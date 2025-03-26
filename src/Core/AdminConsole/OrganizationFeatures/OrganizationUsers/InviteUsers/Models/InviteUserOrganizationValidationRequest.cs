@@ -20,7 +20,7 @@ public class InviteUserOrganizationValidationRequest
         SecretsManagerSubscriptionUpdate = smSubscriptionUpdate;
     }
 
-    public OrganizationUserInviteDto[] Invites { get; init; } = [];
+    public OrganizationUserInvite[] Invites { get; init; } = [];
     public InviteOrganization InviteOrganization { get; init; }
     public Guid PerformedBy { get; init; }
     public DateTimeOffset PerformedAt { get; init; }

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
@@ -11,13 +12,14 @@ public class CreateOrganizationUser
     public CollectionAccessSelection[] Collections { get; set; } = [];
     public Guid[] Groups { get; set; } = [];
 
-    public static Func<OrganizationUserInviteDto, CreateOrganizationUser> MapToDataModel(DateTimeOffset performedAt) =>
+    public static Func<OrganizationUserInvite, CreateOrganizationUser> MapToDataModel(DateTimeOffset performedAt,
+        InviteOrganization organization) =>
         o => new CreateOrganizationUser
         {
             OrganizationUser = new OrganizationUser
             {
                 Id = CoreHelpers.GenerateComb(),
-                OrganizationId = o.OrganizationId,
+                OrganizationId = organization.OrganizationId,
                 Email = o.Email.ToLowerInvariant(),
                 Type = o.Type,
                 Status = OrganizationUserStatusType.Invited,

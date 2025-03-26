@@ -19,5 +19,5 @@ public interface IInviteOrganizationUsersCommand
     /// </param>
     /// <returns>Response from InviteScimOrganiation<see cref="ScimInviteOrganizationUsersResponse"/></returns>
     Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(
-        OrganizationUserSingleEmailInvite request);
+        InviteOrganizationUsersRequest request);
 }

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -14,7 +15,11 @@ public class InviteUserOrganizationValidationTests
     [BitAutoData]
     public void Validate_WhenOrganizationIsFreeTier_ShouldReturnValidResponse(Organization organization)
     {
-        var result = InviteUserOrganizationValidator.Validate(new InviteOrganization(organization, new FreePlan()));
+        var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+        var validSubscriptionUpdate = new Valid<PasswordManagerSubscriptionUpdate>(
+                new PasswordManagerSubscriptionUpdate(inviteOrganization, 0, 0));
+
+        var result = InviteUserOrganizationValidator.Validate(inviteOrganization, validSubscriptionUpdate);
 
         Assert.IsType<Valid<InviteOrganization>>(result);
     }
@@ -25,8 +30,13 @@ public class InviteUserOrganizationValidationTests
         Organization organization)
     {
         organization.GatewayCustomerId = string.Empty;
+        organization.Seats = 3;
 
-        var result = InviteUserOrganizationValidator.Validate(new InviteOrganization(organization, new FreePlan()));
+        var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+        var validSubscriptionUpdate = new Valid<PasswordManagerSubscriptionUpdate>(
+            new PasswordManagerSubscriptionUpdate(inviteOrganization, 3, 1));
+
+        var result = InviteUserOrganizationValidator.Validate(inviteOrganization, validSubscriptionUpdate);
 
         Assert.IsType<Invalid<InviteOrganization>>(result);
         Assert.Equal(OrganizationNoPaymentMethodFoundError.Code, (result as Invalid<InviteOrganization>)!.ErrorMessageString);
@@ -38,8 +48,14 @@ public class InviteUserOrganizationValidationTests
         Organization organization)
     {
         organization.GatewaySubscriptionId = string.Empty;
+        organization.Seats = 3;
+        organization.MaxAutoscaleSeats = 4;
 
-        var result = InviteUserOrganizationValidator.Validate(new InviteOrganization(organization, new FreePlan()));
+        var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+        var validSubscriptionUpdate = new Valid<PasswordManagerSubscriptionUpdate>(
+            new PasswordManagerSubscriptionUpdate(inviteOrganization, 3, 1));
+
+        var result = InviteUserOrganizationValidator.Validate(inviteOrganization, validSubscriptionUpdate);
 
         Assert.IsType<Invalid<InviteOrganization>>(result);
         Assert.Equal(OrganizationNoSubscriptionFoundError.Code, (result as Invalid<InviteOrganization>)!.ErrorMessageString);

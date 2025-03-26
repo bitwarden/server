@@ -17,6 +17,7 @@ using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Microsoft.Extensions.Logging;
 using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.CreateOrganizationUser;
+using OrganizationUserInvite = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 
@@ -41,21 +42,23 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     public const string InvalidResultType = "Invalid result type.";
 
 
-    public async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(OrganizationUserSingleEmailInvite request)
+    public async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(InviteOrganizationUsersRequest request)
     {
         var hasSecretsManagerStandalone = await paymentService.HasSecretsManagerStandalone(request.InviteOrganization);
 
+        // Maybe move this all back up
         var orgUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(request.InviteOrganization.OrganizationId);
 
         if (orgUsers.Any(existingUser =>
-                request.Email.Equals(existingUser.Email, StringComparison.InvariantCultureIgnoreCase) ||
-                request.ExternalId.Equals(existingUser.ExternalId, StringComparison.InvariantCultureIgnoreCase)))
+                request.Invites.First().Email.Equals(existingUser.Email, StringComparison.InvariantCultureIgnoreCase) ||
+                request.Invites.First().ExternalId.Equals(existingUser.ExternalId, StringComparison.InvariantCultureIgnoreCase)))
         {
             return new Failure<ScimInviteOrganizationUsersResponse>(
                 new UserAlreadyExistsError(new ScimInviteOrganizationUsersResponse(request)));
         }
+        // end of move
 
-        var result = await InviteOrganizationUsersAsync(new InviteOrganizationUsersRequest(request, hasSecretsManagerStandalone));
+        var result = await InviteOrganizationUsersAsync(request);
 
         switch (result)
         {
@@ -83,15 +86,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task<CommandResult<IEnumerable<OrganizationUser>>> InviteOrganizationUsersAsync(InviteOrganizationUsersRequest request)
     {
-        var existingEmails = new HashSet<string>(await organizationUserRepository.SelectKnownEmailsAsync(
-                request.InviteOrganization.OrganizationId, request.Invites.SelectMany(i => i.Emails), false),
-            StringComparer.InvariantCultureIgnoreCase);
-
-        var invitesToSend = request.Invites
-            .SelectMany(invite => invite.Emails
-                .Where(email => !existingEmails.Contains(email))
-                .Select(email => OrganizationUserInviteDto.Create(email, invite, request.InviteOrganization.OrganizationId))
-            ).ToArray();
+        var invitesToSend = (await FilterExistingUsersAsync(request)).ToArray();
 
         if (invitesToSend.Length == 0)
         {
@@ -116,10 +111,10 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         var validatedRequest = validationResult as Valid<InviteUserOrganizationValidationRequest>;
 
         var organizationUserToInviteEntities = invitesToSend
-            .Select(MapToDataModel(request.PerformedAt))
+            .Select(MapToDataModel(request.PerformedAt, validatedRequest!.Value.InviteOrganization))
             .ToArray();
 
-        var organization = await organizationRepository.GetByIdAsync(validatedRequest!.Value.InviteOrganization.OrganizationId);
+        var organization = await organizationRepository.GetByIdAsync(validatedRequest.Value.InviteOrganization.OrganizationId);
 
         try
         {
@@ -149,6 +144,17 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         }
 
         return new Success<IEnumerable<OrganizationUser>>(organizationUserToInviteEntities.Select(x => x.OrganizationUser));
+    }
+
+    private async Task<IEnumerable<OrganizationUserInvite>> FilterExistingUsersAsync(InviteOrganizationUsersRequest request)
+    {
+        var existingEmails = new HashSet<string>(await organizationUserRepository.SelectKnownEmailsAsync(
+                request.InviteOrganization.OrganizationId, request.Invites.Select(i => i.Email), false),
+            StringComparer.InvariantCultureIgnoreCase);
+
+        return request.Invites
+            .Where(invite => !existingEmails.Contains(invite.Email))
+            .ToArray();
     }
 
     private async Task RevertPasswordManagerChangesAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult, Organization organization)

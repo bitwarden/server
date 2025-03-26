@@ -28,7 +28,7 @@ public class SecretsManagerInviteUserValidationTests
 
         var request = new InviteUserOrganizationValidationRequest
         {
-            Invites = [new OrganizationUserInviteDto()],
+            Invites = [new OrganizationUserInvite("test@email.com", "", false)],
             InviteOrganization = organizationDto,
             PerformedBy = Guid.Empty,
             PerformedAt = default,
@@ -53,11 +53,18 @@ public class SecretsManagerInviteUserValidationTests
         var organizationDto = new InviteOrganization(organization, new FreePlan());
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
 
-        var invite = OrganizationUserInvite.Create(["email@test.com"], [], OrganizationUserType.User, new Permissions(), string.Empty, true);
+        var invite = new OrganizationUserInvite(
+            email: "email@test.com",
+            assignedCollections: [],
+            groups: [],
+            type: OrganizationUserType.User,
+            permissions: new Permissions(),
+            externalId: string.Empty,
+            accessSecretsManager: true);
 
         var request = new InviteUserOrganizationValidationRequest
         {
-            Invites = [OrganizationUserInviteDto.Create(invite.Emails.First(), invite, organizationDto.OrganizationId)],
+            Invites = [invite],
             InviteOrganization = organizationDto,
             PerformedBy = Guid.Empty,
             PerformedAt = default,
@@ -86,7 +93,14 @@ public class SecretsManagerInviteUserValidationTests
 
         var request = new InviteUserOrganizationValidationRequest
         {
-            Invites = [new OrganizationUserInviteDto()],
+            Invites = [new OrganizationUserInvite(
+                email: "email@test.com",
+                assignedCollections: [],
+                groups: [],
+                type: OrganizationUserType.User,
+                permissions: new Permissions(),
+                externalId: string.Empty,
+                accessSecretsManager: true)],
             InviteOrganization = organizationDto,
             PerformedBy = Guid.Empty,
             PerformedAt = default,
@@ -116,7 +130,14 @@ public class SecretsManagerInviteUserValidationTests
 
         var request = new InviteUserOrganizationValidationRequest
         {
-            Invites = [OrganizationUserInviteDto.Create("email@test.com", OrganizationUserInvite.Create(["email@test.com"], [], OrganizationUserType.User, new Permissions(), string.Empty, true), organization.Id)],
+            Invites = [new OrganizationUserInvite(
+                email: "email@test.com",
+                assignedCollections: [],
+                groups: [],
+                type: OrganizationUserType.User,
+                permissions: new Permissions(),
+                externalId: string.Empty,
+                accessSecretsManager: true)],
             InviteOrganization = organizationDto,
             PerformedBy = Guid.Empty,
             PerformedAt = default,
@@ -137,18 +158,26 @@ public class SecretsManagerInviteUserValidationTests
     public void Validate_GivenPasswordManagerSeatsAreTheSameAsSecretsManagerSeats_WhenAttemptingToAddASecretManagerSeatOnly_ThenShouldNotBeAllowedToAddSecretsManagerUsers(
         Organization organization)
     {
+        organization.Seats = 0;
         organization.SmSeats = 4;
         organization.MaxAutoscaleSmSeats = 5;
         organization.UseSecretsManager = true;
         organization.PlanType = PlanType.EnterpriseAnnually;
 
-        var organizationDto = new InviteOrganization(organization, new Enterprise2023Plan(isAnnual: true));
-        var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
+        var inviteOrganization = new InviteOrganization(organization, new Enterprise2023Plan(isAnnual: true));
+        var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(inviteOrganization, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
         {
-            Invites = [OrganizationUserInviteDto.Create("email@test.com", OrganizationUserInvite.Create(["email@test.com"], [], OrganizationUserType.User, new Permissions(), string.Empty, true), organization.Id)],
-            InviteOrganization = organizationDto,
+            Invites = [new OrganizationUserInvite(
+                email: "email@test.com",
+                assignedCollections: [],
+                groups: [],
+                type: OrganizationUserType.User,
+                permissions: new Permissions(),
+                externalId: string.Empty,
+                accessSecretsManager: true)],
+            InviteOrganization = inviteOrganization,
             PerformedBy = Guid.Empty,
             PerformedAt = default,
             OccupiedPmSeats = 0,

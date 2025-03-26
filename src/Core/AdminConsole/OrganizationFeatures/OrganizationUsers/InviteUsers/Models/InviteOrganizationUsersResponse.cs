@@ -16,12 +16,14 @@ public class ScimInviteOrganizationUsersResponse
 
     }
 
-    public ScimInviteOrganizationUsersResponse(OrganizationUserSingleEmailInvite request)
+    public ScimInviteOrganizationUsersResponse(InviteOrganizationUsersRequest request)
     {
+        var userToInvite = request.Invites.First();
+
         InvitedUser = new OrganizationUser
         {
-            Email = request.Email,
-            ExternalId = request.ExternalId
+            Email = userToInvite.Email,
+            ExternalId = userToInvite.ExternalId
         };
     }
 }

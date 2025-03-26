@@ -25,13 +25,6 @@ public class InviteUsersValidator(
 {
     public async Task<ValidationResult<InviteUserOrganizationValidationRequest>> ValidateAsync(InviteUserOrganizationValidationRequest request)
     {
-        var organizationValidationResult = InviteUserOrganizationValidator.Validate(request.InviteOrganization);
-
-        if (organizationValidationResult is Invalid<InviteOrganization> organizationValidation)
-        {
-            return organizationValidation.Map(request);
-        }
-
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(request);
         var passwordManagerValidationResult = PasswordManagerInviteUserValidator.Validate(subscriptionUpdate);
 
@@ -43,6 +36,13 @@ public class InviteUsersValidator(
         if (ValidateEnvironment(globalSettings, passwordManagerValidationResult as Valid<PasswordManagerSubscriptionUpdate>) is Invalid<IGlobalSettings> invalidEnvironment)
         {
             return invalidEnvironment.Map(request);
+        }
+
+        var organizationValidationResult = InviteUserOrganizationValidator.Validate(request.InviteOrganization, passwordManagerValidationResult as Valid<PasswordManagerSubscriptionUpdate>);
+
+        if (organizationValidationResult is Invalid<InviteOrganization> organizationValidation)
+        {
+            return organizationValidation.Map(request);
         }
 
         var smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(request, subscriptionUpdate);

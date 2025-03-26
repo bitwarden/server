@@ -13,7 +13,8 @@ public class ScimUserRequestModel : BaseScimUserModel
 {
     public ScimUserRequestModel()
         : base(false)
-    { }
+    {
+    }
 
     public OrganizationUserInvite ToOrganizationUserInvite(ScimProviderType scimProvider)
     {
@@ -28,7 +29,7 @@ public class ScimUserRequestModel : BaseScimUserModel
         };
     }
 
-    public OrganizationUserSingleEmailInvite ToRequest(
+    public InviteOrganizationUsersRequest ToRequest(
         ScimProviderType scimProvider,
         InviteOrganization inviteOrganization,
         DateTimeOffset performedAt)
@@ -40,11 +41,18 @@ public class ScimUserRequestModel : BaseScimUserModel
             throw new BadRequestException();
         }
 
-        return new(
-                email: email,
-                inviteOrganization: inviteOrganization,
-                performedAt: performedAt,
-                externalId: ExternalIdForInvite());
+        return new InviteOrganizationUsersRequest(
+            invites:
+            [
+                new Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite(
+                        email: email,
+                        externalId: ExternalIdForInvite(),
+                        accessSecretsManager: false // TODO do something about this
+                    )
+            ],
+            inviteOrganization: inviteOrganization,
+            performedBy: Guid.Empty, // SCIM does not have a user id
+            performedAt: performedAt);
     }
 
     private string EmailForInvite(ScimProviderType scimProvider)

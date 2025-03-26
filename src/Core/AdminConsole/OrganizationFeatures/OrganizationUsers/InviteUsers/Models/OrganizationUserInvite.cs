@@ -9,55 +9,57 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public class OrganizationUserInvite
 {
-    public string[] Emails { get; private init; } = [];
-    public CollectionAccessSelection[] AssignedCollections { get; private init; } = [];
-    public OrganizationUserType Type { get; private init; } = OrganizationUserType.User;
-    public Permissions Permissions { get; private init; } = new();
-    public string ExternalId { get; private init; } = string.Empty;
+    public string Email { get; private init; }
+    public CollectionAccessSelection[] AssignedCollections { get; private init; }
+    public OrganizationUserType Type { get; private init; }
+    public Permissions Permissions { get; private init; }
+    public string ExternalId { get; private init; }
     public bool AccessSecretsManager { get; private init; }
-    public Guid[] Groups { get; private init; } = [];
+    public Guid[] Groups { get; private init; }
 
-    public static OrganizationUserInvite Create(string[] emails,
-        IEnumerable<CollectionAccessSelection> accessibleCollections,
+    public OrganizationUserInvite(string email, string externalId, bool accessSecretsManager) :
+        this(
+            email: email,
+            assignedCollections: [],
+            groups: [],
+            type: OrganizationUserType.User,
+            permissions: new Permissions(),
+            externalId: externalId,
+            accessSecretsManager: accessSecretsManager)
+    {
+    }
+
+    public OrganizationUserInvite(string email,
+        IEnumerable<CollectionAccessSelection> assignedCollections,
+        IEnumerable<Guid> groups,
         OrganizationUserType type,
         Permissions permissions,
         string externalId,
         bool accessSecretsManager)
     {
-        ValidateEmailAddresses(emails);
+        ValidateEmailAddress(email);
 
-        if (accessibleCollections?.Any(ValidateCollectionConfiguration) ?? false)
+        var collections = assignedCollections?.ToArray() ?? [];
+
+        if (collections.Any(ValidateCollectionConfiguration))
         {
             throw new BadRequestException(InvalidCollectionConfigurationErrorMessage);
         }
 
-        return new OrganizationUserInvite
-        {
-            Emails = emails,
-            AssignedCollections = accessibleCollections.ToArray(),
-            Type = type,
-            Permissions = permissions,
-            ExternalId = externalId,
-            AccessSecretsManager = accessSecretsManager
-        };
+        Email = email;
+        AssignedCollections = collections;
+        Groups = groups.ToArray();
+        Type = type;
+        Permissions = permissions ?? new Permissions();
+        ExternalId = externalId;
+        AccessSecretsManager = accessSecretsManager;
     }
 
-    public static OrganizationUserInvite Create(OrganizationUserSingleEmailInvite invite, bool hasStandaloneSecretsManager) =>
-        Create([invite.Email],
-            invite.AccessibleCollections,
-            invite.Type,
-            invite.Permissions,
-            invite.ExternalId,
-            hasStandaloneSecretsManager);
-
-    private static void ValidateEmailAddresses(string[] emails)
+    private static void ValidateEmailAddress(string email)
     {
-        foreach (var email in emails)
+        if (!email.IsValidEmail())
         {
-            if (!email.IsValidEmail())
-            {
-                throw new BadRequestException($"{email} {InvalidEmailErrorMessage}");
-            }
+            throw new BadRequestException($"{email} {InvalidEmailErrorMessage}");
         }
     }
 }
