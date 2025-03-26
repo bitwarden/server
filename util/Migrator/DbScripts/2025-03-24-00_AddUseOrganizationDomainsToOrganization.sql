@@ -1,6 +1,6 @@
 /* adds new column "UseOrganizationDomains" not nullable with default of 0 */
 
-ALTER TABLE [dbo].[Organization] ADD [UseOrgnizationDomains] bit NOT NULL CONSTRAINT [DF_Organization_UseOrganizationDomains] default (0)
+ALTER TABLE [dbo].[Organization] ADD [UseOrganizationDomains] bit NOT NULL CONSTRAINT [DF_Organization_UseOrganizationDomains] default (0)
 GO
 
 /* add column to Organization_Create*/

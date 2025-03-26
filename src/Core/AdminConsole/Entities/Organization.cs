@@ -51,6 +51,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public short? MaxCollections { get; set; }
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
+    public bool UseOrganizationDomains { get; set; }
     public bool UseKeyConnector { get; set; }
     public bool UseScim { get; set; }
     public bool UseGroups { get; set; }

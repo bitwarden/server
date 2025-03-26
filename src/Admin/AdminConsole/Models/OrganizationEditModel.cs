@@ -76,6 +76,7 @@ public class OrganizationEditModel : OrganizationViewModel
         MaxCollections = org.MaxCollections;
         UsePolicies = org.UsePolicies;
         UseSso = org.UseSso;
+        UseOrganizationDomains = org.UseOrganizationDomains;
         UseKeyConnector = org.UseKeyConnector;
         UseScim = org.UseScim;
         UseGroups = org.UseGroups;
@@ -132,6 +133,8 @@ public class OrganizationEditModel : OrganizationViewModel
     public bool UsePolicies { get; set; }
     [Display(Name = "SSO")]
     public bool UseSso { get; set; }
+    [Display(Name = "Use Organization Domains")]
+    public bool UseOrganizationDomains { get; set; }
     [Display(Name = "Key Connector with Customer Encryption")]
     public bool UseKeyConnector { get; set; }
     [Display(Name = "Groups")]
@@ -212,6 +215,7 @@ public class OrganizationEditModel : OrganizationViewModel
                     Has2fa = p.Has2fa,
                     HasApi = p.HasApi,
                     HasSso = p.HasSso,
+                    HasOrganizationDomains = p.HasOrganizationDomains,
                     HasKeyConnector = p.HasKeyConnector,
                     HasScim = p.HasScim,
                     HasResetPassword = p.HasResetPassword,
@@ -285,6 +289,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.MaxCollections = MaxCollections;
         existingOrganization.UsePolicies = UsePolicies;
         existingOrganization.UseSso = UseSso;
+        existingOrganization.UseOrganizationDomains = UseOrganizationDomains;
         existingOrganization.UseKeyConnector = UseKeyConnector;
         existingOrganization.UseScim = UseScim;
         existingOrganization.UseGroups = UseGroups;

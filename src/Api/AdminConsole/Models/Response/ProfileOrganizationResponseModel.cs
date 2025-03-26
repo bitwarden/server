@@ -25,6 +25,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         Name = organization.Name;
         UsePolicies = organization.UsePolicies;
         UseSso = organization.UseSso;
+        UseOrganizationDomains = organization.UseOrganizationDomains;
         UseKeyConnector = organization.UseKeyConnector;
         UseScim = organization.UseScim;
         UseGroups = organization.UseGroups;
@@ -86,6 +87,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public string Name { get; set; }
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
+    public bool UseOrganizationDomains { get; set; }
     public bool UseKeyConnector { get; set; }
     public bool UseScim { get; set; }
     public bool UseGroups { get; set; }

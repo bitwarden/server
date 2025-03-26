@@ -118,3 +118,11 @@ INNER JOIN
 INNER JOIN
     [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
 GO
+
+CREATE OR ALTER VIEW [dbo].[OrganizationView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[Organization]
+GO

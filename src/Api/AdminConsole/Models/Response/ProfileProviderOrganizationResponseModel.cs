@@ -15,6 +15,7 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         Name = organization.Name;
         UsePolicies = organization.UsePolicies;
         UseSso = organization.UseSso;
+        UseOrganizationDomains = organization.UseOrganizationDomains;
         UseKeyConnector = organization.UseKeyConnector;
         UseScim = organization.UseScim;
         UseGroups = organization.UseGroups;
