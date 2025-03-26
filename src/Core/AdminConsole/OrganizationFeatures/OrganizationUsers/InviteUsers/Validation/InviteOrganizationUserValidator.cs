@@ -46,6 +46,7 @@ public class InviteUsersValidator(
         }
 
         var smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(request, subscriptionUpdate);
+
         var secretsManagerValidationResult = SecretsManagerInviteUserValidation.Validate(smSubscriptionUpdate);
 
         if (secretsManagerValidationResult is Invalid<SecretsManagerSubscriptionUpdate> invalidSmSubscriptionUpdate)
@@ -56,9 +57,9 @@ public class InviteUsersValidator(
         var provider = await providerRepository.GetByOrganizationIdAsync(request.InviteOrganization.OrganizationId);
         if (provider is not null)
         {
-            var providerValidationResult = InvitingUserOrganizationProviderValidation.Validate(ProviderDto.FromProviderEntity(provider));
+            var providerValidationResult = InvitingUserOrganizationProviderValidator.Validate(new InviteOrganizationProvider(provider));
 
-            if (providerValidationResult is Invalid<ProviderDto> invalidProviderValidation)
+            if (providerValidationResult is Invalid<InviteOrganizationProvider> invalidProviderValidation)
             {
                 return invalidProviderValidation.Map(request);
             }

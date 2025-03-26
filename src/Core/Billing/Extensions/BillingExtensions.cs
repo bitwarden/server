@@ -29,8 +29,8 @@ public static class BillingExtensions
             Status: ProviderStatusType.Billable
         };
 
-    public static bool IsBillable(this ProviderDto provider) =>
-        provider is
+    public static bool IsBillable(this InviteOrganizationProvider inviteOrganizationProvider) =>
+        inviteOrganizationProvider is
         {
             Type: ProviderType.Msp or ProviderType.MultiOrganizationEnterprise,
             Status: ProviderStatusType.Billable
