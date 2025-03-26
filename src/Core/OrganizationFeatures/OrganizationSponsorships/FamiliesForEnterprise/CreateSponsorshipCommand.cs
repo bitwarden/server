@@ -16,13 +16,14 @@ public class CreateSponsorshipCommand : ICreateSponsorshipCommand
     private readonly BaseCreateSponsorshipHandler _createSponsorshipHandler;
 
     public CreateSponsorshipCommand(
+        IFeatureService featureService,
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IUserService userService,
         ICurrentContext currentContext)
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
 
-        var adminInitiatedSponsorshipHandler = new CreateAdminInitiatedSponsorshipHandler(currentContext);
+        var adminInitiatedSponsorshipHandler = new CreateAdminInitiatedSponsorshipHandler(currentContext, featureService);
         _createSponsorshipHandler = new CreateSponsorshipHandler(userService, organizationSponsorshipRepository);
         _createSponsorshipHandler.SetNext(adminInitiatedSponsorshipHandler);
     }

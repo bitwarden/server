@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SponsorshipCreation;
 
@@ -10,13 +11,19 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 /// sponsorship initiated by organization members with specific permissions to manage members/users.
 /// </summary>
 public class CreateAdminInitiatedSponsorshipHandler(
-    ICurrentContext currentContext) : BaseCreateSponsorshipHandler
+    ICurrentContext currentContext,
+    IFeatureService featureService) : BaseCreateSponsorshipHandler
 {
     public override async Task<OrganizationSponsorship> HandleAsync(CreateSponsorshipRequest request)
     {
         var isAdminInitiated = false;
         if (currentContext.UserId != request.SponsoringMember.UserId)
         {
+            if (!featureService.IsEnabled(FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
+            {
+                throw new BadRequestException("Feature 'pm-17772-admin-initiated-sponsorships' is not enabled.");
+            }
+
             var organization = currentContext.Organizations.First(x => x.Id == request.SponsoringOrganization.Id);
             OrganizationUserType[] allowedUserTypes =
             [
