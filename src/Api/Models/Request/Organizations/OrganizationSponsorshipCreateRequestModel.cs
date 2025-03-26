@@ -23,5 +23,7 @@ public class OrganizationSponsorshipCreateRequestModel
     /// <remarks>Left empty when creating a sponsorship for the authenticated user.</remarks>
     public Guid? SponsoringUserId { get; set; }
 
+    [EncryptedString]
+    [EncryptedStringLength(512)]
     public string Notes { get; set; }
 }
