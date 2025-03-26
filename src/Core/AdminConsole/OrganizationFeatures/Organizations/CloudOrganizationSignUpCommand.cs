@@ -82,7 +82,6 @@ public class CloudOrganizationSignUpCommand(
                 (short?)null : (short)(plan.PasswordManager.BaseStorageGb.Value + signup.AdditionalStorageGb),
             UsePolicies = plan.HasPolicies,
             UseSso = plan.HasSso,
-            UseOrganizationDomains = plan.HasOrganizationDomains,
             UseGroups = plan.HasGroups,
             UseEvents = plan.HasEvents,
             UseDirectory = plan.HasDirectory,
@@ -105,7 +104,8 @@ public class CloudOrganizationSignUpCommand(
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
-            UseSecretsManager = signup.UseSecretsManager
+            UseSecretsManager = signup.UseSecretsManager,
+            UseOrganizationDomains = plan.HasOrganizationDomains,
         };
 
         if (signup.UseSecretsManager)

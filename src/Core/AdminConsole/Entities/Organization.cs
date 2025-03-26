@@ -51,7 +51,6 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public short? MaxCollections { get; set; }
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
-    public bool UseOrganizationDomains { get; set; }
     public bool UseKeyConnector { get; set; }
     public bool UseScim { get; set; }
     public bool UseGroups { get; set; }
@@ -114,6 +113,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// Risk Insights is a reporting feature that provides insights into the security of an organization's vault.
     /// </summary>
     public bool UseRiskInsights { get; set; }
+    public bool UseOrganizationDomains { get; set; }
 
     public void SetNewId()
     {

@@ -40,7 +40,6 @@ public class OrganizationResponseModel : ResponseModel
         MaxStorageGb = organization.MaxStorageGb;
         UsePolicies = organization.UsePolicies;
         UseSso = organization.UseSso;
-        UseOrganizationDomains = organization.UseOrganizationDomains;
         UseKeyConnector = organization.UseKeyConnector;
         UseScim = organization.UseScim;
         UseGroups = organization.UseGroups;
@@ -65,6 +64,7 @@ public class OrganizationResponseModel : ResponseModel
         LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         UseRiskInsights = organization.UseRiskInsights;
+        UseOrganizationDomains = organization.UseOrganizationDomains;
     }
 
     public Guid Id { get; set; }
@@ -87,7 +87,6 @@ public class OrganizationResponseModel : ResponseModel
     public short? MaxStorageGb { get; set; }
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
-    public bool UseOrganizationDomains { get; set; }
     public bool UseKeyConnector { get; set; }
     public bool UseScim { get; set; }
     public bool UseGroups { get; set; }
@@ -112,6 +111,7 @@ public class OrganizationResponseModel : ResponseModel
     public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     public bool UseRiskInsights { get; set; }
+    public bool UseOrganizationDomains { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel

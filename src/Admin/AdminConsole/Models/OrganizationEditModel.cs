@@ -76,7 +76,6 @@ public class OrganizationEditModel : OrganizationViewModel
         MaxCollections = org.MaxCollections;
         UsePolicies = org.UsePolicies;
         UseSso = org.UseSso;
-        UseOrganizationDomains = org.UseOrganizationDomains;
         UseKeyConnector = org.UseKeyConnector;
         UseScim = org.UseScim;
         UseGroups = org.UseGroups;
@@ -102,7 +101,7 @@ public class OrganizationEditModel : OrganizationViewModel
         MaxAutoscaleSmSeats = org.MaxAutoscaleSmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
         MaxAutoscaleSmServiceAccounts = org.MaxAutoscaleSmServiceAccounts;
-
+        UseOrganizationDomains = org.UseOrganizationDomains;
         _plans = plans;
     }
 
@@ -133,8 +132,6 @@ public class OrganizationEditModel : OrganizationViewModel
     public bool UsePolicies { get; set; }
     [Display(Name = "SSO")]
     public bool UseSso { get; set; }
-    [Display(Name = "Use Organization Domains")]
-    public bool UseOrganizationDomains { get; set; }
     [Display(Name = "Key Connector with Customer Encryption")]
     public bool UseKeyConnector { get; set; }
     [Display(Name = "Groups")]
@@ -186,6 +183,8 @@ public class OrganizationEditModel : OrganizationViewModel
     public int? SmServiceAccounts { get; set; }
     [Display(Name = "Max Autoscale Machine Accounts")]
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
+    [Display(Name = "Use Organization Domains")]
+    public bool UseOrganizationDomains { get; set; }
 
     /**
      * Creates a Plan[] object for use in Javascript
@@ -289,7 +288,6 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.MaxCollections = MaxCollections;
         existingOrganization.UsePolicies = UsePolicies;
         existingOrganization.UseSso = UseSso;
-        existingOrganization.UseOrganizationDomains = UseOrganizationDomains;
         existingOrganization.UseKeyConnector = UseKeyConnector;
         existingOrganization.UseScim = UseScim;
         existingOrganization.UseGroups = UseGroups;
@@ -316,6 +314,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.MaxAutoscaleSmSeats = MaxAutoscaleSmSeats;
         existingOrganization.SmServiceAccounts = SmServiceAccounts;
         existingOrganization.MaxAutoscaleSmServiceAccounts = MaxAutoscaleSmServiceAccounts;
+        existingOrganization.UseOrganizationDomains = UseOrganizationDomains;
         return existingOrganization;
     }
 }

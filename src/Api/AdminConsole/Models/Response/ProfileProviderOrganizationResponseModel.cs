@@ -15,7 +15,6 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         Name = organization.Name;
         UsePolicies = organization.UsePolicies;
         UseSso = organization.UseSso;
-        UseOrganizationDomains = organization.UseOrganizationDomains;
         UseKeyConnector = organization.UseKeyConnector;
         UseScim = organization.UseScim;
         UseGroups = organization.UseGroups;
@@ -51,5 +50,6 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         UseRiskInsights = organization.UseRiskInsights;
+        UseOrganizationDomains = organization.UseOrganizationDomains;
     }
 }
