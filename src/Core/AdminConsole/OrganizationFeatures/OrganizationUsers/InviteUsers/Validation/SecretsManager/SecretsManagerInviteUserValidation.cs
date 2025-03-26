@@ -8,11 +8,11 @@ public static class SecretsManagerInviteUserValidation
         SecretsManagerSubscriptionUpdate subscriptionUpdate) =>
         subscriptionUpdate switch
         {
-            { UseSecretsManger: false, AdditionalSeats: > 0 } =>
+            { UseSecretsManger: false, NewUsersToAdd: > 0 } =>
                 new Invalid<SecretsManagerSubscriptionUpdate>(
                     new OrganizationNoSecretsManagerError(subscriptionUpdate)),
 
-            { UseSecretsManger: false, AdditionalSeats: 0 } or { UseSecretsManger: true, Seats: null } =>
+            { UseSecretsManger: false, NewUsersToAdd: 0 } or { UseSecretsManger: true, Seats: null } =>
                 new Valid<SecretsManagerSubscriptionUpdate>(subscriptionUpdate),
 
             { UseSecretsManger: true, SecretsManagerPlan.HasAdditionalSeatsOption: false } =>
@@ -20,7 +20,7 @@ public static class SecretsManagerInviteUserValidation
                     new SecretsManagerAdditionalSeatLimitReachedError(subscriptionUpdate)),
 
             { UseSecretsManger: true, SecretsManagerPlan.MaxAdditionalSeats: var planMaxSeats }
-                when planMaxSeats < subscriptionUpdate.AdditionalSeats =>
+                when planMaxSeats < subscriptionUpdate.NewUsersToAdd =>
                 new Invalid<SecretsManagerSubscriptionUpdate>(
                     new SecretsManagerAdditionalSeatLimitReachedError(subscriptionUpdate)),
 

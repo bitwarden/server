@@ -8,14 +8,45 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 public class SecretsManagerSubscriptionUpdate
 {
     public bool UseSecretsManger { get; }
+
+    /// <summary>
+    /// Seats the organization has
+    /// </summary>
     public int? Seats { get; }
+
+    /// <summary>
+    /// Max number of seats that the organization can have
+    /// </summary>
     public int? MaxAutoScaleSeats { get; }
+
+    /// <summary>
+    /// Seats currently occupied by current users
+    /// </summary>
     public int OccupiedSeats { get; }
-    public int AdditionalSeats { get; }
+
+    /// <summary>
+    /// Users to add to the organization seats
+    /// </summary>
+    public int NewUsersToAdd { get; }
+
     public int? PasswordManagerUpdatedSeatTotal { get; }
     public Plan.SecretsManagerPlanFeatures SecretsManagerPlan { get; }
+
+    /// <summary>
+    /// Number of seats available for users
+    /// </summary>
     public int? AvailableSeats => Seats - OccupiedSeats;
-    public int SeatsRequiredToAdd => AdditionalSeats - AvailableSeats ?? 0;
+
+    /// <summary>
+    /// Number of seats to scale the organization to.
+    ///
+    /// If Organization has no seat limit (Seats is null), then there are no new seats to add.
+    /// </summary>
+    public int SeatsRequiredToAdd => AvailableSeats.HasValue ? Math.Max(NewUsersToAdd - AvailableSeats.Value, 0) : 0;
+
+    /// <summary>
+    /// New total of seats for the organization
+    /// </summary>
     public int? UpdatedSeatTotal => Seats + SeatsRequiredToAdd;
 
     private SecretsManagerSubscriptionUpdate(bool useSecretsManger,
@@ -30,7 +61,7 @@ public class SecretsManagerSubscriptionUpdate
         Seats = organizationSeats;
         MaxAutoScaleSeats = organizationAutoScaleSeatLimit;
         OccupiedSeats = currentSeats;
-        AdditionalSeats = seatsToAdd;
+        NewUsersToAdd = seatsToAdd;
         PasswordManagerUpdatedSeatTotal = passwordManagerUpdatedSeatTotal;
         SecretsManagerPlan = plan;
     }

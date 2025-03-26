@@ -7,7 +7,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 public class PasswordManagerSubscriptionUpdate
 {
     /// <summary>
-    /// Seats the organization is currently paying for
+    /// Seats the organization has
     /// </summary>
     public int? Seats { get; }
 
