@@ -16,8 +16,7 @@ public class InviteUserOrganizationValidationTests
     public void Validate_WhenOrganizationIsFreeTier_ShouldReturnValidResponse(Organization organization)
     {
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
-        var validSubscriptionUpdate = new Valid<PasswordManagerSubscriptionUpdate>(
-                new PasswordManagerSubscriptionUpdate(inviteOrganization, 0, 0));
+        var validSubscriptionUpdate = new PasswordManagerSubscriptionUpdate(inviteOrganization, 0, 0);
 
         var result = InviteUserOrganizationValidator.Validate(inviteOrganization, validSubscriptionUpdate);
 
@@ -33,8 +32,7 @@ public class InviteUserOrganizationValidationTests
         organization.Seats = 3;
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
-        var validSubscriptionUpdate = new Valid<PasswordManagerSubscriptionUpdate>(
-            new PasswordManagerSubscriptionUpdate(inviteOrganization, 3, 1));
+        var validSubscriptionUpdate = new PasswordManagerSubscriptionUpdate(inviteOrganization, 3, 1);
 
         var result = InviteUserOrganizationValidator.Validate(inviteOrganization, validSubscriptionUpdate);
 
@@ -52,8 +50,7 @@ public class InviteUserOrganizationValidationTests
         organization.MaxAutoscaleSeats = 4;
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
-        var validSubscriptionUpdate = new Valid<PasswordManagerSubscriptionUpdate>(
-            new PasswordManagerSubscriptionUpdate(inviteOrganization, 3, 1));
+        var validSubscriptionUpdate = new PasswordManagerSubscriptionUpdate(inviteOrganization, 3, 1);
 
         var result = InviteUserOrganizationValidator.Validate(inviteOrganization, validSubscriptionUpdate);
 
