@@ -7,9 +7,9 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 public static class InviteUserOrganizationValidator
 {
     public static ValidationResult<InviteOrganization> Validate(InviteOrganization inviteOrganization,
-        Valid<PasswordManagerSubscriptionUpdate> passwordManagerValidationResult)
+        PasswordManagerSubscriptionUpdate subscriptionUpdate)
     {
-        if (inviteOrganization.Seats is null || passwordManagerValidationResult.Value.SeatsRequiredToAdd is 0)
+        if (inviteOrganization.Seats is null || subscriptionUpdate.SeatsRequiredToAdd is 0)
         {
             return new Valid<InviteOrganization>(inviteOrganization);
         }

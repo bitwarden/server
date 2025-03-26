@@ -33,12 +33,12 @@ public class InviteUsersValidator(
             return invalidSubscriptionUpdate.Map(request);
         }
 
-        if (ValidateEnvironment(globalSettings, passwordManagerValidationResult as Valid<PasswordManagerSubscriptionUpdate>) is Invalid<IGlobalSettings> invalidEnvironment)
+        if (ValidateEnvironment(globalSettings, subscriptionUpdate) is Invalid<IGlobalSettings> invalidEnvironment)
         {
             return invalidEnvironment.Map(request);
         }
 
-        var organizationValidationResult = InviteUserOrganizationValidator.Validate(request.InviteOrganization, passwordManagerValidationResult as Valid<PasswordManagerSubscriptionUpdate>);
+        var organizationValidationResult = InviteUserOrganizationValidator.Validate(request.InviteOrganization, subscriptionUpdate);
 
         if (organizationValidationResult is Invalid<InviteOrganization> organizationValidation)
         {
@@ -82,8 +82,8 @@ public class InviteUsersValidator(
             smSubscriptionUpdate));
     }
 
-    public static ValidationResult<IGlobalSettings> ValidateEnvironment(IGlobalSettings globalSettings, Valid<PasswordManagerSubscriptionUpdate> subscriptionUpdate) =>
-        globalSettings.SelfHosted && subscriptionUpdate?.Value.SeatsRequiredToAdd > 0
+    public static ValidationResult<IGlobalSettings> ValidateEnvironment(IGlobalSettings globalSettings, PasswordManagerSubscriptionUpdate subscriptionUpdate) =>
+        globalSettings.SelfHosted && subscriptionUpdate.SeatsRequiredToAdd > 0
             ? new Invalid<IGlobalSettings>(new CannotAutoScaleOnSelfHostError(globalSettings))
             : new Valid<IGlobalSettings>(globalSettings);
 }
