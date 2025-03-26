@@ -1,5 +1,9 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -106,6 +110,98 @@ public class CipherServiceTests
 
         await sutProvider.Sut.SaveDetailsAsync(cipherDetails, cipherDetails.UserId.Value, lastKnownRevisionDate);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).ReplaceAsync(cipherDetails);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SaveDetailsAsync_PersonalVault_WithDisablePersonalOwnershipPolicyEnabled_Throws(
+        SutProvider<CipherService> sutProvider,
+        CipherDetails cipher,
+        Guid savingUserId)
+    {
+        cipher.Id = default;
+        cipher.UserId = savingUserId;
+        cipher.OrganizationId = null;
+
+        sutProvider.GetDependency<IPolicyService>()
+            .AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership)
+            .Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null));
+        Assert.Contains("restricted from saving items to your personal vault", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SaveDetailsAsync_PersonalVault_WithDisablePersonalOwnershipPolicyDisabled_Succeeds(
+        SutProvider<CipherService> sutProvider,
+        CipherDetails cipher,
+        Guid savingUserId)
+    {
+        cipher.Id = default;
+        cipher.UserId = savingUserId;
+        cipher.OrganizationId = null;
+
+        sutProvider.GetDependency<IPolicyService>()
+            .AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership)
+            .Returns(false);
+
+        await sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .CreateAsync(cipher);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SaveDetailsAsync_PersonalVault_WithPolicyRequirementsEnabled_WithDisablePersonalOwnershipPolicyEnabled_Throws(
+        SutProvider<CipherService> sutProvider,
+        CipherDetails cipher,
+        Guid savingUserId)
+    {
+        cipher.Id = default;
+        cipher.UserId = savingUserId;
+        cipher.OrganizationId = null;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            .Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<PersonalOwnershipPolicyRequirement>(savingUserId)
+            .Returns(new PersonalOwnershipPolicyRequirement { DisablePersonalOwnership = true });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null));
+        Assert.Contains("restricted from saving items to your personal vault", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SaveDetailsAsync_PersonalVault_WithPolicyRequirementsEnabled_WithDisablePersonalOwnershipPolicyDisabled_Succeeds(
+        SutProvider<CipherService> sutProvider,
+        CipherDetails cipher,
+        Guid savingUserId)
+    {
+        cipher.Id = default;
+        cipher.UserId = savingUserId;
+        cipher.OrganizationId = null;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            .Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<PersonalOwnershipPolicyRequirement>(savingUserId)
+            .Returns(new PersonalOwnershipPolicyRequirement { DisablePersonalOwnership = false });
+
+        await sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .CreateAsync(cipher);
     }
 
     [Theory]
