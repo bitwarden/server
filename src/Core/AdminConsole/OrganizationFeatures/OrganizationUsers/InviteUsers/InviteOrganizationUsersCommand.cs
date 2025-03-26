@@ -1,7 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Interfaces;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -31,7 +34,9 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     IMailService mailService,
     ILogger<InviteOrganizationUsersCommand> logger,
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
-    ISendOrganizationInvitesCommand sendOrganizationInvitesCommand
+    ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
+    IProviderOrganizationRepository providerOrganizationRepository,
+    IProviderUserRepository providerUserRepository
     ) : IInviteOrganizationUsersCommand
 {
 
@@ -200,12 +205,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
         try
         {
-            // TODO include provider org emails
-
-            var ownerEmails = (await organizationUserRepository
-                    .GetManyByMinimumRoleAsync(validatedResult.Value.InviteOrganization.OrganizationId, OrganizationUserType.Owner))
-                .Select(x => x.Email)
-                .Distinct();
+            var ownerEmails = await GetOwnerEmailAddressesAsync(validatedResult.Value.InviteOrganization);
 
             await mailService.SendOrganizationMaxSeatLimitReachedEmailAsync(organization,
                 validatedResult.Value.PasswordManagerSubscriptionUpdate.MaxAutoScaleSeats!.Value, ownerEmails);
@@ -214,6 +214,24 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         {
             logger.LogError(ex, IssueNotifyingOwnersOfSeatLimitReached);
         }
+    }
+
+    private async Task<IEnumerable<string>> GetOwnerEmailAddressesAsync(InviteOrganization organization)
+    {
+        var providerOrganization = await providerOrganizationRepository
+            .GetByOrganizationId(organization.OrganizationId);
+
+        if (providerOrganization == null)
+        {
+            return (await organizationUserRepository
+                    .GetManyByMinimumRoleAsync(organization.OrganizationId, OrganizationUserType.Owner))
+                .Select(x => x.Email)
+                .Distinct();
+        }
+
+        return (await providerUserRepository
+                .GetManyDetailsByProviderAsync(providerOrganization.ProviderId, ProviderUserStatusType.Confirmed))
+            .Select(u => u.Email).Distinct();
     }
 
     private async Task AdjustSecretsManagerSeatsAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult, Organization organization)
