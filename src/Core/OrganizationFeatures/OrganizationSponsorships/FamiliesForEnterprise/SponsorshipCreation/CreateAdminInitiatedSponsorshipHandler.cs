@@ -28,10 +28,10 @@ public class CreateAdminInitiatedSponsorshipHandler(
             OrganizationUserType[] allowedUserTypes =
             [
                 OrganizationUserType.Admin,
-                OrganizationUserType.Owner,
-                OrganizationUserType.Custom
+                OrganizationUserType.Owner
             ];
-            if (!organization.Permissions.ManageUsers || allowedUserTypes.All(x => x != organization.Type))
+
+            if (!organization.Permissions.ManageUsers && allowedUserTypes.All(x => x != organization.Type))
             {
                 throw new UnauthorizedAccessException("You do not have permissions to send sponsorships on behalf of the organization.");
             }

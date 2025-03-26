@@ -211,7 +211,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             {
                 Id = sponsoringOrg.Id,
                 Permissions = new Permissions(),
-                Type = OrganizationUserType.Admin
+                Type = OrganizationUserType.Custom
             }
         ]);
 
@@ -225,6 +225,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
 
     [Theory]
     [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
     public async Task CreateSponsorship_InvalidUserType_ThrowsUnauthorizedException(
         OrganizationUserType organizationUserType,
         Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, User user, string sponsoredEmail,
@@ -248,10 +249,6 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             new()
             {
                 Id = sponsoringOrg.Id,
-                Permissions = new Permissions
-                {
-                    ManageUsers = true,
-                },
                 Type = organizationUserType
             }
         ]);
@@ -266,7 +263,6 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
 
     [Theory]
     [BitAutoData(OrganizationUserType.Admin)]
-    [BitAutoData(OrganizationUserType.Custom)]
     [BitAutoData(OrganizationUserType.Owner)]
     public async Task CreateSponsorship_CreatesAdminInitiatedSponsorship(
         OrganizationUserType organizationUserType,
@@ -291,10 +287,6 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             new()
             {
                 Id = sponsoringOrg.Id,
-                Permissions = new Permissions
-                {
-                    ManageUsers = true,
-                },
                 Type = organizationUserType
             }
         ]);

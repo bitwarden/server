@@ -19,8 +19,10 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 public class CreateAdminInitiatedSponsorshipHandlerTests : FamiliesForEnterpriseTestsBase
 {
     [Theory]
-    [BitAutoData]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
     public async Task HandleAsync_MissingManageUsersPermission_ThrowsUnauthorizedException(
+        OrganizationUserType organizationUserType,
         Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, string sponsoredEmail, string friendlyName,
         Guid currentUserId, SutProvider<CreateAdminInitiatedSponsorshipHandler> sutProvider)
     {
@@ -37,7 +39,7 @@ public class CreateAdminInitiatedSponsorshipHandlerTests : FamiliesForEnterprise
             {
                 Id = sponsoringOrg.Id,
                 Permissions = new Permissions(),
-                Type = OrganizationUserType.Admin
+                Type = organizationUserType
             }
         ]);
 
@@ -52,6 +54,7 @@ public class CreateAdminInitiatedSponsorshipHandlerTests : FamiliesForEnterprise
 
     [Theory]
     [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
     public async Task HandleAsync_InvalidUserType_ThrowsUnauthorizedException(
         OrganizationUserType organizationUserType,
         Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, string sponsoredEmail,
@@ -72,7 +75,7 @@ public class CreateAdminInitiatedSponsorshipHandlerTests : FamiliesForEnterprise
                 Id = sponsoringOrg.Id,
                 Permissions = new Permissions
                 {
-                    ManageUsers = true,
+                    ManageUsers = false,
                 },
                 Type = organizationUserType
             }
@@ -89,7 +92,6 @@ public class CreateAdminInitiatedSponsorshipHandlerTests : FamiliesForEnterprise
 
     [Theory]
     [BitAutoData(OrganizationUserType.Admin)]
-    [BitAutoData(OrganizationUserType.Custom)]
     [BitAutoData(OrganizationUserType.Owner)]
     public async Task HandleAsync_CreatesAdminInitiatedSponsorship(
         OrganizationUserType organizationUserType, Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
@@ -108,11 +110,49 @@ public class CreateAdminInitiatedSponsorshipHandlerTests : FamiliesForEnterprise
             new()
             {
                 Id = sponsoringOrg.Id,
-                Permissions = new Permissions
-                {
-                    ManageUsers = true,
-                },
                 Type = organizationUserType
+            }
+        ]);
+
+        var request = new CreateSponsorshipRequest(sponsoringOrg, sponsoringOrgUser,
+            PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, notes);
+
+        var actual = await sutProvider.Sut.HandleAsync(request);
+
+        var expectedSponsorship = new OrganizationSponsorship
+        {
+            IsAdminInitiated = true,
+            Notes = notes
+        };
+
+        AssertHelper.AssertPropertyEqual(expectedSponsorship, actual);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task HandleAsync_CreatesAdminInitiatedSponsorshipWithValidPermissionsButInvalidOrganizationUserType(
+        OrganizationUserType organizationUserType, Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
+        string sponsoredEmail, string friendlyName, Guid currentUserId, string notes,
+        SutProvider<CreateAdminInitiatedSponsorshipHandler> sutProvider)
+    {
+        sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
+        sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(Arg.Is<string>(p => p == FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(currentUserId);
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns([
+            new()
+            {
+                Id = sponsoringOrg.Id,
+                Type = organizationUserType,
+                Permissions =
+                {
+                    ManageUsers = true
+                }
             }
         ]);
 
