@@ -44,7 +44,6 @@ public class OrganizationLicenseTests
         // These licenses will naturally expire over time, but we still want them to be able to test
         license.Expires = DateTime.MaxValue;
 
-        GenerateLicenseFileJsonString();
         var organization = OrganizationLicenseFileFixtures.OrganizationFactory();
         var globalSettings = Substitute.For<IGlobalSettings>();
         globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
@@ -69,7 +68,6 @@ public class OrganizationLicenseTests
         var license = new OrganizationLicense(organization, null, installationId, licensingService);
 
         var result = JsonSerializer.Serialize(license, JsonHelpers.Indented).Replace("\"", "'");
-        Console.Out.WriteLine(result);
         // Put a break after this line, then copy and paste the value of `result` into OrganizationLicenseFileFixtures
     }
 }
