@@ -63,10 +63,24 @@ public class PostUserCommand(
             return null;
         }
 
+        var hasSecretsManagerStandalone = await paymentService.HasSecretsManagerStandalone(organization);
+
         var request = model.ToRequest(
             scimProvider: scimProvider,
             inviteOrganization: new InviteOrganization(organization, plan),
-            performedAt: timeProvider.GetUtcNow());
+            performedAt: timeProvider.GetUtcNow(),
+            hasSecretsManagerStandalone);
+
+        var orgUsers =
+            await organizationUserRepository.GetManyDetailsByOrganizationAsync(
+                request.InviteOrganization.OrganizationId);
+
+        if (orgUsers.Any(existingUser =>
+                request.Invites.First().Email.Equals(existingUser.Email, StringComparison.OrdinalIgnoreCase) ||
+                request.Invites.First().ExternalId.Equals(existingUser.ExternalId, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new ConflictException("User already exists.");
+        }
 
         var result = await inviteOrganizationUsersCommand.InviteScimOrganizationUserAsync(request);
 

@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 using Bit.Core.AdminConsole.Shared.Validation;
@@ -44,20 +43,6 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     public async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(InviteOrganizationUsersRequest request)
     {
-        var hasSecretsManagerStandalone = await paymentService.HasSecretsManagerStandalone(request.InviteOrganization);
-
-        // Maybe move this all back up
-        var orgUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(request.InviteOrganization.OrganizationId);
-
-        if (orgUsers.Any(existingUser =>
-                request.Invites.First().Email.Equals(existingUser.Email, StringComparison.InvariantCultureIgnoreCase) ||
-                request.Invites.First().ExternalId.Equals(existingUser.ExternalId, StringComparison.InvariantCultureIgnoreCase)))
-        {
-            return new Failure<ScimInviteOrganizationUsersResponse>(
-                new UserAlreadyExistsError(new ScimInviteOrganizationUsersResponse(request)));
-        }
-        // end of move
-
         var result = await InviteOrganizationUsersAsync(request);
 
         switch (result)
