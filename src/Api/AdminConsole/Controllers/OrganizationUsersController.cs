@@ -137,7 +137,7 @@ public class OrganizationUsersController : Controller
         return response;
     }
 
-    [OrganizationAuthorize<OrganizationMemberRequirement>]
+    [Authorize<OrganizationMemberRequirement>]
     [HttpGet("mini-details")]
     public async Task<ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>> GetMiniDetails(Guid orgId)
     {
@@ -147,7 +147,7 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("")]
-    [OrganizationAuthorize<ManageUsersRequirement>]
+    [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
         var organizationUsers = await _organizationUserUserDetailsQuery.GetOrganizationUserUserDetails(
