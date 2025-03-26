@@ -195,6 +195,10 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
         sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
 
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(Arg.Is<string>(p => p == FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
+            .Returns(true);
+
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId.Value).Returns(user);
         sutProvider.GetDependency<IOrganizationSponsorshipRepository>().WhenForAnyArgs(x => x.UpsertAsync(default)).Do(callInfo =>
         {
@@ -228,6 +232,10 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
     {
         sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
         sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(Arg.Is<string>(p => p == FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
+            .Returns(true);
 
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId.Value).Returns(user);
         sutProvider.GetDependency<IOrganizationSponsorshipRepository>().WhenForAnyArgs(x => x.UpsertAsync(default)).Do(callInfo =>
@@ -267,6 +275,10 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
     {
         sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
         sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(Arg.Is<string>(p => p == FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
+            .Returns(true);
 
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId.Value).Returns(user);
         sutProvider.GetDependency<IOrganizationSponsorshipRepository>().WhenForAnyArgs(x => x.UpsertAsync(default)).Do(callInfo =>
