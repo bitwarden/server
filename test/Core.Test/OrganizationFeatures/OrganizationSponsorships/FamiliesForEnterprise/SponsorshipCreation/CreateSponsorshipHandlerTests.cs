@@ -19,21 +19,8 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 [SutProviderCustomize]
 public class CreateSponsorshipHandlerTests : FamiliesForEnterpriseTestsBase
 {
-    private bool SponsorshipValidator(OrganizationSponsorship sponsorship, OrganizationSponsorship expectedSponsorship)
-    {
-        try
-        {
-            AssertHelper.AssertPropertyEqual(sponsorship, expectedSponsorship, nameof(OrganizationSponsorship.Id));
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
     [Theory, BitAutoData]
-    public async Task CreateSponsorship_OfferedToNotFound_ThrowsBadRequest(OrganizationUser orgUser, SutProvider<CreateSponsorshipHandler> sutProvider)
+    public async Task HandleAsync_OfferedToNotFound_ThrowsBadRequest(OrganizationUser orgUser, SutProvider<CreateSponsorshipHandler> sutProvider)
     {
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(orgUser.UserId!.Value).ReturnsNull();
         var request = new CreateSponsorshipRequest(null, orgUser, PlanSponsorshipType.FamiliesForEnterprise, null, null, null);
@@ -46,7 +33,7 @@ public class CreateSponsorshipHandlerTests : FamiliesForEnterpriseTestsBase
     }
 
     [Theory, BitAutoData]
-    public async Task CreateSponsorship_OfferedToSelf_ThrowsBadRequest(OrganizationUser orgUser, string sponsoredEmail, User user, SutProvider<CreateSponsorshipHandler> sutProvider)
+    public async Task HandleAsync_OfferedToSelf_ThrowsBadRequest(OrganizationUser orgUser, string sponsoredEmail, User user, SutProvider<CreateSponsorshipHandler> sutProvider)
     {
         user.Email = sponsoredEmail;
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(orgUser.UserId!.Value).Returns(user);
@@ -59,8 +46,32 @@ public class CreateSponsorshipHandlerTests : FamiliesForEnterpriseTestsBase
             .CreateAsync(null!);
     }
 
+    public static readonly OrganizationUserStatusType[] _unconfirmedOrganizationUserStatusTypes = Enum
+        .GetValues<OrganizationUserStatusType>()
+        .Where(x => x != OrganizationUserStatusType.Confirmed).ToArray();
+
+    [Theory, BitMemberAutoData(nameof(_unconfirmedOrganizationUserStatusTypes))]
+    public async Task HandleAsync_UnconfirmedSponsoringMember_ThrowsBadRequest(
+        OrganizationUserStatusType sponsoringMemberStatus, Organization sponsoringOrg,
+        OrganizationUser sponsoringOrgUser, string sponsoredEmail, User user, string friendlyName,
+        SutProvider<CreateSponsorshipHandler> sutProvider)
+    {
+        sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
+        sponsoringOrgUser.Status = sponsoringMemberStatus;
+
+        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId!.Value).Returns(user);
+
+
+        var request = new CreateSponsorshipRequest(sponsoringOrg, sponsoringOrgUser,
+            PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, null);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.HandleAsync(request));
+
+        Assert.Contains("Only confirmed users can sponsor other organizations.", exception.Message);
+    }
+
     [Theory, BitMemberAutoData(nameof(NonEnterprisePlanTypes))]
-    public async Task CreateSponsorship_BadSponsoringOrgPlan_ThrowsBadRequest(PlanType sponsoringOrgPlan,
+    public async Task HandleAsync_BadSponsoringOrgPlan_ThrowsBadRequest(PlanType sponsoringOrgPlan,
         Organization org, OrganizationUser orgUser, User user, SutProvider<CreateSponsorshipHandler> sutProvider)
     {
         org.PlanType = sponsoringOrgPlan;
@@ -79,7 +90,7 @@ public class CreateSponsorshipHandlerTests : FamiliesForEnterpriseTestsBase
 
     [Theory]
     [BitMemberAutoData(nameof(NonConfirmedOrganizationUsersStatuses))]
-    public async Task CreateSponsorship_BadSponsoringUserStatus_ThrowsBadRequest(
+    public async Task HandleAsync_BadSponsoringUserStatus_ThrowsBadRequest(
         OrganizationUserStatusType statusType, Organization org, OrganizationUser orgUser, User user,
         SutProvider<CreateSponsorshipHandler> sutProvider)
     {
@@ -100,7 +111,7 @@ public class CreateSponsorshipHandlerTests : FamiliesForEnterpriseTestsBase
     [Theory]
     [OrganizationSponsorshipCustomize]
     [BitAutoData]
-    public async Task CreateSponsorship_AlreadySponsoring_Throws(Organization org,
+    public async Task HandleAsync_AlreadySponsoring_Throws(Organization org,
         OrganizationUser orgUser, User user, OrganizationSponsorship sponsorship,
         SutProvider<CreateSponsorshipHandler> sutProvider)
     {
@@ -123,7 +134,7 @@ public class CreateSponsorshipHandlerTests : FamiliesForEnterpriseTestsBase
 
     [Theory]
     [BitAutoData]
-    public async Task CreateSponsorship_ReturnsExpectedSponsorship(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, User user,
+    public async Task HandleAsync_ReturnsExpectedSponsorship(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, User user,
         string sponsoredEmail, string friendlyName, SutProvider<CreateSponsorshipHandler> sutProvider)
     {
         sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
@@ -148,12 +159,6 @@ public class CreateSponsorshipHandlerTests : FamiliesForEnterpriseTestsBase
             Notes = null
         };
 
-        Assert.Equal(expectedSponsorship.SponsoringOrganizationId, actual.SponsoringOrganizationId);
-        Assert.Equal(expectedSponsorship.SponsoringOrganizationUserId, actual.SponsoringOrganizationUserId);
-        Assert.Equal(expectedSponsorship.FriendlyName, actual.FriendlyName);
-        Assert.Equal(expectedSponsorship.OfferedToEmail, actual.OfferedToEmail);
-        Assert.Equal(expectedSponsorship.PlanSponsorshipType, actual.PlanSponsorshipType);
-        Assert.Equal(expectedSponsorship.IsAdminInitiated, actual.IsAdminInitiated);
-        Assert.Equal(expectedSponsorship.Notes, actual.Notes);
+        AssertHelper.AssertPropertyEqual(expectedSponsorship, actual);
     }
 }
