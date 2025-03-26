@@ -10,6 +10,7 @@ BEGIN
         [RequestDeviceIdentifier] = ARI.[RequestDeviceIdentifier],
         [RequestDeviceType] = ARI.[RequestDeviceType],
         [RequestIpAddress] = ARI.[RequestIpAddress],
+        [RequestCountryName] = ARI.[RequestCountryName],
         [ResponseDeviceId] = ARI.[ResponseDeviceId],
         [AccessCode] = ARI.[AccessCode],
         [PublicKey] = ARI.[PublicKey],
@@ -22,7 +23,7 @@ BEGIN
         [OrganizationId] = ARI.[OrganizationId]
     FROM
         [dbo].[AuthRequest] AR
-    INNER JOIN
+        INNER JOIN
         OPENJSON(@jsonData)
         WITH (
             Id UNIQUEIDENTIFIER '$.Id',
@@ -31,6 +32,7 @@ BEGIN
             RequestDeviceIdentifier NVARCHAR(50) '$.RequestDeviceIdentifier',
             RequestDeviceType SMALLINT '$.RequestDeviceType',
             RequestIpAddress VARCHAR(50) '$.RequestIpAddress',
+            RequestCountryName NVARCHAR(200) '$.RequestCountryName',
             ResponseDeviceId UNIQUEIDENTIFIER '$.ResponseDeviceId',
             AccessCode VARCHAR(25) '$.AccessCode',
             PublicKey VARCHAR(MAX) '$.PublicKey',

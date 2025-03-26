@@ -79,7 +79,8 @@ public class ImportCiphersControllerTests
             .ImportIntoIndividualVaultAsync(
             Arg.Any<List<Folder>>(),
             Arg.Any<List<CipherDetails>>(),
-            Arg.Any<IEnumerable<KeyValuePair<int, int>>>()
+            Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
+            user.Id
             );
     }
 

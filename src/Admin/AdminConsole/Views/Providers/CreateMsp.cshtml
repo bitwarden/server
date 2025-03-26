@@ -1,3 +1,4 @@
+@using Bit.Core.Billing.Constants
 @model CreateMspProviderModel
 
 @{
@@ -11,6 +12,19 @@
         <div class="mb-3">
             <label asp-for="OwnerEmail" class="form-label"></label>
             <input type="text" class="form-control" asp-for="OwnerEmail">
+        </div>
+        <div class="mb-3">
+            @{
+                var selectList = new List<SelectListItem>
+                {
+                    new ("No discount", string.Empty, true),
+                    new ("20% - Open", StripeConstants.CouponIDs.MSPDiscounts.Open),
+                    new ("35% - Silver", StripeConstants.CouponIDs.MSPDiscounts.Silver),
+                    new ("50% - Gold", StripeConstants.CouponIDs.MSPDiscounts.Gold)
+                };
+            }
+            <label asp-for="DiscountId" class="form-label"></label>
+            <select class="form-select" asp-for="DiscountId" asp-items="selectList"></select>
         </div>
         <div class="row">
             <div class="col-sm">

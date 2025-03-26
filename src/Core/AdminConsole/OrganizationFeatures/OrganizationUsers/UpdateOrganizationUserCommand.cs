@@ -117,7 +117,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
-        if (collectionAccessList?.Count > 0)
+        if (collectionAccessList.Count > 0)
         {
             var invalidAssociations = collectionAccessList.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
             if (invalidAssociations.Any())

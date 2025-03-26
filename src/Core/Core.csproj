@@ -4,7 +4,7 @@
     <GenerateUserSecretsAttribute>false</GenerateUserSecretsAttribute>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
     <!-- Temp exclusions until warnings are fixed -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS1570;CS1574;CS8602;CS9113;CS1998;CS8604</WarningsNotAsErrors>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS1570;CS1574;CS9113;CS1998</WarningsNotAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -36,7 +36,7 @@
     <PackageReference Include="DnsClient" Version="1.8.0" />
     <PackageReference Include="Fido2.AspNet" Version="3.0.1" />
     <PackageReference Include="Handlebars.Net" Version="2.1.6" />
-    <PackageReference Include="MailKit" Version="4.10.0" />
+    <PackageReference Include="MailKit" Version="4.11.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.46.1" />
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="4.2.0" />

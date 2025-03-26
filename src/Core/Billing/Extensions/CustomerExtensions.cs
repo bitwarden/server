@@ -22,4 +22,9 @@ public static class CustomerExtensions
     /// <returns></returns>
     public static bool HasTaxLocationVerified(this Customer customer) =>
         customer?.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
+
+    public static decimal GetBillingBalance(this Customer customer)
+    {
+        return customer != null ? customer.Balance / 100M : default;
+    }
 }

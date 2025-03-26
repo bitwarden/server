@@ -16,7 +16,8 @@ public record ProviderSubscriptionResponse(
     TaxInformation TaxInformation,
     DateTime? CancelAt,
     SubscriptionSuspension Suspension,
-    ProviderType ProviderType)
+    ProviderType ProviderType,
+    PaymentSource PaymentSource)
 {
     private const string _annualCadence = "Annual";
     private const string _monthlyCadence = "Monthly";
@@ -26,7 +27,8 @@ public record ProviderSubscriptionResponse(
         ICollection<ConfiguredProviderPlan> providerPlans,
         TaxInformation taxInformation,
         SubscriptionSuspension subscriptionSuspension,
-        Provider provider)
+        Provider provider,
+        PaymentSource paymentSource)
     {
         var providerPlanResponses = providerPlans
             .Select(providerPlan =>
@@ -57,7 +59,8 @@ public record ProviderSubscriptionResponse(
             taxInformation,
             subscription.CancelAt,
             subscriptionSuspension,
-            provider.Type);
+            provider.Type,
+            paymentSource);
     }
 }
 

@@ -732,18 +732,6 @@ public class ProviderBillingServiceTests
     #region SetupCustomer
 
     [Theory, BitAutoData]
-    public async Task SetupCustomer_NullProvider_ThrowsArgumentNullException(
-        SutProvider<ProviderBillingService> sutProvider,
-        TaxInfo taxInfo) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.SetupCustomer(null, taxInfo));
-
-    [Theory, BitAutoData]
-    public async Task SetupCustomer_NullTaxInfo_ThrowsArgumentNullException(
-        SutProvider<ProviderBillingService> sutProvider,
-        Provider provider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.SetupCustomer(provider, null));
-
-    [Theory, BitAutoData]
     public async Task SetupCustomer_MissingCountry_ContactSupport(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider,

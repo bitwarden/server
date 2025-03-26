@@ -158,21 +158,4 @@ public static class StaticStore
 
     public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
         SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);
-
-    /// <summary>
-    /// Determines if the stripe plan id is an addon item by checking if the provided stripe plan id
-    /// matches either the <see cref="Plan.PasswordManagerPlanFeatures.StripeStoragePlanId"/> or <see cref="Plan.SecretsManagerPlanFeatures.StripeServiceAccountPlanId"/>
-    /// in any <see cref="Plans"/>.
-    /// </summary>
-    /// <param name="stripePlanId"></param>
-    /// <returns>
-    /// True if the stripePlanId is a addon product, false otherwise
-    /// </returns>
-    public static bool IsAddonSubscriptionItem(string stripePlanId)
-    {
-        // TODO: PRICING -> https://bitwarden.atlassian.net/browse/PM-16844
-        return Plans.Any(p =>
-                p.PasswordManager.StripeStoragePlanId == stripePlanId ||
-                (p.SecretsManager?.StripeServiceAccountPlanId == stripePlanId));
-    }
 }
