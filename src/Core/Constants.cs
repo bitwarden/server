@@ -109,6 +109,7 @@ public static class FeatureFlagKeys
     public const string ShortcutDuplicatePatchRequests = "pm-16812-shortcut-duplicate-patch-requests";
     public const string PushSyncOrgKeysOnRevokeRestore = "pm-17168-push-sync-org-keys-on-revoke-restore";
     public const string PolicyRequirements = "pm-14439-policy-requirements";
+    public const string SsoExternalIdVisibility = "pm-18630-sso-external-id-visibility";
 
     /* Tools Team */
     public const string ItemShare = "item-share";
