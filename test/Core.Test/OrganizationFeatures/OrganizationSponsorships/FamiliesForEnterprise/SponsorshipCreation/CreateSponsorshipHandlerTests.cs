@@ -46,11 +46,11 @@ public class CreateSponsorshipHandlerTests : FamiliesForEnterpriseTestsBase
             .CreateAsync(null!);
     }
 
-    public static readonly OrganizationUserStatusType[] _unconfirmedOrganizationUserStatusTypes = Enum
+    public static readonly OrganizationUserStatusType[] UnconfirmedOrganizationUserStatusTypes = Enum
         .GetValues<OrganizationUserStatusType>()
         .Where(x => x != OrganizationUserStatusType.Confirmed).ToArray();
 
-    [Theory, BitMemberAutoData(nameof(_unconfirmedOrganizationUserStatusTypes))]
+    [Theory, BitMemberAutoData(nameof(UnconfirmedOrganizationUserStatusTypes))]
     public async Task HandleAsync_UnconfirmedSponsoringMember_ThrowsBadRequest(
         OrganizationUserStatusType sponsoringMemberStatus, Organization sponsoringOrg,
         OrganizationUser sponsoringOrgUser, string sponsoredEmail, User user, string friendlyName,
