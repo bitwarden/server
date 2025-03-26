@@ -35,6 +35,7 @@ namespace Bit.Api.AdminConsole.Controllers;
 
 [Route("organizations/{orgId}/users")]
 [Authorize("Application")]
+[Authorize<MemberOrProviderRequirement>]
 public class OrganizationUsersController : Controller
 {
     private readonly IOrganizationRepository _organizationRepository;
@@ -137,7 +138,7 @@ public class OrganizationUsersController : Controller
         return response;
     }
 
-    [Authorize<OrganizationMemberRequirement>]
+    [Authorize<MemberOrProviderRequirement>]
     [HttpGet("mini-details")]
     public async Task<ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>> GetMiniDetails(Guid orgId)
     {
