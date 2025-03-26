@@ -21,6 +21,7 @@ public class OrganizationSponsorship : ITableObject<Guid>
     public DateTime? ValidUntil { get; set; }
     public bool ToDelete { get; set; }
     public bool IsAdminInitiated { get; set; }
+    public string? Notes { get; set; }
 
     public void SetNewId()
     {

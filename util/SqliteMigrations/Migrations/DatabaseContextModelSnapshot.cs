@@ -1247,6 +1247,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime?>("LastSyncDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("OfferedToEmail")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");

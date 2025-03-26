@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations;
+namespace Bit.SqliteMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class PM17830_AdminInitiatedSponsorships : Migration
@@ -13,14 +13,20 @@ public partial class PM17830_AdminInitiatedSponsorships : Migration
         migrationBuilder.AddColumn<bool>(
             name: "IsAdminInitiated",
             table: "OrganizationSponsorship",
-            type: "tinyint(1)",
+            type: "INTEGER",
             nullable: false,
             defaultValue: false);
+
+        migrationBuilder.AddColumn<string>(
+            name: "Notes",
+            table: "OrganizationSponsorship",
+            type: "TEXT",
+            nullable: true);
 
         migrationBuilder.AddColumn<bool>(
             name: "UseAdminSponsoredFamilies",
             table: "Organization",
-            type: "tinyint(1)",
+            type: "INTEGER",
             nullable: false,
             defaultValue: false);
     }
@@ -30,6 +36,10 @@ public partial class PM17830_AdminInitiatedSponsorships : Migration
     {
         migrationBuilder.DropColumn(
             name: "IsAdminInitiated",
+            table: "OrganizationSponsorship");
+
+        migrationBuilder.DropColumn(
+            name: "Notes",
             table: "OrganizationSponsorship");
 
         migrationBuilder.DropColumn(

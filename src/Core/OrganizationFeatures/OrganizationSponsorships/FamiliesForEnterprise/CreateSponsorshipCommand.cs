@@ -28,9 +28,9 @@ public class CreateSponsorshipCommand : ICreateSponsorshipCommand
     }
 
     public async Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-        PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName)
+        PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName, string notes)
     {
-        var createSponsorshipRequest = new CreateSponsorshipRequest(sponsoringOrg, sponsoringOrgUser, sponsorshipType, sponsoredEmail, friendlyName);
+        var createSponsorshipRequest = new CreateSponsorshipRequest(sponsoringOrg, sponsoringOrgUser, sponsorshipType, sponsoredEmail, friendlyName, notes);
         var sponsorship = await _createSponsorshipHandler.HandleAsync(createSponsorshipRequest);
 
         try

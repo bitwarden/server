@@ -9,7 +9,8 @@ CREATE PROCEDURE [dbo].[OrganizationSponsorship_Create]
     @ToDelete BIT,
     @LastSyncDate DATETIME2 (7),
     @ValidUntil DATETIME2 (7),
-    @IsAdminInitiated BIT
+    @IsAdminInitiated BIT,
+    @Notes NVARCHAR(512)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -26,7 +27,8 @@ BEGIN
         [ToDelete],
         [LastSyncDate],
         [ValidUntil],
-        [IsAdminInitiated]
+        [IsAdminInitiated],
+        [Notes]
     )
     VALUES
     (
@@ -40,7 +42,8 @@ BEGIN
         @ToDelete,
         @LastSyncDate,
         @ValidUntil,
-        @IsAdminInitiated
+        @IsAdminInitiated,
+        @Notes
     )
 END
 GO

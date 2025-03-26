@@ -364,7 +364,8 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_Update]
     @ToDelete BIT,
     @LastSyncDate DATETIME2 (7),
     @ValidUntil DATETIME2 (7),
-    @IsAdminInitiated BIT
+    @IsAdminInitiated BIT,
+    @Notes NVARCHAR(512)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -381,7 +382,8 @@ SET
     [ToDelete] = @ToDelete,
     [LastSyncDate] = @LastSyncDate,
     [ValidUntil] = @ValidUntil,
-    [IsAdminInitiated] = @IsAdminInitiated
+    [IsAdminInitiated] = @IsAdminInitiated,
+    [Notes] = @Notes
 WHERE
     [Id] = @Id
 END
@@ -398,7 +400,8 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_Create]
     @ToDelete BIT,
     @LastSyncDate DATETIME2 (7),
     @ValidUntil DATETIME2 (7),
-    @IsAdminInitiated BIT
+    @IsAdminInitiated BIT,
+    @Notes NVARCHAR(512)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -415,7 +418,8 @@ BEGIN
         [ToDelete],
         [LastSyncDate],
         [ValidUntil],
-        [IsAdminInitiated]
+        [IsAdminInitiated],
+        [Notes]
     )
     VALUES
     (
@@ -429,7 +433,8 @@ BEGIN
         @ToDelete,
         @LastSyncDate,
         @ValidUntil,
-        @IsAdminInitiated
+        @IsAdminInitiated,
+        @Notes
     )
 END
 GO;
@@ -449,7 +454,8 @@ CREATE TYPE [dbo].[OrganizationSponsorshipType] AS TABLE(
     [LastSyncDate] DATETIME2(7),
     [ValidUntil] DATETIME2(7),
     [ToDelete] BIT,
-    [IsAdminInitiated] BIT
+    [IsAdminInitiated] BIT,
+    [Notes] NVARCHAR(512)
 );
 GO;
 
@@ -471,7 +477,8 @@ BEGIN
         [ToDelete],
         [LastSyncDate],
         [ValidUntil],
-        [IsAdminInitiated]
+        [IsAdminInitiated],
+        [Notes]
     )
 SELECT
     OS.[Id],
@@ -484,7 +491,8 @@ SELECT
     OS.[ToDelete],
     OS.[LastSyncDate],
     OS.[ValidUntil],
-    OS.[IsAdminInitiated]
+    OS.[IsAdminInitiated],
+    OS.[Notes]
 FROM
     @OrganizationSponsorshipsInput OS
 END
@@ -509,7 +517,8 @@ SET
     [ToDelete] = OSI.[ToDelete],
     [LastSyncDate] = OSI.[LastSyncDate],
     [ValidUntil] = OSI.[ValidUntil],
-    [IsAdminInitiated] = OSI.[IsAdminInitiated]
+    [IsAdminInitiated] = OSI.[IsAdminInitiated],
+    [Notes] = OSI.[Notes]
 FROM
     [dbo].[OrganizationSponsorship] OS
     INNER JOIN

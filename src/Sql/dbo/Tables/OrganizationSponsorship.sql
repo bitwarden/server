@@ -10,6 +10,7 @@ CREATE TABLE [dbo].[OrganizationSponsorship] (
     [LastSyncDate]                  DATETIME2 (7)    NULL,
     [ValidUntil]                    DATETIME2 (7)    NULL,
     [IsAdminInitiated]              BIT              NOT NULL CONSTRAINT [DF_OrganizationSponsorship_IsAdminInitiated] DEFAULT (0),
+    [Notes]                         NVARCHAR(512)    NULL,
     CONSTRAINT [PK_OrganizationSponsorship] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationSponsorship_SponsoringOrg] FOREIGN KEY ([SponsoringOrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
     CONSTRAINT [FK_OrganizationSponsorship_SponsoredOrg] FOREIGN KEY ([SponsoredOrganizationId]) REFERENCES [dbo].[Organization] ([Id]),

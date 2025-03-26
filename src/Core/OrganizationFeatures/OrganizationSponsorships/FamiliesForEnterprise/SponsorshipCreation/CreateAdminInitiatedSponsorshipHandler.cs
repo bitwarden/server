@@ -40,6 +40,7 @@ public class CreateAdminInitiatedSponsorshipHandler(
         var sponsorship = await base.HandleAsync(request) ?? new OrganizationSponsorship();
 
         sponsorship.IsAdminInitiated = isAdminInitiated;
+        sponsorship.Notes = request.Notes;
 
         return sponsorship;
     }

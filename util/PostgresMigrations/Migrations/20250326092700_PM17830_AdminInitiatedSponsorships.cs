@@ -17,6 +17,12 @@ public partial class PM17830_AdminInitiatedSponsorships : Migration
             nullable: false,
             defaultValue: false);
 
+        migrationBuilder.AddColumn<string>(
+            name: "Notes",
+            table: "OrganizationSponsorship",
+            type: "text",
+            nullable: true);
+
         migrationBuilder.AddColumn<bool>(
             name: "UseAdminSponsoredFamilies",
             table: "Organization",
@@ -30,6 +36,10 @@ public partial class PM17830_AdminInitiatedSponsorships : Migration
     {
         migrationBuilder.DropColumn(
             name: "IsAdminInitiated",
+            table: "OrganizationSponsorship");
+
+        migrationBuilder.DropColumn(
+            name: "Notes",
             table: "OrganizationSponsorship");
 
         migrationBuilder.DropColumn(

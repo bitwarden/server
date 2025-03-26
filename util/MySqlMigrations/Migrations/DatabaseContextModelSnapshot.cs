@@ -1258,6 +1258,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime?>("LastSyncDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("Notes")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("OfferedToEmail")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");

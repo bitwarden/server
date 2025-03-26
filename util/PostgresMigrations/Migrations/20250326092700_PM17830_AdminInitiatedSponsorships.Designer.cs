@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250312084357_PM17830_AdminInitiatedSponsorships")]
+    [Migration("20250326092700_PM17830_AdminInitiatedSponsorships")]
     partial class PM17830_AdminInitiatedSponsorships
     {
         /// <inheritdoc />
@@ -1265,6 +1265,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<DateTime?>("LastSyncDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
 
                     b.Property<string>("OfferedToEmail")
                         .HasMaxLength(256)

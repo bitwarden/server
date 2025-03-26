@@ -81,7 +81,10 @@ public class OrganizationSponsorshipsController : Controller
         var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
             sponsoringOrg,
             await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, targetUser),
-            model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
+            model.PlanSponsorshipType,
+            model.SponsoredEmail,
+            model.FriendlyName,
+            model.Notes);
         await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
     }
 

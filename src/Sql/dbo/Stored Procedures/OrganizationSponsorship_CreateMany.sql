@@ -16,7 +16,8 @@ BEGIN
         [ToDelete],
         [LastSyncDate],
         [ValidUntil],
-        [IsAdminInitiated]
+        [IsAdminInitiated],
+        [Notes]
     )
     SELECT
         OS.[Id],
@@ -29,7 +30,8 @@ BEGIN
         OS.[ToDelete],
         OS.[LastSyncDate],
         OS.[ValidUntil],
-        OS.[IsAdminInitiated]
+        OS.[IsAdminInitiated],
+        OS.[Notes]
     FROM
         @OrganizationSponsorshipsInput OS
 END

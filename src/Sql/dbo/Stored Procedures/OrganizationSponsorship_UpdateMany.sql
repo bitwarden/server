@@ -17,7 +17,8 @@ BEGIN
         [ToDelete] = OSI.[ToDelete],
         [LastSyncDate] = OSI.[LastSyncDate],
         [ValidUntil] = OSI.[ValidUntil],
-        [IsAdminInitiated] = OSI.[IsAdminInitiated]
+        [IsAdminInitiated] = OSI.[IsAdminInitiated],
+        [Notes] = OSI.[Notes]
     FROM
         [dbo].[OrganizationSponsorship] OS
     INNER JOIN

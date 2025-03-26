@@ -9,4 +9,5 @@ public record CreateSponsorshipRequest(
     OrganizationUser SponsoringMember,
     PlanSponsorshipType SponsorshipType,
     string SponsoredEmail,
-    string FriendlyName);
+    string FriendlyName,
+    string Notes);

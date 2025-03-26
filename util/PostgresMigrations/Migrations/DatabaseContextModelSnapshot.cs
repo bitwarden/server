@@ -1263,6 +1263,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime?>("LastSyncDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
                     b.Property<string>("OfferedToEmail")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
