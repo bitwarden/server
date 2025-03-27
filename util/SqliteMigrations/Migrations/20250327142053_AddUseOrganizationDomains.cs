@@ -2,28 +2,27 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations
+namespace Bit.SqliteMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class AddUseOrganizationDomains : Migration
 {
     /// <inheritdoc />
-    public partial class AddUseOrganizationDomains : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<bool>(
-                name: "UseOrganizationDomains",
-                table: "Organization",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: false);
-        }
+        migrationBuilder.AddColumn<bool>(
+            name: "UseOrganizationDomains",
+            table: "Organization",
+            type: "INTEGER",
+            nullable: false,
+            defaultValue: false);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "UseOrganizationDomains",
-                table: "Organization");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "UseOrganizationDomains",
+            table: "Organization");
     }
 }

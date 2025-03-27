@@ -2,28 +2,27 @@
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations
+namespace Bit.PostgresMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class AddUseOrganizationDomains : Migration
 {
     /// <inheritdoc />
-    public partial class AddUseOrganizationDomains : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<bool>(
-                name: "UseOrganizationDomains",
-                table: "Organization",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
-        }
+        migrationBuilder.AddColumn<bool>(
+            name: "UseOrganizationDomains",
+            table: "Organization",
+            type: "boolean",
+            nullable: false,
+            defaultValue: false);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "UseOrganizationDomains",
-                table: "Organization");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "UseOrganizationDomains",
+            table: "Organization");
     }
 }
