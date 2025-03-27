@@ -23,7 +23,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.KeyManagement.Controllers;
 
-[Route("accounts/key-management")]
+[Route("accounts")]
 [Authorize("Application")]
 public class AccountsKeyManagementController : Controller
 {
@@ -73,7 +73,7 @@ public class AccountsKeyManagementController : Controller
         _webauthnKeyValidator = webAuthnKeyValidator;
     }
 
-    [HttpPost("regenerate-keys")]
+    [HttpPost("key-management/regenerate-keys")]
     public async Task RegenerateKeysAsync([FromBody] KeyRegenerationRequestModel request)
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.PrivateKeyRegeneration))
@@ -89,7 +89,7 @@ public class AccountsKeyManagementController : Controller
     }
 
 
-    [HttpPost("rotate-user-account-keys")]
+    [HttpPost("key-management/rotate-user-account-keys")]
     public async Task RotateUserAccountKeysAsync([FromBody] RotateUserAccountKeysAndDataRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -116,6 +116,56 @@ public class AccountsKeyManagementController : Controller
         };
 
         var result = await _rotateUserAccountKeysCommand.RotateUserAccountKeysAsync(user, dataModel);
+        if (result.Succeeded)
+        {
+            return;
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        throw new BadRequestException(ModelState);
+    }
+
+    [HttpPost("key-management/set-key-connector-key")]
+    // Backwards compatibility, to be deleted in the future
+    [HttpPost("set-key-connector-key")]
+    public async Task PostSetKeyConnectorKeyAsync([FromBody] SetKeyConnectorKeyRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _userService.SetKeyConnectorKeyAsync(model.ToUser(user), model.Key, model.OrgIdentifier);
+        if (result.Succeeded)
+        {
+            return;
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        throw new BadRequestException(ModelState);
+    }
+
+    [HttpPost("key-management/convert-to-key-connector")]
+    // Backwards compatibility, to be deleted in the future
+    [HttpPost("convert-to-key-connector")]
+    public async Task PostConvertToKeyConnectorAsync()
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _userService.ConvertToKeyConnectorAsync(user);
         if (result.Succeeded)
         {
             return;
