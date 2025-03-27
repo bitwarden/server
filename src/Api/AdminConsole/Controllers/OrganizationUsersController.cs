@@ -8,6 +8,8 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
@@ -55,8 +57,10 @@ public class OrganizationUsersController : Controller
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IDeleteManagedOrganizationUserAccountCommand _deleteManagedOrganizationUserAccountCommand;
     private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
+    private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -79,8 +83,10 @@ public class OrganizationUsersController : Controller
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IDeleteManagedOrganizationUserAccountCommand deleteManagedOrganizationUserAccountCommand,
         IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery,
+        IPolicyRequirementQuery policyRequirementQuery,
         IFeatureService featureService,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IConfirmOrganizationUserCommand confirmOrganizationUserCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -102,8 +108,10 @@ public class OrganizationUsersController : Controller
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _deleteManagedOrganizationUserAccountCommand = deleteManagedOrganizationUserAccountCommand;
         _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
+        _policyRequirementQuery = policyRequirementQuery;
         _featureService = featureService;
         _pricingClient = pricingClient;
+        _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
     }
 
     [HttpGet("{id}")]
@@ -303,7 +311,7 @@ public class OrganizationUsersController : Controller
 
         await _organizationService.InitPendingOrganization(user.Id, orgId, organizationUserId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName);
         await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
-        await _organizationService.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id);
+        await _confirmOrganizationUserCommand.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id);
     }
 
     [HttpPost("{organizationUserId}/accept")]
@@ -315,11 +323,13 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var useMasterPasswordPolicy = await ShouldHandleResetPasswordAsync(orgId);
+        var useMasterPasswordPolicy = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+        ? (await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id)).AutoEnrollEnabled(orgId)
+        : await ShouldHandleResetPasswordAsync(orgId);
 
         if (useMasterPasswordPolicy && string.IsNullOrWhiteSpace(model.ResetPasswordKey))
         {
-            throw new BadRequestException(string.Empty, "Master Password reset is required, but not provided.");
+            throw new BadRequestException("Master Password reset is required, but not provided.");
         }
 
         await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
@@ -357,7 +367,7 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        var result = await _organizationService.ConfirmUserAsync(orgGuidId, new Guid(id), model.Key, userId.Value);
+        var result = await _confirmOrganizationUserCommand.ConfirmUserAsync(orgGuidId, new Guid(id), model.Key, userId.Value);
     }
 
     [HttpPost("confirm")]
@@ -371,7 +381,7 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        var results = await _organizationService.ConfirmUsersAsync(orgGuidId, model.ToDictionary(), userId.Value);
+        var results = await _confirmOrganizationUserCommand.ConfirmUsersAsync(orgGuidId, model.ToDictionary(), userId.Value);
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
