@@ -171,7 +171,6 @@ public static class FeatureFlagKeys
     public const string AppReviewPrompt = "app-review-prompt";
     public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
     public const string PM17772_AdminInitiatedSponsorships = "pm-17772-admin-initiated-sponsorships";
-    public const string Argon2Default = "argon2-default";
     public const string UsePricingService = "use-pricing-service";
     public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
     public const string EnablePasswordManagerSyncAndroid = "enable-password-manager-sync-android";
