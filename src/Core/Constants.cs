@@ -106,9 +106,9 @@ public static class FeatureFlagKeys
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string DeviceApprovalRequestAdminNotifications = "pm-15637-device-approval-request-admin-notifications";
     public const string LimitItemDeletion = "pm-15493-restrict-item-deletion-to-can-manage-permission";
-    public const string ShortcutDuplicatePatchRequests = "pm-16812-shortcut-duplicate-patch-requests";
     public const string PushSyncOrgKeysOnRevokeRestore = "pm-17168-push-sync-org-keys-on-revoke-restore";
     public const string PolicyRequirements = "pm-14439-policy-requirements";
+    public const string SsoExternalIdVisibility = "pm-18630-sso-external-id-visibility";
 
     /* Tools Team */
     public const string ItemShare = "item-share";
@@ -129,19 +129,25 @@ public static class FeatureFlagKeys
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
 
+    /* Key Management Team */
+    public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
+    public const string SSHAgent = "ssh-agent";
+    public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
+    public const string Argon2Default = "argon2-default";
+    public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
+    public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
+    public const string UserkeyRotationV2 = "userkey-rotation-v2";
+
+    /* Unsorted */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
     public const string DuoRedirect = "duo-redirect";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string EmailVerification = "email-verification";
     public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
-    public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
-    public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
-    public const string SSHAgent = "ssh-agent";
-    public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
@@ -162,12 +168,12 @@ public static class FeatureFlagKeys
     public const string NewDeviceVerification = "new-device-verification";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string InlineMenuTotp = "inline-menu-totp";
-    public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string AppReviewPrompt = "app-review-prompt";
     public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
-    public const string Argon2Default = "argon2-default";
     public const string UsePricingService = "use-pricing-service";
     public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
+    public const string EnablePasswordManagerSyncAndroid = "enable-password-manager-sync-android";
+    public const string EnablePasswordManagerSynciOS = "enable-password-manager-sync-ios";
     public const string AccountDeprovisioningBanner = "pm-17120-account-deprovisioning-admin-console-banner";
     public const string SingleTapPasskeyCreation = "single-tap-passkey-creation";
     public const string SingleTapPasskeyAuthentication = "single-tap-passkey-authentication";
