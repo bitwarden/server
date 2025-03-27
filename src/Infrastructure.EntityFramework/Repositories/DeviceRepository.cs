@@ -100,18 +100,18 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
             var deviceUpdates = devices.ToList();
             using var scope = ServiceScopeFactory.CreateScope();
             var dbContext = GetDatabaseContext(scope);
-            var userDevicesQuery = await GetDbSet(dbContext)
+            var userDevices = await GetDbSet(dbContext)
                 .Where(device => device.UserId == userId)
                 .ToListAsync();
-            var validUserDevices = userDevicesQuery
+            var userDevicesWithUpdatesPending = userDevices
                 .Where(existingDevice => deviceUpdates.Any(updatedDevice => updatedDevice.Id == existingDevice.Id))
                 .ToList();
 
-            foreach (var existingDevice in validUserDevices)
+            foreach (var deviceToUpdate in userDevicesWithUpdatesPending)
             {
-                var deviceUpdate = deviceUpdates.First(newDevice => newDevice.Id == existingDevice.Id);
-                existingDevice.EncryptedPublicKey = deviceUpdate.EncryptedPublicKey;
-                existingDevice.EncryptedUserKey = deviceUpdate.EncryptedUserKey;
+                var deviceUpdate = deviceUpdates.First(deviceUpdate => deviceUpdate.Id == deviceToUpdate.Id);
+                deviceToUpdate.EncryptedPublicKey = deviceUpdate.EncryptedPublicKey;
+                deviceToUpdate.EncryptedUserKey = deviceUpdate.EncryptedUserKey;
             }
 
             await dbContext.SaveChangesAsync();
