@@ -11,8 +11,6 @@ namespace Bit.Api.AdminConsole.Authorization;
 /// Retrieves the Organization ID from the route and then passes it to the requirement's AuthorizeAsync callback to
 /// determine whether the action is authorized.
 /// </summary>
-/// <param name="currentContext"></param>
-/// <param name="httpContextAccessor"></param>
 public class OrganizationRequirementHandler(
     ICurrentContext currentContext,
     IProviderOrganizationContext providerOrganizationContext,

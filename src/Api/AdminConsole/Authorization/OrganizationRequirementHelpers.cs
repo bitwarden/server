@@ -12,7 +12,7 @@ public static class OrganizationRequirementHelpers
         }
 
         httpContextAccessor.HttpContext.GetRouteData().Values.TryGetValue("orgId", out var orgIdParam);
-        if (!Guid.TryParse(orgIdParam?.ToString(), out var orgId))
+        if (orgIdParam == null || !Guid.TryParse(orgIdParam.ToString(), out var orgId))
         {
             return null;
         }
