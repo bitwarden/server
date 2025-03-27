@@ -1,15 +1,15 @@
 ﻿using Bit.Core.AdminConsole.Models.Business;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.Shared.Validation;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
 
-public static class InviteUserOrganizationValidator
+public interface IInviteUserOrganizationValidator : IValidator<InviteOrganization>;
+
+public class InviteUserOrganizationValidator : IInviteUserOrganizationValidator
 {
-    public static ValidationResult<InviteOrganization> Validate(InviteOrganization inviteOrganization,
-        PasswordManagerSubscriptionUpdate subscriptionUpdate)
+    public async Task<ValidationResult<InviteOrganization>> ValidateAsync(InviteOrganization inviteOrganization)
     {
-        if (inviteOrganization.Seats is null || subscriptionUpdate.SeatsRequiredToAdd is 0)
+        if (inviteOrganization.Seats is null)
         {
             return new Valid<InviteOrganization>(inviteOrganization);
         }

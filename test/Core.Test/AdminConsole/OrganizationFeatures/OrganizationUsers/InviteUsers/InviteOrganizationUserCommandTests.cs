@@ -6,11 +6,11 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.SecretsManager;
 using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Commands;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -24,6 +24,7 @@ using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 using static Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Helpers.InviteUserOrganizationValidationRequestHelpers;
+using OrganizationUserInvite = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 
@@ -66,7 +67,7 @@ public class InviteOrganizationUserCommandTests
 
         sutProvider.GetDependency<IInviteUsersValidator>()
             .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
-            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization)));
+            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)));
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -128,7 +129,7 @@ public class InviteOrganizationUserCommandTests
 
         sutProvider.GetDependency<IInviteUsersValidator>()
             .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
-            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization)));
+            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)));
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -259,7 +260,7 @@ public class InviteOrganizationUserCommandTests
 
         sutProvider.GetDependency<IInviteUsersValidator>()
             .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
-            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization)
+            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
                 .WithPasswordManagerUpdate(new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1))));
 
         // Act
@@ -329,7 +330,7 @@ public class InviteOrganizationUserCommandTests
 
         sutProvider.GetDependency<IInviteUsersValidator>()
             .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
-            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization)
+            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
                 .WithPasswordManagerUpdate(passwordManagerUpdate)));
 
         // Act
@@ -364,6 +365,7 @@ public class InviteOrganizationUserCommandTests
         organization.Seats = 1;
         organization.SmSeats = 1;
         organization.MaxAutoscaleSeats = 2;
+        organization.MaxAutoscaleSmSeats = 2;
         ownerDetails.Type = OrganizationUserType.Owner;
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
@@ -383,11 +385,8 @@ public class InviteOrganizationUserCommandTests
             performedBy: Guid.Empty,
             timeProvider.GetUtcNow());
 
-        var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(
-            inviteOrganization,
-            organization.SmSeats.Value,
-            1,
-            organization.Seats.Value);
+        var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, inviteOrganization.Plan, true)
+            .AdjustSeats(request.Invites.Count(x => x.AccessSecretsManager));
 
         var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
@@ -397,6 +396,8 @@ public class InviteOrganizationUserCommandTests
         orgUserRepository
             .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
             .Returns([ownerDetails]);
+        orgUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(1);
+        orgUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id).Returns(1);
 
         var orgRepository = sutProvider.GetDependency<IOrganizationRepository>();
 
@@ -405,7 +406,7 @@ public class InviteOrganizationUserCommandTests
 
         sutProvider.GetDependency<IInviteUsersValidator>()
             .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
-            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization)
+            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
                 .WithSecretsManagerUpdate(secretsManagerSubscriptionUpdate)));
 
         // Act
@@ -416,7 +417,6 @@ public class InviteOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
             .Received(1)
-            .UpdateSubscriptionAsync(Arg.Is<Core.Models.Business.SecretsManagerSubscriptionUpdate>(update =>
-                update.SmSeats == secretsManagerSubscriptionUpdate.UpdatedSeatTotal));
+            .UpdateSubscriptionAsync(secretsManagerSubscriptionUpdate);
     }
 }

@@ -112,7 +112,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
             await AdjustPasswordManagerSeatsAsync(validatedRequest, organization);
 
-            await AdjustSecretsManagerSeatsAsync(validatedRequest, organization);
+            await AdjustSecretsManagerSeatsAsync(validatedRequest);
 
             await SendAdditionalEmailsAsync(validatedRequest, organization);
 
@@ -126,7 +126,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
             await organizationUserRepository.DeleteManyAsync(organizationUserToInviteEntities.Select(x => x.OrganizationUser.Id));
 
-            await RevertSecretsManagerChangesAsync(validatedRequest, organization);
+            await RevertSecretsManagerChangesAsync(validatedRequest, organization, validatedRequest.Value.InviteOrganization.SmSeats);
 
             await RevertPasswordManagerChangesAsync(validatedRequest, organization);
 
@@ -164,16 +164,19 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         }
     }
 
-    private async Task RevertSecretsManagerChangesAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult, Organization organization)
+    private async Task RevertSecretsManagerChangesAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult, Organization organization, int? initialSmSeats)
     {
-        if (validatedResult.Value.SecretsManagerSubscriptionUpdate.SeatsRequiredToAdd < 0)
+        if (validatedResult.Value.InviteOrganization.UseSecretsManager && validatedResult.Value.SecretsManagerSubscriptionUpdate.SmSeatsChanged)
         {
-            var updateRevert = new SecretsManagerSubscriptionUpdate(organization, validatedResult.Value.InviteOrganization.Plan, false)
+            var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(
+                organization: organization,
+                plan: validatedResult.Value.InviteOrganization.Plan,
+                autoscaling: false)
             {
-                SmSeats = validatedResult.Value.SecretsManagerSubscriptionUpdate.Seats
+                SmSeats = initialSmSeats
             };
 
-            await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(updateRevert);
+            await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdateRevert);
         }
     }
 
@@ -234,17 +237,14 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             .Select(u => u.Email).Distinct();
     }
 
-    private async Task AdjustSecretsManagerSeatsAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult, Organization organization)
+    private async Task AdjustSecretsManagerSeatsAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult)
     {
-        if (validatedResult.Value.SecretsManagerSubscriptionUpdate.SeatsRequiredToAdd <= 0)
+        if (validatedResult.Value.SecretsManagerSubscriptionUpdate?.SmSeatsChanged is not true)
         {
             return;
         }
 
-        var subscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, validatedResult.Value.InviteOrganization.Plan, true)
-            .AdjustSeats(validatedResult.Value.SecretsManagerSubscriptionUpdate.SeatsRequiredToAdd);
-
-        await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(subscriptionUpdate);
+        await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(validatedResult.Value.SecretsManagerSubscriptionUpdate);
     }
 
     private async Task AdjustPasswordManagerSeatsAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult, Organization organization)

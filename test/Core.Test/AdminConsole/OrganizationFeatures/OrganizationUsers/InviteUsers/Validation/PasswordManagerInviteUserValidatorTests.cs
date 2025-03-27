@@ -4,17 +4,20 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.V
 using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.StaticStore.Plans;
+using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 
 
+[SutProviderCustomize]
 public class PasswordManagerInviteUserValidatorTests
 {
     [Theory]
     [BitAutoData]
-    public void Validate_OrganizationDoesNotHaveSeatsLimit_ShouldReturnValidResult(Organization organization)
+    public async Task Validate_OrganizationDoesNotHaveSeatsLimit_ShouldReturnValidResult(Organization organization,
+        SutProvider<PasswordManagerInviteUserValidator> sutProvider)
     {
         organization.Seats = null;
 
@@ -22,14 +25,15 @@ public class PasswordManagerInviteUserValidatorTests
 
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
 
-        var result = PasswordManagerInviteUserValidator.Validate(subscriptionUpdate);
+        var result = await sutProvider.Sut.ValidateAsync(subscriptionUpdate);
 
         Assert.IsType<Valid<PasswordManagerSubscriptionUpdate>>(result);
     }
 
     [Theory]
     [BitAutoData]
-    public void Validate_NumberOfSeatsToAddMatchesSeatsAvailable_ShouldReturnValidResult(Organization organization)
+    public async Task Validate_NumberOfSeatsToAddMatchesSeatsAvailable_ShouldReturnValidResult(Organization organization,
+        SutProvider<PasswordManagerInviteUserValidator> sutProvider)
     {
         organization.Seats = 8;
         organization.PlanType = PlanType.EnterpriseAnnually;
@@ -40,14 +44,15 @@ public class PasswordManagerInviteUserValidatorTests
 
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, seatsOccupiedByUsers, additionalSeats);
 
-        var result = PasswordManagerInviteUserValidator.Validate(subscriptionUpdate);
+        var result = await sutProvider.Sut.ValidateAsync(subscriptionUpdate);
 
         Assert.IsType<Valid<PasswordManagerSubscriptionUpdate>>(result);
     }
 
     [Theory]
     [BitAutoData]
-    public void Validate_NumberOfSeatsToAddIsGreaterThanMaxSeatsAllowed_ShouldBeInvalidWithSeatLimitMessage(Organization organization)
+    public async Task Validate_NumberOfSeatsToAddIsGreaterThanMaxSeatsAllowed_ShouldBeInvalidWithSeatLimitMessage(Organization organization,
+        SutProvider<PasswordManagerInviteUserValidator> sutProvider)
     {
         organization.Seats = 4;
         organization.MaxAutoscaleSeats = 4;
@@ -59,7 +64,7 @@ public class PasswordManagerInviteUserValidatorTests
 
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, seatsOccupiedByUsers, additionalSeats);
 
-        var result = PasswordManagerInviteUserValidator.Validate(subscriptionUpdate);
+        var result = await sutProvider.Sut.ValidateAsync(subscriptionUpdate);
 
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
         Assert.Equal(PasswordManagerSeatLimitHasBeenReachedError.Code, (result as Invalid<PasswordManagerSubscriptionUpdate>)!.ErrorMessageString);
@@ -67,7 +72,8 @@ public class PasswordManagerInviteUserValidatorTests
 
     [Theory]
     [BitAutoData]
-    public void Validate_GivenThePlanDoesNotAllowAdditionalSeats_ShouldBeInvalidMessageOfPlanNotAllowingSeats(Organization organization)
+    public async Task Validate_GivenThePlanDoesNotAllowAdditionalSeats_ShouldBeInvalidMessageOfPlanNotAllowingSeats(Organization organization,
+        SutProvider<PasswordManagerInviteUserValidator> sutProvider)
     {
         organization.Seats = 8;
         organization.MaxAutoscaleSeats = 9;
@@ -79,7 +85,7 @@ public class PasswordManagerInviteUserValidatorTests
 
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, seatsOccupiedByUsers, additionalSeats);
 
-        var result = PasswordManagerInviteUserValidator.Validate(subscriptionUpdate);
+        var result = await sutProvider.Sut.ValidateAsync(subscriptionUpdate);
 
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
         Assert.Equal(PasswordManagerPlanDoesNotAllowAdditionalSeatsError.Code, (result as Invalid<PasswordManagerSubscriptionUpdate>)!.ErrorMessageString);

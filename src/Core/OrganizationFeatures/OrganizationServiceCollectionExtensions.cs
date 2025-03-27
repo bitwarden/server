@@ -15,6 +15,9 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.GlobalSettings;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationCollections;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
@@ -175,8 +178,12 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IHasConfirmedOwnersExceptQuery, HasConfirmedOwnersExceptQuery>();
 
         services.AddScoped<IInviteOrganizationUsersCommand, InviteOrganizationUsersCommand>();
-        services.AddScoped<IInviteUsersValidator, InviteUsersValidator>();
         services.AddScoped<ISendOrganizationInvitesCommand, SendOrganizationInvitesCommand>();
+
+        services.AddScoped<IInviteUsersValidator, InviteUsersValidator>();
+        services.AddScoped<IInviteUserOrganizationValidator, InviteUserOrganizationValidator>();
+        services.AddScoped<IPasswordManagerInviteUserValidator, PasswordManagerInviteUserValidator>();
+        services.AddScoped<IEnvironmentValidator, EnvironmentValidator>();
     }
 
     // TODO: move to OrganizationSubscriptionServiceCollectionExtensions when OrganizationUser methods are moved out of

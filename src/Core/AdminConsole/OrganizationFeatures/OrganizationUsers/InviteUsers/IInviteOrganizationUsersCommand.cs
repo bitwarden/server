@@ -18,6 +18,5 @@ public interface IInviteOrganizationUsersCommand
     /// Contains the details for inviting a single organization user via email.
     /// </param>
     /// <returns>Response from InviteScimOrganiation<see cref="ScimInviteOrganizationUsersResponse"/></returns>
-    Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(
-        InviteOrganizationUsersRequest request);
+    Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(InviteOrganizationUsersRequest request);
 }

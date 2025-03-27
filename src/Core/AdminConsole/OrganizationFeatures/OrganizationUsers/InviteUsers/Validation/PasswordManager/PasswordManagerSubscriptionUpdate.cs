@@ -32,7 +32,7 @@ public class PasswordManagerSubscriptionUpdate
     public int? AvailableSeats => Seats - OccupiedSeats;
 
     /// <summary>
-    /// Number of seats to scale the organization to.
+    /// Number of seats to scale the organization by.
     ///
     /// If Organization has no seat limit (Seats is null), then there are no new seats to add.
     /// </summary>
@@ -50,17 +50,21 @@ public class PasswordManagerSubscriptionUpdate
 
     public Plan.PasswordManagerPlanFeatures PasswordManagerPlan { get; }
 
+    public InviteOrganization InviteOrganization { get; }
+
     private PasswordManagerSubscriptionUpdate(int? organizationSeats,
         int? organizationAutoScaleSeatLimit,
         int currentSeats,
         int newUsersToAdd,
-        Plan.PasswordManagerPlanFeatures plan)
+        Plan.PasswordManagerPlanFeatures plan,
+        InviteOrganization inviteOrganization)
     {
         Seats = organizationSeats;
         MaxAutoScaleSeats = organizationAutoScaleSeatLimit;
         OccupiedSeats = currentSeats;
         NewUsersToAdd = newUsersToAdd;
         PasswordManagerPlan = plan;
+        InviteOrganization = inviteOrganization;
     }
 
     public PasswordManagerSubscriptionUpdate(InviteOrganization inviteOrganization, int occupiedSeats, int newUsersToAdd) :
@@ -69,7 +73,8 @@ public class PasswordManagerSubscriptionUpdate
             organizationAutoScaleSeatLimit: inviteOrganization.MaxAutoScaleSeats,
             currentSeats: occupiedSeats,
             newUsersToAdd: newUsersToAdd,
-            plan: inviteOrganization.Plan.PasswordManager)
+            plan: inviteOrganization.Plan.PasswordManager,
+            inviteOrganization: inviteOrganization)
     { }
 
     public PasswordManagerSubscriptionUpdate(InviteUserOrganizationValidationRequest validationRequest) :
@@ -78,6 +83,7 @@ public class PasswordManagerSubscriptionUpdate
             organizationAutoScaleSeatLimit: validationRequest.InviteOrganization.MaxAutoScaleSeats,
             currentSeats: validationRequest.OccupiedPmSeats,
             newUsersToAdd: validationRequest.Invites.Length,
-            plan: validationRequest.InviteOrganization.Plan.PasswordManager)
+            plan: validationRequest.InviteOrganization.Plan.PasswordManager,
+            inviteOrganization: validationRequest.InviteOrganization)
     { }
 }
