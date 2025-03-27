@@ -1,7 +1,7 @@
-﻿using Bit.Api.Tools.Authorization;
+﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.Tools.Authorization;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
-using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;

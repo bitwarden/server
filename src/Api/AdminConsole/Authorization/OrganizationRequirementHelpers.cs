@@ -1,9 +1,6 @@
 ﻿#nullable enable
 
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
-
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
+namespace Bit.Api.AdminConsole.Authorization;
 
 public static class OrganizationRequirementHelpers
 {

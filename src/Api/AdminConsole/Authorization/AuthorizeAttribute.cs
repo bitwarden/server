@@ -2,7 +2,7 @@
 
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
+namespace Bit.Api.AdminConsole.Authorization;
 
 /// <summary>
 /// An attribute which requires authorization using the specified requirement.

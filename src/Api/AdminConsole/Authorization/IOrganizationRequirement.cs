@@ -1,9 +1,10 @@
 ﻿#nullable enable
 
+using Bit.Api.AdminConsole.Context;
 using Bit.Core.Context;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
+namespace Bit.Api.AdminConsole.Authorization;
 
 /// <summary>
 /// A requirement that implements this interface will be handled by <see cref="OrganizationRequirementHandler"/>,
@@ -13,6 +14,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 /// </summary>
 public interface IOrganizationRequirement : IAuthorizationRequirement
 {
-    // TODO: avoid injecting all of ICurrentContext?
-    public Task<bool> AuthorizeAsync(Guid organizationId, CurrentContextOrganization? organizationClaims, ICurrentContext currentContext);
+    public Task<bool> AuthorizeAsync(
+        Guid organizationId,
+        CurrentContextOrganization? organizationClaims,
+        IProviderOrganizationContext providerOrganizationContext);
 }

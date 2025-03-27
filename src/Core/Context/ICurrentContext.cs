@@ -22,6 +22,7 @@ public interface ICurrentContext
     string IpAddress { get; set; }
     string CountryName { get; set; }
     List<CurrentContextOrganization> Organizations { get; set; }
+    List<CurrentContextProvider> Providers { get; set; }
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }
     IdentityClientType IdentityClientType { get; set; }
@@ -59,6 +60,7 @@ public interface ICurrentContext
     Task<bool> EditSubscription(Guid orgId);
     Task<bool> EditPaymentMethods(Guid orgId);
     Task<bool> ViewBillingHistory(Guid orgId);
+    [Obsolete("Use IProviderOrganizationContext.ProviderUserForOrgAsync instead.")]
     Task<bool> ProviderUserForOrgAsync(Guid orgId);
     bool ProviderProviderAdmin(Guid providerId);
     bool ProviderUser(Guid providerId);

@@ -1,10 +1,10 @@
 ﻿#nullable enable
 
+using Bit.Api.AdminConsole.Context;
 using Bit.Core.Context;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
+namespace Bit.Api.AdminConsole.Authorization;
 
 /// <summary>
 /// Handles any requirement that implements <see cref="IOrganizationRequirement"/>.
@@ -13,7 +13,10 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 /// </summary>
 /// <param name="currentContext"></param>
 /// <param name="httpContextAccessor"></param>
-public class OrganizationRequirementHandler(ICurrentContext currentContext, IHttpContextAccessor httpContextAccessor)
+public class OrganizationRequirementHandler(
+    ICurrentContext currentContext,
+    IProviderOrganizationContext providerOrganizationContext,
+    IHttpContextAccessor httpContextAccessor)
     : AuthorizationHandler<IOrganizationRequirement>
 {
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, IOrganizationRequirement requirement)
@@ -24,9 +27,9 @@ public class OrganizationRequirementHandler(ICurrentContext currentContext, IHtt
             throw new Exception("No organizationId found in route. IOrganizationRequirement cannot be used on this endpoint.");
         }
 
-        var organization = currentContext.GetOrganization(organizationId.Value);
+        var organizationClaims = currentContext.GetOrganization(organizationId.Value);
 
-        var authorized = await requirement.AuthorizeAsync(organizationId.Value, organization, currentContext);
+        var authorized = await requirement.AuthorizeAsync(organizationId.Value, organizationClaims, providerOrganizationContext);
 
         if (authorized)
         {
