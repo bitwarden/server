@@ -52,11 +52,6 @@ export function setup() {
 }
 
 export default function (data) {
-  if (!data || !data.access_token) {
-    console.error("No access token available. Authentication may have failed.");
-    return;
-  }
-
   const params = {
     headers: {
       Accept: "application/json",
