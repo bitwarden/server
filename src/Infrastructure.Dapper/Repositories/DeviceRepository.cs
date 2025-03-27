@@ -119,8 +119,8 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
             const string sql = @"
                 UPDATE D
                 SET
-                    D.[EncryptedPublicKey] = UD.[EncryptedPublicKey],
-                    D.[EncryptedUserKey] = UD.[EncryptedUserKey]
+                    D.[EncryptedPublicKey] = UD.[encryptedPublicKey],
+                    D.[EncryptedUserKey] = UD.[encryptedUserKey]
                 FROM
                     [dbo].[Device] D
                 INNER JOIN
@@ -130,7 +130,7 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
                         encryptedPublicKey NVARCHAR(MAX),
                         encryptedUserKey NVARCHAR(MAX)
                     ) UD
-                    ON UD.id = D.Id
+                    ON UD.[id] = D.[Id]
                 WHERE
                     D.[UserId] = @UserId";
             var deviceCredentials = CoreHelpers.ClassToJsonData(devices);
