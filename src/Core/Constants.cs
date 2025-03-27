@@ -118,6 +118,7 @@ public static class FeatureFlagKeys
     public const string ExportAttachments = "export-attachments";
 
     /* Vault Team */
+    public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
     public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
@@ -125,19 +126,28 @@ public static class FeatureFlagKeys
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string SecurityTasks = "security-tasks";
 
+    /* Auth Team */
+    public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
+
+    /* Key Management Team */
+    public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
+    public const string SSHAgent = "ssh-agent";
+    public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
+    public const string Argon2Default = "argon2-default";
+    public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
+    public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
+    public const string UserkeyRotationV2 = "userkey-rotation-v2";
+
+    /* Unsorted */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
     public const string DuoRedirect = "duo-redirect";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string EmailVerification = "email-verification";
     public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
-    public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
-    public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
-    public const string SSHAgent = "ssh-agent";
-    public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
@@ -158,12 +168,12 @@ public static class FeatureFlagKeys
     public const string NewDeviceVerification = "new-device-verification";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string InlineMenuTotp = "inline-menu-totp";
-    public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string AppReviewPrompt = "app-review-prompt";
     public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
-    public const string Argon2Default = "argon2-default";
     public const string UsePricingService = "use-pricing-service";
     public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
+    public const string EnablePasswordManagerSyncAndroid = "enable-password-manager-sync-android";
+    public const string EnablePasswordManagerSynciOS = "enable-password-manager-sync-ios";
     public const string AccountDeprovisioningBanner = "pm-17120-account-deprovisioning-admin-console-banner";
     public const string SingleTapPasskeyCreation = "single-tap-passkey-creation";
     public const string SingleTapPasskeyAuthentication = "single-tap-passkey-authentication";
@@ -177,6 +187,8 @@ public static class FeatureFlagKeys
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
     public const string PM18794_ProviderPaymentMethod = "pm-18794-provider-payment-method";
     public const string PM3553_MobileSimpleLoginSelfHostAlias = "simple-login-self-host-alias";
+    public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
+    public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
 
     public static List<string> GetAllKeys()
     {
