@@ -27,7 +27,7 @@ public class DeviceRotationValidator : IRotationValidator<IEnumerable<OtherDevic
         var result = new List<Device>();
 
         var existingTrustedDevices = (await _deviceRepository.GetManyByUserIdAsync(user.Id)).Where(d => d.IsTrusted()).ToList();
-        if (existingTrustedDevices == null || existingTrustedDevices.Count == 0)
+        if (existingTrustedDevices.Count == 0)
         {
             return result;
         }
