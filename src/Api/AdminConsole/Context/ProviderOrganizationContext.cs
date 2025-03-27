@@ -14,6 +14,8 @@ public class ProviderOrganizationContext(ICurrentContext currentContext) : IProv
             return false;
         }
 
+        // This is just a wrapper around CurrentContext for now, but once permission checks are moved out of that class
+        // we should be able to move the underlying logic here without causing circular dependencies.
         return await currentContext.ProviderUserForOrgAsync(orgId);
     }
 }
