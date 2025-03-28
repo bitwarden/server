@@ -993,14 +993,12 @@ public class CipherService : ICipherService
             {
                 throw new BadRequestException("You do not have permission to add cipher key encryption.");
             }
-            if (existingCipherData?.Fields != null && newCipherData?.Fields != null)
+            if (newCipherData?.Fields != null)
             {
                 // Keep only non-hidden fields from the new cipher
                 var nonHiddenFields = newCipherData.Fields.Where(f => f.Type != FieldType.Hidden).ToList();
-
                 // Get hidden fields from the existing cipher
-                var hiddenFields = existingCipherData.Fields.Where(f => f.Type == FieldType.Hidden);
-
+                var hiddenFields = existingCipherData.Fields?.Where(f => f.Type == FieldType.Hidden) ?? [];
                 // Replace the hidden fields in new cipher data with the existing ones
                 newCipherData.Fields = nonHiddenFields.Concat(hiddenFields);
                 cipher.Data = JsonSerializer.Serialize(newCipherData);
