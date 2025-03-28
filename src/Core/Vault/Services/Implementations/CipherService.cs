@@ -975,7 +975,7 @@ public class CipherService : ICipherService
 
     private async Task ValidateViewPasswordUserAsync(Cipher cipher)
     {
-        if (cipher.Type != CipherType.Login || cipher.Data == null || !cipher.OrganizationId.HasValue)
+        if (cipher.Data == null || !cipher.OrganizationId.HasValue)
         {
             return;
         }
@@ -986,18 +986,33 @@ public class CipherService : ICipherService
         // Check if user is a "hidden password" user
         if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !(permission.ViewPassword && permission.Edit))
         {
+            var existingCipherData = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data);
+            var newCipherData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
             // "hidden password" users may not add cipher key encryption
             if (existingCipher.Key == null && cipher.Key != null)
             {
                 throw new BadRequestException("You do not have permission to add cipher key encryption.");
             }
-            // "hidden password" users may not change passwords, TOTP codes, or passkeys, so we need to set them back to the original values
-            var existingCipherData = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data);
-            var newCipherData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
-            newCipherData.Fido2Credentials = existingCipherData.Fido2Credentials;
-            newCipherData.Totp = existingCipherData.Totp;
-            newCipherData.Password = existingCipherData.Password;
-            cipher.Data = JsonSerializer.Serialize(newCipherData);
+            if (existingCipherData?.Fields != null && newCipherData?.Fields != null)
+            {
+                // Keep only non-hidden fields from the new cipher
+                var nonHiddenFields = newCipherData.Fields.Where(f => f.Type != FieldType.Hidden).ToList();
+
+                // Get hidden fields from the existing cipher
+                var hiddenFields = existingCipherData.Fields.Where(f => f.Type == FieldType.Hidden);
+
+                // Replace the hidden fields in new cipher data with the existing ones
+                newCipherData.Fields = nonHiddenFields.Concat(hiddenFields);
+                cipher.Data = JsonSerializer.Serialize(newCipherData);
+            }
+            if (cipher.Type == CipherType.Login)
+            {
+                // "hidden password" users may not change passwords, TOTP codes, or passkeys, so we need to set them back to the original values
+                newCipherData.Fido2Credentials = existingCipherData.Fido2Credentials;
+                newCipherData.Totp = existingCipherData.Totp;
+                newCipherData.Password = existingCipherData.Password;
+                cipher.Data = JsonSerializer.Serialize(newCipherData);
+            }
         }
     }
 }
