@@ -309,8 +309,7 @@ public class ProviderMigrator(
                 .SeatMinimum ?? 0;
 
             var updateSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
-                provider.Id,
-                provider.GatewaySubscriptionId,
+                provider,
                 [
                     (Plan: PlanType.EnterpriseMonthly, SeatsMinimum: enterpriseSeatMinimum),
                     (Plan: PlanType.TeamsMonthly, SeatsMinimum: teamsSeatMinimum)
