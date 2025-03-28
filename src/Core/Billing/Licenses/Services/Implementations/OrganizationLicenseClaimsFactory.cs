@@ -52,6 +52,9 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
             new(nameof(OrganizationLicenseConstants.Refresh), refresh.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.ExpirationWithoutGracePeriod), expirationWithoutGracePeriod.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.Trial), trial.ToString()),
+            // TODO: This default of false should be replaced with entity.UseAdminSponsoredFamilies once the Organization entity
+            // has been updated to include this property from PR #5531 (https://github.com/bitwarden/server/pull/5531)
+            new(nameof(OrganizationLicenseConstants.UseAdminSponsoredFamilies), false.ToString())
         };
 
         if (entity.Name is not null)
