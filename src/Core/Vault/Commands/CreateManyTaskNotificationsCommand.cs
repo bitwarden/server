@@ -48,9 +48,16 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
         }).ToList();
 
         var organization = await _organizationRepository.GetByIdAsync(orgId);
-        var orgAdminEmails = await _organizationUserRepository.GetManyDetailsByRoleAsync(orgId, OrganizationUserType.Admin);
-        var orgOwnerEmails = await _organizationUserRepository.GetManyDetailsByRoleAsync(orgId, OrganizationUserType.Owner);
-        var orgAdminAndOwnerEmails = orgAdminEmails.Concat(orgOwnerEmails).Select(x => x.Email).Distinct().ToList();
+        var orgAdminEmails = (await _organizationUserRepository.GetManyDetailsByRoleAsync(orgId, OrganizationUserType.Admin))
+            .Select(u => u.Email)
+            .ToList();
+
+        var orgOwnerEmails = (await _organizationUserRepository.GetManyDetailsByRoleAsync(orgId, OrganizationUserType.Owner))
+            .Select(u => u.Email)
+            .ToList();
+
+        // Ensure proper deserialization of emails
+        var orgAdminAndOwnerEmails = orgAdminEmails.Concat(orgOwnerEmails).Distinct().ToList();
 
         await _mailService.SendBulkSecurityTaskNotificationsAsync(organization, userTaskCount, orgAdminAndOwnerEmails);
 
