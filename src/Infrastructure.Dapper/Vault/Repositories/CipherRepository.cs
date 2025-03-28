@@ -711,7 +711,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             row[creationDateColumn] = cipher.CreationDate;
             row[revisionDateColumn] = cipher.RevisionDate;
             row[deletedDateColumn] = cipher.DeletedDate.HasValue ? (object)cipher.DeletedDate : DBNull.Value;
-            row[repromptColumn] = cipher.Reprompt;
+            row[repromptColumn] = cipher.Reprompt.HasValue ? cipher.Reprompt.Value : DBNull.Value;
             row[keyColummn] = cipher.Key;
 
             ciphersTable.Rows.Add(row);
