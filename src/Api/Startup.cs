@@ -5,7 +5,6 @@ using Bit.Core.Settings;
 using AspNetCoreRateLimit;
 using Stripe;
 using Bit.Core.Utilities;
-using Duende.IdentityModel;
 using System.Globalization;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
@@ -31,6 +30,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Tools.ReportFeatures;
+using Duende.IdentityModel;
 
 
 #if !OSS

@@ -40,10 +40,18 @@ public class Success<T>(T value) : CommandResult<T>
 public class Failure<T>(IEnumerable<string> errorMessages) : CommandResult<T>
 {
     public List<string> ErrorMessages { get; } = errorMessages.ToList();
+    public Error<T>[] Errors { get; set; } = [];
 
     public string ErrorMessage => string.Join(" ", ErrorMessages);
 
-    public Failure(string error) : this([error]) { }
+    public Failure(string error) : this([error])
+    {
+    }
+
+    public Failure(Error<T> error) : this([error.Message])
+    {
+        Errors = [error];
+    }
 }
 
 public class Partial<T> : CommandResult<T>
