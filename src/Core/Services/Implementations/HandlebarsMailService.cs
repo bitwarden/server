@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Reflection;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -1250,7 +1250,7 @@ public class HandlebarsMailService : IMailService
             {
                 OrgName = CoreHelpers.SanitizeForEmail(sanitizedOrgName, false),
                 TaskCount = notification.TaskCount,
-                AdminOwnerEmails = adminOwnerEmails,
+                AdminOwnerEmails = adminOwnerEmails.ToList(),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             };
             message.Category = "SecurityTasksNotification";
