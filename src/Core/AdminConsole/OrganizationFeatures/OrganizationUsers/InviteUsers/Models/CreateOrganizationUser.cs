@@ -6,6 +6,10 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 
+/// <summary>
+/// Object for associating the <see cref="OrganizationUser"/> with their assigned collections
+/// <see cref="CollectionAccessSelection"/> and Group Ids.
+/// </summary>
 public class CreateOrganizationUser
 {
     public OrganizationUser OrganizationUser { get; set; }
