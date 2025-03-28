@@ -1081,14 +1081,14 @@ public class StripePaymentService : IPaymentService
             true);
 
     public async Task<bool> HasSecretsManagerStandalone(Organization organization) =>
-        await HasSecretsManagerAsync(gatewayCustomerId: organization.GatewayCustomerId,
+        await HasSecretsManagerStandaloneAsync(gatewayCustomerId: organization.GatewayCustomerId,
             organizationHasSecretsManager: organization.UseSecretsManager);
 
     public async Task<bool> HasSecretsManagerStandalone(InviteOrganization organization) =>
-        await HasSecretsManagerAsync(gatewayCustomerId: organization.GatewayCustomerId,
+        await HasSecretsManagerStandaloneAsync(gatewayCustomerId: organization.GatewayCustomerId,
             organizationHasSecretsManager: organization.UseSecretsManager);
 
-    private async Task<bool> HasSecretsManagerAsync(string gatewayCustomerId, bool organizationHasSecretsManager)
+    private async Task<bool> HasSecretsManagerStandaloneAsync(string gatewayCustomerId, bool organizationHasSecretsManager)
     {
         if (string.IsNullOrEmpty(gatewayCustomerId))
         {
