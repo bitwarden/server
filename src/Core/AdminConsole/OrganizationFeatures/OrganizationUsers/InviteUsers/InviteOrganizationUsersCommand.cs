@@ -18,7 +18,6 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Microsoft.Extensions.Logging;
-using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.CreateOrganizationUser;
 using OrganizationUserInvite = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -100,7 +99,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         var validatedRequest = validationResult as Valid<InviteUserOrganizationValidationRequest>;
 
         var organizationUserToInviteEntities = invitesToSend
-            .Select(MapToDataModel(request.PerformedAt, validatedRequest!.Value.InviteOrganization))
+            .Select(x => x.MapToDataModel(request.PerformedAt, validatedRequest!.Value.InviteOrganization))
             .ToArray();
 
         var organization = await organizationRepository.GetByIdAsync(validatedRequest.Value.InviteOrganization.OrganizationId);
