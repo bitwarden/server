@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Errors;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.Shared.Validation;
@@ -46,8 +47,10 @@ public class InviteUsersValidator(
                     organization: await organizationRepository.GetByIdAsync(request.InviteOrganization.OrganizationId),
                     plan: request.InviteOrganization.Plan,
                     autoscaling: true)
-                .AdjustSeats(request.Invites.Count(x => x.AccessSecretsManager));
-
+                .AdjustSeats(GetSecretManagerSeatAdjustment(
+                    occupiedSeats: request.OccupiedSmSeats,
+                    organization: request.InviteOrganization,
+                    invitesToSend: request.Invites.Count(x => x.AccessSecretsManager)));
 
             await secretsManagerSubscriptionCommand.ValidateUpdateAsync(smSubscriptionUpdate);
 
@@ -60,5 +63,8 @@ public class InviteUsersValidator(
         {
             return new Invalid<InviteUserOrganizationValidationRequest>(new Error<InviteUserOrganizationValidationRequest>(ex.Message, request));
         }
+
+        int GetSecretManagerSeatAdjustment(int occupiedSeats, InviteOrganization organization, int invitesToSend) =>
+            organization.SmSeats - (occupiedSeats + invitesToSend) ?? 0;
     }
 }
