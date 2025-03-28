@@ -288,7 +288,7 @@ public class ImportCiphersControllerTests
                 Arg.Any<IEnumerable<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
                     reqs.Contains(BulkCollectionOperations.Create)))
-            .Returns(AuthorizationResult.Success());
+            .Returns(AuthorizationResult.Failed());
 
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByOrganizationIdAsync(orgIdGuid)
@@ -340,7 +340,7 @@ public class ImportCiphersControllerTests
                 Arg.Any<IEnumerable<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
                     reqs.Contains(BulkCollectionOperations.ImportCiphers)))
-            .Returns(AuthorizationResult.Success());
+            .Returns(AuthorizationResult.Failed());
 
         // BulkCollectionOperations.Create permission setup
         sutProvider.GetDependency<IAuthorizationService>()
