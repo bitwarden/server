@@ -14,5 +14,7 @@ public enum ClientType : byte
     [Display(Name = "Desktop App")]
     Desktop = 3,
     [Display(Name = "Mobile App")]
-    Mobile = 4
+    Mobile = 4,
+    [Display(Name = "CLI")]
+    Cli = 5
 }
