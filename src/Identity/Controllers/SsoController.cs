@@ -70,6 +70,7 @@ public class SsoController : Controller
                 InnerExceptionMessage = ex.InnerException?.Message,
             });
         }
+
     }
 
     [HttpGet]
