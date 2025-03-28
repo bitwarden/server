@@ -55,6 +55,7 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @LimitCollectionDeletion BIT = NULL,
     @AllowAdminAccessToAllCollectionItems BIT = 0,
     @UseRiskInsights BIT = 0,
+    @UseAdminSponsoredFamilies BIT = 0,
     @LimitItemDeletion BIT = 0
 AS
 BEGIN
@@ -118,6 +119,7 @@ BEGIN
         [LimitCollectionDeletion],
         [AllowAdminAccessToAllCollectionItems],
         [UseRiskInsights],
+        [UseAdminSponsoredFamilies],
         [LimitItemDeletion]
     )
     VALUES
@@ -178,6 +180,7 @@ BEGIN
         @LimitCollectionDeletion,
         @AllowAdminAccessToAllCollectionItems,
         @UseRiskInsights,
+        @UseAdminSponsoredFamilies,
         @LimitItemDeletion
     )
 END

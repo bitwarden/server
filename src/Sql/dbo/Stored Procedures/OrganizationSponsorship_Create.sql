@@ -8,7 +8,9 @@ CREATE PROCEDURE [dbo].[OrganizationSponsorship_Create]
     @PlanSponsorshipType TINYINT,
     @ToDelete BIT,
     @LastSyncDate DATETIME2 (7),
-    @ValidUntil DATETIME2 (7)
+    @ValidUntil DATETIME2 (7),
+    @IsAdminInitiated BIT,
+    @Notes NVARCHAR(512)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -24,7 +26,9 @@ BEGIN
         [PlanSponsorshipType],
         [ToDelete],
         [LastSyncDate],
-        [ValidUntil]
+        [ValidUntil],
+        [IsAdminInitiated],
+        [Notes]
     )
     VALUES
     (
@@ -37,7 +41,9 @@ BEGIN
         @PlanSponsorshipType,
         @ToDelete,
         @LastSyncDate,
-        @ValidUntil
+        @ValidUntil,
+        @IsAdminInitiated,
+        @Notes
     )
 END
 GO
