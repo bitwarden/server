@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserKey;
 
 #nullable enable
 
@@ -16,4 +17,5 @@ public interface IDeviceRepository : IRepository<Device, Guid>
     // other requests.
     Task<ICollection<DeviceAuthDetails>> GetManyByUserIdWithDeviceAuth(Guid userId);
     Task ClearPushTokenAsync(Guid id);
+    UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<Device> devices);
 }

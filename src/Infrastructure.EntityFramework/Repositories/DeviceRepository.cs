@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Core.Auth.Models.Data;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
@@ -91,4 +92,30 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
             return await query.GetQuery(dbContext, userId, expirationMinutes).ToListAsync();
         }
     }
+
+    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<Core.Entities.Device> devices)
+    {
+        return async (_, _) =>
+        {
+            var deviceUpdates = devices.ToList();
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+            var userDevices = await GetDbSet(dbContext)
+                .Where(device => device.UserId == userId)
+                .ToListAsync();
+            var userDevicesWithUpdatesPending = userDevices
+                .Where(existingDevice => deviceUpdates.Any(updatedDevice => updatedDevice.Id == existingDevice.Id))
+                .ToList();
+
+            foreach (var deviceToUpdate in userDevicesWithUpdatesPending)
+            {
+                var deviceUpdate = deviceUpdates.First(deviceUpdate => deviceUpdate.Id == deviceToUpdate.Id);
+                deviceToUpdate.EncryptedPublicKey = deviceUpdate.EncryptedPublicKey;
+                deviceToUpdate.EncryptedUserKey = deviceUpdate.EncryptedUserKey;
+            }
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
 }

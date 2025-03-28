@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Auth.Models.Data;
-using Bit.Core.Auth.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
@@ -19,7 +18,7 @@ public class DeviceAuthRequestResponseModel : ResponseModel
             Type = deviceAuthDetails.Type,
             Identifier = deviceAuthDetails.Identifier,
             CreationDate = deviceAuthDetails.CreationDate,
-            IsTrusted = deviceAuthDetails.IsTrusted()
+            IsTrusted = deviceAuthDetails.IsTrusted,
         };
 
         if (deviceAuthDetails.AuthRequestId != null && deviceAuthDetails.AuthRequestCreatedAt != null)
