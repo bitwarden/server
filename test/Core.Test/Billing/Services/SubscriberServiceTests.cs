@@ -3,10 +3,13 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.Billing.Stubs;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
@@ -1560,6 +1563,37 @@ public class SubscriberServiceTests
             null,
             "Example Town",
             "NY");
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerUpdateAsync(
+                Arg.Is<string>(p => p == provider.GatewayCustomerId),
+                Arg.Is<CustomerUpdateOptions>(options =>
+                    options.Address.Country == "US" &&
+                    options.Address.PostalCode == "12345" &&
+                    options.Address.Line1 == "123 Example St." &&
+                    options.Address.Line2 == null &&
+                    options.Address.City == "Example Town" &&
+                    options.Address.State == "NY"))
+            .Returns(new Customer
+            {
+                Id = provider.GatewayCustomerId,
+                Address = new Address
+                {
+                    Country = "US",
+                    PostalCode = "12345",
+                    Line1 = "123 Example St.",
+                    Line2 = null,
+                    City = "Example Town",
+                    State = "NY"
+                },
+                TaxIds = new StripeList<TaxId> { Data = [new TaxId { Id = "tax_id_1", Type = "us_ein" }] }
+            });
+
+        var subscription = new Subscription { Items = new StripeList<SubscriptionItem>() };
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(Arg.Any<string>())
+            .Returns(subscription);
+        sutProvider.GetDependency<IAutomaticTaxFactory>().CreateAsync(Arg.Any<AutomaticTaxFactoryParameters>())
+            .Returns(new FakeAutomaticTaxStrategy(true));
 
         await sutProvider.Sut.UpdateTaxInformation(provider, taxInformation);
 

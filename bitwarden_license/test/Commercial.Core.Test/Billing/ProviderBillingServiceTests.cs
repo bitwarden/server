@@ -975,11 +975,12 @@ public class ProviderBillingServiceTests
     {
         provider.GatewaySubscriptionId = null;
 
-        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
+        var customer = new Customer
         {
             Id = "customer_id",
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
-        });
+        };
+        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(customer);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1016,6 +1017,19 @@ public class ProviderBillingServiceTests
         var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
 
         var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
+
+        sutProvider.GetDependency<IAutomaticTaxStrategy>()
+            .When(x => x.SetCreateOptions(
+                Arg.Is<SubscriptionCreateOptions>(options =>
+                    options.Customer == "customer_id")
+                , Arg.Is<Customer>(p => p == customer)))
+            .Do(x =>
+            {
+                x.Arg<SubscriptionCreateOptions>().AutomaticTax = new SubscriptionAutomaticTaxOptions
+                {
+                    Enabled = true
+                };
+            });
 
         sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(
             sub =>
