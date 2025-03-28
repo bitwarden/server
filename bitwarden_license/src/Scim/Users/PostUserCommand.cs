@@ -28,8 +28,7 @@ public class PostUserCommand(
     IFeatureService featureService,
     IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
     TimeProvider timeProvider,
-    IPricingClient pricingClient,
-    ILogger<PostUserCommand> logger)
+    IPricingClient pricingClient)
     : IPostUserCommand
 {
     public async Task<OrganizationUserUserDetails?> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
@@ -54,26 +53,17 @@ public class PostUserCommand(
             throw new NotFoundException();
         }
 
-        var plan = await pricingClient.GetPlan(organization.PlanType);
-
-        if (plan == null)
-        {
-            logger.LogError("Plan {planType} not found for organization {organizationId}",
-                organization.PlanType, organization.Id);
-            return null;
-        }
+        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
         var hasSecretsManagerStandalone = await paymentService.HasSecretsManagerStandalone(organization);
 
         var request = model.ToRequest(
             scimProvider: scimProvider,
             inviteOrganization: new InviteOrganization(organization, plan),
-            performedAt: timeProvider.GetUtcNow(),
-            hasSecretsManagerStandalone);
+            performedAt: timeProvider.GetUtcNow());
 
-        var orgUsers =
-            await organizationUserRepository.GetManyDetailsByOrganizationAsync(
-                request.InviteOrganization.OrganizationId);
+        var orgUsers = await organizationUserRepository
+            .GetManyDetailsByOrganizationAsync(request.InviteOrganization.OrganizationId);
 
         if (orgUsers.Any(existingUser =>
                 request.Invites.First().Email.Equals(existingUser.Email, StringComparison.OrdinalIgnoreCase) ||
