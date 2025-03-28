@@ -185,6 +185,7 @@ public static class FeatureFlagKeys
     public const string WebPush = "web-push";
     public const string AndroidImportLoginsFlow = "import-logins-flow";
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
+    public const string OpaqueKeyExchange = "opaque-key-exchange";
     public const string PM18794_ProviderPaymentMethod = "pm-18794-provider-payment-method";
     public const string PM3553_MobileSimpleLoginSelfHostAlias = "simple-login-self-host-alias";
     public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";

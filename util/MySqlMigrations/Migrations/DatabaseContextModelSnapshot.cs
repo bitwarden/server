@@ -631,6 +631,39 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("Grant", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.OpaqueKeyExchangeCredential", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("CipherConfiguration")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("CredentialBlob")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EncryptedPrivateKey")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EncryptedPublicKey")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EncryptedUserKey")
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("OpaqueKeyExchangeCredential", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.SsoConfig", b =>
                 {
                     b.Property<long>("Id")
@@ -2428,6 +2461,17 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Grantee");
 
                     b.Navigation("Grantor");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.OpaqueKeyExchangeCredential", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.SsoConfig", b =>

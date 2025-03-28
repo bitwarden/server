@@ -11,6 +11,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Services;
@@ -78,6 +79,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
     private readonly IDistributedCache _distributedCache;
+    private readonly IOpaqueKeyExchangeService _opaqueKeyExchangeService;
 
     public UserService(
         IUserRepository userRepository,
@@ -115,7 +117,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IPremiumUserBillingService premiumUserBillingService,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
-        IDistributedCache distributedCache)
+        IDistributedCache distributedCache,
+        IOpaqueKeyExchangeService opaqueKeyExchangeService)
         : base(
               store,
               optionsAccessor,
@@ -159,6 +162,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
         _distributedCache = distributedCache;
+        _opaqueKeyExchangeService = opaqueKeyExchangeService;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -643,7 +647,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     }
 
     public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint,
-        string key)
+        string key, Guid? opaqueSessionId)
     {
         if (user == null)
         {
@@ -664,6 +668,17 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             user.Key = key;
             user.MasterPasswordHint = passwordHint;
 
+            if (_featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange))
+            {
+                if (opaqueSessionId != null)
+                {
+                    await _opaqueKeyExchangeService.WriteCacheCredentialToDatabase((Guid)opaqueSessionId, user);
+                }
+                else
+                {
+                    await _opaqueKeyExchangeService.RemoveUserOpaqueKeyExchangeCredential(user);
+                }
+            }
             await _userRepository.ReplaceAsync(user);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
             await _pushService.PushLogOutAsync(user.Id, true);
@@ -804,6 +819,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         user.ForcePasswordReset = true;
         user.Key = key;
 
+        // TODO: Add Opaque-KE support
+        if (_featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange))
+        {
+            await _opaqueKeyExchangeService.RemoveUserOpaqueKeyExchangeCredential(user);
+        }
         await _userRepository.ReplaceAsync(user);
         await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
@@ -830,6 +850,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         user.Key = key;
         user.MasterPasswordHint = hint;
 
+        // TODO: Add Opaque-KE support
+        if (_featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange))
+        {
+            await _opaqueKeyExchangeService.RemoveUserOpaqueKeyExchangeCredential(user);
+        }
         await _userRepository.ReplaceAsync(user);
         await _mailService.SendUpdatedTempPasswordEmailAsync(user.Email, user.Name);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_UpdatedTempPassword);

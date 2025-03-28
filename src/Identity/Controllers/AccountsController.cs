@@ -1,10 +1,13 @@
 ﻿using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Models.Api.Request.Opaque;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
@@ -45,6 +48,7 @@ public class AccountsController : Controller
     private readonly IReferenceEventService _referenceEventService;
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
+    private readonly IOpaqueKeyExchangeCredentialRepository _opaqueKeyExchangeCredentialRepository;
 
     private readonly byte[] _defaultKdfHmacKey = null;
     private static readonly List<UserKdfInformation> _defaultKdfResults =
@@ -93,6 +97,7 @@ public class AccountsController : Controller
         IReferenceEventService referenceEventService,
         IFeatureService featureService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
+        IOpaqueKeyExchangeCredentialRepository opaqueKeyExchangeCredentialRepository,
         GlobalSettings globalSettings
         )
     {
@@ -107,6 +112,7 @@ public class AccountsController : Controller
         _referenceEventService = referenceEventService;
         _featureService = featureService;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
+        _opaqueKeyExchangeCredentialRepository = opaqueKeyExchangeCredentialRepository;
 
         if (CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
         {
@@ -198,33 +204,27 @@ public class AccountsController : Controller
                         model.EmailVerificationToken);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.OrganizationInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
                     model.OrgInviteToken, model.OrganizationUserId);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, model.MasterPasswordHash, model.OrgSponsoredFreeFamilyPlanToken);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.EmergencyAccessInvite:
                 Debug.Assert(model.AcceptEmergencyAccessId.HasValue);
                 identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(user, model.MasterPasswordHash,
                     model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.ProviderInvite:
                 Debug.Assert(model.ProviderUserId.HasValue);
                 identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(user, model.MasterPasswordHash,
                     model.ProviderInviteToken, model.ProviderUserId.Value);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
-
             default:
                 throw new BadRequestException("Invalid registration finish request");
         }
@@ -255,11 +255,21 @@ public class AccountsController : Controller
     public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
     {
         var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
-        if (kdfInformation == null)
+        var user = await _userRepository.GetByEmailAsync(model.Email);
+        if (kdfInformation == null || user == null)
         {
             kdfInformation = GetDefaultKdf(model.Email);
         }
-        return new PreloginResponseModel(kdfInformation);
+
+        var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(user.Id);
+        if (credential != null && _featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange))
+        {
+            return new PreloginResponseModel(kdfInformation, JsonSerializer.Deserialize<OpaqueKeyExchangeCipherConfiguration>(credential.CipherConfiguration)!);
+        }
+        else
+        {
+            return new PreloginResponseModel(kdfInformation, null);
+        }
     }
 
     [HttpGet("webauthn/assertion-options")]

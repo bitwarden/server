@@ -87,6 +87,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IProviderUserRepository, ProviderUserRepository>();
         services.AddSingleton<ISendRepository, SendRepository>();
         services.AddSingleton<ISsoConfigRepository, SsoConfigRepository>();
+        services.AddSingleton<IOpaqueKeyExchangeCredentialRepository, OpaqueKeyExchangeCredentialRepository>();
         services.AddSingleton<ISsoUserRepository, SsoUserRepository>();
         services.AddSingleton<ITransactionRepository, TransactionRepository>();
         services.AddSingleton<IUserRepository, UserRepository>();
