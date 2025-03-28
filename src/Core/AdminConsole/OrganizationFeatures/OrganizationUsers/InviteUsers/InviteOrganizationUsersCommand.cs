@@ -45,7 +45,6 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     public const string NoUsersToInvite = "No users to invite.";
     public const string InvalidResultType = "Invalid result type.";
 
-
     public async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(InviteOrganizationUsersRequest request)
     {
         var result = await InviteOrganizationUsersAsync(request);
@@ -126,6 +125,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
             await organizationUserRepository.DeleteManyAsync(organizationUserToInviteEntities.Select(x => x.OrganizationUser.Id));
 
+            // Do this first so that SmSeats never exceed PM seats (due to current billing requirements)
             await RevertSecretsManagerChangesAsync(validatedRequest, organization, validatedRequest.Value.InviteOrganization.SmSeats);
 
             await RevertPasswordManagerChangesAsync(validatedRequest, organization);
@@ -140,7 +140,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     {
         var existingEmails = new HashSet<string>(await organizationUserRepository.SelectKnownEmailsAsync(
                 request.InviteOrganization.OrganizationId, request.Invites.Select(i => i.Email), false),
-            StringComparer.InvariantCultureIgnoreCase);
+            StringComparer.OrdinalIgnoreCase);
 
         return request.Invites
             .Where(invite => !existingEmails.Contains(invite.Email))
@@ -166,7 +166,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task RevertSecretsManagerChangesAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult, Organization organization, int? initialSmSeats)
     {
-        if (validatedResult.Value.InviteOrganization.UseSecretsManager && validatedResult.Value.SecretsManagerSubscriptionUpdate.SmSeatsChanged)
+        if (validatedResult.Value.SecretsManagerSubscriptionUpdate?.SmSeatsChanged is true)
         {
             var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(
                 organization: organization,
@@ -239,12 +239,11 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task AdjustSecretsManagerSeatsAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult)
     {
-        if (validatedResult.Value.SecretsManagerSubscriptionUpdate?.SmSeatsChanged is not true)
+        if (validatedResult.Value.SecretsManagerSubscriptionUpdate?.SmSeatsChanged is true)
         {
-            return;
+            await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(validatedResult.Value.SecretsManagerSubscriptionUpdate);
         }
 
-        await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(validatedResult.Value.SecretsManagerSubscriptionUpdate);
     }
 
     private async Task AdjustPasswordManagerSeatsAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult, Organization organization)
