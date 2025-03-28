@@ -17,7 +17,6 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -73,7 +72,6 @@ public class OrganizationService : IOrganizationService
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
-    private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
 
@@ -109,7 +107,6 @@ public class OrganizationService : IOrganizationService
         IProviderRepository providerRepository,
         IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IOrganizationBillingService organizationBillingService,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient)
     {
@@ -144,30 +141,8 @@ public class OrganizationService : IOrganizationService
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
-        _organizationBillingService = organizationBillingService;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
-    }
-
-    public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
-        PaymentMethodType paymentMethodType, TaxInfo taxInfo)
-    {
-        var organization = await GetOrgById(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
-        var updated = await _paymentService.UpdatePaymentMethodAsync(
-            organization,
-            paymentMethodType,
-            paymentToken,
-            taxInfo);
-        if (updated)
-        {
-            await ReplaceAndUpdateCacheAsync(organization);
-        }
     }
 
     public async Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null)
