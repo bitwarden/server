@@ -24,6 +24,7 @@ public abstract record Plan
     public bool Has2fa { get; protected init; }
     public bool HasApi { get; protected init; }
     public bool HasSso { get; protected init; }
+    public bool HasOrganizationDomains { get; protected init; }
     public bool HasKeyConnector { get; protected init; }
     public bool HasScim { get; protected init; }
     public bool HasResetPassword { get; protected init; }

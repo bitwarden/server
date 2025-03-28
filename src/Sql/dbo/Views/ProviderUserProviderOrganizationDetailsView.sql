@@ -37,7 +37,8 @@ SELECT
     O.[AllowAdminAccessToAllCollectionItems],
     O.[UseRiskInsights],
     P.[Type] ProviderType,
-    O.[LimitItemDeletion]
+    O.[LimitItemDeletion],
+    O.[UseOrganizationDomains]
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN
