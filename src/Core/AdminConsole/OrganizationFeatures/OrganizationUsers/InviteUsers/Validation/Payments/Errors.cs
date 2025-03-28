@@ -6,5 +6,5 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 public record PaymentCancelledSubscriptionError(PaymentsSubscription InvalidRequest)
     : Error<PaymentsSubscription>(Code, InvalidRequest)
 {
-    public const string Code = "Cannot autoscale with a canceled subscription.";
+    public const string Code = "You do not have an active subscription. Reinstate your subscription to make changes.";
 }

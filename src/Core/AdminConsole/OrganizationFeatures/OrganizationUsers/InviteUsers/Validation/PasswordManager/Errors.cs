@@ -22,3 +22,9 @@ public record PasswordManagerPlanOnlyAllowsMaxAdditionalSeatsError(PasswordManag
 
     public const string Code = "Organization plan allows a maximum of {0} additional seats.";
 }
+
+public record PasswordManagerMustHaveSeatsError(PasswordManagerSubscriptionUpdate InvalidRequest)
+    : Error<PasswordManagerSubscriptionUpdate>(Code, InvalidRequest)
+{
+    public const string Code = "You do not have any Password Manager seats!";
+}
