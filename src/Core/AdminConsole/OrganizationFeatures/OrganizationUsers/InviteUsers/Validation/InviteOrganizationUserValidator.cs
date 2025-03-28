@@ -12,14 +12,14 @@ public interface IInviteUsersValidator : IValidator<InviteUserOrganizationValida
 
 public class InviteUsersValidator(
     IOrganizationRepository organizationRepository,
-    IPasswordManagerInviteUserValidator passwordManagerInviteUserValidator,
+    IInviteUsersPasswordManagerValidator inviteUsersPasswordManagerValidator,
     IUpdateSecretsManagerSubscriptionCommand secretsManagerSubscriptionCommand) : IInviteUsersValidator
 {
     public async Task<ValidationResult<InviteUserOrganizationValidationRequest>> ValidateAsync(InviteUserOrganizationValidationRequest request)
     {
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(request);
 
-        var passwordManagerValidationResult = await passwordManagerInviteUserValidator.ValidateAsync(subscriptionUpdate);
+        var passwordManagerValidationResult = await inviteUsersPasswordManagerValidator.ValidateAsync(subscriptionUpdate);
 
         if (passwordManagerValidationResult is Invalid<PasswordManagerSubscriptionUpdate> invalidSubscriptionUpdate)
         {

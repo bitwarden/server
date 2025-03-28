@@ -11,16 +11,16 @@ using Bit.Core.Settings;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 
-public interface IPasswordManagerInviteUserValidator : IValidator<PasswordManagerSubscriptionUpdate>;
+public interface IInviteUsersPasswordManagerValidator : IValidator<PasswordManagerSubscriptionUpdate>;
 
-public class PasswordManagerInviteUserValidator(
+public class InviteUsersPasswordManagerValidator(
     IGlobalSettings globalSettings,
-    IEnvironmentValidator environmentValidator,
-    IInviteUserOrganizationValidator inviteUserOrganizationValidator,
+    IInviteUsersEnvironmentValidator inviteUsersEnvironmentValidator,
+    IInviteUsersOrganizationValidator inviteUsersOrganizationValidator,
     IProviderRepository providerRepository,
     IPaymentService paymentService,
     IOrganizationRepository organizationRepository
-    ) : IPasswordManagerInviteUserValidator
+    ) : IInviteUsersPasswordManagerValidator
 {
     /// <summary>
     /// This is for validating if the organization can add additional users.
@@ -34,13 +34,17 @@ public class PasswordManagerInviteUserValidator(
             return new Valid<PasswordManagerSubscriptionUpdate>(subscriptionUpdate);
         }
 
+        if (subscriptionUpdate.PasswordManagerPlan.BaseSeats + subscriptionUpdate.SeatsRequiredToAdd <= 0)
+        {
+            return new Invalid<PasswordManagerSubscriptionUpdate>(new PasswordManagerMustHaveSeatsError(subscriptionUpdate));
+        }
+
         if (subscriptionUpdate.NewUsersToAdd == 0)
         {
             return new Valid<PasswordManagerSubscriptionUpdate>(subscriptionUpdate);
         }
 
-        if (subscriptionUpdate.UpdatedSeatTotal is not null && subscriptionUpdate.MaxAutoScaleSeats is not null &&
-            subscriptionUpdate.UpdatedSeatTotal > subscriptionUpdate.MaxAutoScaleSeats)
+        if (subscriptionUpdate.MaxSeatsReached)
         {
             return new Invalid<PasswordManagerSubscriptionUpdate>(
                 new PasswordManagerSeatLimitHasBeenReachedError(subscriptionUpdate));
@@ -53,7 +57,7 @@ public class PasswordManagerInviteUserValidator(
         }
 
         // Apparently MaxAdditionalSeats is never set. Can probably be removed.
-        if (subscriptionUpdate.NewUsersToAdd > subscriptionUpdate.PasswordManagerPlan.MaxAdditionalSeats)
+        if (subscriptionUpdate.UpdatedSeatTotal - subscriptionUpdate.PasswordManagerPlan.BaseSeats > subscriptionUpdate.PasswordManagerPlan.MaxAdditionalSeats)
         {
             return new Invalid<PasswordManagerSubscriptionUpdate>(
                 new PasswordManagerPlanOnlyAllowsMaxAdditionalSeatsError(subscriptionUpdate));
@@ -69,16 +73,17 @@ public class PasswordManagerInviteUserValidator(
             case Valid<PasswordManagerSubscriptionUpdate> valid
                 when valid.Value.SeatsRequiredToAdd is 0:
                 return new Valid<PasswordManagerSubscriptionUpdate>(request);
+
             case Invalid<PasswordManagerSubscriptionUpdate> invalid:
                 return invalid;
         }
 
-        if (await environmentValidator.ValidateAsync(new EnvironmentRequest(globalSettings, request)) is Invalid<EnvironmentRequest> invalidEnvironment)
+        if (await inviteUsersEnvironmentValidator.ValidateAsync(new EnvironmentRequest(globalSettings, request)) is Invalid<EnvironmentRequest> invalidEnvironment)
         {
             return invalidEnvironment.Map(request);
         }
 
-        var organizationValidationResult = await inviteUserOrganizationValidator.ValidateAsync(request.InviteOrganization);
+        var organizationValidationResult = await inviteUsersOrganizationValidator.ValidateAsync(request.InviteOrganization);
 
         if (organizationValidationResult is Invalid<InviteOrganization> organizationValidation)
         {

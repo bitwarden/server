@@ -14,7 +14,7 @@ public class InviteUserOrganizationValidationTests
 {
     [Theory]
     [BitAutoData]
-    public async Task Validate_WhenOrganizationIsFreeTier_ShouldReturnValidResponse(Organization organization, SutProvider<InviteUserOrganizationValidator> sutProvider)
+    public async Task Validate_WhenOrganizationIsFreeTier_ShouldReturnValidResponse(Organization organization, SutProvider<InviteUsersOrganizationValidator> sutProvider)
     {
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
 
@@ -26,7 +26,7 @@ public class InviteUserOrganizationValidationTests
     [Theory]
     [BitAutoData]
     public async Task Validate_WhenOrganizationDoesNotHavePaymentMethod_ShouldReturnInvalidResponseWithPaymentMethodMessage(
-        Organization organization, SutProvider<InviteUserOrganizationValidator> sutProvider)
+        Organization organization, SutProvider<InviteUsersOrganizationValidator> sutProvider)
     {
         organization.GatewayCustomerId = string.Empty;
         organization.Seats = 3;
@@ -42,7 +42,7 @@ public class InviteUserOrganizationValidationTests
     [Theory]
     [BitAutoData]
     public async Task Validate_WhenOrganizationDoesNotHaveSubscription_ShouldReturnInvalidResponseWithSubscriptionMessage(
-        Organization organization, SutProvider<InviteUserOrganizationValidator> sutProvider)
+        Organization organization, SutProvider<InviteUsersOrganizationValidator> sutProvider)
     {
         organization.GatewaySubscriptionId = string.Empty;
         organization.Seats = 3;

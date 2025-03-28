@@ -2,9 +2,9 @@
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.GlobalSettings;
 
-public interface IEnvironmentValidator : IValidator<EnvironmentRequest>;
+public interface IInviteUsersEnvironmentValidator : IValidator<EnvironmentRequest>;
 
-public class EnvironmentValidator : IEnvironmentValidator
+public class InviteUsersEnvironmentValidator : IInviteUsersEnvironmentValidator
 {
     public Task<ValidationResult<EnvironmentRequest>> ValidateAsync(EnvironmentRequest value) =>
         Task.FromResult<ValidationResult<EnvironmentRequest>>(

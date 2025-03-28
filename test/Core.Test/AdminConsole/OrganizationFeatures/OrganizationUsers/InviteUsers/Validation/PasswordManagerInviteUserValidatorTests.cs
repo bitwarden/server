@@ -12,12 +12,12 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.Invi
 
 
 [SutProviderCustomize]
-public class PasswordManagerInviteUserValidatorTests
+public class InviteUsersPasswordManagerValidatorTests
 {
     [Theory]
     [BitAutoData]
     public async Task Validate_OrganizationDoesNotHaveSeatsLimit_ShouldReturnValidResult(Organization organization,
-        SutProvider<PasswordManagerInviteUserValidator> sutProvider)
+        SutProvider<InviteUsersPasswordManagerValidator> sutProvider)
     {
         organization.Seats = null;
 
@@ -33,7 +33,7 @@ public class PasswordManagerInviteUserValidatorTests
     [Theory]
     [BitAutoData]
     public async Task Validate_NumberOfSeatsToAddMatchesSeatsAvailable_ShouldReturnValidResult(Organization organization,
-        SutProvider<PasswordManagerInviteUserValidator> sutProvider)
+        SutProvider<InviteUsersPasswordManagerValidator> sutProvider)
     {
         organization.Seats = 8;
         organization.PlanType = PlanType.EnterpriseAnnually;
@@ -52,7 +52,7 @@ public class PasswordManagerInviteUserValidatorTests
     [Theory]
     [BitAutoData]
     public async Task Validate_NumberOfSeatsToAddIsGreaterThanMaxSeatsAllowed_ShouldBeInvalidWithSeatLimitMessage(Organization organization,
-        SutProvider<PasswordManagerInviteUserValidator> sutProvider)
+        SutProvider<InviteUsersPasswordManagerValidator> sutProvider)
     {
         organization.Seats = 4;
         organization.MaxAutoscaleSeats = 4;
@@ -73,7 +73,7 @@ public class PasswordManagerInviteUserValidatorTests
     [Theory]
     [BitAutoData]
     public async Task Validate_GivenThePlanDoesNotAllowAdditionalSeats_ShouldBeInvalidMessageOfPlanNotAllowingSeats(Organization organization,
-        SutProvider<PasswordManagerInviteUserValidator> sutProvider)
+        SutProvider<InviteUsersPasswordManagerValidator> sutProvider)
     {
         organization.Seats = 8;
         organization.MaxAutoscaleSeats = 9;

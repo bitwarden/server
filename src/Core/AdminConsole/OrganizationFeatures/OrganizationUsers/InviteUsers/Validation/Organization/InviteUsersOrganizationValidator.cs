@@ -3,9 +3,9 @@ using Bit.Core.AdminConsole.Shared.Validation;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
 
-public interface IInviteUserOrganizationValidator : IValidator<InviteOrganization>;
+public interface IInviteUsersOrganizationValidator : IValidator<InviteOrganization>;
 
-public class InviteUserOrganizationValidator : IInviteUserOrganizationValidator
+public class InviteUsersOrganizationValidator : IInviteUsersOrganizationValidator
 {
     public Task<ValidationResult<InviteOrganization>> ValidateAsync(InviteOrganization inviteOrganization)
     {
