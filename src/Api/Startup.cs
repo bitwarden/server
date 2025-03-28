@@ -30,7 +30,6 @@ using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Core.AdminConsole.Services.NoopImplementations;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Identity.TokenProviders;
-using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Tools.ReportFeatures;
@@ -223,14 +222,10 @@ public class Startup
         {
             services.AddHttpClient(SlackService.HttpClientName);
             services.AddSingleton<ISlackService, SlackService>();
-            services.AddSingleton<IOrganizationIntegrationConfigurationRepository,
-                                  LocalOrganizationIntegrationConfigurationRepository>();
         }
         else
         {
             services.AddSingleton<ISlackService, NoopSlackService>();
-            services.AddSingleton<IOrganizationIntegrationConfigurationRepository,
-                                  LocalOrganizationIntegrationConfigurationRepository>();
         }
     }
 

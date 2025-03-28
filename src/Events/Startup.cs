@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.AdminConsole.Services.NoopImplementations;
 using Bit.Core.Context;
 using Bit.Core.IdentityServer;
-using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -118,8 +117,6 @@ public class Startup
                     provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
                     globalSettings,
                     globalSettings.EventLogging.RabbitMq.EventRepositoryQueueName));
-
-            services.AddSingleton<IOrganizationIntegrationConfigurationRepository, LocalOrganizationIntegrationConfigurationRepository>();
 
             if (CoreHelpers.SettingHasValue(globalSettings.Slack.ClientId) &&
                 CoreHelpers.SettingHasValue(globalSettings.Slack.ClientSecret) &&

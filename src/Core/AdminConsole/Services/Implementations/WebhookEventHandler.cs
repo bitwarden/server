@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Integrations;
@@ -19,20 +20,25 @@ public class WebhookEventHandler(
 
     public async Task HandleEventAsync(EventMessage eventMessage)
     {
-        Guid organizationId = eventMessage.OrganizationId ?? Guid.NewGuid();
-
-        var configurations = await configurationRepository.GetConfigurationsAsync<WebhookConfiguration>(organizationId,
+        var organizationId = eventMessage.OrganizationId ?? Guid.Empty;
+        var configurations = await configurationRepository.GetConfigurationsAsync(organizationId,
             IntegrationType.Webhook, eventMessage.Type);
 
         foreach (var configuration in configurations)
         {
+            var config = JsonSerializer.Deserialize<WebhookConfiguration>(configuration.Configuration ?? string.Empty);
+            if (config is null)
+            {
+                continue;
+            }
+
             var content = new StringContent(
                 TemplateProcessor.ReplaceTokens(configuration.Template, eventMessage),
                 Encoding.UTF8,
                 "application/json"
             );
             var response = await _httpClient.PostAsync(
-                configuration.Configuration.Url,
+                config.url,
                 content);
             response.EnsureSuccessStatusCode();
         }

@@ -1,4 +1,6 @@
-﻿using Bit.Core.Context;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Integrations;
@@ -13,14 +15,13 @@ namespace Bit.Api.AdminConsole.Controllers;
 [Authorize("Application")]
 public class SlackOAuthController(
     ICurrentContext currentContext,
-    IOrganizationIntegrationConfigurationRepository integrationConfigurationRepository,
+    IOrganizationIntegrationRepository integrationRepository,
     ISlackService slackService) : Controller
 {
-    [HttpGet("redirect/{id}")]
-    public async Task<IActionResult> RedirectToSlack(string id)
+    [HttpGet("redirect/{id:guid}")]
+    public async Task<IActionResult> RedirectToSlack(Guid id)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await currentContext.OrganizationOwner(orgIdGuid))
+        if (!await currentContext.OrganizationOwner(id))
         {
             throw new NotFoundException();
         }
@@ -35,11 +36,10 @@ public class SlackOAuthController(
         return Redirect(redirectUrl);
     }
 
-    [HttpGet("callback/{id}", Name = nameof(OAuthCallback))]
-    public async Task<IActionResult> OAuthCallback(string id, [FromQuery] string code)
+    [HttpGet("callback/{id:guid}", Name = nameof(OAuthCallback))]
+    public async Task<IActionResult> OAuthCallback(Guid id, [FromQuery] string code)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await currentContext.OrganizationOwner(orgIdGuid))
+        if (!await currentContext.OrganizationOwner(id))
         {
             throw new NotFoundException();
         }
@@ -49,7 +49,7 @@ public class SlackOAuthController(
             throw new BadRequestException("Missing code from Slack.");
         }
 
-        string callbackUrl = Url.RouteUrl(nameof(OAuthCallback));
+        string callbackUrl = Url.RouteUrl(nameof(OAuthCallback), new { id = id }, currentContext.HttpContext.Request.Scheme);
         var token = await slackService.ObtainTokenViaOAuth(code, callbackUrl);
 
         if (string.IsNullOrEmpty(token))
@@ -57,10 +57,12 @@ public class SlackOAuthController(
             throw new BadRequestException("Invalid response from Slack.");
         }
 
-        await integrationConfigurationRepository.CreateOrganizationIntegrationAsync(
-            orgIdGuid,
-            IntegrationType.Slack,
-            new SlackIntegration(token));
-        return Ok("Slack OAuth successful. Your bot is now installed.");
+        var integration = await integrationRepository.CreateAsync(new OrganizationIntegration
+        {
+            OrganizationId = id,
+            Type = IntegrationType.Slack,
+            Configuration = JsonSerializer.Serialize(new SlackIntegration(token)),
+        });
+        return Ok("Your bot is now installed.");
     }
 }

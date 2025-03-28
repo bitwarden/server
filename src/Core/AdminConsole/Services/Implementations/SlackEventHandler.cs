@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using System.Text.Json;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Integrations;
 using Bit.Core.Repositories;
@@ -12,15 +13,21 @@ public class SlackEventHandler(
 {
     public async Task HandleEventAsync(EventMessage eventMessage)
     {
-        var organizationId = eventMessage.OrganizationId ?? Guid.NewGuid();
-        var configurations = await configurationRepository.GetConfigurationsAsync<SlackConfiguration>(organizationId, IntegrationType.Slack, eventMessage.Type);
+        var organizationId = eventMessage.OrganizationId ?? Guid.Empty;
+        var configurations = await configurationRepository.GetConfigurationsAsync(organizationId, IntegrationType.Slack, eventMessage.Type);
 
         foreach (var configuration in configurations)
         {
+            var config = JsonSerializer.Deserialize<SlackConfiguration>(configuration.Configuration ?? string.Empty);
+            if (config is null)
+            {
+                continue;
+            }
+
             await slackService.SendSlackMessageByChannelIdAsync(
-                configuration.Configuration.Token,
+                config.token,
                 TemplateProcessor.ReplaceTokens(configuration.Template, eventMessage),
-                configuration.Configuration.ChannelId
+                config.channelId
             );
         }
     }
