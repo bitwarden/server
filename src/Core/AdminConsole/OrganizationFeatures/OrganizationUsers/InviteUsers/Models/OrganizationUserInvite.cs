@@ -1,9 +1,9 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.InviteOrganizationUserErrorMessages;
-using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.InviteOrganizationUserFunctions;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 
@@ -41,7 +41,7 @@ public class OrganizationUserInvite
 
         var collections = assignedCollections?.ToArray() ?? [];
 
-        if (collections.Any(ValidateCollectionConfiguration))
+        if (collections.Any(x => x.IsValidCollectionAccessConfiguration()))
         {
             throw new BadRequestException(InvalidCollectionConfigurationErrorMessage);
         }

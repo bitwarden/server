@@ -2,11 +2,11 @@
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 
-public static class InviteOrganizationUserFunctions
+public static class CollectionAccessSelectionExtensions
 {
     /// <summary>
-    /// This
+    /// This validates the permissions on the given assigned collection
     /// </summary>
-    public static Func<CollectionAccessSelection, bool> ValidateCollectionConfiguration => collectionAccessSelection =>
+    public static bool IsValidCollectionAccessConfiguration(this CollectionAccessSelection collectionAccessSelection) =>
         collectionAccessSelection.Manage && (collectionAccessSelection.ReadOnly || collectionAccessSelection.HidePasswords);
 }
