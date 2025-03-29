@@ -3,7 +3,7 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
-namespace Bit.Api.Auth.Models.Request.Accounts;
+namespace Bit.Api.KeyManagement.Models.Requests;
 
 public class SetKeyConnectorKeyRequestModel
 {
