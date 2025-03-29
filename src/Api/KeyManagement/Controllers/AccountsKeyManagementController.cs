@@ -57,7 +57,8 @@ public class AccountsKeyManagementController : Controller
             emergencyAccessValidator,
         IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
             organizationUserValidator,
-        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator)
+        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
+            webAuthnKeyValidator)
     {
         _userService = userService;
         _featureService = featureService;
@@ -129,8 +130,6 @@ public class AccountsKeyManagementController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    [HttpPost("key-management/set-key-connector-key")]
-    // Backwards compatibility, to be deleted in the future
     [HttpPost("set-key-connector-key")]
     public async Task PostSetKeyConnectorKeyAsync([FromBody] SetKeyConnectorKeyRequestModel model)
     {
@@ -154,8 +153,6 @@ public class AccountsKeyManagementController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    [HttpPost("key-management/convert-to-key-connector")]
-    // Backwards compatibility, to be deleted in the future
     [HttpPost("convert-to-key-connector")]
     public async Task PostConvertToKeyConnectorAsync()
     {

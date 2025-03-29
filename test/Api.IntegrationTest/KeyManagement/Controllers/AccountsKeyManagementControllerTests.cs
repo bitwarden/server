@@ -175,7 +175,8 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeysAsync_NotLoggedIn_Unauthorized(RotateUserAccountKeysAndDataRequestModel request)
+    public async Task RotateUserAccountKeysAsync_NotLoggedIn_Unauthorized(
+        RotateUserAccountKeysAndDataRequestModel request)
     {
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
 
@@ -257,20 +258,17 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     }
 
     [Theory]
-    [BitAutoData("/accounts/key-management/set-key-connector-key")]
-    [BitAutoData("/accounts/set-key-connector-key")]
-    public async Task PostSetKeyConnectorKeyAsync_NotLoggedIn_Unauthorized(string uri,
-        SetKeyConnectorKeyRequestModel request)
+    [BitAutoData]
+    public async Task PostSetKeyConnectorKeyAsync_NotLoggedIn_Unauthorized(SetKeyConnectorKeyRequestModel request)
     {
-        var response = await _client.PostAsJsonAsync(uri, request);
+        var response = await _client.PostAsJsonAsync("/accounts/set-key-connector-key", request);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Theory]
-    [BitAutoData("/accounts/key-management/set-key-connector-key")]
-    [BitAutoData("/accounts/set-key-connector-key")]
-    public async Task PostSetKeyConnectorKeyAsync_Success(string uri, string organizationSsoIdentifier,
+    [BitAutoData]
+    public async Task PostSetKeyConnectorKeyAsync_Success(string organizationSsoIdentifier,
         SetKeyConnectorKeyRequestModel request)
     {
         var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
@@ -291,7 +289,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         request.Key = _mockEncryptedString;
         request.OrgIdentifier = organizationSsoIdentifier;
 
-        var response = await _client.PostAsJsonAsync(uri, request);
+        var response = await _client.PostAsJsonAsync("/accounts/set-key-connector-key", request);
         response.EnsureSuccessStatusCode();
 
         var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
@@ -308,20 +306,16 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.Null(ssoOrganizationUser.Email);
     }
 
-    [Theory]
-    [BitAutoData("/accounts/key-management/convert-to-key-connector")]
-    [BitAutoData("/accounts/convert-to-key-connector")]
-    public async Task PostConvertToKeyConnectorAsync_NotLoggedIn_Unauthorized(string uri)
+    [Fact]
+    public async Task PostConvertToKeyConnectorAsync_NotLoggedIn_Unauthorized()
     {
-        var response = await _client.PostAsJsonAsync(uri, new { });
+        var response = await _client.PostAsJsonAsync("/accounts/convert-to-key-connector", new { });
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    [Theory]
-    [BitAutoData("/accounts/key-management/convert-to-key-connector")]
-    [BitAutoData("/accounts/convert-to-key-connector")]
-    public async Task PostConvertToKeyConnectorAsync_Success(string uri)
+    [Fact]
+    public async Task PostConvertToKeyConnectorAsync_Success()
     {
         var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
             PlanType.EnterpriseAnnually, _ownerEmail, passwordManagerSeats: 10,
@@ -337,7 +331,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, ssoUserEmail,
             OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Accepted);
 
-        var response = await _client.PostAsJsonAsync(uri, new { });
+        var response = await _client.PostAsJsonAsync("/accounts/convert-to-key-connector", new { });
         response.EnsureSuccessStatusCode();
 
         var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
