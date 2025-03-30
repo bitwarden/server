@@ -335,7 +335,6 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
 
         var username = "test+tokenclientcredentials@email.com";
 
-
         await server.PostAsync("/accounts/register", JsonContent.Create(new RegisterRequestModel
         {
             Email = username,
