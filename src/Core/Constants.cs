@@ -114,7 +114,6 @@ public static class FeatureFlagKeys
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
     public const string DuoRedirect = "duo-redirect";
     public const string EmailVerification = "email-verification";
-    public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
@@ -154,7 +153,7 @@ public static class FeatureFlagKeys
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string Argon2Default = "argon2-default";
     public const string UserkeyRotationV2 = "userkey-rotation-v2";
-    
+
     /* Mobile Team */
     public const string NativeCarouselFlow = "native-carousel-flow";
     public const string NativeCreateAccountFlow = "native-create-account-flow";
@@ -192,7 +191,7 @@ public static class FeatureFlagKeys
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string SecurityTasks = "security-tasks";
     public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
-    public const string CipherKeyEncryption = "cipher-key-encryption";  
+    public const string CipherKeyEncryption = "cipher-key-encryption";
 
     public static List<string> GetAllKeys()
     {
