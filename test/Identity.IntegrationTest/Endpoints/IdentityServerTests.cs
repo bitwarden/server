@@ -331,10 +331,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     [Theory, BitAutoData]
     public async Task TokenEndpoint_GrantTypeClientCredentials_AsLegacyUser_NotOnWebClient_Fails(string deviceId)
     {
-        var server = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.UseSetting("globalSettings:launchDarkly:flagValues:block-legacy-users", "true");
-        }).Server;
+        var server = _factory.Server;
 
         var username = "test+tokenclientcredentials@email.com";
 
