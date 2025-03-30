@@ -74,11 +74,6 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
             await _mailService.SendRegistrationVerificationEmailAsync(email, token);
         }
 
-        if (delaysEnabled)
-        {
-            // Add random delay between 100ms-130ms to prevent timing attacks
-            await Task.Delay(Random.Shared.Next(100, 130));
-        }
         // User exists but we will return a 200 regardless of whether the email was sent or not; so return null
         return null;
     }
