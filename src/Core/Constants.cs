@@ -154,6 +154,7 @@ public static class FeatureFlagKeys
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string Argon2Default = "argon2-default";
     public const string UserkeyRotationV2 = "userkey-rotation-v2";
+    public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
 
     /* Mobile Team */
     public const string NativeCarouselFlow = "native-carousel-flow";
@@ -191,7 +192,6 @@ public static class FeatureFlagKeys
     public const string VaultBulkManagementAction = "vault-bulk-management-action";
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string SecurityTasks = "security-tasks";
-    public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
     public const string CipherKeyEncryption = "cipher-key-encryption";
 
     public static List<string> GetAllKeys()
