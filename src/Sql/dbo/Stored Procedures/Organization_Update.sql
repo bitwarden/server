@@ -55,6 +55,7 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @LimitCollectionDeletion BIT = null,
     @AllowAdminAccessToAllCollectionItems BIT = 0,
     @UseRiskInsights BIT = 0,
+    @UseAdminSponsoredFamilies BIT = 0,
     @LimitItemDeletion BIT = 0
 AS
 BEGIN

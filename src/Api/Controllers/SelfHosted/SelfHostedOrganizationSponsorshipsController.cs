@@ -44,7 +44,7 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
         await _offerSponsorshipCommand.CreateSponsorshipAsync(
             await _organizationRepository.GetByIdAsync(sponsoringOrgId),
             await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
-            model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
+            model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName, model.Notes);
     }
 
     [HttpDelete("{sponsoringOrgId}")]
