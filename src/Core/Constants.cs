@@ -112,7 +112,6 @@ public static class FeatureFlagKeys
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
-    public const string DuoRedirect = "duo-redirect";
     public const string EmailVerification = "email-verification";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
@@ -204,9 +203,6 @@ public static class FeatureFlagKeys
     public static Dictionary<string, string> GetLocalOverrideFlagValues()
     {
         // place overriding values when needed locally (offline), or return null
-        return new Dictionary<string, string>()
-        {
-            { DuoRedirect, "true" },
-        };
+        return null;
     }
 }
