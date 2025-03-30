@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using Bit.Core;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
