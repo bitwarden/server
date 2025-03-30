@@ -114,7 +114,6 @@ public static class FeatureFlagKeys
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
     public const string DuoRedirect = "duo-redirect";
     public const string EmailVerification = "email-verification";
-    public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
