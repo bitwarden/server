@@ -117,7 +117,6 @@ public static class FeatureFlagKeys
     public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
-    public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
     public const string NewDeviceVerification = "new-device-verification";
     public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
@@ -125,6 +124,7 @@ public static class FeatureFlagKeys
     public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
 
     /* Autofill Team */
+    public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
