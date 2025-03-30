@@ -108,24 +108,7 @@ public static class FeatureFlagKeys
     public const string LimitItemDeletion = "pm-15493-restrict-item-deletion-to-can-manage-permission";
     public const string PushSyncOrgKeysOnRevokeRestore = "pm-17168-push-sync-org-keys-on-revoke-restore";
     public const string PolicyRequirements = "pm-14439-policy-requirements";
-       public const string SsoExternalIdVisibility = "pm-18630-sso-external-id-visibility";
-
-
-    /* Tools Team */
-    public const string ItemShare = "item-share";
-    public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
-    public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
-    public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
-    public const string ExportAttachments = "export-attachments";
-
-    /* Vault Team */
-    public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
-    public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
-    public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
-    public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
-    public const string VaultBulkManagementAction = "vault-bulk-management-action";
-    public const string RestrictProviderAccess = "restrict-provider-access";
-    public const string SecurityTasks = "security-tasks";
+    public const string SsoExternalIdVisibility = "pm-18630-sso-external-id-visibility";
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
