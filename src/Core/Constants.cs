@@ -169,7 +169,6 @@ public static class FeatureFlagKeys
 
     /* Platform Team */
     public const string PersistPopupView = "persist-popup-view";
-    public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string WebPush = "web-push";
     public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
 
