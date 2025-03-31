@@ -22,6 +22,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 using static Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Helpers.InviteUserOrganizationValidationRequestHelpers;
 using OrganizationUserInvite = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite;
@@ -418,5 +419,97 @@ public class InviteOrganizationUserCommandTests
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
             .Received(1)
             .UpdateSubscriptionAsync(secretsManagerSubscriptionUpdate);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task InviteScimOrganizationUserAsync_WhenAnErrorOccursWhileInvitingUsers_ThenAnySeatChangesShouldBeReverted(
+    MailAddress address,
+    Organization organization,
+    OrganizationUser user,
+    FakeTimeProvider timeProvider,
+    string externalId,
+    OrganizationUserUserDetails ownerDetails,
+    SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        // Arrange
+        user.Email = address.Address;
+        organization.Seats = 1;
+        organization.SmSeats = 1;
+        organization.MaxAutoscaleSeats = 2;
+        organization.MaxAutoscaleSmSeats = 2;
+        ownerDetails.Type = OrganizationUserType.Owner;
+
+        var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+
+        var request = new InviteOrganizationUsersRequest(
+            invites: [
+                new OrganizationUserInvite(
+                    email: user.Email,
+                    assignedCollections: [],
+                    groups: [],
+                    type: OrganizationUserType.User,
+                    permissions: new Permissions(),
+                    externalId: externalId,
+                    accessSecretsManager: true)
+            ],
+            inviteOrganization: inviteOrganization,
+            performedBy: Guid.Empty,
+            timeProvider.GetUtcNow());
+
+        var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, inviteOrganization.Plan, true)
+            .AdjustSeats(request.Invites.Count(x => x.AccessSecretsManager));
+
+        var passwordManagerSubscriptionUpdate =
+            new PasswordManagerSubscriptionUpdate(inviteOrganization, 1, request.Invites.Length);
+
+        var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+        orgUserRepository
+            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .Returns([]);
+        orgUserRepository
+            .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
+            .Returns([ownerDetails]);
+
+        var orgRepository = sutProvider.GetDependency<IOrganizationRepository>();
+
+        orgRepository.GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IInviteUsersValidator>()
+            .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
+            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
+                .WithPasswordManagerUpdate(passwordManagerSubscriptionUpdate)
+                .WithSecretsManagerUpdate(secretsManagerSubscriptionUpdate)));
+
+        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
+            .Throws(new Exception("Something went wrong"));
+
+        // Act
+        var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
+
+        // Assert
+        Assert.IsType<Failure<ScimInviteOrganizationUsersResponse>>(result);
+        Assert.Equal(InviteOrganizationUsersCommand.FailedToInviteUsers, (result as Failure<ScimInviteOrganizationUsersResponse>)!.ErrorMessage);
+
+        // org user revert
+        await orgUserRepository.Received(1).DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(x => x.Count() == 1));
+
+        // SM revert
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .Received(2)
+            .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>());
+
+        // PM revert
+        await sutProvider.GetDependency<IPaymentService>()
+            .Received(2)
+            .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
+
+        await orgRepository.Received(2).ReplaceAsync(Arg.Any<Organization>());
+
+        await sutProvider.GetDependency<IApplicationCacheService>().Received(2)
+            .UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
     }
 }
