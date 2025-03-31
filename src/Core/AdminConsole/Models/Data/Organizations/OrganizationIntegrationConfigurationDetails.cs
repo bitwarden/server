@@ -19,15 +19,46 @@ public class OrganizationIntegrationConfigurationDetails
     {
         get
         {
-            var configJson = JsonNode.Parse(Configuration ?? string.Empty) as JsonObject ?? new JsonObject();
-            var integrationJson = JsonNode.Parse(IntegrationConfiguration ?? string.Empty) as JsonObject ?? new JsonObject();
+            var integrationJson = IntegrationConfigurationJson;
 
-            foreach (var kvp in configJson)
+            foreach (var kvp in ConfigurationJson)
             {
-                integrationJson[kvp.Key] = kvp.Value;
+                integrationJson[kvp.Key] = kvp.Value?.DeepClone();
             }
 
             return integrationJson;
+        }
+    }
+
+    private JsonObject ConfigurationJson
+    {
+        get
+        {
+            try
+            {
+                var configuration = Configuration ?? "{}";
+                return JsonNode.Parse(configuration) as JsonObject ?? new JsonObject();
+            }
+            catch
+            {
+                return new JsonObject();
+            }
+        }
+    }
+
+    private JsonObject IntegrationConfigurationJson
+    {
+        get
+        {
+            try
+            {
+                var integration = IntegrationConfiguration ?? "{}";
+                return JsonNode.Parse(integration) as JsonObject ?? new JsonObject();
+            }
+            catch
+            {
+                return new JsonObject();
+            }
         }
     }
 }
