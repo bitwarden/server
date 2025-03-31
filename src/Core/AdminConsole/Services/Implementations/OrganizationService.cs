@@ -496,7 +496,7 @@ public class OrganizationService : IOrganizationService
         return returnValue;
     }
 
-    private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
+    public async Task ValidateSignUpPoliciesAsync(Guid ownerId)
     {
         var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
         if (anySingleOrgPolicies)

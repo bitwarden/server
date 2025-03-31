@@ -63,4 +63,5 @@ public interface IOrganizationService
     Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
         OrganizationUserType? oldType, Permissions permissions);
     Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType);
+    Task ValidateSignUpPoliciesAsync(Guid ownerId);
 }
