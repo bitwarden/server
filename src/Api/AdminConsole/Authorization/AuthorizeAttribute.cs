@@ -16,6 +16,6 @@ public class AuthorizeAttribute<T>
     public IEnumerable<IAuthorizationRequirement> GetRequirements()
     {
         var requirement = new T();
-        yield return requirement;
+        return [requirement];
     }
 }
