@@ -1,8 +1,7 @@
 ﻿using Bit.Api.AdminConsole.Controllers;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data.Integrations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -29,10 +28,10 @@ public class SlackOAuthControllerTests
             .ObtainTokenViaOAuth(Arg.Any<string>(), Arg.Any<string>())
             .Returns(token);
 
-        var requestAction = await sutProvider.Sut.OAuthCallback(organizationId.ToString(), "A_test_code");
+        var requestAction = await sutProvider.Sut.OAuthCallback(organizationId, "A_test_code");
 
-        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
-            .CreateOrganizationIntegrationAsync(organizationId, IntegrationType.Slack, new SlackIntegration(token));
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
+            .CreateAsync(Arg.Any<OrganizationIntegration>());
         Assert.IsType<OkObjectResult>(requestAction);
     }
 
@@ -44,7 +43,7 @@ public class SlackOAuthControllerTests
             .OrganizationOwner(organizationId)
             .Returns(true);
 
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.OAuthCallback(organizationId.ToString(), string.Empty));
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.OAuthCallback(organizationId, string.Empty));
     }
 
     [Theory, BitAutoData]
@@ -58,7 +57,7 @@ public class SlackOAuthControllerTests
             .ObtainTokenViaOAuth(Arg.Any<string>(), Arg.Any<string>())
             .Returns(string.Empty);
 
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.OAuthCallback(organizationId.ToString(), "A_test_code"));
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.OAuthCallback(organizationId, "A_test_code"));
     }
 
     [Theory, BitAutoData]
@@ -73,13 +72,13 @@ public class SlackOAuthControllerTests
             .ObtainTokenViaOAuth(Arg.Any<string>(), Arg.Any<string>())
             .Returns(token);
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.OAuthCallback(organizationId.ToString(), "A_test_code"));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.OAuthCallback(organizationId, "A_test_code"));
     }
 
     [Theory, BitAutoData]
     public async Task Redirect_ShouldRedirectToSlack(SutProvider<SlackOAuthController> sutProvider, Guid organizationId)
     {
-        var expectedUrl = $"https://localhost/{organizationId.ToString()}";
+        var expectedUrl = $"https://localhost/{organizationId}";
 
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.GetDependency<ISlackService>().GetRedirectUrl(Arg.Any<string>()).Returns(expectedUrl);
@@ -90,7 +89,7 @@ public class SlackOAuthControllerTests
             .HttpContext.Request.Scheme
             .Returns("https");
 
-        var requestAction = await sutProvider.Sut.RedirectToSlack(organizationId.ToString());
+        var requestAction = await sutProvider.Sut.RedirectToSlack(organizationId);
 
         var redirectResult = Assert.IsType<RedirectResult>(requestAction);
         Assert.Equal(expectedUrl, redirectResult.Url);
@@ -108,7 +107,7 @@ public class SlackOAuthControllerTests
             .HttpContext.Request.Scheme
             .Returns("https");
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.RedirectToSlack(organizationId.ToString()));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.RedirectToSlack(organizationId));
     }
 
     [Theory, BitAutoData]
@@ -124,6 +123,6 @@ public class SlackOAuthControllerTests
             .HttpContext.Request.Scheme
             .Returns("https");
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.RedirectToSlack(organizationId.ToString()));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.RedirectToSlack(organizationId));
     }
 }
