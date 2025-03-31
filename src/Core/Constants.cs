@@ -144,7 +144,6 @@ public static class FeatureFlagKeys
     public const string TrialPayment = "PM-8163-trial-payment";
     public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
     public const string UsePricingService = "use-pricing-service";
-    public const string P15179_AddExistingOrgsFromProviderPortal = "pm-15179-add-existing-orgs-from-provider-portal";
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
     public const string PM18794_ProviderPaymentMethod = "pm-18794-provider-payment-method";
 
