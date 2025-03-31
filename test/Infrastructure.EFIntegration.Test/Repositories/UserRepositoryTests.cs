@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
@@ -288,5 +289,28 @@ public class UserRepositoryTests
 
         var distinctItems = returnedList.Distinct(equalityComparer);
         Assert.True(!distinctItems.Skip(1).Any());
+    }
+
+    [CiSkippedTheory, EfUserAutoData]
+    public async Task UpdateUserKeyAndEncryptedDataAsync_Works_DataMatches(User user, SqlRepo.UserRepository sqlUserRepo)
+    {
+        var sqlUser = await sqlUserRepo.CreateAsync(user);
+        sqlUser.Kdf = KdfType.PBKDF2_SHA256;
+        sqlUser.KdfIterations = 6_000_000;
+        sqlUser.KdfMemory = 7_000_000;
+        sqlUser.KdfParallelism = 8_000_000;
+        sqlUser.MasterPassword = "masterPasswordHash";
+        sqlUser.MasterPasswordHint = "masterPasswordHint";
+        sqlUser.Email = "example@example.com";
+
+        await sqlUserRepo.UpdateUserKeyAndEncryptedDataV2Async(sqlUser, []);
+        var updatedUser = await sqlUserRepo.GetByIdAsync(sqlUser.Id);
+        Assert.Equal(sqlUser.Kdf, updatedUser.Kdf);
+        Assert.Equal(sqlUser.KdfIterations, updatedUser.KdfIterations);
+        Assert.Equal(sqlUser.KdfMemory, updatedUser.KdfMemory);
+        Assert.Equal(sqlUser.KdfParallelism, updatedUser.KdfParallelism);
+        Assert.Equal(sqlUser.MasterPassword, updatedUser.MasterPassword);
+        Assert.Equal(sqlUser.MasterPasswordHint, updatedUser.MasterPasswordHint);
+        Assert.Equal(sqlUser.Email, updatedUser.Email);
     }
 }
