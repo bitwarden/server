@@ -1,5 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -41,6 +43,8 @@ public class CipherService : ICipherService
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
     private readonly IGetCipherPermissionsForUserQuery _getCipherPermissionsForUserQuery;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IFeatureService _featureService;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -58,7 +62,9 @@ public class CipherService : ICipherService
         GlobalSettings globalSettings,
         IReferenceEventService referenceEventService,
         ICurrentContext currentContext,
-        IGetCipherPermissionsForUserQuery getCipherPermissionsForUserQuery)
+        IGetCipherPermissionsForUserQuery getCipherPermissionsForUserQuery,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IFeatureService featureService)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -76,6 +82,8 @@ public class CipherService : ICipherService
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
         _getCipherPermissionsForUserQuery = getCipherPermissionsForUserQuery;
+        _policyRequirementQuery = policyRequirementQuery;
+        _featureService = featureService;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -143,9 +151,11 @@ public class CipherService : ICipherService
             }
             else
             {
-                // Make sure the user can save new ciphers to their personal vault
-                var anyPersonalOwnershipPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership);
-                if (anyPersonalOwnershipPolicies)
+                var isPersonalVaultRestricted = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+                    ? (await _policyRequirementQuery.GetAsync<PersonalOwnershipPolicyRequirement>(savingUserId)).DisablePersonalOwnership
+                    : await _policyService.AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership);
+
+                if (isPersonalVaultRestricted)
                 {
                     throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
                 }
