@@ -8,7 +8,6 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
-using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -114,17 +113,6 @@ public class AccountsController : Controller
         }
     }
 
-    [HttpPost("register")]
-    [CaptchaProtected]
-    public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
-    {
-        var user = model.ToUser();
-        var identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
-            model.Token, model.OrganizationUserId);
-        // delaysEnabled false is only for the new registration with email verification process
-        return await ProcessRegistrationResult(identityResult, user, delaysEnabled: true);
-    }
-
     [HttpPost("register/send-verification-email")]
     public async Task<IActionResult> PostRegisterSendVerificationEmail([FromBody] RegisterSendVerificationEmailRequestModel model)
     {
@@ -176,8 +164,6 @@ public class AccountsController : Controller
         }
 
         return Ok();
-
-
     }
 
     [HttpPost("register/finish")]
@@ -186,7 +172,6 @@ public class AccountsController : Controller
         var user = model.ToUser();
 
         // Users will either have an emailed token or an email verification token - not both.
-
         IdentityResult identityResult = null;
         var delaysEnabled = !_featureService.IsEnabled(FeatureFlagKeys.EmailVerificationDisableTimingDelays);
 
@@ -198,33 +183,27 @@ public class AccountsController : Controller
                         model.EmailVerificationToken);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.OrganizationInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
                     model.OrgInviteToken, model.OrganizationUserId);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, model.MasterPasswordHash, model.OrgSponsoredFreeFamilyPlanToken);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.EmergencyAccessInvite:
                 Debug.Assert(model.AcceptEmergencyAccessId.HasValue);
                 identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(user, model.MasterPasswordHash,
                     model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.ProviderInvite:
                 Debug.Assert(model.ProviderUserId.HasValue);
                 identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(user, model.MasterPasswordHash,
                     model.ProviderInviteToken, model.ProviderUserId.Value);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
-
             default:
                 throw new BadRequestException("Invalid registration finish request");
         }
