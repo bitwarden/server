@@ -321,7 +321,12 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        await _initPendingOrganizationCommand.InitPendingOrganizationAsync(user.Id, orgId, organizationUserId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName);
+        var commandResult = await _initPendingOrganizationCommand.InitPendingOrganizationAsync(user.Id, orgId, organizationUserId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName);
+        if (commandResult.HasErrors)
+        {
+            throw new BadRequestException(string.Join(", ", commandResult.ErrorMessages));
+        }
+
         await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
         await _confirmOrganizationUserCommand.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id);
     }

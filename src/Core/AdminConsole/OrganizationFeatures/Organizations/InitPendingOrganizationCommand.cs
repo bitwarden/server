@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
+using Bit.Core.Models.Commands;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
@@ -26,7 +26,12 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         _organizationRepository = organizationRepository;
     }
 
-    public async Task InitPendingOrganizationAsync(Guid userId, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName)
+    public const string OrgEnabled = "Organization is already enabled.";
+    public const string OrgNotPending = "Organization is not on a Pending status.";
+    public const string OrgHasPublicKey = "Organization already has a Public Key.";
+    public const string OrgHasPrivateKey = "Organization already has a Private Key.";
+
+    public async Task<CommandResult> InitPendingOrganizationAsync(Guid userId, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName)
     {
         await _organizationService.ValidateSignUpPoliciesAsync(userId);
 
@@ -34,22 +39,22 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
 
         if (org.Enabled)
         {
-            throw new BadRequestException("Organization is already enabled.");
+            return new CommandResult(OrgEnabled);
         }
 
         if (org.Status != OrganizationStatusType.Pending)
         {
-            throw new BadRequestException("Organization is not on a Pending status.");
+            return new CommandResult(OrgNotPending);
         }
 
         if (!string.IsNullOrEmpty(org.PublicKey))
         {
-            throw new BadRequestException("Organization already has a Public Key.");
+            return new CommandResult(OrgHasPublicKey);
         }
 
         if (!string.IsNullOrEmpty(org.PrivateKey))
         {
-            throw new BadRequestException("Organization already has a Private Key.");
+            return new CommandResult(OrgHasPrivateKey);
         }
 
         org.Enabled = true;
@@ -72,5 +77,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             };
             await _collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);
         }
+
+        return new CommandResult();
     }
 }
