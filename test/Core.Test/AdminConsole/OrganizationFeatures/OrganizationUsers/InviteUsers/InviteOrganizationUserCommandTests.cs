@@ -1,11 +1,15 @@
 ﻿using System.Net.Mail;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Errors;
 using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Entities;
@@ -424,13 +428,13 @@ public class InviteOrganizationUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task InviteScimOrganizationUserAsync_WhenAnErrorOccursWhileInvitingUsers_ThenAnySeatChangesShouldBeReverted(
-    MailAddress address,
-    Organization organization,
-    OrganizationUser user,
-    FakeTimeProvider timeProvider,
-    string externalId,
-    OrganizationUserUserDetails ownerDetails,
-    SutProvider<InviteOrganizationUsersCommand> sutProvider)
+        MailAddress address,
+        Organization organization,
+        OrganizationUser user,
+        FakeTimeProvider timeProvider,
+        string externalId,
+        OrganizationUserUserDetails ownerDetails,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
     {
         // Arrange
         user.Email = address.Address;
@@ -511,5 +515,95 @@ public class InviteOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IApplicationCacheService>().Received(2)
             .UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task InviteScimOrganizationUserAsync_WhenAnOrganizationIsManagedByAProvider_ThenAnEmailShouldBeSentToTheProvider(
+        MailAddress address,
+        Organization organization,
+        OrganizationUser user,
+        FakeTimeProvider timeProvider,
+        string externalId,
+        OrganizationUserUserDetails ownerDetails,
+        ProviderOrganization providerOrganization,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        // Arrange
+        user.Email = address.Address;
+        organization.Seats = 1;
+        organization.SmSeats = 1;
+        organization.MaxAutoscaleSeats = 2;
+        organization.MaxAutoscaleSmSeats = 2;
+        ownerDetails.Type = OrganizationUserType.Owner;
+
+        providerOrganization.OrganizationId = organization.Id;
+
+        var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+
+        var request = new InviteOrganizationUsersRequest(
+            invites: [
+                new OrganizationUserInvite(
+                    email: user.Email,
+                    assignedCollections: [],
+                    groups: [],
+                    type: OrganizationUserType.User,
+                    permissions: new Permissions(),
+                    externalId: externalId,
+                    accessSecretsManager: true)
+            ],
+            inviteOrganization: inviteOrganization,
+            performedBy: Guid.Empty,
+            timeProvider.GetUtcNow());
+
+        var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, inviteOrganization.Plan, true)
+            .AdjustSeats(request.Invites.Count(x => x.AccessSecretsManager));
+
+        var passwordManagerSubscriptionUpdate =
+            new PasswordManagerSubscriptionUpdate(inviteOrganization, 1, request.Invites.Length);
+
+        var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+        orgUserRepository
+            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .Returns([]);
+        orgUserRepository
+            .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
+            .Returns([ownerDetails]);
+
+        var orgRepository = sutProvider.GetDependency<IOrganizationRepository>();
+
+        orgRepository.GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IInviteUsersValidator>()
+            .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
+            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
+                .WithPasswordManagerUpdate(passwordManagerSubscriptionUpdate)
+                .WithSecretsManagerUpdate(secretsManagerSubscriptionUpdate)));
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>()
+            .GetByOrganizationId(organization.Id)
+            .Returns(providerOrganization);
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyDetailsByProviderAsync(providerOrganization.ProviderId, ProviderUserStatusType.Confirmed)
+            .Returns(new List<ProviderUserUserDetails>
+            {
+                new()
+                {
+                    Email = "provider@email.com"
+                }
+            });
+
+        // Act
+        var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
+
+        // Assert
+        Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
+
+        sutProvider.GetDependency<IMailService>().Received(1)
+            .SendOrganizationMaxSeatLimitReachedEmailAsync(organization, 2,
+                Arg.Is<IEnumerable<string>>(emails => emails.Any(email => email == "provider@email.com")));
     }
 }
