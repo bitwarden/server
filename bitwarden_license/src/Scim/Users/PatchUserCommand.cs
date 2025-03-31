@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -11,15 +12,18 @@ public class PatchUserCommand : IPatchUserCommand
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
+    private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
     private readonly ILogger<PatchUserCommand> _logger;
 
     public PatchUserCommand(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
+        IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
         ILogger<PatchUserCommand> logger)
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
+        _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
         _logger = logger;
     }
 
@@ -71,7 +75,7 @@ public class PatchUserCommand : IPatchUserCommand
     {
         if (active && orgUser.Status == OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RestoreUserAsync(orgUser, EventSystemUser.SCIM);
+            await _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, EventSystemUser.SCIM);
             return true;
         }
         else if (!active && orgUser.Status != OrganizationUserStatusType.Revoked)
