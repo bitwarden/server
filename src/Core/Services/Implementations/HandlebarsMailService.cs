@@ -789,7 +789,7 @@ public class HandlebarsMailService : IMailService
             {
                 outputMessage += string.Join(", ", emailList.Take(emailList.Count - 1)
                     .Select(email => constructAnchorElement(email)));
-                outputMessage += $", and {constructAnchorElement(emailList.Last())}.";
+                outputMessage += $" and {constructAnchorElement(emailList.Last())}.";
             }
 
             writer.WriteSafeString($"{outputMessage}");
