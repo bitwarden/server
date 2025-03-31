@@ -35,7 +35,6 @@ namespace Bit.Api.AdminConsole.Controllers;
 
 [Route("organizations/{orgId}/users")]
 [Authorize("Application")]
-[Authorize<MemberOrProviderRequirement>]
 public class OrganizationUsersController : Controller
 {
     private readonly IOrganizationRepository _organizationRepository;
