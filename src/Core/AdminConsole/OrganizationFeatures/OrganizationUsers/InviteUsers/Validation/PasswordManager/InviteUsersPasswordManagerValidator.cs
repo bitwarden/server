@@ -34,14 +34,14 @@ public class InviteUsersPasswordManagerValidator(
             return new Valid<PasswordManagerSubscriptionUpdate>(subscriptionUpdate);
         }
 
+        if (subscriptionUpdate.SeatsRequiredToAdd == 0)
+        {
+            return new Valid<PasswordManagerSubscriptionUpdate>(subscriptionUpdate);
+        }
+
         if (subscriptionUpdate.PasswordManagerPlan.BaseSeats + subscriptionUpdate.SeatsRequiredToAdd <= 0)
         {
             return new Invalid<PasswordManagerSubscriptionUpdate>(new PasswordManagerMustHaveSeatsError(subscriptionUpdate));
-        }
-
-        if (subscriptionUpdate.NewUsersToAdd == 0)
-        {
-            return new Valid<PasswordManagerSubscriptionUpdate>(subscriptionUpdate);
         }
 
         if (subscriptionUpdate.MaxSeatsReached)

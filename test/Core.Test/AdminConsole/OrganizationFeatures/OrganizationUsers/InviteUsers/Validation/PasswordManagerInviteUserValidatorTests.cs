@@ -75,7 +75,7 @@ public class InviteUsersPasswordManagerValidatorTests
     public async Task Validate_GivenThePlanDoesNotAllowAdditionalSeats_ShouldBeInvalidMessageOfPlanNotAllowingSeats(Organization organization,
         SutProvider<InviteUsersPasswordManagerValidator> sutProvider)
     {
-        organization.Seats = 8;
+        organization.Seats = 4;
         organization.MaxAutoscaleSeats = 9;
         var seatsOccupiedByUsers = 4;
         var additionalSeats = 4;
