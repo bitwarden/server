@@ -13,12 +13,12 @@ public class SlackEventHandler(
 {
     public async Task HandleEventAsync(EventMessage eventMessage)
     {
-        var organizationId = eventMessage.OrganizationId ?? Guid.Empty;
+        var organizationId = eventMessage.OrganizationId ?? new Guid("f431e04c-f2c3-473c-8cd1-b291014b0236");
         var configurations = await configurationRepository.GetConfigurationsAsync(organizationId, IntegrationType.Slack, eventMessage.Type);
 
         foreach (var configuration in configurations)
         {
-            var config = JsonSerializer.Deserialize<SlackConfiguration>(configuration.Configuration ?? string.Empty);
+            var config = configuration.MergedConfiguration.Deserialize<SlackConfiguration>();
             if (config is null)
             {
                 continue;

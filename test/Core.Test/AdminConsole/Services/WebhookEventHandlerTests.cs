@@ -1,8 +1,9 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Integrations;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -41,13 +42,13 @@ public class WebhookEventHandlerTests
     }
 
     private SutProvider<WebhookEventHandler> GetSutProvider(
-        List<IntegrationConfiguration<WebhookConfiguration>> configurations)
+        List<OrganizationIntegrationConfigurationDetails> configurations)
     {
         var clientFactory = Substitute.For<IHttpClientFactory>();
         clientFactory.CreateClient(WebhookEventHandler.HttpClientName).Returns(_httpClient);
 
         var repository = Substitute.For<IOrganizationIntegrationConfigurationRepository>();
-        repository.GetConfigurationsAsync<WebhookConfiguration>(Arg.Any<Guid>(),
+        repository.GetConfigurationsAsync(Arg.Any<Guid>(),
             IntegrationType.Webhook, Arg.Any<EventType>()).Returns(configurations);
 
         return new SutProvider<WebhookEventHandler>()
@@ -56,38 +57,33 @@ public class WebhookEventHandlerTests
             .Create();
     }
 
-    List<IntegrationConfiguration<WebhookConfiguration>> NoConfigurations()
+    List<OrganizationIntegrationConfigurationDetails> NoConfigurations()
     {
-        return new List<IntegrationConfiguration<WebhookConfiguration>>();
+        return [];
     }
 
-    List<IntegrationConfiguration<WebhookConfiguration>> OneConfiguration()
+    List<OrganizationIntegrationConfigurationDetails> OneConfiguration()
     {
-        return new List<IntegrationConfiguration<WebhookConfiguration>>
-        {
-            new IntegrationConfiguration<WebhookConfiguration>
-            {
-                Configuration = new WebhookConfiguration { Url = _webhookUrl },
-                Template = _template
-            }
-        };
+        var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
+        config.Configuration = null;
+        config.IntegrationConfiguration = JsonSerializer.Serialize(new { url = _webhookUrl });
+        config.Template = _template;
+
+        return [config];
     }
 
-    List<IntegrationConfiguration<WebhookConfiguration>> TwoConfigurations()
+    List<OrganizationIntegrationConfigurationDetails> TwoConfigurations()
     {
-        return new List<IntegrationConfiguration<WebhookConfiguration>>
-        {
-            new IntegrationConfiguration<WebhookConfiguration>
-            {
-                Configuration = new WebhookConfiguration { Url = _webhookUrl },
-                Template = _template
-            },
-            new IntegrationConfiguration<WebhookConfiguration>
-            {
-                Configuration = new WebhookConfiguration { Url = _webhookUrl2 },
-                Template = _template
-            }
-        };
+        var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
+        config.Configuration = null;
+        config.IntegrationConfiguration = JsonSerializer.Serialize(new { url = _webhookUrl });
+        config.Template = _template;
+        var config2 = Substitute.For<OrganizationIntegrationConfigurationDetails>();
+        config2.Configuration = null;
+        config2.IntegrationConfiguration = JsonSerializer.Serialize(new { url = _webhookUrl2 });
+        config2.Template = _template;
+
+        return [config, config2];
     }
 
     [Theory, BitAutoData]

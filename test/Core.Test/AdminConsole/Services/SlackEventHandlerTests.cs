@@ -1,6 +1,7 @@
-﻿using Bit.Core.Enums;
+﻿using System.Text.Json;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Integrations;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -22,9 +23,9 @@ public class SlackEventHandlerTests
     private readonly string _token2 = "xoxb-another-test-token";
 
     private SutProvider<SlackEventHandler> GetSutProvider(
-        List<IntegrationConfiguration<SlackConfiguration>> integrationConfigurations)
+        List<OrganizationIntegrationConfigurationDetails> integrationConfigurations)
     {
-        _repository.GetConfigurationsAsync<SlackConfiguration>(Arg.Any<Guid>(),
+        _repository.GetConfigurationsAsync(Arg.Any<Guid>(),
             IntegrationType.Slack, Arg.Any<EventType>())
         .Returns(integrationConfigurations);
 
@@ -34,39 +35,33 @@ public class SlackEventHandlerTests
             .Create();
     }
 
-    private List<IntegrationConfiguration<SlackConfiguration>> NoConfigurations()
+    private List<OrganizationIntegrationConfigurationDetails> NoConfigurations()
     {
         return [];
     }
 
-    private List<IntegrationConfiguration<SlackConfiguration>> OneConfiguration()
+    private List<OrganizationIntegrationConfigurationDetails> OneConfiguration()
     {
-        return
-        [
-            new IntegrationConfiguration<SlackConfiguration>
-            {
-                Configuration = new SlackConfiguration(channelId: _channelId, token: _token),
-                Template = "Date: #Date#, Type: #Type#, UserId: #UserId#"
-            }
-        ];
+        var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
+        config.Configuration = JsonSerializer.Serialize(new { token = _token });
+        config.IntegrationConfiguration = JsonSerializer.Serialize(new { channelId = _channelId });
+        config.Template = "Date: #Date#, Type: #Type#, UserId: #UserId#";
+
+        return [config];
     }
 
-    private List<IntegrationConfiguration<SlackConfiguration>> TwoConfigurations()
+    private List<OrganizationIntegrationConfigurationDetails> TwoConfigurations()
     {
-        return
-        [
-            new IntegrationConfiguration<SlackConfiguration>
-            {
-                Configuration = new SlackConfiguration(channelId: _channelId, token: _token),
-                Template = "Date: #Date#, Type: #Type#, UserId: #UserId#"
-            },
+        var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
+        config.Configuration = JsonSerializer.Serialize(new { token = _token });
+        config.IntegrationConfiguration = JsonSerializer.Serialize(new { channelId = _channelId });
+        config.Template = "Date: #Date#, Type: #Type#, UserId: #UserId#";
+        var config2 = Substitute.For<OrganizationIntegrationConfigurationDetails>();
+        config2.Configuration = JsonSerializer.Serialize(new { token = _token2 });
+        config2.IntegrationConfiguration = JsonSerializer.Serialize(new { channelId = _channelId2 });
+        config2.Template = "Date: #Date#, Type: #Type#, UserId: #UserId#";
 
-            new IntegrationConfiguration<SlackConfiguration>
-            {
-                Configuration = new SlackConfiguration(channelId: _channelId2, token: _token2),
-                Template = "Date: #Date#, Type: #Type#, UserId: #UserId#"
-            }
-        ];
+        return [config, config2];
     }
 
     [Theory, BitAutoData]
@@ -124,7 +119,6 @@ public class SlackEventHandlerTests
 
         Assert.Equal(eventMessages.Count, received.Count());
 
-        var index = 0;
         foreach (var eventMessage in eventMessages)
         {
             Assert.True(calls.MoveNext());
@@ -133,8 +127,6 @@ public class SlackEventHandlerTests
             Assert.Equal($"Date: {eventMessage.Date}, Type: {eventMessage.Type}, UserId: {eventMessage.UserId}",
                 arguments[1] as string);
             Assert.Equal(_channelId, arguments[2] as string);
-
-            index++;
         }
     }
 
@@ -146,11 +138,10 @@ public class SlackEventHandlerTests
         await sutProvider.Sut.HandleManyEventsAsync(eventMessages);
 
         var received = sutProvider.GetDependency<ISlackService>().ReceivedCalls();
-        var calls = received.GetEnumerator();
+        using var calls = received.GetEnumerator();
 
         Assert.Equal(eventMessages.Count * 2, received.Count());
 
-        var index = 0;
         foreach (var eventMessage in eventMessages)
         {
             Assert.True(calls.MoveNext());
@@ -166,8 +157,6 @@ public class SlackEventHandlerTests
             Assert.Equal($"Date: {eventMessage.Date}, Type: {eventMessage.Type}, UserId: {eventMessage.UserId}",
                 arguments2[1] as string);
             Assert.Equal(_channelId2, arguments2[2] as string);
-
-            index++;
         }
     }
 }
