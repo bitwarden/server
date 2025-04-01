@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using Bit.Core.Identity;
 
 namespace Bit.Core.Models.Data;
 
@@ -20,17 +21,17 @@ public class Permissions
     [JsonIgnore]
     public List<(bool Permission, string ClaimName)> ClaimsMap => new()
     {
-        (AccessEventLogs, "accesseventlogs"),
-        (AccessImportExport, "accessimportexport"),
-        (AccessReports, "accessreports"),
-        (CreateNewCollections, "createnewcollections"),
-        (EditAnyCollection, "editanycollection"),
-        (DeleteAnyCollection, "deleteanycollection"),
-        (ManageGroups, "managegroups"),
-        (ManagePolicies, "managepolicies"),
-        (ManageSso, "managesso"),
-        (ManageUsers, "manageusers"),
-        (ManageResetPassword, "manageresetpassword"),
-        (ManageScim, "managescim"),
+        (AccessEventLogs, Claims.AccessEventLogs),
+        (AccessImportExport, Claims.AccessImportExport),
+        (AccessReports, Claims.AccessReports),
+        (CreateNewCollections, Claims.CreateNewCollections),
+        (EditAnyCollection, Claims.EditAnyCollection),
+        (DeleteAnyCollection, Claims.DeleteAnyCollection),
+        (ManageGroups, Claims.ManageGroups),
+        (ManagePolicies, Claims.ManagePolicies),
+        (ManageSso, Claims.ManageSso),
+        (ManageUsers, Claims.ManageUsers),
+        (ManageResetPassword, Claims.ManageResetPassword),
+        (ManageScim, Claims.ManageScim),
     };
 }
