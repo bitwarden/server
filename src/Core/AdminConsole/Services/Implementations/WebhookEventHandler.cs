@@ -20,7 +20,7 @@ public class WebhookEventHandler(
 
     public async Task HandleEventAsync(EventMessage eventMessage)
     {
-        var organizationId = eventMessage.OrganizationId ?? new Guid("f431e04c-f2c3-473c-8cd1-b291014b0236");
+        var organizationId = eventMessage.OrganizationId ?? Guid.Empty;
         var configurations = await configurationRepository.GetConfigurationsAsync(organizationId,
             IntegrationType.Webhook, eventMessage.Type);
 
