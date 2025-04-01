@@ -314,7 +314,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return;
         }
 
-        if (await IsManagedByAnyOrganizationAsync(user.Id))
+        if (await IsClaimedByAnyOrganizationAsync(user.Id))
         {
             await _mailService.SendCannotDeleteManagedAccountEmailAsync(user.Email);
             return;
@@ -1366,7 +1366,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IsLegacyUser(user);
     }
 
-    public async Task<bool> IsManagedByAnyOrganizationAsync(Guid userId)
+    public async Task<bool> IsClaimedByAnyOrganizationAsync(Guid userId)
     {
         var organizationsClaimingUser = await GetOrganizationsClaimingUserAsync(userId);
         return organizationsClaimingUser.Any();

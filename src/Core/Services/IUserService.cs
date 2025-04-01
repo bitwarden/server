@@ -134,7 +134,7 @@ public interface IUserService
     /// <returns>
     /// False if the Account Deprovisioning feature flag is disabled.
     /// </returns>
-    Task<bool> IsManagedByAnyOrganizationAsync(Guid userId);
+    Task<bool> IsClaimedByAnyOrganizationAsync(Guid userId);
 
     /// <summary>
     /// Verify whether the new email domain meets the requirements for managed users.
@@ -152,6 +152,6 @@ public interface IUserService
     /// <returns>
     /// An empty collection if the Account Deprovisioning feature flag is disabled.
     /// </returns>
-    /// <inheritdoc cref="IsManagedByAnyOrganizationAsync(Guid)"/>
+    /// <inheritdoc cref="IsClaimedByAnyOrganizationAsync"/>
     Task<IEnumerable<Organization>> GetOrganizationsClaimingUserAsync(Guid userId);
 }
