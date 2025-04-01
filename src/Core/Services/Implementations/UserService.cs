@@ -545,11 +545,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        var managedUserValidationResult = await ValidateClaimedUserDomainAsync(user, newEmail);
+        var claimedUserValidationResult = await ValidateClaimedUserDomainAsync(user, newEmail);
 
-        if (!managedUserValidationResult.Succeeded)
+        if (!claimedUserValidationResult.Succeeded)
         {
-            return managedUserValidationResult;
+            return claimedUserValidationResult;
         }
 
         if (!await base.VerifyUserTokenAsync(user, _identityOptions.Tokens.ChangeEmailTokenProvider,
