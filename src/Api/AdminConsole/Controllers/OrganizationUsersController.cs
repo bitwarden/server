@@ -9,6 +9,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
@@ -61,6 +62,7 @@ public class OrganizationUsersController : Controller
     private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
+    private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -86,7 +88,8 @@ public class OrganizationUsersController : Controller
         IPolicyRequirementQuery policyRequirementQuery,
         IFeatureService featureService,
         IPricingClient pricingClient,
-        IConfirmOrganizationUserCommand confirmOrganizationUserCommand)
+        IConfirmOrganizationUserCommand confirmOrganizationUserCommand,
+        IRestoreOrganizationUserCommand restoreOrganizationUserCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -112,6 +115,7 @@ public class OrganizationUsersController : Controller
         _featureService = featureService;
         _pricingClient = pricingClient;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
+        _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
     }
 
     [HttpGet("{id}")]
@@ -618,14 +622,14 @@ public class OrganizationUsersController : Controller
     [HttpPut("{id}/restore")]
     public async Task RestoreAsync(Guid orgId, Guid id)
     {
-        await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _organizationService.RestoreUserAsync(orgUser, userId));
+        await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId));
     }
 
     [HttpPatch("restore")]
     [HttpPut("restore")]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRestoreAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
-        return await RestoreOrRevokeUsersAsync(orgId, model, (orgId, orgUserIds, restoringUserId) => _organizationService.RestoreUsersAsync(orgId, orgUserIds, restoringUserId, _userService));
+        return await RestoreOrRevokeUsersAsync(orgId, model, (orgId, orgUserIds, restoringUserId) => _restoreOrganizationUserCommand.RestoreUsersAsync(orgId, orgUserIds, restoringUserId, _userService));
     }
 
     [HttpPatch("enable-secrets-manager")]

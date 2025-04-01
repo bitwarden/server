@@ -19,7 +19,6 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -75,7 +74,6 @@ public class OrganizationService : IOrganizationService
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
-    private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
@@ -112,7 +110,6 @@ public class OrganizationService : IOrganizationService
         IProviderRepository providerRepository,
         IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IOrganizationBillingService organizationBillingService,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         IPolicyRequirementQuery policyRequirementQuery)
@@ -148,7 +145,6 @@ public class OrganizationService : IOrganizationService
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
-        _organizationBillingService = organizationBillingService;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
         _policyRequirementQuery = policyRequirementQuery;
@@ -1891,144 +1887,6 @@ public class OrganizationService : IOrganizationService
         return result;
     }
 
-    public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId)
-    {
-        if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId.Value)
-        {
-            throw new BadRequestException("You cannot restore yourself.");
-        }
-
-        if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
-            !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
-        {
-            throw new BadRequestException("Only owners can restore other owners.");
-        }
-
-        await RepositoryRestoreUserAsync(organizationUser);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
-
-        if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
-        {
-            await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
-        }
-    }
-
-    public async Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser)
-    {
-        await RepositoryRestoreUserAsync(organizationUser);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, systemUser);
-
-        if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
-        {
-            await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
-        }
-    }
-
-    private async Task RepositoryRestoreUserAsync(OrganizationUser organizationUser)
-    {
-        if (organizationUser.Status != OrganizationUserStatusType.Revoked)
-        {
-            throw new BadRequestException("Already active.");
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
-        var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-        var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
-        if (availableSeats < 1)
-        {
-            await AutoAddSeatsAsync(organization, 1);
-        }
-
-        var userTwoFactorIsEnabled = false;
-        // Only check Two Factor Authentication status if the user is linked to a user account
-        if (organizationUser.UserId.HasValue)
-        {
-            userTwoFactorIsEnabled = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(new[] { organizationUser.UserId.Value })).FirstOrDefault().twoFactorIsEnabled;
-        }
-
-        await CheckPoliciesBeforeRestoreAsync(organizationUser, userTwoFactorIsEnabled);
-
-        var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
-
-        await _organizationUserRepository.RestoreAsync(organizationUser.Id, status);
-        organizationUser.Status = status;
-    }
-
-    public async Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
-        IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService)
-    {
-        var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
-        var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
-            .ToList();
-
-        if (!filteredUsers.Any())
-        {
-            throw new BadRequestException("Users invalid.");
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-        var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
-        var newSeatsRequired = organizationUserIds.Count() - availableSeats;
-        await AutoAddSeatsAsync(organization, newSeatsRequired);
-
-        var deletingUserIsOwner = false;
-        if (restoringUserId.HasValue)
-        {
-            deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
-        }
-
-        // Query Two Factor Authentication status for all users in the organization
-        // This is an optimization to avoid querying the Two Factor Authentication status for each user individually
-        var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(
-            filteredUsers.Where(ou => ou.UserId.HasValue).Select(ou => ou.UserId.Value));
-
-        var result = new List<Tuple<OrganizationUser, string>>();
-
-        foreach (var organizationUser in filteredUsers)
-        {
-            try
-            {
-                if (organizationUser.Status != OrganizationUserStatusType.Revoked)
-                {
-                    throw new BadRequestException("Already active.");
-                }
-
-                if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId)
-                {
-                    throw new BadRequestException("You cannot restore yourself.");
-                }
-
-                if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue && !deletingUserIsOwner)
-                {
-                    throw new BadRequestException("Only owners can restore other owners.");
-                }
-
-                var twoFactorIsEnabled = organizationUser.UserId.HasValue
-                    && organizationUsersTwoFactorEnabled.FirstOrDefault(ou => ou.userId == organizationUser.UserId.Value).twoFactorIsEnabled;
-                await CheckPoliciesBeforeRestoreAsync(organizationUser, twoFactorIsEnabled);
-
-                var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
-
-                await _organizationUserRepository.RestoreAsync(organizationUser.Id, status);
-                organizationUser.Status = status;
-                await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
-                if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
-                {
-                    await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
-                }
-
-                result.Add(Tuple.Create(organizationUser, ""));
-            }
-            catch (BadRequestException e)
-            {
-                result.Add(Tuple.Create(organizationUser, e.Message));
-            }
-        }
-
-        return result;
-    }
-
     private async Task CheckPoliciesBeforeRestoreAsync(OrganizationUser orgUser, bool userHasTwoFactorEnabled)
     {
         // An invited OrganizationUser isn't linked with a user account yet, so these checks are irrelevant
@@ -2095,7 +1953,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)
+    public static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)
     {
         // Determine status to revert back to
         var status = OrganizationUserStatusType.Invited;
