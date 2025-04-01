@@ -153,5 +153,5 @@ public interface IUserService
     /// An empty collection if the Account Deprovisioning feature flag is disabled.
     /// </returns>
     /// <inheritdoc cref="IsManagedByAnyOrganizationAsync(Guid)"/>
-    Task<IEnumerable<Organization>> GetOrganizationsManagingUserAsync(Guid userId);
+    Task<IEnumerable<Organization>> GetOrganizationsClaimingUserAsync(Guid userId);
 }

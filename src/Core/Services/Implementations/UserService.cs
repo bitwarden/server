@@ -619,7 +619,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<IdentityResult> ValidateClaimedUserDomainAsync(User user, string newEmail)
     {
-        var managingOrganizations = await GetOrganizationsManagingUserAsync(user.Id);
+        var managingOrganizations = await GetOrganizationsClaimingUserAsync(user.Id);
 
         if (!managingOrganizations.Any())
         {
@@ -1368,11 +1368,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<bool> IsManagedByAnyOrganizationAsync(Guid userId)
     {
-        var managingOrganizations = await GetOrganizationsManagingUserAsync(userId);
+        var managingOrganizations = await GetOrganizationsClaimingUserAsync(userId);
         return managingOrganizations.Any();
     }
 
-    public async Task<IEnumerable<Organization>> GetOrganizationsManagingUserAsync(Guid userId)
+    public async Task<IEnumerable<Organization>> GetOrganizationsClaimingUserAsync(Guid userId)
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {

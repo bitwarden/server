@@ -104,7 +104,7 @@ public class SyncController : Controller
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var organizationManagingActiveUser = await _userService.GetOrganizationsManagingUserAsync(user.Id);
+        var organizationManagingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(user.Id);
         var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
 
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();

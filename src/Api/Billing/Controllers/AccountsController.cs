@@ -231,7 +231,7 @@ public class AccountsController(
 
     private async Task<IEnumerable<Guid>> GetOrganizationIdsManagingUserAsync(Guid userId)
     {
-        var organizationManagingUser = await userService.GetOrganizationsManagingUserAsync(userId);
+        var organizationManagingUser = await userService.GetOrganizationsClaimingUserAsync(userId);
         return organizationManagingUser.Select(o => o.Id);
     }
 }
