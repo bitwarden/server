@@ -15,12 +15,12 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
 [SutProviderCustomize]
-public class DeleteManagedOrganizationUserAccountCommandTests
+public class DeleteClaimedOrganizationUserAccountCommandTests
 {
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_WithValidUser_DeletesUserAndLogsEvent(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user, Guid deletingUserId,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user, Guid deletingUserId,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
     {
         // Arrange
@@ -59,7 +59,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_WithUserNotFound_ThrowsException(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         Guid organizationId, Guid organizationUserId)
     {
         // Arrange
@@ -81,7 +81,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_DeletingYourself_ThrowsException(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser,
         Guid deletingUserId)
@@ -110,7 +110,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_WhenUserIsInvited_ThrowsException(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Invited, OrganizationUserType.User)] OrganizationUser organizationUser)
     {
         // Arrange
@@ -134,7 +134,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_DeletingOwnerWhenNotOwner_ThrowsException(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser organizationUser,
         Guid deletingUserId)
     {
@@ -166,7 +166,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_DeletingLastConfirmedOwner_ThrowsException(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser organizationUser,
         Guid deletingUserId)
     {
@@ -205,7 +205,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_WithUserNotManaged_ThrowsException(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
     {
         // Arrange
@@ -236,7 +236,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WithValidUsers_DeletesUsersAndLogsEvents(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user1, User user2, Guid organizationId,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user1, User user2, Guid organizationId,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser2)
     {
@@ -276,7 +276,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WhenUserNotFound_ReturnsErrorMessage(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         Guid organizationId,
         Guid orgUserId)
     {
@@ -297,7 +297,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WhenDeletingYourself_ReturnsErrorMessage(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         User user, [OrganizationUser] OrganizationUser orgUser, Guid deletingUserId)
     {
         // Arrange
@@ -326,7 +326,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WhenUserIsInvited_ReturnsErrorMessage(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Invited, OrganizationUserType.User)] OrganizationUser orgUser)
     {
         // Arrange
@@ -351,7 +351,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WhenDeletingOwnerAsNonOwner_ReturnsErrorMessage(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser,
         Guid deletingUserId)
     {
@@ -383,7 +383,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WhenDeletingLastOwner_ReturnsErrorMessage(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser,
         Guid deletingUserId)
     {
@@ -421,7 +421,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WhenUserNotManaged_ReturnsErrorMessage(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
     {
         // Arrange
@@ -454,7 +454,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_MixedValidAndInvalidUsers_ReturnsAppropriateResults(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user1, User user3,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user1, User user3,
         Guid organizationId,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Invited, OrganizationUserType.User)] OrganizationUser orgUser2,
