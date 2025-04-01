@@ -24,12 +24,17 @@ public class WebAuthnLoginKeyRotationValidatorTests
 
         var webauthnKeysToRotate = webauthnRotateCredentialData.Select(e => new WebAuthnLoginRotateKeyRequestModel
         {
-            Id = guid, EncryptedPublicKey = e.EncryptedPublicKey, EncryptedUserKey = e.EncryptedUserKey
+            Id = guid,
+            EncryptedPublicKey = e.EncryptedPublicKey,
+            EncryptedUserKey = e.EncryptedUserKey
         }).ToList();
 
         var data = new WebAuthnCredential
         {
-            Id = guid, SupportsPrf = true, EncryptedPublicKey = "TestKey", EncryptedUserKey = "Test"
+            Id = guid,
+            SupportsPrf = true,
+            EncryptedPublicKey = "TestKey",
+            EncryptedUserKey = "Test"
         };
         sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id)
             .Returns(new List<WebAuthnCredential> { data });
@@ -48,7 +53,9 @@ public class WebAuthnLoginKeyRotationValidatorTests
         var guid = Guid.NewGuid();
         var webauthnKeysToRotate = webauthnRotateCredentialData.Select(e => new WebAuthnLoginRotateKeyRequestModel
         {
-            Id = guid, EncryptedUserKey = e.EncryptedUserKey, EncryptedPublicKey = e.EncryptedPublicKey,
+            Id = guid,
+            EncryptedUserKey = e.EncryptedUserKey,
+            EncryptedPublicKey = e.EncryptedPublicKey,
         }).ToList();
 
         var data = new WebAuthnCredential { Id = guid, EncryptedUserKey = "Test", EncryptedPublicKey = "TestKey" };
