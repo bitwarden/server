@@ -619,16 +619,16 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<IdentityResult> ValidateClaimedUserDomainAsync(User user, string newEmail)
     {
-        var managingOrganizations = await GetOrganizationsClaimingUserAsync(user.Id);
+        var claimingOrganization = await GetOrganizationsClaimingUserAsync(user.Id);
 
-        if (!managingOrganizations.Any())
+        if (!claimingOrganization.Any())
         {
             return IdentityResult.Success;
         }
 
         var newDomain = CoreHelpers.GetEmailDomain(newEmail);
 
-        var verifiedDomains = await _organizationDomainRepository.GetVerifiedDomainsByOrganizationIdsAsync(managingOrganizations.Select(org => org.Id));
+        var verifiedDomains = await _organizationDomainRepository.GetVerifiedDomainsByOrganizationIdsAsync(claimingOrganization.Select(org => org.Id));
 
         if (verifiedDomains.Any(verifiedDomain => verifiedDomain.DomainName == newDomain))
         {
