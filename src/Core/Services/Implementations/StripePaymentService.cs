@@ -128,15 +128,18 @@ public class StripePaymentService : IPaymentService
                 new SubscriptionPendingInvoiceItemIntervalOptions { Interval = "month" };
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+        if (subscriptionUpdate is CompleteSubscriptionUpdate)
         {
-            var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, updatedItemOptions.Select(x => x.Price));
-            var automaticTaxStrategy = await _automaticTaxFactory.CreateAsync(automaticTaxParameters);
-            automaticTaxStrategy.SetUpdateOptions(subUpdateOptions, sub);
-        }
-        else
-        {
-            subUpdateOptions.EnableAutomaticTax(sub.Customer, sub);
+            if (_featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+            {
+                var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, updatedItemOptions.Select(x => x.Plan ?? x.Price));
+                var automaticTaxStrategy = await _automaticTaxFactory.CreateAsync(automaticTaxParameters);
+                automaticTaxStrategy.SetUpdateOptions(subUpdateOptions, sub);
+            }
+            else
+            {
+                subUpdateOptions.EnableAutomaticTax(sub.Customer, sub);
+            }
         }
 
         if (!subscriptionUpdate.UpdateNeeded(sub))

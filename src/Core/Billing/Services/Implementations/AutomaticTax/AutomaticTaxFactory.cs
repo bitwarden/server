@@ -39,9 +39,8 @@ public class AutomaticTaxFactory(
         }
 
         var personalUsePlans = await _personalUsePlansTask.Value;
-        var plans = await pricingClient.ListPlans();
 
-        if (personalUsePlans.Any(x => plans.Any(y => y.PasswordManager.StripePlanId == x)))
+        if (parameters.Prices != null && parameters.Prices.Any(x => personalUsePlans.Any(y => y == x)))
         {
             return new PersonalUseAutomaticTaxStrategy(featureService);
         }
