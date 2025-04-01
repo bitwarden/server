@@ -58,7 +58,7 @@ public class AccountsController(
 
         var userTwoFactorEnabled = await userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await userService.HasPremiumFromOrganization(user);
-        var organizationIdsClaimingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
+        var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
         var profile = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled,
             userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);
@@ -229,7 +229,7 @@ public class AccountsController(
         await paymentService.SaveTaxInfoAsync(user, taxInfo);
     }
 
-    private async Task<IEnumerable<Guid>> GetOrganizationIdsManagingUserAsync(Guid userId)
+    private async Task<IEnumerable<Guid>> GetOrganizationIdsClaimingUserAsync(Guid userId)
     {
         var organizationsClaimingUser = await userService.GetOrganizationsClaimingUserAsync(userId);
         return organizationsClaimingUser.Select(o => o.Id);
