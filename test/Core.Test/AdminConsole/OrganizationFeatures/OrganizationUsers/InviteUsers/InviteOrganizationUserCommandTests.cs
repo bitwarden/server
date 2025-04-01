@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Errors;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
@@ -79,7 +80,7 @@ public class InviteOrganizationUserCommandTests
 
         // Assert
         Assert.IsType<Failure<ScimInviteOrganizationUsersResponse>>(result);
-        Assert.Equal(InviteOrganizationUsersCommand.NoUsersToInvite, (result as Failure<ScimInviteOrganizationUsersResponse>).ErrorMessage);
+        Assert.Equal(NoUsersToInviteError.Code, (result as Failure<ScimInviteOrganizationUsersResponse>).ErrorMessage);
 
         await sutProvider.GetDependency<IPaymentService>()
             .DidNotReceiveWithAnyArgs()
@@ -186,6 +187,8 @@ public class InviteOrganizationUserCommandTests
             performedBy: Guid.Empty,
             timeProvider.GetUtcNow());
 
+        var validationRequest = GetInviteValidationRequestMock(request, inviteOrganization, organization);
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
             .Returns([]);
@@ -196,7 +199,8 @@ public class InviteOrganizationUserCommandTests
 
         sutProvider.GetDependency<IInviteUsersValidator>()
             .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
-            .Returns(new Invalid<InviteUserOrganizationValidationRequest>(new Error<InviteUserOrganizationValidationRequest>(errorMessage, new InviteUserOrganizationValidationRequest())));
+            .Returns(new Invalid<InviteUserOrganizationValidationRequest>(
+                new Error<InviteUserOrganizationValidationRequest>(errorMessage, validationRequest)));
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -496,7 +500,7 @@ public class InviteOrganizationUserCommandTests
 
         // Assert
         Assert.IsType<Failure<ScimInviteOrganizationUsersResponse>>(result);
-        Assert.Equal(InviteOrganizationUsersCommand.FailedToInviteUsers, (result as Failure<ScimInviteOrganizationUsersResponse>)!.ErrorMessage);
+        Assert.Equal(FailedToInviteUsersError.Code, (result as Failure<ScimInviteOrganizationUsersResponse>)!.ErrorMessage);
 
         // org user revert
         await orgUserRepository.Received(1).DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(x => x.Count() == 1));

@@ -1,13 +1,14 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Errors;
 using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Commands;
@@ -40,9 +41,6 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 {
 
     public const string IssueNotifyingOwnersOfSeatLimitReached = "Error encountered notifying organization owners of seat limit reached.";
-    public const string FailedToInviteUsers = "Failed to invite user(s).";
-    public const string NoUsersToInvite = "No users to invite.";
-    public const string InvalidResultType = "Invalid result type.";
 
     public async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(InviteOrganizationUsersRequest request)
     {
@@ -50,11 +48,16 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
         switch (result)
         {
-            case Failure<IEnumerable<OrganizationUser>> failure:
-                return new Failure<ScimInviteOrganizationUsersResponse>(failure.ErrorMessage);
+            case Failure<InviteOrganizationUsersResponse> failure:
+                return new Failure<ScimInviteOrganizationUsersResponse>(
+                    failure.Errors.Select(error => new Error<ScimInviteOrganizationUsersResponse>(error.Message,
+                        new ScimInviteOrganizationUsersResponse
+                        {
+                            InvitedUser = error.ErroredValue.InvitedUsers.FirstOrDefault()
+                        })));
 
-            case Success<IEnumerable<OrganizationUser>> success when success.Value.Any():
-                var user = success.Value.First();
+            case Success<InviteOrganizationUsersResponse> success when success.Value.InvitedUsers.Any():
+                var user = success.Value.InvitedUsers.First();
 
                 await eventService.LogOrganizationUserEventAsync<IOrganizationUser>(
                     organizationUser: user,
@@ -68,17 +71,20 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 });
 
             default:
-                return new Failure<ScimInviteOrganizationUsersResponse>(InvalidResultType);
+                return new Failure<ScimInviteOrganizationUsersResponse>(
+                    new InvalidResultTypeError<ScimInviteOrganizationUsersResponse>(
+                        new ScimInviteOrganizationUsersResponse()));
         }
     }
 
-    private async Task<CommandResult<IEnumerable<OrganizationUser>>> InviteOrganizationUsersAsync(InviteOrganizationUsersRequest request)
+    private async Task<CommandResult<InviteOrganizationUsersResponse>> InviteOrganizationUsersAsync(InviteOrganizationUsersRequest request)
     {
         var invitesToSend = (await FilterExistingUsersAsync(request)).ToArray();
 
         if (invitesToSend.Length == 0)
         {
-            return new Failure<IEnumerable<OrganizationUser>>(NoUsersToInvite);
+            return new Failure<InviteOrganizationUsersResponse>(new NoUsersToInviteError(
+                new InviteOrganizationUsersResponse(request.InviteOrganization.OrganizationId)));
         }
 
         var validationResult = await inviteUsersValidator.ValidateAsync(new InviteUserOrganizationValidationRequest
@@ -93,7 +99,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
         if (validationResult is Invalid<InviteUserOrganizationValidationRequest> invalid)
         {
-            return new Failure<IEnumerable<OrganizationUser>>(invalid.ErrorMessageString);
+            return invalid.MapToFailure(r => new InviteOrganizationUsersResponse(r));
         }
 
         var validatedRequest = validationResult as Valid<InviteUserOrganizationValidationRequest>;
@@ -102,7 +108,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             .Select(x => x.MapToDataModel(request.PerformedAt, validatedRequest!.Value.InviteOrganization))
             .ToArray();
 
-        var organization = await organizationRepository.GetByIdAsync(validatedRequest.Value.InviteOrganization.OrganizationId);
+        var organization = await organizationRepository.GetByIdAsync(validatedRequest!.Value.InviteOrganization.OrganizationId);
 
         try
         {
@@ -120,7 +126,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, FailedToInviteUsers);
+            logger.LogError(ex, FailedToInviteUsersError.Code);
 
             await organizationUserRepository.DeleteManyAsync(organizationUserToInviteEntities.Select(x => x.OrganizationUser.Id));
 
@@ -129,10 +135,14 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
             await RevertPasswordManagerChangesAsync(validatedRequest, organization);
 
-            return new Failure<IEnumerable<OrganizationUser>>(FailedToInviteUsers);
+            return new Failure<InviteOrganizationUsersResponse>(new FailedToInviteUsersError(
+                new InviteOrganizationUsersResponse(validatedRequest.Value)));
         }
 
-        return new Success<IEnumerable<OrganizationUser>>(organizationUserToInviteEntities.Select(x => x.OrganizationUser));
+        return new Success<InviteOrganizationUsersResponse>(
+            new InviteOrganizationUsersResponse(
+                invitedOrganizationUsers: organizationUserToInviteEntities.Select(x => x.OrganizationUser).ToArray(),
+                organizationId: organization!.Id));
     }
 
     private async Task<IEnumerable<OrganizationUserInvite>> FilterExistingUsersAsync(InviteOrganizationUsersRequest request)

@@ -2,9 +2,22 @@
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 
-public class InviteOrganizationUsersResponse
+public class InviteOrganizationUsersResponse(Guid organizationId)
 {
-    public IEnumerable<OrganizationUser> InvitedUsers { get; set; } = [];
+    public IEnumerable<OrganizationUser> InvitedUsers { get; } = [];
+    public Guid OrganizationId { get; } = organizationId;
+
+    public InviteOrganizationUsersResponse(InviteUserOrganizationValidationRequest validationRequest)
+        : this(validationRequest.InviteOrganization.OrganizationId)
+    {
+        InvitedUsers = validationRequest.Invites.Select(x => new OrganizationUser { Email = x.Email });
+    }
+
+    public InviteOrganizationUsersResponse(IEnumerable<OrganizationUser> invitedOrganizationUsers, Guid organizationId)
+        : this(organizationId)
+    {
+        InvitedUsers = invitedOrganizationUsers;
+    }
 }
 
 public class ScimInviteOrganizationUsersResponse
