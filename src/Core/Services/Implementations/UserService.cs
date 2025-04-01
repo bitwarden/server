@@ -1368,8 +1368,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<bool> IsManagedByAnyOrganizationAsync(Guid userId)
     {
-        var managingOrganizations = await GetOrganizationsClaimingUserAsync(userId);
-        return managingOrganizations.Any();
+        var organizationsClaimingUser = await GetOrganizationsClaimingUserAsync(userId);
+        return organizationsClaimingUser.Any();
     }
 
     public async Task<IEnumerable<Organization>> GetOrganizationsClaimingUserAsync(Guid userId)
