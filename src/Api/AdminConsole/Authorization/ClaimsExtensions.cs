@@ -63,7 +63,7 @@ public static class ClaimsExtensions
             AccessSecretsManager = hasClaim(Claims.SecretsManagerAccess),
             Permissions = role == OrganizationUserType.Custom
                 ? GetPermissionsFromClaims(hasClaim)
-                : null
+                : new Permissions()
         };
     }
 
