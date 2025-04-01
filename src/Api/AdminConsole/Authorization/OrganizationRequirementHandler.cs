@@ -16,15 +16,11 @@ public class OrganizationRequirementHandler(
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, IOrganizationRequirement requirement)
     {
         var organizationId = httpContextAccessor.GetOrganizationId();
-        if (organizationId is null)
-        {
-            throw new Exception("No organizationId found in route. IOrganizationRequirement cannot be used on this endpoint.");
-        }
 
-        var organizationClaims = context.User.GetCurrentContextOrganization(organizationId.Value);
+        var organizationClaims = context.User.GetCurrentContextOrganization(organizationId);
         var providerOrganizationContext = null; // TODO
 
-        var authorized = await requirement.AuthorizeAsync(organizationId.Value, organizationClaims, providerOrganizationContext);
+        var authorized = await requirement.AuthorizeAsync(organizationId, organizationClaims, providerOrganizationContext);
 
         if (authorized)
         {
