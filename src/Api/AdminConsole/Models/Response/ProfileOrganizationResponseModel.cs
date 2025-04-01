@@ -70,7 +70,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
         LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
-        UserIsManagedByOrganization = organizationIdsClaimingUser.Contains(organization.OrganizationId);
+        UserIsClaimedByOrganization = organizationIdsClaimingUser.Contains(organization.OrganizationId);
         UseRiskInsights = organization.UseRiskInsights;
 
         if (organization.SsoConfig != null)
@@ -133,15 +133,31 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     /// <summary>
-    /// Indicates if the organization manages the user.
+    /// Indicates if the organization claims the user.
     /// </summary>
     /// <remarks>
-    /// An organization manages a user if the user's email domain is verified by the organization and the user is a member of it.
+    /// An organization claims a user if the user's email domain is verified by the organization and the user is a member of it.
     /// The organization must be enabled and able to have verified domains.
     /// </remarks>
     /// <returns>
     /// False if the Account Deprovisioning feature flag is disabled.
     /// </returns>
-    public bool UserIsManagedByOrganization { get; set; }
+    [Obsolete]
+    public bool UserIsManagedByOrganization
+    {
+        get => UserIsClaimedByOrganization;
+        set => UserIsClaimedByOrganization = value;
+    }
+    /// <summary>
+    /// Indicates if the organization claims the user.
+    /// </summary>
+    /// <remarks>
+    /// An organization claims a user if the user's email domain is verified by the organization and the user is a member of it.
+    /// The organization must be enabled and able to have verified domains.
+    /// </remarks>
+    /// <returns>
+    /// False if the Account Deprovisioning feature flag is disabled.
+    /// </returns>
+    public bool UserIsClaimedByOrganization { get; set; }
     public bool UseRiskInsights { get; set; }
 }
