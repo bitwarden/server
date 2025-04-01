@@ -10,25 +10,46 @@ namespace Bit.Api.AdminConsole.Authorization;
 
 public static class ClaimsExtensions
 {
-    // Relevant claim types for organization roles, SM access, and custom permissions
-    private static readonly IEnumerable<string> _relevantClaimTypes = new List<string>{
+    /// <summary>
+    /// A delegate that returns true if the user has the specified claim type for an organization, false otherwise.
+    /// </summary>
+    private delegate bool HasClaim(string claimType);
+
+    // Relevant claim types required to build a CurrentContextOrganization object.
+    private static readonly IEnumerable<string> _relevantClaimTypes = new HashSet<string>{
         Claims.OrganizationOwner,
         Claims.OrganizationAdmin,
         Claims.OrganizationCustom,
         Claims.OrganizationUser,
         Claims.SecretsManagerAccess,
-    }.Concat(new Permissions().ClaimsMap.Select(c => c.ClaimName));
+        Claims.CustomPermissions.AccessEventLogs,
+        Claims.CustomPermissions.AccessImportExport,
+        Claims.CustomPermissions.AccessReports,
+        Claims.CustomPermissions.CreateNewCollections,
+        Claims.CustomPermissions.EditAnyCollection,
+        Claims.CustomPermissions.DeleteAnyCollection,
+        Claims.CustomPermissions.ManageGroups,
+        Claims.CustomPermissions.ManagePolicies,
+        Claims.CustomPermissions.ManageSso,
+        Claims.CustomPermissions.ManageUsers,
+        Claims.CustomPermissions.ManageResetPassword,
+        Claims.CustomPermissions.ManageScim,
+    };
 
+    /// <summary>
+    /// Parses a user's claims and returns an object representing their claims for the specified organization.
+    /// </summary>
+    /// <param name="user">The user who has the claims.</param>
+    /// <param name="organizationId">The organizationId to look for in the claims.</param>
+    /// <returns>
+    /// A <see cref="CurrentContextOrganization"/> representing the user's claims for that organization, or null
+    /// if the user does not have any claims for that organization.
+    /// </returns>
     public static CurrentContextOrganization? GetCurrentContextOrganization(this ClaimsPrincipal user, Guid organizationId)
     {
-        var claimsDict = user.Claims
-            .Where(c => _relevantClaimTypes.Contains(c.Type) && Guid.TryParse(c.Value, out _))
-            .GroupBy(c => c.Type)
-            .ToDictionary(
-                c => c.Key,
-                c => c.Select(v => new Guid(v.Value)));
+        var hasClaim = GetClaimsParser(user, organizationId);
 
-        var role = claimsDict.GetRoleForOrganizationId(organizationId);
+        var role = GetRoleFromClaims(hasClaim);
         if (!role.HasValue)
         {
             // Not an organization member
@@ -39,37 +60,48 @@ public static class ClaimsExtensions
         {
             Id = organizationId,
             Type = role.Value,
-            AccessSecretsManager = claimsDict.ContainsOrganizationId(Claims.SecretsManagerAccess, organizationId),
+            AccessSecretsManager = hasClaim(Claims.SecretsManagerAccess),
             Permissions = role == OrganizationUserType.Custom
-                ? claimsDict.GetPermissionsFromClaims(organizationId)
+                ? GetPermissionsFromClaims(hasClaim)
                 : null
         };
     }
 
-    private static bool ContainsOrganizationId(this Dictionary<string, IEnumerable<Guid>> claimsDict, string claimType,
-        Guid organizationId)
-        => claimsDict.TryGetValue(claimType, out var claimValue) &&
-           claimValue.Any(guid => guid == organizationId);
-
-    private static OrganizationUserType? GetRoleForOrganizationId(this Dictionary<string, IEnumerable<Guid>> claimsDict,
-        Guid organizationId)
+    /// <summary>
+    /// Creates a <see cref="HasClaim"/> delegate specific to the user and organization.
+    /// </summary>
+    private static HasClaim GetClaimsParser(ClaimsPrincipal user, Guid organizationId)
     {
-        if (claimsDict.ContainsOrganizationId(Claims.OrganizationOwner, organizationId))
+        var claimsDict = user.Claims
+            .Where(c => _relevantClaimTypes.Contains(c.Type) && Guid.TryParse(c.Value, out _))
+            .GroupBy(c => c.Type)
+            .ToDictionary(
+                c => c.Key,
+                c => c.Select(v => new Guid(v.Value)));
+
+        return claimType
+            => claimsDict.TryGetValue(claimType, out var claimValue) &&
+               claimValue.Any(v => v == organizationId);
+    }
+
+    private static OrganizationUserType? GetRoleFromClaims(HasClaim hasClaim)
+    {
+        if (hasClaim(Claims.OrganizationOwner))
         {
             return OrganizationUserType.Owner;
         }
 
-        if (claimsDict.ContainsOrganizationId(Claims.OrganizationAdmin, organizationId))
+        if (hasClaim(Claims.OrganizationAdmin))
         {
             return OrganizationUserType.Admin;
         }
 
-        if (claimsDict.ContainsOrganizationId(Claims.OrganizationCustom, organizationId))
+        if (hasClaim(Claims.OrganizationCustom))
         {
             return OrganizationUserType.Custom;
         }
 
-        if (claimsDict.ContainsOrganizationId(Claims.OrganizationUser, organizationId))
+        if (hasClaim(Claims.OrganizationUser))
         {
             return OrganizationUserType.User;
         }
@@ -77,22 +109,20 @@ public static class ClaimsExtensions
         return null;
     }
 
-    private static Permissions GetPermissionsFromClaims(this Dictionary<string, IEnumerable<Guid>> claimsDict, Guid organizationId)
+    private static Permissions GetPermissionsFromClaims(HasClaim hasClaim)
+    => new()
     {
-        return new Permissions
-        {
-            AccessEventLogs = claimsDict.ContainsOrganizationId(Claims.AccessEventLogs, organizationId),
-            AccessImportExport = claimsDict.ContainsOrganizationId(Claims.AccessImportExport, organizationId),
-            AccessReports = claimsDict.ContainsOrganizationId(Claims.AccessReports, organizationId),
-            CreateNewCollections = claimsDict.ContainsOrganizationId(Claims.CreateNewCollections, organizationId),
-            EditAnyCollection = claimsDict.ContainsOrganizationId(Claims.EditAnyCollection, organizationId),
-            DeleteAnyCollection = claimsDict.ContainsOrganizationId(Claims.DeleteAnyCollection, organizationId),
-            ManageGroups = claimsDict.ContainsOrganizationId(Claims.ManageGroups, organizationId),
-            ManagePolicies = claimsDict.ContainsOrganizationId(Claims.ManagePolicies, organizationId),
-            ManageSso = claimsDict.ContainsOrganizationId(Claims.ManageSso, organizationId),
-            ManageUsers = claimsDict.ContainsOrganizationId(Claims.ManageUsers, organizationId),
-            ManageResetPassword = claimsDict.ContainsOrganizationId(Claims.ManageResetPassword, organizationId),
-            ManageScim = claimsDict.ContainsOrganizationId(Claims.ManageScim, organizationId),
-        };
-    }
+        AccessEventLogs = hasClaim(Claims.CustomPermissions.AccessEventLogs),
+        AccessImportExport = hasClaim(Claims.CustomPermissions.AccessImportExport),
+        AccessReports = hasClaim(Claims.CustomPermissions.AccessReports),
+        CreateNewCollections = hasClaim(Claims.CustomPermissions.CreateNewCollections),
+        EditAnyCollection = hasClaim(Claims.CustomPermissions.EditAnyCollection),
+        DeleteAnyCollection = hasClaim(Claims.CustomPermissions.DeleteAnyCollection),
+        ManageGroups = hasClaim(Claims.CustomPermissions.ManageGroups),
+        ManagePolicies = hasClaim(Claims.CustomPermissions.ManagePolicies),
+        ManageSso = hasClaim(Claims.CustomPermissions.ManageSso),
+        ManageUsers = hasClaim(Claims.CustomPermissions.ManageUsers),
+        ManageResetPassword = hasClaim(Claims.CustomPermissions.ManageResetPassword),
+        ManageScim = hasClaim(Claims.CustomPermissions.ManageScim),
+    };
 }

@@ -21,17 +21,17 @@ public class Permissions
     [JsonIgnore]
     public List<(bool Permission, string ClaimName)> ClaimsMap => new()
     {
-        (AccessEventLogs, Claims.AccessEventLogs),
-        (AccessImportExport, Claims.AccessImportExport),
-        (AccessReports, Claims.AccessReports),
-        (CreateNewCollections, Claims.CreateNewCollections),
-        (EditAnyCollection, Claims.EditAnyCollection),
-        (DeleteAnyCollection, Claims.DeleteAnyCollection),
-        (ManageGroups, Claims.ManageGroups),
-        (ManagePolicies, Claims.ManagePolicies),
-        (ManageSso, Claims.ManageSso),
-        (ManageUsers, Claims.ManageUsers),
-        (ManageResetPassword, Claims.ManageResetPassword),
-        (ManageScim, Claims.ManageScim),
+        (AccessEventLogs, Claims.CustomPermissions.AccessEventLogs),
+        (AccessImportExport, Claims.CustomPermissions.AccessImportExport),
+        (AccessReports, Claims.CustomPermissions.AccessReports),
+        (CreateNewCollections, Claims.CustomPermissions.CreateNewCollections),
+        (EditAnyCollection, Claims.CustomPermissions.EditAnyCollection),
+        (DeleteAnyCollection, Claims.CustomPermissions.DeleteAnyCollection),
+        (ManageGroups, Claims.CustomPermissions.ManageGroups),
+        (ManagePolicies, Claims.CustomPermissions.ManagePolicies),
+        (ManageSso, Claims.CustomPermissions.ManageSso),
+        (ManageUsers, Claims.CustomPermissions.ManageUsers),
+        (ManageResetPassword, Claims.CustomPermissions.ManageResetPassword),
+        (ManageScim, Claims.CustomPermissions.ManageScim),
     };
 }
