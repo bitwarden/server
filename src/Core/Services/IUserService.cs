@@ -142,9 +142,9 @@ public interface IUserService
     /// <remarks>
     /// </remarks>
     /// <returns>
-    /// IdentityResult 
+    /// IdentityResult
     /// </returns>
-    Task<IdentityResult> ValidateManagedUserDomainAsync(User user, string newEmail);
+    Task<IdentityResult> ValidateClaimedUserDomainAsync(User user, string newEmail);
 
     /// <summary>
     /// Gets the organizations that manage the user.

@@ -545,7 +545,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        var managedUserValidationResult = await ValidateManagedUserDomainAsync(user, newEmail);
+        var managedUserValidationResult = await ValidateClaimedUserDomainAsync(user, newEmail);
 
         if (!managedUserValidationResult.Succeeded)
         {
@@ -617,7 +617,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IdentityResult.Success;
     }
 
-    public async Task<IdentityResult> ValidateManagedUserDomainAsync(User user, string newEmail)
+    public async Task<IdentityResult> ValidateClaimedUserDomainAsync(User user, string newEmail)
     {
         var managingOrganizations = await GetOrganizationsManagingUserAsync(user.Id);
 

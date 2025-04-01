@@ -120,7 +120,7 @@ public class AccountsControllerTests : IDisposable
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
         const string newEmail = "example@user.com";
-        _userService.ValidateManagedUserDomainAsync(user, newEmail).Returns(IdentityResult.Success);
+        _userService.ValidateClaimedUserDomainAsync(user, newEmail).Returns(IdentityResult.Success);
 
         // Act
         await _sut.PostEmailToken(new EmailTokenRequestModel { NewEmail = newEmail });
@@ -139,7 +139,7 @@ public class AccountsControllerTests : IDisposable
 
         const string newEmail = "example@user.com";
 
-        _userService.ValidateManagedUserDomainAsync(user, newEmail)
+        _userService.ValidateClaimedUserDomainAsync(user, newEmail)
             .Returns(IdentityResult.Failed(new IdentityError
             {
                 Code = "TestFailure",

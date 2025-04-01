@@ -124,7 +124,7 @@ public class AccountsController : Controller
             throw new BadRequestException("MasterPasswordHash", "Invalid password.");
         }
 
-        var managedUserValidationResult = await _userService.ValidateManagedUserDomainAsync(user, model.NewEmail);
+        var managedUserValidationResult = await _userService.ValidateClaimedUserDomainAsync(user, model.NewEmail);
 
         if (!managedUserValidationResult.Succeeded)
         {
