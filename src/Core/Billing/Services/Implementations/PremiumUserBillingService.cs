@@ -32,7 +32,7 @@ public class PremiumUserBillingService(
         var customer = await subscriberService.GetCustomer(user);
 
         // Negative credit represents a balance and all Stripe denomination is in cents.
-        var credit = (long)amount * -100;
+        var credit = (long)(amount * -100);
 
         if (customer == null)
         {

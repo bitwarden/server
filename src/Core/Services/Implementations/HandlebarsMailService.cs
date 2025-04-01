@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Reflection;
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Mail;
@@ -752,7 +753,21 @@ public class HandlebarsMailService : IMailService
                 return;
             }
 
-            var emailList = ((IEnumerable<string>)parameters[0]).ToList();
+            var emailList = new List<string>();
+            if (parameters[0] is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Array)
+            {
+                emailList = jsonElement.EnumerateArray().Select(e => e.GetString()).ToList();
+            }
+            else if (parameters[0] is IEnumerable<string> emails)
+            {
+                emailList = emails.ToList();
+            }
+            else
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+
             if (emailList.Count == 0)
             {
                 writer.WriteSafeString(string.Empty);
@@ -774,7 +789,7 @@ public class HandlebarsMailService : IMailService
             {
                 outputMessage += string.Join(", ", emailList.Take(emailList.Count - 1)
                     .Select(email => constructAnchorElement(email)));
-                outputMessage += $", and {constructAnchorElement(emailList.Last())}.";
+                outputMessage += $" and {constructAnchorElement(emailList.Last())}.";
             }
 
             writer.WriteSafeString($"{outputMessage}");
@@ -1250,7 +1265,7 @@ public class HandlebarsMailService : IMailService
             {
                 OrgName = CoreHelpers.SanitizeForEmail(sanitizedOrgName, false),
                 TaskCount = notification.TaskCount,
-                AdminOwnerEmails = adminOwnerEmails,
+                AdminOwnerEmails = adminOwnerEmails.ToList(),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             };
             message.Category = "SecurityTasksNotification";
