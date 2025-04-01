@@ -15,27 +15,6 @@ public static class ClaimsExtensions
     /// </summary>
     private delegate bool HasClaim(string claimType);
 
-    // Relevant claim types required to build a CurrentContextOrganization object.
-    private static readonly IEnumerable<string> _relevantClaimTypes = new HashSet<string>{
-        Claims.OrganizationOwner,
-        Claims.OrganizationAdmin,
-        Claims.OrganizationCustom,
-        Claims.OrganizationUser,
-        Claims.SecretsManagerAccess,
-        Claims.CustomPermissions.AccessEventLogs,
-        Claims.CustomPermissions.AccessImportExport,
-        Claims.CustomPermissions.AccessReports,
-        Claims.CustomPermissions.CreateNewCollections,
-        Claims.CustomPermissions.EditAnyCollection,
-        Claims.CustomPermissions.DeleteAnyCollection,
-        Claims.CustomPermissions.ManageGroups,
-        Claims.CustomPermissions.ManagePolicies,
-        Claims.CustomPermissions.ManageSso,
-        Claims.CustomPermissions.ManageUsers,
-        Claims.CustomPermissions.ManageResetPassword,
-        Claims.CustomPermissions.ManageScim,
-    };
-
     /// <summary>
     /// Parses a user's claims and returns an object representing their claims for the specified organization.
     /// </summary>
@@ -72,16 +51,34 @@ public static class ClaimsExtensions
     /// </summary>
     private static HasClaim GetClaimsParser(ClaimsPrincipal user, Guid organizationId)
     {
+        // Transform into a dict based on the claim type
         var claimsDict = user.Claims
-            .Where(c => _relevantClaimTypes.Contains(c.Type) && Guid.TryParse(c.Value, out _))
+            .GetGuidClaims()
             .GroupBy(c => c.Type)
             .ToDictionary(
                 c => c.Key,
-                c => c.Select(v => new Guid(v.Value)));
+                c => c.Select(v => v.Value));
 
         return claimType
             => claimsDict.TryGetValue(claimType, out var claimValue) &&
                claimValue.Any(v => v == organizationId);
+    }
+
+    /// <summary>
+    /// Parses all claims into proper Guids, or ignore them if they are not valid guids.
+    /// </summary>
+    private static List<(string Type, Guid Value)> GetGuidClaims(this IEnumerable<Claim> claims)
+    {
+        List<(string Type, Guid Value)> result = [];
+        foreach (var claim in claims)
+        {
+            if (Guid.TryParse(claim.Value, out var guid))
+            {
+                result.Add((claim.Type, guid));
+            }
+        }
+
+        return result;
     }
 
     private static OrganizationUserType? GetRoleFromClaims(HasClaim hasClaim)
