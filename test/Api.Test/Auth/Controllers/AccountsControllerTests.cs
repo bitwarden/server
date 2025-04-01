@@ -130,7 +130,7 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task PostEmailToken_WhenValidateManagedUserDomainAsyncFails_ShouldReturnError()
+    public async Task PostEmailToken_WhenValidateClaimedUserDomainAsyncFails_ShouldReturnError()
     {
         // Arrange
         var user = GenerateExampleUser();

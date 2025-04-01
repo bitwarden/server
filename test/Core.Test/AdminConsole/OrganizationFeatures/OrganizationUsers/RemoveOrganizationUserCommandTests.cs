@@ -616,7 +616,7 @@ public class RemoveOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RemoveUsers_WithDeletingUserId_RemovingManagedUser_WithAccountDeprovisioningEnabled_ThrowsException(
+    public async Task RemoveUsers_WithDeletingUserId_RemovingClaimedUser_WithAccountDeprovisioningEnabled_ThrowsException(
         [OrganizationUser(status: OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser,
         OrganizationUser deletingUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
