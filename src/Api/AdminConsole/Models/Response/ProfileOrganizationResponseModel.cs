@@ -18,7 +18,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
 
     public ProfileOrganizationResponseModel(
         OrganizationUserOrganizationDetails organization,
-        IEnumerable<Guid> organizationIdsManagingUser)
+        IEnumerable<Guid> organizationIdsClaimingUser)
         : this("profileOrganization")
     {
         Id = organization.OrganizationId;
@@ -70,7 +70,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
         LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
-        UserIsManagedByOrganization = organizationIdsManagingUser.Contains(organization.OrganizationId);
+        UserIsManagedByOrganization = organizationIdsClaimingUser.Contains(organization.OrganizationId);
         UseRiskInsights = organization.UseRiskInsights;
 
         if (organization.SsoConfig != null)
