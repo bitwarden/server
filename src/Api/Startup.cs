@@ -257,9 +257,10 @@ public class Startup
 
         // Add authentication and authorization to the request pipeline.
         app.UseAuthentication();
-        // Note: ICurrentContext is used in authorization middleware so it must be registered first
-        app.UseMiddleware<CurrentContextMiddleware>();
         app.UseAuthorization();
+
+        // Add current context
+        app.UseMiddleware<CurrentContextMiddleware>();
 
         // Add endpoints to the request pipeline.
         app.UseEndpoints(endpoints =>

@@ -512,7 +512,7 @@ public class CurrentContext : ICurrentContext
         return claims[type].FirstOrDefault()?.Value;
     }
 
-    private Permissions SetOrganizationPermissionsFromClaims(string organizationId, Dictionary<string, IEnumerable<Claim>> claimsDict)
+    public static Permissions SetOrganizationPermissionsFromClaims(string organizationId, Dictionary<string, IEnumerable<Claim>> claimsDict)
     {
         bool hasClaim(string claimKey)
         {

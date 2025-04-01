@@ -1,7 +1,5 @@
 ﻿#nullable enable
 
-using Bit.Api.AdminConsole.Context;
-using Bit.Core.Context;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Api.AdminConsole.Authorization;
@@ -12,8 +10,6 @@ namespace Bit.Api.AdminConsole.Authorization;
 /// determine whether the action is authorized.
 /// </summary>
 public class OrganizationRequirementHandler(
-    ICurrentContext currentContext,
-    IProviderOrganizationContext providerOrganizationContext,
     IHttpContextAccessor httpContextAccessor)
     : AuthorizationHandler<IOrganizationRequirement>
 {
@@ -25,7 +21,8 @@ public class OrganizationRequirementHandler(
             throw new Exception("No organizationId found in route. IOrganizationRequirement cannot be used on this endpoint.");
         }
 
-        var organizationClaims = currentContext.GetOrganization(organizationId.Value);
+        var organizationClaims = context.User.GetCurrentContextOrganization(organizationId.Value);
+        var providerOrganizationContext = null; // TODO
 
         var authorized = await requirement.AuthorizeAsync(organizationId.Value, organizationClaims, providerOrganizationContext);
 
