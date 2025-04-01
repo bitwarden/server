@@ -331,7 +331,7 @@ public class OrganizationUsersControllerTests
 
         await sutProvider.Sut.DeleteAccount(orgId, id);
 
-        await sutProvider.GetDependency<IDeleteManagedOrganizationUserAccountCommand>()
+        await sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountCommand>()
             .Received(1)
             .DeleteUserAsync(orgId, id, currentUser.Id);
     }
@@ -367,7 +367,7 @@ public class OrganizationUsersControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(currentUser);
-        sutProvider.GetDependency<IDeleteManagedOrganizationUserAccountCommand>()
+        sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountCommand>()
             .DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id)
             .Returns(deleteResults);
 
@@ -375,7 +375,7 @@ public class OrganizationUsersControllerTests
 
         Assert.Equal(deleteResults.Count, response.Data.Count());
         Assert.True(response.Data.All(r => deleteResults.Any(res => res.Item1 == r.Id && res.Item2 == r.Error)));
-        await sutProvider.GetDependency<IDeleteManagedOrganizationUserAccountCommand>()
+        await sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountCommand>()
             .Received(1)
             .DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
     }

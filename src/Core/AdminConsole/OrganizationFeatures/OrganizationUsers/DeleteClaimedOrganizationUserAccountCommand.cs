@@ -15,7 +15,7 @@ using Bit.Core.Tools.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
-public class DeleteClaimedOrganizationUserAccountCommand : IDeleteManagedOrganizationUserAccountCommand
+public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganizationUserAccountCommand
 {
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
