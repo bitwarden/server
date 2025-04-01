@@ -34,6 +34,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Core.csproj" />
     <ProjectReference Include="..\..\src\Infrastructure.EntityFramework\Infrastructure.EntityFramework.csproj" />
+    <ProjectReference Include="..\..\src\SharedWeb\SharedWeb.csproj" />
   </ItemGroup>
 
   <ItemGroup>

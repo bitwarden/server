@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Bit.Core.Settings;
+using Microsoft.Extensions.Configuration;
 
 namespace Bit.Seeder.Settings;
 

@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
-using Bit.Seeder.Settings;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bit.Seeder.Services;
