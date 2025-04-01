@@ -437,7 +437,7 @@ public class AccountsController : Controller
 
         var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
-        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
+        var organizationIdsManagingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
         var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, twoFactorEnabled,
@@ -451,9 +451,9 @@ public class AccountsController : Controller
         var userId = _userService.GetProperUserId(User);
         var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(userId.Value,
             OrganizationUserStatusType.Confirmed);
-        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(userId.Value);
+        var organizationIdsClaimingUser = await GetOrganizationIdsClaimingUserAsync(userId.Value);
 
-        var responseData = organizationUserDetails.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsManagingActiveUser));
+        var responseData = organizationUserDetails.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingUser));
         return new ListResponseModel<ProfileOrganizationResponseModel>(responseData);
     }
 
@@ -471,7 +471,7 @@ public class AccountsController : Controller
 
         var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
-        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
+        var organizationIdsManagingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
         var response = new ProfileResponseModel(user, null, null, null, twoFactorEnabled, hasPremiumFromOrg, organizationIdsManagingActiveUser);
         return response;
@@ -490,7 +490,7 @@ public class AccountsController : Controller
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
+        var organizationIdsManagingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
         var response = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsManagingActiveUser);
         return response;
@@ -763,9 +763,9 @@ public class AccountsController : Controller
         await _userService.SaveUserAsync(user);
     }
 
-    private async Task<IEnumerable<Guid>> GetOrganizationIdsManagingUserAsync(Guid userId)
+    private async Task<IEnumerable<Guid>> GetOrganizationIdsClaimingUserAsync(Guid userId)
     {
-        var organizationManagingUser = await _userService.GetOrganizationsClaimingUserAsync(userId);
-        return organizationManagingUser.Select(o => o.Id);
+        var organizationsClaimingUser = await _userService.GetOrganizationsClaimingUserAsync(userId);
+        return organizationsClaimingUser.Select(o => o.Id);
     }
 }
