@@ -56,13 +56,10 @@ public class PostUserCommand(
 
         var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
-        var hasSecretsManagerStandalone = await paymentService.HasSecretsManagerStandalone(organization);
-
         var request = model.ToRequest(
             scimProvider: scimProvider,
             inviteOrganization: new InviteOrganization(organization, plan),
-            performedAt: timeProvider.GetUtcNow(),
-            hasSecretsManagerStandalone);
+            performedAt: timeProvider.GetUtcNow());
 
         var orgUsers = await organizationUserRepository
             .GetManyDetailsByOrganizationAsync(request.InviteOrganization.OrganizationId);

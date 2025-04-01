@@ -17,7 +17,7 @@ public class OrganizationUserInvite
     public bool AccessSecretsManager { get; private init; }
     public Guid[] Groups { get; private init; }
 
-    public OrganizationUserInvite(string email, string externalId, bool accessSecretsManager) :
+    public OrganizationUserInvite(string email, string externalId) :
         this(
             email: email,
             assignedCollections: [],
@@ -25,8 +25,20 @@ public class OrganizationUserInvite
             type: OrganizationUserType.User,
             permissions: new Permissions(),
             externalId: externalId,
-            accessSecretsManager: accessSecretsManager)
+            false)
     {
+    }
+
+    public OrganizationUserInvite(OrganizationUserInvite invite, bool accessSecretsManager) :
+        this(invite.Email,
+            invite.AssignedCollections,
+            invite.Groups,
+            invite.Type,
+            invite.Permissions,
+            invite.ExternalId,
+            accessSecretsManager)
+    {
+
     }
 
     public OrganizationUserInvite(string email,

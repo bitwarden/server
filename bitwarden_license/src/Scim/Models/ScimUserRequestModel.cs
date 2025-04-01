@@ -32,8 +32,7 @@ public class ScimUserRequestModel : BaseScimUserModel
     public InviteOrganizationUsersRequest ToRequest(
         ScimProviderType scimProvider,
         InviteOrganization inviteOrganization,
-        DateTimeOffset performedAt,
-        bool hasSecretsManagerStandalone)
+        DateTimeOffset performedAt)
     {
         var email = EmailForInvite(scimProvider);
 
@@ -47,8 +46,7 @@ public class ScimUserRequestModel : BaseScimUserModel
             [
                 new Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite(
                         email: email,
-                        externalId: ExternalIdForInvite(),
-                        accessSecretsManager: hasSecretsManagerStandalone
+                        externalId: ExternalIdForInvite()
                     )
             ],
             inviteOrganization: inviteOrganization,

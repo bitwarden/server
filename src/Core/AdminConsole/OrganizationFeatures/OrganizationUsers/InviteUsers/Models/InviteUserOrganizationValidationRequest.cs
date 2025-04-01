@@ -6,9 +6,11 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public class InviteUserOrganizationValidationRequest
 {
-    public InviteUserOrganizationValidationRequest() { }
+    public InviteUserOrganizationValidationRequest()
+    {
+    }
 
-    public InviteUserOrganizationValidationRequest(InviteUserOrganizationValidationRequest request, PasswordManagerSubscriptionUpdate subscriptionUpdate, SecretsManagerSubscriptionUpdate smSubscriptionUpdate)
+    public InviteUserOrganizationValidationRequest(InviteUserOrganizationValidationRequest request)
     {
         Invites = request.Invites;
         InviteOrganization = request.InviteOrganization;
@@ -16,6 +18,13 @@ public class InviteUserOrganizationValidationRequest
         PerformedAt = request.PerformedAt;
         OccupiedPmSeats = request.OccupiedPmSeats;
         OccupiedSmSeats = request.OccupiedSmSeats;
+    }
+
+    public InviteUserOrganizationValidationRequest(InviteUserOrganizationValidationRequest request,
+        PasswordManagerSubscriptionUpdate subscriptionUpdate,
+        SecretsManagerSubscriptionUpdate smSubscriptionUpdate)
+        : this(request)
+    {
         PasswordManagerSubscriptionUpdate = subscriptionUpdate;
         SecretsManagerSubscriptionUpdate = smSubscriptionUpdate;
     }
