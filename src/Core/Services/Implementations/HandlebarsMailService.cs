@@ -474,7 +474,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList)
+    public async Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList)
     {
         await EnqueueMailAsync(emailList.EmailList.Select(email =>
             CreateMessage(email, emailList.Organization)));

@@ -97,7 +97,7 @@ public interface IMailService
     Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent);
     Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate, string organizationId,
         string organizationName);
-    Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList);
+    Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList);
     Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName);
     Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotifications, IEnumerable<string> adminOwnerEmails);
 }
