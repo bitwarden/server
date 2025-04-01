@@ -77,10 +77,9 @@ public class ImportCiphersController : Controller
 
         //An User is allowed to import if CanCreate Collections or has AccessToImportExport
         var authorized = await CheckOrgImportPermission(collections, orgId);
-
         if (!authorized)
         {
-            throw new NotFoundException();
+            throw new BadRequestException("Not enough privileges to import into this organization.");
         }
 
         var userId = _userService.GetProperUserId(User).Value;
@@ -105,6 +104,44 @@ public class ImportCiphersController : Controller
 
         //We need to verify if the user is trying to import into existing collections
         var existingCollections = collections.Where(tc => orgCollectionIds.Contains(tc.Id));
+
+        // Do we have new collections?
+        var hasNewCollections = collections.Any(tc => !orgCollectionIds.Contains(tc.Id));
+
+        //suppose are are going to be creating new collections and we have existing collections
+        if (hasNewCollections && existingCollections.Any())
+        {
+            // since we are creating new collection, user must have import/manage and create collection permission
+            if ((await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Create)).Succeeded
+                && (await _authorizationService.AuthorizeAsync(User, existingCollections, BulkCollectionOperations.ImportCiphers)).Succeeded)
+            {
+                // can import collections and create new ones
+                return true;
+            }
+            else
+            {
+                // user does not have permission to create new collections
+                return false;
+            }
+        }
+
+        // we are creating new collections and we don't have any existing collections
+        if (hasNewCollections && !existingCollections.Any())
+        {
+            // user is trying to create new collections
+            // we need to check if the user has permission to create collections
+            if ((await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Create)).Succeeded)
+            {
+                return true;
+            }
+            else
+            {
+                // user does not have permission to create new collections
+                return false;
+            }
+        }
+
+        // in many import formats, we don't create collections, we just import ciphers
 
         //When importing into existing collection, we need to verify if the user has permissions
         if (existingCollections.Any() && (await _authorizationService.AuthorizeAsync(User, existingCollections, BulkCollectionOperations.ImportCiphers)).Succeeded)
