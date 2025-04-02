@@ -1,5 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -13,7 +15,9 @@ using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
 
 namespace Bit.Core.Vault.Services;
@@ -38,6 +42,9 @@ public class CipherService : ICipherService
     private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
+    private readonly IGetCipherPermissionsForUserQuery _getCipherPermissionsForUserQuery;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IFeatureService _featureService;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -54,7 +61,10 @@ public class CipherService : ICipherService
         IPolicyService policyService,
         GlobalSettings globalSettings,
         IReferenceEventService referenceEventService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IGetCipherPermissionsForUserQuery getCipherPermissionsForUserQuery,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IFeatureService featureService)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -71,6 +81,9 @@ public class CipherService : ICipherService
         _globalSettings = globalSettings;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
+        _getCipherPermissionsForUserQuery = getCipherPermissionsForUserQuery;
+        _policyRequirementQuery = policyRequirementQuery;
+        _featureService = featureService;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -138,9 +151,11 @@ public class CipherService : ICipherService
             }
             else
             {
-                // Make sure the user can save new ciphers to their personal vault
-                var anyPersonalOwnershipPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership);
-                if (anyPersonalOwnershipPolicies)
+                var isPersonalVaultRestricted = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+                    ? (await _policyRequirementQuery.GetAsync<PersonalOwnershipPolicyRequirement>(savingUserId)).DisablePersonalOwnership
+                    : await _policyService.AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership);
+
+                if (isPersonalVaultRestricted)
                 {
                     throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
                 }
@@ -161,6 +176,7 @@ public class CipherService : ICipherService
         {
             ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
             cipher.RevisionDate = DateTime.UtcNow;
+            await ValidateViewPasswordUserAsync(cipher);
             await _cipherRepository.ReplaceAsync(cipher);
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
 
@@ -965,5 +981,33 @@ public class CipherService : ICipherService
         }
 
         ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
+    }
+
+    private async Task ValidateViewPasswordUserAsync(Cipher cipher)
+    {
+        if (cipher.Type != CipherType.Login || cipher.Data == null || !cipher.OrganizationId.HasValue)
+        {
+            return;
+        }
+        var existingCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
+        if (existingCipher == null) return;
+
+        var cipherPermissions = await _getCipherPermissionsForUserQuery.GetByOrganization(cipher.OrganizationId.Value);
+        // Check if user is a "hidden password" user
+        if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !(permission.ViewPassword && permission.Edit))
+        {
+            // "hidden password" users may not add cipher key encryption
+            if (existingCipher.Key == null && cipher.Key != null)
+            {
+                throw new BadRequestException("You do not have permission to add cipher key encryption.");
+            }
+            // "hidden password" users may not change passwords, TOTP codes, or passkeys, so we need to set them back to the original values
+            var existingCipherData = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data);
+            var newCipherData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
+            newCipherData.Fido2Credentials = existingCipherData.Fido2Credentials;
+            newCipherData.Totp = existingCipherData.Totp;
+            newCipherData.Password = existingCipherData.Password;
+            cipher.Data = JsonSerializer.Serialize(newCipherData);
+        }
     }
 }
