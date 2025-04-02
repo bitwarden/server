@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using Bit.Api.AdminConsole.Context;
 using Bit.Core.Context;
 
 namespace Bit.Api.AdminConsole.Authorization.Requirements;
@@ -11,8 +10,7 @@ namespace Bit.Api.AdminConsole.Authorization.Requirements;
 public class MemberOrProviderRequirement : IOrganizationRequirement
 {
     public async Task<bool> AuthorizeAsync(
-        Guid organizationId,
         CurrentContextOrganization? organizationClaims,
-        IProviderOrganizationContext providerOrganizationContext)
-        => organizationClaims is not null || await providerOrganizationContext.ProviderUserForOrgAsync(organizationId);
+        Func<Task<bool>> isProviderUserForOrg)
+        => organizationClaims is not null || await isProviderUserForOrg();
 }

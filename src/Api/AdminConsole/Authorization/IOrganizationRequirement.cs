@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using Bit.Api.AdminConsole.Context;
 using Bit.Core.Context;
 using Microsoft.AspNetCore.Authorization;
 
@@ -15,7 +14,6 @@ namespace Bit.Api.AdminConsole.Authorization;
 public interface IOrganizationRequirement : IAuthorizationRequirement
 {
     public Task<bool> AuthorizeAsync(
-        Guid organizationId,
         CurrentContextOrganization? organizationClaims,
-        IProviderOrganizationContext providerOrganizationContext);
+        Func<Task<bool>> isProviderUserForOrg);
 }

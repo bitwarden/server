@@ -1,6 +1,9 @@
 ﻿#nullable enable
 
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
+using BadRequestException = Bit.Core.Exceptions.BadRequestException;
 
 namespace Bit.Api.AdminConsole.Authorization;
 
@@ -10,17 +13,31 @@ namespace Bit.Api.AdminConsole.Authorization;
 /// determine whether the action is authorized.
 /// </summary>
 public class OrganizationRequirementHandler(
-    IHttpContextAccessor httpContextAccessor)
+    IHttpContextAccessor httpContextAccessor,
+    IProviderUserRepository providerUserRepository,
+    IUserService userService)
     : AuthorizationHandler<IOrganizationRequirement>
 {
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, IOrganizationRequirement requirement)
     {
-        var organizationId = httpContextAccessor.GetOrganizationId();
+        var httpContext = httpContextAccessor.HttpContext;
+        if (httpContext == null)
+        {
+            throw new InvalidOperationException("This method should only be called in the context of an HTTP Request.");
+        }
 
-        var organizationClaims = context.User.GetCurrentContextOrganization(organizationId);
-        var providerOrganizationContext = null; // TODO
+        var organizationId = httpContext.GetOrganizationId();
+        var organizationClaims = httpContext.User.GetCurrentContextOrganization(organizationId);
 
-        var authorized = await requirement.AuthorizeAsync(organizationId, organizationClaims, providerOrganizationContext);
+        var userId = userService.GetProperUserId(httpContext.User);
+        if (userId == null)
+        {
+            throw new BadRequestException("This method should only be called on the private api with a logged in user.");
+        }
+
+        Task<bool> IsProviderUserForOrg() => httpContextAccessor.HttpContext.IsProviderUserForOrgAsync(providerUserRepository, userId.Value, organizationId);
+
+        var authorized = await requirement.AuthorizeAsync(organizationClaims, IsProviderUserForOrg);
 
         if (authorized)
         {

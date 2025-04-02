@@ -8,7 +8,7 @@ using Bit.Core.Models.Data;
 
 namespace Bit.Api.AdminConsole.Authorization;
 
-public static class ClaimsExtensions
+public static class OrganizationClaimsExtensions
 {
     /// <summary>
     /// A delegate that returns true if the user has the specified claim type for an organization, false otherwise.

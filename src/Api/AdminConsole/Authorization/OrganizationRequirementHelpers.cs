@@ -4,14 +4,9 @@ namespace Bit.Api.AdminConsole.Authorization;
 
 public static class OrganizationRequirementHelpers
 {
-    public static Guid GetOrganizationId(this IHttpContextAccessor httpContextAccessor)
+    public static Guid GetOrganizationId(this HttpContext httpContext)
     {
-        if (httpContextAccessor.HttpContext is null)
-        {
-            throw new InvalidOperationException("This method should only be called in the context of an HTTP Request.");
-        }
-
-        httpContextAccessor.HttpContext.GetRouteData().Values.TryGetValue("orgId", out var orgIdParam);
+        httpContext.GetRouteData().Values.TryGetValue("orgId", out var orgIdParam);
         if (orgIdParam == null || !Guid.TryParse(orgIdParam.ToString(), out var orgId))
         {
             throw new InvalidOperationException(

@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization;
-using Bit.Api.AdminConsole.Context;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
@@ -50,7 +49,7 @@ public class OrganizationRequirementHandlerTests
         // Arrange requirement
         var testRequirement = Substitute.For<IOrganizationRequirement>();
         testRequirement
-            .AuthorizeAsync(organizationId, null, Arg.Any<IProviderOrganizationContext>())
+            .AuthorizeAsync(organizationId, null, Arg.Any<Func<Task<bool>>>())
             .ReturnsForAnyArgs(false);
         var authContext = new AuthorizationHandlerContext([testRequirement], new ClaimsPrincipal(), null);
 
@@ -58,7 +57,7 @@ public class OrganizationRequirementHandlerTests
         await sutProvider.Sut.HandleAsync(authContext);
 
         // Assert
-        await testRequirement.Received(1).AuthorizeAsync(organizationId, null, Arg.Any<IProviderOrganizationContext>());
+        await testRequirement.Received(1).AuthorizeAsync(organizationId, null, Arg.Any<Func<Task<bool>>>());
         Assert.False(authContext.HasSucceeded);
     }
 
@@ -71,7 +70,7 @@ public class OrganizationRequirementHandlerTests
         // Arrange requirement
         var testRequirement = Substitute.For<IOrganizationRequirement>();
         testRequirement
-            .AuthorizeAsync(organizationId, null, Arg.Any<IProviderOrganizationContext>())
+            .AuthorizeAsync(organizationId, null, Arg.Any<Func<Task<bool>>>())
             .ReturnsForAnyArgs(true);
         var authContext = new AuthorizationHandlerContext([testRequirement], new ClaimsPrincipal(), null);
 
@@ -79,7 +78,7 @@ public class OrganizationRequirementHandlerTests
         await sutProvider.Sut.HandleAsync(authContext);
 
         // Assert
-        await testRequirement.Received(1).AuthorizeAsync(organizationId, null, Arg.Any<IProviderOrganizationContext>());
+        await testRequirement.Received(1).AuthorizeAsync(organizationId, null, Arg.Any<Func<Task<bool>>>());
         Assert.True(authContext.HasSucceeded);
     }
 
