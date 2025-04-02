@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Commands;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
@@ -27,7 +26,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         _organizationRepository = organizationRepository;
     }
 
-    public async Task<CommandResult> InitPendingOrganizationAsync(Guid userId, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName)
+    public async Task InitPendingOrganizationAsync(Guid userId, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName)
     {
         await _organizationService.ValidateSignUpPoliciesAsync(userId);
 
@@ -73,7 +72,5 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             };
             await _collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);
         }
-
-        return new CommandResult();
     }
 }
