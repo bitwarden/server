@@ -12,12 +12,14 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OneOf.Types;
 
 namespace Bit.Api.Billing.Controllers;
 
 [Route("organizations/{organizationId:guid}/billing")]
 [Authorize("Application")]
 public class OrganizationBillingController(
+    IBusinessUnitConverter businessUnitConverter,
     ICurrentContext currentContext,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
@@ -295,5 +297,33 @@ public class OrganizationBillingController(
         }
 
         return TypedResults.Ok();
+    }
+
+    [HttpPost("setup-business-unit")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> SetupBusinessUnitAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] SetupBusinessUnitRequestBody requestBody)
+    {
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        if (!await currentContext.OrganizationUser(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var providerId = await businessUnitConverter.FinalizeConversion(
+            organization,
+            requestBody.UserId,
+            requestBody.Token,
+            requestBody.ProviderKey,
+            requestBody.OrganizationKey);
+
+        return TypedResults.Ok(providerId);
     }
 }
