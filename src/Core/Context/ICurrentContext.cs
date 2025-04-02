@@ -60,7 +60,6 @@ public interface ICurrentContext
     Task<bool> EditSubscription(Guid orgId);
     Task<bool> EditPaymentMethods(Guid orgId);
     Task<bool> ViewBillingHistory(Guid orgId);
-    [Obsolete("Use IProviderOrganizationContext.ProviderUserForOrgAsync instead.")]
     Task<bool> ProviderUserForOrgAsync(Guid orgId);
     bool ProviderProviderAdmin(Guid providerId);
     bool ProviderUser(Guid providerId);

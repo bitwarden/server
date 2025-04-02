@@ -7,7 +7,6 @@ using Stripe;
 using Bit.Core.Utilities;
 using Duende.IdentityModel;
 using System.Globalization;
-using Bit.Api.AdminConsole.Context;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.KeyManagement.Validators;
@@ -85,7 +84,6 @@ public class Startup
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
-        services.AddScoped<IProviderOrganizationContext, ProviderOrganizationContext>();
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         // Caching
