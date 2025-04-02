@@ -17,12 +17,15 @@ public class OrganizationRequirementHandler(
     IUserService userService)
     : AuthorizationHandler<IOrganizationRequirement>
 {
+    public const string NoHttpContextError = "This method should only be called in the context of an HTTP Request.";
+    public const string NoUserIdError = "This method should only be called on the private api with a logged in user.";
+
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, IOrganizationRequirement requirement)
     {
         var httpContext = httpContextAccessor.HttpContext;
         if (httpContext == null)
         {
-            throw new InvalidOperationException("This method should only be called in the context of an HTTP Request.");
+            throw new InvalidOperationException(NoHttpContextError);
         }
 
         var organizationId = httpContext.GetOrganizationId();
@@ -31,7 +34,7 @@ public class OrganizationRequirementHandler(
         var userId = userService.GetProperUserId(httpContext.User);
         if (userId == null)
         {
-            throw new InvalidOperationException("This method should only be called on the private api with a logged in user.");
+            throw new InvalidOperationException(NoUserIdError);
         }
 
         Task<bool> IsProviderUserForOrg() => httpContextAccessor.HttpContext.IsProviderUserForOrgAsync(providerUserRepository, userId.Value, organizationId);

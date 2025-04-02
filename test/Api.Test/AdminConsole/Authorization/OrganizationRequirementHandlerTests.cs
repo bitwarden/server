@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
@@ -16,13 +17,13 @@ public class OrganizationRequirementHandlerTests
     public async Task IfNoOrganizationId_Throws(SutProvider<OrganizationRequirementHandler> sutProvider)
     {
         // Arrange
-        ArrangeRouteValues(sutProvider, null); // no orgId in route
+        ArrangeRouteAndUser(sutProvider, null); // no orgId in route
         var testRequirement = Substitute.For<IOrganizationRequirement>();
         var authContext = new AuthorizationHandlerContext([testRequirement], new ClaimsPrincipal(), null);
 
         // Act
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.HandleAsync(authContext));
-        Assert.Contains("should include a route value named 'orgId'", exception.Message);
+        Assert.Equal(OrganizationRequirementHelpers.NoOrgIdError, exception.Message);
         Assert.False(authContext.HasSucceeded);
     }
 
@@ -30,13 +31,13 @@ public class OrganizationRequirementHandlerTests
     public async Task IfInvalidOrganizationId_Throws(SutProvider<OrganizationRequirementHandler> sutProvider)
     {
         // Arrange
-        ArrangeRouteValues(sutProvider, "malformed guid");
+        ArrangeRouteAndUser(sutProvider, "malformed guid");
         var testRequirement = Substitute.For<IOrganizationRequirement>();
         var authContext = new AuthorizationHandlerContext([testRequirement], new ClaimsPrincipal(), null);
 
         // Act
-        var exception = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.HandleAsync(authContext));
-        Assert.Contains("No organizationId found", exception.Message);
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.HandleAsync(authContext));
+        Assert.Contains(OrganizationRequirementHelpers.NoOrgIdError, exception.Message);
         Assert.False(authContext.HasSucceeded);
     }
 
@@ -44,7 +45,7 @@ public class OrganizationRequirementHandlerTests
     public async Task DoesNotAuthorize_IfAuthorizeAsync_ReturnsFalse(SutProvider<OrganizationRequirementHandler> sutProvider, Guid organizationId)
     {
         // Arrange route values
-        ArrangeRouteValues(sutProvider, organizationId.ToString());
+        ArrangeRouteAndUser(sutProvider, organizationId.ToString());
 
         // Arrange requirement
         var testRequirement = Substitute.For<IOrganizationRequirement>();
@@ -65,7 +66,7 @@ public class OrganizationRequirementHandlerTests
     public async Task Authorizes_IfAuthorizeAsync_ReturnsTrue(SutProvider<OrganizationRequirementHandler> sutProvider, Guid organizationId)
     {
         // Arrange route values
-        ArrangeRouteValues(sutProvider, organizationId.ToString());
+        ArrangeRouteAndUser(sutProvider, organizationId.ToString());
 
         // Arrange requirement
         var testRequirement = Substitute.For<IOrganizationRequirement>();
@@ -82,10 +83,11 @@ public class OrganizationRequirementHandlerTests
         Assert.True(authContext.HasSucceeded);
     }
 
-    private static void ArrangeRouteValues(SutProvider<OrganizationRequirementHandler> sutProvider, string orgIdRouteValue)
+    private static void ArrangeRouteAndUser(SutProvider<OrganizationRequirementHandler> sutProvider, string orgIdRouteValue)
     {
         var httpContext = new DefaultHttpContext();
         httpContext.Request.RouteValues["orgId"] = orgIdRouteValue;
         sutProvider.GetDependency<IHttpContextAccessor>().HttpContext = httpContext;
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(Guid.NewGuid());
     }
 }
