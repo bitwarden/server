@@ -21,8 +21,8 @@ public class OrganizationRequirementHandlerTests
         var authContext = new AuthorizationHandlerContext([testRequirement], new ClaimsPrincipal(), null);
 
         // Act
-        var exception = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.HandleAsync(authContext));
-        Assert.Contains("No organizationId found", exception.Message);
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.HandleAsync(authContext));
+        Assert.Contains("should include a route value named 'orgId'", exception.Message);
         Assert.False(authContext.HasSucceeded);
     }
 
