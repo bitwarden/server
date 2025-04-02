@@ -51,30 +51,31 @@ public static class ClaimsExtensions
     /// </summary>
     private static HasClaim GetClaimsParser(ClaimsPrincipal user, Guid organizationId)
     {
-        // Transform into a dict based on the claim type
+        // Group claims by ClaimType
         var claimsDict = user.Claims
-            .GetGuidClaims()
             .GroupBy(c => c.Type)
             .ToDictionary(
                 c => c.Key,
-                c => c.Select(v => v.Value));
+                c => c.ToList());
 
         return claimType
-            => claimsDict.TryGetValue(claimType, out var claimValue) &&
-               claimValue.Any(v => v == organizationId);
+            => claimsDict.TryGetValue(claimType, out var claims) &&
+               claims
+                   .ParseGuids()
+                   .Any(v => v == organizationId);
     }
 
     /// <summary>
-    /// Parses all claims into proper Guids, or ignore them if they are not valid guids.
+    /// Parses the provided claims into proper Guids, or ignore them if they are not valid guids.
     /// </summary>
-    private static List<(string Type, Guid Value)> GetGuidClaims(this IEnumerable<Claim> claims)
+    private static List<Guid> ParseGuids(this IEnumerable<Claim> claims)
     {
-        List<(string Type, Guid Value)> result = [];
+        List<Guid> result = [];
         foreach (var claim in claims)
         {
             if (Guid.TryParse(claim.Value, out var guid))
             {
-                result.Add((claim.Type, guid));
+                result.Add(guid);
             }
         }
 
