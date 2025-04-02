@@ -227,7 +227,7 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
             sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, null));
 
         // Assert
-        Assert.Equal("Member is not managed by the organization.", exception.Message);
+        Assert.Equal("Member is not claimed by the organization.", exception.Message);
         await sutProvider.GetDependency<IUserService>().Received(0).DeleteAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IEventService>().Received(0)
             .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<DateTime?>());
@@ -445,7 +445,7 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
         // Assert
         Assert.Single(result);
         Assert.Equal(orgUser.Id, result.First().Item1);
-        Assert.Contains("Member is not managed by the organization.", result.First().Item2);
+        Assert.Contains("Member is not claimed by the organization.", result.First().Item2);
         await sutProvider.GetDependency<IUserService>().Received(0).DeleteAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IEventService>().Received(0)
             .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
@@ -485,7 +485,7 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
         Assert.Equal(3, results.Count());
         Assert.Empty(results.First(r => r.Item1 == orgUser1.Id).Item2);
         Assert.Equal("You cannot delete a member with Invited status.", results.First(r => r.Item1 == orgUser2.Id).Item2);
-        Assert.Equal("Member is not managed by the organization.", results.First(r => r.Item1 == orgUser3.Id).Item2);
+        Assert.Equal("Member is not claimed by the organization.", results.First(r => r.Item1 == orgUser3.Id).Item2);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(
             Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
