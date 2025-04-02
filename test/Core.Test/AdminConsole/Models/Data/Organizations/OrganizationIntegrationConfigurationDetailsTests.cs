@@ -7,7 +7,7 @@ namespace Bit.Core.Test.Models.Data.Organizations;
 public class OrganizationIntegrationConfigurationDetailsTests
 {
     [Fact]
-    public void MergedConfiguration_BothHaveValues()
+    public void MergedConfiguration_WithValidConfigAndIntegration_ReturnsMergedJson()
     {
         var config = new { config = "A new config value" };
         var integration = new { integration = "An integration value" };
@@ -23,7 +23,7 @@ public class OrganizationIntegrationConfigurationDetailsTests
     }
 
     [Fact]
-    public void MergedConfiguration_BothNotJson()
+    public void MergedConfiguration_WithInvalidJsonConfigAndIntegration_ReturnsEmptyJson()
     {
         var expectedObj = new { };
         var expected = JsonSerializer.Serialize(expectedObj);
@@ -37,7 +37,7 @@ public class OrganizationIntegrationConfigurationDetailsTests
     }
 
     [Fact]
-    public void MergedConfiguration_BothNull()
+    public void MergedConfiguration_WithNullConfigAndIntegration_ReturnsEmptyJson()
     {
         var expectedObj = new { };
         var expected = JsonSerializer.Serialize(expectedObj);
@@ -51,7 +51,7 @@ public class OrganizationIntegrationConfigurationDetailsTests
     }
 
     [Fact]
-    public void MergedConfiguration_ConfigNull()
+    public void MergedConfiguration_WithValidIntegrationAndNullConfig_ReturnsIntegrationJson()
     {
         var integration = new { integration = "An integration value" };
         var expectedObj = new { integration = "An integration value" };
@@ -66,7 +66,7 @@ public class OrganizationIntegrationConfigurationDetailsTests
     }
 
     [Fact]
-    public void MergedConfiguration_IntegrationNull()
+    public void MergedConfiguration_WithValidConfigAndNullIntegration_ReturnsConfigJson()
     {
         var config = new { config = "A new config value" };
         var expectedObj = new { config = "A new config value" };

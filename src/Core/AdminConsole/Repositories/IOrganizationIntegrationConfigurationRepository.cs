@@ -6,7 +6,7 @@ namespace Bit.Core.Repositories;
 
 public interface IOrganizationIntegrationConfigurationRepository : IRepository<OrganizationIntegrationConfiguration, Guid>
 {
-    Task<List<OrganizationIntegrationConfigurationDetails>> GetConfigurationsAsync(
+    Task<List<OrganizationIntegrationConfigurationDetails>> GetConfigurationDetailsAsync(
         Guid organizationId,
         IntegrationType integrationType,
         EventType eventType);

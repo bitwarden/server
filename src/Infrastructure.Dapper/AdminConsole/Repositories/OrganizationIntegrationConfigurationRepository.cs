@@ -20,7 +20,7 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetConfigurationsAsync(
+    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetConfigurationDetailsAsync(
         Guid organizationId,
         IntegrationType integrationType,
         EventType eventType)

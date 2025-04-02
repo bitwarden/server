@@ -16,7 +16,7 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Core.Ad
         : base(serviceScopeFactory, mapper, context => context.OrganizationIntegrationConfigurations)
     { }
 
-    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetConfigurationsAsync(
+    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetConfigurationDetailsAsync(
         Guid organizationId,
         IntegrationType integrationType,
         EventType eventType)

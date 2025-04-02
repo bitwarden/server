@@ -36,7 +36,7 @@ public class OrganizationIntegrationConfigurationDetails
         {
             try
             {
-                var configuration = Configuration ?? "{}";
+                var configuration = Configuration ?? string.Empty;
                 return JsonNode.Parse(configuration) as JsonObject ?? new JsonObject();
             }
             catch
@@ -52,7 +52,7 @@ public class OrganizationIntegrationConfigurationDetails
         {
             try
             {
-                var integration = IntegrationConfiguration ?? "{}";
+                var integration = IntegrationConfiguration ?? string.Empty;
                 return JsonNode.Parse(integration) as JsonObject ?? new JsonObject();
             }
             catch
