@@ -22,7 +22,6 @@ public interface ICurrentContext
     string IpAddress { get; set; }
     string CountryName { get; set; }
     List<CurrentContextOrganization> Organizations { get; set; }
-    List<CurrentContextProvider> Providers { get; set; }
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }
     IdentityClientType IdentityClientType { get; set; }
