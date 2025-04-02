@@ -1170,7 +1170,9 @@ public class SubscriberServiceTests
     {
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)
+        stripeAdapter.CustomerGetAsync(
+                provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(p => p.Expand.Contains("tax") || p.Expand.Contains("tax_ids")))
             .Returns(new Customer
             {
                 Id = provider.GatewayCustomerId,
@@ -1216,7 +1218,10 @@ public class SubscriberServiceTests
     {
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)
+        stripeAdapter.CustomerGetAsync(
+                provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(p => p.Expand.Contains("tax") || p.Expand.Contains("tax_ids"))
+                )
             .Returns(new Customer
             {
                 Id = provider.GatewayCustomerId,
@@ -1324,7 +1329,9 @@ public class SubscriberServiceTests
     {
         const string braintreeCustomerId = "braintree_customer_id";
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(
+                provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(p => p.Expand.Contains("tax") || p.Expand.Contains("tax_ids")))
             .Returns(new Customer
             {
                 Id = provider.GatewayCustomerId,
@@ -1376,7 +1383,9 @@ public class SubscriberServiceTests
     {
         const string braintreeCustomerId = "braintree_customer_id";
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(
+                provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(p => p.Expand.Contains("tax") || p.Expand.Contains("tax_ids")))
             .Returns(new Customer
             {
                 Id = provider.GatewayCustomerId,
@@ -1485,7 +1494,9 @@ public class SubscriberServiceTests
     {
         const string braintreeCustomerId = "braintree_customer_id";
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(
+                provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(p => p.Expand.Contains("tax") || p.Expand.Contains("tax_ids")))
             .Returns(new Customer
             {
                 Id = provider.GatewayCustomerId
