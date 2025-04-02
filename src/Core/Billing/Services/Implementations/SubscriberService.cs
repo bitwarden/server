@@ -441,7 +441,8 @@ public class SubscriberService(
         ArgumentNullException.ThrowIfNull(subscriber);
         ArgumentNullException.ThrowIfNull(tokenizedPaymentSource);
 
-        var customer = await GetCustomerOrThrow(subscriber);
+        var customerGetOptions = new CustomerGetOptions { Expand = ["tax", "tax_ids"] };
+        var customer = await GetCustomerOrThrow(subscriber, customerGetOptions);
 
         var (type, token) = tokenizedPaymentSource;
 
@@ -610,7 +611,8 @@ public class SubscriberService(
                 Line2 = taxInformation.Line2,
                 City = taxInformation.City,
                 State = taxInformation.State
-            }
+            },
+            Expand = ["subscriptions", "tax", "tax_ids"]
         });
 
         var taxId = customer.TaxIds?.FirstOrDefault();
@@ -668,7 +670,11 @@ public class SubscriberService(
         {
             if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
             {
-                var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+                var subscriptionGetOptions = new SubscriptionGetOptions
+                {
+                    Expand = ["customer.tax", "customer.tax_ids"]
+                };
+                var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
                 var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, subscription.Items.Select(x => x.Price.Id));
                 var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
                 var automaticTaxOptions = automaticTaxStrategy.GetUpdateOptions(subscription);

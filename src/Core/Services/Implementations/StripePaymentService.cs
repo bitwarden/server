@@ -100,9 +100,7 @@ public class StripePaymentService : IPaymentService
         SubscriptionUpdate subscriptionUpdate, bool invoiceNow = false)
     {
         // remember, when in doubt, throw
-        var subGetOptions = new SubscriptionGetOptions();
-        // subGetOptions.AddExpand("customer");
-        subGetOptions.AddExpand("customer.tax");
+        var subGetOptions = new SubscriptionGetOptions { Expand = ["customer.tax", "customer.tax_ids"] };
         var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subGetOptions);
         if (sub == null)
         {
@@ -836,7 +834,11 @@ public class StripePaymentService : IPaymentService
             {
                 if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
                 {
-                    var subscription = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+                    var subscriptionGetOptions = new SubscriptionGetOptions
+                    {
+                        Expand = ["customer.tax", "customer.tax_ids"]
+                    };
+                    var subscription = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
 
                     var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, subscription.Items.Select(x => x.Price.Id));
                     var automaticTaxStrategy = await _automaticTaxFactory.CreateAsync(automaticTaxParameters);

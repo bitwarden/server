@@ -562,7 +562,8 @@ public class ProviderBillingService(
     {
         ArgumentNullException.ThrowIfNull(provider);
 
-        var customer = await subscriberService.GetCustomerOrThrow(provider);
+        var customerGetOptions = new CustomerGetOptions { Expand = ["tax", "tax_ids"] };
+        var customer = await subscriberService.GetCustomerOrThrow(provider, customerGetOptions);
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 

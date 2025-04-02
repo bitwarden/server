@@ -86,6 +86,11 @@ public class BusinessUseAutomaticTaxStrategy(IFeatureService featureService) : I
             return true;
         }
 
-        return customer.TaxIds != null && customer.TaxIds.Any();
+        if (customer.TaxIds == null)
+        {
+            throw new ArgumentNullException(nameof(customer.TaxIds), "`customer.tax_ids` must be expanded.");
+        }
+
+        return customer.TaxIds.Any();
     }
 }

@@ -116,7 +116,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             var customer = await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Description = string.Empty,
-                Email = organization.BillingEmail
+                Email = organization.BillingEmail,
+                Expand = ["tax", "tax_ids"]
             });
 
             var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);

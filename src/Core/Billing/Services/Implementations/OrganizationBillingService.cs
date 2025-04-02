@@ -147,7 +147,7 @@ public class OrganizationBillingService(
             Coupon = customerSetup.Coupon,
             Description = organization.DisplayBusinessName(),
             Email = organization.BillingEmail,
-            Expand = ["tax"],
+            Expand = ["tax", "tax_ids"],
             InvoiceSettings = new CustomerInvoiceSettingsOptions
             {
                 CustomFields = [
