@@ -20,11 +20,14 @@
 # Database Operations for database changes
 src/Sql/** @bitwarden/dept-dbops
 util/EfShared/** @bitwarden/dept-dbops
-util/Migrator/** @bitwarden/dept-dbops
+util/Migrator/** @bitwarden/team-platform-dev
 util/MySqlMigrations/** @bitwarden/dept-dbops
 util/PostgresMigrations/** @bitwarden/dept-dbops
 util/SqlServerEFScaffold/** @bitwarden/dept-dbops
 util/SqliteMigrations/** @bitwarden/dept-dbops
+
+# Shared util projects
+util/Setup/** @bitwarden/dept-bre @bitwarden/team-platform-dev
 
 # Auth team
 **/Auth @bitwarden/team-auth-dev
