@@ -117,16 +117,16 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendCannotDeleteManagedAccountEmailAsync(string email)
+    public async Task SendCannotDeleteClaimedAccountEmailAsync(string email)
     {
         var message = CreateDefaultMessage("Delete Your Account", email);
-        var model = new CannotDeleteManagedAccountViewModel
+        var model = new CannotDeleteClaimedAccountViewModel
         {
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
         };
-        await AddMessageContentAsync(message, "AdminConsole.CannotDeleteManagedAccount", model);
-        message.Category = "CannotDeleteManagedAccount";
+        await AddMessageContentAsync(message, "AdminConsole.CannotDeleteClaimedAccount", model);
+        message.Category = "CannotDeleteClaimedAccount";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 

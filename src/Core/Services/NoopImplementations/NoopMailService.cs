@@ -103,7 +103,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendCannotDeleteManagedAccountEmailAsync(string email)
+    public Task SendCannotDeleteClaimedAccountEmailAsync(string email)
     {
         return Task.FromResult(0);
     }

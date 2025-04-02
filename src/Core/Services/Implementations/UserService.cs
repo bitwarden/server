@@ -316,7 +316,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         if (await IsClaimedByAnyOrganizationAsync(user.Id))
         {
-            await _mailService.SendCannotDeleteManagedAccountEmailAsync(user.Email);
+            await _mailService.SendCannotDeleteClaimedAccountEmailAsync(user.Email);
             return;
         }
 

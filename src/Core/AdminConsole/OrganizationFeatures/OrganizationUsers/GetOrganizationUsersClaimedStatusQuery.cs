@@ -21,7 +21,7 @@ public class GetOrganizationUsersClaimedStatusQuery : IGetOrganizationUsersClaim
     {
         if (organizationUserIds.Any())
         {
-            // Users can only be managed by an Organization that is enabled and can have organization domains
+            // Users can only be claimed by an Organization that is enabled and can have organization domains
             var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
 
             // TODO: Replace "UseSso" with a new organization ability like "UseOrganizationDomains" (PM-11622).
@@ -31,7 +31,7 @@ public class GetOrganizationUsersClaimedStatusQuery : IGetOrganizationUsersClaim
                 // Get all organization users with claimed domains by the organization
                 var organizationUsersWithClaimedDomain = await _organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organizationId);
 
-                // Create a dictionary with the OrganizationUserId and a boolean indicating if the user is managed by the organization
+                // Create a dictionary with the OrganizationUserId and a boolean indicating if the user is claimed by the organization
                 return organizationUserIds.ToDictionary(ouId => ouId, ouId => organizationUsersWithClaimedDomain.Any(ou => ou.Id == ouId));
             }
         }

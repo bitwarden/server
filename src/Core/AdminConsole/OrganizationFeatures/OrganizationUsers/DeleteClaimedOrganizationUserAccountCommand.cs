@@ -62,10 +62,10 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
             throw new NotFoundException("Member not found.");
         }
 
-        var managementStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, new[] { organizationUserId });
+        var claimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, new[] { organizationUserId });
         var hasOtherConfirmedOwners = await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUserId }, includeProvider: true);
 
-        await ValidateDeleteUserAsync(organizationId, organizationUser, deletingUserId, managementStatus, hasOtherConfirmedOwners);
+        await ValidateDeleteUserAsync(organizationId, organizationUser, deletingUserId, claimedStatus, hasOtherConfirmedOwners);
 
         var user = await _userRepository.GetByIdAsync(organizationUser.UserId!.Value);
         if (user == null)
@@ -83,7 +83,7 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         var userIds = orgUsers.Where(ou => ou.UserId.HasValue).Select(ou => ou.UserId!.Value).ToList();
         var users = await _userRepository.GetManyAsync(userIds);
 
-        var managementStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, orgUserIds);
+        var claimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, orgUserIds);
         var hasOtherConfirmedOwners = await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, orgUserIds, includeProvider: true);
 
         var results = new List<(Guid OrganizationUserId, string? ErrorMessage)>();
@@ -97,7 +97,7 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
                     throw new NotFoundException("Member not found.");
                 }
 
-                await ValidateDeleteUserAsync(organizationId, orgUser, deletingUserId, managementStatus, hasOtherConfirmedOwners);
+                await ValidateDeleteUserAsync(organizationId, orgUser, deletingUserId, claimedStatus, hasOtherConfirmedOwners);
 
                 var user = users.FirstOrDefault(u => u.Id == orgUser.UserId);
                 if (user == null)
@@ -129,7 +129,7 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         return results;
     }
 
-    private async Task ValidateDeleteUserAsync(Guid organizationId, OrganizationUser orgUser, Guid? deletingUserId, IDictionary<Guid, bool> managementStatus, bool hasOtherConfirmedOwners)
+    private async Task ValidateDeleteUserAsync(Guid organizationId, OrganizationUser orgUser, Guid? deletingUserId, IDictionary<Guid, bool> claimedStatus, bool hasOtherConfirmedOwners)
     {
         if (!orgUser.UserId.HasValue || orgUser.Status == OrganizationUserStatusType.Invited)
         {
@@ -154,9 +154,9 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
             }
         }
 
-        if (!managementStatus.TryGetValue(orgUser.Id, out var isManaged) || !isManaged)
+        if (!claimedStatus.TryGetValue(orgUser.Id, out var isClaimed) || !isClaimed)
         {
-            throw new BadRequestException("Member is not managed by the organization.");
+            throw new BadRequestException("Member is not claimed by the organization.");
         }
     }
 

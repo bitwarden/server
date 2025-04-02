@@ -155,8 +155,8 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
 
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && deletingUserId.HasValue && eventSystemUser == null)
         {
-            var managementStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, new[] { orgUser.Id });
-            if (managementStatus.TryGetValue(orgUser.Id, out var isManaged) && isManaged)
+            var claimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, new[] { orgUser.Id });
+            if (claimedStatus.TryGetValue(orgUser.Id, out var isClaimed) && isClaimed)
             {
                 throw new BadRequestException(RemoveClaimedAccountErrorMessage);
             }
@@ -208,7 +208,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
         }
 
-        var managementStatus = _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && deletingUserId.HasValue && eventSystemUser == null
+        var claimedStatus = _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && deletingUserId.HasValue && eventSystemUser == null
             ? await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, filteredUsers.Select(u => u.Id))
             : filteredUsers.ToDictionary(u => u.Id, u => false);
         var result = new List<(OrganizationUser OrganizationUser, string ErrorMessage)>();
@@ -226,7 +226,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
                     throw new BadRequestException(RemoveOwnerByNonOwnerErrorMessage);
                 }
 
-                if (managementStatus.TryGetValue(orgUser.Id, out var isManaged) && isManaged)
+                if (claimedStatus.TryGetValue(orgUser.Id, out var isClaimed) && isClaimed)
                 {
                     throw new BadRequestException(RemoveClaimedAccountErrorMessage);
                 }
