@@ -73,6 +73,11 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
     {
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
 
+        if (organization is null)
+        {
+            return;
+        }
+
         var currentActiveRevocableOrganizationUsers =
             (await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId))
             .Where(ou => ou.Status != OrganizationUserStatusType.Invited &&
@@ -87,16 +92,25 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
             return;
         }
 
-        var organizationUsersTwoFactorEnabled =
+        var revocableUsersWithTwoFactorStatus =
             await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(currentActiveRevocableOrganizationUsers);
 
-        if (NonCompliantMembersWillLoseAccess(currentActiveRevocableOrganizationUsers, organizationUsersTwoFactorEnabled))
+        var nonCompliantUsers = revocableUsersWithTwoFactorStatus
+            .Where(x => !x.twoFactorIsEnabled)
+            .ToArray();
+
+        if (nonCompliantUsers.Length == 0)
+        {
+            return;
+        }
+
+        if (MembersWithNoMasterPasswordWillLoseAccess(currentActiveRevocableOrganizationUsers, nonCompliantUsers))
         {
             throw new BadRequestException(NonCompliantMembersWillLoseAccessMessage);
         }
 
         var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-            new RevokeOrganizationUsersRequest(organizationId, currentActiveRevocableOrganizationUsers, performedBy));
+            new RevokeOrganizationUsersRequest(organizationId, nonCompliantUsers.Select(x => x.user), performedBy));
 
         if (commandResult.HasErrors)
         {
@@ -104,7 +118,7 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
         }
 
         await Task.WhenAll(currentActiveRevocableOrganizationUsers.Select(x =>
-            _mailService.SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(), x.Email)));
+            _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), x.Email)));
     }
 
     private async Task RemoveNonCompliantUsersAsync(Guid organizationId)
@@ -141,7 +155,7 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
         }
     }
 
-    private static bool NonCompliantMembersWillLoseAccess(
+    private static bool MembersWithNoMasterPasswordWillLoseAccess(
         IEnumerable<OrganizationUserUserDetails> orgUserDetails,
         IEnumerable<(OrganizationUserUserDetails user, bool isTwoFactorEnabled)> organizationUsersTwoFactorEnabled) =>
             orgUserDetails.Any(x =>

@@ -24,7 +24,6 @@ public class GroupsController : Controller
     private readonly IPatchGroupCommand _patchGroupCommand;
     private readonly IPostGroupCommand _postGroupCommand;
     private readonly IPutGroupCommand _putGroupCommand;
-    private readonly ILogger<GroupsController> _logger;
 
     public GroupsController(
         IGroupRepository groupRepository,
@@ -33,8 +32,8 @@ public class GroupsController : Controller
         IDeleteGroupCommand deleteGroupCommand,
         IPatchGroupCommand patchGroupCommand,
         IPostGroupCommand postGroupCommand,
-        IPutGroupCommand putGroupCommand,
-        ILogger<GroupsController> logger)
+        IPutGroupCommand putGroupCommand
+        )
     {
         _groupRepository = groupRepository;
         _organizationRepository = organizationRepository;
@@ -43,7 +42,6 @@ public class GroupsController : Controller
         _patchGroupCommand = patchGroupCommand;
         _postGroupCommand = postGroupCommand;
         _putGroupCommand = putGroupCommand;
-        _logger = logger;
     }
 
     [HttpGet("{id}")]
@@ -97,8 +95,13 @@ public class GroupsController : Controller
     [HttpPatch("{id}")]
     public async Task<IActionResult> Patch(Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
     {
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        await _patchGroupCommand.PatchGroupAsync(organization, id, model);
+        var group = await _groupRepository.GetByIdAsync(id);
+        if (group == null || group.OrganizationId != organizationId)
+        {
+            throw new NotFoundException("Group not found.");
+        }
+
+        await _patchGroupCommand.PatchGroupAsync(group, model);
         return new NoContentResult();
     }
 

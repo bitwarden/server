@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Authorization.SecurityTasks;
 using Bit.SharedWeb.Health;
 using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
@@ -34,6 +35,7 @@ public static class ServiceCollectionExtensions
                     Url = new Uri("https://github.com/bitwarden/server/blob/master/LICENSE.txt")
                 }
             });
+
             config.SwaggerDoc("internal", new OpenApiInfo { Title = "Bitwarden Internal API", Version = "latest" });
 
             config.AddSecurityDefinition("oauth2-client-credentials", new OpenApiSecurityScheme
@@ -101,5 +103,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthorizationHandler, CollectionAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, GroupAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, VaultExportAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, SecurityTaskAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, SecurityTaskOrganizationAuthorizationHandler>();
     }
 }

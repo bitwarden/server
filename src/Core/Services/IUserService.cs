@@ -21,7 +21,20 @@ public interface IUserService
     Task<IdentityResult> CreateUserAsync(User user);
     Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash);
     Task SendMasterPasswordHintAsync(string email);
-    Task SendTwoFactorEmailAsync(User user);
+    /// <summary>
+    /// Used for both email two factor and email two factor setup.
+    /// </summary>
+    /// <param name="user">user requesting the action</param>
+    /// <param name="authentication">this controls if what verbiage is shown in the email</param>
+    /// <returns>void</returns>
+    Task SendTwoFactorEmailAsync(User user, bool authentication = true);
+    /// <summary>
+    /// Calls the same email implementation but instead it sends the token to the account email not the
+    /// email set up for two-factor, since in practice they can be different.
+    /// </summary>
+    /// <param name="user">user attepting to login with a new device</param>
+    /// <returns>void</returns>
+    Task SendNewDeviceVerificationEmailAsync(User user);
     Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
     Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
     Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
@@ -41,8 +54,6 @@ public interface IUserService
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
     Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type);
-    Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
-    Task<string> GenerateUserTokenAsync(User user, string tokenProvider, string purpose);
     Task<IdentityResult> DeleteAsync(User user);
     Task<IdentityResult> DeleteAsync(User user, string token);
     Task SendDeleteConfirmationAsync(string email);
@@ -55,9 +66,7 @@ public interface IUserService
     Task CancelPremiumAsync(User user, bool? endOfPeriod = null);
     Task ReinstatePremiumAsync(User user);
     Task EnablePremiumAsync(Guid userId, DateTime? expirationDate);
-    Task EnablePremiumAsync(User user, DateTime? expirationDate);
     Task DisablePremiumAsync(Guid userId, DateTime? expirationDate);
-    Task DisablePremiumAsync(User user, DateTime? expirationDate);
     Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate);
     Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null,
         int? version = null);
@@ -77,12 +86,40 @@ public interface IUserService
     Task<bool> VerifyOTPAsync(User user, string token);
     Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false);
     Task ResendNewDeviceVerificationEmail(string email, string secret);
+    /// <summary>
+    /// We use this method to check if the user has an active new device verification bypass
+    /// </summary>
+    /// <param name="userId">self</param>
+    /// <returns>returns true if the value is found in the cache</returns>
+    Task<bool> ActiveNewDeviceVerificationException(Guid userId);
+    /// <summary>
+    /// We use this method to toggle the new device verification bypass
+    /// </summary>
+    /// <param name="userId">Id of user bypassing new device verification</param>
+    Task ToggleNewDeviceVerificationException(Guid userId);
 
     void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
 
+    [Obsolete("To be removed when the feature flag pm-17128-recovery-code-login is removed PM-18175.")]
+    Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
+
     /// <summary>
-    /// Returns true if the user is a legacy user. Legacy users use their master key as their encryption key.
-    /// We force these users to the web to migrate their encryption scheme.
+    /// This method is used by the TwoFactorAuthenticationValidator to recover two
+    /// factor for a user. This allows users to be logged in after a successful recovery
+    /// attempt.
+    ///
+    /// This method logs the event, sends an email to the user, and removes two factor
+    /// providers on the user account. This means that a user will have to accomplish
+    /// new device verification on their account on new logins, if it is enabled for their user.
+    /// </summary>
+    /// <param name="recoveryCode">recovery code associated with the user logging in</param>
+    /// <param name="user">The user to refresh the 2FA and Recovery Code on.</param>
+    /// <returns>true if the recovery code is valid; false otherwise</returns>
+    Task<bool> RecoverTwoFactorAsync(User user, string recoveryCode);
+
+    /// <summary>
+    /// Returns true if the user is a legacy user. Legacy users use their master key as their
+    /// encryption key. We force these users to the web to migrate their encryption scheme.
     /// </summary>
     Task<bool> IsLegacyUser(string userId);
 
@@ -90,13 +127,24 @@ public interface IUserService
     /// Indicates if the user is managed by any organization.
     /// </summary>
     /// <remarks>
-    /// A user is considered managed by an organization if their email domain matches one of the verified domains of that organization, and the user is a member of it.
+    /// A user is considered managed by an organization if their email domain matches one of the
+    /// verified domains of that organization, and the user is a member of it.
     /// The organization must be enabled and able to have verified domains.
     /// </remarks>
     /// <returns>
     /// False if the Account Deprovisioning feature flag is disabled.
     /// </returns>
     Task<bool> IsManagedByAnyOrganizationAsync(Guid userId);
+
+    /// <summary>
+    /// Verify whether the new email domain meets the requirements for managed users.
+    /// </summary>
+    /// <remarks>
+    /// </remarks>
+    /// <returns>
+    /// IdentityResult 
+    /// </returns>
+    Task<IdentityResult> ValidateManagedUserDomainAsync(User user, string newEmail);
 
     /// <summary>
     /// Gets the organizations that manage the user.

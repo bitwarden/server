@@ -30,6 +30,7 @@ public class CurrentContext : ICurrentContext
     public virtual string DeviceIdentifier { get; set; }
     public virtual DeviceType? DeviceType { get; set; }
     public virtual string IpAddress { get; set; }
+    public virtual string CountryName { get; set; }
     public virtual List<CurrentContextOrganization> Organizations { get; set; }
     public virtual List<CurrentContextProvider> Providers { get; set; }
     public virtual Guid? InstallationId { get; set; }
@@ -104,6 +105,12 @@ public class CurrentContext : ICurrentContext
         {
             ClientVersionIsPrerelease = clientVersionIsPrerelease == "1";
         }
+
+        if (httpContext.Request.Headers.TryGetValue("country-name", out var countryName))
+        {
+            CountryName = countryName;
+        }
+
     }
 
     public async virtual Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings)
@@ -168,6 +175,11 @@ public class CurrentContext : ICurrentContext
         }
 
         DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
+
+        if (Enum.TryParse(GetClaimValue(claimsDict, Claims.DeviceType), out DeviceType deviceType))
+        {
+            DeviceType = deviceType;
+        }
 
         Organizations = GetOrganizations(claimsDict, orgApi);
 

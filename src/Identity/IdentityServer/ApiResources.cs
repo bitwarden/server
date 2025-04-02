@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
+using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
-using IdentityModel;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -18,6 +18,7 @@ public class ApiResources
                 Claims.SecurityStamp,
                 Claims.Premium,
                 Claims.Device,
+                Claims.DeviceType,
                 Claims.OrganizationOwner,
                 Claims.OrganizationAdmin,
                 Claims.OrganizationUser,

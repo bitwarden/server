@@ -53,6 +53,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
     public virtual SqlSettings MySql { get; set; } = new SqlSettings();
     public virtual SqlSettings Sqlite { get; set; } = new SqlSettings() { ConnectionString = "Data Source=:memory:" };
+    public virtual EventLoggingSettings EventLogging { get; set; } = new EventLoggingSettings();
     public virtual MailSettings Mail { get; set; } = new MailSettings();
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
     public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
@@ -69,6 +70,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
     public virtual DuoSettings Duo { get; set; } = new DuoSettings();
     public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
+    public virtual ImportCiphersLimitationSettings ImportCiphersLimitation { get; set; } = new ImportCiphersLimitationSettings();
     public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
     public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
     public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
@@ -81,8 +83,11 @@ public class GlobalSettings : IGlobalSettings
     public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
+    public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
 
     public virtual bool EnableEmailVerification { get; set; }
+    public virtual string KdfDefaultHashKey { get; set; }
+    public virtual string PricingUri { get; set; }
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -238,7 +243,18 @@ public class GlobalSettings : IGlobalSettings
         public string ConnectionString
         {
             get => _connectionString;
-            set => _connectionString = value.Trim('"');
+            set
+            {
+                // On development environment, the self-hosted overrides would not override the read-only connection string, since it is already set from the non-self-hosted connection string.
+                // This causes a bug, where the read-only connection string is pointing to self-hosted database.
+                if (!string.IsNullOrWhiteSpace(_readOnlyConnectionString) &&
+                    _readOnlyConnectionString == _connectionString)
+                {
+                    _readOnlyConnectionString = null;
+                }
+
+                _connectionString = value.Trim('"');
+            }
         }
 
         public string ReadOnlyConnectionString
@@ -252,6 +268,66 @@ public class GlobalSettings : IGlobalSettings
         {
             get => _jobSchedulerConnectionString;
             set => _jobSchedulerConnectionString = value.Trim('"');
+        }
+    }
+
+    public class EventLoggingSettings
+    {
+        public AzureServiceBusSettings AzureServiceBus { get; set; } = new AzureServiceBusSettings();
+        public virtual string WebhookUrl { get; set; }
+        public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
+
+        public class AzureServiceBusSettings
+        {
+            private string _connectionString;
+            private string _topicName;
+
+            public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
+            public virtual string WebhookSubscriptionName { get; set; } = "events-webhook-subscription";
+
+            public string ConnectionString
+            {
+                get => _connectionString;
+                set => _connectionString = value.Trim('"');
+            }
+
+            public string TopicName
+            {
+                get => _topicName;
+                set => _topicName = value.Trim('"');
+            }
+        }
+
+        public class RabbitMqSettings
+        {
+            private string _hostName;
+            private string _username;
+            private string _password;
+            private string _exchangeName;
+
+            public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
+            public virtual string WebhookQueueName { get; set; } = "events-webhook-queue";
+
+            public string HostName
+            {
+                get => _hostName;
+                set => _hostName = value.Trim('"');
+            }
+            public string Username
+            {
+                get => _username;
+                set => _username = value.Trim('"');
+            }
+            public string Password
+            {
+                get => _password;
+                set => _password = value.Trim('"');
+            }
+            public string ExchangeName
+            {
+                get => _exchangeName;
+                set => _exchangeName = value.Trim('"');
+            }
         }
     }
 
@@ -481,6 +557,13 @@ public class GlobalSettings : IGlobalSettings
         public string PrivateKey { get; set; }
     }
 
+    public class ImportCiphersLimitationSettings
+    {
+        public int CiphersLimit { get; set; }
+        public int CollectionRelationshipsLimit { get; set; }
+        public int CollectionsLimit { get; set; }
+    }
+
     public class BitPaySettings
     {
         public bool Production { get; set; }
@@ -595,5 +678,10 @@ public class GlobalSettings : IGlobalSettings
     {
         public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public virtual IConnectionStringSettings Cosmos { get; set; } = new ConnectionStringSettings();
+    }
+
+    public class WebPushSettings : IWebPushSettings
+    {
+        public string VapidPublicKey { get; set; }
     }
 }

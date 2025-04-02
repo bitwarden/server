@@ -105,7 +105,7 @@ public class BaseRequestValidatorTests
         // Assert
         await _eventService.Received(1)
                            .LogUserEventAsync(context.CustomValidatorRequestContext.User.Id,
-                                             Core.Enums.EventType.User_FailedLogIn);
+                                             EventType.User_FailedLogIn);
         Assert.True(context.GrantResult.IsError);
         Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
     }
@@ -369,7 +369,6 @@ public class BaseRequestValidatorTests
         context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         context.ValidatedTokenRequest.ClientId = "Not Web";
         _sut.isValid = true;
-        _featureService.IsEnabled(FeatureFlagKeys.BlockLegacyUsers).Returns(true);
         _twoFactorAuthenticationValidator
             .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
             .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));

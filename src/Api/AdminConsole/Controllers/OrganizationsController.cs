@@ -14,13 +14,17 @@ using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -58,6 +62,9 @@ public class OrganizationsController : Controller
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly ICloudOrganizationSignUpCommand _cloudOrganizationSignUpCommand;
+    private readonly IOrganizationDeleteCommand _organizationDeleteCommand;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IPricingClient _pricingClient;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -78,7 +85,10 @@ public class OrganizationsController : Controller
         IProviderBillingService providerBillingService,
         IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        ICloudOrganizationSignUpCommand cloudOrganizationSignUpCommand)
+        ICloudOrganizationSignUpCommand cloudOrganizationSignUpCommand,
+        IOrganizationDeleteCommand organizationDeleteCommand,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IPricingClient pricingClient)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -99,6 +109,9 @@ public class OrganizationsController : Controller
         _orgDeleteTokenDataFactory = orgDeleteTokenDataFactory;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _cloudOrganizationSignUpCommand = cloudOrganizationSignUpCommand;
+        _organizationDeleteCommand = organizationDeleteCommand;
+        _policyRequirementQuery = policyRequirementQuery;
+        _pricingClient = pricingClient;
     }
 
     [HttpGet("{id}")]
@@ -116,7 +129,8 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        return new OrganizationResponseModel(organization);
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        return new OrganizationResponseModel(organization, plan);
     }
 
     [HttpGet("")]
@@ -154,8 +168,13 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var resetPasswordPolicy =
-            await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            var resetPasswordPolicyRequirement = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
+            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, resetPasswordPolicyRequirement.AutoEnrollEnabled(organization.Id));
+        }
+
+        var resetPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
         if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled || resetPasswordPolicy.Data == null)
         {
             return new OrganizationAutoEnrollStatusResponseModel(organization.Id, false);
@@ -163,6 +182,7 @@ public class OrganizationsController : Controller
 
         var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
         return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
+
     }
 
     [HttpPost("")]
@@ -177,7 +197,8 @@ public class OrganizationsController : Controller
 
         var organizationSignup = model.ToOrganizationSignup(user);
         var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Organization);
+        var plan = await _pricingClient.GetPlanOrThrow(result.Organization.PlanType);
+        return new OrganizationResponseModel(result.Organization, plan);
     }
 
     [HttpPost("create-without-payment")]
@@ -192,7 +213,8 @@ public class OrganizationsController : Controller
 
         var organizationSignup = model.ToOrganizationSignup(user);
         var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Organization);
+        var plan = await _pricingClient.GetPlanOrThrow(result.Organization.PlanType);
+        return new OrganizationResponseModel(result.Organization, plan);
     }
 
     [HttpPut("{id}")]
@@ -220,7 +242,8 @@ public class OrganizationsController : Controller
         }
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization, _globalSettings), updateBilling);
-        return new OrganizationResponseModel(organization);
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        return new OrganizationResponseModel(organization, plan);
     }
 
     [HttpPost("{id}/storage")]
@@ -303,7 +326,7 @@ public class OrganizationsController : Controller
             }
         }
 
-        await _organizationService.DeleteAsync(organization);
+        await _organizationDeleteCommand.DeleteAsync(organization);
     }
 
     [HttpPost("{id}/delete-recover-token")]
@@ -333,7 +356,7 @@ public class OrganizationsController : Controller
             }
         }
 
-        await _organizationService.DeleteAsync(organization);
+        await _organizationDeleteCommand.DeleteAsync(organization);
     }
 
     [HttpPost("{id}/api-key")]
@@ -354,8 +377,8 @@ public class OrganizationsController : Controller
         if (model.Type == OrganizationApiKeyType.BillingSync || model.Type == OrganizationApiKeyType.Scim)
         {
             // Non-enterprise orgs should not be able to create or view an apikey of billing sync/scim key types
-            var plan = StaticStore.GetPlan(organization.PlanType);
-            if (plan.ProductTier is not ProductTierType.Enterprise and not ProductTierType.Teams)
+            var productTier = organization.PlanType.GetProductTier();
+            if (productTier is not ProductTierType.Enterprise and not ProductTierType.Teams)
             {
                 throw new NotFoundException();
             }
@@ -538,7 +561,8 @@ public class OrganizationsController : Controller
         }
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization, _featureService), eventType: EventType.Organization_CollectionManagement_Updated);
-        return new OrganizationResponseModel(organization);
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        return new OrganizationResponseModel(organization, plan);
     }
 
     [HttpGet("{id}/plan-type")]

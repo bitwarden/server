@@ -64,7 +64,8 @@ public class SelfHostedOrganizationLicensesController : Controller
 
         var result = await _organizationService.SignUpAsync(license, user, model.Key,
             model.CollectionName, model.Keys?.PublicKey, model.Keys?.EncryptedPrivateKey);
-        return new OrganizationResponseModel(result.Item1);
+
+        return new OrganizationResponseModel(result.Item1, null);
     }
 
     [HttpPost("{id}")]

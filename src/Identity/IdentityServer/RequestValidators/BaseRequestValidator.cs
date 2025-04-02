@@ -77,7 +77,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
-        // 1. we need to check if the user is a bot and if their master password hash is correct
+        // 1. We need to check if the user is a bot and if their master password hash is correct.
         var isBot = validatorContext.CaptchaResponse?.IsBot ?? false;
         var valid = await ValidateContextAsync(context, validatorContext);
         var user = validatorContext.User;
@@ -99,7 +99,7 @@ public abstract class BaseRequestValidator<T> where T : class
             return;
         }
 
-        // 2. Does this user belong to an organization that requires SSO
+        // 2. Decide if this user belongs to an organization that requires SSO.
         validatorContext.SsoRequired = await RequireSsoLoginAsync(user, request.GrantType);
         if (validatorContext.SsoRequired)
         {
@@ -111,17 +111,22 @@ public abstract class BaseRequestValidator<T> where T : class
             return;
         }
 
-        // 3. Check if 2FA is required
-        (validatorContext.TwoFactorRequired, var twoFactorOrganization) = await _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(user, request);
-        // This flag is used to determine if the user wants a rememberMe token sent when authentication is successful
+        // 3. Check if 2FA is required.
+        (validatorContext.TwoFactorRequired, var twoFactorOrganization) =
+            await _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(user, request);
+
+        // This flag is used to determine if the user wants a rememberMe token sent when
+        // authentication is successful.
         var returnRememberMeToken = false;
+
         if (validatorContext.TwoFactorRequired)
         {
-            var twoFactorToken = request.Raw["TwoFactorToken"]?.ToString();
-            var twoFactorProvider = request.Raw["TwoFactorProvider"]?.ToString();
+            var twoFactorToken = request.Raw["TwoFactorToken"];
+            var twoFactorProvider = request.Raw["TwoFactorProvider"];
             var validTwoFactorRequest = !string.IsNullOrWhiteSpace(twoFactorToken) &&
                                         !string.IsNullOrWhiteSpace(twoFactorProvider);
-            // response for 2FA required and not provided state
+
+            // 3a. Response for 2FA required and not provided state.
             if (!validTwoFactorRequest ||
                 !Enum.TryParse(twoFactorProvider, out TwoFactorProviderType twoFactorProviderType))
             {
@@ -133,26 +138,27 @@ public abstract class BaseRequestValidator<T> where T : class
                     return;
                 }
 
-                // Include Master Password Policy in 2FA response
-                resultDict.Add("MasterPasswordPolicy", await GetMasterPasswordPolicy(user));
+                // Include Master Password Policy in 2FA response.
+                resultDict.Add("MasterPasswordPolicy", await GetMasterPasswordPolicyAsync(user));
                 SetTwoFactorResult(context, resultDict);
                 return;
             }
 
-            var twoFactorTokenValid = await _twoFactorAuthenticationValidator
-                                    .VerifyTwoFactor(user, twoFactorOrganization, twoFactorProviderType, twoFactorToken);
+            var twoFactorTokenValid =
+                await _twoFactorAuthenticationValidator
+                    .VerifyTwoFactorAsync(user, twoFactorOrganization, twoFactorProviderType, twoFactorToken);
 
-            // response for 2FA required but request is not valid or remember token expired state
+            // 3b. Response for 2FA required but request is not valid or remember token expired state.
             if (!twoFactorTokenValid)
             {
-                // The remember me token has expired
+                // The remember me token has expired.
                 if (twoFactorProviderType == TwoFactorProviderType.Remember)
                 {
                     var resultDict = await _twoFactorAuthenticationValidator
                                             .BuildTwoFactorResultAsync(user, twoFactorOrganization);
 
                     // Include Master Password Policy in 2FA response
-                    resultDict.Add("MasterPasswordPolicy", await GetMasterPasswordPolicy(user));
+                    resultDict.Add("MasterPasswordPolicy", await GetMasterPasswordPolicyAsync(user));
                     SetTwoFactorResult(context, resultDict);
                 }
                 else
@@ -163,17 +169,19 @@ public abstract class BaseRequestValidator<T> where T : class
                 return;
             }
 
-            // When the two factor authentication is successful, we can check if the user wants a rememberMe token
-            var twoFactorRemember = request.Raw["TwoFactorRemember"]?.ToString() == "1";
-            if (twoFactorRemember // Check if the user wants a rememberMe token
-                && twoFactorTokenValid // Make sure two factor authentication was successful
-                && twoFactorProviderType != TwoFactorProviderType.Remember) // if the two factor auth was rememberMe do not send another token
+            // 3c. When the 2FA authentication is successful, we can check if the user wants a
+            // rememberMe token.
+            var twoFactorRemember = request.Raw["TwoFactorRemember"] == "1";
+            // Check if the user wants a rememberMe token.
+            if (twoFactorRemember
+                // if the 2FA auth was rememberMe do not send another token.
+                && twoFactorProviderType != TwoFactorProviderType.Remember)
             {
                 returnRememberMeToken = true;
             }
         }
 
-        // 4. Check if the user is logging in from a new device
+        // 4. Check if the user is logging in from a new device.
         var deviceValid = await _deviceValidator.ValidateRequestDeviceAsync(request, validatorContext);
         if (!deviceValid)
         {
@@ -182,14 +190,11 @@ public abstract class BaseRequestValidator<T> where T : class
             return;
         }
 
-        // 5. Force legacy users to the web for migration
-        if (FeatureService.IsEnabled(FeatureFlagKeys.BlockLegacyUsers))
+        // 5. Force legacy users to the web for migration.
+        if (UserService.IsLegacyUser(user) && request.ClientId != "web")
         {
-            if (UserService.IsLegacyUser(user) && request.ClientId != "web")
-            {
-                await FailAuthForLegacyUserAsync(user, context);
-                return;
-            }
+            await FailAuthForLegacyUserAsync(user, context);
+            return;
         }
 
         await BuildSuccessResultAsync(user, context, validatorContext.Device, returnRememberMeToken);
@@ -213,6 +218,7 @@ public abstract class BaseRequestValidator<T> where T : class
         if (device != null)
         {
             claims.Add(new Claim(Claims.Device, device.Identifier));
+            claims.Add(new Claim(Claims.DeviceType, device.Type.ToString()));
         }
 
         var customResponse = new Dictionary<string, object>();
@@ -226,7 +232,7 @@ public abstract class BaseRequestValidator<T> where T : class
             customResponse.Add("Key", user.Key);
         }
 
-        customResponse.Add("MasterPasswordPolicy", await GetMasterPasswordPolicy(user));
+        customResponse.Add("MasterPasswordPolicy", await GetMasterPasswordPolicyAsync(user));
         customResponse.Add("ForcePasswordReset", user.ForcePasswordReset);
         customResponse.Add("ResetMasterPassword", string.IsNullOrWhiteSpace(user.MasterPassword));
         customResponse.Add("Kdf", (byte)user.Kdf);
@@ -405,7 +411,7 @@ public abstract class BaseRequestValidator<T> where T : class
         return unknownDevice && failedLoginCeiling > 0 && failedLoginCount == failedLoginCeiling;
     }
 
-    private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicy(User user)
+    private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicyAsync(User user)
     {
         // Check current context/cache to see if user is in any organizations, avoids extra DB call if not
         var orgs = (await CurrentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))

@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Bit.Billing.Models;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -23,6 +24,7 @@ public class PayPalController : Controller
     private readonly ITransactionRepository _transactionRepository;
     private readonly IUserRepository _userRepository;
     private readonly IProviderRepository _providerRepository;
+    private readonly IPremiumUserBillingService _premiumUserBillingService;
 
     public PayPalController(
         IOptions<BillingSettings> billingSettings,
@@ -32,7 +34,8 @@ public class PayPalController : Controller
         IPaymentService paymentService,
         ITransactionRepository transactionRepository,
         IUserRepository userRepository,
-        IProviderRepository providerRepository)
+        IProviderRepository providerRepository,
+        IPremiumUserBillingService premiumUserBillingService)
     {
         _billingSettings = billingSettings?.Value;
         _logger = logger;
@@ -42,6 +45,7 @@ public class PayPalController : Controller
         _transactionRepository = transactionRepository;
         _userRepository = userRepository;
         _providerRepository = providerRepository;
+        _premiumUserBillingService = premiumUserBillingService;
     }
 
     [HttpPost("ipn")]
@@ -257,10 +261,9 @@ public class PayPalController : Controller
         {
             var user = await _userRepository.GetByIdAsync(transaction.UserId.Value);
 
-            if (await _paymentService.CreditAccountAsync(user, transaction.Amount))
+            if (user != null)
             {
-                await _userRepository.ReplaceAsync(user);
-
+                await _premiumUserBillingService.Credit(user, transaction.Amount);
                 billingEmail = user.BillingEmailAddress();
             }
         }

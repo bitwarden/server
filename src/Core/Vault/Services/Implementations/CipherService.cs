@@ -1,10 +1,12 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -13,7 +15,9 @@ using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
 
 namespace Bit.Core.Vault.Services;
@@ -38,6 +42,9 @@ public class CipherService : ICipherService
     private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
+    private readonly IGetCipherPermissionsForUserQuery _getCipherPermissionsForUserQuery;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IFeatureService _featureService;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -54,7 +61,10 @@ public class CipherService : ICipherService
         IPolicyService policyService,
         GlobalSettings globalSettings,
         IReferenceEventService referenceEventService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IGetCipherPermissionsForUserQuery getCipherPermissionsForUserQuery,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IFeatureService featureService)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -71,6 +81,9 @@ public class CipherService : ICipherService
         _globalSettings = globalSettings;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
+        _getCipherPermissionsForUserQuery = getCipherPermissionsForUserQuery;
+        _policyRequirementQuery = policyRequirementQuery;
+        _featureService = featureService;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -138,9 +151,11 @@ public class CipherService : ICipherService
             }
             else
             {
-                // Make sure the user can save new ciphers to their personal vault
-                var anyPersonalOwnershipPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership);
-                if (anyPersonalOwnershipPolicies)
+                var isPersonalVaultRestricted = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+                    ? (await _policyRequirementQuery.GetAsync<PersonalOwnershipPolicyRequirement>(savingUserId)).DisablePersonalOwnership
+                    : await _policyService.AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership);
+
+                if (isPersonalVaultRestricted)
                 {
                     throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
                 }
@@ -161,6 +176,7 @@ public class CipherService : ICipherService
         {
             ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
             cipher.RevisionDate = DateTime.UtcNow;
+            await ValidateViewPasswordUserAsync(cipher);
             await _cipherRepository.ReplaceAsync(cipher);
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
 
@@ -210,6 +226,11 @@ public class CipherService : ICipherService
             AttachmentData = JsonSerializer.Serialize(data)
         });
         cipher.AddAttachment(attachmentId, data);
+
+        // Update the revision date when an attachment is added
+        cipher.RevisionDate = DateTime.UtcNow;
+        await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
+
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
 
         return (attachmentId, uploadUrl);
@@ -258,6 +279,10 @@ public class CipherService : ICipherService
             await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, data);
             throw;
         }
+
+        // Update the revision date when an attachment is added
+        cipher.RevisionDate = DateTime.UtcNow;
+        await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
 
         // push
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
@@ -438,7 +463,7 @@ public class CipherService : ICipherService
         await _pushService.PushSyncCiphersAsync(deletingUserId);
     }
 
-    public async Task DeleteAttachmentAsync(Cipher cipher, string attachmentId, Guid deletingUserId,
+    public async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(Cipher cipher, string attachmentId, Guid deletingUserId,
         bool orgAdmin = false)
     {
         if (!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))
@@ -451,7 +476,7 @@ public class CipherService : ICipherService
             throw new NotFoundException();
         }
 
-        await DeleteAttachmentAsync(cipher, cipher.GetAttachments()[attachmentId]);
+        return await DeleteAttachmentAsync(cipher, cipher.GetAttachments()[attachmentId]);
     }
 
     public async Task PurgeAsync(Guid organizationId)
@@ -675,152 +700,6 @@ public class CipherService : ICipherService
         await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
     }
 
-    public async Task ImportCiphersAsync(
-        List<Folder> folders,
-        List<CipherDetails> ciphers,
-        IEnumerable<KeyValuePair<int, int>> folderRelationships)
-    {
-        var userId = folders.FirstOrDefault()?.UserId ?? ciphers.FirstOrDefault()?.UserId;
-
-        // Make sure the user can save new ciphers to their personal vault
-        var anyPersonalOwnershipPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(userId.Value, PolicyType.PersonalOwnership);
-        if (anyPersonalOwnershipPolicies)
-        {
-            throw new BadRequestException("You cannot import items into your personal vault because you are " +
-                "a member of an organization which forbids it.");
-        }
-
-        foreach (var cipher in ciphers)
-        {
-            cipher.SetNewId();
-
-            if (cipher.UserId.HasValue && cipher.Favorite)
-            {
-                cipher.Favorites = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":\"true\"}}";
-            }
-        }
-
-        var userfoldersIds = (await _folderRepository.GetManyByUserIdAsync(userId ?? Guid.Empty)).Select(f => f.Id).ToList();
-
-        //Assign id to the ones that don't exist in DB
-        //Need to keep the list order to create the relationships
-        List<Folder> newFolders = new List<Folder>();
-        foreach (var folder in folders)
-        {
-            if (!userfoldersIds.Contains(folder.Id))
-            {
-                folder.SetNewId();
-                newFolders.Add(folder);
-            }
-        }
-
-        // Create the folder associations based on the newly created folder ids
-        foreach (var relationship in folderRelationships)
-        {
-            var cipher = ciphers.ElementAtOrDefault(relationship.Key);
-            var folder = folders.ElementAtOrDefault(relationship.Value);
-
-            if (cipher == null || folder == null)
-            {
-                continue;
-            }
-
-            cipher.Folders = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":" +
-                $"\"{folder.Id.ToString().ToUpperInvariant()}\"}}";
-        }
-
-        // Create it all
-        await _cipherRepository.CreateAsync(ciphers, newFolders);
-
-        // push
-        if (userId.HasValue)
-        {
-            await _pushService.PushSyncVaultAsync(userId.Value);
-        }
-    }
-
-    public async Task ImportCiphersAsync(
-        List<Collection> collections,
-        List<CipherDetails> ciphers,
-        IEnumerable<KeyValuePair<int, int>> collectionRelationships,
-        Guid importingUserId)
-    {
-        var org = collections.Count > 0 ?
-            await _organizationRepository.GetByIdAsync(collections[0].OrganizationId) :
-            await _organizationRepository.GetByIdAsync(ciphers.FirstOrDefault(c => c.OrganizationId.HasValue).OrganizationId.Value);
-        var importingOrgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, importingUserId);
-
-        if (collections.Count > 0 && org != null && org.MaxCollections.HasValue)
-        {
-            var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
-            if (org.MaxCollections.Value < (collectionCount + collections.Count))
-            {
-                throw new BadRequestException("This organization can only have a maximum of " +
-                    $"{org.MaxCollections.Value} collections.");
-            }
-        }
-
-        // Init. ids for ciphers
-        foreach (var cipher in ciphers)
-        {
-            cipher.SetNewId();
-        }
-
-        var organizationCollectionsIds = (await _collectionRepository.GetManyByOrganizationIdAsync(org.Id)).Select(c => c.Id).ToList();
-
-        //Assign id to the ones that don't exist in DB
-        //Need to keep the list order to create the relationships
-        var newCollections = new List<Collection>();
-        var newCollectionUsers = new List<CollectionUser>();
-
-        foreach (var collection in collections)
-        {
-            if (!organizationCollectionsIds.Contains(collection.Id))
-            {
-                collection.SetNewId();
-                newCollections.Add(collection);
-                newCollectionUsers.Add(new CollectionUser
-                {
-                    CollectionId = collection.Id,
-                    OrganizationUserId = importingOrgUser.Id,
-                    Manage = true
-                });
-            }
-        }
-
-        // Create associations based on the newly assigned ids
-        var collectionCiphers = new List<CollectionCipher>();
-        foreach (var relationship in collectionRelationships)
-        {
-            var cipher = ciphers.ElementAtOrDefault(relationship.Key);
-            var collection = collections.ElementAtOrDefault(relationship.Value);
-
-            if (cipher == null || collection == null)
-            {
-                continue;
-            }
-
-            collectionCiphers.Add(new CollectionCipher
-            {
-                CipherId = cipher.Id,
-                CollectionId = collection.Id
-            });
-        }
-
-        // Create it all
-        await _cipherRepository.CreateAsync(ciphers, newCollections, collectionCiphers, newCollectionUsers);
-
-        // push
-        await _pushService.PushSyncVaultAsync(importingUserId);
-
-
-        if (org != null)
-        {
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.VaultImported, org, _currentContext));
-        }
-    }
-
     public async Task SoftDeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false)
     {
         if (!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))
@@ -952,35 +831,6 @@ public class CipherService : ICipherService
         return restoringCiphers;
     }
 
-    public async Task<(IEnumerable<CipherOrganizationDetails>, Dictionary<Guid, IGrouping<Guid, CollectionCipher>>)> GetOrganizationCiphers(Guid userId, Guid organizationId)
-    {
-        if (!await _currentContext.ViewAllCollections(organizationId) && !await _currentContext.AccessReports(organizationId) && !await _currentContext.AccessImportExport(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        IEnumerable<CipherOrganizationDetails> orgCiphers;
-        if (await _currentContext.AccessImportExport(organizationId))
-        {
-            // Admins, Owners, Providers and Custom (with import/export permission) can access all items even if not assigned to them
-            orgCiphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(organizationId);
-        }
-        else
-        {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: true);
-            orgCiphers = ciphers.Where(c => c.OrganizationId == organizationId);
-        }
-
-        var orgCipherIds = orgCiphers.Select(c => c.Id);
-
-        var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
-        var collectionCiphersGroupDict = collectionCiphers
-            .Where(c => orgCipherIds.Contains(c.CipherId))
-            .GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
-
-        return (orgCiphers, collectionCiphersGroupDict);
-    }
-
     private async Task<bool> UserCanEditAsync(Cipher cipher, Guid userId)
     {
         if (!cipher.OrganizationId.HasValue && cipher.UserId.HasValue && cipher.UserId.Value == userId)
@@ -1006,11 +856,11 @@ public class CipherService : ICipherService
         }
     }
 
-    private async Task DeleteAttachmentAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
+    private async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
     {
         if (attachmentData == null || string.IsNullOrWhiteSpace(attachmentData.AttachmentId))
         {
-            return;
+            return null;
         }
 
         await _cipherRepository.DeleteAttachmentAsync(cipher.Id, attachmentData.AttachmentId);
@@ -1018,8 +868,14 @@ public class CipherService : ICipherService
         await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, attachmentData);
         await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_AttachmentDeleted);
 
+        // Update the revision date when an attachment is deleted
+        cipher.RevisionDate = DateTime.UtcNow;
+        await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
+
         // push
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+
+        return new DeleteAttachmentResponseData(cipher);
     }
 
     private async Task ValidateCipherEditForAttachmentAsync(Cipher cipher, Guid savingUserId, bool orgAdmin,
@@ -1122,5 +978,33 @@ public class CipherService : ICipherService
         }
 
         ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
+    }
+
+    private async Task ValidateViewPasswordUserAsync(Cipher cipher)
+    {
+        if (cipher.Type != CipherType.Login || cipher.Data == null || !cipher.OrganizationId.HasValue)
+        {
+            return;
+        }
+        var existingCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
+        if (existingCipher == null) return;
+
+        var cipherPermissions = await _getCipherPermissionsForUserQuery.GetByOrganization(cipher.OrganizationId.Value);
+        // Check if user is a "hidden password" user
+        if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !(permission.ViewPassword && permission.Edit))
+        {
+            // "hidden password" users may not add cipher key encryption
+            if (existingCipher.Key == null && cipher.Key != null)
+            {
+                throw new BadRequestException("You do not have permission to add cipher key encryption.");
+            }
+            // "hidden password" users may not change passwords, TOTP codes, or passkeys, so we need to set them back to the original values
+            var existingCipherData = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data);
+            var newCipherData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
+            newCipherData.Fido2Credentials = existingCipherData.Fido2Credentials;
+            newCipherData.Totp = existingCipherData.Totp;
+            newCipherData.Password = existingCipherData.Password;
+            cipher.Data = JsonSerializer.Serialize(newCipherData);
+        }
     }
 }

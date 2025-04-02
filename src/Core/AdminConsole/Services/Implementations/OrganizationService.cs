@@ -4,9 +4,10 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
-using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
@@ -17,7 +18,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -27,6 +28,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Mail;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -67,14 +69,14 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
-    private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
     private readonly IProviderRepository _providerRepository;
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
-    private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
+    private readonly IPricingClient _pricingClient;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -105,12 +107,12 @@ public class OrganizationService : IOrganizationService
         IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
-        IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
         IProviderRepository providerRepository,
         IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IOrganizationBillingService organizationBillingService,
-        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+        IPricingClient pricingClient,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -138,14 +140,14 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
-        _orgDeleteTokenDataFactory = orgDeleteTokenDataFactory;
         _providerRepository = providerRepository;
         _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
-        _organizationBillingService = organizationBillingService;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
+        _pricingClient = pricingClient;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -213,11 +215,7 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException();
         }
 
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
-        if (plan == null)
-        {
-            throw new BadRequestException("Existing plan not found.");
-        }
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
 
         if (!plan.PasswordManager.HasAdditionalStorageOption)
         {
@@ -271,7 +269,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException($"Cannot set max seat autoscaling below current seat count.");
         }
 
-        var plan = StaticStore.GetPlan(organization.PlanType);
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
         if (plan == null)
         {
             throw new BadRequestException("Existing plan not found.");
@@ -323,11 +321,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("No subscription found.");
         }
 
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
-        if (plan == null)
-        {
-            throw new BadRequestException("Existing plan not found.");
-        }
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
 
         if (!plan.PasswordManager.HasAdditionalSeatsOption)
         {
@@ -445,7 +439,7 @@ public class OrganizationService : IOrganizationService
 
     public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup)
     {
-        var plan = StaticStore.GetPlan(signup.Plan);
+        var plan = await _pricingClient.GetPlanOrThrow(signup.Plan);
 
         ValidatePlan(plan, signup.AdditionalSeats, "Password Manager");
 
@@ -533,17 +527,6 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException(exception);
         }
 
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType);
-        if (plan is null)
-        {
-            throw new BadRequestException($"Server must be updated to support {license.Plan}.");
-        }
-
-        if (license.PlanType != PlanType.Custom && plan.Disabled)
-        {
-            throw new BadRequestException($"Plan {plan.Name} is disabled.");
-        }
-
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
         if (enabledOrgs.Any(o => string.Equals(o.LicenseKey, license.LicenseKey)))
         {
@@ -592,6 +575,7 @@ public class OrganizationService : IOrganizationService
             UseSecretsManager = license.UseSecretsManager,
             SmSeats = license.SmSeats,
             SmServiceAccounts = license.SmServiceAccounts,
+            UseRiskInsights = license.UseRiskInsights,
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
@@ -689,70 +673,6 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task InitiateDeleteAsync(Organization organization, string orgAdminEmail)
-    {
-        var orgAdmin = await _userRepository.GetByEmailAsync(orgAdminEmail);
-        if (orgAdmin == null)
-        {
-            throw new BadRequestException("Org admin not found.");
-        }
-        var orgAdminOrgUser = await _organizationUserRepository.GetDetailsByUserAsync(orgAdmin.Id, organization.Id);
-        if (orgAdminOrgUser == null || orgAdminOrgUser.Status != OrganizationUserStatusType.Confirmed ||
-            (orgAdminOrgUser.Type != OrganizationUserType.Admin && orgAdminOrgUser.Type != OrganizationUserType.Owner))
-        {
-            throw new BadRequestException("Org admin not found.");
-        }
-        var token = _orgDeleteTokenDataFactory.Protect(new OrgDeleteTokenable(organization, 1));
-        await _mailService.SendInitiateDeleteOrganzationEmailAsync(orgAdminEmail, organization, token);
-    }
-
-    public async Task DeleteAsync(Organization organization)
-    {
-        await ValidateDeleteOrganizationAsync(organization);
-
-        if (!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
-        {
-            try
-            {
-                var eop = !organization.ExpirationDate.HasValue ||
-                    organization.ExpirationDate.Value >= DateTime.UtcNow;
-                await _paymentService.CancelSubscriptionAsync(organization, eop);
-                await _referenceEventService.RaiseEventAsync(
-                    new ReferenceEvent(ReferenceEventType.DeleteAccount, organization, _currentContext));
-            }
-            catch (GatewayException) { }
-        }
-
-        await _organizationRepository.DeleteAsync(organization);
-        await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
-    }
-
-    public async Task EnableAsync(Guid organizationId, DateTime? expirationDate)
-    {
-        var org = await GetOrgById(organizationId);
-        if (org != null && !org.Enabled && org.Gateway.HasValue)
-        {
-            org.Enabled = true;
-            org.ExpirationDate = expirationDate;
-            org.RevisionDate = DateTime.UtcNow;
-            await ReplaceAndUpdateCacheAsync(org);
-        }
-    }
-
-    public async Task DisableAsync(Guid organizationId, DateTime? expirationDate)
-    {
-        var org = await GetOrgById(organizationId);
-        if (org != null && org.Enabled)
-        {
-            org.Enabled = false;
-            org.ExpirationDate = expirationDate;
-            org.RevisionDate = DateTime.UtcNow;
-            await ReplaceAndUpdateCacheAsync(org);
-
-            // TODO: send email to owners?
-        }
-    }
-
     public async Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate)
     {
         var org = await GetOrgById(organizationId);
@@ -760,16 +680,6 @@ public class OrganizationService : IOrganizationService
         {
             org.ExpirationDate = expirationDate;
             org.RevisionDate = DateTime.UtcNow;
-            await ReplaceAndUpdateCacheAsync(org);
-        }
-    }
-
-    public async Task EnableAsync(Guid organizationId)
-    {
-        var org = await GetOrgById(organizationId);
-        if (org != null && !org.Enabled)
-        {
-            org.Enabled = true;
             await ReplaceAndUpdateCacheAsync(org);
         }
     }
@@ -800,6 +710,11 @@ public class OrganizationService : IOrganizationService
                 Email = organization.BillingEmail,
                 Description = organization.DisplayBusinessName()
             });
+        }
+
+        if (eventType == EventType.Organization_CollectionManagement_Updated)
+        {
+            await _pushNotificationService.PushSyncOrganizationCollectionManagementSettingsAsync(organization);
         }
     }
 
@@ -954,7 +869,8 @@ public class OrganizationService : IOrganizationService
         var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, inviteWithSmAccessCount);
         if (additionalSmSeatsRequired > 0)
         {
-            smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, true)
+            var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+            smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, plan, true)
                 .AdjustSeats(additionalSmSeatsRequired);
         }
 
@@ -1080,7 +996,8 @@ public class OrganizationService : IOrganizationService
             if (initialSmSeatCount.HasValue && currentOrganization.SmSeats.HasValue &&
                 currentOrganization.SmSeats.Value != initialSmSeatCount.Value)
             {
-                var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(currentOrganization, false)
+                var plan = await _pricingClient.GetPlanOrThrow(currentOrganization.PlanType);
+                var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(currentOrganization, plan, false)
                 {
                     SmSeats = initialSmSeatCount.Value
                 };
@@ -1207,97 +1124,6 @@ public class OrganizationService : IOrganizationService
         );
     }
 
-    public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
-        Guid confirmingUserId)
-    {
-        var result = await ConfirmUsersAsync(
-            organizationId,
-            new Dictionary<Guid, string>() { { organizationUserId, key } },
-            confirmingUserId);
-
-        if (!result.Any())
-        {
-            throw new BadRequestException("User not valid.");
-        }
-
-        var (orgUser, error) = result[0];
-        if (error != "")
-        {
-            throw new BadRequestException(error);
-        }
-        return orgUser;
-    }
-
-    public async Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
-        Guid confirmingUserId)
-    {
-        var selectedOrganizationUsers = await _organizationUserRepository.GetManyAsync(keys.Keys);
-        var validSelectedOrganizationUsers = selectedOrganizationUsers
-            .Where(u => u.Status == OrganizationUserStatusType.Accepted && u.OrganizationId == organizationId && u.UserId != null)
-            .ToList();
-
-        if (!validSelectedOrganizationUsers.Any())
-        {
-            return new List<Tuple<OrganizationUser, string>>();
-        }
-
-        var validSelectedUserIds = validSelectedOrganizationUsers.Select(u => u.UserId.Value).ToList();
-
-        var organization = await GetOrgById(organizationId);
-        var allUsersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validSelectedUserIds);
-        var users = await _userRepository.GetManyAsync(validSelectedUserIds);
-        var usersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(validSelectedUserIds);
-
-        var keyedFilteredUsers = validSelectedOrganizationUsers.ToDictionary(u => u.UserId.Value, u => u);
-        var keyedOrganizationUsers = allUsersOrgs.GroupBy(u => u.UserId.Value)
-            .ToDictionary(u => u.Key, u => u.ToList());
-
-        var succeededUsers = new List<OrganizationUser>();
-        var result = new List<Tuple<OrganizationUser, string>>();
-
-        foreach (var user in users)
-        {
-            if (!keyedFilteredUsers.TryGetValue(user.Id, out var orgUser))
-            {
-                continue;
-            }
-            var orgUsers = keyedOrganizationUsers.GetValueOrDefault(user.Id, new List<OrganizationUser>());
-            try
-            {
-                if (organization.PlanType == PlanType.Free && (orgUser.Type == OrganizationUserType.Admin
-                    || orgUser.Type == OrganizationUserType.Owner))
-                {
-                    // Since free organizations only supports a few users there is not much point in avoiding N+1 queries for this.
-                    var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
-                    if (adminCount > 0)
-                    {
-                        throw new BadRequestException("User can only be an admin of one free organization.");
-                    }
-                }
-
-                var twoFactorEnabled = usersTwoFactorEnabled.FirstOrDefault(tuple => tuple.userId == user.Id).twoFactorIsEnabled;
-                await CheckPoliciesAsync(organizationId, user, orgUsers, twoFactorEnabled);
-                orgUser.Status = OrganizationUserStatusType.Confirmed;
-                orgUser.Key = keys[orgUser.Id];
-                orgUser.Email = null;
-
-                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-                await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email, orgUser.AccessSecretsManager);
-                await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
-                succeededUsers.Add(orgUser);
-                result.Add(Tuple.Create(orgUser, ""));
-            }
-            catch (BadRequestException e)
-            {
-                result.Add(Tuple.Create(orgUser, e.Message));
-            }
-        }
-
-        await _organizationUserRepository.ReplaceManyAsync(succeededUsers);
-
-        return result;
-    }
-
     internal async Task<(bool canScale, string failureReason)> CanScaleAsync(
         Organization organization,
         int seatsToAdd)
@@ -1329,17 +1155,17 @@ public class OrganizationService : IOrganizationService
             }
         }
 
+        var subscription = await _paymentService.GetSubscriptionAsync(organization);
+        if (subscription?.Subscription?.Status == StripeConstants.SubscriptionStatus.Canceled)
+        {
+            return (false, "You do not have an active subscription. Reinstate your subscription to make changes");
+        }
+
         if (organization.Seats.HasValue &&
             organization.MaxAutoscaleSeats.HasValue &&
             organization.MaxAutoscaleSeats.Value < organization.Seats.Value + seatsToAdd)
         {
             return (false, $"Seat limit has been reached.");
-        }
-
-        var subscription = await _paymentService.GetSubscriptionAsync(organization);
-        if (subscription?.Subscription?.Status == StripeConstants.SubscriptionStatus.Canceled)
-        {
-            return (false, "Cannot autoscale with a canceled subscription.");
         }
 
         return (true, failureReason);
@@ -1384,32 +1210,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task CheckPoliciesAsync(Guid organizationId, User user,
-        ICollection<OrganizationUser> userOrgs, bool twoFactorEnabled)
-    {
-        // Enforce Two Factor Authentication Policy for this organization
-        var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication))
-            .Any(p => p.OrganizationId == organizationId);
-        if (orgRequiresTwoFactor && !twoFactorEnabled)
-        {
-            throw new BadRequestException("User does not have two-step login enabled.");
-        }
 
-        var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
-        var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
-        var otherSingleOrgPolicies =
-            singleOrgPolicies.Where(p => p.OrganizationId != organizationId);
-        // Enforce Single Organization Policy for this organization
-        if (hasOtherOrgs && singleOrgPolicies.Any(p => p.OrganizationId == organizationId))
-        {
-            throw new BadRequestException("Cannot confirm this member to the organization until they leave or remove all other organizations.");
-        }
-        // Enforce Single Organization Policy of other organizations user is a member of
-        if (otherSingleOrgPolicies.Any())
-        {
-            throw new BadRequestException("Cannot confirm this member to the organization because they are in another organization which forbids it.");
-        }
-    }
 
     public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId)
     {
@@ -1437,13 +1238,25 @@ public class OrganizationService : IOrganizationService
         }
 
         // Block the user from withdrawal if auto enrollment is enabled
-        if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
-            var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
-
-            if (data?.AutoEnrollEnabled ?? false)
+            var resetPasswordPolicyRequirement = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(userId);
+            if (resetPasswordKey == null && resetPasswordPolicyRequirement.AutoEnrollEnabled(organizationId))
             {
-                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to withdraw from Password Reset.");
+                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
+            }
+
+        }
+        else
+        {
+            if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
+            {
+                var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
+
+                if (data?.AutoEnrollEnabled ?? false)
+                {
+                    throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
+                }
             }
         }
 
@@ -1707,15 +1520,6 @@ public class OrganizationService : IOrganizationService
         await _groupRepository.UpdateUsersAsync(group.Id, users);
     }
 
-    private async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId)
-    {
-        var devices = await GetUserDeviceIdsAsync(userId);
-        await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(devices,
-            organizationId.ToString());
-        await _pushNotificationService.PushSyncOrgKeysAsync(userId);
-    }
-
-
     private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
     {
         var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
@@ -1971,15 +1775,6 @@ public class OrganizationService : IOrganizationService
         return true;
     }
 
-    private async Task ValidateDeleteOrganizationAsync(Organization organization)
-    {
-        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-        if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector)
-        {
-            throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
-        }
-    }
-
     public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId)
     {
         if (revokingUserId.HasValue && organizationUser.UserId == revokingUserId.Value)
@@ -1995,6 +1790,11 @@ public class OrganizationService : IOrganizationService
 
         await RepositoryRevokeUserAsync(organizationUser);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+        {
+            await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
+        }
     }
 
     public async Task RevokeUserAsync(OrganizationUser organizationUser,
@@ -2002,6 +1802,11 @@ public class OrganizationService : IOrganizationService
     {
         await RepositoryRevokeUserAsync(organizationUser);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, systemUser);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+        {
+            await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
+        }
     }
 
     private async Task RepositoryRevokeUserAsync(OrganizationUser organizationUser)
@@ -2067,128 +1872,10 @@ public class OrganizationService : IOrganizationService
                 await _organizationUserRepository.RevokeAsync(organizationUser.Id);
                 organizationUser.Status = OrganizationUserStatusType.Revoked;
                 await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
-
-                result.Add(Tuple.Create(organizationUser, ""));
-            }
-            catch (BadRequestException e)
-            {
-                result.Add(Tuple.Create(organizationUser, e.Message));
-            }
-        }
-
-        return result;
-    }
-
-    public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId)
-    {
-        if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId.Value)
-        {
-            throw new BadRequestException("You cannot restore yourself.");
-        }
-
-        if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
-            !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
-        {
-            throw new BadRequestException("Only owners can restore other owners.");
-        }
-
-        await RepositoryRestoreUserAsync(organizationUser);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
-    }
-
-    public async Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser)
-    {
-        await RepositoryRestoreUserAsync(organizationUser);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, systemUser);
-    }
-
-    private async Task RepositoryRestoreUserAsync(OrganizationUser organizationUser)
-    {
-        if (organizationUser.Status != OrganizationUserStatusType.Revoked)
-        {
-            throw new BadRequestException("Already active.");
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
-        var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-        var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
-        if (availableSeats < 1)
-        {
-            await AutoAddSeatsAsync(organization, 1);
-        }
-
-        var userTwoFactorIsEnabled = false;
-        // Only check Two Factor Authentication status if the user is linked to a user account
-        if (organizationUser.UserId.HasValue)
-        {
-            userTwoFactorIsEnabled = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(new[] { organizationUser.UserId.Value })).FirstOrDefault().twoFactorIsEnabled;
-        }
-
-        await CheckPoliciesBeforeRestoreAsync(organizationUser, userTwoFactorIsEnabled);
-
-        var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
-
-        await _organizationUserRepository.RestoreAsync(organizationUser.Id, status);
-        organizationUser.Status = status;
-    }
-
-    public async Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
-        IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService)
-    {
-        var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
-        var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
-            .ToList();
-
-        if (!filteredUsers.Any())
-        {
-            throw new BadRequestException("Users invalid.");
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-        var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
-        var newSeatsRequired = organizationUserIds.Count() - availableSeats;
-        await AutoAddSeatsAsync(organization, newSeatsRequired);
-
-        var deletingUserIsOwner = false;
-        if (restoringUserId.HasValue)
-        {
-            deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
-        }
-
-        // Query Two Factor Authentication status for all users in the organization
-        // This is an optimization to avoid querying the Two Factor Authentication status for each user individually
-        var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(filteredUsers.Select(ou => ou.UserId.Value));
-
-        var result = new List<Tuple<OrganizationUser, string>>();
-
-        foreach (var organizationUser in filteredUsers)
-        {
-            try
-            {
-                if (organizationUser.Status != OrganizationUserStatusType.Revoked)
+                if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
                 {
-                    throw new BadRequestException("Already active.");
+                    await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
                 }
-
-                if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId)
-                {
-                    throw new BadRequestException("You cannot restore yourself.");
-                }
-
-                if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue && !deletingUserIsOwner)
-                {
-                    throw new BadRequestException("Only owners can restore other owners.");
-                }
-
-                var twoFactorIsEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(ou => ou.userId == organizationUser.UserId.Value).twoFactorIsEnabled;
-                await CheckPoliciesBeforeRestoreAsync(organizationUser, twoFactorIsEnabled);
-
-                var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
-
-                await _organizationUserRepository.RestoreAsync(organizationUser.Id, status);
-                organizationUser.Status = status;
-                await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
 
                 result.Add(Tuple.Create(organizationUser, ""));
             }
@@ -2240,7 +1927,7 @@ public class OrganizationService : IOrganizationService
         if (!userHasTwoFactorEnabled)
         {
             var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId,
-                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
+                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Revoked);
             if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
             {
                 twoFactorCompliant = false;
@@ -2267,7 +1954,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)
+    public static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)
     {
         // Determine status to revert back to
         var status = OrganizationUserStatusType.Invited;
@@ -2287,13 +1974,6 @@ public class OrganizationService : IOrganizationService
 
     public async Task CreatePendingOrganization(Organization organization, string ownerEmail, ClaimsPrincipal user, IUserService userService, bool salesAssistedTrialStarted)
     {
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
-
-        if (plan!.Disabled)
-        {
-            throw new BadRequestException("Plan not found.");
-        }
-
         organization.Id = CoreHelpers.GenerateComb();
         organization.Enabled = false;
         organization.Status = OrganizationStatusType.Pending;

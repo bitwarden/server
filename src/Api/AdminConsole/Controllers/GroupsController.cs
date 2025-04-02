@@ -2,7 +2,6 @@
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
@@ -90,7 +89,7 @@ public class GroupsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<GroupDetailsResponseModel>> GetOrganizationGroups(Guid orgId)
+    public async Task<ListResponseModel<GroupResponseModel>> GetOrganizationGroups(Guid orgId)
     {
         var authResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId), GroupOperations.ReadAll);
         if (!authResult.Succeeded)
@@ -98,24 +97,15 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.SecureOrgGroupDetails))
-        {
-            var groups = await _groupRepository.GetManyByOrganizationIdAsync(orgId);
-            var responses = groups.Select(g => new GroupDetailsResponseModel(g, []));
-            return new ListResponseModel<GroupDetailsResponseModel>(responses);
-        }
-
-        var groupDetails = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
-        var detailResponses = groupDetails.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
-        return new ListResponseModel<GroupDetailsResponseModel>(detailResponses);
+        var groups = await _groupRepository.GetManyByOrganizationIdAsync(orgId);
+        var responses = groups.Select(g => new GroupResponseModel(g));
+        return new ListResponseModel<GroupResponseModel>(responses);
     }
 
     [HttpGet("details")]
     public async Task<ListResponseModel<GroupDetailsResponseModel>> GetOrganizationGroupDetails(Guid orgId)
     {
-        var authResult = _featureService.IsEnabled(FeatureFlagKeys.SecureOrgGroupDetails)
-            ? await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId), GroupOperations.ReadAllDetails)
-            : await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId), GroupOperations.ReadAll);
+        var authResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId), GroupOperations.ReadAllDetails);
 
         if (!authResult.Succeeded)
         {
