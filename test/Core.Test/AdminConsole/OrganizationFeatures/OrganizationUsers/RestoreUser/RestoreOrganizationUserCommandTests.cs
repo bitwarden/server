@@ -37,22 +37,6 @@ public class RestoreOrganizationUserCommandTests
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RestoreUser_WithPushSyncOrgKeysOnRevokeRestoreEnabled_Success(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
-        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser, SutProvider<RestoreOrganizationUserCommand> sutProvider)
-    {
-        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
-
-        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .Received(1)
-            .RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Invited);
-        await sutProvider.GetDependency<IEventService>()
-            .Received(1)
-            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
             .PushSyncOrgKeysAsync(organizationUser.UserId!.Value);
@@ -60,21 +44,6 @@ public class RestoreOrganizationUserCommandTests
 
     [Theory, BitAutoData]
     public async Task RestoreUser_WithEventSystemUser_Success(Organization organization, [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser, EventSystemUser eventSystemUser, SutProvider<RestoreOrganizationUserCommand> sutProvider)
-    {
-        RestoreUser_Setup(organization, null, organizationUser, sutProvider);
-
-        await sutProvider.Sut.RestoreUserAsync(organizationUser, eventSystemUser);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .Received(1)
-            .RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Invited);
-        await sutProvider.GetDependency<IEventService>()
-            .Received(1)
-            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, eventSystemUser);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RestoreUser_WithEventSystemUser_WithPushSyncOrgKeysOnRevokeRestoreEnabled_Success(Organization organization, [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser, EventSystemUser eventSystemUser, SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         RestoreUser_Setup(organization, null, organizationUser, sutProvider);
 
