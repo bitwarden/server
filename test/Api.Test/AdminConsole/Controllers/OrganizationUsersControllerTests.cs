@@ -260,14 +260,15 @@ public class OrganizationUsersControllerTests
             .GetDetailsByIdWithCollectionsAsync(organizationUser.Id)
             .Returns((organizationUser, collections));
 
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(organizationUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)))
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(organizationUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)))
             .Returns(new Dictionary<Guid, bool> { { organizationUser.Id, true } });
 
         var response = await sutProvider.Sut.Get(organizationUser.Id, false);
 
         Assert.Equal(organizationUser.Id, response.Id);
         Assert.Equal(accountDeprovisioningEnabled, response.ManagedByOrganization);
+        Assert.Equal(accountDeprovisioningEnabled, response.ClaimedByOrganization);
     }
 
     [Theory]

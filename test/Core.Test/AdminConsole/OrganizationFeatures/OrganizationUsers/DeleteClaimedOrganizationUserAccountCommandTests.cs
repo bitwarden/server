@@ -34,8 +34,8 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
 
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(
                 organizationUser.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)))
             .Returns(new Dictionary<Guid, bool> { { organizationUser.Id, true } });
@@ -218,8 +218,8 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id)
             .Returns(user);
 
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(organizationUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(organizationUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, bool> { { organizationUser.Id, false } });
 
         // Act
@@ -253,8 +253,8 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user1.Id) && ids.Contains(user2.Id)))
             .Returns(new[] { user1, user2 });
 
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, bool> { { orgUser1.Id, true }, { orgUser2.Id, true } });
 
         // Act
@@ -435,8 +435,8 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.UserId.Value)))
             .Returns(new[] { user });
 
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>())
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, bool> { { orgUser.Id, false } });
 
         // Act
@@ -474,8 +474,8 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user1.Id) && ids.Contains(user3.Id)))
             .Returns(new[] { user1, user3 });
 
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, bool> { { orgUser1.Id, true }, { orgUser3.Id, false } });
 
         // Act

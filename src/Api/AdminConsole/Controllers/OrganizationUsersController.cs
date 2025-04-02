@@ -57,7 +57,7 @@ public class OrganizationUsersController : Controller
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IDeleteClaimedOrganizationUserAccountCommand _deleteClaimedOrganizationUserAccountCommand;
-    private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
+    private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
@@ -84,7 +84,7 @@ public class OrganizationUsersController : Controller
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IDeleteClaimedOrganizationUserAccountCommand deleteClaimedOrganizationUserAccountCommand,
-        IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery,
+        IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
         IPolicyRequirementQuery policyRequirementQuery,
         IFeatureService featureService,
         IPricingClient pricingClient,
@@ -110,7 +110,7 @@ public class OrganizationUsersController : Controller
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _deleteClaimedOrganizationUserAccountCommand = deleteClaimedOrganizationUserAccountCommand;
-        _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
+        _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _policyRequirementQuery = policyRequirementQuery;
         _featureService = featureService;
         _pricingClient = pricingClient;
@@ -127,11 +127,11 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        var managedByOrganization = await GetManagedByOrganizationStatusAsync(
+        var claimedByOrganizationStatus = await GetClaimedByOrganizationStatusAsync(
             organizationUser.OrganizationId,
             [organizationUser.Id]);
 
-        var response = new OrganizationUserDetailsResponseModel(organizationUser, managedByOrganization[organizationUser.Id], collections);
+        var response = new OrganizationUserDetailsResponseModel(organizationUser, claimedByOrganizationStatus[organizationUser.Id], collections);
 
         if (includeGroups)
         {
@@ -175,7 +175,7 @@ public class OrganizationUsersController : Controller
             }
         );
         var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
-        var organizationUsersManagementStatus = await GetManagedByOrganizationStatusAsync(orgId, organizationUsers.Select(o => o.Id));
+        var organizationUsersManagementStatus = await GetClaimedByOrganizationStatusAsync(orgId, organizationUsers.Select(o => o.Id));
         var responses = organizationUsers
             .Select(o =>
             {
@@ -717,14 +717,14 @@ public class OrganizationUsersController : Controller
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
     }
 
-    private async Task<IDictionary<Guid, bool>> GetManagedByOrganizationStatusAsync(Guid orgId, IEnumerable<Guid> userIds)
+    private async Task<IDictionary<Guid, bool>> GetClaimedByOrganizationStatusAsync(Guid orgId, IEnumerable<Guid> userIds)
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
             return userIds.ToDictionary(kvp => kvp, kvp => false);
         }
 
-        var usersOrganizationManagementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(orgId, userIds);
+        var usersOrganizationManagementStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(orgId, userIds);
         return usersOrganizationManagementStatus;
     }
 }

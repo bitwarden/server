@@ -4,12 +4,12 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
-public class GetOrganizationUsersManagementStatusQuery : IGetOrganizationUsersManagementStatusQuery
+public class GetOrganizationUsersClaimedStatusQuery : IGetOrganizationUsersClaimedStatusQuery
 {
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
-    public GetOrganizationUsersManagementStatusQuery(
+    public GetOrganizationUsersClaimedStatusQuery(
         IApplicationCacheService applicationCacheService,
         IOrganizationUserRepository organizationUserRepository)
     {
@@ -17,7 +17,7 @@ public class GetOrganizationUsersManagementStatusQuery : IGetOrganizationUsersMa
         _organizationUserRepository = organizationUserRepository;
     }
 
-    public async Task<IDictionary<Guid, bool>> GetUsersOrganizationManagementStatusAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds)
+    public async Task<IDictionary<Guid, bool>> GetUsersOrganizationClaimedStatusAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds)
     {
         if (organizationUserIds.Any())
         {

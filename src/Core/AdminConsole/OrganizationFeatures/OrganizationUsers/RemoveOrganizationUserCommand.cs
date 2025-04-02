@@ -18,7 +18,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     private readonly IPushRegistrationService _pushRegistrationService;
     private readonly ICurrentContext _currentContext;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
-    private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
+    private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
     private readonly IFeatureService _featureService;
     private readonly TimeProvider _timeProvider;
 
@@ -37,7 +37,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         IPushRegistrationService pushRegistrationService,
         ICurrentContext currentContext,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-        IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery,
+        IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
         IFeatureService featureService,
         TimeProvider timeProvider)
     {
@@ -48,7 +48,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         _pushRegistrationService = pushRegistrationService;
         _currentContext = currentContext;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
-        _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
+        _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _featureService = featureService;
         _timeProvider = timeProvider;
     }
@@ -155,7 +155,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
 
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && deletingUserId.HasValue && eventSystemUser == null)
         {
-            var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(orgUser.OrganizationId, new[] { orgUser.Id });
+            var managementStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, new[] { orgUser.Id });
             if (managementStatus.TryGetValue(orgUser.Id, out var isManaged) && isManaged)
             {
                 throw new BadRequestException(RemoveClaimedAccountErrorMessage);
@@ -209,7 +209,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         }
 
         var managementStatus = _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && deletingUserId.HasValue && eventSystemUser == null
-            ? await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, filteredUsers.Select(u => u.Id))
+            ? await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, filteredUsers.Select(u => u.Id))
             : filteredUsers.ToDictionary(u => u.Id, u => false);
         var result = new List<(OrganizationUser OrganizationUser, string ErrorMessage)>();
         foreach (var orgUser in filteredUsers)

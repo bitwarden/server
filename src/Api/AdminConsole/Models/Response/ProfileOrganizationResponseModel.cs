@@ -133,16 +133,11 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     /// <summary>
-    /// Indicates if the organization claims the user.
+    /// Obsolete.
+    ///
+    /// See <see cref="UserIsClaimedByOrganization"/>
     /// </summary>
-    /// <remarks>
-    /// An organization claims a user if the user's email domain is verified by the organization and the user is a member of it.
-    /// The organization must be enabled and able to have verified domains.
-    /// </remarks>
-    /// <returns>
-    /// False if the Account Deprovisioning feature flag is disabled.
-    /// </returns>
-    [Obsolete]
+    [Obsolete("Please use UserIsClaimedByOrganization instead. This property will be removed in a future version.")]
     public bool UserIsManagedByOrganization
     {
         get => UserIsClaimedByOrganization;

@@ -19,7 +19,7 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
 {
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
-    private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
+    private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
@@ -31,7 +31,7 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
     public DeleteClaimedOrganizationUserAccountCommand(
         IUserService userService,
         IEventService eventService,
-        IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery,
+        IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
         IOrganizationUserRepository organizationUserRepository,
         IUserRepository userRepository,
         ICurrentContext currentContext,
@@ -43,7 +43,7 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
     {
         _userService = userService;
         _eventService = eventService;
-        _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
+        _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _organizationUserRepository = organizationUserRepository;
         _userRepository = userRepository;
         _currentContext = currentContext;
@@ -62,7 +62,7 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
             throw new NotFoundException("Member not found.");
         }
 
-        var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, new[] { organizationUserId });
+        var managementStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, new[] { organizationUserId });
         var hasOtherConfirmedOwners = await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUserId }, includeProvider: true);
 
         await ValidateDeleteUserAsync(organizationId, organizationUser, deletingUserId, managementStatus, hasOtherConfirmedOwners);
@@ -83,7 +83,7 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         var userIds = orgUsers.Where(ou => ou.UserId.HasValue).Select(ou => ou.UserId!.Value).ToList();
         var users = await _userRepository.GetManyAsync(userIds);
 
-        var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, orgUserIds);
+        var managementStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, orgUserIds);
         var hasOtherConfirmedOwners = await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, orgUserIds, includeProvider: true);
 
         var results = new List<(Guid OrganizationUserId, string? ErrorMessage)>();

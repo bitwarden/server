@@ -66,24 +66,30 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
 {
     public OrganizationUserDetailsResponseModel(
         OrganizationUser organizationUser,
-        bool managedByOrganization,
+        bool claimedByOrganization,
         IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
-        ManagedByOrganization = managedByOrganization;
+        ClaimedByOrganization = claimedByOrganization;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
 
     public OrganizationUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
-        bool managedByOrganization,
+        bool claimedByOrganization,
         IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
-        ManagedByOrganization = managedByOrganization;
+        ClaimedByOrganization = claimedByOrganization;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
 
-    public bool ManagedByOrganization { get; set; }
+    [Obsolete("Please use ClaimedByOrganization instead. This property will be removed in a future version.")]
+    public bool ManagedByOrganization
+    {
+        get => ClaimedByOrganization;
+        set => ClaimedByOrganization = value;
+    }
+    public bool ClaimedByOrganization { get; set; }
 
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
 
