@@ -1,4 +1,5 @@
-﻿CREATE VIEW [dbo].[NotificationStatusDetailsView]
+-- Recreate the NotificationStatusView to include the Notification.TaskId column
+CREATE OR ALTER VIEW [dbo].[NotificationStatusDetailsView]
 AS
 SELECT
     N.[Id],
@@ -17,7 +18,8 @@ SELECT
     NS.[DeletedDate]
 FROM
     [dbo].[Notification] AS N
-LEFT JOIN
+    LEFT JOIN
     [dbo].[NotificationStatus] as NS
 ON
     N.[Id] = NS.[NotificationId]
+GO

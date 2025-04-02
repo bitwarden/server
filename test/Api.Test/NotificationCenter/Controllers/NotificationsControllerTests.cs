@@ -67,6 +67,7 @@ public class NotificationsControllerTests
             Assert.Equal(expectedNotificationStatusDetails.RevisionDate, notificationResponseModel.Date);
             Assert.Equal(expectedNotificationStatusDetails.ReadDate, notificationResponseModel.ReadDate);
             Assert.Equal(expectedNotificationStatusDetails.DeletedDate, notificationResponseModel.DeletedDate);
+            Assert.Equal(expectedNotificationStatusDetails.TaskId, notificationResponseModel.TaskId);
         });
         Assert.Null(listResponse.ContinuationToken);
 
@@ -116,6 +117,7 @@ public class NotificationsControllerTests
             Assert.Equal(expectedNotificationStatusDetails.RevisionDate, notificationResponseModel.Date);
             Assert.Equal(expectedNotificationStatusDetails.ReadDate, notificationResponseModel.ReadDate);
             Assert.Equal(expectedNotificationStatusDetails.DeletedDate, notificationResponseModel.DeletedDate);
+            Assert.Equal(expectedNotificationStatusDetails.TaskId, notificationResponseModel.TaskId);
         });
         Assert.Equal("2", listResponse.ContinuationToken);
 
@@ -164,6 +166,7 @@ public class NotificationsControllerTests
             Assert.Equal(expectedNotificationStatusDetails.RevisionDate, notificationResponseModel.Date);
             Assert.Equal(expectedNotificationStatusDetails.ReadDate, notificationResponseModel.ReadDate);
             Assert.Equal(expectedNotificationStatusDetails.DeletedDate, notificationResponseModel.DeletedDate);
+            Assert.Equal(expectedNotificationStatusDetails.TaskId, notificationResponseModel.TaskId);
         });
         Assert.Null(listResponse.ContinuationToken);
 
