@@ -49,7 +49,7 @@ public class OrganizationRequirementHandlerTests
         // Arrange requirement
         var testRequirement = Substitute.For<IOrganizationRequirement>();
         testRequirement
-            .AuthorizeAsync(organizationId, null, Arg.Any<Func<Task<bool>>>())
+            .AuthorizeAsync(null, Arg.Any<Func<Task<bool>>>())
             .ReturnsForAnyArgs(false);
         var authContext = new AuthorizationHandlerContext([testRequirement], new ClaimsPrincipal(), null);
 
@@ -57,7 +57,7 @@ public class OrganizationRequirementHandlerTests
         await sutProvider.Sut.HandleAsync(authContext);
 
         // Assert
-        await testRequirement.Received(1).AuthorizeAsync(organizationId, null, Arg.Any<Func<Task<bool>>>());
+        await testRequirement.Received(1).AuthorizeAsync(null, Arg.Any<Func<Task<bool>>>());
         Assert.False(authContext.HasSucceeded);
     }
 
@@ -70,7 +70,7 @@ public class OrganizationRequirementHandlerTests
         // Arrange requirement
         var testRequirement = Substitute.For<IOrganizationRequirement>();
         testRequirement
-            .AuthorizeAsync(organizationId, null, Arg.Any<Func<Task<bool>>>())
+            .AuthorizeAsync(null, Arg.Any<Func<Task<bool>>>())
             .ReturnsForAnyArgs(true);
         var authContext = new AuthorizationHandlerContext([testRequirement], new ClaimsPrincipal(), null);
 
@@ -78,7 +78,7 @@ public class OrganizationRequirementHandlerTests
         await sutProvider.Sut.HandleAsync(authContext);
 
         // Assert
-        await testRequirement.Received(1).AuthorizeAsync(organizationId, null, Arg.Any<Func<Task<bool>>>());
+        await testRequirement.Received(1).AuthorizeAsync(null, Arg.Any<Func<Task<bool>>>());
         Assert.True(authContext.HasSucceeded);
     }
 
