@@ -26,4 +26,10 @@ public class FakeAutomaticTaxStrategy(
     {
         options.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = IsAutomaticTaxEnabled };
     }
+
+    public void SetInvoiceCreatePreviewOptions(InvoiceCreatePreviewOptions options)
+    {
+        options.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = IsAutomaticTaxEnabled };
+
+    }
 }
