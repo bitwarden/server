@@ -6,6 +6,14 @@ namespace Bit.Api.AdminConsole.Authorization;
 
 public static class ProviderOrganizationHttpContextFeature
 {
+    /// <summary>
+    /// Returns the ProviderUserOrganizations for a user. These are the organizations the ProviderUser manages via their Provider, if any.
+    /// This data is fetched from the database and cached as a HttpContext Feature for the lifetime of the request.
+    /// </summary>
+    /// <param name="httpContext"></param>
+    /// <param name="providerUserRepository"></param>
+    /// <param name="userId"></param>
+    /// <returns></returns>
     private static async Task<IEnumerable<ProviderUserOrganizationDetails>> GetProviderUserOrganizationsAsync(
         this HttpContext httpContext,
         IProviderUserRepository providerUserRepository,
@@ -24,6 +32,10 @@ public static class ProviderOrganizationHttpContextFeature
         return providerUserOrganizations;
     }
 
+    /// <summary>
+    /// Returns true if the user is a ProviderUser for a Provider which manages the specified organization, otherwise false.
+    /// This data is fetched from the database and cached as a HttpContext Feature for the lifetime of the request.
+    /// </summary>
     public static async Task<bool> IsProviderUserForOrgAsync(
         this HttpContext httpContext,
         IProviderUserRepository providerUserRepository,
