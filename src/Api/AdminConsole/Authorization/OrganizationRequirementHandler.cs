@@ -3,7 +3,6 @@
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
-using BadRequestException = Bit.Core.Exceptions.BadRequestException;
 
 namespace Bit.Api.AdminConsole.Authorization;
 
@@ -32,7 +31,7 @@ public class OrganizationRequirementHandler(
         var userId = userService.GetProperUserId(httpContext.User);
         if (userId == null)
         {
-            throw new BadRequestException("This method should only be called on the private api with a logged in user.");
+            throw new InvalidOperationException("This method should only be called on the private api with a logged in user.");
         }
 
         Task<bool> IsProviderUserForOrg() => httpContextAccessor.HttpContext.IsProviderUserForOrgAsync(providerUserRepository, userId.Value, organizationId);
