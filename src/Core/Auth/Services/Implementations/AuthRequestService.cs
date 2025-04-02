@@ -287,12 +287,6 @@ public class AuthRequestService : IAuthRequestService
 
     private async Task NotifyAdminsOfDeviceApprovalRequestAsync(OrganizationUser organizationUser, User user)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.DeviceApprovalRequestAdminNotifications))
-        {
-            _logger.LogWarning("Skipped sending device approval notification to admins - feature flag disabled");
-            return;
-        }
-
         var adminEmails = await GetAdminAndAccountRecoveryEmailsAsync(organizationUser.OrganizationId);
 
         await _mailService.SendDeviceApprovalRequestedNotificationEmailAsync(
