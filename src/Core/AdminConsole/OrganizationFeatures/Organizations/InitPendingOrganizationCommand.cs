@@ -1,7 +1,9 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Commands;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
@@ -25,11 +27,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         _organizationRepository = organizationRepository;
     }
 
-    public const string OrgEnabled = "Organization is already enabled.";
-    public const string OrgNotPending = "Organization is not on a Pending status.";
-    public const string OrgHasPublicKey = "Organization already has a Public Key.";
-    public const string OrgHasPrivateKey = "Organization already has a Private Key.";
-
     public async Task<CommandResult> InitPendingOrganizationAsync(Guid userId, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName)
     {
         await _organizationService.ValidateSignUpPoliciesAsync(userId);
@@ -38,22 +35,22 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
 
         if (org.Enabled)
         {
-            return new CommandResult(OrgEnabled);
+            throw new BadRequestException("Organization is already enabled.");
         }
 
         if (org.Status != OrganizationStatusType.Pending)
         {
-            return new CommandResult(OrgNotPending);
+            throw new BadRequestException("Organization is not on a Pending status.");
         }
 
         if (!string.IsNullOrEmpty(org.PublicKey))
         {
-            return new CommandResult(OrgHasPublicKey);
+            throw new BadRequestException("Organization already has a Public Key.");
         }
 
         if (!string.IsNullOrEmpty(org.PrivateKey))
         {
-            return new CommandResult(OrgHasPrivateKey);
+            throw new BadRequestException("Organization already has a Private Key.");
         }
 
         org.Enabled = true;
