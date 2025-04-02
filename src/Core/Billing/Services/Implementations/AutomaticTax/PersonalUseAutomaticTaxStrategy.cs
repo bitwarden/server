@@ -52,6 +52,11 @@ public class PersonalUseAutomaticTaxStrategy(IFeatureService featureService) : I
         return options;
     }
 
+    public void SetInvoiceCreatePreviewOptions(InvoiceCreatePreviewOptions options)
+    {
+        options.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true };
+    }
+
     private static bool ShouldBeEnabled(Customer customer)
     {
         return customer.HasTaxLocationVerified();

@@ -10,6 +10,7 @@ using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
+using Bit.Core.Billing.Services.Implementations.AutomaticTax;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -17,6 +18,7 @@ using Bit.Core.Models.BitStripe;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using PaymentMethod = Stripe.PaymentMethod;
@@ -38,6 +40,7 @@ public class StripePaymentService : IPaymentService
     private readonly ISubscriberService _subscriberService;
     private readonly IPricingClient _pricingClient;
     private readonly IAutomaticTaxFactory _automaticTaxFactory;
+    private readonly IAutomaticTaxStrategy _personalUseTaxStrategy;
 
     public StripePaymentService(
         ITransactionRepository transactionRepository,
@@ -49,7 +52,8 @@ public class StripePaymentService : IPaymentService
         ITaxService taxService,
         ISubscriberService subscriberService,
         IPricingClient pricingClient,
-        IAutomaticTaxFactory automaticTaxFactory)
+        IAutomaticTaxFactory automaticTaxFactory,
+        [FromKeyedServices(AutomaticTaxFactory.PersonalUse)] IAutomaticTaxStrategy personalUseTaxStrategy)
     {
         _transactionRepository = transactionRepository;
         _logger = logger;
@@ -61,6 +65,7 @@ public class StripePaymentService : IPaymentService
         _subscriberService = subscriberService;
         _pricingClient = pricingClient;
         _automaticTaxFactory = automaticTaxFactory;
+        _personalUseTaxStrategy = personalUseTaxStrategy;
     }
 
     private async Task ChangeOrganizationSponsorship(
@@ -1251,6 +1256,8 @@ public class StripePaymentService : IPaymentService
             }
         }
 
+        _personalUseTaxStrategy.SetInvoiceCreatePreviewOptions(options);
+
         try
         {
             var invoice = await _stripeAdapter.InvoiceCreatePreviewAsync(options);
@@ -1293,10 +1300,6 @@ public class StripePaymentService : IPaymentService
 
         var options = new InvoiceCreatePreviewOptions
         {
-            AutomaticTax = new InvoiceAutomaticTaxOptions
-            {
-                Enabled = true,
-            },
             Currency = "usd",
             SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
             {
@@ -1384,9 +1387,11 @@ public class StripePaymentService : IPaymentService
             ];
         }
 
+        Customer gatewayCustomer = null;
+
         if (!string.IsNullOrWhiteSpace(gatewayCustomerId))
         {
-            var gatewayCustomer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
+            gatewayCustomer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
 
             if (gatewayCustomer.Discount != null)
             {
@@ -1403,6 +1408,10 @@ public class StripePaymentService : IPaymentService
                 options.Coupon ??= gatewaySubscription.Discount.Coupon.Id;
             }
         }
+
+        var automaticTaxFactoryParameters = new AutomaticTaxFactoryParameters(parameters.PasswordManager.Plan);
+        var automaticTaxStrategy = await _automaticTaxFactory.CreateAsync(automaticTaxFactoryParameters);
+        automaticTaxStrategy.SetInvoiceCreatePreviewOptions(options);
 
         try
         {

@@ -28,4 +28,6 @@ public interface IAutomaticTaxStrategy
     /// <param name="options"></param>
     /// <param name="subscription"></param>
     void SetUpdateOptions(SubscriptionUpdateOptions options, Subscription subscription);
+
+    void SetInvoiceCreatePreviewOptions(InvoiceCreatePreviewOptions options);
 }

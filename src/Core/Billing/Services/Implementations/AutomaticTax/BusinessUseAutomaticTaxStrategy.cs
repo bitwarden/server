@@ -61,6 +61,19 @@ public class BusinessUseAutomaticTaxStrategy(IFeatureService featureService) : I
         options.DefaultTaxRates = [];
     }
 
+    public void SetInvoiceCreatePreviewOptions(InvoiceCreatePreviewOptions options)
+    {
+        options.AutomaticTax ??= new InvoiceAutomaticTaxOptions();
+
+        if (options.CustomerDetails.Address.Country == "US")
+        {
+            options.AutomaticTax.Enabled = true;
+            return;
+        }
+
+        options.AutomaticTax.Enabled = options.CustomerDetails.TaxIds != null && options.CustomerDetails.TaxIds.Any();
+    }
+
     private bool ShouldBeEnabled(Customer customer)
     {
         if (!customer.HasTaxLocationVerified())
