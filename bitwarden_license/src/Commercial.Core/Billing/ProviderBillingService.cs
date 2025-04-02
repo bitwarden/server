@@ -14,6 +14,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
+using Bit.Core.Billing.Services.Implementations.AutomaticTax;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -22,6 +23,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using CsvHelper;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -29,6 +31,7 @@ namespace Bit.Commercial.Core.Billing;
 
 public class ProviderBillingService(
     IEventService eventService,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -40,7 +43,9 @@ public class ProviderBillingService(
     IProviderUserRepository providerUserRepository,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
-    ITaxService taxService) : IProviderBillingService
+    ITaxService taxService,
+    [FromKeyedServices(AutomaticTaxFactory.BusinessUse)] IAutomaticTaxStrategy automaticTaxStrategy)
+    : IProviderBillingService
 {
     [RequireFeature(FeatureFlagKeys.P15179_AddExistingOrgsFromProviderPortal)]
     public async Task AddExistingOrganization(
@@ -557,7 +562,8 @@ public class ProviderBillingService(
     {
         ArgumentNullException.ThrowIfNull(provider);
 
-        var customer = await subscriberService.GetCustomerOrThrow(provider);
+        var customerGetOptions = new CustomerGetOptions { Expand = ["tax", "tax_ids"] };
+        var customer = await subscriberService.GetCustomerOrThrow(provider, customerGetOptions);
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
@@ -589,10 +595,6 @@ public class ProviderBillingService(
 
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
-            AutomaticTax = new SubscriptionAutomaticTaxOptions
-            {
-                Enabled = true
-            },
             CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
             Customer = customer.Id,
             DaysUntilDue = 30,
@@ -604,6 +606,15 @@ public class ProviderBillingService(
             OffSession = true,
             ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations
         };
+
+        if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+        {
+            automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
+        }
+        else
+        {
+            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+        }
 
         try
         {
