@@ -9,4 +9,4 @@ WHERE Active = 0
       EncryptedPublicKey IS NOT NULL OR
       EncryptedPrivateKey IS NOT NULL
   );
-GO;
+GO
