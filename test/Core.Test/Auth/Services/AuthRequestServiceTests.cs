@@ -17,6 +17,7 @@ using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
@@ -393,6 +394,87 @@ public class AuthRequestServiceTests
                 organizationUser2.OrganizationId,
                 user.Email,
                 user.Name);
+    }
+
+
+    [Theory, BitAutoData]
+    public async Task CreateAuthRequestAsync_AdminApproval_WithAdminNotifications_AndNoAdminEmails_ShouldNotSendNotificationEmails(
+        SutProvider<AuthRequestService> sutProvider,
+        AuthRequestCreateRequestModel createModel,
+        User user,
+        OrganizationUser organizationUser1)
+    {
+        createModel.Type = AuthRequestType.AdminApproval;
+        user.Email = createModel.Email;
+        organizationUser1.UserId = user.Id;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.DeviceApprovalRequestAdminNotifications)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(user.Email)
+            .Returns(user);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .DeviceType
+            .Returns(DeviceType.ChromeExtension);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId
+            .Returns(user.Id);
+
+        sutProvider.GetDependency<IGlobalSettings>()
+            .PasswordlessAuth.KnownDevicesOnly
+            .Returns(false);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser>
+            {
+                organizationUser1,
+            });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByMinimumRoleAsync(organizationUser1.OrganizationId, OrganizationUserType.Admin)
+            .Returns([]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByRoleAsync(organizationUser1.OrganizationId, OrganizationUserType.Custom)
+            .Returns([]);
+
+        sutProvider.GetDependency<IAuthRequestRepository>()
+            .CreateAsync(Arg.Any<AuthRequest>())
+            .Returns(c => c.ArgAt<AuthRequest>(0));
+
+        var authRequest = await sutProvider.Sut.CreateAuthRequestAsync(createModel);
+
+        Assert.Equal(organizationUser1.OrganizationId, authRequest.OrganizationId);
+
+        await sutProvider.GetDependency<IAuthRequestRepository>()
+            .Received(1)
+            .CreateAsync(Arg.Is<AuthRequest>(o => o.OrganizationId == organizationUser1.OrganizationId));
+
+        await sutProvider.GetDependency<IAuthRequestRepository>()
+            .Received(1)
+            .CreateAsync(Arg.Any<AuthRequest>());
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(0)
+            .SendDeviceApprovalRequestedNotificationEmailAsync(
+                Arg.Any<IEnumerable<string>>(),
+                Arg.Any<Guid>(),
+                Arg.Any<string>(),
+                Arg.Any<string>());
+
+        var expectedLogMessage = "There are no admin emails to send to.";
+        sutProvider.GetDependency<ILogger<AuthRequestService>>()
+            .Received(1)
+            .LogWarning(expectedLogMessage);
     }
 
     /// <summary>

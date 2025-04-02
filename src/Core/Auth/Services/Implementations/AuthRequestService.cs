@@ -289,6 +289,12 @@ public class AuthRequestService : IAuthRequestService
     {
         var adminEmails = await GetAdminAndAccountRecoveryEmailsAsync(organizationUser.OrganizationId);
 
+        if (adminEmails.Count == 0)
+        {
+            _logger.LogWarning("There are no admin emails to send to.");
+            return;
+        }
+
         await _mailService.SendDeviceApprovalRequestedNotificationEmailAsync(
             adminEmails,
             organizationUser.OrganizationId,
