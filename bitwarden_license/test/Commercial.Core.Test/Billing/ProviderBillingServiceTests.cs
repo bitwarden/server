@@ -924,11 +924,15 @@ public class ProviderBillingServiceTests
     {
         provider.GatewaySubscriptionId = null;
 
-        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
-        {
-            Id = "customer_id",
-            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
-        });
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomerOrThrow(
+                provider,
+                Arg.Is<CustomerGetOptions>(p => p.Expand.Contains("tax") || p.Expand.Contains("tax_ids")))
+            .Returns(new Customer
+            {
+                Id = "customer_id",
+                Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+            });
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -980,7 +984,10 @@ public class ProviderBillingServiceTests
             Id = "customer_id",
             Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
         };
-        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(customer);
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomerOrThrow(
+                provider,
+                Arg.Is<CustomerGetOptions>(p => p.Expand.Contains("tax") || p.Expand.Contains("tax_ids"))).Returns(customer);
 
         var providerPlans = new List<ProviderPlan>
         {
