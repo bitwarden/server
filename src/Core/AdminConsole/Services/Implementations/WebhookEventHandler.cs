@@ -21,8 +21,10 @@ public class WebhookEventHandler(
     public async Task HandleEventAsync(EventMessage eventMessage)
     {
         var organizationId = eventMessage.OrganizationId ?? Guid.Empty;
-        var configurations = await configurationRepository.GetConfigurationsAsync(organizationId,
-            IntegrationType.Webhook, eventMessage.Type);
+        var configurations = await configurationRepository.GetConfigurationDetailsAsync(
+            organizationId,
+            IntegrationType.Webhook,
+            eventMessage.Type);
 
         foreach (var configuration in configurations)
         {

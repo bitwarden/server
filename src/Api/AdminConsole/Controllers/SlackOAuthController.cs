@@ -63,6 +63,6 @@ public class SlackOAuthController(
             Type = IntegrationType.Slack,
             Configuration = JsonSerializer.Serialize(new SlackIntegration(token)),
         });
-        return Ok("Your bot is now installed.");
+        return Ok(integration.Id);
     }
 }

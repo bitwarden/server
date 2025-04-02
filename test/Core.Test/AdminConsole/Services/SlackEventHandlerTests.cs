@@ -25,7 +25,7 @@ public class SlackEventHandlerTests
     private SutProvider<SlackEventHandler> GetSutProvider(
         List<OrganizationIntegrationConfigurationDetails> integrationConfigurations)
     {
-        _repository.GetConfigurationsAsync(Arg.Any<Guid>(),
+        _repository.GetConfigurationDetailsAsync(Arg.Any<Guid>(),
             IntegrationType.Slack, Arg.Any<EventType>())
         .Returns(integrationConfigurations);
 
@@ -65,7 +65,7 @@ public class SlackEventHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleEventAsync_DoesNothingWhenNoConfigurations(EventMessage eventMessage)
+    public async Task HandleEventAsync_NoConfigurations_DoesNothing(EventMessage eventMessage)
     {
         var sutProvider = GetSutProvider(NoConfigurations());
 
@@ -74,7 +74,7 @@ public class SlackEventHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleEventAsync_SendsEventViaSlackService(EventMessage eventMessage)
+    public async Task HandleEventAsync_OneConfiguration_SendsEventViaSlackService(EventMessage eventMessage)
     {
         var sutProvider = GetSutProvider(OneConfiguration());
 
@@ -88,7 +88,7 @@ public class SlackEventHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleEventAsync_SendsMultipleWhenConfigured(EventMessage eventMessage)
+    public async Task HandleEventAsync_TwoConfigurations_SendsMultipleEvents(EventMessage eventMessage)
     {
         var sutProvider = GetSutProvider(TwoConfigurations());
 
@@ -108,7 +108,7 @@ public class SlackEventHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleManyEventsAsync_SendsEventsViaSlackService(List<EventMessage> eventMessages)
+    public async Task HandleManyEventsAsync_OneConfiguration_SendsEventsViaSlackService(List<EventMessage> eventMessages)
     {
         var sutProvider = GetSutProvider(OneConfiguration());
 
@@ -131,7 +131,7 @@ public class SlackEventHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleManyEventsAsync_SendsMultipleEventsAndMultipleConfigurations(List<EventMessage> eventMessages)
+    public async Task HandleManyEventsAsync_TwoConfigurations_SendsMultipleEvents(List<EventMessage> eventMessages)
     {
         var sutProvider = GetSutProvider(TwoConfigurations());
 

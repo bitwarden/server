@@ -48,7 +48,7 @@ public class WebhookEventHandlerTests
         clientFactory.CreateClient(WebhookEventHandler.HttpClientName).Returns(_httpClient);
 
         var repository = Substitute.For<IOrganizationIntegrationConfigurationRepository>();
-        repository.GetConfigurationsAsync(Arg.Any<Guid>(),
+        repository.GetConfigurationDetailsAsync(Arg.Any<Guid>(),
             IntegrationType.Webhook, Arg.Any<EventType>()).Returns(configurations);
 
         return new SutProvider<WebhookEventHandler>()
@@ -87,7 +87,7 @@ public class WebhookEventHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleEventAsync_DoesNothingWhenNoConfigurations(EventMessage eventMessage)
+    public async Task HandleEventAsync_NoConfigurations_DoesNothing(EventMessage eventMessage)
     {
         var sutProvider = GetSutProvider(NoConfigurations());
 
@@ -100,7 +100,7 @@ public class WebhookEventHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleEventAsync_PostsEventToUrl(EventMessage eventMessage)
+    public async Task HandleEventAsync_OneConfiguration_PostsEventToUrl(EventMessage eventMessage)
     {
         var sutProvider = GetSutProvider(OneConfiguration());
 
@@ -121,7 +121,7 @@ public class WebhookEventHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleManyEventsAsync_DoesNothingWhenNoConfigurations(List<EventMessage> eventMessages)
+    public async Task HandleManyEventsAsync_NoConfigurations_DoesNothing(List<EventMessage> eventMessages)
     {
         var sutProvider = GetSutProvider(NoConfigurations());
 
@@ -135,7 +135,7 @@ public class WebhookEventHandlerTests
 
 
     [Theory, BitAutoData]
-    public async Task HandleManyEventsAsync_PostsEventsToUrl(List<EventMessage> eventMessages)
+    public async Task HandleManyEventsAsync_OneConfiguration_PostsEventsToUrl(List<EventMessage> eventMessages)
     {
         var sutProvider = GetSutProvider(OneConfiguration());
 
@@ -160,7 +160,7 @@ public class WebhookEventHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleManyEventsAsync_PostsEventsToMultipleUrls(List<EventMessage> eventMessages)
+    public async Task HandleManyEventsAsync_TwoConfigurations_PostsEventsToMultipleUrls(List<EventMessage> eventMessages)
     {
         var sutProvider = GetSutProvider(TwoConfigurations());
 
