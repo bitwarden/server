@@ -11,21 +11,24 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
-[Route("slack/oauth")]
+[Route("organizations/{organizationId:guid}/integrations/slack/")]
 [Authorize("Application")]
-public class SlackOAuthController(
+public class SlackIntegrationController(
     ICurrentContext currentContext,
     IOrganizationIntegrationRepository integrationRepository,
     ISlackService slackService) : Controller
 {
-    [HttpGet("redirect/{id:guid}")]
-    public async Task<IActionResult> RedirectToSlack(Guid id)
+    [HttpGet("redirect/")]
+    public async Task<IActionResult> RedirectAsync(Guid organizationId)
     {
-        if (!await currentContext.OrganizationOwner(id))
+        if (!await currentContext.OrganizationOwner(organizationId))
         {
             throw new NotFoundException();
         }
-        string callbackUrl = Url.RouteUrl(nameof(OAuthCallback), new { id = id }, currentContext.HttpContext.Request.Scheme);
+        string callbackUrl = Url.RouteUrl(
+            nameof(CreateAsync),
+            new { id = organizationId },
+            currentContext.HttpContext.Request.Scheme);
         var redirectUrl = slackService.GetRedirectUrl(callbackUrl);
 
         if (string.IsNullOrEmpty(redirectUrl))
@@ -36,10 +39,10 @@ public class SlackOAuthController(
         return Redirect(redirectUrl);
     }
 
-    [HttpGet("callback/{id:guid}", Name = nameof(OAuthCallback))]
-    public async Task<IActionResult> OAuthCallback(Guid id, [FromQuery] string code)
+    [HttpGet("create", Name = nameof(CreateAsync))]
+    public async Task<IActionResult> CreateAsync(Guid organizationId, [FromQuery] string code)
     {
-        if (!await currentContext.OrganizationOwner(id))
+        if (!await currentContext.OrganizationOwner(organizationId))
         {
             throw new NotFoundException();
         }
@@ -49,7 +52,10 @@ public class SlackOAuthController(
             throw new BadRequestException("Missing code from Slack.");
         }
 
-        string callbackUrl = Url.RouteUrl(nameof(OAuthCallback), new { id = id }, currentContext.HttpContext.Request.Scheme);
+        string callbackUrl = Url.RouteUrl(
+            nameof(CreateAsync),
+            new { id = organizationId },
+            currentContext.HttpContext.Request.Scheme);
         var token = await slackService.ObtainTokenViaOAuth(code, callbackUrl);
 
         if (string.IsNullOrEmpty(token))
@@ -59,10 +65,28 @@ public class SlackOAuthController(
 
         var integration = await integrationRepository.CreateAsync(new OrganizationIntegration
         {
-            OrganizationId = id,
+            OrganizationId = organizationId,
             Type = IntegrationType.Slack,
             Configuration = JsonSerializer.Serialize(new SlackIntegration(token)),
         });
-        return Ok(integration.Id);
+        return Ok(new { id = integration.Id } );
+    }
+
+    [HttpDelete("{integrationId:guid}")]
+    [HttpPost("{integrationId:guid}/delete")]
+    public async Task DeleteAsync(Guid organizationId, Guid integrationId)
+    {
+        if (!await currentContext.OrganizationOwner(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var integration = await integrationRepository.GetByIdAsync(integrationId);
+        if (integration is null)
+        {
+            throw new NotFoundException();
+        }
+
+        await integrationRepository.DeleteAsync(integration);
     }
 }
