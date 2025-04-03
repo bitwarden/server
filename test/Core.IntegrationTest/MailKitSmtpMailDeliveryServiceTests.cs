@@ -20,9 +20,19 @@ public class MailKitSmtpMailDeliveryServiceTests
     {
         ConfigureSmtpServerLogging(testOutputHelper);
 
+        _selfSignedCert = CreateSelfSignedCert("localhost");
+    }
+
+    private static X509Certificate2 CreateSelfSignedCert(string commonName)
+    {
         using var rsa = RSA.Create(2048);
-        var certRequest = new CertificateRequest("CN=localhost", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        _selfSignedCert = certRequest.CreateSelfSigned(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddYears(1));
+        var certRequest = new CertificateRequest($"CN={commonName}", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        return certRequest.CreateSelfSigned(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddYears(1));
+    }
+
+    private static async Task SaveCertAsync(string filePath, X509Certificate2 certificate)
+    {
+        await File.WriteAllBytesAsync(filePath, certificate.Export(X509ContentType.Cert));
     }
 
     private static void ConfigureSmtpServerLogging(ITestOutputHelper testOutputHelper)
@@ -101,6 +111,107 @@ public class MailKitSmtpMailDeliveryServiceTests
                 TextContent = "Hi",
             }, new CancellationTokenSource(TimeSpan.FromSeconds(5)).Token)
         );
+    }
+
+    [Fact(Skip = "Upcoming feature")]
+    public async Task SendEmailAsync_SmtpServerUsingSelfSignedCert_CertInCustomLocation_Works()
+    {
+        // If an SMTP server is using a self signed cert we will in the future
+        // allow a custom location for certificates to be stored and the certitifactes 
+        // stored there will also be trusted.
+        var port = RandomPort();
+        var behavior = new DefaultServerBehaviour(false, port, _selfSignedCert);
+        using var smtpServer = new SmtpServer(behavior);
+        smtpServer.Start();
+
+        var globalSettings = GetSettings(gs =>
+        {
+            gs.Mail.Smtp.Port = port;
+            gs.Mail.Smtp.Ssl = true;
+        });
+
+        // TODO: Setup custom location and save self signed cert there.
+        // await SaveCertAsync("./my-location", _selfSignedCert);
+
+        var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
+            globalSettings,
+            NullLogger<MailKitSmtpMailDeliveryService>.Instance
+        );
+
+        var tcs = new TaskCompletionSource();
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        cts.Token.Register(tcs.SetCanceled);
+
+        behavior.MessageReceivedEventHandler += (sender, args) =>
+        {
+            if (args.Message.Recipients.Contains("test1@example.com"))
+            {
+                tcs.SetResult();
+            }
+            return Task.CompletedTask;
+        };
+
+        await mailKitDeliveryService.SendEmailAsync(new MailMessage
+        {
+            Subject = "Test",
+            ToEmails = ["test1@example.com"],
+            TextContent = "Hi",
+        }, cts.Token);
+
+        // Wait for email
+        await tcs.Task;
+    }
+
+    [Fact(Skip = "Upcoming feature")]
+    public async Task SendEmailAsync_SmtpServerUsingSelfSignedCert_CertInCustomLocation_WithUnrelatedCerts_Works()
+    {
+        // If an SMTP server is using a self signed cert we will in the future
+        // allow a custom location for certificates to be stored and the certitifactes 
+        // stored there will also be trusted.
+        var port = RandomPort();
+        var behavior = new DefaultServerBehaviour(false, port, _selfSignedCert);
+        using var smtpServer = new SmtpServer(behavior);
+        smtpServer.Start();
+
+        var globalSettings = GetSettings(gs =>
+        {
+            gs.Mail.Smtp.Port = port;
+            gs.Mail.Smtp.Ssl = true;
+        });
+
+        // TODO: Setup custom location and save self signed cert there
+        // along with another self signed cert that is not related to 
+        // the SMTP server.
+        // await SaveCertAsync("./my-location", _selfSignedCert);
+        // await SaveCertAsync("./my-location", CreateSelfSignedCert("example.com"));
+
+        var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
+            globalSettings,
+            NullLogger<MailKitSmtpMailDeliveryService>.Instance
+        );
+
+        var tcs = new TaskCompletionSource();
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        cts.Token.Register(tcs.SetCanceled);
+
+        behavior.MessageReceivedEventHandler += (sender, args) =>
+        {
+            if (args.Message.Recipients.Contains("test1@example.com"))
+            {
+                tcs.SetResult();
+            }
+            return Task.CompletedTask;
+        };
+
+        await mailKitDeliveryService.SendEmailAsync(new MailMessage
+        {
+            Subject = "Test",
+            ToEmails = ["test1@example.com"],
+            TextContent = "Hi",
+        }, cts.Token);
+
+        // Wait for email
+        await tcs.Task;
     }
 
     [Fact]
