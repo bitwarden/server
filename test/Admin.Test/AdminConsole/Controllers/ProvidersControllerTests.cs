@@ -12,6 +12,8 @@ using NSubstitute.ReceivedExtensions;
 
 namespace Admin.Test.AdminConsole.Controllers;
 
+//comment for commit
+
 [ControllerCustomize(typeof(ProvidersController))]
 [SutProviderCustomize]
 public class ProvidersControllerTests
