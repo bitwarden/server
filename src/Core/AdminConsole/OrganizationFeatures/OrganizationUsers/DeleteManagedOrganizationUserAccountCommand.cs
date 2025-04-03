@@ -1,5 +1,5 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -11,103 +11,108 @@ using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
-using Bit.Core.Validators;
 
-
-#nullable enable
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+#nullable enable
 
 public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganizationUserAccountCommand
 {
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
+    private readonly IDeleteManagedOrganizationUserAccountValidator _deleteManagedOrganizationUserAccountValidator;
     private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IPushNotificationService _pushService;
-    private readonly IProviderUserRepository _providerUserRepository;
+
     public DeleteManagedOrganizationUserAccountCommand(
         IUserService userService,
         IEventService eventService,
+        IDeleteManagedOrganizationUserAccountValidator deleteManagedOrganizationUserAccountValidator,
         IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery,
         IOrganizationUserRepository organizationUserRepository,
         IUserRepository userRepository,
         ICurrentContext currentContext,
         IReferenceEventService referenceEventService,
-        IPushNotificationService pushService,
-        IProviderUserRepository providerUserRepository
-        )
+        IPushNotificationService pushService)
     {
         _userService = userService;
         _eventService = eventService;
+        _deleteManagedOrganizationUserAccountValidator = deleteManagedOrganizationUserAccountValidator;
         _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
         _organizationUserRepository = organizationUserRepository;
         _userRepository = userRepository;
         _currentContext = currentContext;
         _referenceEventService = referenceEventService;
         _pushService = pushService;
-        _providerUserRepository = providerUserRepository;
     }
 
-    public async Task<(Guid OrganizationUserId, CommandResult result)> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
+    public async Task<CommandResult> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
         var result = await InternalDeleteManyUsersAsync(organizationId, new[] { organizationUserId }, deletingUserId);
 
-        return result.FirstOrDefault();
+
+        if (result.InvalidResults.Count > 0)
+        {
+
+            var error = result.InvalidResults.FirstOrDefault()?.Errors.FirstOrDefault();
+
+            return new Failure();
+        }
+
+        return new Success();
     }
 
     public async Task<IEnumerable<(Guid OrganizationUserId, CommandResult result)>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId)
     {
-        return await InternalDeleteManyUsersAsync(organizationId, orgUserIds, deletingUserId);
+        var results = await InternalDeleteManyUsersAsync(organizationId, orgUserIds, deletingUserId);
     }
 
-    private async Task<IEnumerable<(Guid OrganizationUserId, CommandResult result)>> InternalDeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId)
+    private async Task<PartialValidationResult<DeleteUserValidationRequest>> InternalDeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId)
     {
         var orgUsers = await _organizationUserRepository.GetManyAsync(orgUserIds);
         var users = await GetUsersAsync(orgUsers);
-        var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, orgUserIds);
+        var managementStatuses = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, orgUserIds);
 
-        var userDeletionRequests = new List<(Guid OrganizationUserId, CommandResult result, OrganizationUser? orgUser, User? user)>();
+        var requests = CreateRequests(organizationId, deletingUserId, orgUserIds, orgUsers, users, managementStatuses);
+        var validationResults = await _deleteManagedOrganizationUserAccountValidator.ValidateAsync(requests);
 
+        await CancelPremiumsAsync(validationResults.ValidResults);
+        await HandleUserDeletionsAsync(validationResults.ValidResults);
+        await LogDeletedOrganizationUsersAsync(validationResults.ValidResults);
+
+        return validationResults;
+    }
+
+    private List<DeleteUserValidationRequest> CreateRequests(
+        Guid organizationId,
+        Guid? deletingUserId,
+        IEnumerable<Guid> orgUserIds,
+        ICollection<OrganizationUser> orgUsers,
+        IEnumerable<User> users,
+        IDictionary<Guid, bool> managementStatuses)
+    {
+        var requests = new List<DeleteUserValidationRequest>();
         foreach (var orgUserId in orgUserIds)
         {
-            var orgUser = orgUsers.FirstOrDefault(ou => ou.Id == orgUserId);
-            if (orgUser == null || orgUser.OrganizationId != organizationId)
+            var orgUser = orgUsers.FirstOrDefault(orgUser => orgUser.Id == orgUserId);
+            var user = users.FirstOrDefault(user => user.Id == orgUser?.UserId);
+            managementStatuses.TryGetValue(orgUserId, out var isManaged);
+
+            requests.Add(new DeleteUserValidationRequest
             {
-                userDeletionRequests.Add((orgUserId, new BadRequestFailure("Member not found."), null, null));
-                continue;
-            }
-
-            var user = users.FirstOrDefault(u => u.Id == orgUser.UserId);
-
-            if (user == null)
-            {
-                userDeletionRequests.Add((orgUserId, new BadRequestFailure("Member not found."), orgUser, null));
-                continue;
-            }
-
-            var result = await ValidateAsync(organizationId, orgUser, user, deletingUserId, managementStatus);
-            if (result is not Success)
-            {
-                userDeletionRequests.Add((orgUserId, result, orgUser, user));
-                continue;
-            }
-
-            await CancelPremiumAsync(user);
-
-            userDeletionRequests.Add((orgUserId, new Success(), orgUser, user));
+                User = user,
+                OrganizationUser = orgUser,
+                IsManaged = isManaged,
+                OrganizationId = organizationId,
+                DeletingUserId = deletingUserId,
+            });
         }
 
-        await HandleUserDeletionsAsync(userDeletionRequests);
-
-        await LogDeletedOrganizationUsersAsync(userDeletionRequests);
-
-        return userDeletionRequests
-            .Select(request => (request.OrganizationUserId, request.result))
-            .ToList();
+        return requests;
     }
 
     private async Task<IEnumerable<User>> GetUsersAsync(ICollection<OrganizationUser> orgUsers)
@@ -120,112 +125,12 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         return await _userRepository.GetManyAsync(userIds);
     }
 
-    private async Task<CommandResult> ValidateAsync(Guid organizationId, OrganizationUser orgUser, User user, Guid? deletingUserId, IDictionary<Guid, bool> managementStatus)
-    {
-        var validators = new[]
-        {
-            () => EnsureUserStatusIsNotInvited(orgUser),
-            () => PreventSelfDeletion(orgUser, deletingUserId),
-            () => EnsureUserIsManagedByOrganization(orgUser, managementStatus),
-        };
-        var result = CommandResultValidator.ExecuteValidators(validators);
-
-        if (result is not Success)
-        {
-            return result;
-        }
-
-        var asyncValidators = new[]
-        {
-            async () => await EnsureOnlyOwnersCanDeleteOwnersAsync(organizationId, orgUser, deletingUserId),
-            async () => await EnsureUserIsNotSoleOrganizationOwnerAsync(user),
-            async () => await EnsureUserIsNotSoleProviderOwnerAsync(user)
-        };
-        var asyncResult = await CommandResultValidator.ExecuteValidatorAsync(asyncValidators);
-
-        if (asyncResult is not Success)
-        {
-            return asyncResult;
-        }
-
-        return new Success();
-    }
-    private static CommandResult EnsureUserStatusIsNotInvited(OrganizationUser orgUser)
-    {
-        if (!orgUser.UserId.HasValue || orgUser.Status == OrganizationUserStatusType.Invited)
-        {
-            return new BadRequestFailure("You cannot delete a member with Invited status.");
-        }
-
-        return new Success();
-    }
-    private static CommandResult PreventSelfDeletion(OrganizationUser orgUser, Guid? deletingUserId)
-    {
-        if (!orgUser.UserId.HasValue || !deletingUserId.HasValue)
-        {
-            return new Success();
-        }
-        if (orgUser.UserId.Value == deletingUserId.Value)
-        {
-            return new BadRequestFailure("You cannot delete yourself.");
-        }
-
-        return new Success();
-    }
-
-    private async Task<CommandResult> EnsureOnlyOwnersCanDeleteOwnersAsync(Guid organizationId, OrganizationUser orgUser, Guid? deletingUserId)
-    {
-        if (orgUser.Type != OrganizationUserType.Owner)
-        {
-            return new Success();
-        }
-
-        if (deletingUserId.HasValue && !await _currentContext.OrganizationOwner(organizationId))
-        {
-            return new BadRequestFailure("Only owners can delete other owners.");
-        }
-
-        return new Success();
-    }
-
-    private static CommandResult EnsureUserIsManagedByOrganization(OrganizationUser orgUser, IDictionary<Guid, bool> managementStatus)
-    {
-        if (!managementStatus.TryGetValue(orgUser.Id, out var isManaged) || !isManaged)
-        {
-            return new BadRequestFailure("Member is not managed by the organization.");
-        }
-        return new Success();
-    }
-
-    private async Task<CommandResult> EnsureUserIsNotSoleOrganizationOwnerAsync(User user)
-    {
-        var onlyOwnerCount = await _organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
-        if (onlyOwnerCount > 0)
-        {
-            return new BadRequestFailure("Cannot delete this user because it is the sole owner of at least one organization. Please delete these organizations or upgrade another user.");
-        }
-        return new Success();
-    }
-
-    private async Task<CommandResult> EnsureUserIsNotSoleProviderOwnerAsync(User user)
-    {
-        var onlyOwnerProviderCount = await _providerUserRepository.GetCountByOnlyOwnerAsync(user.Id);
-        if (onlyOwnerProviderCount > 0)
-        {
-            return new BadRequestFailure("Cannot delete this user because it is the sole owner of at least one provider. Please delete these providers or upgrade another user.");
-        }
-        return new Success();
-    }
-
-    private async Task LogDeletedOrganizationUsersAsync(
-        List<(Guid OrganizationUserId, CommandResult result, OrganizationUser? orgUser, User? user)> userDeletionRequests)
+    private async Task LogDeletedOrganizationUsersAsync(List<Valid<DeleteUserValidationRequest>> requests)
     {
         var eventDate = DateTime.UtcNow;
 
-        var events = userDeletionRequests
-            .Where(request =>
-                request.result is Success)
-            .Select(request => (request.orgUser!, (EventType)EventType.OrganizationUser_Deleted, (DateTime?)eventDate))
+        var events = requests
+            .Select(request => (request.Value.OrganizationUser!, (EventType)EventType.OrganizationUser_Deleted, (DateTime?)eventDate))
             .ToList();
 
         if (events.Any())
@@ -234,16 +139,15 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         }
     }
 
-    private async Task HandleUserDeletionsAsync(List<(Guid OrganizationUserId, CommandResult result, OrganizationUser? orgUser, User? user)> userDeletionRequests)
-    {
-        var usersToDelete = userDeletionRequests
-            .Where(request =>
-                request.result is Success)
-            .Select(request => request.user!);
 
-        if (usersToDelete.Any())
+    private async Task HandleUserDeletionsAsync(List<Valid<DeleteUserValidationRequest>> requests)
+    {
+        var users = requests
+            .Select(request => request.Value.User!);
+
+        if (users.Any())
         {
-            await DeleteManyAsync(usersToDelete);
+            await DeleteManyAsync(users);
         }
     }
 
@@ -259,16 +163,23 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
 
     }
 
-    private async Task CancelPremiumAsync(User user)
+    private async Task CancelPremiumsAsync(List<Valid<DeleteUserValidationRequest>> requests)
     {
-        if (string.IsNullOrWhiteSpace(user.GatewaySubscriptionId))
+        var users = requests
+            .Select(request => request.Value.User!);
+
+        foreach (var user in users)
         {
-            return;
+            try
+            {
+                await _userService.CancelPremiumAsync(user);
+            }
+            catch (GatewayException)
+            {
+
+            }
         }
-        try
-        {
-            await _userService.CancelPremiumAsync(user);
-        }
-        catch (GatewayException) { }
     }
+
 }
+

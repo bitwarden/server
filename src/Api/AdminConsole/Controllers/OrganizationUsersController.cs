@@ -594,7 +594,7 @@ public class OrganizationUsersController : Controller
 
         var deletionResult = await _deleteManagedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
 
-        return deletionResult.result.MapToActionResult();
+        return deletionResult.MapToActionResult();
     }
 
     [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]
