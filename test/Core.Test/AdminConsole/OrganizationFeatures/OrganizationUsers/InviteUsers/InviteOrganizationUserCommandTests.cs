@@ -72,8 +72,8 @@ public class InviteOrganizationUserCommandTests
             .Returns([user.Email]);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
-            .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
-            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)));
+            .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
+            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)));
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -134,8 +134,8 @@ public class InviteOrganizationUserCommandTests
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
-            .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
-            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)));
+            .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
+            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)));
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -198,9 +198,9 @@ public class InviteOrganizationUserCommandTests
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
-            .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
-            .Returns(new Invalid<InviteUserOrganizationValidationRequest>(
-                new Error<InviteUserOrganizationValidationRequest>(errorMessage, validationRequest)));
+            .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
+            .Returns(new Invalid<InviteOrganizationUsersValidationRequest>(
+                new Error<InviteOrganizationUsersValidationRequest>(errorMessage, validationRequest)));
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -268,8 +268,8 @@ public class InviteOrganizationUserCommandTests
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
-            .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
-            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
+            .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
+            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
                 .WithPasswordManagerUpdate(new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1))));
 
         // Act
@@ -338,8 +338,8 @@ public class InviteOrganizationUserCommandTests
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
-            .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
-            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
+            .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
+            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
                 .WithPasswordManagerUpdate(passwordManagerUpdate)));
 
         // Act
@@ -414,8 +414,8 @@ public class InviteOrganizationUserCommandTests
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
-            .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
-            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
+            .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
+            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
                 .WithSecretsManagerUpdate(secretsManagerSubscriptionUpdate)));
 
         // Act
@@ -486,8 +486,8 @@ public class InviteOrganizationUserCommandTests
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
-            .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
-            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
+            .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
+            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
                 .WithPasswordManagerUpdate(passwordManagerSubscriptionUpdate)
                 .WithSecretsManagerUpdate(secretsManagerSubscriptionUpdate)));
 
@@ -581,8 +581,8 @@ public class InviteOrganizationUserCommandTests
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
-            .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
-            .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
+            .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
+            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
                 .WithPasswordManagerUpdate(passwordManagerSubscriptionUpdate)
                 .WithSecretsManagerUpdate(secretsManagerSubscriptionUpdate)));
 

@@ -4,13 +4,13 @@ using Bit.Core.Models.Business;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 
-public class InviteUserOrganizationValidationRequest
+public class InviteOrganizationUsersValidationRequest
 {
-    public InviteUserOrganizationValidationRequest()
+    public InviteOrganizationUsersValidationRequest()
     {
     }
 
-    public InviteUserOrganizationValidationRequest(InviteUserOrganizationValidationRequest request)
+    public InviteOrganizationUsersValidationRequest(InviteOrganizationUsersValidationRequest request)
     {
         Invites = request.Invites;
         InviteOrganization = request.InviteOrganization;
@@ -20,7 +20,7 @@ public class InviteUserOrganizationValidationRequest
         OccupiedSmSeats = request.OccupiedSmSeats;
     }
 
-    public InviteUserOrganizationValidationRequest(InviteUserOrganizationValidationRequest request,
+    public InviteOrganizationUsersValidationRequest(InviteOrganizationUsersValidationRequest request,
         PasswordManagerSubscriptionUpdate subscriptionUpdate,
         SecretsManagerSubscriptionUpdate smSubscriptionUpdate)
         : this(request)

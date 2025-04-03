@@ -77,13 +77,13 @@ public class PasswordManagerSubscriptionUpdate
             inviteOrganization: inviteOrganization)
     { }
 
-    public PasswordManagerSubscriptionUpdate(InviteUserOrganizationValidationRequest validationRequest) :
+    public PasswordManagerSubscriptionUpdate(InviteOrganizationUsersValidationRequest usersValidationRequest) :
         this(
-            organizationSeats: validationRequest.InviteOrganization.Seats,
-            organizationAutoScaleSeatLimit: validationRequest.InviteOrganization.MaxAutoScaleSeats,
-            currentSeats: validationRequest.OccupiedPmSeats,
-            newUsersToAdd: validationRequest.Invites.Length,
-            plan: validationRequest.InviteOrganization.Plan.PasswordManager,
-            inviteOrganization: validationRequest.InviteOrganization)
+            organizationSeats: usersValidationRequest.InviteOrganization.Seats,
+            organizationAutoScaleSeatLimit: usersValidationRequest.InviteOrganization.MaxAutoScaleSeats,
+            currentSeats: usersValidationRequest.OccupiedPmSeats,
+            newUsersToAdd: usersValidationRequest.Invites.Length,
+            plan: usersValidationRequest.InviteOrganization.Plan.PasswordManager,
+            inviteOrganization: usersValidationRequest.InviteOrganization)
     { }
 }

@@ -8,7 +8,7 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.Invi
 
 public static class InviteUserOrganizationValidationRequestHelpers
 {
-    public static InviteUserOrganizationValidationRequest GetInviteValidationRequestMock(InviteOrganizationUsersRequest request,
+    public static InviteOrganizationUsersValidationRequest GetInviteValidationRequestMock(InviteOrganizationUsersRequest request,
         InviteOrganization inviteOrganization, Organization organization) =>
         new()
         {
@@ -23,7 +23,7 @@ public static class InviteUserOrganizationValidationRequestHelpers
                 .AdjustSeats(request.Invites.Count(x => x.AccessSecretsManager))
         };
 
-    public static InviteUserOrganizationValidationRequest WithPasswordManagerUpdate(this InviteUserOrganizationValidationRequest request, PasswordManagerSubscriptionUpdate passwordManagerSubscriptionUpdate) =>
+    public static InviteOrganizationUsersValidationRequest WithPasswordManagerUpdate(this InviteOrganizationUsersValidationRequest request, PasswordManagerSubscriptionUpdate passwordManagerSubscriptionUpdate) =>
         new()
         {
             Invites = request.Invites,
@@ -36,7 +36,7 @@ public static class InviteUserOrganizationValidationRequestHelpers
             SecretsManagerSubscriptionUpdate = request.SecretsManagerSubscriptionUpdate
         };
 
-    public static InviteUserOrganizationValidationRequest WithSecretsManagerUpdate(this InviteUserOrganizationValidationRequest request, SecretsManagerSubscriptionUpdate secretsManagerSubscriptionUpdate) =>
+    public static InviteOrganizationUsersValidationRequest WithSecretsManagerUpdate(this InviteOrganizationUsersValidationRequest request, SecretsManagerSubscriptionUpdate secretsManagerSubscriptionUpdate) =>
         new()
         {
             Invites = request.Invites,

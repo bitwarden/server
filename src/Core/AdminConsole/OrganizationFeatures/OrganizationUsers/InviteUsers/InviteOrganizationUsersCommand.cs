@@ -87,7 +87,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 new InviteOrganizationUsersResponse(request.InviteOrganization.OrganizationId)));
         }
 
-        var validationResult = await inviteUsersValidator.ValidateAsync(new InviteUserOrganizationValidationRequest
+        var validationResult = await inviteUsersValidator.ValidateAsync(new InviteOrganizationUsersValidationRequest
         {
             Invites = invitesToSend.ToArray(),
             InviteOrganization = request.InviteOrganization,
@@ -97,12 +97,12 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             OccupiedSmSeats = await organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId)
         });
 
-        if (validationResult is Invalid<InviteUserOrganizationValidationRequest> invalid)
+        if (validationResult is Invalid<InviteOrganizationUsersValidationRequest> invalid)
         {
             return invalid.MapToFailure(r => new InviteOrganizationUsersResponse(r));
         }
 
-        var validatedRequest = validationResult as Valid<InviteUserOrganizationValidationRequest>;
+        var validatedRequest = validationResult as Valid<InviteOrganizationUsersValidationRequest>;
 
         var organizationUserToInviteEntities = invitesToSend
             .Select(x => x.MapToDataModel(request.PerformedAt, validatedRequest!.Value.InviteOrganization))
@@ -135,8 +135,9 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
             await RevertPasswordManagerChangesAsync(validatedRequest, organization);
 
-            return new Failure<InviteOrganizationUsersResponse>(new FailedToInviteUsersError(
-                new InviteOrganizationUsersResponse(validatedRequest.Value)));
+            return new Failure<InviteOrganizationUsersResponse>(
+                new FailedToInviteUsersError(
+                    new InviteOrganizationUsersResponse(validatedRequest.Value)));
         }
 
         return new Success<InviteOrganizationUsersResponse>(
@@ -156,7 +157,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             .ToArray();
     }
 
-    private async Task RevertPasswordManagerChangesAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult, Organization organization)
+    private async Task RevertPasswordManagerChangesAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
         if (validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd > 0)
         {
@@ -173,7 +174,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         }
     }
 
-    private async Task RevertSecretsManagerChangesAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult, Organization organization, int? initialSmSeats)
+    private async Task RevertSecretsManagerChangesAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization, int? initialSmSeats)
     {
         if (validatedResult.Value.SecretsManagerSubscriptionUpdate?.SmSeatsChanged is true)
         {
@@ -189,7 +190,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         }
     }
 
-    private async Task PublishReferenceEventAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult,
+    private async Task PublishReferenceEventAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult,
         Organization organization) =>
         await referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.InvitedUsers, organization, currentContext)
@@ -203,12 +204,12 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 users.Select(x => x.OrganizationUser),
                 organization));
 
-    private async Task SendAdditionalEmailsAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult, Organization organization)
+    private async Task SendAdditionalEmailsAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
         await SendPasswordManagerMaxSeatLimitEmailsAsync(validatedResult, organization);
     }
 
-    private async Task SendPasswordManagerMaxSeatLimitEmailsAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult, Organization organization)
+    private async Task SendPasswordManagerMaxSeatLimitEmailsAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
         if (!validatedResult.Value.PasswordManagerSubscriptionUpdate.MaxSeatsReached)
         {
@@ -246,7 +247,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             .Select(u => u.Email).Distinct();
     }
 
-    private async Task AdjustSecretsManagerSeatsAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult)
+    private async Task AdjustSecretsManagerSeatsAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult)
     {
         if (validatedResult.Value.SecretsManagerSubscriptionUpdate?.SmSeatsChanged is true)
         {
@@ -255,7 +256,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     }
 
-    private async Task AdjustPasswordManagerSeatsAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult, Organization organization)
+    private async Task AdjustPasswordManagerSeatsAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
         if (validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd <= 0)
         {

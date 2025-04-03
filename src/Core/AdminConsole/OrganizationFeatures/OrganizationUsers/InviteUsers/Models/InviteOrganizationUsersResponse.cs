@@ -7,10 +7,10 @@ public class InviteOrganizationUsersResponse(Guid organizationId)
     public IEnumerable<OrganizationUser> InvitedUsers { get; } = [];
     public Guid OrganizationId { get; } = organizationId;
 
-    public InviteOrganizationUsersResponse(InviteUserOrganizationValidationRequest validationRequest)
-        : this(validationRequest.InviteOrganization.OrganizationId)
+    public InviteOrganizationUsersResponse(InviteOrganizationUsersValidationRequest usersValidationRequest)
+        : this(usersValidationRequest.InviteOrganization.OrganizationId)
     {
-        InvitedUsers = validationRequest.Invites.Select(x => new OrganizationUser { Email = x.Email });
+        InvitedUsers = usersValidationRequest.Invites.Select(x => new OrganizationUser { Email = x.Email });
     }
 
     public InviteOrganizationUsersResponse(IEnumerable<OrganizationUser> invitedOrganizationUsers, Guid organizationId)
