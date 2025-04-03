@@ -21,7 +21,7 @@ public static class CustomerExtensions
     /// <param name="customer"></param>
     /// <returns></returns>
     public static bool HasTaxLocationVerified(this Customer customer) =>
-        customer?.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
+        customer?.Tax?.AutomaticTax != StripeConstants.AutomaticTaxStatus.UnrecognizedLocation;
 
     public static decimal GetBillingBalance(this Customer customer)
     {

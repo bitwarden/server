@@ -432,10 +432,11 @@ public class RestoreOrganizationUserCommandTests
         Organization organization,
         Organization otherOrganization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
-        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.Owner)] OrganizationUser organizationUser,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUserOwnerFromDifferentOrg,
         SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
+        organization.PlanType = PlanType.Free;
         organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
 
         orgUserOwnerFromDifferentOrg.UserId = organizationUser.UserId;
@@ -465,6 +466,107 @@ public class RestoreOrganizationUserCommandTests
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
         Assert.Equal("User is an owner/admin of another free organization. Please have them upgrade to a paid plan to restore their account.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WhenUserOwningAnotherFreeOrganizationAndIsOnlyAUserInCurrentOrg_ThenUserShouldBeRestored(
+        Organization organization,
+        Organization otherOrganization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUserOwnerFromDifferentOrg,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.PlanType = PlanType.Free;
+        organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
+
+        orgUserOwnerFromDifferentOrg.UserId = organizationUser.UserId;
+        otherOrganization.Id = orgUserOwnerFromDifferentOrg.OrganizationId;
+        otherOrganization.PlanType = PlanType.Free;
+
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        organizationUserRepository
+            .GetManyByUserAsync(organizationUser.UserId.Value)
+            .Returns([orgUserOwnerFromDifferentOrg]);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetManyByUserIdAsync(organizationUser.UserId.Value)
+            .Returns([otherOrganization]);
+
+        sutProvider.GetDependency<IPolicyService>()
+            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication,
+                Arg.Any<OrganizationUserStatusType>())
+            .Returns([
+                new OrganizationUserPolicyDetails
+                {
+                    OrganizationId = organizationUser.OrganizationId,
+                    PolicyType = PolicyType.TwoFactorAuthentication
+                }
+            ]);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.UserId.Value)))
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (organizationUser.UserId.Value, true) });
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id);
+
+        await organizationUserRepository
+            .Received(1)
+            .RestoreAsync(organizationUser.Id,
+                Arg.Is<OrganizationUserStatusType>(x => x != OrganizationUserStatusType.Revoked));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WhenUserOwningAnotherFreeOrganizationAndCurrentOrgIsNotFree_ThenUserShouldBeRestored(
+        Organization organization,
+        Organization otherOrganization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.Owner)] OrganizationUser organizationUser,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUserOwnerFromDifferentOrg,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually2023;
+
+        organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
+
+        orgUserOwnerFromDifferentOrg.UserId = organizationUser.UserId;
+        otherOrganization.Id = orgUserOwnerFromDifferentOrg.OrganizationId;
+        otherOrganization.PlanType = PlanType.Free;
+
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        organizationUserRepository
+            .GetManyByUserAsync(organizationUser.UserId.Value)
+            .Returns([orgUserOwnerFromDifferentOrg]);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetManyByUserIdAsync(organizationUser.UserId.Value)
+            .Returns([otherOrganization]);
+
+        sutProvider.GetDependency<IPolicyService>()
+            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication,
+                Arg.Any<OrganizationUserStatusType>())
+            .Returns([
+                new OrganizationUserPolicyDetails
+                {
+                    OrganizationId = organizationUser.OrganizationId,
+                    PolicyType = PolicyType.TwoFactorAuthentication
+                }
+            ]);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.UserId.Value)))
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (organizationUser.UserId.Value, true) });
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id);
+
+        await organizationUserRepository
+            .Received(1)
+            .RestoreAsync(organizationUser.Id,
+                Arg.Is<OrganizationUserStatusType>(x => x != OrganizationUserStatusType.Revoked));
     }
 
     [Theory, BitAutoData]
@@ -573,7 +675,7 @@ public class RestoreOrganizationUserCommandTests
     [Theory, BitAutoData]
     public async Task RestoreUsers_UserOwnsAnotherFreeOrganization_BlocksOwnerUserFromBeingRestored(Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
-        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser1,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.Owner)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser2,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser3,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUserFromOtherOrg,
@@ -598,7 +700,7 @@ public class RestoreOrganizationUserCommandTests
 
         organizationUserRepository
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id) && ids.Contains(orgUser3.Id)))
-            .Returns(new[] { orgUser1, orgUser2, orgUser3 });
+            .Returns([orgUser1, orgUser2, orgUser3]);
 
         userRepository.GetByIdAsync(orgUser2.UserId!.Value).Returns(new User { Email = "test@example.com" });
 
@@ -633,6 +735,110 @@ public class RestoreOrganizationUserCommandTests
         await organizationUserRepository
             .DidNotReceive()
             .RestoreAsync(orgUser1.Id, OrganizationUserStatusType.Confirmed);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUsers_UserOwnsAnotherFreeOrganizationButReactivatingOrgIsPaid_RestoresUser(Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.Owner)] OrganizationUser orgUser1,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUserFromOtherOrg,
+        Organization otherOrganization,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organization.PlanType = PlanType.EnterpriseAnnually2023;
+
+        RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var policyService = sutProvider.GetDependency<IPolicyService>();
+        var userService = Substitute.For<IUserService>();
+
+        orgUser1.OrganizationId = organization.Id;
+
+        orgUserFromOtherOrg.UserId = orgUser1.UserId;
+
+        otherOrganization.Id = orgUserFromOtherOrg.OrganizationId;
+        otherOrganization.PlanType = PlanType.Free;
+
+        organizationUserRepository
+            .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id)))
+            .Returns([orgUser1]);
+
+        organizationUserRepository
+            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([orgUserFromOtherOrg]);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetManyByIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUserFromOtherOrg.OrganizationId)))
+            .Returns([otherOrganization]);
+
+
+        // Setup 2FA policy
+        policyService.GetPoliciesApplicableToUserAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
+            .Returns([new OrganizationUserPolicyDetails { OrganizationId = organization.Id, PolicyType = PolicyType.TwoFactorAuthentication }]);
+
+        // User1 has 2FA, User2 doesn't
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.UserId!.Value)))
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>
+            {
+                (orgUser1.UserId!.Value, true)
+            });
+
+        // Act
+        var result = await sutProvider.Sut.RestoreUsersAsync(organization.Id, [orgUser1.Id], owner.Id, userService);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(string.Empty, result[0].Item2);
+        await organizationUserRepository
+            .Received(1)
+            .RestoreAsync(orgUser1.Id, Arg.Is<OrganizationUserStatusType>(x => x != OrganizationUserStatusType.Revoked));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RestoreUsers_UserOwnsAnotherOrganizationButIsOnlyUserOfCurrentOrganization_UserShouldBeRestored(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.User)] OrganizationUser orgUser1,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUserFromOtherOrg,
+        Organization otherOrganization,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organization.PlanType = PlanType.Free;
+
+        RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var userService = Substitute.For<IUserService>();
+
+        orgUser1.OrganizationId = organization.Id;
+
+        orgUserFromOtherOrg.UserId = orgUser1.UserId;
+
+        otherOrganization.Id = orgUserFromOtherOrg.OrganizationId;
+        otherOrganization.PlanType = PlanType.Free;
+
+        organizationUserRepository
+            .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id)))
+            .Returns([orgUser1]);
+
+        organizationUserRepository
+            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([orgUserFromOtherOrg]);
+
+        sutProvider.GetDependency<IPolicyService>().GetPoliciesApplicableToUserAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
+            .Returns([new OrganizationUserPolicyDetails { OrganizationId = organization.Id, PolicyType = PolicyType.TwoFactorAuthentication }]);
+
+        // Act
+        var result = await sutProvider.Sut.RestoreUsersAsync(organization.Id, [orgUser1.Id], owner.Id, userService);
+
+        Assert.Single(result);
+        Assert.Equal(string.Empty, result[0].Item2);
+        await organizationUserRepository
+            .Received(1)
+            .RestoreAsync(orgUser1.Id, Arg.Is<OrganizationUserStatusType>(x => x != OrganizationUserStatusType.Revoked));
     }
 
     private static void RestoreUser_Setup(

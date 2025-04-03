@@ -85,7 +85,10 @@ public class RestoreOrganizationUserCommand(
                 .twoFactorIsEnabled;
         }
 
-        await CheckUserForOtherFreeOrganizationOwnershipAsync(organizationUser);
+        if (organization.PlanType == PlanType.Free)
+        {
+            await CheckUserForOtherFreeOrganizationOwnershipAsync(organizationUser);
+        }
 
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userTwoFactorIsEnabled);
 
@@ -98,7 +101,7 @@ public class RestoreOrganizationUserCommand(
 
     private async Task CheckUserForOtherFreeOrganizationOwnershipAsync(OrganizationUser organizationUser)
     {
-        var relatedOrgUsersFromOtherOrgs = await organizationUserRepository.GetManyByUserAsync(organizationUser.UserId.Value);
+        var relatedOrgUsersFromOtherOrgs = await organizationUserRepository.GetManyByUserAsync(organizationUser.UserId!.Value);
         var otherOrgs = await organizationRepository.GetManyByUserIdAsync(organizationUser.UserId.Value);
 
         var orgOrgUserDict = relatedOrgUsersFromOtherOrgs
@@ -108,13 +111,16 @@ public class RestoreOrganizationUserCommand(
         CheckForOtherFreeOrganizationOwnership(organizationUser, orgOrgUserDict);
     }
 
-    private async Task<Dictionary<OrganizationUser, Organization>> GetRelatedOrganizationUsersAndOrganizations(
-        IEnumerable<OrganizationUser> organizationUsers)
+    private async Task<Dictionary<OrganizationUser, Organization>> GetRelatedOrganizationUsersAndOrganizationsAsync(
+        List<OrganizationUser> organizationUsers)
     {
-        var allUserIds = organizationUsers.Select(x => x.UserId.Value);
+        var allUserIds = organizationUsers
+            .Where(x => x.UserId.HasValue)
+            .Select(x => x.UserId.Value);
 
         var otherOrganizationUsers = (await organizationUserRepository.GetManyByManyUsersAsync(allUserIds))
-            .Where(x => organizationUsers.Any(y => y.Id == x.Id) == false);
+            .Where(x => organizationUsers.Any(y => y.Id == x.Id) == false)
+            .ToArray();
 
         var otherOrgs = await organizationRepository.GetManyByIdsAsync(otherOrganizationUsers
                 .Select(x => x.OrganizationId)
@@ -128,7 +134,9 @@ public class RestoreOrganizationUserCommand(
         Dictionary<OrganizationUser, Organization> otherOrgUsersAndOrgs)
     {
         var ownerOrAdminList = new[] { OrganizationUserType.Owner, OrganizationUserType.Admin };
-        if (otherOrgUsersAndOrgs.Any(x =>
+
+        if (ownerOrAdminList.Any(x => organizationUser.Type == x) &&
+            otherOrgUsersAndOrgs.Any(x =>
                 x.Key.UserId == organizationUser.UserId &&
                 ownerOrAdminList.Any(userType => userType == x.Key.Type) &&
                 x.Key.Status == OrganizationUserStatusType.Confirmed &&
@@ -168,7 +176,7 @@ public class RestoreOrganizationUserCommand(
         var organizationUsersTwoFactorEnabled = await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(
             filteredUsers.Where(ou => ou.UserId.HasValue).Select(ou => ou.UserId.Value));
 
-        var orgUsersAndOrgs = await GetRelatedOrganizationUsersAndOrganizations(filteredUsers);
+        var orgUsersAndOrgs = await GetRelatedOrganizationUsersAndOrganizationsAsync(filteredUsers);
 
         var result = new List<Tuple<OrganizationUser, string>>();
 
@@ -199,7 +207,10 @@ public class RestoreOrganizationUserCommand(
 
                 await CheckPoliciesBeforeRestoreAsync(organizationUser, twoFactorIsEnabled);
 
-                CheckForOtherFreeOrganizationOwnership(organizationUser, orgUsersAndOrgs);
+                if (organization.PlanType == PlanType.Free)
+                {
+                    CheckForOtherFreeOrganizationOwnership(organizationUser, orgUsersAndOrgs);
+                }
 
                 var status = OrganizationService.GetPriorActiveOrganizationUserStatusType(organizationUser);
 
