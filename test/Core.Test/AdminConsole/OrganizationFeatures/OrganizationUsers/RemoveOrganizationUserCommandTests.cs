@@ -172,6 +172,28 @@ public class RemoveOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task RemoveUser_WhenCustomUserRemovesAdmin_ThrowsException(
+    [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser organizationUser,
+    [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser deletingUser,
+    SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organizationUser.OrganizationId = deletingUser.OrganizationId;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationCustom(organizationUser.OrganizationId)
+            .Returns(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUser.UserId));
+        Assert.Contains(RemoveOrganizationUserCommand.RemoveAdminByCustomUserErrorMessage, exception.Message);
+    }
+
+    [Theory, BitAutoData]
     public async Task RemoveUser_WithDeletingUserId_RemovingLastOwner_ThrowsException(
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationUser,
         OrganizationUser deletingUser,

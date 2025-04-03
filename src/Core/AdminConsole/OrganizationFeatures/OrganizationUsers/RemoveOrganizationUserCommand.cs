@@ -25,7 +25,8 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     public const string UserNotFoundErrorMessage = "User not found.";
     public const string UsersInvalidErrorMessage = "Users invalid.";
     public const string RemoveYourselfErrorMessage = "You cannot remove yourself.";
-    public const string RemoveOwnerByNonOwnerErrorMessage = "Only owners can delete other owners.";
+    public const string RemoveOwnerByNonOwnerErrorMessage = "Only owners can remove other owners.";
+    public const string RemoveAdminByCustomUserErrorMessage = "Custom users can not remove admins.";
     public const string RemoveLastConfirmedOwnerErrorMessage = "Organization must have at least one confirmed owner.";
     public const string RemoveClaimedAccountErrorMessage = "Cannot remove member accounts claimed by the organization. To offboard a member, revoke or delete the account.";
 
@@ -151,6 +152,11 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             {
                 throw new BadRequestException(RemoveLastConfirmedOwnerErrorMessage);
             }
+        }
+
+        if (orgUser.Type == OrganizationUserType.Admin && await _currentContext.OrganizationCustom(orgUser.OrganizationId))
+        {
+            throw new BadRequestException(RemoveAdminByCustomUserErrorMessage);
         }
 
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && deletingUserId.HasValue && eventSystemUser == null)

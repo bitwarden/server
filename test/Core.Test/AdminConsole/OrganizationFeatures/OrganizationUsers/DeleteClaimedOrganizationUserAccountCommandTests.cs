@@ -133,6 +133,38 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task DeleteUserAsync_WhenCustomUserDeletesAdmin_ThrowsException(
+        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Admin)] OrganizationUser organizationUser,
+        Guid deletingUserId)
+    {
+        // Arrange
+        organizationUser.UserId = user.Id;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id)
+            .Returns(user);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationCustom(organizationUser.OrganizationId)
+            .Returns(true);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUserId));
+
+        // Assert
+        Assert.Equal("Custom users can not delete admins.", exception.Message);
+        await sutProvider.GetDependency<IUserService>().Received(0).DeleteAsync(Arg.Any<User>());
+        await sutProvider.GetDependency<IEventService>().Received(0)
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<DateTime?>());
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task DeleteUserAsync_DeletingOwnerWhenNotOwner_ThrowsException(
         SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser organizationUser,

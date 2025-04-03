@@ -794,6 +794,29 @@ public class HandlebarsMailService : IMailService
 
             writer.WriteSafeString($"{outputMessage}");
         });
+
+        // Returns the singular or plural form of a word based on the provided numeric value.
+        Handlebars.RegisterHelper("plurality", (writer, context, parameters) =>
+        {
+            if (parameters.Length != 3)
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+
+            var numeric = parameters[0];
+            var singularText = parameters[1].ToString();
+            var pluralText = parameters[2].ToString();
+
+            if (numeric is int number)
+            {
+                writer.WriteSafeString(number == 1 ? singularText : pluralText);
+            }
+            else
+            {
+                writer.WriteSafeString(string.Empty);
+            }
+        });
     }
 
     public async Task SendEmergencyAccessInviteEmailAsync(EmergencyAccess emergencyAccess, string name, string token)

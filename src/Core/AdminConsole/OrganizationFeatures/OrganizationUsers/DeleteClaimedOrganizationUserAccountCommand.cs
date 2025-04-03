@@ -154,6 +154,11 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
             }
         }
 
+        if (orgUser.Type == OrganizationUserType.Admin && await _currentContext.OrganizationCustom(organizationId))
+        {
+            throw new BadRequestException("Custom users can not delete admins.");
+        }
+
         if (!claimedStatus.TryGetValue(orgUser.Id, out var isClaimed) || !isClaimed)
         {
             throw new BadRequestException("Member is not claimed by the organization.");
