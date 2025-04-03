@@ -113,6 +113,7 @@ public static class FeatureFlagKeys
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
+    public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
     public const string DuoRedirect = "duo-redirect";
     public const string EmailVerification = "email-verification";
     public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
@@ -148,6 +149,8 @@ public static class FeatureFlagKeys
     public const string P15179_AddExistingOrgsFromProviderPortal = "pm-15179-add-existing-orgs-from-provider-portal";
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
     public const string PM18794_ProviderPaymentMethod = "pm-18794-provider-payment-method";
+    public const string PM19147_AutomaticTaxImprovements = "pm-19147-automatic-tax-improvements";
+    public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -169,6 +172,7 @@ public static class FeatureFlagKeys
     public const string SingleTapPasskeyAuthentication = "single-tap-passkey-authentication";
     public const string EnablePMAuthenticatorSync = "enable-pm-bwa-sync";
     public const string PM3503_MobileAnonAddySelfHostAlias = "anon-addy-self-host-alias";
+
     public const string PM3553_MobileSimpleLoginSelfHostAlias = "simple-login-self-host-alias";
 
     /* Platform Team */
