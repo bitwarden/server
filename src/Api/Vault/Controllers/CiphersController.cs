@@ -1019,7 +1019,7 @@ public class CiphersController : Controller
             throw new BadRequestException(ModelState);
         }
 
-        // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
+        // If Account Deprovisioning is enabled, we need to check if the user is claimed by any organization.
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
             && await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
         {

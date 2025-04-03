@@ -104,13 +104,13 @@ public class SyncController : Controller
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var organizationManagingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(user.Id);
-        var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
+        var organizationClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(user.Id);
+        var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
 
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
 
         var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
-            organizationIdsManagingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
+            organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;
     }

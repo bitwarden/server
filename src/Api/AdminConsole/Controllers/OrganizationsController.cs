@@ -140,10 +140,10 @@ public class OrganizationsController : Controller
         var organizations = await _organizationUserRepository.GetManyDetailsByUserAsync(userId,
             OrganizationUserStatusType.Confirmed);
 
-        var organizationManagingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(userId);
-        var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
+        var organizationsClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(userId);
+        var organizationIdsClaimingActiveUser = organizationsClaimingActiveUser.Select(o => o.Id);
 
-        var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsManagingActiveUser));
+        var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingActiveUser));
         return new ListResponseModel<ProfileOrganizationResponseModel>(responses);
     }
 
@@ -279,7 +279,7 @@ public class OrganizationsController : Controller
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
             && (await _userService.GetOrganizationsClaimingUserAsync(user.Id)).Any(x => x.Id == id))
         {
-            throw new BadRequestException("Managed user account cannot leave managing organization. Contact your organization administrator for additional details.");
+            throw new BadRequestException("Claimed user account cannot leave claiming organization. Contact your organization administrator for additional details.");
         }
 
         await _removeOrganizationUserCommand.UserLeaveAsync(id, user.Id);

@@ -437,11 +437,11 @@ public class AccountsController : Controller
 
         var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
-        var organizationIdsManagingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
+        var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
         var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, twoFactorEnabled,
-            hasPremiumFromOrg, organizationIdsManagingActiveUser);
+            hasPremiumFromOrg, organizationIdsClaimingActiveUser);
         return response;
     }
 
@@ -471,9 +471,9 @@ public class AccountsController : Controller
 
         var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
-        var organizationIdsManagingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
+        var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
-        var response = new ProfileResponseModel(user, null, null, null, twoFactorEnabled, hasPremiumFromOrg, organizationIdsManagingActiveUser);
+        var response = new ProfileResponseModel(user, null, null, null, twoFactorEnabled, hasPremiumFromOrg, organizationIdsClaimingActiveUser);
         return response;
     }
 
@@ -490,9 +490,9 @@ public class AccountsController : Controller
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var organizationIdsManagingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
+        var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
-        var response = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsManagingActiveUser);
+        var response = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);
         return response;
     }
 
@@ -560,7 +560,7 @@ public class AccountsController : Controller
         }
         else
         {
-            // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
+            // If Account Deprovisioning is enabled, we need to check if the user is claimed by any organization.
             if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
                 && await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
             {

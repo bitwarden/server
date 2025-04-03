@@ -409,9 +409,9 @@ public class OrganizationsController(
             organizationId,
             OrganizationUserStatusType.Confirmed);
 
-        var organizationIdsManagingActiveUser = (await userService.GetOrganizationsClaimingUserAsync(userId))
+        var organizationIdsClaimingActiveUser = (await userService.GetOrganizationsClaimingUserAsync(userId))
             .Select(o => o.Id);
 
-        return new ProfileOrganizationResponseModel(organizationUserDetails, organizationIdsManagingActiveUser);
+        return new ProfileOrganizationResponseModel(organizationUserDetails, organizationIdsClaimingActiveUser);
     }
 }

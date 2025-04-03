@@ -175,13 +175,13 @@ public class OrganizationUsersController : Controller
             }
         );
         var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
-        var organizationUsersManagementStatus = await GetClaimedByOrganizationStatusAsync(orgId, organizationUsers.Select(o => o.Id));
+        var organizationUsersClaimedStatus = await GetClaimedByOrganizationStatusAsync(orgId, organizationUsers.Select(o => o.Id));
         var responses = organizationUsers
             .Select(o =>
             {
                 var userTwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == o.Id).twoFactorIsEnabled;
-                var managedByOrganization = organizationUsersManagementStatus[o.Id];
-                var orgUser = new OrganizationUserUserDetailsResponseModel(o, userTwoFactorEnabled, managedByOrganization);
+                var claimedByOrganization = organizationUsersClaimedStatus[o.Id];
+                var orgUser = new OrganizationUserUserDetailsResponseModel(o, userTwoFactorEnabled, claimedByOrganization);
 
                 return orgUser;
             });
@@ -724,7 +724,7 @@ public class OrganizationUsersController : Controller
             return userIds.ToDictionary(kvp => kvp, kvp => false);
         }
 
-        var usersOrganizationManagementStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(orgId, userIds);
-        return usersOrganizationManagementStatus;
+        var usersOrganizationClaimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(orgId, userIds);
+        return usersOrganizationClaimedStatus;
     }
 }
