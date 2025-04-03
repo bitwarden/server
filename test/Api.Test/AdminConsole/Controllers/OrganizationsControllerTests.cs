@@ -171,7 +171,7 @@ public class OrganizationsControllerTests : IDisposable
         _userService.GetOrganizationsClaimingUserAsync(user.Id).Returns(new List<Organization> { { foundOrg } });
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Leave(orgId));
 
-        Assert.Contains("Managed user account cannot leave managing organization. Contact your organization administrator for additional details.",
+        Assert.Contains("Claimed user account cannot leave claiming organization. Contact your organization administrator for additional details.",
             exception.Message);
 
         await _removeOrganizationUserCommand.DidNotReceiveWithAnyArgs().RemoveUserAsync(default, default);
