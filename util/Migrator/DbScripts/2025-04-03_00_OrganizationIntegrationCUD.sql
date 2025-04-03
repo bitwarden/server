@@ -1,12 +1,6 @@
 -- Configure FK to cascade on delete
-IF EXISTS(SELECT *
-FROM information_schema.table_constraints
-WHERE table_name='OrganizationIntegrationConfiguration'
-    AND constraint_name='FK_OrganizationIntegrationConfiguration_OrganizationIntegration')
-BEGIN
-    ALTER TABLE [dbo].[OrganizationIntegrationConfiguration] DROP FK_OrganizationIntegrationConfiguration_OrganizationIntegration;
-    ALTER TABLE [dbo].[OrganizationIntegrationConfiguration] ADD CONSTRAINT [FK_OrganizationIntegrationConfiguration_OrganizationIntegration] FOREIGN KEY ([OrganizationIntegrationId]) REFERENCES [dbo].[OrganizationIntegration] ([Id]) ON DELETE CASCADE;
-END
+ALTER TABLE [dbo].[OrganizationIntegrationConfiguration] DROP FK_OrganizationIntegrationConfiguration_OrganizationIntegration;
+ALTER TABLE [dbo].[OrganizationIntegrationConfiguration] ADD CONSTRAINT [FK_OrganizationIntegrationConfiguration_OrganizationIntegration] FOREIGN KEY ([OrganizationIntegrationId]) REFERENCES [dbo].[OrganizationIntegration] ([Id]) ON DELETE CASCADE;
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegration_Create]
@@ -152,3 +146,34 @@ BEGIN
     WHERE
         [Id] = @Id
 END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegration_ReadById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[OrganizationIntegration]
+    WHERE
+        [Id] = @Id
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegrationConfiguration_ReadById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[OrganizationIntegrationConfiguration]
+    WHERE
+        [Id] = @Id
+END
+GO
