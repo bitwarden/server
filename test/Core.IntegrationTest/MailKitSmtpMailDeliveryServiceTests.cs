@@ -140,7 +140,7 @@ public class MailKitSmtpMailDeliveryServiceTests
 
         var tcs = new TaskCompletionSource();
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        cts.Token.Register(tcs.SetCanceled);
+        cts.Token.Register(() => _ = tcs.TrySetCanceled());
 
         behavior.MessageReceivedEventHandler += (sender, args) =>
         {
@@ -192,7 +192,7 @@ public class MailKitSmtpMailDeliveryServiceTests
 
         var tcs = new TaskCompletionSource();
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        cts.Token.Register(tcs.SetCanceled);
+        cts.Token.Register(() => _ = tcs.TrySetCanceled());
 
         behavior.MessageReceivedEventHandler += (sender, args) =>
         {
@@ -239,7 +239,7 @@ public class MailKitSmtpMailDeliveryServiceTests
 
         var tcs = new TaskCompletionSource();
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        cts.Token.Register(tcs.SetCanceled);
+        cts.Token.Register(() => _ = tcs.TrySetCanceled());
 
         behavior.MessageReceivedEventHandler += (sender, args) =>
         {
@@ -320,7 +320,7 @@ public class MailKitSmtpMailDeliveryServiceTests
 
         var tcs = new TaskCompletionSource();
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        cts.Token.Register(tcs.SetCanceled);
+        cts.Token.Register(() => _ = tcs.TrySetCanceled());
 
         behavior.MessageReceivedEventHandler += (sender, args) =>
         {
@@ -386,7 +386,7 @@ public class MailKitSmtpMailDeliveryServiceTests
 
         var tcs = new TaskCompletionSource();
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        cts.Token.Register(tcs.SetCanceled);
+        cts.Token.Register(() => _ = tcs.TrySetCanceled());
 
         behavior.MessageReceivedEventHandler += (sender, args) =>
         {
