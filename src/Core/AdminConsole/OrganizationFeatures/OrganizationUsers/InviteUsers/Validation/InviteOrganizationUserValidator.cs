@@ -18,11 +18,13 @@ public class InviteOrganizationUsersValidator(
     IUpdateSecretsManagerSubscriptionCommand secretsManagerSubscriptionCommand,
     IPaymentService paymentService) : IInviteUsersValidator
 {
-    public async Task<ValidationResult<InviteOrganizationUsersValidationRequest>> ValidateAsync(InviteOrganizationUsersValidationRequest request)
+    public async Task<ValidationResult<InviteOrganizationUsersValidationRequest>> ValidateAsync(
+        InviteOrganizationUsersValidationRequest request)
     {
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(request);
 
-        var passwordManagerValidationResult = await inviteUsersPasswordManagerValidator.ValidateAsync(subscriptionUpdate);
+        var passwordManagerValidationResult =
+            await inviteUsersPasswordManagerValidator.ValidateAsync(subscriptionUpdate);
 
         if (passwordManagerValidationResult is Invalid<PasswordManagerSubscriptionUpdate> invalidSubscriptionUpdate)
         {
@@ -53,18 +55,25 @@ public class InviteOrganizationUsersValidator(
     }
 
     private async Task<ValidationResult<InviteOrganizationUsersValidationRequest>> ValidateSecretsManagerSubscriptionUpdateAsync(
-        InviteOrganizationUsersValidationRequest request,
-        PasswordManagerSubscriptionUpdate subscriptionUpdate)
+            InviteOrganizationUsersValidationRequest request,
+            PasswordManagerSubscriptionUpdate subscriptionUpdate)
     {
         try
         {
-            var smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(
-                    organization: await organizationRepository.GetByIdAsync(request.InviteOrganization.OrganizationId),
-                    plan: request.InviteOrganization.Plan,
-                    autoscaling: true)
-                .AdjustSeats(GetSecretManagerSeatAdjustment(request));
 
-            await secretsManagerSubscriptionCommand.ValidateUpdateAsync(smSubscriptionUpdate);
+            var smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(
+                organization: await organizationRepository.GetByIdAsync(request.InviteOrganization.OrganizationId),
+                plan: request.InviteOrganization.Plan,
+                autoscaling: true);
+
+            var seatsToAdd = GetSecretManagerSeatAdjustment(request);
+
+            if (seatsToAdd > 0)
+            {
+                smSubscriptionUpdate.AdjustSeats(seatsToAdd);
+
+                await secretsManagerSubscriptionCommand.ValidateUpdateAsync(smSubscriptionUpdate);
+            }
 
             return new Valid<InviteOrganizationUsersValidationRequest>(new InviteOrganizationUsersValidationRequest(
                 request,
@@ -73,13 +82,27 @@ public class InviteOrganizationUsersValidator(
         }
         catch (Exception ex)
         {
-            return new Invalid<InviteOrganizationUsersValidationRequest>(new Error<InviteOrganizationUsersValidationRequest>(ex.Message, request));
+            return new Invalid<InviteOrganizationUsersValidationRequest>(
+                new Error<InviteOrganizationUsersValidationRequest>(ex.Message, request));
         }
-
-        int GetSecretManagerSeatAdjustment(InviteOrganizationUsersValidationRequest request) =>
-            Math.Abs(
-                request.InviteOrganization.SmSeats -
-                request.OccupiedSmSeats -
-                request.Invites.Count(x => x.AccessSecretsManager) ?? 0);
     }
+
+    /// <summary>
+    /// This calculates the number of SM seats to add to the organization seat total.
+    ///
+    /// If they have a current seat limit (it can be null), we want to figure out how many are available (seats -
+    /// occupied seats). Then, we'll subtract the available seats from the number of users we're trying to invite.
+    ///
+    /// If it's negative, we have available seats and do not need to increase, so we go with 0.
+    /// </summary>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    private static int GetSecretManagerSeatAdjustment(InviteOrganizationUsersValidationRequest request) =>
+        request.InviteOrganization.SmSeats.HasValue
+            ? Math.Max(
+                request.Invites.Count(x => x.AccessSecretsManager) -
+                (request.InviteOrganization.SmSeats.Value -
+                 request.OccupiedSmSeats),
+                0)
+            : 0;
 }
