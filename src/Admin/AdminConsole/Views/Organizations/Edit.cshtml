@@ -1,10 +1,13 @@
 @using Bit.Admin.Enums;
 @using Bit.Admin.Models
+@using Bit.Core
 @using Bit.Core.AdminConsole.Enums.Provider
 @using Bit.Core.Billing.Enums
 @using Bit.Core.Billing.Extensions
+@using Bit.Core.Services
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
+@inject IFeatureService FeatureService
 @model OrganizationEditModel
 @{
     ViewData["Title"] = (Model.Provider != null ? "Client " : string.Empty) + "Organization: " + Model.Name;
@@ -17,6 +20,7 @@
     var canUnlinkFromProvider = AccessControlService.UserHasPermission(Permission.Provider_Edit);
 
     var canConvertToBusinessUnit =
+        FeatureService.IsEnabled(FeatureFlagKeys.PM18770_EnableOrganizationBusinessUnitConversion) &&
         AccessControlService.UserHasPermission(Permission.Org_Billing_ConvertToBusinessUnit) &&
         Model.Organization.PlanType.GetProductTier() == ProductTierType.Enterprise &&
         !string.IsNullOrEmpty(Model.Organization.GatewaySubscriptionId) &&
