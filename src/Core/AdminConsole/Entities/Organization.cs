@@ -313,5 +313,6 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
+        UseRiskInsights = license.UseRiskInsights;
     }
 }
