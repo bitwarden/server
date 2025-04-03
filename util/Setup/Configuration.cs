@@ -94,6 +94,11 @@ public class Configuration
     [Description("Enable Key Connector (https://bitwarden.com/help/article/deploy-key-connector)")]
     public bool EnableKeyConnector { get; set; } = false;
 
+    [Description("Enable integrated MSSQL Database\n" +
+        "true: use default mssql configuration and start a mssql container\n" +
+        "false: use external self managned MSSQL Database")]
+    public bool MssqlEnabled { get; set; } = true;
+
     [Description("Enable SCIM")]
     public bool EnableScim { get; set; } = false;
 
