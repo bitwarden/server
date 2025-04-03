@@ -33,7 +33,7 @@ using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Services;
 using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Tools.ReportFeatures;
-
+using Bit.Core.Auth.Models.Api.Request;
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -170,6 +170,9 @@ public class Startup
         services
             .AddScoped<IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>,
                 WebAuthnLoginKeyRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>>,
+                DeviceRotationValidator>();
 
         // Services
         services.AddBaseServices(globalSettings);
