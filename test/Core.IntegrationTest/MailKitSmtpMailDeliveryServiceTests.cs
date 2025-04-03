@@ -184,7 +184,7 @@ public class MailKitSmtpMailDeliveryServiceTests
         );
     }
 
-    [Fact]
+    [Fact(Skip = "Requires permission to privileged port")]
     public async Task SendEmailAsync_Works_NoSsl()
     {
         // If the SMTP server isn't set up with any SSL/TLS and we dont' expect
