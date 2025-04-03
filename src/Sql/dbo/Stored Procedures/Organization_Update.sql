@@ -119,6 +119,7 @@ BEGIN
         [LimitCollectionDeletion] = @LimitCollectionDeletion,
         [AllowAdminAccessToAllCollectionItems] = @AllowAdminAccessToAllCollectionItems,
         [UseRiskInsights] = @UseRiskInsights,
+        [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [LimitItemDeletion] = @LimitItemDeletion
     WHERE
         [Id] = @Id
