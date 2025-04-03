@@ -1059,12 +1059,10 @@ public class CiphersController : Controller
         var shareCiphers = new List<(Cipher, DateTime?)>();
         foreach (var cipher in model.Ciphers)
         {
-            if (!ciphersDict.ContainsKey(cipher.Id.Value))
+            if (!ciphersDict.TryGetValue(cipher.Id.Value, out var existingCipher))
             {
                 throw new BadRequestException("Trying to move ciphers that you do not own.");
             }
-
-            var existingCipher = ciphersDict[cipher.Id.Value];
 
             ValidateClientVersionForFido2CredentialSupport(existingCipher);
 
@@ -1155,14 +1153,14 @@ public class CiphersController : Controller
         var cipher = await GetByIdAsync(id, userId);
         var attachments = cipher?.GetAttachments();
 
-        if (attachments == null || !attachments.ContainsKey(attachmentId) || attachments[attachmentId].Validated)
+        if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachment) || attachment.Validated)
         {
             throw new NotFoundException();
         }
 
         return new AttachmentUploadDataResponseModel
         {
-            Url = await _attachmentStorageService.GetAttachmentUploadUrlAsync(cipher, attachments[attachmentId]),
+            Url = await _attachmentStorageService.GetAttachmentUploadUrlAsync(cipher, attachment),
             FileUploadType = _attachmentStorageService.FileUploadType,
         };
     }
@@ -1181,11 +1179,10 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
         var attachments = cipher?.GetAttachments();
-        if (attachments == null || !attachments.ContainsKey(attachmentId))
+        if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachmentData))
         {
             throw new NotFoundException();
         }
-        var attachmentData = attachments[attachmentId];
 
         await Request.GetFileAsync(async (stream) =>
         {
@@ -1322,7 +1319,7 @@ public class CiphersController : Controller
                         var cipher = await _cipherRepository.GetByIdAsync(new Guid(cipherId));
                         var attachments = cipher?.GetAttachments() ?? new Dictionary<string, CipherAttachment.MetaData>();
 
-                        if (cipher == null || !attachments.ContainsKey(attachmentId) || attachments[attachmentId].Validated)
+                        if (cipher == null || !attachments.TryGetValue(attachmentId, out var attachment) || attachment.Validated)
                         {
                             if (_attachmentStorageService is AzureSendFileStorageService azureFileStorageService)
                             {
@@ -1332,7 +1329,7 @@ public class CiphersController : Controller
                             return;
                         }
 
-                        await _cipherService.ValidateCipherAttachmentFile(cipher, attachments[attachmentId]);
+                        await _cipherService.ValidateCipherAttachmentFile(cipher, attachment);
                     }
                     catch (Exception e)
                     {
