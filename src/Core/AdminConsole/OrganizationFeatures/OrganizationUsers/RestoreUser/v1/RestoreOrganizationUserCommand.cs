@@ -16,7 +16,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUs
 public class RestoreOrganizationUserCommand(
     ICurrentContext currentContext,
     IEventService eventService,
-    IFeatureService featureService,
     IPushNotificationService pushNotificationService,
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationRepository organizationRepository,
