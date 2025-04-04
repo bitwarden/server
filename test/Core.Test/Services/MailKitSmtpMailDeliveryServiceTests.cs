@@ -1,6 +1,8 @@
-﻿using Bit.Core.Services;
+﻿using Bit.Core.Platform.X509ChainCustomization;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
 
@@ -23,7 +25,8 @@ public class MailKitSmtpMailDeliveryServiceTests
 
         _sut = new MailKitSmtpMailDeliveryService(
             _globalSettings,
-            _logger
+            _logger,
+            Options.Create(new X509ChainOptions())
         );
     }
 
