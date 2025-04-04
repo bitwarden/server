@@ -1251,7 +1251,7 @@ public class StripePaymentService : IPaymentService
         {
             var invoice = await _stripeAdapter.InvoiceCreatePreviewAsync(options);
 
-            var effectiveTaxRate = invoice.Tax != null && invoice.TotalExcludingTax != null
+            var effectiveTaxRate = invoice.Tax != null && invoice.TotalExcludingTax != null && invoice.TotalExcludingTax.Value != 0
                 ? invoice.Tax.Value.ToMajor() / invoice.TotalExcludingTax.Value.ToMajor()
                 : 0M;
 
@@ -1409,7 +1409,7 @@ public class StripePaymentService : IPaymentService
         {
             var invoice = await _stripeAdapter.InvoiceCreatePreviewAsync(options);
 
-            var effectiveTaxRate = invoice.Tax != null && invoice.TotalExcludingTax != null
+            var effectiveTaxRate = invoice.Tax != null && invoice.TotalExcludingTax != null && invoice.TotalExcludingTax.Value != 0
                 ? invoice.Tax.Value.ToMajor() / invoice.TotalExcludingTax.Value.ToMajor()
                 : 0M;
 
