@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Platform.X509ChainCustomization;
 using Bit.Core.Settings;
@@ -24,7 +24,7 @@ public class X509ChainCustomizationServiceCollectionExtensionsTests
     public async Task OptionsPatternReturnsCachedValue()
     {
         var tempDir = Directory.CreateTempSubdirectory("certs");
-        
+
         var tempCert = Path.Combine(tempDir.FullName, "test.crt");
         await File.WriteAllBytesAsync(tempCert, CreateSelfSignedCert("localhost").Export(X509ContentType.Cert));
 
@@ -36,7 +36,7 @@ public class X509ChainCustomizationServiceCollectionExtensionsTests
 
             config["X509ChainOptions:AdditionalCustomTrustCertificatesDirectory"] = tempDir.FullName;
         });
-        
+
         // Create options once
         var firstOptions = services.GetRequiredService<IOptions<X509ChainOptions>>().Value;
 
@@ -61,7 +61,7 @@ public class X509ChainCustomizationServiceCollectionExtensionsTests
     public async Task DoesNotProvideCustomCallbackOnCloud()
     {
         var tempDir = Directory.CreateTempSubdirectory("certs");
-        
+
         var tempCert = Path.Combine(tempDir.FullName, "test.crt");
         await File.WriteAllBytesAsync(tempCert, CreateSelfSignedCert("localhost").Export(X509ContentType.Cert));
 
@@ -81,7 +81,7 @@ public class X509ChainCustomizationServiceCollectionExtensionsTests
     public async Task ManuallyAddingOptionsTakesPrecedence()
     {
         var tempDir = Directory.CreateTempSubdirectory("certs");
-        
+
         var tempCert = Path.Combine(tempDir.FullName, "test.crt");
         await File.WriteAllBytesAsync(tempCert, CreateSelfSignedCert("localhost").Export(X509ContentType.Cert));
 
