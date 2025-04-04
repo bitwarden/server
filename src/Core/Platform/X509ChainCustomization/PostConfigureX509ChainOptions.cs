@@ -1,10 +1,10 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Security.Cryptography.X509Certificates;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Hosting;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Core.Platform.X509ChainCustomization;
 

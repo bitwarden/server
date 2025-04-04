@@ -1,6 +1,6 @@
-using Bit.Core.Platform.X509ChainCustomization;
-using Microsoft.Extensions.Options;
+﻿using Bit.Core.Platform.X509ChainCustomization;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.DependencyInjection;
 

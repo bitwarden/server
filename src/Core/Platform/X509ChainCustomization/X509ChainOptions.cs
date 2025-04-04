@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Security;
@@ -45,7 +45,7 @@ public sealed class X509ChainOptions
     /// </returns>
     [MemberNotNullWhen(true, nameof(AdditionalCustomTrustCertificates))]
     public bool TryGetCustomRemoteCertificateValidationCallback(
-        [MaybeNullWhen(false)]out Func<X509Certificate2?, X509Chain?, SslPolicyErrors, bool> callback)
+        [MaybeNullWhen(false)] out Func<X509Certificate2?, X509Chain?, SslPolicyErrors, bool> callback)
     {
         callback = null;
         if (AdditionalCustomTrustCertificates == null || AdditionalCustomTrustCertificates.Count == 0)
