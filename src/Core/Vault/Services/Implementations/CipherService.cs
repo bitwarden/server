@@ -1014,47 +1014,25 @@ public class CipherService : ICipherService
 
     private string SerializeCipherData(CipherData data)
     {
-        if (data is CipherLoginData cipherLoginData)
+        return data switch
         {
-            return JsonSerializer.Serialize<CipherLoginData>(cipherLoginData);
-        }
-        if (data is CipherIdentityData cipherIdentityData)
-        {
-            return JsonSerializer.Serialize<CipherIdentityData>(cipherIdentityData);
-        }
-        if (data is CipherCardData cipherCardData)
-        {
-            return JsonSerializer.Serialize<CipherCardData>(cipherCardData);
-        }
-        if (data is CipherSecureNoteData cipherSecureNoteData)
-        {
-            return JsonSerializer.Serialize<CipherSecureNoteData>(cipherSecureNoteData);
-        }
-
-        return null;
+            CipherLoginData loginData => JsonSerializer.Serialize(loginData),
+            CipherIdentityData identityData => JsonSerializer.Serialize(identityData),
+            CipherCardData cardData => JsonSerializer.Serialize(cardData),
+            CipherSecureNoteData noteData => JsonSerializer.Serialize(noteData),
+            _ => throw new ArgumentException("Unsupported cipher data type.", nameof(data))
+        };
     }
 
     private CipherData DeserializeCipherData(Cipher cipher)
     {
-        if (cipher.Type == CipherType.Login)
+        return cipher.Type switch
         {
-            return JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
-        }
-
-        if (cipher.Type == CipherType.Identity)
-        {
-            return JsonSerializer.Deserialize<CipherIdentityData>(cipher.Data);
-        }
-
-        if (cipher.Type == CipherType.Card)
-        {
-            return JsonSerializer.Deserialize<CipherCardData>(cipher.Data);
-        }
-
-        if (cipher.Type == CipherType.SecureNote)
-        {
-            return JsonSerializer.Deserialize<CipherSecureNoteData>(cipher.Data);
-        }
-        return null;
+            CipherType.Login => JsonSerializer.Deserialize<CipherLoginData>(cipher.Data),
+            CipherType.Identity => JsonSerializer.Deserialize<CipherIdentityData>(cipher.Data),
+            CipherType.Card => JsonSerializer.Deserialize<CipherCardData>(cipher.Data),
+            CipherType.SecureNote => JsonSerializer.Deserialize<CipherSecureNoteData>(cipher.Data),
+            _ => throw new ArgumentException("Unsupported cipher type.", nameof(cipher))
+        };
     }
 }
