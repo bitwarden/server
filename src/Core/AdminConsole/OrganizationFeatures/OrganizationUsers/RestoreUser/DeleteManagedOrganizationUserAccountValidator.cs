@@ -17,6 +17,7 @@ public class DeleteManagedOrganizationUserAccountValidator(
     {
         var invalidResults = new List<Invalid<DeleteUserValidationRequest>>();
         var validResults = new List<Valid<DeleteUserValidationRequest>>();
+
         foreach (var request in requests)
         {
             // The order of the validators matters.
@@ -87,7 +88,7 @@ public class DeleteManagedOrganizationUserAccountValidator(
     {
         if (request.User == null || request.OrganizationUser == null)
         {
-            return new Invalid<DeleteUserValidationRequest>(new BadRequestError<DeleteUserValidationRequest>("You cannot delete a member with Invited status.", request));
+            return new Invalid<DeleteUserValidationRequest>(new RecordNotFoundError<DeleteUserValidationRequest>("Member not found.", request));
         }
 
         return new Valid<DeleteUserValidationRequest>();
