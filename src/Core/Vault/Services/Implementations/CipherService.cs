@@ -986,31 +986,75 @@ public class CipherService : ICipherService
         // Check if user is a "hidden password" user
         if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !(permission.ViewPassword && permission.Edit))
         {
-            var existingCipherData = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data);
-            var newCipherData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
+            var existingCipherData = DeserializeCipherData(existingCipher);
+            var newCipherData = DeserializeCipherData(cipher);
+
             // "hidden password" users may not add cipher key encryption
             if (existingCipher.Key == null && cipher.Key != null)
             {
                 throw new BadRequestException("You do not have permission to add cipher key encryption.");
             }
-            if (newCipherData?.Fields != null)
-            {
-                // Keep only non-hidden fields from the new cipher
-                var nonHiddenFields = newCipherData.Fields.Where(f => f.Type != FieldType.Hidden).ToList();
-                // Get hidden fields from the existing cipher
-                var hiddenFields = existingCipherData.Fields?.Where(f => f.Type == FieldType.Hidden) ?? [];
-                // Replace the hidden fields in new cipher data with the existing ones
-                newCipherData.Fields = nonHiddenFields.Concat(hiddenFields);
-                cipher.Data = JsonSerializer.Serialize(newCipherData);
-            }
-            if (cipher.Type == CipherType.Login)
+            // Keep only non-hidden fileds from the new cipher
+            var nonHiddenFields = newCipherData.Fields?.Where(f => f.Type != FieldType.Hidden) ?? [];
+            // Get hidden fields from the existing cipher
+            var hiddenFields = existingCipherData.Fields?.Where(f => f.Type == FieldType.Hidden) ?? [];
+            // Replace the hidden fields in new cipher data with the existing ones
+            newCipherData.Fields = nonHiddenFields.Concat(hiddenFields);
+            cipher.Data = SerializeCipherData(newCipherData);
+            if (existingCipherData is CipherLoginData existingLoginData && newCipherData is CipherLoginData newLoginCipherData)
             {
                 // "hidden password" users may not change passwords, TOTP codes, or passkeys, so we need to set them back to the original values
-                newCipherData.Fido2Credentials = existingCipherData.Fido2Credentials;
-                newCipherData.Totp = existingCipherData.Totp;
-                newCipherData.Password = existingCipherData.Password;
-                cipher.Data = JsonSerializer.Serialize(newCipherData);
+                newLoginCipherData.Fido2Credentials = existingLoginData.Fido2Credentials;
+                newLoginCipherData.Totp = existingLoginData.Totp;
+                newLoginCipherData.Password = existingLoginData.Password;
+                cipher.Data = SerializeCipherData(newLoginCipherData);
             }
         }
+    }
+
+    private string SerializeCipherData(CipherData data)
+    {
+        if (data is CipherLoginData cipherLoginData)
+        {
+            return JsonSerializer.Serialize<CipherLoginData>(cipherLoginData);
+        }
+        if (data is CipherIdentityData cipherIdentityData)
+        {
+            return JsonSerializer.Serialize<CipherIdentityData>(cipherIdentityData);
+        }
+        if (data is CipherCardData cipherCardData)
+        {
+            return JsonSerializer.Serialize<CipherCardData>(cipherCardData);
+        }
+        if (data is CipherSecureNoteData cipherSecureNoteData)
+        {
+            return JsonSerializer.Serialize<CipherSecureNoteData>(cipherSecureNoteData);
+        }
+
+        return null;
+    }
+
+    private CipherData DeserializeCipherData(Cipher cipher)
+    {
+        if (cipher.Type == CipherType.Login)
+        {
+            return JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
+        }
+
+        if (cipher.Type == CipherType.Identity)
+        {
+            return JsonSerializer.Deserialize<CipherIdentityData>(cipher.Data);
+        }
+
+        if (cipher.Type == CipherType.Card)
+        {
+            return JsonSerializer.Deserialize<CipherCardData>(cipher.Data);
+        }
+
+        if (cipher.Type == CipherType.SecureNote)
+        {
+            return JsonSerializer.Deserialize<CipherSecureNoteData>(cipher.Data);
+        }
+        return null;
     }
 }
