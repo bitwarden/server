@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using Bit.Commercial.Core.Billing.Models;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -21,7 +20,6 @@ using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using CsvHelper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -46,7 +44,6 @@ public class ProviderBillingService(
     [FromKeyedServices(AutomaticTaxFactory.BusinessUse)] IAutomaticTaxStrategy automaticTaxStrategy)
     : IProviderBillingService
 {
-    [RequireFeature(FeatureFlagKeys.P15179_AddExistingOrgsFromProviderPortal)]
     public async Task AddExistingOrganization(
         Provider provider,
         Organization organization,
@@ -312,7 +309,6 @@ public class ProviderBillingService(
         return memoryStream.ToArray();
     }
 
-    [RequireFeature(FeatureFlagKeys.P15179_AddExistingOrgsFromProviderPortal)]
     public async Task<IEnumerable<AddableOrganization>> GetAddableOrganizations(
         Provider provider,
         Guid userId)
