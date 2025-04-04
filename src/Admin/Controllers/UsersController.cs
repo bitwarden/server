@@ -184,7 +184,7 @@ public class UsersController : Controller
     private async Task<bool?> AccountDeprovisioningEnabled(Guid userId)
     {
         return _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            ? await _userService.IsManagedByAnyOrganizationAsync(userId)
+            ? await _userService.IsClaimedByAnyOrganizationAsync(userId)
             : null;
     }
 }
