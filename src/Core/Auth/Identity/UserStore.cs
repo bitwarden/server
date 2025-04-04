@@ -44,31 +44,30 @@ public class UserStore :
 
     public async Task<User> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default(CancellationToken))
     {
-        if (_currentContext?.User != null && _currentContext.User.Email == normalizedEmail)
+        var currentUser = await _currentContext.UserAsync.Value;
+        if (currentUser != null && currentUser.Email == normalizedEmail)
         {
-            return _currentContext.User;
+            return currentUser;
         }
 
-        _currentContext.User = await _userRepository.GetByEmailAsync(normalizedEmail);
-        return _currentContext.User;
+        return await _userRepository.GetByEmailAsync(normalizedEmail);
     }
 
     public async Task<User> FindByIdAsync(string userId, CancellationToken cancellationToken = default(CancellationToken))
     {
-        if (_currentContext?.User != null &&
-            string.Equals(_currentContext.User.Id.ToString(), userId, StringComparison.InvariantCultureIgnoreCase))
+        var currentUser = await _currentContext.UserAsync.Value;
+        if (currentUser != null &&
+            string.Equals(currentUser.Id.ToString(), userId, StringComparison.InvariantCultureIgnoreCase))
         {
-            return _currentContext.User;
+            return currentUser;
         }
 
-        Guid userIdGuid;
-        if (!Guid.TryParse(userId, out userIdGuid))
+        if (!Guid.TryParse(userId, out var userIdGuid))
         {
             return null;
         }
 
-        _currentContext.User = await _userRepository.GetByIdAsync(userIdGuid);
-        return _currentContext.User;
+        return await _userRepository.GetByIdAsync(userIdGuid);
     }
 
     public async Task<User> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken = default(CancellationToken))

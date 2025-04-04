@@ -173,10 +173,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<User> GetUserByIdAsync(string userId)
     {
-        if (_currentContext?.User != null &&
-            string.Equals(_currentContext.User.Id.ToString(), userId, StringComparison.InvariantCultureIgnoreCase))
+        var currentUser = await _currentContext.UserAsync.Value;
+        if (currentUser != null &&
+            string.Equals(currentUser.Id.ToString(), userId, StringComparison.InvariantCultureIgnoreCase))
         {
-            return _currentContext.User;
+            return currentUser;
         }
 
         if (!Guid.TryParse(userId, out var userIdGuid))
@@ -184,19 +185,18 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return null;
         }
 
-        _currentContext.User = await _userRepository.GetByIdAsync(userIdGuid);
-        return _currentContext.User;
+        return await _userRepository.GetByIdAsync(userIdGuid);
     }
 
     public async Task<User> GetUserByIdAsync(Guid userId)
     {
-        if (_currentContext?.User != null && _currentContext.User.Id == userId)
+        var currentUser = await _currentContext.UserAsync.Value;
+        if (currentUser != null && currentUser.Id == userId)
         {
-            return _currentContext.User;
+            return currentUser;
         }
 
-        _currentContext.User = await _userRepository.GetByIdAsync(userId);
-        return _currentContext.User;
+        return await _userRepository.GetByIdAsync(userId);
     }
 
     public async Task<User> GetUserByPrincipalAsync(ClaimsPrincipal principal)

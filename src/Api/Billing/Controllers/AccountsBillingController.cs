@@ -2,6 +2,7 @@
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.Services;
+using Bit.Core.Context;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -12,15 +13,15 @@ namespace Bit.Api.Billing.Controllers;
 [Route("accounts/billing")]
 [Authorize("Application")]
 public class AccountsBillingController(
+    ICurrentContext currentContext,
     IPaymentService paymentService,
-    IUserService userService,
     IPaymentHistoryService paymentHistoryService) : Controller
 {
     [HttpGet("history")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<BillingHistoryResponseModel> GetBillingHistoryAsync()
     {
-        var user = await userService.GetUserByPrincipalAsync(User);
+        var user = await currentContext.UserAsync.Value;
         if (user == null)
         {
             throw new UnauthorizedAccessException();
@@ -34,7 +35,7 @@ public class AccountsBillingController(
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<BillingPaymentResponseModel> GetPaymentMethodAsync()
     {
-        var user = await userService.GetUserByPrincipalAsync(User);
+        var user = await currentContext.UserAsync.Value;
         if (user == null)
         {
             throw new UnauthorizedAccessException();
@@ -47,7 +48,7 @@ public class AccountsBillingController(
     [HttpGet("invoices")]
     public async Task<IResult> GetInvoicesAsync([FromQuery] string? status = null, [FromQuery] string? startAfter = null)
     {
-        var user = await userService.GetUserByPrincipalAsync(User);
+        var user = await currentContext.UserAsync.Value;
         if (user == null)
         {
             throw new UnauthorizedAccessException();
@@ -65,7 +66,7 @@ public class AccountsBillingController(
     [HttpGet("transactions")]
     public async Task<IResult> GetTransactionsAsync([FromQuery] DateTime? startAfter = null)
     {
-        var user = await userService.GetUserByPrincipalAsync(User);
+        var user = await currentContext.UserAsync.Value;
         if (user == null)
         {
             throw new UnauthorizedAccessException();
@@ -82,7 +83,7 @@ public class AccountsBillingController(
     [HttpPost("preview-invoice")]
     public async Task<IResult> PreviewInvoiceAsync([FromBody] PreviewIndividualInvoiceRequestBody model)
     {
-        var user = await userService.GetUserByPrincipalAsync(User);
+        var user = await currentContext.UserAsync.Value;
         if (user == null)
         {
             throw new UnauthorizedAccessException();

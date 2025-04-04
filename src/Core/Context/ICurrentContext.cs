@@ -16,7 +16,7 @@ public interface ICurrentContext
 {
     HttpContext HttpContext { get; set; }
     Guid? UserId { get; set; }
-    User User { get; set; }
+    Lazy<Task<User>> UserAsync { get; }
     string DeviceIdentifier { get; set; }
     DeviceType? DeviceType { get; set; }
     string IpAddress { get; set; }
