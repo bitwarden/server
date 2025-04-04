@@ -5,6 +5,7 @@ using Bit.Core.Settings;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
@@ -30,10 +31,6 @@ public class X509ChainCustomizationServiceCollectionExtensionsTests
 
         var services = CreateServices((gs, environment, config) =>
         {
-            gs.SelfHosted = true;
-
-            environment.EnvironmentName = "Development";
-
             config["X509ChainOptions:AdditionalCustomTrustCertificatesDirectory"] = tempDir.FullName;
         });
 
@@ -69,8 +66,6 @@ public class X509ChainCustomizationServiceCollectionExtensionsTests
         {
             gs.SelfHosted = false;
 
-            environment.EnvironmentName = "Development";
-
             config["X509ChainOptions:AdditionalCustomTrustCertificatesDirectory"] = tempDir.FullName;
         });
 
@@ -85,12 +80,8 @@ public class X509ChainCustomizationServiceCollectionExtensionsTests
         var tempCert = Path.Combine(tempDir.FullName, "test.crt");
         await File.WriteAllBytesAsync(tempCert, CreateSelfSignedCert("localhost").Export(X509ContentType.Cert));
 
-        var options = CreateOptions((gs, environment, config) =>
+        var services = CreateServices((gs, environment, config) =>
         {
-            gs.SelfHosted = false;
-
-            environment.EnvironmentName = "Development";
-
             config["X509ChainOptions:AdditionalCustomTrustCertificatesDirectory"] = tempDir.FullName;
         }, services =>
         {
@@ -100,9 +91,95 @@ public class X509ChainCustomizationServiceCollectionExtensionsTests
             });
         });
 
+        var options = services.GetRequiredService<IOptions<X509ChainOptions>>().Value;
+
         Assert.True(options.TryGetCustomRemoteCertificateValidationCallback(out var callback));
         var cert = Assert.Single(options.AdditionalCustomTrustCertificates);
         Assert.Equal("CN=example.com", cert.Subject);
+
+        var fakeLogCollector = services.GetFakeLogCollector();
+
+        Assert.Contains(fakeLogCollector.GetSnapshot(),
+            r => r.Message == $"Additional custom trust certificates were added directly, skipping loading them from '{tempDir}'");
+    }
+
+    [Fact]
+    public void NullCustomDirectory_SkipsTryingToLoad()
+    {
+        var services = CreateServices((gs, environment, config) =>
+        {
+            config["X509ChainOptions:AdditionalCustomTrustCertificatesDirectory"] = null;
+        });
+
+        var options = services.GetRequiredService<IOptions<X509ChainOptions>>().Value;
+
+        Assert.False(options.TryGetCustomRemoteCertificateValidationCallback(out _));
+    }
+
+    [Theory]
+    [InlineData("Development", LogLevel.Debug)]
+    [InlineData("Production", LogLevel.Warning)]
+    public void CustomDirectoryDoesNotExist_Logs(string environment, LogLevel logLevel)
+    {
+        var fakeDir = "/fake/dir/that/does/not/exist";
+        var services = CreateServices((gs, hostEnvironment, config) =>
+        {
+            hostEnvironment.EnvironmentName = environment;
+
+            config["X509ChainOptions:AdditionalCustomTrustCertificatesDirectory"] = fakeDir;
+        });
+
+        var options = services.GetRequiredService<IOptions<X509ChainOptions>>().Value;
+
+        Assert.False(options.TryGetCustomRemoteCertificateValidationCallback(out _));
+
+        var fakeLogCollector = services.GetFakeLogCollector();
+
+        Assert.Contains(fakeLogCollector.GetSnapshot(),
+            r => r.Message == $"An additional custom trust certificate directory was given '{fakeDir}' but that directory does not exist."
+                && r.Level == logLevel
+        );
+    }
+
+    [Fact]
+    public async Task NamedOptions_NotConfiguredAsync()
+    {
+        // To help make sure this fails for the right reason we should add certs to the directory
+        var tempDir = Directory.CreateTempSubdirectory("certs");
+
+        var tempCert = Path.Combine(tempDir.FullName, "test.crt");
+        await File.WriteAllBytesAsync(tempCert, CreateSelfSignedCert("localhost").Export(X509ContentType.Cert));
+
+        var services = CreateServices((gs, environment, config) =>
+        {
+            config["X509ChainOptions:AdditionalCustomTrustCertificatesDirectory"] = tempDir.FullName;
+        });
+
+        var options = services.GetRequiredService<IOptionsMonitor<X509ChainOptions>>();
+
+        var namedOptions = options.Get("SomeName");
+
+        Assert.Null(namedOptions.AdditionalCustomTrustCertificates);
+    }
+
+    [Fact]
+    public void CustomLocation_NoCertificates_Logs()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("certs");
+        var services = CreateServices((gs, hostEnvironment, config) =>
+        {
+            config["X509ChainOptions:AdditionalCustomTrustCertificatesDirectory"] = tempDir.FullName;
+        });
+
+        var options = services.GetRequiredService<IOptions<X509ChainOptions>>().Value;
+
+        Assert.False(options.TryGetCustomRemoteCertificateValidationCallback(out _));
+
+        var fakeLogCollector = services.GetFakeLogCollector();
+
+        Assert.Contains(fakeLogCollector.GetSnapshot(),
+            r => r.Message == $"No additional custom trust certificates were found in '{tempDir.FullName}'"
+        );
     }
 
     private static X509ChainOptions CreateOptions(Action<GlobalSettings, IHostEnvironment, Dictionary<string, string>> configure, Action<IServiceCollection>? after = null)
@@ -113,13 +190,23 @@ public class X509ChainCustomizationServiceCollectionExtensionsTests
 
     private static IServiceProvider CreateServices(Action<GlobalSettings, IHostEnvironment, Dictionary<string, string>> configure, Action<IServiceCollection>? after = null)
     {
-        var globalSettings = new GlobalSettings();
+        var globalSettings = new GlobalSettings
+        {
+            // A solid default for these tests as these settings aren't allowed to work in cloud.
+            SelfHosted = true,
+        };
         var hostEnvironment = Substitute.For<IHostEnvironment>();
+        hostEnvironment.EnvironmentName = "Development";
         var config = new Dictionary<string, string>();
 
         configure(globalSettings, hostEnvironment, config);
 
         var services = new ServiceCollection();
+        services.AddLogging(logging =>
+        {
+            logging.SetMinimumLevel(LogLevel.Debug);
+            logging.AddFakeLogging();
+        });
         services.AddSingleton(globalSettings);
         services.AddSingleton(hostEnvironment);
         services.AddSingleton<IConfiguration>(
