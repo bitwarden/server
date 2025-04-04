@@ -7,7 +7,8 @@ using System.Security.Cryptography.X509Certificates;
 namespace Bit.Core.Platform.X509ChainCustomization;
 
 /// <summary>
-/// Allows for customization of 
+/// Allows for customization of the <see cref="X509ChainPolicy"/> and access to a custom server certificate validator
+/// if customization has been made.
 /// </summary>
 public sealed class X509ChainOptions
 {

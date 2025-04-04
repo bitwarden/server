@@ -28,6 +28,8 @@ internal sealed class PostConfigureX509ChainOptions : IPostConfigureOptions<X509
 
     public void PostConfigure(string? name, X509ChainOptions options)
     {
+        // We don't register or request a named instance of these options,
+        // so don't customize it.
         if (name != Options.DefaultName)
         {
             return;
