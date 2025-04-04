@@ -13,14 +13,14 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
 {
     private readonly GlobalSettings _globalSettings;
     private readonly ILogger<MailKitSmtpMailDeliveryService> _logger;
-    private readonly X509ChainOptions _x509CertificateCustomization;
+    private readonly X509ChainOptions _x509ChainOptions;
     private readonly string _replyDomain;
     private readonly string _replyEmail;
 
     public MailKitSmtpMailDeliveryService(
         GlobalSettings globalSettings,
         ILogger<MailKitSmtpMailDeliveryService> logger,
-        IOptions<X509ChainOptions> tlsOptions)
+        IOptions<X509ChainOptions> x509ChainOptions)
     {
         if (globalSettings.Mail?.Smtp?.Host == null)
         {
@@ -36,7 +36,7 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
 
         _globalSettings = globalSettings;
         _logger = logger;
-        _x509CertificateCustomization = tlsOptions.Value;
+        _x509ChainOptions = x509ChainOptions.Value;
     }
 
     public async Task SendEmailAsync(Models.Mail.MailMessage message)
@@ -81,7 +81,7 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
             {
                 client.ServerCertificateValidationCallback = (s, c, h, e) => true;
             }
-            else if (_x509CertificateCustomization.TryGetCustomRemoteCertificateValidationCallback(out var callback))
+            else if (_x509ChainOptions.TryGetCustomRemoteCertificateValidationCallback(out var callback))
             {
                 client.ServerCertificateValidationCallback = (sender, cert, chain, errors) =>
                 {

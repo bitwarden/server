@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Platform.TlsCustomization;
+namespace Bit.Core.Test.Platform.X509ChainCustomization;
 
 public class X509ChainCustomizationServiceCollectionExtensionsTests
 {

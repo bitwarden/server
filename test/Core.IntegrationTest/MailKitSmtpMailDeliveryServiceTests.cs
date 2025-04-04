@@ -1,9 +1,9 @@
 ﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Models.Mail;
+using Bit.Core.Platform.X509ChainCustomization;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Platform.TlsCustomization;
 using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -103,7 +103,7 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(new X509CertificateCustomizationOptions())
+            Options.Create(new X509ChainOptions())
         );
 
         await Assert.ThrowsAsync<SslHandshakeException>(
@@ -133,7 +133,7 @@ public class MailKitSmtpMailDeliveryServiceTests
             gs.Mail.Smtp.Ssl = true;
         });
 
-        var tlsOptions = new X509CertificateCustomizationOptions
+        var x509ChainOptions = new X509ChainOptions
         {
             AdditionalCustomTrustCertificates =
             [
@@ -144,7 +144,7 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(tlsOptions)
+            Options.Create(x509ChainOptions)
         );
 
         var tcs = new TaskCompletionSource();
@@ -188,7 +188,7 @@ public class MailKitSmtpMailDeliveryServiceTests
             gs.Mail.Smtp.Ssl = true;
         });
 
-        var tlsOptions = new X509CertificateCustomizationOptions
+        var x509ChainOptions = new X509ChainOptions
         {
             AdditionalCustomTrustCertificates =
             [
@@ -200,7 +200,7 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(tlsOptions)
+            Options.Create(x509ChainOptions)
         );
 
         var tcs = new TaskCompletionSource();
@@ -248,7 +248,7 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(new X509CertificateCustomizationOptions())
+            Options.Create(new X509ChainOptions())
         );
 
         var tcs = new TaskCompletionSource();
@@ -295,7 +295,7 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(new X509CertificateCustomizationOptions())
+            Options.Create(new X509ChainOptions())
         );
 
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -331,7 +331,7 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(new X509CertificateCustomizationOptions())
+            Options.Create(new X509ChainOptions())
         );
 
         var tcs = new TaskCompletionSource();
@@ -398,7 +398,7 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(new X509CertificateCustomizationOptions())
+            Options.Create(new X509ChainOptions())
         );
 
         var tcs = new TaskCompletionSource();

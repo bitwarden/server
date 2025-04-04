@@ -5,12 +5,12 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Extension methods for setting up the ability to provide customization to how TLS works in an <see cref="IServiceCollection"/>.
+/// Extension methods for setting up the ability to provide customization to how X509 chain validation works in an <see cref="IServiceCollection"/>.
 /// </summary>
 public static class X509ChainCustomizationServiceCollectionExtensions
 {
     /// <summary>
-    /// Configures X509ChainPolicy customization through the root level <c>TlsOptions</c> configuration section
+    /// Configures X509ChainPolicy customization through the root level <c>X509ChainOptions</c> configuration section
     /// and configures the primary <see cref="HttpMessageHandler"/> to use custom certificate validation
     /// when customized to do so.
     /// </summary>
@@ -23,7 +23,7 @@ public static class X509ChainCustomizationServiceCollectionExtensions
         services.AddOptions<X509ChainOptions>()
             .BindConfiguration(nameof(X509ChainOptions));
 
-        // Use TryAddEnumerable to make sure `PostConfigureTlsOptions` isn't added multiple
+        // Use TryAddEnumerable to make sure `PostConfigureX509ChainOptions` isn't added multiple
         // times even if this method is called multiple times.
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<X509ChainOptions>, PostConfigureX509ChainOptions>());
 
@@ -32,11 +32,11 @@ public static class X509ChainCustomizationServiceCollectionExtensions
             {
                 builder.ConfigurePrimaryHttpMessageHandler(sp =>
                 {
-                    var tlsOptions = sp.GetRequiredService<IOptions<X509ChainOptions>>().Value;
+                    var x509ChainOptions = sp.GetRequiredService<IOptions<X509ChainOptions>>().Value;
 
                     var handler = new HttpClientHandler();
 
-                    if (tlsOptions.TryGetCustomRemoteCertificateValidationCallback(out var callback))
+                    if (x509ChainOptions.TryGetCustomRemoteCertificateValidationCallback(out var callback))
                     {
                         handler.ServerCertificateCustomValidationCallback = (sender, certificate, chain, errors) =>
                         {
