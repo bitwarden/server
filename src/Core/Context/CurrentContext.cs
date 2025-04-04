@@ -28,7 +28,7 @@ public class CurrentContext : ICurrentContext
 
     public virtual HttpContext HttpContext { get; set; }
     public virtual Guid? UserId { get; set; }
-    public virtual Lazy<Task<User>> UserAsync { get; private set; }
+    public virtual Lazy<Task<User>> UserAsync { get; private set; } = new(() => Task.FromResult<User>(null));
     public virtual string DeviceIdentifier { get; set; }
     public virtual DeviceType? DeviceType { get; set; }
     public virtual string IpAddress { get; set; }
