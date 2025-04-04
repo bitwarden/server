@@ -22,6 +22,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Commands;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -592,9 +593,9 @@ public class OrganizationUsersController : Controller
             return Unauthorized();
         }
 
-        var deletionResult = await _deleteManagedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
+        var result = await _deleteManagedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
 
-        return deletionResult.MapToActionResult();
+        return result.MapToActionResultWithSingleErrorMessage();
     }
 
     [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]
@@ -613,12 +614,16 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var results = await _deleteManagedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
+        var result = await _deleteManagedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
 
-        //  Temporary code.
-        throw new UnauthorizedAccessException();
-        // return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
-        //     new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.result)));
+        return MapToOrganizationUserBulkResponseModel(result);
+    }
+
+    private static ListResponseModel<OrganizationUserBulkResponseModel> MapToOrganizationUserBulkResponseModel(Partial<Core.Models.Data.Organizations.DeleteUserResponse> result)
+    {
+        var failures = result.Failures.Select(failure => new OrganizationUserBulkResponseModel(failure.ErroredValue.OrganizationUserId, failure.Message));
+        var successes = result.Successes.Select(success => new OrganizationUserBulkResponseModel(success.OrganizationUserId, string.Empty));
+        return new ListResponseModel<OrganizationUserBulkResponseModel>(failures.Concat(successes));
     }
 
     [HttpPatch("{id}/revoke")]

@@ -2,5 +2,5 @@
 
 public class DeleteUserResponse
 {
-    public Guid OrganizationId { get; init; }
+    public Guid OrganizationUserId { get; init; }
 }

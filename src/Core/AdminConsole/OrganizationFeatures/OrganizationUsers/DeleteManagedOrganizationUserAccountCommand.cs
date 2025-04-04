@@ -1,10 +1,12 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿using Bit.Core.AdminConsole.Errors;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Commands;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -50,25 +52,35 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         _pushService = pushService;
     }
 
-    public async Task<CommandResult> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
+    public async Task<CommandResult<DeleteUserResponse>> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
     {
-        var result = await InternalDeleteManyUsersAsync(organizationId, new[] { organizationUserId }, deletingUserId);
+        var result = await InternalDeleteManyUsersAsync(organizationId, [organizationUserId], deletingUserId);
 
         var error = result.InvalidResults.FirstOrDefault()?.Errors.FirstOrDefault();
 
         if (error != null)
         {
-            return new Failure(error.Message);
+            return error.ToFailure<DeleteUserValidationRequest, DeleteUserResponse>();
         }
 
-        return new Success();
+        var valid = result.ValidResults.First();
+
+        return new Success<DeleteUserResponse>(new DeleteUserResponse
+        {
+            OrganizationUserId = valid!.Value.OrganizationUserId
+        });
     }
 
-    public async Task<CommandResult> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid deletingUserId)
+    public async Task<Partial<DeleteUserResponse>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid deletingUserId)
     {
-        var results = await InternalDeleteManyUsersAsync(organizationId, orgUserIds, deletingUserId);
+        var result = await InternalDeleteManyUsersAsync(organizationId, orgUserIds, deletingUserId);
 
-        return new Success();
+        var successes = result.ValidResults.Select(valid => new DeleteUserResponse { OrganizationUserId = valid.Value.OrganizationUser!.Id });
+        var errors = result.InvalidResults
+            .Select(invalid => invalid.Errors.First())
+            .Select(error => error.ToError(new DeleteUserResponse() { OrganizationUserId = error.ErroredValue.OrganizationUserId }));
+
+        return new Partial<DeleteUserResponse>(successes, errors);
     }
 
     private async Task<PartialValidationResult<DeleteUserValidationRequest>> InternalDeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid deletingUserId)
@@ -78,13 +90,13 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         var managementStatuses = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, orgUserIds);
 
         var requests = CreateRequests(organizationId, deletingUserId, orgUserIds, orgUsers, users, managementStatuses);
-        var validationResults = await _deleteManagedOrganizationUserAccountValidator.ValidateAsync(requests);
+        var results = await _deleteManagedOrganizationUserAccountValidator.ValidateAsync(requests);
 
-        await CancelPremiumsAsync(validationResults.ValidResults);
-        await HandleUserDeletionsAsync(validationResults.ValidResults);
-        await LogDeletedOrganizationUsersAsync(validationResults.ValidResults);
+        await CancelPremiumsAsync(results.ValidResults);
+        await HandleUserDeletionsAsync(results.ValidResults);
+        await LogDeletedOrganizationUsersAsync(results.ValidResults);
 
-        return validationResults;
+        return results;
     }
 
     private List<DeleteUserValidationRequest> CreateRequests(
@@ -105,6 +117,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
             requests.Add(new DeleteUserValidationRequest
             {
                 User = user,
+                OrganizationUserId = orgUserId,
                 OrganizationUser = orgUser,
                 IsManaged = isManaged,
                 OrganizationId = organizationId,
