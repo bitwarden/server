@@ -455,6 +455,7 @@ public class OrganizationService : IOrganizationService
             MaxStorageGb = 1,
             UsePolicies = plan.HasPolicies,
             UseSso = plan.HasSso,
+            UseOrganizationDomains = plan.HasOrganizationDomains,
             UseGroups = plan.HasGroups,
             UseEvents = plan.HasEvents,
             UseDirectory = plan.HasDirectory,
