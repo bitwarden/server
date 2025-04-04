@@ -19,6 +19,34 @@ public class OrganizationLicense : ILicense
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrganizationLicense"/> class.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ DEPRECATED: This constructor and the entire property-based licensing system is deprecated.
+    /// Do not add new properties to this constructor or extend its functionality.
+    /// </para>
+    /// <para>
+    /// This implementation has been replaced by a new claims-based licensing system that provides better security
+    /// and flexibility. The new system uses JWT claims to store and validate license information, making it more
+    /// secure and easier to extend without requiring changes to the license format.
+    /// </para>
+    /// <para>
+    /// For new license-related features or modifications:
+    /// 1. Use the claims-based system instead of adding properties here
+    /// 2. Add new claims to the license token
+    /// 3. Validate claims in the <see cref="CanUse"/> and <see cref="VerifyData"/> methods
+    /// </para>
+    /// <para>
+    /// This constructor is maintained only for backward compatibility with existing licenses.
+    /// </para>
+    /// </remarks>
+    /// <param name="org">The organization to create the license for.</param>
+    /// <param name="subscriptionInfo">Information about the organization's subscription.</param>
+    /// <param name="installationId">The ID of the current installation.</param>
+    /// <param name="licenseService">The service used to sign the license.</param>
+    /// <param name="version">Optional version number for the license format.</param>
     public OrganizationLicense(Organization org, SubscriptionInfo subscriptionInfo, Guid installationId,
         ILicensingService licenseService, int? version = null)
     {
@@ -289,13 +317,35 @@ public class OrganizationLicense : ILicense
     }
 
     /// <summary>
-    /// Do not extend this method. It is only here for backwards compatibility with old licenses.
-    /// Instead, extend the CanUse method using the ClaimsPrincipal.
+    /// Validates an obsolete license format using property-based validation.
     /// </summary>
-    /// <param name="globalSettings"></param>
-    /// <param name="licensingService"></param>
-    /// <param name="exception"></param>
-    /// <returns></returns>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ DEPRECATED: This method is deprecated and should not be extended or modified.
+    /// It is maintained only for backward compatibility with old license formats.
+    /// </para>
+    /// <para>
+    /// This method has been replaced by a new claims-based validation system that provides:
+    /// - Better security through JWT claims
+    /// - More flexible validation rules
+    /// - Easier extensibility without changing the license format
+    /// - Better separation of concerns
+    /// </para>
+    /// <para>
+    /// To add new license validation rules:
+    /// 1. Add new claims to the license token in the claims-based system
+    /// 2. Extend the <see cref="CanUse(IGlobalSettings, ILicensingService, ClaimsPrincipal, out string)"/> method
+    /// 3. Validate the new claims using the ClaimsPrincipal parameter
+    /// </para>
+    /// <para>
+    /// This method will be removed in a future version once all old licenses have been migrated
+    /// to the new claims-based system.
+    /// </para>
+    /// </remarks>
+    /// <param name="globalSettings">The global settings containing installation information.</param>
+    /// <param name="licensingService">The service used to verify the license signature.</param>
+    /// <param name="exception">When the method returns false, contains the error message explaining why the license is invalid.</param>
+    /// <returns>True if the license is valid, false otherwise.</returns>
     private bool ObsoleteCanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
     {
         // Do not extend this method. It is only here for backwards compatibility with old licenses.
