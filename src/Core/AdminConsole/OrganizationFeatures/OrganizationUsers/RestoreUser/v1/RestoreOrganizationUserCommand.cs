@@ -16,7 +16,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUs
 public class RestoreOrganizationUserCommand(
     ICurrentContext currentContext,
     IEventService eventService,
-    IFeatureService featureService,
     IPushNotificationService pushNotificationService,
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationRepository organizationRepository,
@@ -41,8 +40,7 @@ public class RestoreOrganizationUserCommand(
         await RepositoryRestoreUserAsync(organizationUser);
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) &&
-            organizationUser.UserId.HasValue)
+        if (organizationUser.UserId.HasValue)
         {
             await pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
         }
@@ -54,8 +52,7 @@ public class RestoreOrganizationUserCommand(
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored,
             systemUser);
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) &&
-            organizationUser.UserId.HasValue)
+        if (organizationUser.UserId.HasValue)
         {
             await pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
         }
@@ -219,8 +216,7 @@ public class RestoreOrganizationUserCommand(
                 await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
                 organizationUser.Status = status;
                 await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
-                if (featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) &&
-                    organizationUser.UserId.HasValue)
+                if (organizationUser.UserId.HasValue)
                 {
                     await pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
                 }
