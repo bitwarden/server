@@ -134,7 +134,7 @@ public class DeleteClaimedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_WhenCustomUserDeletesAdmin_ThrowsException(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Admin)] OrganizationUser organizationUser,
         Guid deletingUserId)
     {
