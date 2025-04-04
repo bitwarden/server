@@ -13,7 +13,7 @@ public class OrganizationIntegrationConfiguration : ITableObject<Guid>
     public EventType EventType { get; set; }
     public string? Configuration { get; set; }
     public string? Template { get; set; }
-    public DateTime CreationDate { get; set; } = DateTime.UtcNow;
+    public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
     public void SetNewId() => Id = CoreHelpers.GenerateComb();
 }
