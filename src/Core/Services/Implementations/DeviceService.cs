@@ -77,6 +77,9 @@ public class DeviceService : IDeviceService
 
         device.Active = false;
         device.RevisionDate = DateTime.UtcNow;
+        device.EncryptedPrivateKey = null;
+        device.EncryptedPublicKey = null;
+        device.EncryptedUserKey = null;
         await _deviceRepository.UpsertAsync(device);
 
         await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString());
