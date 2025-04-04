@@ -8,8 +8,6 @@ public class DeleteUserValidationRequest
     public Guid OrganizationId { get; init; }
     public OrganizationUser? OrganizationUser { get; init; }
     public User? User { get; init; }
-    public Guid? DeletingUserId { get; init; }
-
-    public IDictionary<Guid, bool>? ManagementStatus { get; init; }
+    public Guid DeletingUserId { get; init; }
     public bool? IsManaged { get; init; }
 }

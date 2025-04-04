@@ -50,28 +50,28 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         _pushService = pushService;
     }
 
-    public async Task<CommandResult> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
+    public async Task<CommandResult> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
     {
         var result = await InternalDeleteManyUsersAsync(organizationId, new[] { organizationUserId }, deletingUserId);
 
+        var error = result.InvalidResults.FirstOrDefault()?.Errors.FirstOrDefault();
 
-        if (result.InvalidResults.Count > 0)
+        if (error != null)
         {
-
-            var error = result.InvalidResults.FirstOrDefault()?.Errors.FirstOrDefault();
-
-            return new Failure();
+            return new Failure(error.Message);
         }
 
         return new Success();
     }
 
-    public async Task<IEnumerable<(Guid OrganizationUserId, CommandResult result)>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId)
+    public async Task<CommandResult> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid deletingUserId)
     {
         var results = await InternalDeleteManyUsersAsync(organizationId, orgUserIds, deletingUserId);
+
+        return new Success();
     }
 
-    private async Task<PartialValidationResult<DeleteUserValidationRequest>> InternalDeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId)
+    private async Task<PartialValidationResult<DeleteUserValidationRequest>> InternalDeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid deletingUserId)
     {
         var orgUsers = await _organizationUserRepository.GetManyAsync(orgUserIds);
         var users = await GetUsersAsync(orgUsers);
@@ -89,7 +89,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
 
     private List<DeleteUserValidationRequest> CreateRequests(
         Guid organizationId,
-        Guid? deletingUserId,
+        Guid deletingUserId,
         IEnumerable<Guid> orgUserIds,
         ICollection<OrganizationUser> orgUsers,
         IEnumerable<User> users,
@@ -145,22 +145,19 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         var users = requests
             .Select(request => request.Value.User!);
 
-        if (users.Any())
+        if (!users.Any())
         {
-            await DeleteManyAsync(users);
+            return;
         }
-    }
 
-    private async Task DeleteManyAsync(IEnumerable<User> users)
-    {
         await _userRepository.DeleteManyAsync(users);
+
         foreach (var user in users)
         {
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.DeleteAccount, user, _currentContext));
             await _pushService.PushLogOutAsync(user.Id);
         }
-
     }
 
     private async Task CancelPremiumsAsync(List<Valid<DeleteUserValidationRequest>> requests)

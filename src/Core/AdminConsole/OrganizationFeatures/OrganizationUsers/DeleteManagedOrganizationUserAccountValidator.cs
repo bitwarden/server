@@ -6,7 +6,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
 public class DeleteManagedOrganizationUserAccountValidator(
     ICurrentContext currentContext,
@@ -34,7 +34,8 @@ public class DeleteManagedOrganizationUserAccountValidator(
             {
                 EnsureOnlyOwnersCanDeleteOwnersAsync,
                 EnsureUserIsNotSoleOrganizationOwnerAsync,
-                EnsureUserIsNotSoleProviderOwnerAsync
+                EnsureUserIsNotSoleProviderOwnerAsync,
+                EnsureCustomUsersCannotDeleteAdminsAsync
             };
 
             var result = await ExecuteValidatorsAsync(validators, asyncValidators, request);
@@ -130,7 +131,7 @@ public class DeleteManagedOrganizationUserAccountValidator(
             return new Valid<DeleteUserValidationRequest>(request);
         }
 
-        if (request.DeletingUserId.HasValue && !await currentContext.OrganizationOwner(request.OrganizationId))
+        if (!await currentContext.OrganizationOwner(request.OrganizationId))
         {
             return new Invalid<DeleteUserValidationRequest>(new BadRequestError<DeleteUserValidationRequest>("Only owners can delete other owners.", request));
         }
@@ -158,4 +159,15 @@ public class DeleteManagedOrganizationUserAccountValidator(
 
         return new Valid<DeleteUserValidationRequest>(request);
     }
+
+    private async Task<ValidationResult<DeleteUserValidationRequest>> EnsureCustomUsersCannotDeleteAdminsAsync(DeleteUserValidationRequest request)
+    {
+        if (request.OrganizationUser.Type == OrganizationUserType.Admin && await currentContext.OrganizationCustom(request.OrganizationId))
+        {
+            return new Invalid<DeleteUserValidationRequest>(new BadRequestError<DeleteUserValidationRequest>("Custom users can not delete admins.", request));
+        }
+
+        return new Valid<DeleteUserValidationRequest>();
+    }
+
 }

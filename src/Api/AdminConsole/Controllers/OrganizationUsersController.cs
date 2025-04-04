@@ -615,8 +615,10 @@ public class OrganizationUsersController : Controller
 
         var results = await _deleteManagedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
 
-        return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
-            new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.result)));
+        //  Temporary code.
+        throw new UnauthorizedAccessException();
+        // return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
+        //     new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.result)));
     }
 
     [HttpPatch("{id}/revoke")]
