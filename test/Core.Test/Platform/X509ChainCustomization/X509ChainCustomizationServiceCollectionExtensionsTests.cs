@@ -195,7 +195,7 @@ public class X509ChainCustomizationServiceCollectionExtensionsTests
             options.ServerCertificate = selfSignedCertificate;
         });
 
-        var services = CreateServices((gs, environment, config) => {}, services =>
+        var services = CreateServices((gs, environment, config) => { }, services =>
         {
             services.Configure<X509ChainOptions>(options =>
             {
@@ -218,7 +218,7 @@ public class X509ChainCustomizationServiceCollectionExtensionsTests
             options.ServerCertificate = selfSignedCertificate;
         });
 
-        var services = CreateServices((gs, environment, config) => {}, services =>
+        var services = CreateServices((gs, environment, config) => { }, services =>
         {
             services.Configure<X509ChainOptions>(options =>
             {
@@ -243,7 +243,7 @@ public class X509ChainCustomizationServiceCollectionExtensionsTests
             options.ServerCertificate = selfSignedCertificate;
         });
 
-        var services = CreateServices((gs, environment, config) => {}, services =>
+        var services = CreateServices((gs, environment, config) => { }, services =>
         {
             services.Configure<X509ChainOptions>(options =>
             {
