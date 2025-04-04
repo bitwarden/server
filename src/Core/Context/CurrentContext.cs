@@ -19,6 +19,8 @@ public class CurrentContext : ICurrentContext
 {
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IProviderUserRepository _providerUserRepository;
+    private readonly IUserRepository _userRepository;
+
     private bool _builtHttpContext;
     private bool _builtClaimsPrincipal;
     private IEnumerable<ProviderOrganizationProviderDetails> _providerOrganizationProviderDetails;
@@ -26,7 +28,7 @@ public class CurrentContext : ICurrentContext
 
     public virtual HttpContext HttpContext { get; set; }
     public virtual Guid? UserId { get; set; }
-    public virtual User User { get; set; }
+    public virtual Lazy<Task<User>> UserAsync { get; private set; }
     public virtual string DeviceIdentifier { get; set; }
     public virtual DeviceType? DeviceType { get; set; }
     public virtual string IpAddress { get; set; }
@@ -47,10 +49,12 @@ public class CurrentContext : ICurrentContext
 
     public CurrentContext(
         IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderUserRepository providerUserRepository)
+        IProviderUserRepository providerUserRepository,
+        IUserRepository userRepository)
     {
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerUserRepository = providerUserRepository;
+        _userRepository = userRepository;
     }
 
     public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
@@ -138,6 +142,7 @@ public class CurrentContext : ICurrentContext
         if (Guid.TryParse(subject, out var subIdGuid))
         {
             UserId = subIdGuid;
+            UserAsync = new Lazy<Task<User>>(() => _userRepository.GetByIdAsync(UserId.Value));
         }
 
         ClientId = GetClaimValue(claimsDict, "client_id");
