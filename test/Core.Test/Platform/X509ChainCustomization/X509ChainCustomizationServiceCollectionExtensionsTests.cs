@@ -1,7 +1,11 @@
-﻿using System.Security.Cryptography;
+﻿using System.Security.Authentication;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Platform.X509ChainCustomization;
 using Bit.Core.Settings;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -180,6 +184,104 @@ public class X509ChainCustomizationServiceCollectionExtensionsTests
         Assert.Contains(fakeLogCollector.GetSnapshot(),
             r => r.Message == $"No additional custom trust certificates were found in '{tempDir.FullName}'"
         );
+    }
+
+    [Fact]
+    public async Task CallHttpWithSelfSignedCert_SelfSignedCertificateConfigured_Works()
+    {
+        var selfSignedCertificate = CreateSelfSignedCert("localhost");
+        await using var app = await CreateServerAsync(55555, options =>
+        {
+            options.ServerCertificate = selfSignedCertificate;
+        });
+
+        var services = CreateServices((gs, environment, config) => {}, services =>
+        {
+            services.Configure<X509ChainOptions>(options =>
+            {
+                options.AdditionalCustomTrustCertificates = [selfSignedCertificate];
+            });
+        });
+
+        var httpClient = services.GetRequiredService<IHttpClientFactory>().CreateClient();
+
+        var response = await httpClient.GetStringAsync("https://localhost:55555");
+        Assert.Equal("Hi", response);
+    }
+
+    [Fact]
+    public async Task CallHttpWithSelfSignedCert_SelfSignedCertificateNotConfigured_Throws()
+    {
+        var selfSignedCertificate = CreateSelfSignedCert("localhost");
+        await using var app = await CreateServerAsync(55556, options =>
+        {
+            options.ServerCertificate = selfSignedCertificate;
+        });
+
+        var services = CreateServices((gs, environment, config) => {}, services =>
+        {
+            services.Configure<X509ChainOptions>(options =>
+            {
+                options.AdditionalCustomTrustCertificates = [CreateSelfSignedCert("example.com")];
+            });
+        });
+
+        var httpClient = services.GetRequiredService<IHttpClientFactory>().CreateClient();
+
+        var requestException = await Assert.ThrowsAsync<HttpRequestException>(async () => await httpClient.GetStringAsync("https://localhost:55556"));
+        Assert.NotNull(requestException.InnerException);
+        var authenticationException = Assert.IsAssignableFrom<AuthenticationException>(requestException.InnerException);
+        Assert.Equal("The remote certificate was rejected by the provided RemoteCertificateValidationCallback.", authenticationException.Message);
+    }
+
+    [Fact]
+    public async Task CallHttpWithSelfSignedCert_SelfSignedCertificateConfigured_WithExtraCert_Works()
+    {
+        var selfSignedCertificate = CreateSelfSignedCert("localhost");
+        await using var app = await CreateServerAsync(55557, options =>
+        {
+            options.ServerCertificate = selfSignedCertificate;
+        });
+
+        var services = CreateServices((gs, environment, config) => {}, services =>
+        {
+            services.Configure<X509ChainOptions>(options =>
+            {
+                options.AdditionalCustomTrustCertificates = [selfSignedCertificate, CreateSelfSignedCert("example.com")];
+            });
+        });
+
+        var httpClient = services.GetRequiredService<IHttpClientFactory>().CreateClient();
+
+        var response = await httpClient.GetStringAsync("https://localhost:55557");
+        Assert.Equal("Hi", response);
+    }
+
+    private static async Task<IAsyncDisposable> CreateServerAsync(int port, Action<HttpsConnectionAdapterOptions> configure)
+    {
+        // Start HTTP Server with self signed cert
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.Logging.AddFakeLogging();
+        builder.Services.AddRoutingCore();
+        builder.WebHost.UseKestrelCore()
+            .ConfigureKestrel(options =>
+            {
+                options.ListenLocalhost(port, listenOptions =>
+                {
+                    listenOptions.UseHttps(httpsOptions =>
+                    {
+                        configure(httpsOptions);
+                    });
+                });
+            });
+
+        var app = builder.Build();
+
+        app.MapGet("/", () => "Hi");
+
+        await app.StartAsync();
+
+        return app;
     }
 
     private static X509ChainOptions CreateOptions(Action<GlobalSettings, IHostEnvironment, Dictionary<string, string>> configure, Action<IServiceCollection>? after = null)
