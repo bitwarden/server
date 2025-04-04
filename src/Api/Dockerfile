@@ -13,7 +13,6 @@ ENV ASPNETCORE_URLS http://+:5000
 WORKDIR /app
 EXPOSE 5000
 EXPOSE 5001
-EXPOSE 5002
 COPY obj/build-output/publish .
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
