@@ -40,7 +40,7 @@ public class CommandResultExtensionTests
     [MemberData(nameof(WithGenericTypeTestCases))]
     public void MapToActionResult_WithGenericType_ShouldMapToHttpResponse(CommandResult<Cipher> input, ObjectResult expected)
     {
-        var result = input.MapToActionResult();
+        var result = input.MapToActionResultWithErrorMessages();
 
         Assert.Equivalent(expected, result);
     }
@@ -92,7 +92,7 @@ public class CommandResultExtensionTests
     {
         var result = new NotImplementedCommandResult<Cipher>();
 
-        Assert.Throws<InvalidOperationException>(() => result.MapToActionResult());
+        Assert.Throws<InvalidOperationException>(() => result.MapToActionResultWithErrorMessages());
     }
 }
 
