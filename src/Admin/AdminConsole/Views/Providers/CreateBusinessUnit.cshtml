@@ -1,15 +1,15 @@
 @using Bit.Core.Billing.Enums
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 
-@model CreateMultiOrganizationEnterpriseProviderModel
+@model CreateBusinessUnitProviderModel
 
 @{
-    ViewData["Title"] = "Create Multi-organization Enterprise Provider";
+    ViewData["Title"] = "Create Business Unit Provider";
 }
 
-<h1 class="mb-4">Create Multi-organization Enterprise Provider</h1>
+<h1 class="mb-4">Create Business Unit Provider</h1>
 <div>
-    <form method="post" asp-action="CreateMultiOrganizationEnterprise">
+    <form method="post" asp-action="CreateBusinessUnit">
         <div asp-validation-summary="All" class="alert alert-danger"></div>
         <div class="mb-3">
             <label asp-for="OwnerEmail" class="form-label"></label>
@@ -19,14 +19,14 @@
             <div class="col-sm">
                 <div class="mb-3">
                     @{
-                        var multiOrgPlans = new List<PlanType>
+                        var businessUnitPlanTypes = new List<PlanType>
                         {
                             PlanType.EnterpriseAnnually,
                             PlanType.EnterpriseMonthly
                         };
                     }
                     <label asp-for="Plan" class="form-label"></label>
-                    <select class="form-select" asp-for="Plan" asp-items="Html.GetEnumSelectList(multiOrgPlans)">
+                    <select class="form-select" asp-for="Plan" asp-items="Html.GetEnumSelectList(businessUnitPlanTypes)">
                         <option value="">--</option>
                     </select>
                 </div>

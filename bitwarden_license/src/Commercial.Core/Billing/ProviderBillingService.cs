@@ -791,7 +791,7 @@ public class ProviderBillingService(
         Provider provider,
         Organization organization)
     {
-        if (provider.Type == ProviderType.MultiOrganizationEnterprise)
+        if (provider.Type == ProviderType.BusinessUnit)
         {
             return (await providerPlanRepository.GetByProviderId(provider.Id)).First().PlanType;
         }

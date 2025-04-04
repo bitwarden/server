@@ -51,7 +51,7 @@ public static class ProviderPriceAdapter
     /// <param name="subscription">The provider's subscription.</param>
     /// <param name="planType">The plan type correlating to the desired Stripe price ID.</param>
     /// <returns>A Stripe <see cref="Stripe.Price"/> ID.</returns>
-    /// <exception cref="BillingException">Thrown when the provider's type is not <see cref="ProviderType.Msp"/> or <see cref="ProviderType.MultiOrganizationEnterprise"/>.</exception>
+    /// <exception cref="BillingException">Thrown when the provider's type is not <see cref="ProviderType.Msp"/> or <see cref="ProviderType.BusinessUnit"/>.</exception>
     /// <exception cref="BillingException">Thrown when the provided <see cref="planType"/> does not relate to a Stripe price ID.</exception>
     public static string GetPriceId(
         Provider provider,
@@ -78,7 +78,7 @@ public static class ProviderPriceAdapter
                     PlanType.EnterpriseMonthly => MSP.Active.Enterprise,
                     _ => throw invalidPlanType
                 },
-            ProviderType.MultiOrganizationEnterprise => BusinessUnit.Legacy.List.Intersect(priceIds).Any()
+            ProviderType.BusinessUnit => BusinessUnit.Legacy.List.Intersect(priceIds).Any()
                 ? planType switch
                 {
                     PlanType.EnterpriseAnnually => BusinessUnit.Legacy.Annually,
@@ -103,7 +103,7 @@ public static class ProviderPriceAdapter
     /// <param name="provider">The provider to get the Stripe price ID for.</param>
     /// <param name="planType">The plan type correlating to the desired Stripe price ID.</param>
     /// <returns>A Stripe <see cref="Stripe.Price"/> ID.</returns>
-    /// <exception cref="BillingException">Thrown when the provider's type is not <see cref="ProviderType.Msp"/> or <see cref="ProviderType.MultiOrganizationEnterprise"/>.</exception>
+    /// <exception cref="BillingException">Thrown when the provider's type is not <see cref="ProviderType.Msp"/> or <see cref="ProviderType.BusinessUnit"/>.</exception>
     /// <exception cref="BillingException">Thrown when the provided <see cref="planType"/> does not relate to a Stripe price ID.</exception>
     public static string GetActivePriceId(
         Provider provider,
@@ -120,7 +120,7 @@ public static class ProviderPriceAdapter
                 PlanType.EnterpriseMonthly => MSP.Active.Enterprise,
                 _ => throw invalidPlanType
             },
-            ProviderType.MultiOrganizationEnterprise => planType switch
+            ProviderType.BusinessUnit => planType switch
             {
                 PlanType.EnterpriseAnnually => BusinessUnit.Active.Annually,
                 PlanType.EnterpriseMonthly => BusinessUnit.Active.Monthly,

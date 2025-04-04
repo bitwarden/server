@@ -63,7 +63,7 @@ public class CreateProviderCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateMultiOrganizationEnterpriseAsync_Success(
+    public async Task CreateBusinessUnitAsync_Success(
     Provider provider,
     User user,
     PlanType plan,
@@ -71,13 +71,13 @@ public class CreateProviderCommandTests
     SutProvider<CreateProviderCommand> sutProvider)
     {
         // Arrange
-        provider.Type = ProviderType.MultiOrganizationEnterprise;
+        provider.Type = ProviderType.BusinessUnit;
 
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         userRepository.GetByEmailAsync(user.Email).Returns(user);
 
         // Act
-        await sutProvider.Sut.CreateMultiOrganizationEnterpriseAsync(provider, user.Email, plan, minimumSeats);
+        await sutProvider.Sut.CreateBusinessUnitAsync(provider, user.Email, plan, minimumSeats);
 
         // Assert
         await sutProvider.GetDependency<IProviderRepository>().ReceivedWithAnyArgs().CreateAsync(provider);
@@ -85,7 +85,7 @@ public class CreateProviderCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateMultiOrganizationEnterpriseAsync_UserIdIsInvalid_Throws(
+    public async Task CreateBusinessUnitAsync_UserIdIsInvalid_Throws(
         Provider provider,
         SutProvider<CreateProviderCommand> sutProvider)
     {
@@ -94,7 +94,7 @@ public class CreateProviderCommandTests
 
         // Act
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CreateMultiOrganizationEnterpriseAsync(provider, default, default, default));
+            () => sutProvider.Sut.CreateBusinessUnitAsync(provider, default, default, default));
 
         // Assert
         Assert.Contains("Invalid owner.", exception.Message);

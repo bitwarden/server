@@ -71,7 +71,7 @@ public class ProviderPriceAdapterTests
         var provider = new Provider
         {
             Id = Guid.NewGuid(),
-            Type = ProviderType.MultiOrganizationEnterprise
+            Type = ProviderType.BusinessUnit
         };
 
         var subscription = new Subscription
@@ -98,7 +98,7 @@ public class ProviderPriceAdapterTests
         var provider = new Provider
         {
             Id = Guid.NewGuid(),
-            Type = ProviderType.MultiOrganizationEnterprise
+            Type = ProviderType.BusinessUnit
         };
 
         var subscription = new Subscription
@@ -141,7 +141,7 @@ public class ProviderPriceAdapterTests
         var provider = new Provider
         {
             Id = Guid.NewGuid(),
-            Type = ProviderType.MultiOrganizationEnterprise
+            Type = ProviderType.BusinessUnit
         };
 
         var result = ProviderPriceAdapter.GetActivePriceId(provider, planType);

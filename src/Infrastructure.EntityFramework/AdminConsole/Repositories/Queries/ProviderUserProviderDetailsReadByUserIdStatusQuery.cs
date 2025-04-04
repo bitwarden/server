@@ -35,6 +35,7 @@ public class ProviderUserProviderDetailsReadByUserIdStatusQuery : IQuery<Provide
             Permissions = x.pu.Permissions,
             UseEvents = x.p.UseEvents,
             ProviderStatus = x.p.Status,
+            ProviderType = x.p.Type
         });
     }
 }

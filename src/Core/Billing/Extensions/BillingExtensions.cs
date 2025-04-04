@@ -24,12 +24,12 @@ public static class BillingExtensions
     public static bool IsBillable(this Provider provider) =>
         provider is
         {
-            Type: ProviderType.Msp or ProviderType.MultiOrganizationEnterprise,
+            Type: ProviderType.Msp or ProviderType.BusinessUnit,
             Status: ProviderStatusType.Billable
         };
 
     public static bool SupportsConsolidatedBilling(this ProviderType providerType)
-        => providerType is ProviderType.Msp or ProviderType.MultiOrganizationEnterprise;
+        => providerType is ProviderType.Msp or ProviderType.BusinessUnit;
 
     public static bool IsValidClient(this Organization organization)
         => organization is

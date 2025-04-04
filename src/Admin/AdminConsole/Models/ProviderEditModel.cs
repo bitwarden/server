@@ -34,7 +34,7 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         GatewaySubscriptionUrl = gatewaySubscriptionUrl;
         Type = provider.Type;
 
-        if (Type == ProviderType.MultiOrganizationEnterprise)
+        if (Type == ProviderType.BusinessUnit)
         {
             var plan = providerPlans.SingleOrDefault();
             EnterpriseMinimumSeats = plan?.SeatMinimum ?? 0;
@@ -100,7 +100,7 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
                     yield return new ValidationResult($"The {billingEmailDisplayName} field is required.");
                 }
                 break;
-            case ProviderType.MultiOrganizationEnterprise:
+            case ProviderType.BusinessUnit:
                 if (Plan == null)
                 {
                     var displayName = nameof(Plan).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(Plan);
