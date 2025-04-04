@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System.Diagnostics.CodeAnalysis;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
@@ -208,7 +208,8 @@ public class BusinessUnitConverter(
 
         var createProviderOrganization = providerOrganizationRepository.CreateAsync(new ProviderOrganization
         {
-            ProviderId = provider.Id, OrganizationId = organization.Id
+            ProviderId = provider.Id,
+            OrganizationId = organization.Id
         });
 
         var createProviderPlan = providerPlanRepository.CreateAsync(new ProviderPlan

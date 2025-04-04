@@ -44,7 +44,7 @@ public class BusinessUnitConverterTests
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
 
-    private BusinessUnitConverter BuildConverter() => new (
+    private BusinessUnitConverter BuildConverter() => new(
         _dataProtectionProvider,
         _globalSettings,
         _logger,
@@ -222,7 +222,8 @@ public class BusinessUnitConverterTests
 
         var user = new User
         {
-            Id = Guid.NewGuid(), Email = providerAdminEmail
+            Id = Guid.NewGuid(),
+            Email = providerAdminEmail
         };
 
         _userRepository.GetByEmailAsync(providerAdminEmail).Returns(user);
@@ -297,7 +298,8 @@ public class BusinessUnitConverterTests
 
         var user = new User
         {
-            Id = Guid.NewGuid(), Email = providerAdminEmail
+            Id = Guid.NewGuid(),
+            Email = providerAdminEmail
         };
 
         _providerOrganizationRepository.GetByOrganizationId(organization.Id)
@@ -472,7 +474,9 @@ public class BusinessUnitConverterTests
 
         var providerPlan = new ProviderPlan
         {
-            Id = Guid.NewGuid(), ProviderId = provider.Id, PlanType = PlanType.EnterpriseAnnually
+            Id = Guid.NewGuid(),
+            ProviderId = provider.Id,
+            PlanType = PlanType.EnterpriseAnnually
         };
 
         _providerPlanRepository.GetByProviderId(provider.Id).Returns([providerPlan]);

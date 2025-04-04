@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using Bit.Admin.Billing.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;

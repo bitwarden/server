@@ -1,4 +1,4 @@
-namespace Bit.Core.Models.Mail.Billing;
+﻿namespace Bit.Core.Models.Mail.Billing;
 
 public class BusinessUnitConversionInviteModel : BaseMailModel
 {
