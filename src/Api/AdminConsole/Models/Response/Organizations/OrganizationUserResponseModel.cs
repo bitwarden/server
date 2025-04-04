@@ -67,10 +67,12 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
     public OrganizationUserDetailsResponseModel(
         OrganizationUser organizationUser,
         bool managedByOrganization,
+        string ssoExternalId,
         IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
         ManagedByOrganization = managedByOrganization;
+        SsoExternalId = ssoExternalId;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
 
@@ -80,10 +82,12 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
         : base(organizationUser, "organizationUserDetails")
     {
         ManagedByOrganization = managedByOrganization;
+        SsoExternalId = organizationUser.SsoExternalId;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
 
     public bool ManagedByOrganization { get; set; }
+    public string SsoExternalId { get; set; }
 
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
 
