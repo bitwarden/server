@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Billing.Models.Api.Requests.Organizations;
 
@@ -19,6 +20,8 @@ public class PreviewOrganizationInvoiceRequestBody
 public class OrganizationPasswordManagerRequestModel
 {
     public PlanType Plan { get; set; }
+
+    public PlanSponsorshipType? SponsoredPlan { get; set; }
 
     [Range(0, int.MaxValue)]
     public int Seats { get; set; }
