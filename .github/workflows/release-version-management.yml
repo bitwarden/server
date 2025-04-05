@@ -1,4 +1,4 @@
-name: Repository management
+name: Release version management
 
 on:
   workflow_dispatch:
@@ -187,9 +187,8 @@ jobs:
       - name: Push changes
         run: git push
 
-
-  cherry_pick:
-    name: Cherry-Pick Commit(s)
+  create_pr:
+    name: Create PR to release candidate branches
     if: ${{ needs.setup.outputs.branch != 'none' }}
     runs-on: ubuntu-24.04
     needs:
@@ -224,8 +223,7 @@ jobs:
         env:
           CUT_BRANCH: ${{ needs.setup.outputs.branch }}
         run: |
-          # Function for cherry-picking
-          cherry_pick () {
+          create_pull_request () {
             local source_branch=$1
             local destination_branch=$2
 
@@ -239,8 +237,12 @@ jobs:
             DESTINATION_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
 
             if [[ "$DESTINATION_VERSION" != "$SOURCE_VERSION" ]]; then
+              git checkout -b "increment-version-to-$DESTINATION_VERSION-on-$destination_branch"
               git cherry-pick --strategy-option=theirs -x $SOURCE_COMMIT
-              git push -u origin $destination_branch
+              gh pr create \
+                --base $destination_branch  \
+                --title "Increment version to $DESTINATION_VERSION on $destination_branch" \
+                --body "This PR was created automatically by GitHub Actions to increment the version to $DESTINATION_VERSION on $destination_branch." \
             fi
           }
 
@@ -250,17 +252,17 @@ jobs:
             # If the 'rc' branch exists:
             if [[ $(git ls-remote --heads origin rc) ]]; then
 
-              # Chery-pick from 'rc' into 'hotfix-rc'
-              cherry_pick rc hotfix-rc
+              # Create PR from 'rc' into 'hotfix-rc' to make hotfix-rc consume the old version
+              create_pull_request rc hotfix-rc
 
-              # Cherry-pick from 'main' into 'rc'
-              cherry_pick main rc
+              # Create PR from 'main' into 'rc' to allocate the new version to `rc`
+              create_pull_request main rc
 
             # If the 'rc' branch does not exist:
             else
 
-              # Cherry-pick from 'main' into 'hotfix-rc'
-              cherry_pick main hotfix-rc
+              # Create PR from 'main' into 'rc' to allocate the new version to `rc`
+              create_pull_request main hotfix-rc
 
             fi
 
@@ -268,13 +270,13 @@ jobs:
           elif [[ "$CUT_BRANCH" == "rc" ]]; then
 
             # Cherry-pick from 'main' into 'rc'
-            cherry_pick main rc
+            create_pull_request main rc
 
           fi
 
 
   move_future_db_scripts:
     name: Move finalization database scripts
-    needs: cherry_pick
+    needs: create_pr
     uses: ./.github/workflows/_move_finalization_db_scripts.yml
     secrets: inherit
