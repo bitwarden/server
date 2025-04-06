@@ -10,24 +10,41 @@ namespace Bit.Core.Billing.Extensions;
 
 public static class BillingExtensions
 {
+    public static ProductTierType GetProductTier(this PlanType planType)
+        => planType switch
+        {
+            PlanType.Custom or PlanType.Free => ProductTierType.Free,
+            PlanType.FamiliesAnnually or PlanType.FamiliesAnnually2019 => ProductTierType.Families,
+            PlanType.TeamsStarter or PlanType.TeamsStarter2023 => ProductTierType.TeamsStarter,
+            _ when planType.ToString().Contains("Teams") => ProductTierType.Teams,
+            _ when planType.ToString().Contains("Enterprise") => ProductTierType.Enterprise,
+            _ => throw new BillingException($"PlanType {planType} could not be matched to a ProductTierType")
+        };
+
     public static bool IsBillable(this Provider provider) =>
         provider is
         {
-            Type: ProviderType.Msp,
+            Type: ProviderType.Msp or ProviderType.MultiOrganizationEnterprise,
             Status: ProviderStatusType.Billable
         };
+
+    public static bool SupportsConsolidatedBilling(this ProviderType providerType)
+        => providerType is ProviderType.Msp or ProviderType.MultiOrganizationEnterprise;
 
     public static bool IsValidClient(this Organization organization)
         => organization is
         {
             Seats: not null,
             Status: OrganizationStatusType.Managed,
-            PlanType: PlanType.TeamsMonthly or PlanType.EnterpriseMonthly
+            PlanType: PlanType.TeamsMonthly or PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually
         };
 
     public static bool IsStripeEnabled(this ISubscriber subscriber)
-        => !string.IsNullOrEmpty(subscriber.GatewayCustomerId) &&
-           !string.IsNullOrEmpty(subscriber.GatewaySubscriptionId);
+        => subscriber is
+        {
+            GatewayCustomerId: not null and not "",
+            GatewaySubscriptionId: not null and not ""
+        };
 
     public static bool IsUnverifiedBankAccount(this SetupIntent setupIntent) =>
         setupIntent is
@@ -44,5 +61,5 @@ public static class BillingExtensions
         };
 
     public static bool SupportsConsolidatedBilling(this PlanType planType)
-        => planType is PlanType.TeamsMonthly or PlanType.EnterpriseMonthly;
+        => planType is PlanType.TeamsMonthly or PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually;
 }

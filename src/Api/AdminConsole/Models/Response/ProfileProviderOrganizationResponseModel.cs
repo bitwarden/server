@@ -1,8 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Response;
 
@@ -26,7 +26,7 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         UseResetPassword = organization.UseResetPassword;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
-        UseActivateAutofillPolicy = StaticStore.GetPlan(organization.PlanType).ProductTier == ProductTierType.Enterprise;
+        UseActivateAutofillPolicy = organization.PlanType.GetProductTier() == ProductTierType.Enterprise;
         SelfHost = organization.SelfHost;
         Seats = organization.Seats;
         MaxCollections = organization.MaxCollections;
@@ -43,8 +43,12 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         UserId = organization.UserId;
         ProviderId = organization.ProviderId;
         ProviderName = organization.ProviderName;
-        ProductTierType = StaticStore.GetPlan(organization.PlanType).ProductTier;
-        LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
+        ProviderType = organization.ProviderType;
+        ProductTierType = organization.PlanType.GetProductTier();
+        LimitCollectionCreation = organization.LimitCollectionCreation;
+        LimitCollectionDeletion = organization.LimitCollectionDeletion;
+        LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
+        UseRiskInsights = organization.UseRiskInsights;
     }
 }

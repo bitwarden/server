@@ -3,7 +3,6 @@ using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
@@ -12,8 +11,10 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -42,6 +43,7 @@ public class ProvidersController : Controller
     private readonly IFeatureService _featureService;
     private readonly IProviderPlanRepository _providerPlanRepository;
     private readonly IProviderBillingService _providerBillingService;
+    private readonly IPricingClient _pricingClient;
     private readonly string _stripeUrl;
     private readonly string _braintreeMerchantUrl;
     private readonly string _braintreeMerchantId;
@@ -60,7 +62,8 @@ public class ProvidersController : Controller
         IFeatureService featureService,
         IProviderPlanRepository providerPlanRepository,
         IProviderBillingService providerBillingService,
-        IWebHostEnvironment webHostEnvironment)
+        IWebHostEnvironment webHostEnvironment,
+        IPricingClient pricingClient)
     {
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
@@ -75,6 +78,7 @@ public class ProvidersController : Controller
         _featureService = featureService;
         _providerPlanRepository = providerPlanRepository;
         _providerBillingService = providerBillingService;
+        _pricingClient = pricingClient;
         _stripeUrl = webHostEnvironment.GetStripeUrl();
         _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
         _braintreeMerchantId = globalSettings.Braintree.MerchantId;
@@ -107,9 +111,15 @@ public class ProvidersController : Controller
         });
     }
 
-    public IActionResult Create(int teamsMinimumSeats, int enterpriseMinimumSeats, string ownerEmail = null)
+    public IActionResult Create()
     {
-        return View(new CreateProviderModel
+        return View(new CreateProviderModel());
+    }
+
+    [HttpGet("providers/create/msp")]
+    public IActionResult CreateMsp(int teamsMinimumSeats, int enterpriseMinimumSeats, string ownerEmail = null)
+    {
+        return View(new CreateMspProviderModel
         {
             OwnerEmail = ownerEmail,
             TeamsMonthlySeatMinimum = teamsMinimumSeats,
@@ -117,10 +127,45 @@ public class ProvidersController : Controller
         });
     }
 
+    [HttpGet("providers/create/reseller")]
+    public IActionResult CreateReseller()
+    {
+        return View(new CreateResellerProviderModel());
+    }
+
+    [HttpGet("providers/create/multi-organization-enterprise")]
+    public IActionResult CreateMultiOrganizationEnterprise(int enterpriseMinimumSeats, string ownerEmail = null)
+    {
+        return View(new CreateMultiOrganizationEnterpriseProviderModel
+        {
+            OwnerEmail = ownerEmail,
+            EnterpriseSeatMinimum = enterpriseMinimumSeats
+        });
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequirePermission(Permission.Provider_Create)]
-    public async Task<IActionResult> Create(CreateProviderModel model)
+    public IActionResult Create(CreateProviderModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        return model.Type switch
+        {
+            ProviderType.Msp => RedirectToAction("CreateMsp"),
+            ProviderType.Reseller => RedirectToAction("CreateReseller"),
+            ProviderType.MultiOrganizationEnterprise => RedirectToAction("CreateMultiOrganizationEnterprise"),
+            _ => View(model)
+        };
+    }
+
+    [HttpPost("providers/create/msp")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Provider_Create)]
+    public async Task<IActionResult> CreateMsp(CreateMspProviderModel model)
     {
         if (!ModelState.IsValid)
         {
@@ -128,19 +173,47 @@ public class ProvidersController : Controller
         }
 
         var provider = model.ToProvider();
-        switch (provider.Type)
+
+        await _createProviderCommand.CreateMspAsync(
+            provider,
+            model.OwnerEmail,
+            model.TeamsMonthlySeatMinimum,
+            model.EnterpriseMonthlySeatMinimum);
+
+        return RedirectToAction("Edit", new { id = provider.Id });
+    }
+
+    [HttpPost("providers/create/reseller")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Provider_Create)]
+    public async Task<IActionResult> CreateReseller(CreateResellerProviderModel model)
+    {
+        if (!ModelState.IsValid)
         {
-            case ProviderType.Msp:
-                await _createProviderCommand.CreateMspAsync(
-                    provider,
-                    model.OwnerEmail,
-                    model.TeamsMonthlySeatMinimum,
-                    model.EnterpriseMonthlySeatMinimum);
-                break;
-            case ProviderType.Reseller:
-                await _createProviderCommand.CreateResellerAsync(provider);
-                break;
+            return View(model);
         }
+        var provider = model.ToProvider();
+        await _createProviderCommand.CreateResellerAsync(provider);
+
+        return RedirectToAction("Edit", new { id = provider.Id });
+    }
+
+    [HttpPost("providers/create/multi-organization-enterprise")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Provider_Create)]
+    public async Task<IActionResult> CreateMultiOrganizationEnterprise(CreateMultiOrganizationEnterpriseProviderModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+        var provider = model.ToProvider();
+
+        await _createProviderCommand.CreateMultiOrganizationEnterpriseAsync(
+            provider,
+            model.OwnerEmail,
+            model.Plan.Value,
+            model.EnterpriseSeatMinimum);
 
         return RedirectToAction("Edit", new { id = provider.Id });
     }
@@ -156,7 +229,8 @@ public class ProvidersController : Controller
 
         var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
         var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
-        return View(new ProviderViewModel(provider, users, providerOrganizations));
+        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
+        return View(new ProviderViewModel(provider, users, providerOrganizations, providerPlans.ToList()));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -169,6 +243,18 @@ public class ProvidersController : Controller
         }
 
         return View(provider);
+    }
+
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IActionResult> Cancel(Guid id)
+    {
+        var provider = await GetEditModel(id);
+        if (provider == null)
+        {
+            return RedirectToAction("Index");
+        }
+
+        return RedirectToAction("Edit", new { id });
     }
 
     [HttpPost]
@@ -203,34 +289,44 @@ public class ProvidersController : Controller
         await _providerRepository.ReplaceAsync(provider);
         await _applicationCacheService.UpsertProviderAbilityAsync(provider);
 
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (!isConsolidatedBillingEnabled || !provider.IsBillable())
+        if (!provider.IsBillable())
         {
             return RedirectToAction("Edit", new { id });
         }
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
 
-        if (providerPlans.Count == 0)
+        switch (provider.Type)
         {
-            var newProviderPlans = new List<ProviderPlan>
-            {
-                new () { ProviderId = provider.Id, PlanType = PlanType.TeamsMonthly, SeatMinimum = model.TeamsMonthlySeatMinimum, PurchasedSeats = 0, AllocatedSeats = 0 },
-                new () { ProviderId = provider.Id, PlanType = PlanType.EnterpriseMonthly, SeatMinimum = model.EnterpriseMonthlySeatMinimum, PurchasedSeats = 0, AllocatedSeats = 0 }
-            };
+            case ProviderType.Msp:
+                var updateMspSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
+                    provider,
+                    [
+                        (Plan: PlanType.TeamsMonthly, SeatsMinimum: model.TeamsMonthlySeatMinimum),
+                        (Plan: PlanType.EnterpriseMonthly, SeatsMinimum: model.EnterpriseMonthlySeatMinimum)
+                    ]);
+                await _providerBillingService.UpdateSeatMinimums(updateMspSeatMinimumsCommand);
+                break;
+            case ProviderType.MultiOrganizationEnterprise:
+                {
+                    var existingMoePlan = providerPlans.Single();
 
-            foreach (var newProviderPlan in newProviderPlans)
-            {
-                await _providerPlanRepository.CreateAsync(newProviderPlan);
-            }
-        }
-        else
-        {
-            await _providerBillingService.UpdateSeatMinimums(
-                provider,
-                model.EnterpriseMonthlySeatMinimum,
-                model.TeamsMonthlySeatMinimum);
+                    // 1. Change the plan and take over any old values.
+                    var changeMoePlanCommand = new ChangeProviderPlanCommand(
+                        provider,
+                        existingMoePlan.Id,
+                        model.Plan!.Value);
+                    await _providerBillingService.ChangePlan(changeMoePlanCommand);
+
+                    // 2. Update the seat minimums.
+                    var updateMoeSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
+                        provider,
+                        [
+                            (Plan: model.Plan!.Value, SeatsMinimum: model.EnterpriseMinimumSeats!.Value)
+                        ]);
+                    await _providerBillingService.UpdateSeatMinimums(updateMoeSeatMinimumsCommand);
+                    break;
+                }
         }
 
         return RedirectToAction("Edit", new { id });
@@ -247,10 +343,7 @@ public class ProvidersController : Controller
         var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
         var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
 
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-
-        if (!isConsolidatedBillingEnabled || !provider.IsBillable())
+        if (!provider.IsBillable())
         {
             return new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>());
         }
@@ -324,7 +417,9 @@ public class ProvidersController : Controller
             return RedirectToAction("Index");
         }
 
-        return View(new OrganizationEditModel(provider));
+        var plans = await _pricingClient.ListPlans();
+
+        return View(new OrganizationEditModel(provider, plans));
     }
 
     [HttpPost]

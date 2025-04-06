@@ -1,5 +1,8 @@
 ﻿using AspNetCoreRateLimit;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Services;
+using Bit.Core.Platform.Push;
+using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Services;
@@ -11,6 +14,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -55,6 +59,16 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             mockService(substitutedService);
             services.Add(ServiceDescriptor.Singleton(typeof(TService), substitutedService));
         });
+    }
+
+    /// <summary>
+    /// Allows you to add your own services to the application as required.
+    /// </summary>
+    /// <param name="configure">The service collection you want added to the test service collection.</param>
+    /// <remarks>This needs to be ran BEFORE making any calls through the factory to take effect.</remarks>
+    public void ConfigureServices(Action<IServiceCollection> configure)
+    {
+        _configureTestServices.Add(configure);
     }
 
     /// <summary>
@@ -149,6 +163,10 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
                 // New Device Verification
                 { "globalSettings:disableEmailNewDevice", "false" },
+
+                // Web push notifications
+                { "globalSettings:webPush:vapidPublicKey", "BGBtAM0bU3b5jsB14IjBYarvJZ6rWHilASLudTTYDDBi7a-3kebo24Yus_xYeOMZ863flAXhFAbkL6GVSrxgErg" },
+                { "globalSettings:launchDarkly:flagValues:web-push", "true" },
             });
         });
 
@@ -175,44 +193,27 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             // QUESTION: The normal licensing service should run fine on developer machines but not in CI
             // should we have a fork here to leave the normal service for developers?
             // TODO: Eventually add the license file to CI
-            var licensingService = services.First(sd => sd.ServiceType == typeof(ILicensingService));
-            services.Remove(licensingService);
-            services.AddSingleton<ILicensingService, NoopLicensingService>();
+            Replace<ILicensingService, NoopLicensingService>(services);
 
             // FUTURE CONSIDERATION: Add way to run this self hosted/cloud, for now it is cloud only
-            var pushRegistrationService = services.First(sd => sd.ServiceType == typeof(IPushRegistrationService));
-            services.Remove(pushRegistrationService);
-            services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
+            Replace<IPushRegistrationService, NoopPushRegistrationService>(services);
 
             // Even though we are cloud we currently set this up as cloud, we can use the EF/selfhosted service
             // instead of using Noop for this service
             // TODO: Install and use azurite in CI pipeline
-            var eventWriteService = services.First(sd => sd.ServiceType == typeof(IEventWriteService));
-            services.Remove(eventWriteService);
-            services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            Replace<IEventWriteService, RepositoryEventWriteService>(services);
 
-            var eventRepositoryService = services.First(sd => sd.ServiceType == typeof(IEventRepository));
-            services.Remove(eventRepositoryService);
-            services.AddSingleton<IEventRepository, EventRepository>();
+            Replace<IEventRepository, EventRepository>(services);
 
-            var mailDeliveryService = services.First(sd => sd.ServiceType == typeof(IMailDeliveryService));
-            services.Remove(mailDeliveryService);
-            services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
+            Replace<IMailDeliveryService, NoopMailDeliveryService>(services);
 
-            var captchaValidationService = services.First(sd => sd.ServiceType == typeof(ICaptchaValidationService));
-            services.Remove(captchaValidationService);
-            services.AddSingleton<ICaptchaValidationService, NoopCaptchaValidationService>();
+            Replace<ICaptchaValidationService, NoopCaptchaValidationService>(services);
 
             // TODO: Install and use azurite in CI pipeline
-            var installationDeviceRepository =
-                services.First(sd => sd.ServiceType == typeof(IInstallationDeviceRepository));
-            services.Remove(installationDeviceRepository);
-            services.AddSingleton<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>();
+            Replace<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>(services);
 
             // TODO: Install and use azurite in CI pipeline
-            var referenceEventService = services.First(sd => sd.ServiceType == typeof(IReferenceEventService));
-            services.Remove(referenceEventService);
-            services.AddSingleton<IReferenceEventService, NoopReferenceEventService>();
+            Replace<IReferenceEventService, NoopReferenceEventService>(services);
 
             // Our Rate limiter works so well that it begins to fail tests unless we carve out
             // one whitelisted ip. We should still test the rate limiter though and they should change the Ip
@@ -232,15 +233,44 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
 
             // Noop StripePaymentService - this could be changed to integrate with our Stripe test account
-            var stripePaymentService = services.First(sd => sd.ServiceType == typeof(IPaymentService));
-            services.Remove(stripePaymentService);
-            services.AddSingleton(Substitute.For<IPaymentService>());
+            Replace(services, Substitute.For<IPaymentService>());
+
+            Replace(services, Substitute.For<IOrganizationBillingService>());
         });
 
         foreach (var configureTestService in _configureTestServices)
         {
             builder.ConfigureTestServices(configureTestService);
         }
+    }
+
+    private static void Replace<TService, TNewImplementation>(IServiceCollection services)
+        where TService : class
+        where TNewImplementation : class, TService
+    {
+        services.RemoveAll<TService>();
+        services.AddSingleton<TService, TNewImplementation>();
+    }
+
+    private static void Replace<TService>(IServiceCollection services, TService implementation)
+        where TService : class
+    {
+        services.RemoveAll<TService>();
+        services.AddSingleton<TService>(implementation);
+    }
+
+    public HttpClient CreateAuthedClient(string accessToken)
+    {
+        var handler = Server.CreateHandler((context) =>
+        {
+            context.Request.Headers.Authorization = $"Bearer {accessToken}";
+        });
+
+        return new HttpClient(handler)
+        {
+            BaseAddress = Server.BaseAddress,
+            Timeout = TimeSpan.FromSeconds(200),
+        };
     }
 
     public DatabaseContext GetDatabaseContext()

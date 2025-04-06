@@ -9,10 +9,7 @@ namespace Bit.Admin.Models;
 
 public class UserEditModel
 {
-    public UserEditModel()
-    {
-
-    }
+    public UserEditModel() { }
 
     public UserEditModel(
         User user,
@@ -20,9 +17,13 @@ public class UserEditModel
         IEnumerable<Cipher> ciphers,
         BillingInfo billingInfo,
         BillingHistoryInfo billingHistoryInfo,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        bool? claimedAccount,
+        bool? activeNewDeviceVerificationException)
     {
-        User = UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers);
+        User = UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, claimedAccount);
+
+        ActiveNewDeviceVerificationException = activeNewDeviceVerificationException ?? false;
 
         BillingInfo = billingInfo;
         BillingHistoryInfo = billingHistoryInfo;
@@ -46,6 +47,8 @@ public class UserEditModel
     public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
     public string OneYearExpirationDate => DateTime.Now.AddYears(1).ToString("yyyy-MM-ddTHH:mm");
     public string BraintreeMerchantId { get; init; }
+    public bool ActiveNewDeviceVerificationException { get; init; }
+
 
     [Display(Name = "Name")]
     public string Name { get; init; }

@@ -10,6 +10,8 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -47,6 +49,8 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IReferenceEventService _referenceEventService;
     private readonly ISubscriberService _subscriberService;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IOrganizationInstallationRepository _organizationInstallationRepository;
+    private readonly IPricingClient _pricingClient;
 
     private readonly OrganizationsController _sut;
 
@@ -70,6 +74,8 @@ public class OrganizationsControllerTests : IDisposable
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _subscriberService = Substitute.For<ISubscriberService>();
         _removeOrganizationUserCommand = Substitute.For<IRemoveOrganizationUserCommand>();
+        _organizationInstallationRepository = Substitute.For<IOrganizationInstallationRepository>();
+        _pricingClient = Substitute.For<IPricingClient>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -85,7 +91,9 @@ public class OrganizationsControllerTests : IDisposable
             _upgradeOrganizationPlanCommand,
             _addSecretsManagerSubscriptionCommand,
             _referenceEventService,
-            _subscriberService);
+            _subscriberService,
+            _organizationInstallationRepository,
+            _pricingClient);
     }
 
     public void Dispose()

@@ -3,12 +3,10 @@ using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.WebAuthn;
-using Bit.Api.Auth.Validators;
-using Bit.Api.Models.Request;
+using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Request;
-using Bit.Api.Utilities;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -18,23 +16,16 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
-using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Services;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Api.Response;
-using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -46,20 +37,15 @@ namespace Bit.Api.Auth.Controllers;
 [Authorize("Application")]
 public class AccountsController : Controller
 {
-    private readonly GlobalSettings _globalSettings;
     private readonly IOrganizationService _organizationService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProviderUserRepository _providerUserRepository;
-    private readonly IPaymentService _paymentService;
     private readonly IUserService _userService;
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly IFeatureService _featureService;
-    private readonly ISubscriberService _subscriberService;
-    private readonly IReferenceEventService _referenceEventService;
-    private readonly ICurrentContext _currentContext;
 
     private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
     private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
@@ -74,20 +60,15 @@ public class AccountsController : Controller
 
 
     public AccountsController(
-        GlobalSettings globalSettings,
         IOrganizationService organizationService,
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
-        IPaymentService paymentService,
         IUserService userService,
         IPolicyService policyService,
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         IRotateUserKeyCommand rotateUserKeyCommand,
         IFeatureService featureService,
-        ISubscriberService subscriberService,
-        IReferenceEventService referenceEventService,
-        ICurrentContext currentContext,
         IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
         IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> folderValidator,
         IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> sendValidator,
@@ -98,20 +79,15 @@ public class AccountsController : Controller
         IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator
         )
     {
-        _globalSettings = globalSettings;
         _organizationService = organizationService;
         _organizationUserRepository = organizationUserRepository;
         _providerUserRepository = providerUserRepository;
-        _paymentService = paymentService;
         _userService = userService;
         _policyService = policyService;
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
         _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
         _rotateUserKeyCommand = rotateUserKeyCommand;
         _featureService = featureService;
-        _subscriberService = subscriberService;
-        _referenceEventService = referenceEventService;
-        _currentContext = currentContext;
         _cipherValidator = cipherValidator;
         _folderValidator = folderValidator;
         _sendValidator = sendValidator;
@@ -146,6 +122,13 @@ public class AccountsController : Controller
         {
             await Task.Delay(2000);
             throw new BadRequestException("MasterPasswordHash", "Invalid password.");
+        }
+
+        var managedUserValidationResult = await _userService.ValidateManagedUserDomainAsync(user, model.NewEmail);
+
+        if (!managedUserValidationResult.Succeeded)
+        {
+            throw new BadRequestException(managedUserValidationResult.Errors);
         }
 
         await _userService.InitiateEmailChangeAsync(user, model.NewEmail);
@@ -251,8 +234,18 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        try
+        {
+            user = model.ToUser(user);
+        }
+        catch (Exception e)
+        {
+            ModelState.AddModelError(string.Empty, e.Message);
+            throw new BadRequestException(ModelState);
+        }
+
         var result = await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
-            model.ToUser(user),
+            user,
             model.MasterPasswordHash,
             model.Key,
             model.OrgIdentifier);
@@ -362,6 +355,7 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
+    [Obsolete("Replaced by the safer rotate-user-account-keys endpoint.")]
     [HttpPost("key")]
     public async Task PostKey([FromBody] UpdateKeyRequestModel model)
     {
@@ -566,6 +560,13 @@ public class AccountsController : Controller
         }
         else
         {
+            // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
+            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+                && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
+            {
+                throw new BadRequestException("Cannot delete accounts owned by an organization. Contact your organization administrator for additional details.");
+            }
+
             var result = await _userService.DeleteAsync(user);
             if (result.Succeeded)
             {
@@ -611,207 +612,6 @@ public class AccountsController : Controller
 
         await Task.Delay(2000);
         throw new BadRequestException(ModelState);
-    }
-
-    [HttpPost("premium")]
-    public async Task<PaymentResponseModel> PostPremium(PremiumRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var valid = model.Validate(_globalSettings);
-        UserLicense license = null;
-        if (valid && _globalSettings.SelfHosted)
-        {
-            license = await ApiHelpers.ReadJsonFileFromBody<UserLicense>(HttpContext, model.License);
-        }
-
-        if (!valid && !_globalSettings.SelfHosted && string.IsNullOrWhiteSpace(model.Country))
-        {
-            throw new BadRequestException("Country is required.");
-        }
-
-        if (!valid || (_globalSettings.SelfHosted && license == null))
-        {
-            throw new BadRequestException("Invalid license.");
-        }
-
-        var result = await _userService.SignUpPremiumAsync(user, model.PaymentToken,
-            model.PaymentMethodType.Value, model.AdditionalStorageGb.GetValueOrDefault(0), license,
-            new TaxInfo
-            {
-                BillingAddressCountry = model.Country,
-                BillingAddressPostalCode = model.PostalCode,
-            });
-
-        var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
-        var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
-
-        var profile = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsManagingActiveUser);
-        return new PaymentResponseModel
-        {
-            UserProfile = profile,
-            PaymentIntentClientSecret = result.Item2,
-            Success = result.Item1
-        };
-    }
-
-    [HttpGet("subscription")]
-    public async Task<SubscriptionResponseModel> GetSubscription()
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        if (!_globalSettings.SelfHosted && user.Gateway != null)
-        {
-            var subscriptionInfo = await _paymentService.GetSubscriptionAsync(user);
-            var license = await _userService.GenerateLicenseAsync(user, subscriptionInfo);
-            return new SubscriptionResponseModel(user, subscriptionInfo, license);
-        }
-        else if (!_globalSettings.SelfHosted)
-        {
-            var license = await _userService.GenerateLicenseAsync(user);
-            return new SubscriptionResponseModel(user, license);
-        }
-        else
-        {
-            return new SubscriptionResponseModel(user);
-        }
-    }
-
-    [HttpPost("payment")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostPayment([FromBody] PaymentRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        await _userService.ReplacePaymentMethodAsync(user, model.PaymentToken, model.PaymentMethodType.Value,
-            new TaxInfo
-            {
-                BillingAddressCountry = model.Country,
-                BillingAddressPostalCode = model.PostalCode,
-            });
-    }
-
-    [HttpPost("storage")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<PaymentResponseModel> PostStorage([FromBody] StorageRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var result = await _userService.AdjustStorageAsync(user, model.StorageGbAdjustment.Value);
-        return new PaymentResponseModel
-        {
-            Success = true,
-            PaymentIntentClientSecret = result
-        };
-    }
-
-    [HttpPost("license")]
-    [SelfHosted(SelfHostedOnly = true)]
-    public async Task PostLicense(LicenseRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var license = await ApiHelpers.ReadJsonFileFromBody<UserLicense>(HttpContext, model.License);
-        if (license == null)
-        {
-            throw new BadRequestException("Invalid license");
-        }
-
-        await _userService.UpdateLicenseAsync(user, license);
-    }
-
-    [HttpPost("cancel")]
-    public async Task PostCancel([FromBody] SubscriptionCancellationRequestModel request)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        await _subscriberService.CancelSubscription(user,
-            new OffboardingSurveyResponse
-            {
-                UserId = user.Id,
-                Reason = request.Reason,
-                Feedback = request.Feedback
-            },
-            user.IsExpired());
-
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
-            ReferenceEventType.CancelSubscription,
-            user,
-            _currentContext)
-        {
-            EndOfPeriod = user.IsExpired()
-        });
-    }
-
-    [HttpPost("reinstate-premium")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostReinstate()
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        await _userService.ReinstatePremiumAsync(user);
-    }
-
-    [HttpGet("tax")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<TaxInfoResponseModel> GetTaxInfo()
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var taxInfo = await _paymentService.GetTaxInfoAsync(user);
-        return new TaxInfoResponseModel(taxInfo);
-    }
-
-    [HttpPut("tax")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PutTaxInfo([FromBody] TaxInfoUpdateRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var taxInfo = new TaxInfo
-        {
-            BillingAddressPostalCode = model.PostalCode,
-            BillingAddressCountry = model.Country,
-        };
-        await _paymentService.SaveTaxInfoAsync(user, taxInfo);
     }
 
     [HttpDelete("sso/{organizationId}")]
@@ -937,6 +737,30 @@ public class AccountsController : Controller
             await Task.Delay(2000);
             throw new BadRequestException("Token", "Invalid token");
         }
+    }
+
+    [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
+    [AllowAnonymous]
+    [HttpPost("resend-new-device-otp")]
+    public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificationRequestModel request)
+    {
+        await _userService.ResendNewDeviceVerificationEmail(request.Email, request.Secret);
+    }
+
+    [HttpPost("verify-devices")]
+    [HttpPut("verify-devices")]
+    public async Task SetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+
+        if (!await _userService.VerifySecretAsync(user, request.Secret))
+        {
+            await Task.Delay(2000);
+            throw new BadRequestException(string.Empty, "User verification failed.");
+        }
+        user.VerifyDevices = request.VerifyDevices;
+
+        await _userService.SaveUserAsync(user);
     }
 
     private async Task<IEnumerable<Guid>> GetOrganizationIdsManagingUserAsync(Guid userId)

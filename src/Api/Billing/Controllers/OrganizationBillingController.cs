@@ -1,7 +1,10 @@
 ﻿#nullable enable
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Core;
+using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
@@ -16,17 +19,18 @@ namespace Bit.Api.Billing.Controllers;
 [Authorize("Application")]
 public class OrganizationBillingController(
     ICurrentContext currentContext,
-    IFeatureService featureService,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
+    IPricingClient pricingClient,
     ISubscriberService subscriberService,
-    IPaymentHistoryService paymentHistoryService) : BaseBillingController
+    IPaymentHistoryService paymentHistoryService,
+    IUserService userService) : BaseBillingController
 {
     [HttpGet("metadata")]
     public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
     {
-        if (!await currentContext.AccessMembersTab(organizationId))
+        if (!await currentContext.OrganizationUser(organizationId))
         {
             return Error.Unauthorized();
         }
@@ -136,11 +140,6 @@ public class OrganizationBillingController(
     [HttpGet("payment-method")]
     public async Task<IResult> GetPaymentMethodAsync([FromRoute] Guid organizationId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -165,11 +164,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] UpdatePaymentMethodRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -196,14 +190,14 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] VerifyBankAccountRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
+        }
+
+        if (requestBody.DescriptorCode.Length != 6 || !requestBody.DescriptorCode.StartsWith("SM"))
+        {
+            return Error.BadRequest("Statement descriptor should be a 6-character value that starts with 'SM'");
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
@@ -213,7 +207,7 @@ public class OrganizationBillingController(
             return Error.NotFound();
         }
 
-        await subscriberService.VerifyBankAccount(organization, (requestBody.Amount1, requestBody.Amount2));
+        await subscriberService.VerifyBankAccount(organization, requestBody.DescriptorCode);
 
         return TypedResults.Ok();
     }
@@ -221,11 +215,6 @@ public class OrganizationBillingController(
     [HttpGet("tax-information")]
     public async Task<IResult> GetTaxInformationAsync([FromRoute] Guid organizationId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -250,11 +239,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] TaxInformationRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -270,6 +254,45 @@ public class OrganizationBillingController(
         var taxInformation = requestBody.ToDomain();
 
         await subscriberService.UpdateTaxInformation(organization, taxInformation);
+
+        return TypedResults.Ok();
+    }
+
+    [HttpPost("restart-subscription")]
+    public async Task<IResult> RestartSubscriptionAsync([FromRoute] Guid organizationId,
+        [FromBody] OrganizationCreateRequestModel model)
+    {
+        var user = await userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        if (!await currentContext.EditPaymentMethods(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+        var organizationSignup = model.ToOrganizationSignup(user);
+        var sale = OrganizationSale.From(organization, organizationSignup);
+        var plan = await pricingClient.GetPlanOrThrow(model.PlanType);
+        sale.Organization.PlanType = plan.Type;
+        sale.Organization.Plan = plan.Name;
+        sale.SubscriptionSetup.SkipTrial = true;
+        await organizationBillingService.Finalize(sale);
+        var org = await organizationRepository.GetByIdAsync(organizationId);
+        if (organizationSignup.PaymentMethodType != null)
+        {
+            var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
+            var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
+            await organizationBillingService.UpdatePaymentMethod(org, paymentSource, taxInformation);
+        }
 
         return TypedResults.Ok();
     }

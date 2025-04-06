@@ -18,7 +18,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Identity;
 using Bit.Core.Settings;
-using IdentityModel;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.DataProtection;
 using MimeKit;
 
@@ -74,6 +74,39 @@ public static class CoreHelpers
         Array.Copy(msecsArray, msecsArray.Length - 4, guidArray, guidArray.Length - 4, 4);
 
         return new Guid(guidArray);
+    }
+
+    internal static DateTime DateFromComb(Guid combGuid)
+    {
+        var guidArray = combGuid.ToByteArray();
+        var daysArray = new byte[4];
+        var msecsArray = new byte[4];
+
+        Array.Copy(guidArray, guidArray.Length - 6, daysArray, 2, 2);
+        Array.Copy(guidArray, guidArray.Length - 4, msecsArray, 0, 4);
+
+        Array.Reverse(daysArray);
+        Array.Reverse(msecsArray);
+
+        var days = BitConverter.ToInt32(daysArray, 0);
+        var msecs = BitConverter.ToInt32(msecsArray, 0);
+
+        var time = TimeSpan.FromDays(days) + TimeSpan.FromMilliseconds(msecs * 3.333333);
+        return new DateTime(_baseDateTicks + time.Ticks, DateTimeKind.Utc);
+    }
+
+    internal static long BinForComb(Guid combGuid, int binCount)
+    {
+        // From System.Web.Util.HashCodeCombiner
+        uint CombineHashCodes(uint h1, byte h2)
+        {
+            return (uint)(((h1 << 5) + h1) ^ h2);
+        }
+        var guidArray = combGuid.ToByteArray();
+        var randomArray = new byte[10];
+        Array.Copy(guidArray, 0, randomArray, 0, 10);
+        var hash = randomArray.Aggregate((uint)randomArray.Length, CombineHashCodes);
+        return hash % binCount;
     }
 
     public static string CleanCertificateThumbprint(string thumbprint)

@@ -6,7 +6,9 @@ using Bit.Infrastructure.EntityFramework.Billing.Models;
 using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
+using Bit.Infrastructure.EntityFramework.Platform;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
+using Bit.Infrastructure.EntityFramework.Tools.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -53,6 +55,8 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationApiKey> OrganizationApiKeys { get; set; }
     public DbSet<OrganizationSponsorship> OrganizationSponsorships { get; set; }
     public DbSet<OrganizationConnection> OrganizationConnections { get; set; }
+    public DbSet<OrganizationIntegration> OrganizationIntegrations { get; set; }
+    public DbSet<OrganizationIntegrationConfiguration> OrganizationIntegrationConfigurations { get; set; }
     public DbSet<OrganizationUser> OrganizationUsers { get; set; }
     public DbSet<Policy> Policies { get; set; }
     public DbSet<Provider> Providers { get; set; }
@@ -75,6 +79,9 @@ public class DatabaseContext : DbContext
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<NotificationStatus> NotificationStatuses { get; set; }
     public DbSet<ClientOrganizationMigrationRecord> ClientOrganizationMigrationRecords { get; set; }
+    public DbSet<PasswordHealthReportApplication> PasswordHealthReportApplications { get; set; }
+    public DbSet<SecurityTask> SecurityTasks { get; set; }
+    public DbSet<OrganizationInstallation> OrganizationInstallations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

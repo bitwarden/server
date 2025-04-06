@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Models.Data.Organizations;
 
 #nullable enable
@@ -22,4 +23,6 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     /// Gets the organizations that have a verified domain matching the user's email domain.
     /// </summary>
     Task<ICollection<Organization>> GetByVerifiedUserEmailDomainAsync(Guid userId);
+    Task<ICollection<Organization>> GetAddableToProviderByUserIdAsync(Guid userId, ProviderType providerType);
+    Task<ICollection<Organization>> GetManyByIdsAsync(IEnumerable<Guid> ids);
 }

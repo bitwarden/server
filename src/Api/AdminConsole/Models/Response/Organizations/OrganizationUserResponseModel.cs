@@ -64,19 +64,26 @@ public class OrganizationUserResponseModel : ResponseModel
 
 public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel
 {
-    public OrganizationUserDetailsResponseModel(OrganizationUser organizationUser,
+    public OrganizationUserDetailsResponseModel(
+        OrganizationUser organizationUser,
+        bool managedByOrganization,
         IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
+        ManagedByOrganization = managedByOrganization;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
 
     public OrganizationUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
+        bool managedByOrganization,
         IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
+        ManagedByOrganization = managedByOrganization;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
+
+    public bool ManagedByOrganization { get; set; }
 
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
 
@@ -110,7 +117,7 @@ public class OrganizationUserUserMiniDetailsResponseModel : ResponseModel
 public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel
 {
     public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
-        bool twoFactorEnabled, string obj = "organizationUserUserDetails")
+        bool twoFactorEnabled, bool managedByOrganization, string obj = "organizationUserUserDetails")
         : base(organizationUser, obj)
     {
         if (organizationUser == null)
@@ -127,6 +134,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         Groups = organizationUser.Groups;
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
+        ManagedByOrganization = managedByOrganization;
     }
 
     public string Name { get; set; }
@@ -134,6 +142,11 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public string AvatarColor { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool SsoBound { get; set; }
+    /// <summary>
+    /// Indicates if the organization manages the user. If a user is "managed" by an organization,
+    /// the organization has greater control over their account, and some user actions are restricted.
+    /// </summary>
+    public bool ManagedByOrganization { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
 }

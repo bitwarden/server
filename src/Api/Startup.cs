@@ -5,16 +5,13 @@ using Bit.Core.Settings;
 using AspNetCoreRateLimit;
 using Stripe;
 using Bit.Core.Utilities;
-using IdentityModel;
+using Duende.IdentityModel;
 using System.Globalization;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
-using Bit.Api.AdminConsole.Validators;
 using Bit.Api.Auth.Models.Request;
-using Bit.Api.Auth.Validators;
+using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
-using Bit.Api.Tools.Validators;
 using Bit.Api.Vault.Models.Request;
-using Bit.Api.Vault.Validators;
 using Bit.Core.Auth.Entities;
 using Bit.Core.IdentityServer;
 using Bit.SharedWeb.Health;
@@ -23,7 +20,6 @@ using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures;
 using Bit.Core.Entities;
 using Bit.Core.Billing.Extensions;
@@ -32,7 +28,10 @@ using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Core.Auth.Models.Data;
-
+using Bit.Core.Auth.Identity.TokenProviders;
+using Bit.Core.Tools.ImportFeatures;
+using Bit.Core.Tools.ReportFeatures;
+using Bit.Core.Auth.Models.Api.Request;
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -169,6 +168,9 @@ public class Startup
         services
             .AddScoped<IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>,
                 WebAuthnLoginKeyRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>>,
+                DeviceRotationValidator>();
 
         // Services
         services.AddBaseServices(globalSettings);
@@ -176,6 +178,8 @@ public class Startup
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
+        services.AddReportingServices();
+        services.AddImportServices();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();

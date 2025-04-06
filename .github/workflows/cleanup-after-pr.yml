@@ -1,4 +1,3 @@
----
 name: Container registry cleanup
 
 on:

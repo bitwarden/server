@@ -229,13 +229,13 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetDomainByIdOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
             .Returns(organizationDomain);
-        sutProvider.GetDependency<IVerifyOrganizationDomainCommand>().VerifyOrganizationDomainAsync(organizationDomain)
+        sutProvider.GetDependency<IVerifyOrganizationDomainCommand>().UserVerifyOrganizationDomainAsync(organizationDomain)
             .Returns(new OrganizationDomain());
 
         var result = await sutProvider.Sut.Verify(organizationDomain.OrganizationId, organizationDomain.Id);
 
         await sutProvider.GetDependency<IVerifyOrganizationDomainCommand>().Received(1)
-            .VerifyOrganizationDomainAsync(organizationDomain);
+            .UserVerifyOrganizationDomainAsync(organizationDomain);
         Assert.IsType<OrganizationDomainResponseModel>(result);
     }
 

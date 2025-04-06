@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
@@ -29,6 +30,7 @@ public class CurrentContext : ICurrentContext
     public virtual string DeviceIdentifier { get; set; }
     public virtual DeviceType? DeviceType { get; set; }
     public virtual string IpAddress { get; set; }
+    public virtual string CountryName { get; set; }
     public virtual List<CurrentContextOrganization> Organizations { get; set; }
     public virtual List<CurrentContextProvider> Providers { get; set; }
     public virtual Guid? InstallationId { get; set; }
@@ -39,6 +41,7 @@ public class CurrentContext : ICurrentContext
     public virtual int? BotScore { get; set; }
     public virtual string ClientId { get; set; }
     public virtual Version ClientVersion { get; set; }
+    public virtual bool ClientVersionIsPrerelease { get; set; }
     public virtual IdentityClientType IdentityClientType { get; set; }
     public virtual Guid? ServiceAccountOrganizationId { get; set; }
 
@@ -97,6 +100,17 @@ public class CurrentContext : ICurrentContext
         {
             ClientVersion = cVersion;
         }
+
+        if (httpContext.Request.Headers.TryGetValue("Is-Prerelease", out var clientVersionIsPrerelease))
+        {
+            ClientVersionIsPrerelease = clientVersionIsPrerelease == "1";
+        }
+
+        if (httpContext.Request.Headers.TryGetValue("country-name", out var countryName))
+        {
+            CountryName = countryName;
+        }
+
     }
 
     public async virtual Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings)
@@ -161,6 +175,11 @@ public class CurrentContext : ICurrentContext
         }
 
         DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
+
+        if (Enum.TryParse(GetClaimValue(claimsDict, Claims.DeviceType), out DeviceType deviceType))
+        {
+            DeviceType = deviceType;
+        }
 
         Organizations = GetOrganizations(claimsDict, orgApi);
 
@@ -357,9 +376,9 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> ViewSubscription(Guid orgId)
     {
-        var orgManagedByMspProvider = (await GetOrganizationProviderDetails()).Any(po => po.OrganizationId == orgId && po.ProviderType == ProviderType.Msp);
+        var isManagedByBillableProvider = (await GetOrganizationProviderDetails()).Any(po => po.OrganizationId == orgId && po.ProviderType.SupportsConsolidatedBilling());
 
-        return orgManagedByMspProvider
+        return isManagedByBillableProvider
             ? await ProviderUserForOrgAsync(orgId)
             : await OrganizationOwner(orgId);
     }

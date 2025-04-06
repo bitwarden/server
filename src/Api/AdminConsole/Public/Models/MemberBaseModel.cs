@@ -1,7 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+
+#nullable enable
 
 namespace Bit.Api.AdminConsole.Public.Models;
 
@@ -18,7 +21,6 @@ public abstract class MemberBaseModel
 
         Type = user.Type;
         ExternalId = user.ExternalId;
-        ResetPasswordEnrolled = user.ResetPasswordKey != null;
 
         if (Type == OrganizationUserType.Custom)
         {
@@ -26,6 +28,7 @@ public abstract class MemberBaseModel
         }
     }
 
+    [SetsRequiredMembers]
     public MemberBaseModel(OrganizationUserUserDetails user)
     {
         if (user == null)
@@ -35,7 +38,6 @@ public abstract class MemberBaseModel
 
         Type = user.Type;
         ExternalId = user.ExternalId;
-        ResetPasswordEnrolled = user.ResetPasswordKey != null;
 
         if (Type == OrganizationUserType.Custom)
         {
@@ -48,18 +50,13 @@ public abstract class MemberBaseModel
     /// </summary>
     [Required]
     [EnumDataType(typeof(OrganizationUserType))]
-    public OrganizationUserType? Type { get; set; }
+    public required OrganizationUserType? Type { get; set; }
     /// <summary>
     /// External identifier for reference or linking this member to another system, such as a user directory.
     /// </summary>
     /// <example>external_id_123456</example>
     [StringLength(300)]
-    public string ExternalId { get; set; }
-    /// <summary>
-    /// Returns <c>true</c> if the member has enrolled in Password Reset assistance within the organization
-    /// </summary>
-    [Required]
-    public bool ResetPasswordEnrolled { get; set; }
+    public string? ExternalId { get; set; }
     /// <summary>
     /// The member's custom permissions if the member has a Custom role. If not supplied, all custom permissions will
     /// default to false.

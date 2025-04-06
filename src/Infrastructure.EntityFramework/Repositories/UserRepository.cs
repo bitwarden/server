@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
@@ -170,6 +170,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             entity.SecurityStamp = user.SecurityStamp;
             entity.Key = user.Key;
+
             entity.PrivateKey = user.PrivateKey;
             entity.LastKeyRotationDate = user.LastKeyRotationDate;
             entity.AccountRevisionDate = user.AccountRevisionDate;
@@ -192,6 +193,52 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             throw;
         }
 
+    }
+
+
+    public async Task UpdateUserKeyAndEncryptedDataV2Async(Core.Entities.User user,
+        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        // Update user
+        var userEntity = await dbContext.Users.FindAsync(user.Id);
+        if (userEntity == null)
+        {
+            throw new ArgumentException("User not found", nameof(user));
+        }
+
+        userEntity.SecurityStamp = user.SecurityStamp;
+        userEntity.Key = user.Key;
+        userEntity.PrivateKey = user.PrivateKey;
+
+        userEntity.Kdf = user.Kdf;
+        userEntity.KdfIterations = user.KdfIterations;
+        userEntity.KdfMemory = user.KdfMemory;
+        userEntity.KdfParallelism = user.KdfParallelism;
+
+        userEntity.Email = user.Email;
+
+        userEntity.MasterPassword = user.MasterPassword;
+        userEntity.MasterPasswordHint = user.MasterPasswordHint;
+
+        userEntity.LastKeyRotationDate = user.LastKeyRotationDate;
+        userEntity.AccountRevisionDate = user.AccountRevisionDate;
+        userEntity.RevisionDate = user.RevisionDate;
+
+        await dbContext.SaveChangesAsync();
+
+        //  Update re-encrypted data
+        foreach (var action in updateDataActions)
+        {
+            // connection and transaction aren't used in EF
+            await action();
+        }
+
+        await transaction.CommitAsync();
     }
 
     public async Task<IEnumerable<Core.Entities.User>> GetManyAsync(IEnumerable<Guid> ids)
@@ -260,6 +307,53 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             var mappedUser = Mapper.Map<User>(user);
             dbContext.Users.Remove(mappedUser);
+
+            await transaction.CommitAsync();
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    public async Task DeleteManyAsync(IEnumerable<Core.Entities.User> users)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var transaction = await dbContext.Database.BeginTransactionAsync();
+
+            var targetIds = users.Select(u => u.Id).ToList();
+
+            await dbContext.WebAuthnCredentials.Where(wa => targetIds.Contains(wa.UserId)).ExecuteDeleteAsync();
+            await dbContext.Ciphers.Where(c => targetIds.Contains(c.UserId ?? default)).ExecuteDeleteAsync();
+            await dbContext.Folders.Where(f => targetIds.Contains(f.UserId)).ExecuteDeleteAsync();
+            await dbContext.AuthRequests.Where(a => targetIds.Contains(a.UserId)).ExecuteDeleteAsync();
+            await dbContext.Devices.Where(d => targetIds.Contains(d.UserId)).ExecuteDeleteAsync();
+            var collectionUsers = from cu in dbContext.CollectionUsers
+                                  join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
+                                  where targetIds.Contains(ou.UserId ?? default)
+                                  select cu;
+            dbContext.CollectionUsers.RemoveRange(collectionUsers);
+            var groupUsers = from gu in dbContext.GroupUsers
+                             join ou in dbContext.OrganizationUsers on gu.OrganizationUserId equals ou.Id
+                             where targetIds.Contains(ou.UserId ?? default)
+                             select gu;
+            dbContext.GroupUsers.RemoveRange(groupUsers);
+            await dbContext.UserProjectAccessPolicy.Where(ap => targetIds.Contains(ap.OrganizationUser.UserId ?? default)).ExecuteDeleteAsync();
+            await dbContext.UserServiceAccountAccessPolicy.Where(ap => targetIds.Contains(ap.OrganizationUser.UserId ?? default)).ExecuteDeleteAsync();
+            await dbContext.OrganizationUsers.Where(ou => targetIds.Contains(ou.UserId ?? default)).ExecuteDeleteAsync();
+            await dbContext.ProviderUsers.Where(pu => targetIds.Contains(pu.UserId ?? default)).ExecuteDeleteAsync();
+            await dbContext.SsoUsers.Where(su => targetIds.Contains(su.UserId)).ExecuteDeleteAsync();
+            await dbContext.EmergencyAccesses.Where(ea => targetIds.Contains(ea.GrantorId) || targetIds.Contains(ea.GranteeId ?? default)).ExecuteDeleteAsync();
+            await dbContext.Sends.Where(s => targetIds.Contains(s.UserId ?? default)).ExecuteDeleteAsync();
+            await dbContext.NotificationStatuses.Where(ns => targetIds.Contains(ns.UserId)).ExecuteDeleteAsync();
+            await dbContext.Notifications.Where(n => targetIds.Contains(n.UserId ?? default)).ExecuteDeleteAsync();
+
+            foreach (var u in users)
+            {
+                var mappedUser = Mapper.Map<User>(u);
+                dbContext.Users.Remove(mappedUser);
+            }
+
 
             await transaction.CommitAsync();
             await dbContext.SaveChangesAsync();

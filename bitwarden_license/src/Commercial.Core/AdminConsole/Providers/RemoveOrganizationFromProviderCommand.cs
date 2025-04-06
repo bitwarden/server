@@ -1,18 +1,19 @@
 ﻿using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Implementations.AutomaticTax;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 using Stripe;
 
 namespace Bit.Commercial.Core.AdminConsole.Providers;
@@ -29,6 +30,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IProviderBillingService _providerBillingService;
     private readonly ISubscriberService _subscriberService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
+    private readonly IPricingClient _pricingClient;
+    private readonly IAutomaticTaxStrategy _automaticTaxStrategy;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
@@ -40,7 +43,9 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IFeatureService featureService,
         IProviderBillingService providerBillingService,
         ISubscriberService subscriberService,
-        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+        IPricingClient pricingClient,
+        [FromKeyedServices(AutomaticTaxFactory.BusinessUse)] IAutomaticTaxStrategy automaticTaxStrategy)
     {
         _eventService = eventService;
         _mailService = mailService;
@@ -52,6 +57,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         _providerBillingService = providerBillingService;
         _subscriberService = subscriberService;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
+        _pricingClient = pricingClient;
+        _automaticTaxStrategy = automaticTaxStrategy;
     }
 
     public async Task RemoveOrganizationFromProvider(
@@ -102,35 +109,44 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         Provider provider,
         IEnumerable<string> organizationOwnerEmails)
     {
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (isConsolidatedBillingEnabled &&
-            provider.Status == ProviderStatusType.Billable &&
-            organization.Status == OrganizationStatusType.Managed &&
+        if (provider.IsBillable() &&
+            organization.IsValidClient() &&
             !string.IsNullOrEmpty(organization.GatewayCustomerId))
         {
-            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            var customer = await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Description = string.Empty,
-                Email = organization.BillingEmail
+                Email = organization.BillingEmail,
+                Expand = ["tax", "tax_ids"]
             });
 
-            var plan = StaticStore.GetPlan(organization.PlanType).PasswordManager;
+            var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
 
             var subscriptionCreateOptions = new SubscriptionCreateOptions
             {
                 Customer = organization.GatewayCustomerId,
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
                 DaysUntilDue = 30,
-                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
                 Metadata = new Dictionary<string, string>
                 {
                     { "organizationId", organization.Id.ToString() }
                 },
                 OffSession = true,
                 ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
-                Items = [new SubscriptionItemOptions { Price = plan.StripeSeatPlanId, Quantity = organization.Seats }]
+                Items = [new SubscriptionItemOptions { Price = plan.PasswordManager.StripeSeatPlanId, Quantity = organization.Seats }]
             };
+
+            if (_featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+            {
+                _automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
+            }
+            else
+            {
+                subscriptionCreateOptions.AutomaticTax ??= new SubscriptionAutomaticTaxOptions
+                {
+                    Enabled = true
+                };
+            }
 
             var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 

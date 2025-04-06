@@ -1,6 +1,8 @@
 ﻿using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response.Organizations;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -31,6 +33,8 @@ public class OrganizationSponsorshipsController : Controller
     private readonly ICloudSyncSponsorshipsCommand _syncSponsorshipsCommand;
     private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
+    private readonly IPolicyRepository _policyRepository;
+    private readonly IFeatureService _featureService;
 
     public OrganizationSponsorshipsController(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
@@ -45,7 +49,9 @@ public class OrganizationSponsorshipsController : Controller
         IRemoveSponsorshipCommand removeSponsorshipCommand,
         ICloudSyncSponsorshipsCommand syncSponsorshipsCommand,
         IUserService userService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IPolicyRepository policyRepository,
+        IFeatureService featureService)
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
         _organizationRepository = organizationRepository;
@@ -60,6 +66,8 @@ public class OrganizationSponsorshipsController : Controller
         _syncSponsorshipsCommand = syncSponsorshipsCommand;
         _userService = userService;
         _currentContext = currentContext;
+        _policyRepository = policyRepository;
+        _featureService = featureService;
     }
 
     [Authorize("Application")]
@@ -68,6 +76,13 @@ public class OrganizationSponsorshipsController : Controller
     public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipCreateRequestModel model)
     {
         var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
+        var freeFamiliesSponsorshipPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(sponsoringOrgId,
+            PolicyType.FreeFamiliesSponsorshipPolicy);
+
+        if (freeFamiliesSponsorshipPolicy?.Enabled == true)
+        {
+            throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
+        }
 
         var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
             sponsoringOrg,
@@ -81,6 +96,14 @@ public class OrganizationSponsorshipsController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task ResendSponsorshipOffer(Guid sponsoringOrgId)
     {
+        var freeFamiliesSponsorshipPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(sponsoringOrgId,
+            PolicyType.FreeFamiliesSponsorshipPolicy);
+
+        if (freeFamiliesSponsorshipPolicy?.Enabled == true)
+        {
+            throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
+        }
+
         var sponsoringOrgUser = await _organizationUserRepository
             .GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
 
@@ -94,9 +117,20 @@ public class OrganizationSponsorshipsController : Controller
     [Authorize("Application")]
     [HttpPost("validate-token")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<bool> PreValidateSponsorshipToken([FromQuery] string sponsorshipToken)
+    public async Task<PreValidateSponsorshipResponseModel> PreValidateSponsorshipToken([FromQuery] string sponsorshipToken)
     {
-        return (await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email)).valid;
+        var isFreeFamilyPolicyEnabled = false;
+        var (isValid, sponsorship) = await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email);
+        if (isValid && sponsorship.SponsoringOrganizationId.HasValue)
+        {
+            var policy = await _policyRepository.GetByOrganizationIdTypeAsync(sponsorship.SponsoringOrganizationId.Value,
+                PolicyType.FreeFamiliesSponsorshipPolicy);
+            isFreeFamilyPolicyEnabled = policy?.Enabled ?? false;
+        }
+
+        var response = PreValidateSponsorshipResponseModel.From(isValid, isFreeFamilyPolicyEnabled);
+
+        return response;
     }
 
     [Authorize("Application")]
@@ -114,6 +148,14 @@ public class OrganizationSponsorshipsController : Controller
         if (!await _currentContext.OrganizationOwner(model.SponsoredOrganizationId))
         {
             throw new BadRequestException("Can only redeem sponsorship for an organization you own.");
+        }
+
+        var freeFamiliesSponsorshipPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(
+            model.SponsoredOrganizationId, PolicyType.FreeFamiliesSponsorshipPolicy);
+
+        if (freeFamiliesSponsorshipPolicy?.Enabled == true)
+        {
+            throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
         }
 
         await _setUpSponsorshipCommand.SetUpSponsorshipAsync(
