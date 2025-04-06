@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Models.Mail;
 using Bit.Core.Platform.X509ChainCustomization;
@@ -30,11 +30,6 @@ public class MailKitSmtpMailDeliveryServiceTests
         using var rsa = RSA.Create(2048);
         var certRequest = new CertificateRequest($"CN={commonName}", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         return certRequest.CreateSelfSigned(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddYears(1));
-    }
-
-    private static async Task SaveCertAsync(string filePath, X509Certificate2 certificate)
-    {
-        await File.WriteAllBytesAsync(filePath, certificate.Export(X509ContentType.Cert));
     }
 
     private static void ConfigureSmtpServerLogging(ITestOutputHelper testOutputHelper)
