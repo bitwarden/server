@@ -2,6 +2,7 @@
 using Bit.Seeder.Factories;
 using Bit.Seeder.Settings;
 using Bit.SharedWeb.Utilities;
+using LinqToDB.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -42,10 +43,12 @@ public class GenerateCommand
             db.Add(organization);
             db.Add(user);
             db.Add(orgUser);
-            db.AddRange(additionalUsers);
-            db.AddRange(additionalOrgUsers);
 
             db.SaveChanges();
+
+            // Use LinqToDB's BulkCopy for significant better performance
+            db.BulkCopy(additionalUsers);
+            db.BulkCopy(additionalOrgUsers);
         }
 
         return true;
