@@ -259,9 +259,7 @@ public class X509ChainCustomizationServiceCollectionExtensionsTests
 
     private static async Task<IAsyncDisposable> CreateServerAsync(int port, Action<HttpsConnectionAdapterOptions> configure)
     {
-        // Start HTTP Server with self signed cert
-        var builder = WebApplication.CreateSlimBuilder();
-        builder.Logging.AddFakeLogging();
+        var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
         builder.Services.AddRoutingCore();
         builder.WebHost.UseKestrelCore()
             .ConfigureKestrel(options =>
