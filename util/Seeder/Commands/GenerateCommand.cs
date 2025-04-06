@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Factories;
+﻿using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Seeder.Factories;
 using Bit.Seeder.Settings;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.DataProtection;
@@ -23,6 +24,16 @@ public class GenerateCommand
         var user = UserSeeder.CreateUser($"admin@{domain}");
         var orgUser = organization.CreateOrganizationUser(user);
 
+        var additionalUsers = new List<User>();
+        var additionalOrgUsers = new List<OrganizationUser>();
+        for (var i = 0; i < users; i++)
+        {
+            var additionalUser = UserSeeder.CreateUser($"user{i}@{domain}");
+            additionalUsers.Add(additionalUser);
+            additionalOrgUsers.Add(organization.CreateOrganizationUser(additionalUser));
+        }
+
+
         using (var scope = serviceProvider.CreateScope())
         {
             var scopedServices = scope.ServiceProvider;
@@ -31,6 +42,8 @@ public class GenerateCommand
             db.Add(organization);
             db.Add(user);
             db.Add(orgUser);
+            db.AddRange(additionalUsers);
+            db.AddRange(additionalOrgUsers);
 
             db.SaveChanges();
         }
