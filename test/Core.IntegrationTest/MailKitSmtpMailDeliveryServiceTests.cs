@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Models.Mail;
 using Bit.Core.Platform.X509ChainCustomization;
@@ -16,6 +16,7 @@ namespace Bit.Core.IntegrationTest;
 
 public class MailKitSmtpMailDeliveryServiceTests
 {
+    private static int _loggingConfigured;
     private readonly X509Certificate2 _selfSignedCert;
 
     public MailKitSmtpMailDeliveryServiceTests(ITestOutputHelper testOutputHelper)
@@ -34,6 +35,12 @@ public class MailKitSmtpMailDeliveryServiceTests
 
     private static void ConfigureSmtpServerLogging(ITestOutputHelper testOutputHelper)
     {
+        // The logging in SmtpServer is configured statically so if we add it for each test it duplicates
+        // but we cant add the logger statically either because we need ITestOutputHelper
+        if (Interlocked.CompareExchange(ref _loggingConfigured, 1, 0) == 0)
+        {
+            return;
+        }
         // Unfortunately this package doesn't public expose its logging infrastructure
         // so we use private reflection to try and access it. 
         try
