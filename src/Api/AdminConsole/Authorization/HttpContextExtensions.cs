@@ -8,6 +8,9 @@ namespace Bit.Api.AdminConsole.Authorization;
 
 public static class HttpContextExtensions
 {
+    public const string NoOrgIdError =
+        "A route decorated with with '[Authorize<Requirement>]' should include a route value named 'orgId' either through the [Controller] attribute or through a '[Http*]' attribute.";
+
     /// <summary>
     /// Returns the result of the callback, caching it in HttpContext.Features for the lifetime of the request.
     /// Subsequent calls will retrieve the cached value.
@@ -53,8 +56,24 @@ public static class HttpContextExtensions
         this HttpContext httpContext,
         IProviderUserRepository providerUserRepository,
         Guid userId)
-        => await httpContext.WithFeaturesCacheAsync(async () =>
-            (await providerUserRepository.GetManyOrganizationDetailsByUserAsync(
-                userId, ProviderUserStatusType.Confirmed)).ToList());
+        => await httpContext.WithFeaturesCacheAsync(() =>
+            providerUserRepository.GetManyOrganizationDetailsByUserAsync(userId, ProviderUserStatusType.Confirmed));
 
+
+    /// <summary>
+    /// Parses the {orgId} route parameter into a Guid, or throws if the {orgId} is not present or not a valid guid.
+    /// </summary>
+    /// <param name="httpContext"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    public static Guid GetOrganizationId(this HttpContext httpContext)
+    {
+        httpContext.GetRouteData().Values.TryGetValue("orgId", out var orgIdParam);
+        if (orgIdParam == null || !Guid.TryParse(orgIdParam.ToString(), out var orgId))
+        {
+            throw new InvalidOperationException(NoOrgIdError);
+        }
+
+        return orgId;
+    }
 }

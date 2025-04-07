@@ -17,13 +17,13 @@ public class OrganizationRequirementHandlerTests
     public async Task IfNoOrganizationId_Throws(SutProvider<OrganizationRequirementHandler> sutProvider)
     {
         // Arrange
-        ArrangeRouteAndUser(sutProvider, null); // no orgId in route
+        ArrangeRouteAndUser(sutProvider, null!); // no orgId in route
         var testRequirement = Substitute.For<IOrganizationRequirement>();
         var authContext = new AuthorizationHandlerContext([testRequirement], new ClaimsPrincipal(), null);
 
         // Act
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.HandleAsync(authContext));
-        Assert.Equal(OrganizationRequirementHelpers.NoOrgIdError, exception.Message);
+        Assert.Equal(HttpContextExtensions.NoOrgIdError, exception.Message);
         Assert.False(authContext.HasSucceeded);
     }
 
@@ -37,7 +37,7 @@ public class OrganizationRequirementHandlerTests
 
         // Act
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.HandleAsync(authContext));
-        Assert.Contains(OrganizationRequirementHelpers.NoOrgIdError, exception.Message);
+        Assert.Contains(HttpContextExtensions.NoOrgIdError, exception.Message);
         Assert.False(authContext.HasSucceeded);
     }
 
