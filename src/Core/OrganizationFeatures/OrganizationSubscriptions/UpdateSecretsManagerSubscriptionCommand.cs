@@ -124,7 +124,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     }
 
-    private async Task ValidateUpdateAsync(SecretsManagerSubscriptionUpdate update)
+    public async Task ValidateUpdateAsync(SecretsManagerSubscriptionUpdate update)
     {
         if (_globalSettings.SelfHosted)
         {
