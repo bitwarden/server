@@ -3,7 +3,7 @@ using Bit.Api.AdminConsole.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
+using Bit.Core.Test.AdminConsole.Helpers;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -43,7 +43,7 @@ public class OrganizationClaimsExtensionsTests
             ];
         }
 
-        var permissions = GetTestCustomPermissions();
+        var permissions = PermissionsHelpers.GetAllPermissions();
         foreach (var permission in permissions)
         {
             yield return
@@ -56,21 +56,5 @@ public class OrganizationClaimsExtensionsTests
                 }
             ];
         }
-    }
-
-    private static IEnumerable<Permissions> GetTestCustomPermissions()
-    {
-        yield return new Permissions { AccessEventLogs = true };
-        yield return new Permissions { AccessImportExport = true };
-        yield return new Permissions { AccessReports = true };
-        yield return new Permissions { CreateNewCollections = true };
-        yield return new Permissions { EditAnyCollection = true };
-        yield return new Permissions { DeleteAnyCollection = true };
-        yield return new Permissions { ManageGroups = true };
-        yield return new Permissions { ManagePolicies = true };
-        yield return new Permissions { ManageSso = true };
-        yield return new Permissions { ManageUsers = true };
-        yield return new Permissions { ManageResetPassword = true };
-        yield return new Permissions { ManageScim = true };
     }
 }
