@@ -17,7 +17,7 @@ public class UntrustDevicesCommand : IUntrustDevicesCommand
     {
         var userDevices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
         var deviceIdDict = userDevices.ToDictionary(device => device.Id);
-        
+
         // Validate that the user owns all devices that they passed in
         foreach (var deviceId in devicesToUntrust)
         {
