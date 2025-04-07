@@ -37,7 +37,7 @@ public class OrganizationRequirementHandler(
             throw new InvalidOperationException(NoUserIdError);
         }
 
-        Task<bool> IsProviderUserForOrg() => httpContextAccessor.HttpContext.IsProviderUserForOrgAsync(providerUserRepository, userId.Value, organizationId);
+        Task<bool> IsProviderUserForOrg() => httpContext.IsProviderUserForOrgAsync(providerUserRepository, userId.Value, organizationId);
 
         var authorized = await requirement.AuthorizeAsync(organizationClaims, IsProviderUserForOrg);
 
