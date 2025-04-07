@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
@@ -250,18 +249,6 @@ public class StripePaymentService : IPaymentService
 
     public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
-
-    public Task<string> AdjustSeats(
-        Provider provider,
-        StaticStore.Plan plan,
-        int currentlySubscribedSeats,
-        int newlySubscribedSeats)
-        => FinalizeSubscriptionChangeAsync(
-            provider,
-            new ProviderSubscriptionUpdate(
-                plan,
-                currentlySubscribedSeats,
-                newlySubscribedSeats));
 
     public Task<string> AdjustSmSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(
