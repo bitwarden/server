@@ -38,7 +38,7 @@ public class CommandResultExtensionTests
 
     [Theory]
     [MemberData(nameof(WithGenericTypeTestCases))]
-    public void MapToActionResult_WithGenericType_ShouldMapToHttpResponse(CommandResult<Cipher> input, ObjectResult expected)
+    public void MapToActionResultWithErrorMessages_WithGenericType_ShouldMapToHttpResponse(CommandResult<Cipher> input, ObjectResult expected)
     {
         var result = input.MapToActionResultWithErrorMessages();
 
@@ -47,7 +47,7 @@ public class CommandResultExtensionTests
 
 
     [Fact]
-    public void MapToActionResult_WithGenericType_ShouldThrowExceptionForUnhandledCommandResult()
+    public void MapToActionResultWithErrorMessages_WithGenericType_ShouldThrowExceptionForUnhandledCommandResult()
     {
         var result = new NotImplementedCommandResult();
 
@@ -80,7 +80,7 @@ public class CommandResultExtensionTests
 
     [Theory]
     [MemberData(nameof(TestCases))]
-    public void MapToActionResult_ShouldMapToHttpResponse(CommandResult input, ObjectResult expected)
+    public void MapToActionResultWithErrorMessages_ShouldMapToHttpResponse(CommandResult input, ObjectResult expected)
     {
         var result = input.MapToActionResult();
 
@@ -88,7 +88,7 @@ public class CommandResultExtensionTests
     }
 
     [Fact]
-    public void MapToActionResult_ShouldThrowExceptionForUnhandledCommandResult()
+    public void MapToActionResultWithErrorMessages_ShouldThrowExceptionForUnhandledCommandResult()
     {
         var result = new NotImplementedCommandResult<Cipher>();
 
