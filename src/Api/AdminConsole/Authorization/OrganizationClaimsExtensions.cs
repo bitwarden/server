@@ -68,18 +68,15 @@ public static class OrganizationClaimsExtensions
     /// <summary>
     /// Parses the provided claims into proper Guids, or ignore them if they are not valid guids.
     /// </summary>
-    private static List<Guid> ParseGuids(this IEnumerable<Claim> claims)
+    private static IEnumerable<Guid> ParseGuids(this IEnumerable<Claim> claims)
     {
-        List<Guid> result = [];
         foreach (var claim in claims)
         {
             if (Guid.TryParse(claim.Value, out var guid))
             {
-                result.Add(guid);
+                yield return guid;
             }
         }
-
-        return result;
     }
 
     private static OrganizationUserType? GetRoleFromClaims(HasClaim hasClaim)
