@@ -32,7 +32,7 @@ public static class BillingExtensions
     public static bool IsBillable(this InviteOrganizationProvider inviteOrganizationProvider) =>
         inviteOrganizationProvider is
         {
-            Type: ProviderType.Msp or ProviderType.MultiOrganizationEnterprise,
+            Type: ProviderType.Msp or ProviderType.BusinessUnit,
             Status: ProviderStatusType.Billable
         };
 
