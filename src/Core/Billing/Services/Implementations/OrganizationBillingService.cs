@@ -86,14 +86,17 @@ public class OrganizationBillingService(
             };
         }
 
-        var customer = await subscriberService.GetCustomer(organization,
-            new CustomerGetOptions { Expand = ["discount.coupon.applies_to"] });
+        var customerGetOptions = new CustomerGetOptions
+        {
+            Expand = ["discount.coupon.applies_to", "subscriptions", "subscriptions.data.latest_invoice"]
+        };
+        var customer = await subscriberService.GetCustomer(organization, customerGetOptions);
 
-        var subscription = await subscriberService.GetSubscription(organization);
+        var subscription = customer.Subscriptions.Single();
 
         var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
 
-        var invoice = await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions());
+        var invoice = subscription.LatestInvoice;
 
         var isPaymentMethodConfigured = customer.InvoiceSettings.DefaultPaymentMethodId != null;
 
