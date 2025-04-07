@@ -627,8 +627,8 @@ jobs:
               }
             })
 
-  setup-ephemeral-environment-branch:
-    name: Setup Ephemeral Environment Branch
+  setup-ephemeral-environment:
+    name: Setup Ephemeral Environment
     needs: build-docker
     if: |
       github.event_name == 'pull_request'
@@ -637,7 +637,6 @@ jobs:
     with:
       project: server
       pull_request_number: ${{ github.event.number }}
-      sync_environment: true
       create_branch: true
     secrets: inherit
 
