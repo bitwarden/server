@@ -20,11 +20,18 @@
 # Database Operations for database changes
 src/Sql/** @bitwarden/dept-dbops
 util/EfShared/** @bitwarden/dept-dbops
-util/Migrator/** @bitwarden/dept-dbops
+util/Migrator/** @bitwarden/team-platform-dev # The Platform team owns the Migrator project code
+util/Migrator/DbScripts/** @bitwarden/dept-dbops
+util/Migrator/DbScripts_finalization/** @bitwarden/dept-dbops
+util/Migrator/DbScripts_transition/** @bitwarden/dept-dbops
+util/Migrator/MySql/** @bitwarden/dept-dbops
 util/MySqlMigrations/** @bitwarden/dept-dbops
 util/PostgresMigrations/** @bitwarden/dept-dbops
 util/SqlServerEFScaffold/** @bitwarden/dept-dbops
 util/SqliteMigrations/** @bitwarden/dept-dbops
+
+# Shared util projects
+util/Setup/** @bitwarden/dept-bre @bitwarden/team-platform-dev
 
 # Auth team
 **/Auth @bitwarden/team-auth-dev
@@ -66,6 +73,7 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 
 # Platform team
 .github/workflows/build.yml @bitwarden/team-platform-dev
+.github/workflows/build_target.yml @bitwarden/team-platform-dev
 .github/workflows/cleanup-after-pr.yml @bitwarden/team-platform-dev
 .github/workflows/cleanup-rc-branch.yml @bitwarden/team-platform-dev
 .github/workflows/repository-management.yml @bitwarden/team-platform-dev

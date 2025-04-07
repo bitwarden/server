@@ -200,6 +200,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .ExecuteDeleteAsync();
             await dbContext.ProviderOrganizations.Where(po => po.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
+            await dbContext.OrganizationIntegrations.Where(oi => oi.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
 
             await dbContext.GroupServiceAccountAccessPolicy.Where(ap => ap.GrantedServiceAccount.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
@@ -353,6 +355,19 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
             return await query.ToArrayAsync();
         }
+    }
+
+    public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetManyByIdsAsync(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        var query = from organization in dbContext.Organizations
+                    where ids.Contains(organization.Id)
+                    select organization;
+
+        return await query.ToArrayAsync();
     }
 
     public Task EnableCollectionEnhancements(Guid organizationId)
