@@ -154,6 +154,12 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
             }
         }
 
+        if (orgUser.Type == OrganizationUserType.Admin && await _currentContext.OrganizationCustom(organizationId))
+        {
+            throw new BadRequestException("Custom users can not delete admins.");
+        }
+
+
         if (!managementStatus.TryGetValue(orgUser.Id, out var isManaged) || !isManaged)
         {
             throw new BadRequestException("Member is not managed by the organization.");
