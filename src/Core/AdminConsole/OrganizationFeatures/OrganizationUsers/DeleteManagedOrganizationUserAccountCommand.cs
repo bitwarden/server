@@ -13,6 +13,7 @@ using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
+using Microsoft.Extensions.Logging;
 
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
@@ -27,6 +28,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly ILogger<DeleteManagedOrganizationUserAccountCommand> _logger;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IPushNotificationService _pushService;
 
@@ -38,6 +40,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         IOrganizationUserRepository organizationUserRepository,
         IUserRepository userRepository,
         ICurrentContext currentContext,
+        ILogger<DeleteManagedOrganizationUserAccountCommand> logger,
         IReferenceEventService referenceEventService,
         IPushNotificationService pushService)
     {
@@ -48,6 +51,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         _organizationUserRepository = organizationUserRepository;
         _userRepository = userRepository;
         _currentContext = currentContext;
+        _logger = logger;
         _referenceEventService = referenceEventService;
         _pushService = pushService;
     }
@@ -184,9 +188,9 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
             {
                 await _userService.CancelPremiumAsync(user);
             }
-            catch (GatewayException)
+            catch (GatewayException exception)
             {
-
+                _logger.LogWarning(exception, "Failed to cancel the user's premium.");
             }
         }
     }

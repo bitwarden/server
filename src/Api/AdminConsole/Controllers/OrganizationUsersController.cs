@@ -23,6 +23,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Commands;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -594,6 +595,12 @@ public class OrganizationUsersController : Controller
         }
 
         var result = await _deleteManagedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
+
+        if (result is Success<DeleteUserResponse>)
+        {
+            return Ok();
+
+        }
 
         return result.MapToActionResultWithSingleErrorMessage();
     }

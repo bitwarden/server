@@ -116,7 +116,7 @@ public class DeleteManagedOrganizationUserAccountValidator(
 
     private static ValidationResult<DeleteUserValidationRequest> PreventSelfDeletion(DeleteUserValidationRequest request)
     {
-        if (request.OrganizationUser?.UserId == request.DeletingUserId)
+        if (request.OrganizationUser.UserId == request.DeletingUserId)
         {
             return new Invalid<DeleteUserValidationRequest>(new BadRequestError<DeleteUserValidationRequest>("You cannot delete yourself.", request));
         }
@@ -126,7 +126,7 @@ public class DeleteManagedOrganizationUserAccountValidator(
 
     private async Task<ValidationResult<DeleteUserValidationRequest>> EnsureOnlyOwnersCanDeleteOwnersAsync(DeleteUserValidationRequest request)
     {
-        if (request.OrganizationUser?.Type != OrganizationUserType.Owner)
+        if (request.OrganizationUser.Type != OrganizationUserType.Owner)
         {
             return new Valid<DeleteUserValidationRequest>(request);
         }
