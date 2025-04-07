@@ -1,7 +1,6 @@
 FROM --platform=$BUILDPLATFORM nginx:stable
 
 ARG TARGETPLATFORM
-
 LABEL com.bitwarden.product="bitwarden"
 
 RUN apt-get update \

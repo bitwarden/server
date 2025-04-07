@@ -58,10 +58,12 @@ WORKDIR /app
 #                  App stage                  #
 ###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
-LABEL com.bitwarden.product="bitwarden"
-EXPOSE 5000
 
+ARG TARGETPLATFORM
+LABEL com.bitwarden.product="bitwarden"
+ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:5000
+EXPOSE 5000
 ENV PROJECT_NAME=EventsProcessor
 
 RUN apt-get update \
@@ -71,10 +73,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy app from the build stage
+# Copy app from the build stage
 WORKDIR /app
 COPY --from=build /source/src/${PROJECT_NAME}/out /app
 COPY ./src/${PROJECT_NAME}/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
 
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/entrypoint.sh"]

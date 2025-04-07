@@ -52,6 +52,8 @@ WORKDIR /app
 #                  App stage                  #
 ###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
+
+ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden" com.bitwarden.project="setup"
 
 ENV PROJECT_NAME=Setup
@@ -62,7 +64,7 @@ RUN apt-get update \
     gosu \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the build output from the build stage
+# Copy app from the build stage
 WORKDIR /app
 COPY --from=build /source/util/${PROJECT_NAME}/out .
 COPY util/${PROJECT_NAME}/entrypoint.sh /entrypoint.sh

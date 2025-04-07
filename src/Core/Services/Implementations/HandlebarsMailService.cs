@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Reflection;
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Mail;
@@ -740,6 +741,82 @@ public class HandlebarsMailService : IMailService
             var clickTrackingText = (clickTrackingOff ? "clicktracking=off" : string.Empty);
             writer.WriteSafeString($"<a href=\"{href}\" target=\"_blank\" {clickTrackingText}>{text}</a>");
         });
+
+        // Construct markup for admin and owner email addresses.
+        // Using conditionals within the handlebar syntax was including extra spaces around
+        // concatenated strings, which this helper avoids.
+        Handlebars.RegisterHelper("formatAdminOwnerEmails", (writer, context, parameters) =>
+        {
+            if (parameters.Length == 0)
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+
+            var emailList = new List<string>();
+            if (parameters[0] is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Array)
+            {
+                emailList = jsonElement.EnumerateArray().Select(e => e.GetString()).ToList();
+            }
+            else if (parameters[0] is IEnumerable<string> emails)
+            {
+                emailList = emails.ToList();
+            }
+            else
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+
+            if (emailList.Count == 0)
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+
+            string constructAnchorElement(string email)
+            {
+                return $"<a style=\"color: #175DDC\" href=\"mailto:{email}\">{email}</a>";
+            }
+
+            var outputMessage = "This request was initiated by ";
+
+            if (emailList.Count == 1)
+            {
+                outputMessage += $"{constructAnchorElement(emailList[0])}.";
+            }
+            else
+            {
+                outputMessage += string.Join(", ", emailList.Take(emailList.Count - 1)
+                    .Select(email => constructAnchorElement(email)));
+                outputMessage += $" and {constructAnchorElement(emailList.Last())}.";
+            }
+
+            writer.WriteSafeString($"{outputMessage}");
+        });
+
+        // Returns the singular or plural form of a word based on the provided numeric value.
+        Handlebars.RegisterHelper("plurality", (writer, context, parameters) =>
+        {
+            if (parameters.Length != 3)
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+
+            var numeric = parameters[0];
+            var singularText = parameters[1].ToString();
+            var pluralText = parameters[2].ToString();
+
+            if (numeric is int number)
+            {
+                writer.WriteSafeString(number == 1 ? singularText : pluralText);
+            }
+            else
+            {
+                writer.WriteSafeString(string.Empty);
+            }
+        });
     }
 
     public async Task SendEmergencyAccessInviteEmailAsync(EmergencyAccess emergencyAccess, string name, string token)
@@ -1201,7 +1278,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotifications)
+    public async Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotifications, IEnumerable<string> adminOwnerEmails)
     {
         MailQueueMessage CreateMessage(UserSecurityTasksCount notification)
         {
@@ -1211,6 +1288,7 @@ public class HandlebarsMailService : IMailService
             {
                 OrgName = CoreHelpers.SanitizeForEmail(sanitizedOrgName, false),
                 TaskCount = notification.TaskCount,
+                AdminOwnerEmails = adminOwnerEmails.ToList(),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             };
             message.Category = "SecurityTasksNotification";

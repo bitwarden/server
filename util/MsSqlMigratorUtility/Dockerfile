@@ -57,6 +57,8 @@ WORKDIR /app
 #                  App stage                  #
 ###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
+
+ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
 
 ENV PROJECT_NAME=MsSqlMigratorUtility

@@ -1,9 +1,7 @@
-# TODO: We need to build from source for multi-arch and self-contained
-# support until the base ghcr.io/bitwarden/server supports this, or our
-# workflows support building the base server image from a feature branch.
+###############################################
+#                 Build stage                 #
+###############################################
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ENV PROJECT_NAME=Attachments
-ARG GIT_COMMIT
 
 # Docker buildx supplies the value for this arg
 ARG TARGETPLATFORM
@@ -23,6 +21,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
 WORKDIR /source
 COPY util/Server/*.csproj ./util/Server/
 COPY Directory.Build.props .
+COPY .editorconfig .
 
 # Restore project dependencies and tools
 WORKDIR /source/util/Server
@@ -31,8 +30,6 @@ RUN . /tmp/rid.txt && dotnet restore -r $RID
 # Copy required project files
 WORKDIR /source
 COPY util/Server/. ./util/Server/
-COPY .git/. ./.git/
-COPY .editorconfig /source
 
 # Build project
 WORKDIR /source/util/Server
@@ -49,10 +46,12 @@ WORKDIR /app
 #                  App stage                  #
 ###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
-LABEL com.bitwarden.product="bitwarden"
-EXPOSE 5000
 
+ARG TARGETPLATFORM
+LABEL com.bitwarden.product="bitwarden"
+ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:5000
+EXPOSE 5000
 ENV PROJECT_NAME=Attachments
 
 RUN apt-get update \

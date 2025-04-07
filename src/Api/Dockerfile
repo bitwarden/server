@@ -61,10 +61,12 @@ WORKDIR /app
 #                  App stage                  #
 ###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
-LABEL com.bitwarden.product="bitwarden"
-EXPOSE 5000
 
+ARG TARGETPLATFORM
+LABEL com.bitwarden.product="bitwarden"
+ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:5000
+EXPOSE 5000
 ENV PROJECT_NAME=Api
 
 RUN apt-get update \

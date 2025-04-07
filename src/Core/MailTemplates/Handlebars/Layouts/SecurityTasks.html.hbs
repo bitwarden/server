@@ -6,11 +6,8 @@
       <table border="0" cellpadding="0" cellspacing="0" width="100%"
         style="padding-left:30px; padding-right: 5px; padding-top: 20px;">
         <tr>
-          <td
-            style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 24px; color: #ffffff; line-height: 32px; font-weight: 500; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
-            {{OrgName}} has identified {{TaskCount}} critical login{{#if TaskCountPlural}}s{{/if}} that require{{#unless
-            TaskCountPlural}}s{{/unless}} a
-            password change
+          <td style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 24px; color: #ffffff; line-height: 32px; font-weight: 500; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+            {{OrgName}} has identified {{TaskCount}} critical {{plurality TaskCount "login" "logins"}} that {{plurality TaskCount "requires" "require"}} a password change
           </td>
         </tr>
       </table>

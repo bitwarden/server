@@ -57,10 +57,12 @@ WORKDIR /app
 #                  App stage                  #
 ###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
-LABEL com.bitwarden.product="bitwarden"
-EXPOSE 5000
 
+ARG TARGETPLATFORM
+LABEL com.bitwarden.product="bitwarden"
+ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:5000
+EXPOSE 5000
 ENV PROJECT_NAME=Identity
 
 RUN apt-get update \
@@ -69,8 +71,6 @@ RUN apt-get update \
   curl \
   krb5-user \
   && rm -rf /var/lib/apt/lists/*
-
-ENV ASPNETCORE_URLS=http://+:5000
 
 # Copy app from the build stage
 WORKDIR /app
