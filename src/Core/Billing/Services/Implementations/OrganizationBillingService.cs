@@ -73,7 +73,9 @@ public class OrganizationBillingService(
             return OrganizationMetadata.Default;
         }
 
-        var isEligibleForSelfHost = await IsEligibleForSelfHostAsync(organization);
+        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+
+        var isEligibleForSelfHost = plan.HasSelfHost;
 
         var isManaged = organization.Status == OrganizationStatusType.Managed;
 
@@ -94,7 +96,7 @@ public class OrganizationBillingService(
 
         var subscription = customer.Subscriptions.Single();
 
-        var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
+        var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(customer, plan);
 
         var invoice = subscription.LatestInvoice;
 
@@ -418,16 +420,13 @@ public class OrganizationBillingService(
     }
 
     private async Task<bool> IsOnSecretsManagerStandalone(
-        Organization organization,
         Customer? customer,
-        Subscription? subscription)
+        Bit.Core.Models.StaticStore.Plan plan)
     {
-        if (customer == null || subscription == null)
+        if (customer?.Subscriptions == null || !customer.Subscriptions.Any())
         {
             return false;
         }
-
-        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
         if (!plan.SupportsSecretsManager)
         {
@@ -440,6 +439,8 @@ public class OrganizationBillingService(
         {
             return false;
         }
+
+        var subscription = customer.Subscriptions.Single();
 
         var subscriptionProductIds = subscription.Items.Data.Select(item => item.Plan.ProductId);
 
