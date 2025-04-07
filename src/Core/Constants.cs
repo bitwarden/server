@@ -197,6 +197,7 @@ public static class FeatureFlagKeys
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string SecurityTasks = "security-tasks";
     public const string CipherKeyEncryption = "cipher-key-encryption";
+    public const string DesktopCipherForms = "pm-18520-desktop-cipher-forms";
 
     public static List<string> GetAllKeys()
     {
