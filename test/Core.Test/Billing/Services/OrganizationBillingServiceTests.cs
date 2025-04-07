@@ -58,6 +58,7 @@ public class OrganizationBillingServiceTests
                     Data = [
                         new Subscription
                         {
+                            Id = organization.GatewaySubscriptionId,
                             Items = new StripeList<SubscriptionItem>
                             {
                                 Data =
@@ -122,6 +123,7 @@ public class OrganizationBillingServiceTests
                     Data = [
                         new Subscription
                         {
+                            Id = organization.GatewaySubscriptionId,
                             Items = new StripeList<SubscriptionItem>
                             {
                                 Data =

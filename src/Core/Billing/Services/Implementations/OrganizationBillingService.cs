@@ -96,7 +96,7 @@ public class OrganizationBillingService(
 
         var subscription = customer.Subscriptions.FirstOrDefault(x => x.Id == organization.GatewaySubscriptionId);
 
-        var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(customer, plan);
+        var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(customer, subscription, plan);
 
         var invoice = subscription?.LatestInvoice;
 
@@ -409,21 +409,12 @@ public class OrganizationBillingService(
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
     }
 
-    private async Task<bool> IsEligibleForSelfHostAsync(
-        Organization organization)
-    {
-        var plans = await pricingClient.ListPlans();
-
-        var eligibleSelfHostPlans = plans.Where(plan => plan.HasSelfHost).Select(plan => plan.Type);
-
-        return eligibleSelfHostPlans.Contains(organization.PlanType);
-    }
-
     private bool IsOnSecretsManagerStandalone(
         Customer? customer,
+        Subscription? subscription,
         Bit.Core.Models.StaticStore.Plan plan)
     {
-        if (customer?.Subscriptions == null || !customer.Subscriptions.Any())
+        if (subscription == null)
         {
             return false;
         }
@@ -433,18 +424,16 @@ public class OrganizationBillingService(
             return false;
         }
 
-        var hasCoupon = customer.Discount?.Coupon?.Id == StripeConstants.CouponIDs.SecretsManagerStandalone;
+        var hasCoupon = customer?.Discount?.Coupon?.Id == StripeConstants.CouponIDs.SecretsManagerStandalone;
 
         if (!hasCoupon)
         {
             return false;
         }
 
-        var subscription = customer.Subscriptions.Single();
-
         var subscriptionProductIds = subscription.Items.Data.Select(item => item.Plan.ProductId);
 
-        var couponAppliesTo = customer.Discount?.Coupon?.AppliesTo?.Products;
+        var couponAppliesTo = customer?.Discount?.Coupon?.AppliesTo?.Products;
 
         return subscriptionProductIds.Intersect(couponAppliesTo ?? []).Any();
     }
