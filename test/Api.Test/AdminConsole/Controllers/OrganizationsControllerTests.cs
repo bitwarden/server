@@ -60,6 +60,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationDeleteCommand _organizationDeleteCommand;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
+    private readonly IOrganizationUpdateKeysCommand _organizationUpdateKeysCommand;
     private readonly OrganizationsController _sut;
 
     public OrganizationsControllerTests()
@@ -86,6 +87,7 @@ public class OrganizationsControllerTests : IDisposable
         _organizationDeleteCommand = Substitute.For<IOrganizationDeleteCommand>();
         _policyRequirementQuery = Substitute.For<IPolicyRequirementQuery>();
         _pricingClient = Substitute.For<IPricingClient>();
+        _organizationUpdateKeysCommand = Substitute.For<IOrganizationUpdateKeysCommand>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -109,7 +111,8 @@ public class OrganizationsControllerTests : IDisposable
             _cloudOrganizationSignUpCommand,
             _organizationDeleteCommand,
             _policyRequirementQuery,
-            _pricingClient);
+            _pricingClient,
+            _organizationUpdateKeysCommand);
     }
 
     public void Dispose()
