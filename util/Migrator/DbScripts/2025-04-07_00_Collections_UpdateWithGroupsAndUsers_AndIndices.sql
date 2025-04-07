@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Collection_UpdateWithGroupsAndUsers]
+CREATE OR ALTER PROCEDURE [dbo].[Collection_UpdateWithGroupsAndUsers]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name VARCHAR(MAX),
@@ -17,9 +17,9 @@ BEGIN
     -- Delete groups that are no longer in source
     DELETE cg
     FROM [dbo].[CollectionGroup] cg
-             LEFT JOIN @Groups g ON cg.GroupId = g.Id
+    LEFT JOIN @Groups g ON cg.GroupId = g.Id
     WHERE cg.CollectionId = @Id
-      AND g.Id IS NULL;
+    AND g.Id IS NULL;
 
     -- Update existing groups
     UPDATE cg
@@ -27,11 +27,11 @@ BEGIN
         cg.HidePasswords = g.HidePasswords,
         cg.Manage = g.Manage
     FROM [dbo].[CollectionGroup] cg
-             INNER JOIN @Groups g ON cg.GroupId = g.Id
+    INNER JOIN @Groups g ON cg.GroupId = g.Id
     WHERE cg.CollectionId = @Id
-      AND (cg.ReadOnly != g.ReadOnly
-        OR cg.HidePasswords != g.HidePasswords
-        OR cg.Manage != g.Manage);
+    AND (cg.ReadOnly != g.ReadOnly
+         OR cg.HidePasswords != g.HidePasswords
+         OR cg.Manage != g.Manage);
 
     -- Insert new groups
     INSERT INTO [dbo].[CollectionGroup]
@@ -49,19 +49,19 @@ BEGIN
         g.HidePasswords,
         g.Manage
     FROM @Groups g
-             INNER JOIN [dbo].[Group] grp ON grp.Id = g.Id
-             LEFT JOIN [dbo].[CollectionGroup] cg
-                       ON cg.CollectionId = @Id AND cg.GroupId = g.Id
+    INNER JOIN [dbo].[Group] grp ON grp.Id = g.Id
+    LEFT JOIN [dbo].[CollectionGroup] cg
+        ON cg.CollectionId = @Id AND cg.GroupId = g.Id
     WHERE grp.OrganizationId = @OrganizationId
-      AND cg.CollectionId IS NULL;
+    AND cg.CollectionId IS NULL;
 
     -- Users
     -- Delete users that are no longer in source
     DELETE cu
     FROM [dbo].[CollectionUser] cu
-             LEFT JOIN @Users u ON cu.OrganizationUserId = u.Id
+    LEFT JOIN @Users u ON cu.OrganizationUserId = u.Id
     WHERE cu.CollectionId = @Id
-      AND u.Id IS NULL;
+    AND u.Id IS NULL;
 
     -- Update existing users
     UPDATE cu
@@ -69,11 +69,11 @@ BEGIN
         cu.HidePasswords = u.HidePasswords,
         cu.Manage = u.Manage
     FROM [dbo].[CollectionUser] cu
-             INNER JOIN @Users u ON cu.OrganizationUserId = u.Id
+    INNER JOIN @Users u ON cu.OrganizationUserId = u.Id
     WHERE cu.CollectionId = @Id
-      AND (cu.ReadOnly != u.ReadOnly
-        OR cu.HidePasswords != u.HidePasswords
-        OR cu.Manage != u.Manage);
+    AND (cu.ReadOnly != u.ReadOnly
+         OR cu.HidePasswords != u.HidePasswords
+         OR cu.Manage != u.Manage);
 
     -- Insert new users
     INSERT INTO [dbo].[CollectionUser]
@@ -91,11 +91,27 @@ BEGIN
         u.HidePasswords,
         u.Manage
     FROM @Users u
-             INNER JOIN [dbo].[OrganizationUser] ou ON ou.Id = u.Id
-             LEFT JOIN [dbo].[CollectionUser] cu
-                       ON cu.CollectionId = @Id AND cu.OrganizationUserId = u.Id
+    INNER JOIN [dbo].[OrganizationUser] ou ON ou.Id = u.Id
+    LEFT JOIN [dbo].[CollectionUser] cu
+        ON cu.CollectionId = @Id AND cu.OrganizationUserId = u.Id
     WHERE ou.OrganizationId = @OrganizationId
-      AND cu.CollectionId IS NULL;
+    AND cu.CollectionId IS NULL;
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
 END
+
+IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_CollectionGroup_GroupId')
+    BEGIN
+        CREATE NONCLUSTERED INDEX IX_CollectionGroup_GroupId
+            ON [dbo].[CollectionGroup] (GroupId)
+            INCLUDE (ReadOnly, HidePasswords, Manage)
+    END
+GO
+
+IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_CollectionUser_OrganizationUserId')
+    BEGIN
+        CREATE NONCLUSTERED INDEX IX_CollectionUser_OrganizationUserId
+            ON [dbo].[CollectionUser] (OrganizationUserId)
+            INCLUDE (ReadOnly, HidePasswords, Manage)
+    END
+GO
