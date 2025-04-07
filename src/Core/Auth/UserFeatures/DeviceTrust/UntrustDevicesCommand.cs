@@ -16,9 +16,12 @@ public class UntrustDevicesCommand : IUntrustDevicesCommand
     public async Task UntrustDevices(User user, IEnumerable<Guid> devicesToUntrust)
     {
         var userDevices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
+        var deviceIdDict = userDevices.ToDictionary(device => device.Id);
+        
+        // Validate that the user owns all devices that they passed in
         foreach (var deviceId in devicesToUntrust)
         {
-            if (!userDevices.Any(d => d.Id == deviceId))
+            if (!deviceIdDict.ContainsKey(deviceId))
             {
                 throw new UnauthorizedAccessException($"User {user.Id} does not have access to device {deviceId}");
             }
@@ -26,7 +29,7 @@ public class UntrustDevicesCommand : IUntrustDevicesCommand
 
         foreach (var deviceId in devicesToUntrust)
         {
-            var device = userDevices.First(d => d.Id == deviceId);
+            var device = deviceIdDict[deviceId];
             device.EncryptedPrivateKey = null;
             device.EncryptedPublicKey = null;
             device.EncryptedUserKey = null;
