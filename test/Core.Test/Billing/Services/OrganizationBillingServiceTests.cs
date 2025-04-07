@@ -34,7 +34,10 @@ public class OrganizationBillingServiceTests
         var subscriberService = sutProvider.GetDependency<ISubscriberService>();
 
         subscriberService
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options => options.Expand.FirstOrDefault() == "discount.coupon.applies_to"))
+            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options =>
+                options.Expand.Contains("discount.coupon.applies_to") &&
+                options.Expand.Contains("subscriptions") &&
+                options.Expand.Contains("subscriptions.data.latest_invoice")))
             .Returns(new Customer
             {
                 Discount = new Discount
@@ -51,25 +54,29 @@ public class OrganizationBillingServiceTests
                 InvoiceSettings = new CustomerInvoiceSettings
                 {
                     DefaultPaymentMethodId = "pm_123"
+                },
+                Subscriptions = new StripeList<Subscription>
+                {
+                    Data = [
+                        new Subscription
+                        {
+                            Items = new StripeList<SubscriptionItem>
+                            {
+                                Data =
+                                [
+                                    new SubscriptionItem
+                                    {
+                                        Plan = new Plan
+                                        {
+                                            ProductId = "product_id"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
                 }
             });
-
-        subscriberService.GetSubscription(organization).Returns(new Subscription
-        {
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new SubscriptionItem
-                    {
-                        Plan = new Plan
-                        {
-                            ProductId = "product_id"
-                        }
-                    }
-                ]
-            }
-        });
 
         var metadata = await sutProvider.Sut.GetMetadata(organizationId);
 
@@ -93,7 +100,10 @@ public class OrganizationBillingServiceTests
         var subscriberService = sutProvider.GetDependency<ISubscriberService>();
 
         subscriberService
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options => options.Expand.FirstOrDefault() == "discount.coupon.applies_to"))
+            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options =>
+                options.Expand.Contains("discount.coupon.applies_to") &&
+                options.Expand.Contains("subscriptions") &&
+                options.Expand.Contains("subscriptions.data.latest_invoice")))
             .Returns(new Customer
             {
                 Discount = new Discount
@@ -110,25 +120,29 @@ public class OrganizationBillingServiceTests
                 InvoiceSettings = new CustomerInvoiceSettings
                 {
                     DefaultPaymentMethodId = null
+                },
+                Subscriptions = new StripeList<Subscription>
+                {
+                    Data = [
+                        new Subscription
+                        {
+                            Items = new StripeList<SubscriptionItem>
+                            {
+                                Data =
+                                [
+                                    new SubscriptionItem
+                                    {
+                                        Plan = new Plan
+                                        {
+                                            ProductId = "product_id"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
                 }
             });
-
-        subscriberService.GetSubscription(organization).Returns(new Subscription
-        {
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new SubscriptionItem
-                    {
-                        Plan = new Plan
-                        {
-                            ProductId = "product_id"
-                        }
-                    }
-                ]
-            }
-        });
 
         var metadata = await sutProvider.Sut.GetMetadata(organizationId);
 
