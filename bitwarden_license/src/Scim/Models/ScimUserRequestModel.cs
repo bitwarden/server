@@ -1,8 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
+using OrganizationUserInvite = Bit.Core.Models.Business.OrganizationUserInvite;
 
 namespace Bit.Scim.Models;
 
@@ -10,7 +13,8 @@ public class ScimUserRequestModel : BaseScimUserModel
 {
     public ScimUserRequestModel()
         : base(false)
-    { }
+    {
+    }
 
     public OrganizationUserInvite ToOrganizationUserInvite(ScimProviderType scimProvider)
     {
@@ -23,6 +27,31 @@ public class ScimUserRequestModel : BaseScimUserModel
             Collections = new List<CollectionAccessSelection>(),
             Groups = new List<Guid>()
         };
+    }
+
+    public InviteOrganizationUsersRequest ToRequest(
+        ScimProviderType scimProvider,
+        InviteOrganization inviteOrganization,
+        DateTimeOffset performedAt)
+    {
+        var email = EmailForInvite(scimProvider);
+
+        if (string.IsNullOrWhiteSpace(email) || !Active)
+        {
+            throw new BadRequestException();
+        }
+
+        return new InviteOrganizationUsersRequest(
+            invites:
+            [
+                new Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite(
+                        email: email,
+                        externalId: ExternalIdForInvite()
+                    )
+            ],
+            inviteOrganization: inviteOrganization,
+            performedBy: Guid.Empty, // SCIM does not have a user id
+            performedAt: performedAt);
     }
 
     private string EmailForInvite(ScimProviderType scimProvider)

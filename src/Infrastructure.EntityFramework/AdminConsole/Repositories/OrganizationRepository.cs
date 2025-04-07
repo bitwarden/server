@@ -199,6 +199,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .ExecuteDeleteAsync();
             await dbContext.ProviderOrganizations.Where(po => po.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
+            await dbContext.OrganizationIntegrations.Where(oi => oi.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
 
             await dbContext.GroupServiceAccountAccessPolicy.Where(ap => ap.GrantedServiceAccount.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();

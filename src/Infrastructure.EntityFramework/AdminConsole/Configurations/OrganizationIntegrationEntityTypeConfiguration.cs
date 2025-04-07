@@ -9,15 +9,15 @@ public class OrganizationIntegrationEntityTypeConfiguration : IEntityTypeConfigu
     public void Configure(EntityTypeBuilder<OrganizationIntegration> builder)
     {
         builder
-            .Property(p => p.Id)
+            .Property(oi => oi.Id)
             .ValueGeneratedNever();
 
         builder
-            .HasIndex(p => p.OrganizationId)
+            .HasIndex(oi => oi.OrganizationId)
             .IsClustered(false);
 
         builder
-            .HasIndex(p => new { p.OrganizationId, p.Type })
+            .HasIndex(oi => new { oi.OrganizationId, oi.Type })
             .IsUnique()
             .IsClustered(false);
 
