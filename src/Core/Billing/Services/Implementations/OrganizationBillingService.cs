@@ -95,6 +95,8 @@ public class OrganizationBillingService(
 
         var invoice = await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions());
 
+        var isPaymentMethodConfigured = customer.InvoiceSettings.DefaultPaymentMethodId != null;
+
         return new OrganizationMetadata(
             isEligibleForSelfHost,
             isManaged,
@@ -105,7 +107,8 @@ public class OrganizationBillingService(
             subscription.Status == StripeConstants.SubscriptionStatus.Canceled,
             invoice?.DueDate,
             invoice?.Created,
-            subscription.CurrentPeriodEnd);
+            subscription.CurrentPeriodEnd,
+            isPaymentMethodConfigured);
     }
 
     public async Task UpdatePaymentMethod(
