@@ -32,7 +32,7 @@ public class OrganizationBillingServiceTests
         var subscriberService = sutProvider.GetDependency<ISubscriberService>();
 
         subscriberService
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options =>
+            .GetCustomerOrThrow(organization, Arg.Is<CustomerGetOptions>(options =>
                 options.Expand.Contains("discount.coupon.applies_to") &&
                 options.Expand.Contains("subscriptions") &&
                 options.Expand.Contains("subscriptions.data.latest_invoice")))
@@ -96,7 +96,7 @@ public class OrganizationBillingServiceTests
         var subscriberService = sutProvider.GetDependency<ISubscriberService>();
 
         subscriberService
-            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options =>
+            .GetCustomerOrThrow(organization, Arg.Is<CustomerGetOptions>(options =>
                 options.Expand.Contains("discount.coupon.applies_to") &&
                 options.Expand.Contains("subscriptions") &&
                 options.Expand.Contains("subscriptions.data.latest_invoice")))

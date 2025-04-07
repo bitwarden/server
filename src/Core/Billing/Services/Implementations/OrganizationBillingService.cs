@@ -92,13 +92,13 @@ public class OrganizationBillingService(
         {
             Expand = ["discount.coupon.applies_to", "subscriptions", "subscriptions.data.latest_invoice"]
         };
-        var customer = await subscriberService.GetCustomer(organization, customerGetOptions);
+        var customer = await subscriberService.GetCustomerOrThrow(organization, customerGetOptions);
 
-        var subscription = customer.Subscriptions.Single();
+        var subscription = customer.Subscriptions.FirstOrDefault(x => x.Id == organization.GatewaySubscriptionId);
 
-        var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(customer, plan);
+        var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(customer, plan);
 
-        var invoice = subscription.LatestInvoice;
+        var invoice = subscription?.LatestInvoice;
 
         var isPaymentMethodConfigured = customer.InvoiceSettings.DefaultPaymentMethodId != null;
 
@@ -106,13 +106,13 @@ public class OrganizationBillingService(
             isEligibleForSelfHost,
             isManaged,
             isOnSecretsManagerStandalone,
-            subscription.Status == StripeConstants.SubscriptionStatus.Unpaid,
+            subscription?.Status == StripeConstants.SubscriptionStatus.Unpaid,
             true,
             invoice?.Status == StripeConstants.InvoiceStatus.Open,
-            subscription.Status == StripeConstants.SubscriptionStatus.Canceled,
+            subscription?.Status == StripeConstants.SubscriptionStatus.Canceled,
             invoice?.DueDate,
             invoice?.Created,
-            subscription.CurrentPeriodEnd,
+            subscription?.CurrentPeriodEnd,
             isPaymentMethodConfigured);
     }
 
@@ -419,7 +419,7 @@ public class OrganizationBillingService(
         return eligibleSelfHostPlans.Contains(organization.PlanType);
     }
 
-    private async Task<bool> IsOnSecretsManagerStandalone(
+    private bool IsOnSecretsManagerStandalone(
         Customer? customer,
         Bit.Core.Models.StaticStore.Plan plan)
     {
