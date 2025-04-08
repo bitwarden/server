@@ -631,7 +631,8 @@ jobs:
     name: Setup Ephemeral Environment
     needs: build-docker
     if: |
-      github.event_name == 'pull_request'
+      needs.build-artifacts.outputs.has_secrets == 'true'
+      && github.event_name == 'pull_request'
       && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
     uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
     with:
