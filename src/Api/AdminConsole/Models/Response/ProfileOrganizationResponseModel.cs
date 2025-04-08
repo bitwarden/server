@@ -72,6 +72,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         UserIsManagedByOrganization = organizationIdsManagingUser.Contains(organization.OrganizationId);
         UseRiskInsights = organization.UseRiskInsights;
+        UseOrganizationDomains = organization.UseOrganizationDomains;
 
         if (organization.SsoConfig != null)
         {
@@ -144,4 +145,5 @@ public class ProfileOrganizationResponseModel : ResponseModel
     /// </returns>
     public bool UserIsManagedByOrganization { get; set; }
     public bool UseRiskInsights { get; set; }
+    public bool UseOrganizationDomains { get; set; }
 }
