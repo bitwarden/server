@@ -483,6 +483,8 @@ public static class ServiceCollectionExtensions
         Action<AuthorizationOptions> addAuthorization)
     {
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            // If we ever use the overload here with a different authentication scheme name then 
+            // we need to change the AddOptions call below.
             .AddJwtBearer(options =>
             {
                 options.MapInboundClaims = false;
@@ -500,6 +502,15 @@ public static class ServiceCollectionExtensions
                         return Task.CompletedTask;
                     }
                 };
+            });
+
+        // This is done through a Configure method instead of above so that we can avoid
+        // an early creation of services but still use a service that should centrally control how HttpMessageHandlers
+        // are created.
+        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+            .Configure<IHttpMessageHandlerFactory>((options, httpMessageHandlerFactory) =>
+            {
+                options.BackchannelHttpHandler = httpMessageHandlerFactory.CreateHandler();
             });
 
         if (addAuthorization != null)

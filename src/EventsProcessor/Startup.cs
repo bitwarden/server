@@ -59,6 +59,9 @@ public class Startup
             }
         }
         services.AddHostedService<AzureQueueHostedService>();
+
+        // This should be registered last because it customizes the primary http message handler and we want it to win.
+        services.AddX509ChainCustomization();
     }
 
     public void Configure(
