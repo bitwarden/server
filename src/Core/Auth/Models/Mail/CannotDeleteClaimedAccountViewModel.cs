@@ -2,6 +2,6 @@
 
 namespace Bit.Core.Auth.Models.Mail;
 
-public class CannotDeleteManagedAccountViewModel : BaseMailModel
+public class CannotDeleteClaimedAccountViewModel : BaseMailModel
 {
 }
