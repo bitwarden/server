@@ -51,7 +51,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         SsoBound = !string.IsNullOrWhiteSpace(organization.SsoExternalId);
         Identifier = organization.Identifier;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organization.Permissions);
-        ResetPasswordEnrolled = organization.ResetPasswordKey != null;
+        ResetPasswordEnrolled = !string.IsNullOrWhiteSpace(organization.ResetPasswordKey);
         UserId = organization.UserId;
         OrganizationUserId = organization.OrganizationUserId;
         ProviderId = organization.ProviderId;
