@@ -84,7 +84,7 @@ public class OrganizationBillingServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetMetadata_ReturnsFalseForIsPaymentMethodConfigured_WhenNoPaymentMethodIsConfiguredForTheCustomer(
+    public async Task GetMetadata_ReturnsFalseForIsPaymentMethodConfigured_WhenNoPaymentMethodConfigured(
         Guid organizationId,
         Organization organization,
         SutProvider<OrganizationBillingService> sutProvider)
@@ -118,6 +118,7 @@ public class OrganizationBillingServiceTests
                 {
                     DefaultPaymentMethodId = null
                 },
+                Metadata = new Dictionary<string, string>(),
                 Subscriptions = new StripeList<Subscription>
                 {
                     Data = [
@@ -145,6 +146,135 @@ public class OrganizationBillingServiceTests
         var metadata = await sutProvider.Sut.GetMetadata(organizationId);
 
         Assert.False(metadata!.IsPaymentMethodConfigured);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetMetadata_ReturnsTrueForIsPaymentMethodConfigured_WhenCustomerIsUsingCard(
+        Guid organizationId,
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
+            .Returns(StaticStore.GetPlan(organization.PlanType));
+
+        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
+
+        subscriberService
+            .GetCustomerOrThrow(organization, Arg.Is<CustomerGetOptions>(options =>
+                options.Expand.Contains("discount.coupon.applies_to") &&
+                options.Expand.Contains("subscriptions") &&
+                options.Expand.Contains("subscriptions.data.latest_invoice")))
+            .Returns(new Customer
+            {
+                Discount = new Discount
+                {
+                    Coupon = new Coupon
+                    {
+                        Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
+                        AppliesTo = new CouponAppliesTo
+                        {
+                            Products = ["product_id"]
+                        }
+                    }
+                },
+                InvoiceSettings = new CustomerInvoiceSettings
+                {
+                    DefaultPaymentMethodId = "pm_123"
+                },
+                Subscriptions = new StripeList<Subscription>
+                {
+                    Data = [
+                        new Subscription
+                        {
+                            Id = organization.GatewaySubscriptionId,
+                            Items = new StripeList<SubscriptionItem>
+                            {
+                                Data =
+                                [
+                                    new SubscriptionItem
+                                    {
+                                        Plan = new Plan
+                                        {
+                                            ProductId = "product_id"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            });
+
+        var metadata = await sutProvider.Sut.GetMetadata(organizationId);
+
+        Assert.True(metadata!.IsPaymentMethodConfigured);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetMetadata_ReturnsTrueForIsPaymentMethodConfigured_WhenCustomerIsUsingPayPal(
+        Guid organizationId,
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
+            .Returns(StaticStore.GetPlan(organization.PlanType));
+
+        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
+
+        subscriberService
+            .GetCustomerOrThrow(organization, Arg.Is<CustomerGetOptions>(options =>
+                options.Expand.Contains("discount.coupon.applies_to") &&
+                options.Expand.Contains("subscriptions") &&
+                options.Expand.Contains("subscriptions.data.latest_invoice")))
+            .Returns(new Customer
+            {
+                Discount = new Discount
+                {
+                    Coupon = new Coupon
+                    {
+                        Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
+                        AppliesTo = new CouponAppliesTo
+                        {
+                            Products = ["product_id"]
+                        }
+                    }
+                },
+                InvoiceSettings = new CustomerInvoiceSettings(),
+                Metadata = new Dictionary<string, string>
+                {
+                    {"btCustomerId", Guid.NewGuid().ToString() }
+                },
+                Subscriptions = new StripeList<Subscription>
+                {
+                    Data = [
+                        new Subscription
+                        {
+                            Id = organization.GatewaySubscriptionId,
+                            Items = new StripeList<SubscriptionItem>
+                            {
+                                Data =
+                                [
+                                    new SubscriptionItem
+                                    {
+                                        Plan = new Plan
+                                        {
+                                            ProductId = "product_id"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            });
+
+        var metadata = await sutProvider.Sut.GetMetadata(organizationId);
+
+        Assert.True(metadata!.IsPaymentMethodConfigured);
     }
     #endregion
 }

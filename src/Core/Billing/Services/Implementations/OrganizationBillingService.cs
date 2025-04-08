@@ -100,8 +100,6 @@ public class OrganizationBillingService(
 
         var invoice = subscription?.LatestInvoice;
 
-        var isPaymentMethodConfigured = customer.InvoiceSettings.DefaultPaymentMethodId != null;
-
         return new OrganizationMetadata(
             isEligibleForSelfHost,
             isManaged,
@@ -113,7 +111,7 @@ public class OrganizationBillingService(
             invoice?.DueDate,
             invoice?.Created,
             subscription?.CurrentPeriodEnd,
-            isPaymentMethodConfigured);
+            customer.IsPaymentMethodConfigured());
     }
 
     public async Task UpdatePaymentMethod(
