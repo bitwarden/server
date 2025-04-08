@@ -54,10 +54,17 @@ h3 {
     margin-top: .45rem;
 }
 
+input.invalid {
+    border-color: $danger;
+}
+
+.validation-message {
+  color: $danger;
+
 a {
-    text-decoration: none;
+  text-decoration: none;
     
-    &:hover {
-      text-decoration: underline;
-    }
+  &:hover {
+    text-decoration: underline;
+  }
 }
