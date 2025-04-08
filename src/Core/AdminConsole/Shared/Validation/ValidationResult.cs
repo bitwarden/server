@@ -16,6 +16,13 @@ public record Valid<T> : ValidationResult<T>
     public T Value { get; init; }
 }
 
+public record PartialValidationResult<T>
+{
+    public List<Invalid<T>> InvalidResults { get; init; }
+
+    public List<Valid<T>> ValidResults { get; init; }
+}
+
 public record Invalid<T> : ValidationResult<T>
 {
     public IEnumerable<Error<T>> Errors { get; init; } = [];
