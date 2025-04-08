@@ -121,8 +121,7 @@ public class AccountsController : Controller
         var user = model.ToUser();
         var identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
             model.Token, model.OrganizationUserId);
-        // delaysEnabled false is only for the new registration with email verification process
-        return await ProcessRegistrationResult(identityResult, user, delaysEnabled: true);
+        return ProcessRegistrationResult(identityResult, user);
     }
 
     [HttpPost("register/send-verification-email")]
