@@ -804,12 +804,10 @@ public class HandlebarsMailService : IMailService
                 return;
             }
 
-            var numeric = parameters[0];
-            var singularText = parameters[1].ToString();
-            var pluralText = parameters[2].ToString();
-
-            if (numeric is int number)
+            if (int.TryParse(parameters[0].ToString(), out var number))
             {
+                var singularText = parameters[1].ToString();
+                var pluralText = parameters[2].ToString();
                 writer.WriteSafeString(number == 1 ? singularText : pluralText);
             }
             else
