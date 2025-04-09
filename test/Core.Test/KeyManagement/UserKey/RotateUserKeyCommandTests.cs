@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.KeyManagement.UserFeatures.UserKey;
+namespace Bit.Core.Test.KeyManagement.UserKey;
 
 [SutProviderCustomize]
 public class RotateUserKeyCommandTests
