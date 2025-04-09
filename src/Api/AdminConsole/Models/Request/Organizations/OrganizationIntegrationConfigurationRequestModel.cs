@@ -6,15 +6,17 @@ using Bit.Core.Enums;
 
 namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 
-public class OrganizationIntegrationConfigurationCreateRequestModel : IValidatableObject
+public class OrganizationIntegrationConfigurationRequestModel : IValidatableObject
 {
     public string? Configuration { get; set; }
 
     [Required]
-    public Guid OrganizationIntegrationId { get; set; }
+    public EventType EventType { get; set; }
+
+    public Guid? Id { get; set; }
 
     [Required]
-    public EventType EventType { get; set; }
+    public Guid OrganizationIntegrationId { get; set; }
 
     public string? Template { get; set; }
 
@@ -22,6 +24,7 @@ public class OrganizationIntegrationConfigurationCreateRequestModel : IValidatab
     {
         return new OrganizationIntegrationConfiguration()
         {
+            Id = Id ?? Guid.Empty,
             OrganizationIntegrationId = OrganizationIntegrationId,
             Configuration = Configuration,
             EventType = EventType,

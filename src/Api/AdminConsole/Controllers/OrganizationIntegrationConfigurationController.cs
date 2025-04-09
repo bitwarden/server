@@ -19,14 +19,16 @@ public class OrganizationIntegrationConfigurationController(
     public async Task<OrganizationIntegrationConfigurationResponseModel> PostAsync(
         Guid organizationId,
         Guid integrationId,
-        [FromBody] OrganizationIntegrationConfigurationCreateRequestModel model)
+        [FromBody] OrganizationIntegrationConfigurationRequestModel model)
     {
         if (!await currentContext.OrganizationOwner(organizationId))
         {
             throw new NotFoundException();
         }
         var integration = await integrationRepository.GetByIdAsync(integrationId);
-        if (integration == null || integration.OrganizationId != organizationId)
+        if (integration == null ||
+            integration.OrganizationId != organizationId ||
+            model.OrganizationIntegrationId != integrationId)
         {
             throw new NotFoundException();
         }
@@ -34,6 +36,35 @@ public class OrganizationIntegrationConfigurationController(
         var organizationIntegrationConfiguration = model.ToOrganizationIntegrationConfiguration();
         var configuration = await integrationConfigurationRepository.CreateAsync(organizationIntegrationConfiguration);
         return new OrganizationIntegrationConfigurationResponseModel(configuration);
+    }
+
+    [HttpPut("{configurationId:guid}")]
+    public async Task<OrganizationIntegrationConfigurationResponseModel> UpdateAsync(Guid organizationId, Guid integrationId, Guid configurationId, OrganizationIntegrationConfigurationRequestModel model)
+    {
+        if (!await currentContext.OrganizationOwner(organizationId))
+        {
+            throw new NotFoundException();
+        }
+        var integration = await integrationRepository.GetByIdAsync(integrationId);
+        if (integration == null ||
+            integration.OrganizationId != organizationId)
+        {
+            throw new NotFoundException();
+        }
+
+        var configuration = await integrationConfigurationRepository.GetByIdAsync(configurationId);
+        if (configuration is null ||
+            configuration.OrganizationIntegrationId != integrationId ||
+            model.Id != configurationId ||
+            model.OrganizationIntegrationId != integrationId)
+        {
+            throw new BadRequestException();
+        }
+
+        var newConfiguration = model.ToOrganizationIntegrationConfiguration();
+        await integrationConfigurationRepository.ReplaceAsync(model.ToOrganizationIntegrationConfiguration());
+
+        return new OrganizationIntegrationConfigurationResponseModel(newConfiguration);
     }
 
     [HttpDelete("{configurationId:guid}")]
@@ -51,7 +82,7 @@ public class OrganizationIntegrationConfigurationController(
         }
 
         var configuration = await integrationConfigurationRepository.GetByIdAsync(configurationId);
-        if (configuration is null)
+        if (configuration is null || configuration.OrganizationIntegrationId != integrationId)
         {
             throw new NotFoundException();
         }
