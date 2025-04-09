@@ -15,12 +15,12 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
 [SutProviderCustomize]
-public class DeleteManagedOrganizationUserAccountCommandTests
+public class DeleteClaimedOrganizationUserAccountCommandTests
 {
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_WithValidUser_DeletesUserAndLogsEvent(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user, Guid deletingUserId,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user, Guid deletingUserId,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
     {
         // Arrange
@@ -34,8 +34,8 @@ public class DeleteManagedOrganizationUserAccountCommandTests
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
 
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(
                 organizationUser.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)))
             .Returns(new Dictionary<Guid, bool> { { organizationUser.Id, true } });
@@ -59,7 +59,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_WithUserNotFound_ThrowsException(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         Guid organizationId, Guid organizationUserId)
     {
         // Arrange
@@ -81,7 +81,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_DeletingYourself_ThrowsException(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser,
         Guid deletingUserId)
@@ -110,7 +110,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_WhenUserIsInvited_ThrowsException(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Invited, OrganizationUserType.User)] OrganizationUser organizationUser)
     {
         // Arrange
@@ -134,7 +134,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_WhenCustomUserDeletesAdmin_ThrowsException(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Admin)] OrganizationUser organizationUser,
         Guid deletingUserId)
     {
@@ -166,7 +166,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_DeletingOwnerWhenNotOwner_ThrowsException(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser organizationUser,
         Guid deletingUserId)
     {
@@ -198,7 +198,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_DeletingLastConfirmedOwner_ThrowsException(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser organizationUser,
         Guid deletingUserId)
     {
@@ -237,7 +237,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteUserAsync_WithUserNotManaged_ThrowsException(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
     {
         // Arrange
@@ -250,8 +250,8 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id)
             .Returns(user);
 
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(organizationUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(organizationUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, bool> { { organizationUser.Id, false } });
 
         // Act
@@ -259,7 +259,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
             sutProvider.Sut.DeleteUserAsync(organizationUser.OrganizationId, organizationUser.Id, null));
 
         // Assert
-        Assert.Equal("Member is not managed by the organization.", exception.Message);
+        Assert.Equal("Member is not claimed by the organization.", exception.Message);
         await sutProvider.GetDependency<IUserService>().Received(0).DeleteAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IEventService>().Received(0)
             .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<DateTime?>());
@@ -268,7 +268,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WithValidUsers_DeletesUsersAndLogsEvents(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user1, User user2, Guid organizationId,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user1, User user2, Guid organizationId,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser2)
     {
@@ -285,8 +285,8 @@ public class DeleteManagedOrganizationUserAccountCommandTests
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user1.Id) && ids.Contains(user2.Id)))
             .Returns(new[] { user1, user2 });
 
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, bool> { { orgUser1.Id, true }, { orgUser2.Id, true } });
 
         // Act
@@ -308,7 +308,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WhenUserNotFound_ReturnsErrorMessage(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         Guid organizationId,
         Guid orgUserId)
     {
@@ -329,7 +329,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WhenDeletingYourself_ReturnsErrorMessage(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         User user, [OrganizationUser] OrganizationUser orgUser, Guid deletingUserId)
     {
         // Arrange
@@ -358,7 +358,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WhenUserIsInvited_ReturnsErrorMessage(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider,
         [OrganizationUser(OrganizationUserStatusType.Invited, OrganizationUserType.User)] OrganizationUser orgUser)
     {
         // Arrange
@@ -383,7 +383,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WhenDeletingOwnerAsNonOwner_ReturnsErrorMessage(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser,
         Guid deletingUserId)
     {
@@ -415,7 +415,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WhenDeletingLastOwner_ReturnsErrorMessage(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUser,
         Guid deletingUserId)
     {
@@ -453,7 +453,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_WhenUserNotManaged_ReturnsErrorMessage(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
     {
         // Arrange
@@ -467,8 +467,8 @@ public class DeleteManagedOrganizationUserAccountCommandTests
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.UserId.Value)))
             .Returns(new[] { user });
 
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>())
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, bool> { { orgUser.Id, false } });
 
         // Act
@@ -477,7 +477,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         // Assert
         Assert.Single(result);
         Assert.Equal(orgUser.Id, result.First().Item1);
-        Assert.Contains("Member is not managed by the organization.", result.First().Item2);
+        Assert.Contains("Member is not claimed by the organization.", result.First().Item2);
         await sutProvider.GetDependency<IUserService>().Received(0).DeleteAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IEventService>().Received(0)
             .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
@@ -486,7 +486,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task DeleteManyUsersAsync_MixedValidAndInvalidUsers_ReturnsAppropriateResults(
-        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user1, User user3,
+        SutProvider<DeleteClaimedOrganizationUserAccountCommand> sutProvider, User user1, User user3,
         Guid organizationId,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Invited, OrganizationUserType.User)] OrganizationUser orgUser2,
@@ -506,8 +506,8 @@ public class DeleteManagedOrganizationUserAccountCommandTests
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user1.Id) && ids.Contains(user3.Id)))
             .Returns(new[] { user1, user3 });
 
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, bool> { { orgUser1.Id, true }, { orgUser3.Id, false } });
 
         // Act
@@ -517,7 +517,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         Assert.Equal(3, results.Count());
         Assert.Empty(results.First(r => r.Item1 == orgUser1.Id).Item2);
         Assert.Equal("You cannot delete a member with Invited status.", results.First(r => r.Item1 == orgUser2.Id).Item2);
-        Assert.Equal("Member is not managed by the organization.", results.First(r => r.Item1 == orgUser3.Id).Item2);
+        Assert.Equal("Member is not claimed by the organization.", results.First(r => r.Item1 == orgUser3.Id).Item2);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(
             Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
