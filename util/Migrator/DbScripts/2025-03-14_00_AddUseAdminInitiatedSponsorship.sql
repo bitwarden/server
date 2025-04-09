@@ -64,8 +64,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @LimitCollectionDeletion BIT = NULL,
     @AllowAdminAccessToAllCollectionItems BIT = 0,
     @UseRiskInsights BIT = 0,
-    @UseAdminSponsoredFamilies BIT = 0,
-    @LimitItemDeletion BIT = 0
+    @LimitItemDeletion BIT = 0,
+    @UseAdminSponsoredFamilies BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -128,8 +128,8 @@ BEGIN
         [LimitCollectionDeletion],
         [AllowAdminAccessToAllCollectionItems],
         [UseRiskInsights],
-        [UseAdminSponsoredFamilies],
-        [LimitItemDeletion]
+        [LimitItemDeletion],
+        [UseAdminSponsoredFamilies]
     )
     VALUES
     (
@@ -189,8 +189,8 @@ BEGIN
         @LimitCollectionDeletion,
         @AllowAdminAccessToAllCollectionItems,
         @UseRiskInsights,
-        @UseAdminSponsoredFamilies,
-        @LimitItemDeletion
+        @LimitItemDeletion,
+        @UseAdminSponsoredFamilies
     )
 END
 GO;
@@ -222,8 +222,8 @@ END AS [Using2fa],
         [LimitCollectionDeletion],
         [AllowAdminAccessToAllCollectionItems],
         [UseRiskInsights],
-        [UseAdminSponsoredFamilies],
-        [LimitItemDeletion]
+        [LimitItemDeletion],
+        [UseAdminSponsoredFamilies]
     FROM
         [dbo].[Organization]
 END
@@ -286,8 +286,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @LimitCollectionDeletion BIT = null,
     @AllowAdminAccessToAllCollectionItems BIT = 0,
     @UseRiskInsights BIT = 0,
-    @UseAdminSponsoredFamilies BIT = 0,
-    @LimitItemDeletion BIT = 0
+    @LimitItemDeletion BIT = 0,
+    @UseAdminSponsoredFamilies BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -350,7 +350,8 @@ SET
     [LimitCollectionDeletion] = @LimitCollectionDeletion,
     [AllowAdminAccessToAllCollectionItems] = @AllowAdminAccessToAllCollectionItems,
     [UseRiskInsights] = @UseRiskInsights,
-    [LimitItemDeletion] = @LimitItemDeletion
+    [LimitItemDeletion] = @LimitItemDeletion,
+    [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies
 WHERE
     [Id] = @Id
 END
@@ -367,8 +368,8 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_Update]
     @ToDelete BIT,
     @LastSyncDate DATETIME2 (7),
     @ValidUntil DATETIME2 (7),
-    @IsAdminInitiated BIT,
-    @Notes NVARCHAR(512)
+    @IsAdminInitiated BIT = 0,
+    @Notes NVARCHAR(512) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -403,8 +404,8 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_Create]
     @ToDelete BIT,
     @LastSyncDate DATETIME2 (7),
     @ValidUntil DATETIME2 (7),
-    @IsAdminInitiated BIT,
-    @Notes NVARCHAR(512)
+    @IsAdminInitiated BIT = 0,
+    @Notes NVARCHAR(512) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -457,8 +458,8 @@ CREATE TYPE [dbo].[OrganizationSponsorshipType] AS TABLE(
     [LastSyncDate] DATETIME2(7),
     [ValidUntil] DATETIME2(7),
     [ToDelete] BIT,
-    [IsAdminInitiated] BIT,
-    [Notes] NVARCHAR(512)
+    [IsAdminInitiated] BIT DEFAULT 0,
+    [Notes] NVARCHAR(512) NULL
 );
 GO;
 
