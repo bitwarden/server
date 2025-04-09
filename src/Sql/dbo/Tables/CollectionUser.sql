@@ -9,6 +9,7 @@
     CONSTRAINT [FK_CollectionUser_OrganizationUser] FOREIGN KEY ([OrganizationUserId]) REFERENCES [dbo].[OrganizationUser] ([Id])
 );
 
+GO
 CREATE NONCLUSTERED INDEX IX_CollectionUser_OrganizationUserId
     ON [dbo].[CollectionUser] (OrganizationUserId)
     INCLUDE (ReadOnly, HidePasswords, Manage);

@@ -9,6 +9,7 @@
     CONSTRAINT [FK_CollectionGroup_Group] FOREIGN KEY ([GroupId]) REFERENCES [dbo].[Group] ([Id]) ON DELETE CASCADE
 );
 
+GO
 CREATE NONCLUSTERED INDEX IX_CollectionGroup_GroupId
     ON [dbo].[CollectionGroup] (GroupId)
     INCLUDE (ReadOnly, HidePasswords, Manage);
