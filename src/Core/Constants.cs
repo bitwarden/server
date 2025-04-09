@@ -141,7 +141,6 @@ public static class FeatureFlagKeys
     /* Billing Team */
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string TrialPayment = "PM-8163-trial-payment";
-    public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
     public const string UsePricingService = "use-pricing-service";
     public const string P15179_AddExistingOrgsFromProviderPortal = "pm-15179-add-existing-orgs-from-provider-portal";
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
