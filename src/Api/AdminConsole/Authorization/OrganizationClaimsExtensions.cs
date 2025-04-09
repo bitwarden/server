@@ -11,11 +11,6 @@ namespace Bit.Api.AdminConsole.Authorization;
 public static class OrganizationClaimsExtensions
 {
     /// <summary>
-    /// A delegate that returns true if the user has the specified claim type for an organization, false otherwise.
-    /// </summary>
-    private delegate bool HasClaim(string claimType);
-
-    /// <summary>
     /// Parses a user's claims and returns an object representing their claims for the specified organization.
     /// </summary>
     /// <param name="user">The user who has the claims.</param>
@@ -47,9 +42,10 @@ public static class OrganizationClaimsExtensions
     }
 
     /// <summary>
-    /// Creates a <see cref="HasClaim"/> delegate specific to the user and organization.
+    /// Returns a function for evaluating claims for the specified user and organizationId.
+    /// The function returns true if the claim type exists and false otherwise.
     /// </summary>
-    private static HasClaim GetClaimsParser(ClaimsPrincipal user, Guid organizationId)
+    private static Func<string, bool> GetClaimsParser(ClaimsPrincipal user, Guid organizationId)
     {
         // Group claims by ClaimType
         var claimsDict = user.Claims
@@ -79,7 +75,7 @@ public static class OrganizationClaimsExtensions
         }
     }
 
-    private static OrganizationUserType? GetRoleFromClaims(HasClaim hasClaim)
+    private static OrganizationUserType? GetRoleFromClaims(Func<string, bool> hasClaim)
     {
         if (hasClaim(Claims.OrganizationOwner))
         {
@@ -104,7 +100,7 @@ public static class OrganizationClaimsExtensions
         return null;
     }
 
-    private static Permissions GetPermissionsFromClaims(HasClaim hasClaim)
+    private static Permissions GetPermissionsFromClaims(Func<string, bool> hasClaim)
     => new()
     {
         AccessEventLogs = hasClaim(Claims.CustomPermissions.AccessEventLogs),
