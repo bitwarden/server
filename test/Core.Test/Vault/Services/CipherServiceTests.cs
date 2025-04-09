@@ -1248,6 +1248,7 @@ public class CipherServiceTests
         var existingCipher = new Cipher
         {
             Id = cipherDetails.Id,
+            Type = CipherType.Login,
             Data = JsonSerializer.Serialize(
                 new CipherLoginData
                 {
