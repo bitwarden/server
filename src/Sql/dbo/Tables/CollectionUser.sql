@@ -12,4 +12,6 @@
 GO
 CREATE NONCLUSTERED INDEX IX_CollectionUser_OrganizationUserId
     ON [dbo].[CollectionUser] (OrganizationUserId)
-    INCLUDE (ReadOnly, HidePasswords, Manage);
+    INCLUDE (ReadOnly, HidePasswords, Manage)
+
+GO

@@ -99,6 +99,7 @@ BEGIN
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId
 END
+GO
 
 IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_CollectionGroup_GroupId')
     BEGIN
