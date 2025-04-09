@@ -569,10 +569,9 @@ jobs:
       && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
     uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
     with:
-      ephemeral_env_branch: process.env.GITHUB_HEAD_REF
       project: server
-      sync_environment: true
       pull_request_number: ${{ github.event.number }}
+      create_branch: true
     secrets: inherit
 
   check-failures:

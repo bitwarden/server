@@ -1,6 +1,5 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Billing.Jobs;
-using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -24,7 +23,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISchedulerFactory _schedulerFactory;
-    private readonly IFeatureService _featureService;
     private readonly IOrganizationEnableCommand _organizationEnableCommand;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
     private readonly IPricingClient _pricingClient;
@@ -39,7 +37,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IPushNotificationService pushNotificationService,
         IOrganizationRepository organizationRepository,
         ISchedulerFactory schedulerFactory,
-        IFeatureService featureService,
         IOrganizationEnableCommand organizationEnableCommand,
         IOrganizationDisableCommand organizationDisableCommand,
         IPricingClient pricingClient)
@@ -53,7 +50,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _pushNotificationService = pushNotificationService;
         _organizationRepository = organizationRepository;
         _schedulerFactory = schedulerFactory;
-        _featureService = featureService;
         _organizationEnableCommand = organizationEnableCommand;
         _organizationDisableCommand = organizationDisableCommand;
         _pricingClient = pricingClient;
@@ -227,12 +223,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     private async Task ScheduleCancellationJobAsync(string subscriptionId, Guid organizationId)
     {
-        var isResellerManagedOrgAlertEnabled = _featureService.IsEnabled(FeatureFlagKeys.ResellerManagedOrgAlert);
-        if (!isResellerManagedOrgAlertEnabled)
-        {
-            return;
-        }
-
         var scheduler = await _schedulerFactory.GetScheduler();
 
         var job = JobBuilder.Create<SubscriptionCancellationJob>()
