@@ -53,6 +53,10 @@ public sealed class X509ChainOptions
             return false;
         }
 
+        // Do this outside of the callback so that we aren't opening the root store every request.
+        using var store = new X509Store(StoreName.Root, StoreLocation.LocalMachine, OpenFlags.ReadOnly);
+        var rootCertificates = store.Certificates;
+
         // Ref: https://github.com/dotnet/runtime/issues/39835#issuecomment-663020581
         callback = (certificate, chain, errors) =>
         {
@@ -62,6 +66,10 @@ public sealed class X509ChainOptions
             }
 
             chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+
+            // We want our additional certificates to be in addition to the machines root store.
+            chain.ChainPolicy.CustomTrustStore.AddRange(rootCertificates);
+
             foreach (var additionalCertificate in AdditionalCustomTrustCertificates)
             {
                 chain.ChainPolicy.CustomTrustStore.Add(additionalCertificate);
