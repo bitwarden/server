@@ -1,7 +1,10 @@
-﻿using Bit.Core.Settings;
+﻿using System.Security.Cryptography.X509Certificates;
+using Bit.Core.Platform.X509ChainCustomization;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using MailKit.Net.Smtp;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MimeKit;
 
 namespace Bit.Core.Services;
@@ -10,12 +13,14 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
 {
     private readonly GlobalSettings _globalSettings;
     private readonly ILogger<MailKitSmtpMailDeliveryService> _logger;
+    private readonly X509ChainOptions _x509ChainOptions;
     private readonly string _replyDomain;
     private readonly string _replyEmail;
 
     public MailKitSmtpMailDeliveryService(
         GlobalSettings globalSettings,
-        ILogger<MailKitSmtpMailDeliveryService> logger)
+        ILogger<MailKitSmtpMailDeliveryService> logger,
+        IOptions<X509ChainOptions> x509ChainOptions)
     {
         if (globalSettings.Mail?.Smtp?.Host == null)
         {
@@ -31,6 +36,7 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
 
         _globalSettings = globalSettings;
         _logger = logger;
+        _x509ChainOptions = x509ChainOptions.Value;
     }
 
     public async Task SendEmailAsync(Models.Mail.MailMessage message)
@@ -74,6 +80,13 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
             if (_globalSettings.Mail.Smtp.TrustServer)
             {
                 client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+            }
+            else if (_x509ChainOptions.TryGetCustomRemoteCertificateValidationCallback(out var callback))
+            {
+                client.ServerCertificateValidationCallback = (sender, cert, chain, errors) =>
+                {
+                    return callback(new X509Certificate2(cert), chain, errors);
+                };
             }
 
             if (!_globalSettings.Mail.Smtp.StartTls && !_globalSettings.Mail.Smtp.Ssl &&
