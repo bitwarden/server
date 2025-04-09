@@ -4,7 +4,7 @@ namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class OrganizationAutoEnrollStatusResponseModel : ResponseModel
 {
-    public OrganizationAutoEnrollStatusResponseModel(Guid orgId, bool resetPasswordEnabled, String organizationName) : base("organizationAutoEnrollStatus")
+    public OrganizationAutoEnrollStatusResponseModel(Guid orgId, bool resetPasswordEnabled, string organizationName) : base("organizationAutoEnrollStatus")
     {
         Id = orgId;
         ResetPasswordEnabled = resetPasswordEnabled;
