@@ -16,6 +16,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Authorization.Permissions;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
@@ -338,6 +339,77 @@ public class CiphersController : Controller
 
         // We know we're an "admin", now check the ciphers explicitly (in case admins are restricted)
         return await CanEditCiphersAsync(organizationId, cipherIds);
+    }
+
+    private async Task<bool> CanDeleteOrRestoreCipherAsAdminAsync(Guid organizationId, IEnumerable<Guid> cipherIds)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.LimitItemDeletion))
+        {
+            return await CanEditCipherAsAdminAsync(organizationId, cipherIds);
+        }
+
+        var org = _currentContext.GetOrganization(organizationId);
+
+        // If we're not an "admin", we don't need to check the ciphers
+        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }))
+        {
+            // Are we a provider user? If so, we need to be sure we're not restricted
+            // Once the feature flag is removed, this check can be combined with the above
+            if (await _currentContext.ProviderUserForOrgAsync(organizationId))
+            {
+                // Provider is restricted from editing ciphers, so we're not an "admin"
+                if (_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess))
+                {
+                    return false;
+                }
+
+                // Provider is unrestricted, so we're an "admin", don't return early
+            }
+            else
+            {
+                // Not a provider or admin
+                return false;
+            }
+        }
+
+        // If the user can edit all ciphers for the organization, just check they all belong to the org
+        if (await CanEditAllCiphersAsync(organizationId))
+        {
+            // TODO: This can likely be optimized to only query the requested ciphers and then checking they belong to the org
+            var orgCiphers = (await _cipherRepository.GetManyByOrganizationIdAsync(organizationId)).ToDictionary(c => c.Id);
+
+            // Ensure all requested ciphers are in orgCiphers
+            return cipherIds.All(c => orgCiphers.ContainsKey(c));
+        }
+
+        // The user cannot access any ciphers for the organization, we're done
+        if (!await CanAccessOrganizationCiphersAsync(organizationId))
+        {
+            return false;
+        }
+
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        // Select all deletable ciphers for this user belonging to the organization
+        var deletableOrgCipherList = (await _cipherRepository.GetManyByUserIdAsync(user.Id, true))
+            .Where(c => c.OrganizationId == organizationId && c.UserId == null).ToList();
+
+        // Special case for unassigned ciphers
+        if (await CanAccessUnassignedCiphersAsync(organizationId))
+        {
+            var unassignedCiphers =
+                (await _cipherRepository.GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(
+                    organizationId));
+
+            // Users that can access unassigned ciphers can also delete them
+            deletableOrgCipherList.AddRange(unassignedCiphers.Select(c => new CipherDetails(c) { Manage = true }));
+        }
+
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        var deletableOrgCiphers = deletableOrgCipherList
+            .Where(c => NormalCipherPermissions.CanDelete(user, c, organizationAbility))
+            .ToDictionary(c => c.Id);
+
+        return cipherIds.All(c => deletableOrgCiphers.ContainsKey(c));
     }
 
     /// <summary>
@@ -758,12 +830,12 @@ public class CiphersController : Controller
 
     [HttpDelete("{id}/admin")]
     [HttpPost("{id}/delete-admin")]
-    public async Task DeleteAdmin(string id)
+    public async Task DeleteAdmin(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
-            !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
+            !await CanDeleteOrRestoreCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
@@ -803,7 +875,7 @@ public class CiphersController : Controller
         var cipherIds = model.Ids.Select(i => new Guid(i)).ToList();
 
         if (string.IsNullOrWhiteSpace(model.OrganizationId) ||
-            !await CanEditCipherAsAdminAsync(new Guid(model.OrganizationId), cipherIds))
+            !await CanDeleteOrRestoreCipherAsAdminAsync(new Guid(model.OrganizationId), cipherIds))
         {
             throw new NotFoundException();
         }
@@ -825,12 +897,12 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}/delete-admin")]
-    public async Task PutDeleteAdmin(string id)
+    public async Task PutDeleteAdmin(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
-            !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
+            !await CanDeleteOrRestoreCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
@@ -866,7 +938,7 @@ public class CiphersController : Controller
         var cipherIds = model.Ids.Select(i => new Guid(i)).ToList();
 
         if (string.IsNullOrWhiteSpace(model.OrganizationId) ||
-            !await CanEditCipherAsAdminAsync(new Guid(model.OrganizationId), cipherIds))
+            !await CanDeleteOrRestoreCipherAsAdminAsync(new Guid(model.OrganizationId), cipherIds))
         {
             throw new NotFoundException();
         }
@@ -894,12 +966,12 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}/restore-admin")]
-    public async Task<CipherMiniResponseModel> PutRestoreAdmin(string id)
+    public async Task<CipherMiniResponseModel> PutRestoreAdmin(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
-            !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
+            !await CanDeleteOrRestoreCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
@@ -939,7 +1011,7 @@ public class CiphersController : Controller
 
         var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
 
-        if (model.OrganizationId == default || !await CanEditCipherAsAdminAsync(model.OrganizationId, cipherIdsToRestore))
+        if (model.OrganizationId == default || !await CanDeleteOrRestoreCipherAsAdminAsync(model.OrganizationId, cipherIdsToRestore))
         {
             throw new NotFoundException();
         }
@@ -1014,9 +1086,9 @@ public class CiphersController : Controller
             throw new BadRequestException(ModelState);
         }
 
-        // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
+        // If Account Deprovisioning is enabled, we need to check if the user is claimed by any organization.
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
+            && await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
         {
             throw new BadRequestException("Cannot purge accounts owned by an organization. Contact your organization administrator for additional details.");
         }

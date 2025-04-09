@@ -2,9 +2,6 @@
 
   <PropertyGroup>
     <UserSecretsId>bitwarden-Billing</UserSecretsId>
-    <MvcRazorCompileOnPublish>false</MvcRazorCompileOnPublish>
-    <!-- Temp exclusions until warnings are fixed -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS9113</WarningsNotAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Billing' " />

@@ -2,6 +2,7 @@
 using Bit.Api.Models.Response;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.UserFeatures.DeviceTrust;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -19,6 +20,7 @@ public class DevicesControllerTest
     private readonly IDeviceRepository _deviceRepositoryMock;
     private readonly IDeviceService _deviceServiceMock;
     private readonly IUserService _userServiceMock;
+    private readonly IUntrustDevicesCommand _untrustDevicesCommand;
     private readonly IUserRepository _userRepositoryMock;
     private readonly ICurrentContext _currentContextMock;
     private readonly IGlobalSettings _globalSettingsMock;
@@ -30,6 +32,7 @@ public class DevicesControllerTest
         _deviceRepositoryMock = Substitute.For<IDeviceRepository>();
         _deviceServiceMock = Substitute.For<IDeviceService>();
         _userServiceMock = Substitute.For<IUserService>();
+        _untrustDevicesCommand = Substitute.For<IUntrustDevicesCommand>();
         _userRepositoryMock = Substitute.For<IUserRepository>();
         _currentContextMock = Substitute.For<ICurrentContext>();
         _loggerMock = Substitute.For<ILogger<DevicesController>>();
@@ -38,6 +41,7 @@ public class DevicesControllerTest
             _deviceRepositoryMock,
             _deviceServiceMock,
             _userServiceMock,
+            _untrustDevicesCommand,
             _userRepositoryMock,
             _currentContextMock,
             _loggerMock);
