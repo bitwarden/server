@@ -69,24 +69,6 @@ public class SlackIntegrationController(
             Type = IntegrationType.Slack,
             Configuration = JsonSerializer.Serialize(new SlackIntegration(token)),
         });
-        return Ok(new { id = integration.Id } );
-    }
-
-    [HttpDelete("{integrationId:guid}")]
-    [HttpPost("{integrationId:guid}/delete")]
-    public async Task DeleteAsync(Guid organizationId, Guid integrationId)
-    {
-        if (!await currentContext.OrganizationOwner(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var integration = await integrationRepository.GetByIdAsync(integrationId);
-        if (integration is null)
-        {
-            throw new NotFoundException();
-        }
-
-        await integrationRepository.DeleteAsync(integration);
+        return Ok(new { id = integration.Id });
     }
 }
