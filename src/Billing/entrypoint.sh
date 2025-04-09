@@ -39,11 +39,6 @@ then
     mkdir -p /etc/bitwarden/ca-certificates
     chown -R $USERNAME:$GROUPNAME /etc/bitwarden
 
-    if [[ $globalSettings__selfHosted == "true" ]]; then
-    cp /etc/bitwarden/ca-certificates/*.crt /usr/local/share/ca-certificates/ >/dev/null 2>&1 \
-        && update-ca-certificates
-    fi
-
     gosu_cmd="gosu $USERNAME:$GROUPNAME"
 else
     gosu_cmd=""
