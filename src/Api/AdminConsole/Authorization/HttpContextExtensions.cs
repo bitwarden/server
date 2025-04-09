@@ -9,7 +9,7 @@ namespace Bit.Api.AdminConsole.Authorization;
 public static class HttpContextExtensions
 {
     public const string NoOrgIdError =
-        "A route decorated with with '[Authorize<Requirement>]' should include a route value named 'orgId' either through the [Controller] attribute or through a '[Http*]' attribute.";
+        "A route decorated with with '[Authorize<Requirement>]' must include a route value named 'orgId' either through the [Controller] attribute or through a '[Http*]' attribute.";
 
     /// <summary>
     /// Returns the result of the callback, caching it in HttpContext.Features for the lifetime of the request.
@@ -32,8 +32,10 @@ public static class HttpContextExtensions
 
     /// <summary>
     /// Returns true if the user is a ProviderUser for a Provider which manages the specified organization, otherwise false.
-    /// This data is fetched from the database and cached as a HttpContext Feature for the lifetime of the request.
     /// </summary>
+    /// <remarks>
+    /// This data is fetched from the database and cached as a HttpContext Feature for the lifetime of the request.
+    /// </remarks>
     public static async Task<bool> IsProviderUserForOrgAsync(
         this HttpContext httpContext,
         IProviderUserRepository providerUserRepository,
@@ -46,12 +48,10 @@ public static class HttpContextExtensions
 
     /// <summary>
     /// Returns the ProviderUserOrganizations for a user. These are the organizations the ProviderUser manages via their Provider, if any.
-    /// This data is fetched from the database and cached as a HttpContext Feature for the lifetime of the request.
     /// </summary>
-    /// <param name="httpContext"></param>
-    /// <param name="providerUserRepository"></param>
-    /// <param name="userId"></param>
-    /// <returns></returns>
+    /// <remarks>
+    /// This data is fetched from the database and cached as a HttpContext Feature for the lifetime of the request.
+    /// </remarks>
     private static async Task<IEnumerable<ProviderUserOrganizationDetails>> GetProviderUserOrganizationsAsync(
         this HttpContext httpContext,
         IProviderUserRepository providerUserRepository,
