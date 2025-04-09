@@ -9,8 +9,8 @@ CREATE PROCEDURE [dbo].[OrganizationSponsorship_Update]
     @ToDelete BIT,
     @LastSyncDate DATETIME2 (7),
     @ValidUntil DATETIME2 (7),
-    @IsAdminInitiated BIT,
-    @Notes NVARCHAR(512)
+    @IsAdminInitiated BIT = 0,
+    @Notes NVARCHAR(512) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
