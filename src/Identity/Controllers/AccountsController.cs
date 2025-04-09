@@ -121,8 +121,7 @@ public class AccountsController : Controller
         var user = model.ToUser();
         var identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
             model.Token, model.OrganizationUserId);
-        // delaysEnabled false is only for the new registration with email verification process
-        return await ProcessRegistrationResult(identityResult, user, delaysEnabled: true);
+        return ProcessRegistrationResult(identityResult, user);
     }
 
     [HttpPost("register/send-verification-email")]
@@ -188,7 +187,6 @@ public class AccountsController : Controller
         // Users will either have an emailed token or an email verification token - not both.
 
         IdentityResult identityResult = null;
-        var delaysEnabled = !_featureService.IsEnabled(FeatureFlagKeys.EmailVerificationDisableTimingDelays);
 
         switch (model.GetTokenType())
         {
@@ -197,32 +195,32 @@ public class AccountsController : Controller
                     await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash,
                         model.EmailVerificationToken);
 
-                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                return ProcessRegistrationResult(identityResult, user);
                 break;
             case RegisterFinishTokenType.OrganizationInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
                     model.OrgInviteToken, model.OrganizationUserId);
 
-                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                return ProcessRegistrationResult(identityResult, user);
                 break;
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, model.MasterPasswordHash, model.OrgSponsoredFreeFamilyPlanToken);
 
-                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                return ProcessRegistrationResult(identityResult, user);
                 break;
             case RegisterFinishTokenType.EmergencyAccessInvite:
                 Debug.Assert(model.AcceptEmergencyAccessId.HasValue);
                 identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(user, model.MasterPasswordHash,
                     model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
 
-                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                return ProcessRegistrationResult(identityResult, user);
                 break;
             case RegisterFinishTokenType.ProviderInvite:
                 Debug.Assert(model.ProviderUserId.HasValue);
                 identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(user, model.MasterPasswordHash,
                     model.ProviderInviteToken, model.ProviderUserId.Value);
 
-                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                return ProcessRegistrationResult(identityResult, user);
                 break;
 
             default:
@@ -230,7 +228,7 @@ public class AccountsController : Controller
         }
     }
 
-    private async Task<RegisterResponseModel> ProcessRegistrationResult(IdentityResult result, User user, bool delaysEnabled)
+    private RegisterResponseModel ProcessRegistrationResult(IdentityResult result, User user)
     {
         if (result.Succeeded)
         {
@@ -243,10 +241,6 @@ public class AccountsController : Controller
             ModelState.AddModelError(string.Empty, error.Description);
         }
 
-        if (delaysEnabled)
-        {
-            await Task.Delay(Random.Shared.Next(100, 130));
-        }
         throw new BadRequestException(ModelState);
     }
 
