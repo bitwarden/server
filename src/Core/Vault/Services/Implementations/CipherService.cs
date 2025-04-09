@@ -1048,6 +1048,7 @@ public class CipherService : ICipherService
             CipherIdentityData identityData => JsonSerializer.Serialize(identityData),
             CipherCardData cardData => JsonSerializer.Serialize(cardData),
             CipherSecureNoteData noteData => JsonSerializer.Serialize(noteData),
+            CipherSSHKeyData sshKeyData => JsonSerializer.Serialize(sshKeyData),
             _ => throw new ArgumentException("Unsupported cipher data type.", nameof(data))
         };
     }
@@ -1060,6 +1061,7 @@ public class CipherService : ICipherService
             CipherType.Identity => JsonSerializer.Deserialize<CipherIdentityData>(cipher.Data),
             CipherType.Card => JsonSerializer.Deserialize<CipherCardData>(cipher.Data),
             CipherType.SecureNote => JsonSerializer.Deserialize<CipherSecureNoteData>(cipher.Data),
+            CipherType.SSHKey => JsonSerializer.Deserialize<CipherSSHKeyData>(cipher.Data),
             _ => throw new ArgumentException("Unsupported cipher type.", nameof(cipher))
         };
     }
