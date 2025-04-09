@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.UserKey;
@@ -579,5 +580,33 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
             return results.ToList();
         }
+    }
+
+    public async Task CreateManyAsync(IEnumerable<CreateOrganizationUser> organizationUserCollection)
+    {
+        await using var connection = new SqlConnection(_marsConnectionString);
+
+        await connection.ExecuteAsync(
+            $"[{Schema}].[OrganizationUser_CreateManyWithCollectionsAndGroups]",
+            new
+            {
+                OrganizationUserData = JsonSerializer.Serialize(organizationUserCollection.Select(x => x.OrganizationUser)),
+                CollectionData = JsonSerializer.Serialize(organizationUserCollection
+                    .SelectMany(x => x.Collections, (user, collection) => new CollectionUser
+                    {
+                        CollectionId = collection.Id,
+                        OrganizationUserId = user.OrganizationUser.Id,
+                        ReadOnly = collection.ReadOnly,
+                        HidePasswords = collection.HidePasswords,
+                        Manage = collection.Manage
+                    })),
+                GroupData = JsonSerializer.Serialize(organizationUserCollection
+                    .SelectMany(x => x.Groups, (user, group) => new GroupUser
+                    {
+                        GroupId = group,
+                        OrganizationUserId = user.OrganizationUser.Id
+                    }))
+            },
+            commandType: CommandType.StoredProcedure);
     }
 }
