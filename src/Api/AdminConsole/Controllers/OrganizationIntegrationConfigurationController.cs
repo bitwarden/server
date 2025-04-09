@@ -39,7 +39,11 @@ public class OrganizationIntegrationConfigurationController(
     }
 
     [HttpPut("{configurationId:guid}")]
-    public async Task<OrganizationIntegrationConfigurationResponseModel> UpdateAsync(Guid organizationId, Guid integrationId, Guid configurationId, OrganizationIntegrationConfigurationRequestModel model)
+    public async Task<OrganizationIntegrationConfigurationResponseModel> UpdateAsync(
+        Guid organizationId,
+        Guid integrationId,
+        Guid configurationId,
+        [FromBody] OrganizationIntegrationConfigurationRequestModel model)
     {
         if (!await currentContext.OrganizationOwner(organizationId))
         {
