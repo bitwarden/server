@@ -4,12 +4,14 @@ namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class OrganizationAutoEnrollStatusResponseModel : ResponseModel
 {
-    public OrganizationAutoEnrollStatusResponseModel(Guid orgId, bool resetPasswordEnabled) : base("organizationAutoEnrollStatus")
+    public OrganizationAutoEnrollStatusResponseModel(Guid orgId, bool resetPasswordEnabled, String organizationName) : base("organizationAutoEnrollStatus")
     {
         Id = orgId;
         ResetPasswordEnabled = resetPasswordEnabled;
+        Name = organizationName;
     }
 
     public Guid Id { get; set; }
     public bool ResetPasswordEnabled { get; set; }
+    public string Name { get; set; }
 }

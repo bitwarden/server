@@ -171,17 +171,17 @@ public class OrganizationsController : Controller
         if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
             var resetPasswordPolicyRequirement = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
-            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, resetPasswordPolicyRequirement.AutoEnrollEnabled(organization.Id));
+            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, resetPasswordPolicyRequirement.AutoEnrollEnabled(organization.Id), organization.Name);
         }
 
         var resetPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
         if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled || resetPasswordPolicy.Data == null)
         {
-            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, false);
+            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, false, organization.Name);
         }
 
         var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
-        return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
+        return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false, organization.Name);
 
     }
 
