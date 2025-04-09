@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
@@ -1110,14 +1111,27 @@ public class StripePaymentService : IPaymentService
             new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount),
             true);
 
-    public async Task<bool> HasSecretsManagerStandalone(Organization organization)
+    public async Task<bool> HasSecretsManagerStandalone(Organization organization) =>
+        await HasSecretsManagerStandaloneAsync(gatewayCustomerId: organization.GatewayCustomerId,
+            organizationHasSecretsManager: organization.UseSecretsManager);
+
+    public async Task<bool> HasSecretsManagerStandalone(InviteOrganization organization) =>
+        await HasSecretsManagerStandaloneAsync(gatewayCustomerId: organization.GatewayCustomerId,
+            organizationHasSecretsManager: organization.UseSecretsManager);
+
+    private async Task<bool> HasSecretsManagerStandaloneAsync(string gatewayCustomerId, bool organizationHasSecretsManager)
     {
-        if (string.IsNullOrEmpty(organization.GatewayCustomerId))
+        if (string.IsNullOrEmpty(gatewayCustomerId))
         {
             return false;
         }
 
-        var customer = await _stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId);
+        if (organizationHasSecretsManager is false)
+        {
+            return false;
+        }
+
+        var customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
 
         return customer?.Discount?.Coupon?.Id == SecretsManagerStandaloneDiscountId;
     }

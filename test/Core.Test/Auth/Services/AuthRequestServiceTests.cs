@@ -398,7 +398,7 @@ public class AuthRequestServiceTests
 
 
     [Theory, BitAutoData]
-    public async Task CreateAuthRequestAsync_AdminApproval_WithAdminNotifications_AndNoAdminEmails_ShouldNotSendNotificationEmails(
+    public async Task CreateAuthRequestAsync_AdminApproval_AndNoAdminEmails_ShouldNotSendNotificationEmails(
         SutProvider<AuthRequestService> sutProvider,
         AuthRequestCreateRequestModel createModel,
         User user,
@@ -407,10 +407,6 @@ public class AuthRequestServiceTests
         createModel.Type = AuthRequestType.AdminApproval;
         user.Email = createModel.Email;
         organizationUser1.UserId = user.Id;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.DeviceApprovalRequestAdminNotifications)
-            .Returns(true);
 
         sutProvider.GetDependency<IUserRepository>()
             .GetByEmailAsync(user.Email)
