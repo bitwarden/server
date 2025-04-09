@@ -66,27 +66,33 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
 {
     public OrganizationUserDetailsResponseModel(
         OrganizationUser organizationUser,
-        bool managedByOrganization,
+        bool claimedByOrganization,
         string ssoExternalId,
         IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
-        ManagedByOrganization = managedByOrganization;
+        ClaimedByOrganization = claimedByOrganization;
         SsoExternalId = ssoExternalId;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
 
     public OrganizationUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
-        bool managedByOrganization,
+        bool claimedByOrganization,
         IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
-        ManagedByOrganization = managedByOrganization;
+        ClaimedByOrganization = claimedByOrganization;
         SsoExternalId = organizationUser.SsoExternalId;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
 
-    public bool ManagedByOrganization { get; set; }
+    [Obsolete("Please use ClaimedByOrganization instead. This property will be removed in a future version.")]
+    public bool ManagedByOrganization
+    {
+        get => ClaimedByOrganization;
+        set => ClaimedByOrganization = value;
+    }
+    public bool ClaimedByOrganization { get; set; }
     public string SsoExternalId { get; set; }
 
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
@@ -121,7 +127,7 @@ public class OrganizationUserUserMiniDetailsResponseModel : ResponseModel
 public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel
 {
     public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
-        bool twoFactorEnabled, bool managedByOrganization, string obj = "organizationUserUserDetails")
+        bool twoFactorEnabled, bool claimedByOrganization, string obj = "organizationUserUserDetails")
         : base(organizationUser, obj)
     {
         if (organizationUser == null)
@@ -138,7 +144,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         Groups = organizationUser.Groups;
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
-        ManagedByOrganization = managedByOrganization;
+        ClaimedByOrganization = claimedByOrganization;
     }
 
     public string Name { get; set; }
@@ -146,11 +152,17 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public string AvatarColor { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool SsoBound { get; set; }
+    [Obsolete("Please use ClaimedByOrganization instead. This property will be removed in a future version.")]
+    public bool ManagedByOrganization
+    {
+        get => ClaimedByOrganization;
+        set => ClaimedByOrganization = value;
+    }
     /// <summary>
-    /// Indicates if the organization manages the user. If a user is "managed" by an organization,
+    /// Indicates if the organization claimed the user. If a user is "claimed" by an organization,
     /// the organization has greater control over their account, and some user actions are restricted.
     /// </summary>
-    public bool ManagedByOrganization { get; set; }
+    public bool ClaimedByOrganization { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
 }

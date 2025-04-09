@@ -4,6 +4,7 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Auth.Models.Api.Response;
+using Bit.Core.Auth.UserFeatures.DeviceTrust;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -21,6 +22,7 @@ public class DevicesController : Controller
     private readonly IDeviceRepository _deviceRepository;
     private readonly IDeviceService _deviceService;
     private readonly IUserService _userService;
+    private readonly IUntrustDevicesCommand _untrustDevicesCommand;
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<DevicesController> _logger;
@@ -29,6 +31,7 @@ public class DevicesController : Controller
         IDeviceRepository deviceRepository,
         IDeviceService deviceService,
         IUserService userService,
+        IUntrustDevicesCommand untrustDevicesCommand,
         IUserRepository userRepository,
         ICurrentContext currentContext,
         ILogger<DevicesController> logger)
@@ -36,6 +39,7 @@ public class DevicesController : Controller
         _deviceRepository = deviceRepository;
         _deviceService = deviceService;
         _userService = userService;
+        _untrustDevicesCommand = untrustDevicesCommand;
         _userRepository = userRepository;
         _currentContext = currentContext;
         _logger = logger;
@@ -163,6 +167,19 @@ public class DevicesController : Controller
             user.Id,
             model.CurrentDevice,
             model.OtherDevices ?? Enumerable.Empty<OtherDeviceKeysUpdateRequestModel>());
+    }
+
+    [HttpPost("untrust")]
+    public async Task PostUntrust([FromBody] UntrustDevicesRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        await _untrustDevicesCommand.UntrustDevices(user, model.Devices);
     }
 
     [HttpPut("identifier/{identifier}/token")]
