@@ -54,7 +54,15 @@ public class AccountsController(
 
         var result = await userService.SignUpPremiumAsync(user, model.PaymentToken,
             model.PaymentMethodType!.Value, model.AdditionalStorageGb.GetValueOrDefault(0), license,
-            new TaxInfo { BillingAddressCountry = model.Country, BillingAddressPostalCode = model.PostalCode });
+            new TaxInfo
+            {
+                BillingAddressCountry = model.Country,
+                BillingAddressPostalCode = model.PostalCode,
+                BillingAddressCity = model.City,
+                BillingAddressLine1 = model.Line1,
+                BillingAddressLine2 = model.Line2,
+                BillingAddressState = model.State
+            });
 
         var userTwoFactorEnabled = await userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await userService.HasPremiumFromOrganization(user);
@@ -116,8 +124,7 @@ public class AccountsController(
                 BillingAddressCity = model.City,
                 BillingAddressState = model.State,
                 BillingAddressCountry = model.Country,
-                BillingAddressPostalCode = model.PostalCode,
-                TaxIdNumber = model.TaxId
+                BillingAddressPostalCode = model.PostalCode
             });
     }
 
