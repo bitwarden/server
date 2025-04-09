@@ -285,14 +285,16 @@ public class OrganizationBillingController(
         sale.Organization.PlanType = plan.Type;
         sale.Organization.Plan = plan.Name;
         sale.SubscriptionSetup.SkipTrial = true;
-        await organizationBillingService.Finalize(sale);
-        var org = await organizationRepository.GetByIdAsync(organizationId);
-        if (organizationSignup.PaymentMethodType != null)
+
+        if (organizationSignup.PaymentMethodType == null || string.IsNullOrEmpty(organizationSignup.PaymentToken))
         {
-            var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
-            var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
-            await organizationBillingService.UpdatePaymentMethod(org, paymentSource, taxInformation);
+            return Error.BadRequest("A payment method is required to restart the subscription.");
         }
+        var org = await organizationRepository.GetByIdAsync(organizationId);
+        var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
+        var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
+        await organizationBillingService.UpdatePaymentMethod(org, paymentSource, taxInformation);
+        await organizationBillingService.Finalize(sale);
 
         return TypedResults.Ok();
     }
