@@ -176,6 +176,7 @@ public static class FeatureFlagKeys
     public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string WebPush = "web-push";
     public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
+    public const string IpcChannelFramework = "ipc-channel-framework";
 
     /* Tools Team */
     public const string ItemShare = "item-share";
