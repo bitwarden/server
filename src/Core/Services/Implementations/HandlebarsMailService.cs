@@ -117,16 +117,16 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendCannotDeleteManagedAccountEmailAsync(string email)
+    public async Task SendCannotDeleteClaimedAccountEmailAsync(string email)
     {
         var message = CreateDefaultMessage("Delete Your Account", email);
-        var model = new CannotDeleteManagedAccountViewModel
+        var model = new CannotDeleteClaimedAccountViewModel
         {
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
         };
-        await AddMessageContentAsync(message, "AdminConsole.CannotDeleteManagedAccount", model);
-        message.Category = "CannotDeleteManagedAccount";
+        await AddMessageContentAsync(message, "AdminConsole.CannotDeleteClaimedAccount", model);
+        message.Category = "CannotDeleteClaimedAccount";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
@@ -474,7 +474,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList)
+    public async Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList)
     {
         await EnqueueMailAsync(emailList.EmailList.Select(email =>
             CreateMessage(email, emailList.Organization)));
@@ -804,12 +804,10 @@ public class HandlebarsMailService : IMailService
                 return;
             }
 
-            var numeric = parameters[0];
-            var singularText = parameters[1].ToString();
-            var pluralText = parameters[2].ToString();
-
-            if (numeric is int number)
+            if (int.TryParse(parameters[0].ToString(), out var number))
             {
+                var singularText = parameters[1].ToString();
+                var pluralText = parameters[2].ToString();
                 writer.WriteSafeString(number == 1 ? singularText : pluralText);
             }
             else

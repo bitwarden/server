@@ -104,18 +104,16 @@ public static class FeatureFlagKeys
     /* Admin Console Team */
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
-    public const string DeviceApprovalRequestAdminNotifications = "pm-15637-device-approval-request-admin-notifications";
     public const string LimitItemDeletion = "pm-15493-restrict-item-deletion-to-can-manage-permission";
-    public const string PushSyncOrgKeysOnRevokeRestore = "pm-17168-push-sync-org-keys-on-revoke-restore";
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string SsoExternalIdVisibility = "pm-18630-sso-external-id-visibility";
+    public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
     public const string DuoRedirect = "duo-redirect";
     public const string EmailVerification = "email-verification";
-    public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
@@ -197,6 +195,7 @@ public static class FeatureFlagKeys
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string SecurityTasks = "security-tasks";
     public const string CipherKeyEncryption = "cipher-key-encryption";
+    public const string DesktopCipherForms = "pm-18520-desktop-cipher-forms";
 
     public static List<string> GetAllKeys()
     {
