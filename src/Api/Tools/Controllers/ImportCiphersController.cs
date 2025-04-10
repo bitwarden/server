@@ -102,13 +102,19 @@ public class ImportCiphersController : Controller
             .Select(c => c.Id)
             .ToHashSet();
 
-        //We need to verify if the user is trying to import into existing collections
+        // when there are no collections, then we can import
+        if (collections.Count == 0)
+        {
+            return true;
+        }
+
+        // are we trying to import into existing collections?
         var existingCollections = collections.Where(tc => orgCollectionIds.Contains(tc.Id));
 
-        // Do we have new collections?
+        // are we trying to create new collections?
         var hasNewCollections = collections.Any(tc => !orgCollectionIds.Contains(tc.Id));
 
-        //suppose we are going to be creating new collections and we have existing collections
+        // suppose we have both new and existing collections
         if (hasNewCollections && existingCollections.Any())
         {
             // since we are creating new collection, user must have import/manage and create collection permission
@@ -120,12 +126,12 @@ public class ImportCiphersController : Controller
             }
             else
             {
-                // user does not have permission to create new collections
+                // user does not have permission to import
                 return false;
             }
         }
 
-        // we are creating new collections and we don't have any existing collections
+        // suppose we have new collections and none of our collections exist
         if (hasNewCollections && !existingCollections.Any())
         {
             // user is trying to create new collections
@@ -141,19 +147,13 @@ public class ImportCiphersController : Controller
             }
         }
 
-        // in many import formats, we don't create collections, we just import ciphers
+        // in many import formats, we don't create collections, we just import ciphers into an existing collection
 
-        //When importing into existing collection, we need to verify if the user has permissions
+        // When importing, we need to verify if the user has ImportCiphers permission
         if (existingCollections.Any() && (await _authorizationService.AuthorizeAsync(User, existingCollections, BulkCollectionOperations.ImportCiphers)).Succeeded)
         {
             return true;
         };
-
-        //Users allowed to import if they CanCreate Collections
-        if ((await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Create)).Succeeded)
-        {
-            return true;
-        }
 
         return false;
     }
