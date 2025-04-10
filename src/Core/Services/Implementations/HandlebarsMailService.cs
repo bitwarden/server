@@ -11,6 +11,7 @@ using Bit.Core.Billing.Models.Mail;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
+using Bit.Core.Models.Mail.Billing;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
 using Bit.Core.SecretsManager.Models.Mail;
@@ -946,6 +947,22 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "Provider.ProviderSetupInvite", model);
         message.Category = "ProviderSetupInvite";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendBusinessUnitConversionInviteAsync(Organization organization, string token, string email)
+    {
+        var message = CreateDefaultMessage("Set Up Business Unit", email);
+        var model = new BusinessUnitConversionInviteModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+            OrganizationId = organization.Id.ToString(),
+            Email = WebUtility.UrlEncode(email),
+            Token = WebUtility.UrlEncode(token)
+        };
+        await AddMessageContentAsync(message, "Billing.BusinessUnitConversionInvite", model);
+        message.Category = "BusinessUnitConversionInvite";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 

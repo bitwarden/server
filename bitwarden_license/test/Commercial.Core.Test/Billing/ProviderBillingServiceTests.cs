@@ -116,7 +116,7 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         // Arrange
-        provider.Type = ProviderType.MultiOrganizationEnterprise;
+        provider.Type = ProviderType.BusinessUnit;
 
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
         var existingPlan = new ProviderPlan

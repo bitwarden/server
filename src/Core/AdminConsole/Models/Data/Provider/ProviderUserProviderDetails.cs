@@ -17,4 +17,5 @@ public class ProviderUserProviderDetails
     public string Permissions { get; set; }
     public bool UseEvents { get; set; }
     public ProviderStatusType ProviderStatus { get; set; }
+    public ProviderType ProviderType { get; set; }
 }
