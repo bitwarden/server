@@ -1,4 +1,5 @@
-﻿using Stripe;
+﻿using Bit.Core.Billing.Constants;
+using Stripe;
 
 namespace Bit.Core.Models.Business;
 
@@ -37,7 +38,7 @@ public class SubscriptionInfo
             PeriodEndDate = sub.CurrentPeriodEnd;
             CancelledDate = sub.CanceledAt;
             CancelAtEndDate = sub.CancelAtPeriodEnd;
-            Cancelled = sub.Status == "canceled" || sub.Status == "unpaid" || sub.Status == "incomplete_expired";
+            Cancelled = sub.Status is StripeConstants.SubscriptionStatus.Canceled or StripeConstants.SubscriptionStatus.IncompleteExpired;
             if (sub.Items?.Data != null)
             {
                 Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));
