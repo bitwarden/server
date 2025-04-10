@@ -108,7 +108,7 @@ public class ImportCiphersController : Controller
         // Do we have new collections?
         var hasNewCollections = collections.Any(tc => !orgCollectionIds.Contains(tc.Id));
 
-        //suppose are are going to be creating new collections and we have existing collections
+        //suppose we are going to be creating new collections and we have existing collections
         if (hasNewCollections && existingCollections.Any())
         {
             // since we are creating new collection, user must have import/manage and create collection permission
