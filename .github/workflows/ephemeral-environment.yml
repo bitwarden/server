@@ -13,5 +13,4 @@ jobs:
       project: server
       pull_request_number: ${{ github.event.number }}
       sync_environment: true
-      create_branch: true
     secrets: inherit
