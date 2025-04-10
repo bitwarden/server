@@ -38,7 +38,7 @@ public class SubscriptionInfo
             PeriodEndDate = sub.CurrentPeriodEnd;
             CancelledDate = sub.CanceledAt;
             CancelAtEndDate = sub.CancelAtPeriodEnd;
-            Cancelled = sub.Status is StripeConstants.SubscriptionStatus.Canceled or StripeConstants.SubscriptionStatus.IncompleteExpired;
+            Cancelled = sub.Status is StripeConstants.SubscriptionStatus.Canceled or StripeConstants.SubscriptionStatus.Unpaid or StripeConstants.SubscriptionStatus.IncompleteExpired;
             if (sub.Items?.Data != null)
             {
                 Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));
