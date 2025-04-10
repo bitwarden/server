@@ -6,6 +6,7 @@ namespace Bit.Api;
 
 public class Program
 {
+    // Test
     public static void Main(string[] args)
     {
         Host
