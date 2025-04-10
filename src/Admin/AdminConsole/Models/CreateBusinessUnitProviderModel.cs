@@ -6,7 +6,7 @@ using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.AdminConsole.Models;
 
-public class CreateMultiOrganizationEnterpriseProviderModel : IValidatableObject
+public class CreateBusinessUnitProviderModel : IValidatableObject
 {
     [Display(Name = "Owner Email")]
     public string OwnerEmail { get; set; }
@@ -22,7 +22,7 @@ public class CreateMultiOrganizationEnterpriseProviderModel : IValidatableObject
     {
         return new Provider
         {
-            Type = ProviderType.MultiOrganizationEnterprise
+            Type = ProviderType.BusinessUnit
         };
     }
 
@@ -30,17 +30,17 @@ public class CreateMultiOrganizationEnterpriseProviderModel : IValidatableObject
     {
         if (string.IsNullOrWhiteSpace(OwnerEmail))
         {
-            var ownerEmailDisplayName = nameof(OwnerEmail).GetDisplayAttribute<CreateMultiOrganizationEnterpriseProviderModel>()?.GetName() ?? nameof(OwnerEmail);
+            var ownerEmailDisplayName = nameof(OwnerEmail).GetDisplayAttribute<CreateBusinessUnitProviderModel>()?.GetName() ?? nameof(OwnerEmail);
             yield return new ValidationResult($"The {ownerEmailDisplayName} field is required.");
         }
         if (EnterpriseSeatMinimum < 0)
         {
-            var enterpriseSeatMinimumDisplayName = nameof(EnterpriseSeatMinimum).GetDisplayAttribute<CreateMultiOrganizationEnterpriseProviderModel>()?.GetName() ?? nameof(EnterpriseSeatMinimum);
+            var enterpriseSeatMinimumDisplayName = nameof(EnterpriseSeatMinimum).GetDisplayAttribute<CreateBusinessUnitProviderModel>()?.GetName() ?? nameof(EnterpriseSeatMinimum);
             yield return new ValidationResult($"The {enterpriseSeatMinimumDisplayName} field can not be negative.");
         }
         if (Plan != PlanType.EnterpriseAnnually && Plan != PlanType.EnterpriseMonthly)
         {
-            var planDisplayName = nameof(Plan).GetDisplayAttribute<CreateMultiOrganizationEnterpriseProviderModel>()?.GetName() ?? nameof(Plan);
+            var planDisplayName = nameof(Plan).GetDisplayAttribute<CreateBusinessUnitProviderModel>()?.GetName() ?? nameof(Plan);
             yield return new ValidationResult($"The {planDisplayName} field must be set to Enterprise Annually or Enterprise Monthly.");
         }
     }
