@@ -54,7 +54,6 @@ public interface IOrganizationService
     /// <remarks>
     /// This method must target a disabled Organization that has null keys and status as 'Pending'.
     /// </remarks>
-    Task InitPendingOrganization(Guid userId, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
 
     void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
@@ -62,4 +61,5 @@ public interface IOrganizationService
     Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
         OrganizationUserType? oldType, Permissions permissions);
     Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType);
+    Task ValidateSignUpPoliciesAsync(Guid ownerId);
 }
