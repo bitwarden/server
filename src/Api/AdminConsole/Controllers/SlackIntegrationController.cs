@@ -18,7 +18,7 @@ public class SlackIntegrationController(
     IOrganizationIntegrationRepository integrationRepository,
     ISlackService slackService) : Controller
 {
-    [HttpGet("redirect/")]
+    [HttpGet("redirect")]
     public async Task<IActionResult> RedirectAsync(Guid organizationId)
     {
         if (!await currentContext.OrganizationOwner(organizationId))
@@ -27,7 +27,7 @@ public class SlackIntegrationController(
         }
         string callbackUrl = Url.RouteUrl(
             nameof(CreateAsync),
-            new { id = organizationId },
+            new { organizationId },
             currentContext.HttpContext.Request.Scheme);
         var redirectUrl = slackService.GetRedirectUrl(callbackUrl);
 
@@ -54,7 +54,7 @@ public class SlackIntegrationController(
 
         string callbackUrl = Url.RouteUrl(
             nameof(CreateAsync),
-            new { id = organizationId },
+            new { organizationId },
             currentContext.HttpContext.Request.Scheme);
         var token = await slackService.ObtainTokenViaOAuth(code, callbackUrl);
 

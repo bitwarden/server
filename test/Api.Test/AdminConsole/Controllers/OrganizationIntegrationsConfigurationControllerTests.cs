@@ -144,7 +144,6 @@ public class OrganizationIntegrationsConfigurationControllerTests
         OrganizationIntegrationConfigurationRequestModel model)
     {
         organizationIntegration.OrganizationId = organizationId;
-        model.OrganizationIntegrationId = organizationIntegration.Id;
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(organizationIntegrationConfiguration);
 
@@ -209,34 +208,6 @@ public class OrganizationIntegrationsConfigurationControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PostAsync_IntegrationDoesNotMatchIdProvided_ThrowsNotFound(
-        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
-        Guid organizationId,
-        OrganizationIntegration organizationIntegration,
-        OrganizationIntegrationConfiguration organizationIntegrationConfiguration,
-        OrganizationIntegrationConfigurationRequestModel model)
-    {
-        organizationIntegration.OrganizationId = organizationId;
-        model.OrganizationIntegrationId = organizationIntegration.Id;
-
-        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(organizationId)
-            .Returns(true);
-        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
-            .GetByIdAsync(Arg.Any<Guid>())
-            .Returns(organizationIntegration);
-        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
-            .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
-            .Returns(organizationIntegrationConfiguration);
-
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.PostAsync(
-            organizationId,
-            Guid.NewGuid(),
-            new OrganizationIntegrationConfigurationRequestModel()));
-    }
-
-    [Theory, BitAutoData]
     public async Task PostAsync_UserIsNotOrganizationAdmin_ThrowsNotFound(SutProvider<OrganizationIntegrationConfigurationController> sutProvider, Guid organizationId)
     {
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
@@ -256,12 +227,9 @@ public class OrganizationIntegrationsConfigurationControllerTests
         OrganizationIntegrationConfigurationRequestModel model)
     {
         organizationIntegration.OrganizationId = organizationId;
-        model.OrganizationIntegrationId = organizationIntegration.Id;
         organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
 
-        var modelId = model.Id ?? Guid.NewGuid();
-        model.Id = modelId;
-        var expected = new OrganizationIntegrationConfigurationResponseModel(model.ToOrganizationIntegrationConfiguration());
+        var expected = new OrganizationIntegrationConfigurationResponseModel(model.ToOrganizationIntegrationConfiguration(organizationIntegrationConfiguration));
 
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.GetDependency<ICurrentContext>()
@@ -273,7 +241,11 @@ public class OrganizationIntegrationsConfigurationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
             .GetByIdAsync(Arg.Any<Guid>())
             .Returns(organizationIntegrationConfiguration);
-        var requestAction = await sutProvider.Sut.UpdateAsync(organizationId, organizationIntegration.Id, modelId, model);
+        var requestAction = await sutProvider.Sut.UpdateAsync(
+            organizationId,
+            organizationIntegration.Id,
+            organizationIntegrationConfiguration.Id,
+            model);
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
             .ReplaceAsync(Arg.Any<OrganizationIntegrationConfiguration>());
@@ -321,35 +293,6 @@ public class OrganizationIntegrationsConfigurationControllerTests
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.UpdateAsync(
             organizationId,
             organizationIntegration.Id,
-            Guid.Empty,
-            new OrganizationIntegrationConfigurationRequestModel()));
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateAsync_IntegrationDoesNotMatchIdProvided_ThrowsNotFound(
-        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
-        Guid organizationId,
-        OrganizationIntegration organizationIntegration,
-        OrganizationIntegrationConfiguration organizationIntegrationConfiguration,
-        OrganizationIntegrationConfigurationRequestModel model)
-    {
-        organizationIntegration.OrganizationId = organizationId;
-        model.OrganizationIntegrationId = organizationIntegration.Id;
-
-        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(organizationId)
-            .Returns(true);
-        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
-            .GetByIdAsync(Arg.Any<Guid>())
-            .Returns(organizationIntegration);
-        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
-            .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
-            .Returns(organizationIntegrationConfiguration);
-
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.UpdateAsync(
-            organizationId,
-            Guid.NewGuid(),
             Guid.Empty,
             new OrganizationIntegrationConfigurationRequestModel()));
     }

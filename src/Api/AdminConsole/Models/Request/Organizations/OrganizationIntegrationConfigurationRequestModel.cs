@@ -13,23 +13,26 @@ public class OrganizationIntegrationConfigurationRequestModel : IValidatableObje
     [Required]
     public EventType EventType { get; set; }
 
-    public Guid? Id { get; set; }
-
-    [Required]
-    public Guid OrganizationIntegrationId { get; set; }
-
     public string? Template { get; set; }
 
-    public OrganizationIntegrationConfiguration ToOrganizationIntegrationConfiguration()
+    public OrganizationIntegrationConfiguration ToOrganizationIntegrationConfiguration(Guid organizationIntegrationId)
     {
         return new OrganizationIntegrationConfiguration()
         {
-            Id = Id ?? Guid.Empty,
-            OrganizationIntegrationId = OrganizationIntegrationId,
+            OrganizationIntegrationId = organizationIntegrationId,
             Configuration = Configuration,
             EventType = EventType,
             Template = Template
         };
+    }
+
+    public OrganizationIntegrationConfiguration ToOrganizationIntegrationConfiguration(OrganizationIntegrationConfiguration currentConfiguration)
+    {
+        currentConfiguration.Configuration = Configuration;
+        currentConfiguration.EventType = EventType;
+        currentConfiguration.Template = Template;
+
+        return currentConfiguration;
     }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

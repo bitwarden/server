@@ -26,14 +26,12 @@ public class OrganizationIntegrationConfigurationController(
             throw new NotFoundException();
         }
         var integration = await integrationRepository.GetByIdAsync(integrationId);
-        if (integration == null ||
-            integration.OrganizationId != organizationId ||
-            model.OrganizationIntegrationId != integrationId)
+        if (integration == null || integration.OrganizationId != organizationId)
         {
             throw new NotFoundException();
         }
 
-        var organizationIntegrationConfiguration = model.ToOrganizationIntegrationConfiguration();
+        var organizationIntegrationConfiguration = model.ToOrganizationIntegrationConfiguration(integrationId);
         var configuration = await integrationConfigurationRepository.CreateAsync(organizationIntegrationConfiguration);
         return new OrganizationIntegrationConfigurationResponseModel(configuration);
     }
@@ -50,23 +48,19 @@ public class OrganizationIntegrationConfigurationController(
             throw new NotFoundException();
         }
         var integration = await integrationRepository.GetByIdAsync(integrationId);
-        if (integration == null ||
-            integration.OrganizationId != organizationId)
+        if (integration == null || integration.OrganizationId != organizationId)
         {
             throw new NotFoundException();
         }
 
         var configuration = await integrationConfigurationRepository.GetByIdAsync(configurationId);
-        if (configuration is null ||
-            configuration.OrganizationIntegrationId != integrationId ||
-            model.Id != configurationId ||
-            model.OrganizationIntegrationId != integrationId)
+        if (configuration is null || configuration.OrganizationIntegrationId != integrationId)
         {
             throw new BadRequestException();
         }
 
-        var newConfiguration = model.ToOrganizationIntegrationConfiguration();
-        await integrationConfigurationRepository.ReplaceAsync(model.ToOrganizationIntegrationConfiguration());
+        var newConfiguration = model.ToOrganizationIntegrationConfiguration(configuration);
+        await integrationConfigurationRepository.ReplaceAsync(newConfiguration);
 
         return new OrganizationIntegrationConfigurationResponseModel(newConfiguration);
     }
