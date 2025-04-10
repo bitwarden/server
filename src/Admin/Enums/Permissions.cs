@@ -38,6 +38,7 @@ public enum Permission
     Org_Billing_View,
     Org_Billing_Edit,
     Org_Billing_LaunchGateway,
+    Org_Billing_ConvertToBusinessUnit,
 
     Provider_List_View,
     Provider_Create,

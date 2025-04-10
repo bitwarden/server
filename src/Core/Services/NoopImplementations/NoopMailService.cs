@@ -212,6 +212,11 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendBusinessUnitConversionInviteAsync(Organization organization, string token, string email)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email)
     {
         return Task.FromResult(0);
