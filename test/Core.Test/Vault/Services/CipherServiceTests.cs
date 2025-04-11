@@ -1228,7 +1228,8 @@ public class CipherServiceTests
         bool editPermission,
         string? key = null,
         string? totp = null,
-        CipherLoginFido2CredentialData[]? passkeys = null
+        CipherLoginFido2CredentialData[]? passkeys = null,
+        CipherFieldData[]? fields = null
         )
     {
         var cipherDetails = new CipherDetails
@@ -1241,12 +1242,13 @@ public class CipherServiceTests
             Key = key,
         };
 
-        var newLoginData = new CipherLoginData { Username = "user", Password = newPassword, Totp = totp, Fido2Credentials = passkeys };
+        var newLoginData = new CipherLoginData { Username = "user", Password = newPassword, Totp = totp, Fido2Credentials = passkeys, Fields = fields };
         cipherDetails.Data = JsonSerializer.Serialize(newLoginData);
 
         var existingCipher = new Cipher
         {
             Id = cipherDetails.Id,
+            Type = CipherType.Login,
             Data = JsonSerializer.Serialize(
                 new CipherLoginData
                 {
@@ -1440,6 +1442,56 @@ public class CipherServiceTests
 
         var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
         Assert.Equal(passkeys.Length, updatedLoginData.Fido2Credentials.Length);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SaveDetailsAsync_HiddenFieldsChangedWithoutPermission(string _, SutProvider<CipherService> sutProvider)
+    {
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: false, editPermission: false, fields:
+        [
+            new CipherFieldData
+            {
+                Name = "FieldName",
+                Value = "FieldValue",
+                Type = FieldType.Hidden,
+            }
+        ]);
+
+        await deps.SutProvider.Sut.SaveDetailsAsync(
+            deps.CipherDetails,
+            deps.CipherDetails.UserId.Value,
+            deps.CipherDetails.RevisionDate,
+            null,
+            true);
+
+        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
+        Assert.Empty(updatedLoginData.Fields);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SaveDetailsAsync_HiddenFieldsChangedWithPermission(string _, SutProvider<CipherService> sutProvider)
+    {
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: true, fields:
+        [
+            new CipherFieldData
+            {
+                Name = "FieldName",
+                Value = "FieldValue",
+                Type = FieldType.Hidden,
+            }
+        ]);
+
+        await deps.SutProvider.Sut.SaveDetailsAsync(
+            deps.CipherDetails,
+            deps.CipherDetails.UserId.Value,
+            deps.CipherDetails.RevisionDate,
+            null,
+            true);
+
+        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
+        Assert.Single(updatedLoginData.Fields.ToArray());
     }
 
     [Theory]

@@ -177,12 +177,7 @@ public class CiphersController : Controller
         }
 
         await _cipherService.SaveDetailsAsync(cipher, user.Id, model.Cipher.LastKnownRevisionDate, model.CollectionIds, cipher.OrganizationId.HasValue);
-        var response = new CipherResponseModel(
-            cipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings);
-        return response;
+        return await Get(cipher.Id);
     }
 
     [HttpPost("admin")]
