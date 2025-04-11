@@ -5,7 +5,7 @@
   "repository": "https://github.com/bitwarden/server",
   "license": "GPL-3.0",
   "scripts": {
-    "build": "webpack"
+    "build": "echo 'test stuff goes here'"
   },
   "dependencies": {
     "bootstrap": "5.3.3",
