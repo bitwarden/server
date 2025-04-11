@@ -313,7 +313,7 @@ public class PremiumUserBillingService(
         {
             subscriptionItemOptionsList.Add(new SubscriptionItemOptions
             {
-                Price = "storage-gb-annually",
+                Price = StripeConstants.Prices.StoragePlanPersonal,
                 Quantity = storage
             });
         }
