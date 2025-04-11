@@ -40,9 +40,23 @@ public class OrganizationBillingService(
     {
         var (organization, customerSetup, subscriptionSetup) = sale;
 
-        var customer = string.IsNullOrEmpty(organization.GatewayCustomerId) && customerSetup != null
-            ? await CreateCustomerAsync(organization, customerSetup)
-            : await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
+        Customer customer;
+        if (string.IsNullOrEmpty(organization.GatewayCustomerId) && customerSetup != null)
+        {
+            customer = await CreateCustomerAsync(organization, customerSetup!);
+        }
+        else
+        {
+            if (organization.GatewaySubscriptionId != null)
+            {
+                var existingSubscription = await stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId);
+                if (existingSubscription.Status != StripeConstants.SubscriptionStatus.Canceled)
+                {
+                    throw new BadRequestException("You cannot create another subscription if you already have a active subscription.");
+                }
+            }
+            customer = await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
+        }
 
         var subscription = await CreateSubscriptionAsync(organization.Id, customer, subscriptionSetup);
 
