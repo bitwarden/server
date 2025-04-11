@@ -25,8 +25,9 @@ public interface IGlobalSettings
     IDomainVerificationSettings DomainVerification { get; set; }
     ILaunchDarklySettings LaunchDarkly { get; set; }
     string DatabaseProvider { get; set; }
-    GlobalSettings.SqlSettings SqlServer { get; set; }
+    SqlSettings SqlServer { get; set; }
     string DevelopmentDirectory { get; set; }
     IWebPushSettings WebPush { get; set; }
-    GlobalSettings.EventLoggingSettings EventLogging { get; set; }
+    EventLoggingSettings EventLogging { get; set; }
+    IInfrastructureResourceProvider InfrastructureResourceProvider { get; set; }
 }
