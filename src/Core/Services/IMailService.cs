@@ -21,7 +21,7 @@ public interface IMailService
         ProductTierType productTier,
         IEnumerable<ProductType> products);
     Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token);
-    Task SendCannotDeleteManagedAccountEmailAsync(string email);
+    Task SendCannotDeleteClaimedAccountEmailAsync(string email);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
     Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true);
@@ -70,6 +70,7 @@ public interface IMailService
     Task SendEnqueuedMailMessageAsync(IMailQueueMessage queueMessage);
     Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName);
     Task SendProviderSetupInviteEmailAsync(Provider provider, string token, string email);
+    Task SendBusinessUnitConversionInviteAsync(Organization organization, string token, string email);
     Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email);
     Task SendProviderConfirmedEmailAsync(string providerName, string email);
     Task SendProviderUserRemoved(string providerName, string email);
@@ -97,7 +98,7 @@ public interface IMailService
     Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent);
     Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate, string organizationId,
         string organizationName);
-    Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList);
+    Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList);
     Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName);
-    Task SendBulkSecurityTaskNotificationsAsync(string orgName, IEnumerable<UserSecurityTasksCount> securityTaskNotificaitons);
+    Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotifications, IEnumerable<string> adminOwnerEmails);
 }

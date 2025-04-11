@@ -87,8 +87,7 @@ public class Startup
         // TODO: no longer be required - see PM-1880
         services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
 
-        // Mvc
-        services.AddMvc(config =>
+        services.AddControllers(config =>
         {
             config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
         });

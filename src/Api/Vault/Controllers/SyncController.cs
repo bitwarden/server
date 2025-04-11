@@ -36,6 +36,7 @@ public class SyncController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
     private readonly IFeatureService _featureService;
+    private readonly IApplicationCacheService _applicationCacheService;
 
     public SyncController(
         IUserService userService,
@@ -49,7 +50,8 @@ public class SyncController : Controller
         ISendRepository sendRepository,
         GlobalSettings globalSettings,
         ICurrentContext currentContext,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IApplicationCacheService applicationCacheService)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -63,6 +65,7 @@ public class SyncController : Controller
         _globalSettings = globalSettings;
         _currentContext = currentContext;
         _featureService = featureService;
+        _applicationCacheService = applicationCacheService;
     }
 
     [HttpGet("")]
@@ -101,11 +104,13 @@ public class SyncController : Controller
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var organizationManagingActiveUser = await _userService.GetOrganizationsManagingUserAsync(user.Id);
-        var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
+        var organizationClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(user.Id);
+        var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
 
-        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization,
-            organizationIdsManagingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
+        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+
+        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
+            organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;
     }

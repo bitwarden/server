@@ -22,8 +22,15 @@ public static class StripeConstants
 
     public static class CouponIDs
     {
-        public const string MSPDiscount35 = "msp-discount-35";
+        public const string LegacyMSPDiscount = "msp-discount-35";
         public const string SecretsManagerStandalone = "sm-standalone";
+
+        public static class MSPDiscounts
+        {
+            public const string Open = "msp-open-discount";
+            public const string Silver = "msp-silver-discount";
+            public const string Gold = "msp-gold-discount";
+        }
     }
 
     public static class ErrorCodes
@@ -44,6 +51,8 @@ public static class StripeConstants
     public static class MetadataKeys
     {
         public const string OrganizationId = "organizationId";
+        public const string ProviderId = "providerId";
+        public const string UserId = "userId";
     }
 
     public static class PaymentBehavior
