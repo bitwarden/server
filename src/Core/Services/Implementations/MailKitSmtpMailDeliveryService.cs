@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography.X509Certificates;
+using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Platform.X509ChainCustomization;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -22,12 +22,17 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
         ILogger<MailKitSmtpMailDeliveryService> logger,
         IOptions<X509ChainOptions> x509ChainOptions)
     {
-        if (globalSettings.Mail?.Smtp?.Host == null)
+        if (globalSettings.Mail.Smtp?.Host == null)
         {
             throw new ArgumentNullException(nameof(globalSettings.Mail.Smtp.Host));
         }
 
-        _replyEmail = CoreHelpers.PunyEncode(globalSettings.Mail?.ReplyToEmail);
+        if (globalSettings.Mail.ReplyToEmail == null)
+        {
+            throw new InvalidOperationException("A GlobalSettings.Mail.ReplyToEmail is required to be set up.");
+        }
+
+        _replyEmail = CoreHelpers.PunyEncode(globalSettings.Mail.ReplyToEmail);
 
         if (_replyEmail.Contains("@"))
         {

@@ -513,8 +513,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task ReplaceAsync(Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups,
-        IEnumerable<CollectionAccessSelection> users)
+    public async Task ReplaceAsync(Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection>? groups,
+        IEnumerable<CollectionAccessSelection>? users)
     {
         await UpsertAsync(collection);
         using (var scope = ServiceScopeFactory.CreateScope())
