@@ -347,9 +347,9 @@ public static class CoreHelpers
     /// This method is subject to the limitations of System.Text.Json. For example, properties with
     /// inaccessible setters will not be set.
     /// </summary>
-    public static T? CloneObject<T>(T obj)
+    public static T CloneObject<T>(T obj)
     {
-        return JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(obj));
+        return JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(obj))!;
     }
 
     public static bool SettingHasValue([NotNullWhen(true)] string? setting)
@@ -808,7 +808,7 @@ public static class CoreHelpers
     /// <param name="jsonData">The JSON data</param>
     /// <typeparam name="T">The type to deserialize into</typeparam>
     /// <returns></returns>
-    public static T LoadClassFromJsonData<T>(string jsonData) where T : new()
+    public static T LoadClassFromJsonData<T>(string? jsonData) where T : new()
     {
         if (string.IsNullOrWhiteSpace(jsonData))
         {

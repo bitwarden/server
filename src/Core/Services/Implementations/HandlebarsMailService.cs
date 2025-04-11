@@ -762,7 +762,7 @@ public class HandlebarsMailService : IMailService
             var emailList = new List<string>();
             if (parameters[0] is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Array)
             {
-                emailList = jsonElement.EnumerateArray().Select(e => e.GetString()).ToList();
+                emailList = jsonElement.EnumerateArray().Select(e => e.GetString()!).ToList();
             }
             else if (parameters[0] is IEnumerable<string> emails)
             {
@@ -1267,7 +1267,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName)
+    public async Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string? userName)
     {
         var templateName = _globalSettings.SelfHosted ?
             "AdminConsole.SelfHostNotifyAdminDeviceApprovalRequested" :
@@ -1304,7 +1304,7 @@ public class HandlebarsMailService : IMailService
         await EnqueueMailAsync(messageModels.ToList());
     }
 
-    private static string GetUserIdentifier(string email, string userName)
+    private static string GetUserIdentifier(string email, string? userName)
     {
         return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
     }

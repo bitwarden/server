@@ -520,8 +520,14 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            await ReplaceCollectionGroupsAsync(dbContext, collection, groups);
-            await ReplaceCollectionUsersAsync(dbContext, collection, users);
+            if (groups != null)
+            {
+                await ReplaceCollectionGroupsAsync(dbContext, collection, groups);
+            }
+            if (users != null)
+            {
+                await ReplaceCollectionUsersAsync(dbContext, collection, users);
+            }
             await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(collection.Id, collection.OrganizationId);
             await dbContext.SaveChangesAsync();
         }
