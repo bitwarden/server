@@ -14,6 +14,7 @@ using Bit.Core.Billing.Models.Mail;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
+using Bit.Core.Models.Mail.Billing;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
 using Bit.Core.SecretsManager.Models.Mail;
@@ -120,16 +121,16 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendCannotDeleteManagedAccountEmailAsync(string email)
+    public async Task SendCannotDeleteClaimedAccountEmailAsync(string email)
     {
         var message = CreateDefaultMessage("Delete Your Account", email);
-        var model = new CannotDeleteManagedAccountViewModel
+        var model = new CannotDeleteClaimedAccountViewModel
         {
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
         };
-        await AddMessageContentAsync(message, "AdminConsole.CannotDeleteManagedAccount", model);
-        message.Category = "CannotDeleteManagedAccount";
+        await AddMessageContentAsync(message, "AdminConsole.CannotDeleteClaimedAccount", model);
+        message.Category = "CannotDeleteClaimedAccount";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
@@ -478,7 +479,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList)
+    public async Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList)
     {
         await EnqueueMailAsync(emailList.EmailList.Select(email =>
             CreateMessage(email, emailList.Organization)));
@@ -810,12 +811,10 @@ public class HandlebarsMailService : IMailService
                 return;
             }
 
-            var numeric = parameters[0];
-            var singularText = parameters[1].ToString();
-            var pluralText = parameters[2].ToString();
-
-            if (numeric is int number)
+            if (int.TryParse(parameters[0].ToString(), out var number))
             {
+                var singularText = parameters[1].ToString();
+                var pluralText = parameters[2].ToString();
                 writer.WriteSafeString(number == 1 ? singularText : pluralText);
             }
             else
@@ -954,6 +953,22 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "Provider.ProviderSetupInvite", model);
         message.Category = "ProviderSetupInvite";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendBusinessUnitConversionInviteAsync(Organization organization, string token, string email)
+    {
+        var message = CreateDefaultMessage("Set Up Business Unit", email);
+        var model = new BusinessUnitConversionInviteModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+            OrganizationId = organization.Id.ToString(),
+            Email = WebUtility.UrlEncode(email),
+            Token = WebUtility.UrlEncode(token)
+        };
+        await AddMessageContentAsync(message, "Billing.BusinessUnitConversionInvite", model);
+        message.Category = "BusinessUnitConversionInvite";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
