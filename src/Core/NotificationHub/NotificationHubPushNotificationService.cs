@@ -32,20 +32,22 @@ public class NotificationHubPushNotificationService : IPushNotificationService
     private readonly INotificationHubPool _notificationHubPool;
     private readonly ILogger _logger;
     private readonly IGlobalSettings _globalSettings;
+    private readonly TimeProvider _timeProvider;
 
     public NotificationHubPushNotificationService(
         IInstallationDeviceRepository installationDeviceRepository,
         INotificationHubPool notificationHubPool,
         IHttpContextAccessor httpContextAccessor,
         ILogger<NotificationHubPushNotificationService> logger,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        TimeProvider timeProvider)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _httpContextAccessor = httpContextAccessor;
         _notificationHubPool = notificationHubPool;
         _logger = logger;
         _globalSettings = globalSettings;
-
+        _timeProvider = timeProvider;
         if (globalSettings.Installation.Id == Guid.Empty)
         {
             logger.LogWarning("Installation ID is not set. Push notifications for installations will not work.");
@@ -152,7 +154,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
 
     private async Task PushUserAsync(Guid userId, PushType type, bool excludeCurrentContext = false)
     {
-        var message = new UserPushNotification { UserId = userId, Date = DateTime.UtcNow };
+        var message = new UserPushNotification { UserId = userId, Date = _timeProvider.GetUtcNow().UtcDateTime };
 
         await SendPayloadToUserAsync(userId, type, message, excludeCurrentContext);
     }
