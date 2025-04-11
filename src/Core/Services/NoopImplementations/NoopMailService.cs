@@ -103,7 +103,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendCannotDeleteManagedAccountEmailAsync(string email)
+    public Task SendCannotDeleteClaimedAccountEmailAsync(string email)
     {
         return Task.FromResult(0);
     }
@@ -208,6 +208,11 @@ public class NoopMailService : IMailService
     }
 
     public Task SendProviderSetupInviteEmailAsync(Provider provider, string token, string email)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendBusinessUnitConversionInviteAsync(Organization organization, string token, string email)
     {
         return Task.FromResult(0);
     }
@@ -317,14 +322,14 @@ public class NoopMailService : IMailService
     {
         return Task.FromResult(0);
     }
-    public Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList) => Task.CompletedTask;
+    public Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList) => Task.CompletedTask;
 
     public Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName)
     {
         return Task.FromResult(0);
     }
 
-    public Task SendBulkSecurityTaskNotificationsAsync(string orgName, IEnumerable<UserSecurityTasksCount> securityTaskNotificaitons)
+    public Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotifications, IEnumerable<string> adminOwnerEmails)
     {
         return Task.FromResult(0);
     }

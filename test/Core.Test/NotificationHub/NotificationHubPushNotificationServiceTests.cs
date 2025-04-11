@@ -1142,6 +1142,7 @@ public class NotificationHubPushNotificationServiceTests
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             InstallationId = installationId,
+            TaskId = notification.TaskId,
             Title = notification.Title,
             Body = notification.Body,
             CreationDate = notification.CreationDate,

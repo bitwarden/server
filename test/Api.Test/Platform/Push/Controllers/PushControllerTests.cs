@@ -243,20 +243,22 @@ public class PushControllerTests
                 PushToken = "test-push-token",
                 UserId = userId.ToString(),
                 Type = DeviceType.Android,
-                Identifier = identifier.ToString()
+                Identifier = identifier.ToString(),
             }));
 
         Assert.Equal("Not correctly configured for push relays.", exception.Message);
 
         await sutProvider.GetDependency<IPushRegistrationService>().Received(0)
-            .CreateOrUpdateRegistrationAsync(Arg.Any<PushRegistrationData>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<DeviceType>(), Arg.Any<IEnumerable<string>>(), Arg.Any<Guid>());
+            .CreateOrUpdateRegistrationAsync(Arg.Any<PushRegistrationData>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<string>(), Arg.Any<DeviceType>(), Arg.Any<IEnumerable<string>>(), Arg.Any<Guid>());
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task? RegisterAsync_ValidModel_CreatedOrUpdatedRegistration(SutProvider<PushController> sutProvider,
-        Guid installationId, Guid userId, Guid identifier, Guid deviceId, Guid organizationId)
+    [BitAutoData(false)]
+    [BitAutoData(true)]
+    public async Task RegisterAsync_ValidModel_CreatedOrUpdatedRegistration(bool haveOrganizationId,
+        SutProvider<PushController> sutProvider, Guid installationId, Guid userId, Guid identifier, Guid deviceId,
+        Guid organizationId)
     {
         sutProvider.GetDependency<IGlobalSettings>().SelfHosted = false;
         sutProvider.GetDependency<ICurrentContext>().InstallationId.Returns(installationId);
@@ -273,19 +275,29 @@ public class PushControllerTests
             UserId = userId.ToString(),
             Type = DeviceType.Android,
             Identifier = identifier.ToString(),
-            OrganizationIds = [organizationId.ToString()],
+            OrganizationIds = haveOrganizationId ? [organizationId.ToString()] : null,
             InstallationId = installationId
         };
 
         await sutProvider.Sut.RegisterAsync(model);
 
         await sutProvider.GetDependency<IPushRegistrationService>().Received(1)
-            .CreateOrUpdateRegistrationAsync(Arg.Is<PushRegistrationData>(data => data == new PushRegistrationData(model.PushToken)), expectedDeviceId, expectedUserId,
+            .CreateOrUpdateRegistrationAsync(
+                Arg.Is<PushRegistrationData>(data => data == new PushRegistrationData(model.PushToken)),
+                expectedDeviceId, expectedUserId,
                 expectedIdentifier, DeviceType.Android, Arg.Do<IEnumerable<string>>(organizationIds =>
                 {
+                    Assert.NotNull(organizationIds);
                     var organizationIdsList = organizationIds.ToList();
-                    Assert.Contains(expectedOrganizationId, organizationIdsList);
-                    Assert.Single(organizationIdsList);
+                    if (haveOrganizationId)
+                    {
+                        Assert.Contains(expectedOrganizationId, organizationIdsList);
+                        Assert.Single(organizationIdsList);
+                    }
+                    else
+                    {
+                        Assert.Empty(organizationIdsList);
+                    }
                 }), installationId);
     }
 }
