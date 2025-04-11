@@ -72,6 +72,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         UserIsClaimedByOrganization = organizationIdsClaimingUser.Contains(organization.OrganizationId);
         UseRiskInsights = organization.UseRiskInsights;
+        UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
 
         if (organization.SsoConfig != null)
         {
@@ -155,4 +156,5 @@ public class ProfileOrganizationResponseModel : ResponseModel
     /// </returns>
     public bool UserIsClaimedByOrganization { get; set; }
     public bool UseRiskInsights { get; set; }
+    public bool UseAdminSponsoredFamilies { get; set; }
 }
