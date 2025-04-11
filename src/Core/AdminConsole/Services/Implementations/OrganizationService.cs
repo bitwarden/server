@@ -13,6 +13,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Constants;
@@ -30,10 +31,12 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using OrganizationUserInvite = Bit.Core.Models.Business.OrganizationUserInvite;
@@ -74,6 +77,8 @@ public class OrganizationService : IOrganizationService
     private readonly IPricingClient _pricingClient;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
+    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
+    private readonly IDataProtector _dataProtector;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -107,7 +112,10 @@ public class OrganizationService : IOrganizationService
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         IPolicyRequirementQuery policyRequirementQuery,
-        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand)
+        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
+        IDataProtectionProvider dataProtectionProvider
+        )
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -141,6 +149,8 @@ public class OrganizationService : IOrganizationService
         _pricingClient = pricingClient;
         _policyRequirementQuery = policyRequirementQuery;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
+        _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
+        _dataProtector = dataProtectionProvider.CreateProtector(OrgUserInviteTokenable.DataProtectorPurpose);
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -1912,9 +1922,33 @@ public class OrganizationService : IOrganizationService
         });
     }
 
-    public async Task InitPendingOrganization(Guid userId, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName)
+    public async Task InitPendingOrganization(User user, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName, string emailToken)
     {
-        await ValidateSignUpPoliciesAsync(userId);
+        await ValidateSignUpPoliciesAsync(user.Id);
+
+        var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+        if (orgUser == null)
+        {
+            throw new BadRequestException("User invalid.");
+        }
+
+        // Tokens will have been created in two ways in the OrganizationService invite methods:
+        // 1. New way - via OrgUserInviteTokenable
+        // 2. Old way - via manual process using data protector initialized with purpose: "OrganizationServiceDataProtector"
+        // For backwards compatibility, must check validity of both types of tokens and accept if either is valid
+
+        // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
+        var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+            _orgUserInviteTokenDataFactory, emailToken, orgUser);
+
+        var tokenValid = newTokenValid ||
+                         CoreHelpers.UserInviteTokenIsValid(_dataProtector, emailToken, user.Email, orgUser.Id,
+                             _globalSettings);
+
+        if (!tokenValid)
+        {
+            throw new BadRequestException("Invalid token.");
+        }
 
         var org = await GetOrgById(organizationId);
 
