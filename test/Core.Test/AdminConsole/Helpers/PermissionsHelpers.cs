@@ -4,7 +4,7 @@ using Bit.Core.Models.Data;
 
 namespace Bit.Core.Test.AdminConsole.Helpers;
 
-public static class AuthorizationHelpers
+public static class PermissionsHelpers
 {
     /// <summary>
     /// Return a new Permission object with inverted permissions.
@@ -34,6 +34,24 @@ public static class AuthorizationHelpers
             .ForEach(p => p.SetValue(result, true));
 
         return result;
+    }
+
+    /// <summary>
+    /// Returns a sequence of Permission objects, where each Permission object has a different permission flag set.
+    /// </summary>
+    public static IEnumerable<Permissions> GetAllPermissions()
+    {
+        // Get all boolean properties of input object
+        var props = typeof(Permissions)
+            .GetProperties()
+            .Where(p => p.PropertyType == typeof(bool));
+
+        foreach (var prop in props)
+        {
+            var result = new Permissions();
+            prop.SetValue(result, true);
+            yield return result;
+        }
     }
 
     /// <summary>

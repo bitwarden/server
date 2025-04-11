@@ -64,7 +64,7 @@ public class VaultExportAuthorizationHandlerTests
     }
 
     public static IEnumerable<object[]> CanExportManagedCollections =>
-        AuthorizationHelpers.AllRoles().Select(o => new[] { o });
+        PermissionsHelpers.AllRoles().Select(o => new[] { o });
 
     [Theory]
     [BitMemberAutoData(nameof(CanExportManagedCollections))]

@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.Helpers;
 
-public class AuthorizationHelpersTests
+public class PermissionsHelpersTests
 {
     [Fact]
     public void Permissions_Invert_InvertsAllPermissions()
