@@ -63,7 +63,9 @@ public class DevicesControllerTest
                     UserId = userId,
                     Name = "chrome",
                     Type = DeviceType.ChromeBrowser,
-                    Identifier = Guid.Parse("811E9254-F77C-48C8-AF0A-A181943F5708").ToString()
+                    Identifier = Guid.Parse("811E9254-F77C-48C8-AF0A-A181943F5708").ToString(),
+                    EncryptedPublicKey = "PublicKey",
+                    EncryptedUserKey = "UserKey",
                 },
                 Guid.Parse("E09D6943-D574-49E5-AC85-C3F12B4E019E"),
                 authDateTimeResponse)
@@ -78,6 +80,13 @@ public class DevicesControllerTest
         // Assert
         Assert.NotNull(result);
         Assert.IsType<ListResponseModel<DeviceAuthRequestResponseModel>>(result);
+        var resultDevice = result.Data.First();
+        Assert.Equal("chrome", resultDevice.Name);
+        Assert.Equal(DeviceType.ChromeBrowser, resultDevice.Type);
+        Assert.Equal(Guid.Parse("B3136B10-7818-444F-B05B-4D7A9B8C48BF"), resultDevice.Id);
+        Assert.Equal(Guid.Parse("811E9254-F77C-48C8-AF0A-A181943F5708").ToString(), resultDevice.Identifier);
+        Assert.Equal("PublicKey", resultDevice.EncryptedPublicKey);
+        Assert.Equal("UserKey", resultDevice.EncryptedUserKey);
     }
 
     [Fact]
