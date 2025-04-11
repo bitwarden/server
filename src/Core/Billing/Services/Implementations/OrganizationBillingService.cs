@@ -93,7 +93,9 @@ public class OrganizationBillingService(
 
         var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
 
-        var invoice = await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions());
+        var invoice = !string.IsNullOrEmpty(subscription.LatestInvoiceId)
+            ? await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions())
+            : null;
 
         return new OrganizationMetadata(
             isEligibleForSelfHost,
