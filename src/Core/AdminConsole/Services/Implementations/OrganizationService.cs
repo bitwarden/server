@@ -1932,11 +1932,6 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("User invalid.");
         }
 
-        // Tokens will have been created in two ways in the OrganizationService invite methods:
-        // 1. New way - via OrgUserInviteTokenable
-        // 2. Old way - via manual process using data protector initialized with purpose: "OrganizationServiceDataProtector"
-        // For backwards compatibility, must check validity of both types of tokens and accept if either is valid
-
         // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
         var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
             _orgUserInviteTokenDataFactory, emailToken, orgUser);
