@@ -314,9 +314,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return;
         }
 
-        if (await IsManagedByAnyOrganizationAsync(user.Id))
+        if (await IsClaimedByAnyOrganizationAsync(user.Id))
         {
-            await _mailService.SendCannotDeleteManagedAccountEmailAsync(user.Email);
+            await _mailService.SendCannotDeleteClaimedAccountEmailAsync(user.Email);
             return;
         }
 
@@ -545,11 +545,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        var managedUserValidationResult = await ValidateManagedUserDomainAsync(user, newEmail);
+        var claimedUserValidationResult = await ValidateClaimedUserDomainAsync(user, newEmail);
 
-        if (!managedUserValidationResult.Succeeded)
+        if (!claimedUserValidationResult.Succeeded)
         {
-            return managedUserValidationResult;
+            return claimedUserValidationResult;
         }
 
         if (!await base.VerifyUserTokenAsync(user, _identityOptions.Tokens.ChangeEmailTokenProvider,
@@ -617,18 +617,18 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IdentityResult.Success;
     }
 
-    public async Task<IdentityResult> ValidateManagedUserDomainAsync(User user, string newEmail)
+    public async Task<IdentityResult> ValidateClaimedUserDomainAsync(User user, string newEmail)
     {
-        var managingOrganizations = await GetOrganizationsManagingUserAsync(user.Id);
+        var claimingOrganization = await GetOrganizationsClaimingUserAsync(user.Id);
 
-        if (!managingOrganizations.Any())
+        if (!claimingOrganization.Any())
         {
             return IdentityResult.Success;
         }
 
         var newDomain = CoreHelpers.GetEmailDomain(newEmail);
 
-        var verifiedDomains = await _organizationDomainRepository.GetVerifiedDomainsByOrganizationIdsAsync(managingOrganizations.Select(org => org.Id));
+        var verifiedDomains = await _organizationDomainRepository.GetVerifiedDomainsByOrganizationIdsAsync(claimingOrganization.Select(org => org.Id));
 
         if (verifiedDomains.Any(verifiedDomain => verifiedDomain.DomainName == newDomain))
         {
@@ -1218,10 +1218,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             ? new UserLicense(user, _licenseService)
             : new UserLicense(user, subscriptionInfo, _licenseService);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
-        {
-            userLicense.Token = await _licenseService.CreateUserTokenAsync(user, subscriptionInfo);
-        }
+        userLicense.Token = await _licenseService.CreateUserTokenAsync(user, subscriptionInfo);
 
         return userLicense;
     }
@@ -1369,13 +1366,13 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IsLegacyUser(user);
     }
 
-    public async Task<bool> IsManagedByAnyOrganizationAsync(Guid userId)
+    public async Task<bool> IsClaimedByAnyOrganizationAsync(Guid userId)
     {
-        var managingOrganizations = await GetOrganizationsManagingUserAsync(userId);
-        return managingOrganizations.Any();
+        var organizationsClaimingUser = await GetOrganizationsClaimingUserAsync(userId);
+        return organizationsClaimingUser.Any();
     }
 
-    public async Task<IEnumerable<Organization>> GetOrganizationsManagingUserAsync(Guid userId)
+    public async Task<IEnumerable<Organization>> GetOrganizationsClaimingUserAsync(Guid userId)
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {

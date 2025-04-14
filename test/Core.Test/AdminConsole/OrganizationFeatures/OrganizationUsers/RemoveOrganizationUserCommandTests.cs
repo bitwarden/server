@@ -41,9 +41,9 @@ public class RemoveOrganizationUserCommandTests
         await sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId);
 
         // Assert
-        await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+        await sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
             .DidNotReceiveWithAnyArgs()
-            .GetUsersOrganizationManagementStatusAsync(default, default);
+            .GetUsersOrganizationClaimedStatusAsync(default, default);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .DeleteAsync(organizationUser);
@@ -78,9 +78,9 @@ public class RemoveOrganizationUserCommandTests
         await sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId);
 
         // Assert
-        await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+        await sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
             .Received(1)
-            .GetUsersOrganizationManagementStatusAsync(
+            .GetUsersOrganizationClaimedStatusAsync(
                 organizationUser.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)));
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -172,6 +172,28 @@ public class RemoveOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task RemoveUser_WhenCustomUserRemovesAdmin_ThrowsException(
+    [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser organizationUser,
+    [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser deletingUser,
+    SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organizationUser.OrganizationId = deletingUser.OrganizationId;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationCustom(organizationUser.OrganizationId)
+            .Returns(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUser.UserId));
+        Assert.Contains(RemoveOrganizationUserCommand.RemoveAdminByCustomUserErrorMessage, exception.Message);
+    }
+
+    [Theory, BitAutoData]
     public async Task RemoveUser_WithDeletingUserId_RemovingLastOwner_ThrowsException(
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationUser,
         OrganizationUser deletingUser,
@@ -225,17 +247,17 @@ public class RemoveOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(orgUser.Id)
             .Returns(orgUser);
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(orgUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)))
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)))
             .Returns(new Dictionary<Guid, bool> { { orgUser.Id, true } });
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUserAsync(orgUser.OrganizationId, orgUser.Id, deletingUserId));
         Assert.Contains(RemoveOrganizationUserCommand.RemoveClaimedAccountErrorMessage, exception.Message);
-        await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+        await sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
             .Received(1)
-            .GetUsersOrganizationManagementStatusAsync(orgUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)));
+            .GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)));
     }
 
     [Theory, BitAutoData]
@@ -252,9 +274,9 @@ public class RemoveOrganizationUserCommandTests
         await sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, eventSystemUser);
 
         // Assert
-        await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+        await sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
             .DidNotReceiveWithAnyArgs()
-            .GetUsersOrganizationManagementStatusAsync(default, default);
+            .GetUsersOrganizationClaimedStatusAsync(default, default);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .DeleteAsync(organizationUser);
@@ -280,9 +302,9 @@ public class RemoveOrganizationUserCommandTests
         await sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, eventSystemUser);
 
         // Assert
-        await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+        await sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
             .DidNotReceiveWithAnyArgs()
-            .GetUsersOrganizationManagementStatusAsync(default, default);
+            .GetUsersOrganizationClaimedStatusAsync(default, default);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .DeleteAsync(organizationUser);
@@ -468,8 +490,8 @@ public class RemoveOrganizationUserCommandTests
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationOwner(deletingUser.OrganizationId)
             .Returns(true);
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(
                 deletingUser.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser1.Id) && i.Contains(orgUser2.Id)))
             .Returns(new Dictionary<Guid, bool> { { orgUser1.Id, false }, { orgUser2.Id, false } });
@@ -480,9 +502,9 @@ public class RemoveOrganizationUserCommandTests
         // Assert
         Assert.Equal(2, result.Count());
         Assert.All(result, r => Assert.Empty(r.ErrorMessage));
-        await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+        await sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
             .DidNotReceiveWithAnyArgs()
-            .GetUsersOrganizationManagementStatusAsync(default, default);
+            .GetUsersOrganizationClaimedStatusAsync(default, default);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser1.Id) && i.Contains(orgUser2.Id)));
@@ -522,8 +544,8 @@ public class RemoveOrganizationUserCommandTests
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationOwner(deletingUser.OrganizationId)
             .Returns(true);
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(
                 deletingUser.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser1.Id) && i.Contains(orgUser2.Id)))
             .Returns(new Dictionary<Guid, bool> { { orgUser1.Id, false }, { orgUser2.Id, false } });
@@ -534,9 +556,9 @@ public class RemoveOrganizationUserCommandTests
         // Assert
         Assert.Equal(2, result.Count());
         Assert.All(result, r => Assert.Empty(r.ErrorMessage));
-        await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+        await sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
             .Received(1)
-            .GetUsersOrganizationManagementStatusAsync(
+            .GetUsersOrganizationClaimedStatusAsync(
                 deletingUser.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser1.Id) && i.Contains(orgUser2.Id)));
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -616,7 +638,7 @@ public class RemoveOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RemoveUsers_WithDeletingUserId_RemovingManagedUser_WithAccountDeprovisioningEnabled_ThrowsException(
+    public async Task RemoveUsers_WithDeletingUserId_RemovingClaimedUser_WithAccountDeprovisioningEnabled_ThrowsException(
         [OrganizationUser(status: OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser,
         OrganizationUser deletingUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
@@ -636,8 +658,8 @@ public class RemoveOrganizationUserCommandTests
             .HasConfirmedOwnersExceptAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
 
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(orgUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)))
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)))
             .Returns(new Dictionary<Guid, bool> { { orgUser.Id, true } });
 
         // Act
@@ -701,9 +723,9 @@ public class RemoveOrganizationUserCommandTests
         // Assert
         Assert.Equal(2, result.Count());
         Assert.All(result, r => Assert.Empty(r.ErrorMessage));
-        await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+        await sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
             .DidNotReceiveWithAnyArgs()
-            .GetUsersOrganizationManagementStatusAsync(default, default);
+            .GetUsersOrganizationClaimedStatusAsync(default, default);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser1.Id) && i.Contains(orgUser2.Id)));
@@ -746,9 +768,9 @@ public class RemoveOrganizationUserCommandTests
         // Assert
         Assert.Equal(2, result.Count());
         Assert.All(result, r => Assert.Empty(r.ErrorMessage));
-        await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+        await sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
             .DidNotReceiveWithAnyArgs()
-            .GetUsersOrganizationManagementStatusAsync(default, default);
+            .GetUsersOrganizationClaimedStatusAsync(default, default);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser1.Id) && i.Contains(orgUser2.Id)));

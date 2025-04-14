@@ -250,6 +250,11 @@ public class DeviceValidator(
         var customResponse = new Dictionary<string, object>();
         switch (errorType)
         {
+            /* 
+             * The ErrorMessage is brittle and is used to control the flow in the clients. Do not change them without updating the client as well.
+             * There is a backwards compatibility issue as well: if you make a change on the clients then ensure that they are backwards
+             * compatible.
+             */
             case DeviceValidationResultType.InvalidUser:
                 result.ErrorDescription = "Invalid user";
                 customResponse.Add("ErrorModel", new ErrorResponseModel("invalid user"));
