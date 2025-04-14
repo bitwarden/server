@@ -94,7 +94,7 @@ jobs:
         with:
           cache: "npm"
           cache-dependency-path: "**/package-lock.json"
-          node-version: "16"
+          node-version: "22"
 
       - name: Print environment
         run: |
