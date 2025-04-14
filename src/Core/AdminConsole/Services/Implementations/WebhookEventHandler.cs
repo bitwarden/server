@@ -28,7 +28,7 @@ public class WebhookEventHandler(
 
         foreach (var configuration in configurations)
         {
-            var config = configuration.MergedConfiguration.Deserialize<WebhookConfiguration>();
+            var config = configuration.MergedConfiguration.Deserialize<WebhookIntegrationConfigurationDetils>();
             if (config is null)
             {
                 continue;

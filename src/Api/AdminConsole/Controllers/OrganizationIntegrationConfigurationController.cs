@@ -30,6 +30,10 @@ public class OrganizationIntegrationConfigurationController(
         {
             throw new NotFoundException();
         }
+        if (!model.isValidForType(integration.Type))
+        {
+            throw new BadRequestException($"Invalid Configuration and/or Template for integration type {integration.Type}");
+        }
 
         var organizationIntegrationConfiguration = model.ToOrganizationIntegrationConfiguration(integrationId);
         var configuration = await integrationConfigurationRepository.CreateAsync(organizationIntegrationConfiguration);
@@ -51,6 +55,10 @@ public class OrganizationIntegrationConfigurationController(
         if (integration == null || integration.OrganizationId != organizationId)
         {
             throw new NotFoundException();
+        }
+        if (!model.isValidForType(integration.Type))
+        {
+            throw new BadRequestException($"Invalid Configuration and/or Template for integration type {integration.Type}");
         }
 
         var configuration = await integrationConfigurationRepository.GetByIdAsync(configurationId);

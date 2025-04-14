@@ -1,6 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Integrations;
 
 #nullable enable
 
@@ -14,6 +16,22 @@ public class OrganizationIntegrationConfigurationRequestModel : IValidatableObje
     public EventType EventType { get; set; }
 
     public string? Template { get; set; }
+
+    public bool isValidForType(IntegrationType integrationType)
+    {
+        switch (integrationType)
+        {
+            case IntegrationType.CloudBillingSync or IntegrationType.Scim:
+                return false;
+            case IntegrationType.Slack:
+                return !string.IsNullOrWhiteSpace(Template) && IsConfigurationValid<SlackIntegrationConfiguration>();
+            case IntegrationType.Webhook:
+                return !string.IsNullOrWhiteSpace(Template) && IsConfigurationValid<WebhookIntegrationConfiguration>();
+            default:
+                return false;
+
+        }
+    }
 
     public OrganizationIntegrationConfiguration ToOrganizationIntegrationConfiguration(Guid organizationIntegrationId)
     {
@@ -38,5 +56,23 @@ public class OrganizationIntegrationConfigurationRequestModel : IValidatableObje
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         return [];
+    }
+
+    private bool IsConfigurationValid<T>()
+    {
+        if (string.IsNullOrWhiteSpace(Configuration))
+        {
+            return false;
+        }
+
+        try
+        {
+            var config = JsonSerializer.Deserialize<T>(Configuration);
+            return config is not null;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

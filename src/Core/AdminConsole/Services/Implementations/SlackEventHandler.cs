@@ -21,7 +21,7 @@ public class SlackEventHandler(
 
         foreach (var configuration in configurations)
         {
-            var config = configuration.MergedConfiguration.Deserialize<SlackConfiguration>();
+            var config = configuration.MergedConfiguration.Deserialize<SlackIntegrationConfigurationDetails>();
             if (config is null)
             {
                 continue;

@@ -39,6 +39,17 @@ public class OrganizationIntegrationRequestModel : IValidatableObject
                 yield return new ValidationResult($"{nameof(Type)} integrations cannot be created directly.", new[] { nameof(Type) });
                 break;
             case IntegrationType.Webhook:
+                if (Configuration is not null)
+                {
+                    yield return new ValidationResult(
+                        "Webhook integrations must not include configuration.",
+                        new[] { nameof(Configuration) });
+                }
+                break;
+            default:
+                yield return new ValidationResult(
+                    $"Integration type '{Type}' is not recognized.",
+                    new[] { nameof(Type) });
                 break;
         }
     }

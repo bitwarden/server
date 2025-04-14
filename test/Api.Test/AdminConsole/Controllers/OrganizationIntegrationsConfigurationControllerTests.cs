@@ -1,9 +1,12 @@
-﻿using Bit.Api.AdminConsole.Controllers;
+﻿using System.Text.Json;
+using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Integrations;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -136,7 +139,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PostAsync_AllParamsProvided_Succeeds(
+    public async Task PostAsync_AllParamsProvided_Slack_Succeeds(
         SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
         Guid organizationId,
         OrganizationIntegration organizationIntegration,
@@ -144,6 +147,10 @@ public class OrganizationIntegrationsConfigurationControllerTests
         OrganizationIntegrationConfigurationRequestModel model)
     {
         organizationIntegration.OrganizationId = organizationId;
+        organizationIntegration.Type = IntegrationType.Slack;
+        var slackConfig = new SlackIntegrationConfiguration(channelId: "C123456");
+        model.Configuration = JsonSerializer.Serialize(slackConfig);
+        model.Template = "Template String";
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(organizationIntegrationConfiguration);
 
@@ -166,6 +173,99 @@ public class OrganizationIntegrationsConfigurationControllerTests
         Assert.Equal(expected.Configuration, requestAction.Configuration);
         Assert.Equal(expected.EventType, requestAction.EventType);
         Assert.Equal(expected.Template, requestAction.Template);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostAsync_AllParamsProvided_Webhook_Succeeds(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        OrganizationIntegrationConfiguration organizationIntegrationConfiguration,
+        OrganizationIntegrationConfigurationRequestModel model)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegration.Type = IntegrationType.Webhook;
+        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        model.Configuration = JsonSerializer.Serialize(webhookConfig);
+        model.Template = "Template String";
+
+        var expected = new OrganizationIntegrationConfigurationResponseModel(organizationIntegrationConfiguration);
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
+            .Returns(organizationIntegrationConfiguration);
+        var requestAction = await sutProvider.Sut.PostAsync(organizationId, organizationIntegration.Id, model);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>());
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(requestAction);
+        Assert.Equal(expected.Id, requestAction.Id);
+        Assert.Equal(expected.Configuration, requestAction.Configuration);
+        Assert.Equal(expected.EventType, requestAction.EventType);
+        Assert.Equal(expected.Template, requestAction.Template);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostAsync_IntegrationTypeCloudBillingSync_ThrowsBadRequestException(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        OrganizationIntegrationConfiguration organizationIntegrationConfiguration,
+        OrganizationIntegrationConfigurationRequestModel model)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegration.Type = IntegrationType.CloudBillingSync;
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
+            .Returns(organizationIntegrationConfiguration);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.PostAsync(
+            organizationId,
+            organizationIntegration.Id,
+            model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostAsync_IntegrationTypeScim_ThrowsBadRequestException(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        OrganizationIntegrationConfiguration organizationIntegrationConfiguration,
+        OrganizationIntegrationConfigurationRequestModel model)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegration.Type = IntegrationType.Scim;
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
+            .Returns(organizationIntegrationConfiguration);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.PostAsync(
+            organizationId,
+            organizationIntegration.Id,
+            model));
     }
 
     [Theory, BitAutoData]
@@ -208,6 +308,67 @@ public class OrganizationIntegrationsConfigurationControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task PostAsync_InvalidConfiguration_ThrowsBadRequestException(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        OrganizationIntegrationConfiguration organizationIntegrationConfiguration,
+        OrganizationIntegrationConfigurationRequestModel model)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegration.Type = IntegrationType.Webhook;
+        model.Configuration = null;
+        model.Template = "Template String";
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
+            .Returns(organizationIntegrationConfiguration);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.PostAsync(
+            organizationId,
+            organizationIntegration.Id,
+            model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostAsync_InvalidTemplate_ThrowsBadRequestException(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        OrganizationIntegrationConfiguration organizationIntegrationConfiguration,
+        OrganizationIntegrationConfigurationRequestModel model)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegration.Type = IntegrationType.Webhook;
+        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        model.Configuration = JsonSerializer.Serialize(webhookConfig);
+        model.Template = null;
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
+            .Returns(organizationIntegrationConfiguration);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.PostAsync(
+            organizationId,
+            organizationIntegration.Id,
+            model));
+    }
+
+    [Theory, BitAutoData]
     public async Task PostAsync_UserIsNotOrganizationAdmin_ThrowsNotFound(SutProvider<OrganizationIntegrationConfigurationController> sutProvider, Guid organizationId)
     {
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
@@ -219,7 +380,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_AllParamsProvided_Succeeds(
+    public async Task UpdateAsync_AllParamsProvided_Slack_Succeeds(
         SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
         Guid organizationId,
         OrganizationIntegration organizationIntegration,
@@ -228,6 +389,53 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
+        organizationIntegration.Type = IntegrationType.Slack;
+        var slackConfig = new SlackIntegrationConfiguration(channelId: "C123456");
+        model.Configuration = JsonSerializer.Serialize(slackConfig);
+        model.Template = "Template String";
+
+        var expected = new OrganizationIntegrationConfigurationResponseModel(model.ToOrganizationIntegrationConfiguration(organizationIntegrationConfiguration));
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegrationConfiguration);
+        var requestAction = await sutProvider.Sut.UpdateAsync(
+            organizationId,
+            organizationIntegration.Id,
+            organizationIntegrationConfiguration.Id,
+            model);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .ReplaceAsync(Arg.Any<OrganizationIntegrationConfiguration>());
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(requestAction);
+        Assert.Equal(expected.Id, requestAction.Id);
+        Assert.Equal(expected.Configuration, requestAction.Configuration);
+        Assert.Equal(expected.EventType, requestAction.EventType);
+        Assert.Equal(expected.Template, requestAction.Template);
+    }
+
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_AllParamsProvided_Webhook_Succeeds(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        OrganizationIntegrationConfiguration organizationIntegrationConfiguration,
+        OrganizationIntegrationConfigurationRequestModel model)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
+        organizationIntegration.Type = IntegrationType.Webhook;
+        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        model.Configuration = JsonSerializer.Serialize(webhookConfig);
+        model.Template = "Template String";
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(model.ToOrganizationIntegrationConfiguration(organizationIntegrationConfiguration));
 
@@ -295,6 +503,71 @@ public class OrganizationIntegrationsConfigurationControllerTests
             organizationIntegration.Id,
             Guid.Empty,
             new OrganizationIntegrationConfigurationRequestModel()));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_InvalidConfiguration_ThrowsBadRequestException(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        OrganizationIntegrationConfiguration organizationIntegrationConfiguration,
+        OrganizationIntegrationConfigurationRequestModel model)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
+        organizationIntegration.Type = IntegrationType.Slack;
+        model.Configuration = null;
+        model.Template = "Template String";
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegrationConfiguration);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.UpdateAsync(
+            organizationId,
+            organizationIntegration.Id,
+            organizationIntegrationConfiguration.Id,
+            model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_InvalidTemplate_ThrowsBadRequestException(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        OrganizationIntegrationConfiguration organizationIntegrationConfiguration,
+        OrganizationIntegrationConfigurationRequestModel model)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
+        organizationIntegration.Type = IntegrationType.Slack;
+        var slackConfig = new SlackIntegrationConfiguration(channelId: "C123456");
+        model.Configuration = JsonSerializer.Serialize(slackConfig);
+        model.Template = null;
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegrationConfiguration);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.UpdateAsync(
+            organizationId,
+            organizationIntegration.Id,
+            organizationIntegrationConfiguration.Id,
+            model));
     }
 
     [Theory, BitAutoData]
