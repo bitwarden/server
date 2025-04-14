@@ -300,10 +300,10 @@ public class NonAnonymousSendCommandTests
     // TODO: REMOVE
     // Disable Send policy check - vNext
     private void SaveSendAsync_Setup_vNext(SutProvider<NonAnonymousSendCommand> sutProvider, Send send,
-        SendPolicyRequirement sendPolicyRequirement)
+        SendOptionsPolicyRequirement sendOptionsPolicyRequirement)
     {
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendPolicyRequirement>(send.UserId!.Value)
-            .Returns(sendPolicyRequirement);
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(send.UserId!.Value)
+            .Returns(sendOptionsPolicyRequirement);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         // Should not be called in these tests
