@@ -1397,28 +1397,6 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey)
-    {
-        if (!await _currentContext.ManageResetPassword(orgId))
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        // If the keys already exist, error out
-        var org = await _organizationRepository.GetByIdAsync(orgId);
-        if (org.PublicKey != null && org.PrivateKey != null)
-        {
-            throw new BadRequestException("Organization Keys already exist");
-        }
-
-        // Update org with generated public/private key
-        org.PublicKey = publicKey;
-        org.PrivateKey = privateKey;
-        await UpdateAsync(org);
-
-        return org;
-    }
-
     private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,
         Dictionary<string, Guid> existingUsersIdDict, HashSet<Guid> existingUsers = null)
     {
