@@ -348,6 +348,7 @@ public abstract class PushTestBase
             ClientType = ClientType.All,
             UserId = userId != null ? Guid.Parse(userId) : null,
             OrganizationId = organizationId != null ? Guid.Parse(organizationId) : null,
+            TaskId = Guid.NewGuid(),
             Title = "My Title",
             Body = "My Body",
             CreationDate = DateTime.UtcNow.AddDays(-1),
@@ -374,6 +375,7 @@ public abstract class PushTestBase
             ClientType = ClientType.All,
             UserId = userId != null ? Guid.Parse(userId) : null,
             OrganizationId = organizationId != null ? Guid.Parse(organizationId) : null,
+            TaskId = Guid.NewGuid(),
             Title = "My Title",
             Body = "My Body",
             CreationDate = DateTime.UtcNow.AddDays(-1),
@@ -460,6 +462,8 @@ public abstract class PushTestBase
                 access_token = CreateAccessToken(DateTime.UtcNow.AddDays(1)),
             }));
 
+        JsonNode actualNode = null;
+
         var clientRequest = MockClient
             .Expect(HttpMethod.Post, ExpectedClientUrl())
             .With(request =>
@@ -471,13 +475,17 @@ public abstract class PushTestBase
 
                 // TODO: What options?
                 var actualString = JsonSerializer.Serialize(jsonContent.Value);
-                var actualNode = JsonNode.Parse(actualString);
+                actualNode = JsonNode.Parse(actualString);
 
                 return JsonNode.DeepEquals(actualNode, expectedRequestBody);
             })
             .Respond(HttpStatusCode.OK);
 
         await test(CreateService());
+
+        Assert.NotNull(actualNode);
+
+        Assert.Equal(expectedRequestBody, actualNode, EqualityComparer<JsonNode>.Create(JsonNode.DeepEquals));
 
         Assert.Equal(1, MockClient.GetMatchCount(clientRequest));
     }
