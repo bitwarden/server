@@ -6,6 +6,7 @@ using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.SharedWeb.Utilities;
+using BitPayLight.Models.Invoice;
 
 namespace Bit.Admin.AdminConsole.Models;
 
@@ -18,6 +19,7 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         IEnumerable<ProviderUserUserDetails> providerUsers,
         IEnumerable<ProviderOrganizationOrganizationDetails> organizations,
         IReadOnlyCollection<ProviderPlan> providerPlans,
+        bool invoiceApproved,
         string gatewayCustomerUrl = null,
         string gatewaySubscriptionUrl = null) : base(provider, providerUsers, organizations, providerPlans)
     {
@@ -33,6 +35,7 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         GatewayCustomerUrl = gatewayCustomerUrl;
         GatewaySubscriptionUrl = gatewaySubscriptionUrl;
         Type = provider.Type;
+        InvoiceApproved = invoiceApproved;
 
         if (Type == ProviderType.BusinessUnit)
         {
@@ -62,6 +65,8 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
     public string GatewaySubscriptionId { get; set; }
     public string GatewayCustomerUrl { get; }
     public string GatewaySubscriptionUrl { get; }
+    [Display(Name = "Invoice Approved")]
+    public bool InvoiceApproved { get; set; }
     [Display(Name = "Provider Type")]
     public ProviderType Type { get; set; }
 
