@@ -317,14 +317,14 @@ public class ProvidersController : Controller
                 {
                     var customer = await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId);
 
-                    if (model.InvoiceApproved != customer.IsInvoiceApproved())
+                    if (model.PayByInvoice != customer.ApprovedToPayByInvoice())
                     {
-                        var invoiceApproved = model.InvoiceApproved ? "1" : "0";
+                        var approvedToPayByInvoice = model.PayByInvoice ? "1" : "0";
                         await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
                         {
                             Metadata = new Dictionary<string, string>
                             {
-                                [StripeConstants.MetadataKeys.InvoiceApproved] = invoiceApproved
+                                [StripeConstants.MetadataKeys.InvoiceApproved] = approvedToPayByInvoice
                             }
                         });
                     }
@@ -373,13 +373,13 @@ public class ProvidersController : Controller
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
 
-        var invoiceApproved =
+        var payByInvoice =
             _featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) &&
-            (await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)).IsInvoiceApproved();
+            (await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)).ApprovedToPayByInvoice();
 
         return new ProviderEditModel(
             provider, users, providerOrganizations,
-            providerPlans.ToList(), invoiceApproved, GetGatewayCustomerUrl(provider), GetGatewaySubscriptionUrl(provider));
+            providerPlans.ToList(), payByInvoice, GetGatewayCustomerUrl(provider), GetGatewaySubscriptionUrl(provider));
     }
 
     [RequirePermission(Permission.Provider_ResendEmailInvite)]

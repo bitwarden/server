@@ -28,7 +28,7 @@ public static class CustomerExtensions
         return customer != null ? customer.Balance / 100M : default;
     }
 
-    public static bool IsInvoiceApproved(this Customer customer)
+    public static bool ApprovedToPayByInvoice(this Customer customer)
         => customer.Metadata.TryGetValue(StripeConstants.MetadataKeys.InvoiceApproved, out var value) &&
            int.TryParse(value, out var invoiceApproved) && invoiceApproved == 1;
 }

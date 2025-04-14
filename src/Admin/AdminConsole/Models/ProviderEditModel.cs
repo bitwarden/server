@@ -19,7 +19,7 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         IEnumerable<ProviderUserUserDetails> providerUsers,
         IEnumerable<ProviderOrganizationOrganizationDetails> organizations,
         IReadOnlyCollection<ProviderPlan> providerPlans,
-        bool invoiceApproved,
+        bool payByInvoice,
         string gatewayCustomerUrl = null,
         string gatewaySubscriptionUrl = null) : base(provider, providerUsers, organizations, providerPlans)
     {
@@ -35,7 +35,7 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         GatewayCustomerUrl = gatewayCustomerUrl;
         GatewaySubscriptionUrl = gatewaySubscriptionUrl;
         Type = provider.Type;
-        InvoiceApproved = invoiceApproved;
+        PayByInvoice = payByInvoice;
 
         if (Type == ProviderType.BusinessUnit)
         {
@@ -65,8 +65,8 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
     public string GatewaySubscriptionId { get; set; }
     public string GatewayCustomerUrl { get; }
     public string GatewaySubscriptionUrl { get; }
-    [Display(Name = "Invoice Approved")]
-    public bool InvoiceApproved { get; set; }
+    [Display(Name = "Pay By Invoice")]
+    public bool PayByInvoice { get; set; }
     [Display(Name = "Provider Type")]
     public ProviderType Type { get; set; }
 

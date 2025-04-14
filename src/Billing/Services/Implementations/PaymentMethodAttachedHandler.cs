@@ -68,7 +68,7 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
          * If we have an invoiced provider subscription where the customer hasn't been marked as invoice-approved,
          * we need to try and set the default payment method and update the collection method to be "charge_automatically".
          */
-        if (invoicedProviderSubscription != null && !customer.IsInvoiceApproved())
+        if (invoicedProviderSubscription != null && !customer.ApprovedToPayByInvoice())
         {
             if (customer.InvoiceSettings.DefaultPaymentMethodId != paymentMethod.Id)
             {
