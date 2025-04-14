@@ -329,7 +329,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData]
-    public async Task TokenEndpoint_GrantTypeClientCredentials_AsLegacyUser_NotOnWebClient_Fails(string deviceId)
+    public async Task TokenEndpoint_GrantTypeClientCredentials_AsLegacyUser_Fails(string deviceId)
     {
         var server = _factory.WithWebHostBuilder(builder =>
         {
@@ -371,7 +371,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var errorBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "ErrorModel", JsonValueKind.Object);
         var message = AssertHelper.AssertJsonProperty(error, "Message", JsonValueKind.String).GetString();
-        Assert.StartsWith("Encryption key migration is required.", message);
+        Assert.StartsWith("Legacy encryption without a userkey is no longer supported.", message);
     }
 
 
