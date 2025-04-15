@@ -39,7 +39,7 @@ public class TemplateProcessorTests
     [Theory, BitAutoData]
     public void ReplaceTokens_WithNullProperty_LeavesTokenUnchanged(EventMessage eventMessage)
     {
-        eventMessage.UserId = null; // Ensure UserId is null for this test
+        eventMessage.UserId = null;
 
         var template = "Event #Type#, User (id: #UserId#).";
         var expected = $"Event {eventMessage.Type}, User (id: #UserId#).";
@@ -49,17 +49,17 @@ public class TemplateProcessorTests
     }
 
     [Theory, BitAutoData]
-    public void ReplaceTokens_IgnoresCaseSensitiveTokens(EventMessage eventMessage)
+    public void ReplaceTokens_TokensWithNonmatchingCase_LeavesTokensUnchanged(EventMessage eventMessage)
     {
-        var template = "Event #type#, User (id: #UserId#)."; // Lowercase "type"
-        var expected = $"Event #type#, User (id: {eventMessage.UserId})."; // Token remains unchanged
+        var template = "Event #type#, User (id: #UserId#).";
+        var expected = $"Event #type#, User (id: {eventMessage.UserId}).";
         var result = TemplateProcessor.ReplaceTokens(template, eventMessage);
 
         Assert.Equal(expected, result);
     }
 
     [Theory, BitAutoData]
-    public void ReplaceTokens_ReturnsOriginalString_IfNoTokensPresent(EventMessage eventMessage)
+    public void ReplaceTokens_NoTokensPresent_ReturnsOriginalString(EventMessage eventMessage)
     {
         var template = "System is running normally.";
         var expected = "System is running normally.";
@@ -69,7 +69,7 @@ public class TemplateProcessorTests
     }
 
     [Theory, BitAutoData]
-    public void ReplaceTokens_ReturnsOriginalString_IfTemplateIsNullOrEmpty(EventMessage eventMessage)
+    public void ReplaceTokens_TemplateIsEmpty_ReturnsOriginalString(EventMessage eventMessage)
     {
         var emptyTemplate = "";
         var expectedEmpty = "";
@@ -79,7 +79,7 @@ public class TemplateProcessorTests
     }
 
     [Fact]
-    public void ReplaceTokens_ReturnsOriginalString_IfDataObjectIsNull()
+    public void ReplaceTokens_DataObjectIsNull_ReturnsOriginalString()
     {
         var template = "Event #Type#, User (id: #UserId#).";
         var expected = "Event #Type#, User (id: #UserId#).";
