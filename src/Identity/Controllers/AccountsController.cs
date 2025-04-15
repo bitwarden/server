@@ -173,7 +173,6 @@ public class AccountsController : Controller
 
         // Users will either have an emailed token or an email verification token - not both.
         IdentityResult identityResult = null;
-        var delaysEnabled = !_featureService.IsEnabled(FeatureFlagKeys.EmailVerificationDisableTimingDelays);
 
         switch (model.GetTokenType())
         {
@@ -209,7 +208,7 @@ public class AccountsController : Controller
         }
     }
 
-    private async Task<RegisterResponseModel> ProcessRegistrationResult(IdentityResult result, User user, bool delaysEnabled)
+    private RegisterResponseModel ProcessRegistrationResult(IdentityResult result, User user)
     {
         if (result.Succeeded)
         {
@@ -222,10 +221,6 @@ public class AccountsController : Controller
             ModelState.AddModelError(string.Empty, error.Description);
         }
 
-        if (delaysEnabled)
-        {
-            await Task.Delay(Random.Shared.Next(100, 130));
-        }
         throw new BadRequestException(ModelState);
     }
 

@@ -67,6 +67,7 @@ using Microsoft.Extensions.Caching.Cosmos;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -278,6 +279,8 @@ public static class ServiceCollectionExtensions
         {
             services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
         }
+
+        services.TryAddSingleton(TimeProvider.System);
 
         services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
         if (globalSettings.SelfHosted)
