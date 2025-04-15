@@ -1,7 +1,10 @@
 ﻿using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.WebAuthn;
+using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
@@ -9,6 +12,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
@@ -73,6 +77,28 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
         sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IPolicyService>().AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso).ReturnsForAnyArgs(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AttestationOptions(requestModel));
+        Assert.Contains("Passkeys cannot be created for your account. SSO login is required", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AttestationOptions_WithPolicyRequirementsFeatureEnabled_RequireSsoPolicyApplicable_ThrowsBadRequestException(
+        SecretVerificationRequestModel requestModel, User user, SutProvider<WebAuthnController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, default).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireSsoPolicyRequirement>(user.Id)
+            .ReturnsForAnyArgs(
+                new RequireSsoPolicyRequirement(
+                [
+                     new PolicyDetails { PolicyType = PolicyType.RequireSso, OrganizationUserStatus = OrganizationUserStatusType.Confirmed }
+                ]));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -204,6 +230,39 @@ public class WebAuthnControllerTests
             .Unprotect(requestModel.Token)
             .Returns(token);
         sutProvider.GetDependency<IPolicyService>().AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso).ReturnsForAnyArgs(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.Post(requestModel));
+        Assert.Contains("Passkeys cannot be created for your account. SSO login is required", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Post_WithPolicyRequirementsFeatureEnabled_RequireSsoPolicyApplicable_ThrowsBadRequestException(
+        WebAuthnLoginCredentialCreateRequestModel requestModel,
+        CredentialCreateOptions createOptions,
+        User user,
+        SutProvider<WebAuthnController> sutProvider)
+    {
+        // Arrange
+        var token = new WebAuthnCredentialCreateOptionsTokenable(user, createOptions);
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(default)
+            .ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<ICreateWebAuthnLoginCredentialCommand>()
+            .CreateWebAuthnLoginCredentialAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), false)
+            .Returns(true);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
+            .Unprotect(requestModel.Token)
+            .Returns(token);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireSsoPolicyRequirement>(user.Id)
+            .ReturnsForAnyArgs(
+                new RequireSsoPolicyRequirement(
+                [
+                    new PolicyDetails { PolicyType = PolicyType.RequireSso, OrganizationUserStatus = OrganizationUserStatusType.Confirmed }
+                ]));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(

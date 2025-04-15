@@ -4,6 +4,7 @@ using Bit.Api.Auth.Models.Response.WebAuthn;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
@@ -31,6 +32,8 @@ public class WebAuthnController : Controller
     private readonly ICreateWebAuthnLoginCredentialCommand _createWebAuthnLoginCredentialCommand;
     private readonly IAssertWebAuthnLoginCredentialCommand _assertWebAuthnLoginCredentialCommand;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IFeatureService _featureService;
 
     public WebAuthnController(
         IUserService userService,
@@ -41,7 +44,9 @@ public class WebAuthnController : Controller
         IGetWebAuthnLoginCredentialCreateOptionsCommand getWebAuthnLoginCredentialCreateOptionsCommand,
         ICreateWebAuthnLoginCredentialCommand createWebAuthnLoginCredentialCommand,
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand,
-        IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand)
+        IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IFeatureService featureService)
     {
         _userService = userService;
         _policyService = policyService;
@@ -52,7 +57,8 @@ public class WebAuthnController : Controller
         _createWebAuthnLoginCredentialCommand = createWebAuthnLoginCredentialCommand;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
-
+        _policyRequirementQuery = policyRequirementQuery;
+        _featureService = featureService;
     }
 
     [HttpGet("")]
@@ -118,7 +124,9 @@ public class WebAuthnController : Controller
 
     private async Task ValidateRequireSsoPolicyDisabledOrNotApplicable(Guid userId)
     {
-        var requireSsoLogin = await _policyService.AnyPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso);
+        var requireSsoLogin = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            ? (await _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(userId)).CanUsePasskeyLogin
+            : await _policyService.AnyPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso);
 
         if (requireSsoLogin)
         {
