@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Platform.Installations;
+﻿#nullable enable
+
+namespace Bit.Core.Platform.Installations;
 
 /// <summary>
 /// Command interface responsible for updating data on an `Installation`
