@@ -260,14 +260,15 @@ public class OrganizationUsersControllerTests
             .GetDetailsByIdWithCollectionsAsync(organizationUser.Id)
             .Returns((organizationUser, collections));
 
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(organizationUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)))
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(organizationUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)))
             .Returns(new Dictionary<Guid, bool> { { organizationUser.Id, true } });
 
         var response = await sutProvider.Sut.Get(organizationUser.Id, false);
 
         Assert.Equal(organizationUser.Id, response.Id);
         Assert.Equal(accountDeprovisioningEnabled, response.ManagedByOrganization);
+        Assert.Equal(accountDeprovisioningEnabled, response.ClaimedByOrganization);
     }
 
     [Theory]
@@ -331,7 +332,7 @@ public class OrganizationUsersControllerTests
 
         await sutProvider.Sut.DeleteAccount(orgId, id);
 
-        await sutProvider.GetDependency<IDeleteManagedOrganizationUserAccountCommand>()
+        await sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountCommand>()
             .Received(1)
             .DeleteUserAsync(orgId, id, currentUser.Id);
     }
@@ -359,6 +360,7 @@ public class OrganizationUsersControllerTests
             sutProvider.Sut.DeleteAccount(orgId, id));
     }
 
+<<<<<<< HEAD
     // [Theory]
     // [BitAutoData]
     // public async Task BulkDeleteAccount_WhenUserCanManageUsers_Success(
@@ -379,6 +381,28 @@ public class OrganizationUsersControllerTests
     //         .Received(1)
     //         .DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
     // }
+=======
+    [Theory]
+    [BitAutoData]
+    public async Task BulkDeleteAccount_WhenUserCanManageUsers_Success(
+        Guid orgId, OrganizationUserBulkRequestModel model, User currentUser,
+        List<(Guid, string)> deleteResults, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(currentUser);
+        sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountCommand>()
+            .DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id)
+            .Returns(deleteResults);
+
+        var response = await sutProvider.Sut.BulkDeleteAccount(orgId, model);
+
+        Assert.Equal(deleteResults.Count, response.Data.Count());
+        Assert.True(response.Data.All(r => deleteResults.Any(res => res.Item1 == r.Id && res.Item2 == r.Error)));
+        await sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountCommand>()
+            .Received(1)
+            .DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
+    }
+>>>>>>> main
 
     [Theory]
     [BitAutoData]

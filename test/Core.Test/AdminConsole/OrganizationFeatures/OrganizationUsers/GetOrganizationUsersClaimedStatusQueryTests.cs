@@ -12,14 +12,14 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
 [SutProviderCustomize]
-public class GetOrganizationUsersManagementStatusQueryTests
+public class GetOrganizationUsersClaimedStatusQueryTests
 {
     [Theory, BitAutoData]
     public async Task GetUsersOrganizationManagementStatusAsync_WithNoUsers_ReturnsEmpty(
         Organization organization,
-        SutProvider<GetOrganizationUsersManagementStatusQuery> sutProvider)
+        SutProvider<GetOrganizationUsersClaimedStatusQuery> sutProvider)
     {
-        var result = await sutProvider.Sut.GetUsersOrganizationManagementStatusAsync(organization.Id, new List<Guid>());
+        var result = await sutProvider.Sut.GetUsersOrganizationClaimedStatusAsync(organization.Id, new List<Guid>());
 
         Assert.Empty(result);
     }
@@ -28,7 +28,7 @@ public class GetOrganizationUsersManagementStatusQueryTests
     public async Task GetUsersOrganizationManagementStatusAsync_WithUseSsoEnabled_Success(
         Organization organization,
         ICollection<OrganizationUser> usersWithClaimedDomain,
-        SutProvider<GetOrganizationUsersManagementStatusQuery> sutProvider)
+        SutProvider<GetOrganizationUsersClaimedStatusQuery> sutProvider)
     {
         organization.Enabled = true;
         organization.UseSso = true;
@@ -44,7 +44,7 @@ public class GetOrganizationUsersManagementStatusQueryTests
             .GetManyByOrganizationWithClaimedDomainsAsync(organization.Id)
             .Returns(usersWithClaimedDomain);
 
-        var result = await sutProvider.Sut.GetUsersOrganizationManagementStatusAsync(organization.Id, userIdsToCheck);
+        var result = await sutProvider.Sut.GetUsersOrganizationClaimedStatusAsync(organization.Id, userIdsToCheck);
 
         Assert.All(usersWithClaimedDomain, ou => Assert.True(result[ou.Id]));
         Assert.False(result[userIdWithoutClaimedDomain]);
@@ -54,7 +54,7 @@ public class GetOrganizationUsersManagementStatusQueryTests
     public async Task GetUsersOrganizationManagementStatusAsync_WithUseSsoDisabled_ReturnsAllFalse(
         Organization organization,
         ICollection<OrganizationUser> usersWithClaimedDomain,
-        SutProvider<GetOrganizationUsersManagementStatusQuery> sutProvider)
+        SutProvider<GetOrganizationUsersClaimedStatusQuery> sutProvider)
     {
         organization.Enabled = true;
         organization.UseSso = false;
@@ -70,7 +70,7 @@ public class GetOrganizationUsersManagementStatusQueryTests
             .GetManyByOrganizationWithClaimedDomainsAsync(organization.Id)
             .Returns(usersWithClaimedDomain);
 
-        var result = await sutProvider.Sut.GetUsersOrganizationManagementStatusAsync(organization.Id, userIdsToCheck);
+        var result = await sutProvider.Sut.GetUsersOrganizationClaimedStatusAsync(organization.Id, userIdsToCheck);
 
         Assert.All(result, r => Assert.False(r.Value));
     }
@@ -79,7 +79,7 @@ public class GetOrganizationUsersManagementStatusQueryTests
     public async Task GetUsersOrganizationManagementStatusAsync_WithDisabledOrganization_ReturnsAllFalse(
         Organization organization,
         ICollection<OrganizationUser> usersWithClaimedDomain,
-        SutProvider<GetOrganizationUsersManagementStatusQuery> sutProvider)
+        SutProvider<GetOrganizationUsersClaimedStatusQuery> sutProvider)
     {
         organization.Enabled = false;
 
@@ -94,7 +94,7 @@ public class GetOrganizationUsersManagementStatusQueryTests
             .GetManyByOrganizationWithClaimedDomainsAsync(organization.Id)
             .Returns(usersWithClaimedDomain);
 
-        var result = await sutProvider.Sut.GetUsersOrganizationManagementStatusAsync(organization.Id, userIdsToCheck);
+        var result = await sutProvider.Sut.GetUsersOrganizationClaimedStatusAsync(organization.Id, userIdsToCheck);
 
         Assert.All(result, r => Assert.False(r.Value));
     }

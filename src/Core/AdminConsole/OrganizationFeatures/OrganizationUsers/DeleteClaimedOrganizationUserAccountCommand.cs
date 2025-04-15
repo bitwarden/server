@@ -19,35 +19,37 @@ using Microsoft.Extensions.Logging;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 #nullable enable
 
-public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganizationUserAccountCommand
+public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganizationUserAccountCommand
 {
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
     private readonly IDeleteManagedOrganizationUserAccountValidator _deleteManagedOrganizationUserAccountValidator;
     private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
+    private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly ILogger<DeleteManagedOrganizationUserAccountCommand> _logger;
+    private readonly ILogger<DeleteClaimedOrganizationUserAccountCommand> _logger;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IPushNotificationService _pushService;
-
-    public DeleteManagedOrganizationUserAccountCommand(
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IProviderUserRepository _providerUserRepository;
+    public DeleteClaimedOrganizationUserAccountCommand(
         IUserService userService,
         IEventService eventService,
-        IDeleteManagedOrganizationUserAccountValidator deleteManagedOrganizationUserAccountValidator,
-        IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery,
+        IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
         IOrganizationUserRepository organizationUserRepository,
         IUserRepository userRepository,
         ICurrentContext currentContext,
-        ILogger<DeleteManagedOrganizationUserAccountCommand> logger,
+        ILogger<DeleteClaimedOrganizationUserAccountCommand> logger,
         IReferenceEventService referenceEventService,
         IPushNotificationService pushService)
     {
         _userService = userService;
         _eventService = eventService;
         _deleteManagedOrganizationUserAccountValidator = deleteManagedOrganizationUserAccountValidator;
-        _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
+        _getOrganizationUsersManagementStatusQuery = _getOrganizationUsersManagementStatusQuery;
+        _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _organizationUserRepository = organizationUserRepository;
         _userRepository = userRepository;
         _currentContext = currentContext;
@@ -130,6 +132,16 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         }
 
         return requests;
+        // Jimmy move this to the validator
+        // if (orgUser.Type == OrganizationUserType.Admin && await _currentContext.OrganizationCustom(organizationId))
+        // {
+        //     throw new BadRequestException("Custom users can not delete admins.");
+        // }
+
+        // if (!claimedStatus.TryGetValue(orgUser.Id, out var isClaimed) || !isClaimed)
+        // {
+        //     throw new BadRequestException("Member is not claimed by the organization.");
+        // }
     }
 
     private async Task<IEnumerable<User>> GetUsersAsync(ICollection<OrganizationUser> orgUsers)

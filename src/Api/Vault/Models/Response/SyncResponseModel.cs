@@ -23,7 +23,7 @@ public class SyncResponseModel : ResponseModel
         bool userTwoFactorEnabled,
         bool userHasPremiumFromOrganization,
         IDictionary<Guid, OrganizationAbility> organizationAbilities,
-        IEnumerable<Guid> organizationIdsManagingUser,
+        IEnumerable<Guid> organizationIdsClaimingingUser,
         IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails,
         IEnumerable<ProviderUserProviderDetails> providerUserDetails,
         IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
@@ -37,7 +37,7 @@ public class SyncResponseModel : ResponseModel
         : base("sync")
     {
         Profile = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
-            providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsManagingUser);
+            providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingingUser);
         Folders = folders.Select(f => new FolderResponseModel(f));
         Ciphers = ciphers.Select(cipher =>
             new CipherDetailsResponseModel(

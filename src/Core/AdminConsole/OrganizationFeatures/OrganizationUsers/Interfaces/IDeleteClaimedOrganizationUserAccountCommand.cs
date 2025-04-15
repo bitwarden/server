@@ -5,7 +5,7 @@ using Bit.Core.Models.Data.Organizations;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 
-public interface IDeleteManagedOrganizationUserAccountCommand
+public interface IDeleteClaimedOrganizationUserAccountCommand
 {
     /// <summary>
     /// Removes a user from an organization and deletes all of their associated user data.
