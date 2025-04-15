@@ -13,6 +13,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
 {
     private readonly IDeviceRepository _deviceRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IEventService _eventService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IPushRegistrationService _pushRegistrationService;
@@ -29,6 +30,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     public const string RemoveAdminByCustomUserErrorMessage = "Custom users can not remove admins.";
     public const string RemoveLastConfirmedOwnerErrorMessage = "Organization must have at least one confirmed owner.";
     public const string RemoveClaimedAccountErrorMessage = "Cannot remove member accounts claimed by the organization. To offboard a member, revoke or delete the account.";
+    public const string RemoveTDEUsersErrorMessage = "Cannor remove member accounts with TDE enabled";
 
     public RemoveOrganizationUserCommand(
         IDeviceRepository deviceRepository,
@@ -40,7 +42,8 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
         IFeatureService featureService,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IUserRepository userRepository)
     {
         _deviceRepository = deviceRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -52,6 +55,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _featureService = featureService;
         _timeProvider = timeProvider;
+        _userRepository = userRepository;
     }
 
     public async Task RemoveUserAsync(Guid organizationId, Guid userId)
@@ -197,6 +201,12 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     {
         var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
         var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId).ToList();
+        var users = await _userRepository.GetManyAsync(filteredUsers.Select(u => u.Id));
+
+        if (users.Any(u => u.HasMasterPassword() == false))
+        {
+            throw new BadRequestException(RemoveTDEUsersErrorMessage);
+        }
 
         if (!filteredUsers.Any())
         {

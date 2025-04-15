@@ -1230,11 +1230,20 @@ public class OrganizationService : IOrganizationService
         // Remove Users
         if (removeUserExternalIds?.Any() ?? false)
         {
+
+
             var existingUsersDict = existingExternalUsers.ToDictionary(u => u.ExternalId);
             var removeUsersSet = new HashSet<string>(removeUserExternalIds)
                 .Except(newUsersSet)
                 .Where(u => existingUsersDict.ContainsKey(u) && existingUsersDict[u].Type != OrganizationUserType.Owner)
                 .Select(u => existingUsersDict[u]);
+
+            var tdeUsers = existingExternalUsers.Any(u => u.HasMasterPassword == false);
+
+            if (tdeUsers)
+            {
+                throw new BadRequestException("Cannot overwriteExisting for TDE users");
+            }
 
             await _organizationUserRepository.DeleteManyAsync(removeUsersSet.Select(u => u.Id));
             events.AddRange(removeUsersSet.Select(u => (
@@ -1247,6 +1256,13 @@ public class OrganizationService : IOrganizationService
 
         if (overwriteExisting)
         {
+            var tdeUsers = existingExternalUsers.Any(u => u.HasMasterPassword == false);
+
+            if (tdeUsers)
+            {
+                throw new BadRequestException("Cannot overwriteExisting for TDE users");
+            }
+
             // Remove existing external users that are not in new user set
             var usersToDelete = existingExternalUsers.Where(u =>
                 u.Type != OrganizationUserType.Owner &&
