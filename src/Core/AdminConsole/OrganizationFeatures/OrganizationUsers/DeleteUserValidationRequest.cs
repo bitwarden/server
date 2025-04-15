@@ -10,5 +10,5 @@ public class DeleteUserValidationRequest
     public OrganizationUser? OrganizationUser { get; init; }
     public User? User { get; init; }
     public Guid DeletingUserId { get; init; }
-    public bool? IsManaged { get; init; }
+    public bool? IsClaimed { get; init; }
 }

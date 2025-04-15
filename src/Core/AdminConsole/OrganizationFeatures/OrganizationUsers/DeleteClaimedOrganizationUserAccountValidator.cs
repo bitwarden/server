@@ -97,7 +97,7 @@ public class DeleteClaimedOrganizationUserAccountValidator(
 
     private static ValidationResult<DeleteUserValidationRequest> EnsureUserIsManagedByOrganization(DeleteUserValidationRequest request)
     {
-        if (request.IsManaged == true)
+        if (request.IsClaimed == true)
         {
             return new Valid<DeleteUserValidationRequest>();
         }

@@ -25,14 +25,13 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
     private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
-    private readonly IDeleteClaimedOrganizationUserAccountValidator _deleteManagedOrganizationUserAccountValidator;
+    private readonly IDeleteClaimedOrganizationUserAccountValidator _deleteClaimedOrganizationUserAccountValidator;
     private readonly ILogger<DeleteClaimedOrganizationUserAccountCommand> _logger;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IPushNotificationService _pushService;
-    private readonly IProviderUserRepository _providerUserRepository;
     public DeleteClaimedOrganizationUserAccountCommand(
         IUserService userService,
         IEventService eventService,
@@ -44,7 +43,7 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         IPushNotificationService pushService,
         IProviderUserRepository providerUserRepository,
         ILogger<DeleteClaimedOrganizationUserAccountCommand> logger,
-        IDeleteClaimedOrganizationUserAccountValidator deleteManagedOrganizationUserAccountValidator)
+        IDeleteClaimedOrganizationUserAccountValidator deleteClaimedOrganizationUserAccountValidator)
     {
         _userService = userService;
         _eventService = eventService;
@@ -54,9 +53,8 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         _currentContext = currentContext;
         _referenceEventService = referenceEventService;
         _pushService = pushService;
-        _providerUserRepository = providerUserRepository;
         _logger = logger;
-        _deleteManagedOrganizationUserAccountValidator = deleteManagedOrganizationUserAccountValidator;
+        _deleteClaimedOrganizationUserAccountValidator = deleteClaimedOrganizationUserAccountValidator;
     }
 
     public async Task<CommandResult<DeleteUserResponse>> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
@@ -94,10 +92,10 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
     {
         var orgUsers = await _organizationUserRepository.GetManyAsync(orgUserIds);
         var users = await GetUsersAsync(orgUsers);
-        var managementStatuses = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, orgUserIds);
+        var claimedStatuses = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, orgUserIds);
 
-        var requests = CreateRequests(organizationId, deletingUserId, orgUserIds, orgUsers, users, managementStatuses);
-        var results = await _deleteManagedOrganizationUserAccountValidator.ValidateAsync(requests);
+        var requests = CreateRequests(organizationId, deletingUserId, orgUserIds, orgUsers, users, claimedStatuses);
+        var results = await _deleteClaimedOrganizationUserAccountValidator.ValidateAsync(requests);
 
         await CancelPremiumsAsync(results.ValidResults);
         await HandleUserDeletionsAsync(results.ValidResults);
@@ -112,37 +110,27 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         IEnumerable<Guid> orgUserIds,
         ICollection<OrganizationUser> orgUsers,
         IEnumerable<User> users,
-        IDictionary<Guid, bool> managementStatuses)
+        IDictionary<Guid, bool> claimedStatuses)
     {
         var requests = new List<DeleteUserValidationRequest>();
         foreach (var orgUserId in orgUserIds)
         {
             var orgUser = orgUsers.FirstOrDefault(orgUser => orgUser.Id == orgUserId);
             var user = users.FirstOrDefault(user => user.Id == orgUser?.UserId);
-            managementStatuses.TryGetValue(orgUserId, out var isManaged);
+            claimedStatuses.TryGetValue(orgUserId, out var isClaimed);
 
             requests.Add(new DeleteUserValidationRequest
             {
                 User = user,
                 OrganizationUserId = orgUserId,
                 OrganizationUser = orgUser,
-                IsManaged = isManaged,
+                IsClaimed = isClaimed,
                 OrganizationId = organizationId,
                 DeletingUserId = deletingUserId,
             });
         }
 
         return requests;
-        // Jimmy move this to the validator
-        // if (orgUser.Type == OrganizationUserType.Admin && await _currentContext.OrganizationCustom(organizationId))
-        // {
-        //     throw new BadRequestException("Custom users can not delete admins.");
-        // }
-
-        // if (!claimedStatus.TryGetValue(orgUser.Id, out var isClaimed) || !isClaimed)
-        // {
-        //     throw new BadRequestException("Member is not claimed by the organization.");
-        // }
     }
 
     private async Task<IEnumerable<User>> GetUsersAsync(ICollection<OrganizationUser> orgUsers)
