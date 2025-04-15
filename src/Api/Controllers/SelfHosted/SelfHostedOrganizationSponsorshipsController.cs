@@ -45,16 +45,13 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
     [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
     public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipCreateRequestModel model)
     {
-        // Check feature flag at controller level
         if (!_featureService.IsEnabled(Bit.Core.FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
         {
-            // If flag is off and someone tries to use admin-initiated sponsorships, return 404
             if (model.SponsoringUserId.HasValue)
             {
                 throw new NotFoundException();
             }
 
-            // If flag is off and notes field has a value, ignore it
             if (!string.IsNullOrWhiteSpace(model.Notes))
             {
                 model.Notes = null;
