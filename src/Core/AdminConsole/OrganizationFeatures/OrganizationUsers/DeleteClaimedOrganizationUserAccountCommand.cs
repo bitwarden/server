@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -23,16 +24,14 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
 {
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
-    private readonly IDeleteManagedOrganizationUserAccountValidator _deleteManagedOrganizationUserAccountValidator;
-    private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
     private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
+    private readonly IDeleteClaimedOrganizationUserAccountValidator _deleteManagedOrganizationUserAccountValidator;
+    private readonly ILogger<DeleteClaimedOrganizationUserAccountCommand> _logger;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly ILogger<DeleteClaimedOrganizationUserAccountCommand> _logger;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IPushNotificationService _pushService;
-    private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     public DeleteClaimedOrganizationUserAccountCommand(
         IUserService userService,
@@ -41,21 +40,23 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         IOrganizationUserRepository organizationUserRepository,
         IUserRepository userRepository,
         ICurrentContext currentContext,
-        ILogger<DeleteClaimedOrganizationUserAccountCommand> logger,
         IReferenceEventService referenceEventService,
-        IPushNotificationService pushService)
+        IPushNotificationService pushService,
+        IProviderUserRepository providerUserRepository,
+        ILogger<DeleteClaimedOrganizationUserAccountCommand> logger,
+        IDeleteClaimedOrganizationUserAccountValidator deleteManagedOrganizationUserAccountValidator)
     {
         _userService = userService;
         _eventService = eventService;
-        _deleteManagedOrganizationUserAccountValidator = deleteManagedOrganizationUserAccountValidator;
-        _getOrganizationUsersManagementStatusQuery = _getOrganizationUsersManagementStatusQuery;
         _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
         _organizationUserRepository = organizationUserRepository;
         _userRepository = userRepository;
         _currentContext = currentContext;
-        _logger = logger;
         _referenceEventService = referenceEventService;
         _pushService = pushService;
+        _providerUserRepository = providerUserRepository;
+        _logger = logger;
+        _deleteManagedOrganizationUserAccountValidator = deleteManagedOrganizationUserAccountValidator;
     }
 
     public async Task<CommandResult<DeleteUserResponse>> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
@@ -93,7 +94,7 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
     {
         var orgUsers = await _organizationUserRepository.GetManyAsync(orgUserIds);
         var users = await GetUsersAsync(orgUsers);
-        var managementStatuses = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, orgUserIds);
+        var managementStatuses = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, orgUserIds);
 
         var requests = CreateRequests(organizationId, deletingUserId, orgUserIds, orgUsers, users, managementStatuses);
         var results = await _deleteManagedOrganizationUserAccountValidator.ValidateAsync(requests);

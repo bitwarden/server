@@ -8,10 +8,10 @@ using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
-public class DeleteManagedOrganizationUserAccountValidator(
+public class DeleteClaimedOrganizationUserAccountValidator(
     ICurrentContext currentContext,
     IOrganizationUserRepository organizationUserRepository,
-    IProviderUserRepository providerUserRepository) : IDeleteManagedOrganizationUserAccountValidator
+    IProviderUserRepository providerUserRepository) : IDeleteClaimedOrganizationUserAccountValidator
 {
     public async Task<PartialValidationResult<DeleteUserValidationRequest>> ValidateAsync(List<DeleteUserValidationRequest> requests)
     {
