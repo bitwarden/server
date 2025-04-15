@@ -333,7 +333,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             var planTypes = providerType switch
             {
                 ProviderType.Msp => PlanConstants.EnterprisePlanTypes.Concat(PlanConstants.TeamsPlanTypes),
-                ProviderType.MultiOrganizationEnterprise => PlanConstants.EnterprisePlanTypes,
+                ProviderType.BusinessUnit => PlanConstants.EnterprisePlanTypes,
                 _ => []
             };
 
