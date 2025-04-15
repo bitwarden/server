@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -39,6 +40,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected ISsoConfigRepository SsoConfigRepository { get; }
     protected IUserService _userService { get; }
     protected IUserDecryptionOptionsBuilder UserDecryptionOptionsBuilder { get; }
+    protected IPolicyRequirementQuery PolicyRequirementQuery { get; }
 
     public BaseRequestValidator(
         UserManager<User> userManager,
@@ -55,7 +57,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _userManager = userManager;
         _userService = userService;
@@ -72,6 +75,7 @@ public abstract class BaseRequestValidator<T> where T : class
         FeatureService = featureService;
         SsoConfigRepository = ssoConfigRepository;
         UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
+        PolicyRequirementQuery = policyRequirementQuery;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -348,8 +352,11 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         // Check if user belongs to any organization with an active SSO policy
-        var anySsoPoliciesApplicableToUser = await PolicyService.AnyPoliciesApplicableToUserAsync(
-                                                user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
+        var anySsoPoliciesApplicableToUser = FeatureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            ? (await PolicyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(user.Id))
+                .SsoRequired
+            : await PolicyService.AnyPoliciesApplicableToUserAsync(
+                user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
         if (anySsoPoliciesApplicableToUser)
         {
             return true;

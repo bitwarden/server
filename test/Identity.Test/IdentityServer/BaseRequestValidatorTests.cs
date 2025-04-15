@@ -1,6 +1,8 @@
 ﻿using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
@@ -41,6 +43,7 @@ public class BaseRequestValidatorTests
     private readonly IFeatureService _featureService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserDecryptionOptionsBuilder _userDecryptionOptionsBuilder;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -61,6 +64,7 @@ public class BaseRequestValidatorTests
         _featureService = Substitute.For<IFeatureService>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _userDecryptionOptionsBuilder = Substitute.For<IUserDecryptionOptionsBuilder>();
+        _policyRequirementQuery = Substitute.For<IPolicyRequirementQuery>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -77,7 +81,8 @@ public class BaseRequestValidatorTests
             _policyService,
             _featureService,
             _ssoConfigRepository,
-            _userDecryptionOptionsBuilder);
+            _userDecryptionOptionsBuilder,
+            _policyRequirementQuery);
     }
 
     /* Logic path
@@ -274,6 +279,99 @@ public class BaseRequestValidatorTests
         Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
         Assert.Equal("SSO authentication is required.", errorResponse.Message);
+    }
+
+    // Test grantTypes with RequireSsoPolicyRequirement when feature flag is enabled
+    [Theory]
+    [BitAutoData("password")]
+    [BitAutoData("webauthn")]
+    [BitAutoData("refresh_token")]
+    public async Task ValidateAsync_GrantTypes_WithPolicyRequirementsEnabled_OrgSsoRequiredTrue_ShouldSetSsoResult(
+        string grantType,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
+        _sut.isValid = true;
+
+        context.ValidatedTokenRequest.GrantType = grantType;
+        // Configure requirement to require SSO and exempt accepted users
+        var requirement = new RequireSsoPolicyRequirement(
+            [
+                new PolicyDetails
+                {
+                    PolicyType = PolicyType.RequireSso,
+                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed
+                }
+            ]);
+        _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(Arg.Any<Guid>()).Returns(requirement);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        await _policyService.DidNotReceive().AnyPoliciesApplicableToUserAsync(
+                Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
+        Assert.True(context.GrantResult.IsError);
+        var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
+        Assert.Equal("SSO authentication is required.", errorResponse.Message);
+    }
+
+    [Theory]
+    [BitAutoData("password")]
+    [BitAutoData("webauthn")]
+    [BitAutoData("refresh_token")]
+    public async Task ValidateAsync_GrantTypes_WithPolicyRequirementsEnabled_ExemptStatusesOnly_ShouldSucceed(
+        string grantType,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
+        _sut.isValid = true;
+
+        context.ValidatedTokenRequest.GrantType = grantType;
+        context.ValidatedTokenRequest.ClientId = "web";
+
+        // Configure requirement with only exempt statuses
+        var requirement = new RequireSsoPolicyRequirement(
+            [
+                new PolicyDetails
+                {
+                    PolicyType = PolicyType.RequireSso,
+                    OrganizationUserStatus = OrganizationUserStatusType.Invited
+                },
+                new PolicyDetails
+                {
+                    PolicyType = PolicyType.RequireSso,
+                    OrganizationUserStatus = OrganizationUserStatusType.Revoked
+                },
+                new PolicyDetails
+                {
+                    PolicyType = PolicyType.RequireSso,
+                    OrganizationUserStatus = OrganizationUserStatusType.Accepted
+                }
+            ]);
+        _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(Arg.Any<Guid>()).Returns(requirement);
+
+        _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        await _sut.ValidateAsync(context);
+
+        Assert.False(context.GrantResult.IsError);
+        await _eventService.Received(1).LogUserEventAsync(
+            context.CustomValidatorRequestContext.User.Id, EventType.User_LoggedIn);
+        await _userRepository.Received(1).ReplaceAsync(Arg.Any<User>());
     }
 
     // Test grantTypes where SSO would be required but the user is not in an
