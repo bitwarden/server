@@ -1242,7 +1242,7 @@ public class OrganizationService : IOrganizationService
 
             if (tdeUsers)
             {
-                throw new BadRequestException("Cannot overwriteExisting for TDE users");
+                throw new BadRequestException("Cannot remove member accounts with TDE enabled");
             }
 
             await _organizationUserRepository.DeleteManyAsync(removeUsersSet.Select(u => u.Id));
@@ -1260,7 +1260,7 @@ public class OrganizationService : IOrganizationService
 
             if (tdeUsers)
             {
-                throw new BadRequestException("Cannot overwriteExisting for TDE users");
+                throw new BadRequestException("Cannot remove member accounts with TDE enabled");
             }
 
             // Remove existing external users that are not in new user set

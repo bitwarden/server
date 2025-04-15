@@ -30,7 +30,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     public const string RemoveAdminByCustomUserErrorMessage = "Custom users can not remove admins.";
     public const string RemoveLastConfirmedOwnerErrorMessage = "Organization must have at least one confirmed owner.";
     public const string RemoveClaimedAccountErrorMessage = "Cannot remove member accounts claimed by the organization. To offboard a member, revoke or delete the account.";
-    public const string RemoveTDEUsersErrorMessage = "Cannor remove member accounts with TDE enabled";
+    public const string RemoveTDEUsersErrorMessage = "Cannot remove member accounts with TDE enabled";
 
     public RemoveOrganizationUserCommand(
         IDeviceRepository deviceRepository,
