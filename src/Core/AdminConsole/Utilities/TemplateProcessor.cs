@@ -1,8 +1,11 @@
 ﻿using System.Text.RegularExpressions;
 
-public static class TemplateProcessor
+namespace Bit.Core.AdminConsole.Utilities;
+
+public static partial class TemplateProcessor
 {
-    private static readonly Regex TokenRegex = new(@"#(\w+)#", RegexOptions.Compiled);
+    [GeneratedRegex(@"#(\w+)#")]
+    private static partial Regex TokenRegex();
 
     public static string ReplaceTokens(string template, object values)
     {
@@ -10,7 +13,7 @@ public static class TemplateProcessor
             return template;
 
         var type = values.GetType();
-        return TokenRegex.Replace(template, match =>
+        return TokenRegex().Replace(template, match =>
         {
             var propertyName = match.Groups[1].Value;
             var property = type.GetProperty(propertyName);

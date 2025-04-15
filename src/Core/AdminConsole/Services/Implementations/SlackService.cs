@@ -104,7 +104,7 @@ public class SlackService(
         }
         if (!result.Ok)
         {
-            logger.LogError("Error obtaining token via OAuth: " + result.Error);
+            logger.LogError("Error obtaining token via OAuth: {Error}", result.Error);
             return string.Empty;
         }
 
@@ -135,7 +135,7 @@ public class SlackService(
         }
         if (!result.Ok)
         {
-            logger.LogError("Error retrieving Slack user ID: " + result.Error);
+            logger.LogError("Error retrieving Slack user ID: {Error}", result.Error);
             return string.Empty;
         }
 
@@ -158,7 +158,7 @@ public class SlackService(
         }
         if (!result.Ok)
         {
-            logger.LogError("Error opening DM channel: " + result.Error);
+            logger.LogError("Error opening DM channel: {Error}", result.Error);
             return string.Empty;
         }
 

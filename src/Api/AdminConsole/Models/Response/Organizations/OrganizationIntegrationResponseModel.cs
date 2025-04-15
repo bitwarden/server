@@ -11,10 +11,7 @@ public class OrganizationIntegrationResponseModel : ResponseModel
     public OrganizationIntegrationResponseModel(OrganizationIntegration organizationIntegration, string obj = "organizationIntegration")
         : base(obj)
     {
-        if (organizationIntegration == null)
-        {
-            throw new ArgumentNullException(nameof(organizationIntegration));
-        }
+        ArgumentNullException.ThrowIfNull(organizationIntegration);
 
         Id = organizationIntegration.Id;
         Type = organizationIntegration.Type;

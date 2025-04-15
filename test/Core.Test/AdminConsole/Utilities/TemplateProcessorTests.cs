@@ -1,8 +1,9 @@
-﻿using Bit.Core.Models.Data;
+﻿using Bit.Core.AdminConsole.Utilities;
+using Bit.Core.Models.Data;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
-namespace Bit.Core.Test.Utilities;
+namespace Bit.Core.Test.AdminConsole.Utilities;
 
 public class TemplateProcessorTests
 {
