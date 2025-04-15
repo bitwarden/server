@@ -13,7 +13,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
 public class CreateSponsorshipCommand(
     ICurrentContext currentContext,
-    IFeatureService featureService,
     IOrganizationSponsorshipRepository organizationSponsorshipRepository,
     IUserService userService) : ICreateSponsorshipCommand
 {
@@ -65,11 +64,6 @@ public class CreateSponsorshipCommand(
         var isAdminInitiated = false;
         if (currentContext.UserId != sponsoringMember.UserId)
         {
-            if (!featureService.IsEnabled(FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
-            {
-                throw new BadRequestException("Feature 'pm-17772-admin-initiated-sponsorships' is not enabled.");
-            }
-
             var organization = currentContext.Organizations.First(x => x.Id == sponsoringOrganization.Id);
             OrganizationUserType[] allowedUserTypes =
             [
