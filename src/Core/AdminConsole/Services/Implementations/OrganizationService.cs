@@ -1230,8 +1230,6 @@ public class OrganizationService : IOrganizationService
         // Remove Users
         if (removeUserExternalIds?.Any() ?? false)
         {
-
-
             var existingUsersDict = existingExternalUsers.ToDictionary(u => u.ExternalId);
             var removeUsersSet = new HashSet<string>(removeUserExternalIds)
                 .Except(newUsersSet)
