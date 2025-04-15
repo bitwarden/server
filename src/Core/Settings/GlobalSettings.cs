@@ -290,7 +290,7 @@ public class GlobalSettings : IGlobalSettings
             private string _topicName;
 
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
-            public virtual string SlackSubscriptionName { get; set; } = "events-slack-queue";
+            public virtual string SlackSubscriptionName { get; set; } = "events-slack-subscription";
             public virtual string WebhookSubscriptionName { get; set; } = "events-webhook-subscription";
 
             public string ConnectionString
