@@ -156,6 +156,8 @@ public static class FeatureFlagKeys
     public const string Argon2Default = "argon2-default";
     public const string UserkeyRotationV2 = "userkey-rotation-v2";
     public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
+    public const string UserSdkForDecryption = "use-sdk-for-decryption";
+    public const string PM17987_BlockType0 = "pm-17987-block-type-0";
 
     /* Mobile Team */
     public const string NativeCarouselFlow = "native-carousel-flow";
