@@ -1,7 +1,6 @@
 ﻿using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
@@ -299,15 +298,8 @@ public class BaseRequestValidatorTests
         _sut.isValid = true;
 
         context.ValidatedTokenRequest.GrantType = grantType;
-        // Configure requirement to require SSO and exempt accepted users
-        var requirement = new RequireSsoPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    PolicyType = PolicyType.RequireSso,
-                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed
-                }
-            ]);
+        // Configure requirement to require SSO
+        var requirement = new RequireSsoPolicyRequirement([]) { SsoRequired = true };
         _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(Arg.Any<Guid>()).Returns(requirement);
 
         // Act
@@ -325,7 +317,7 @@ public class BaseRequestValidatorTests
     [BitAutoData("password")]
     [BitAutoData("webauthn")]
     [BitAutoData("refresh_token")]
-    public async Task ValidateAsync_GrantTypes_WithPolicyRequirementsEnabled_ExemptStatusesOnly_ShouldSucceed(
+    public async Task ValidateAsync_GrantTypes_WithPolicyRequirementsEnabled_OrgSsoRequiredFalse_ShouldSucceed(
         string grantType,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
@@ -340,25 +332,8 @@ public class BaseRequestValidatorTests
         context.ValidatedTokenRequest.GrantType = grantType;
         context.ValidatedTokenRequest.ClientId = "web";
 
-        // Configure requirement with only exempt statuses
-        var requirement = new RequireSsoPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    PolicyType = PolicyType.RequireSso,
-                    OrganizationUserStatus = OrganizationUserStatusType.Invited
-                },
-                new PolicyDetails
-                {
-                    PolicyType = PolicyType.RequireSso,
-                    OrganizationUserStatus = OrganizationUserStatusType.Revoked
-                },
-                new PolicyDetails
-                {
-                    PolicyType = PolicyType.RequireSso,
-                    OrganizationUserStatus = OrganizationUserStatusType.Accepted
-                }
-            ]);
+        // Configure requirement to not require SSO
+        var requirement = new RequireSsoPolicyRequirement([]) { SsoRequired = false };
         _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(Arg.Any<Guid>()).Returns(requirement);
 
         _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
