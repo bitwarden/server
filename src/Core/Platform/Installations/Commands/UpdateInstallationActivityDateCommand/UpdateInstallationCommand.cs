@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Platform.Installations;
+﻿#nullable enable
+
+namespace Bit.Core.Platform.Installations;
 
 /// <summary>
 /// Commands responsible for updating an installation from
