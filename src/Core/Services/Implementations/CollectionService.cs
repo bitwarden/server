@@ -1,4 +1,6 @@
-﻿using Bit.Core.Context;
+﻿#nullable enable
+
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -34,8 +36,8 @@ public class CollectionService : ICollectionService
         _currentContext = currentContext;
     }
 
-    public async Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
-        IEnumerable<CollectionAccessSelection> users = null)
+    public async Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection>? groups = null,
+        IEnumerable<CollectionAccessSelection>? users = null)
     {
         var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
         if (org == null)
