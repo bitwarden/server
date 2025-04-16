@@ -772,4 +772,146 @@ public class InviteOrganizationUserCommandTests
             .SendOrganizationAutoscaledEmailAsync(organization, 1,
                 Arg.Is<IEnumerable<string>>(emails => emails.Any(email => email == "provider@email.com")));
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task InviteScimOrganizationUserAsync_WhenAnOrganizationAutoscalesButOwnersHaveAlreadyBeenNotified_ThenAnEmailShouldNotBeSent(
+        MailAddress address,
+        Organization organization,
+        OrganizationUser user,
+        FakeTimeProvider timeProvider,
+        string externalId,
+        OrganizationUserUserDetails ownerDetails,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        // Arrange
+        user.Email = address.Address;
+        organization.Seats = 1;
+        organization.MaxAutoscaleSeats = 2;
+        organization.OwnersNotifiedOfAutoscaling = DateTime.UtcNow;
+        ownerDetails.Type = OrganizationUserType.Owner;
+
+        var inviteOrganization = new InviteOrganization(organization, new Enterprise2019Plan(true));
+
+        var request = new InviteOrganizationUsersRequest(
+            invites:
+            [
+                new OrganizationUserInvite(
+                    email: user.Email,
+                    assignedCollections: [],
+                    groups: [],
+                    type: OrganizationUserType.User,
+                    permissions: new Permissions(),
+                    externalId: externalId,
+                    accessSecretsManager: true)
+            ],
+            inviteOrganization: inviteOrganization,
+            performedBy: Guid.Empty,
+            timeProvider.GetUtcNow());
+
+        var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+        orgUserRepository
+            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .Returns([]);
+        orgUserRepository
+            .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
+            .Returns([ownerDetails]);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IInviteUsersValidator>()
+            .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
+            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(
+                GetInviteValidationRequestMock(request, inviteOrganization, organization)
+                    .WithPasswordManagerUpdate(
+                        new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1))));
+
+        // Act
+        var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
+
+        // Assert
+        Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
+
+        Assert.NotNull(inviteOrganization.MaxAutoScaleSeats);
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendOrganizationAutoscaledEmailAsync(Arg.Any<Organization>(),
+                Arg.Any<int>(),
+                Arg.Any<IEnumerable<string>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task InviteScimOrganizationUserAsync_WhenAnOrganizationDoesNotAutoScale_ThenAnEmailShouldNotBeSent(
+        MailAddress address,
+        Organization organization,
+        OrganizationUser user,
+        FakeTimeProvider timeProvider,
+        string externalId,
+        OrganizationUserUserDetails ownerDetails,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        // Arrange
+        user.Email = address.Address;
+        organization.Seats = 2;
+        organization.MaxAutoscaleSeats = 2;
+        organization.OwnersNotifiedOfAutoscaling = DateTime.UtcNow;
+        ownerDetails.Type = OrganizationUserType.Owner;
+
+        var inviteOrganization = new InviteOrganization(organization, new Enterprise2019Plan(true));
+
+        var request = new InviteOrganizationUsersRequest(
+            invites:
+            [
+                new OrganizationUserInvite(
+                    email: user.Email,
+                    assignedCollections: [],
+                    groups: [],
+                    type: OrganizationUserType.User,
+                    permissions: new Permissions(),
+                    externalId: externalId,
+                    accessSecretsManager: true)
+            ],
+            inviteOrganization: inviteOrganization,
+            performedBy: Guid.Empty,
+            timeProvider.GetUtcNow());
+
+        var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+        orgUserRepository
+            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .Returns([]);
+        orgUserRepository
+            .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
+            .Returns([ownerDetails]);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IInviteUsersValidator>()
+            .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
+            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(
+                GetInviteValidationRequestMock(request, inviteOrganization, organization)
+                    .WithPasswordManagerUpdate(
+                        new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1))));
+
+        // Act
+        var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
+
+        // Assert
+        Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
+
+        Assert.NotNull(inviteOrganization.MaxAutoScaleSeats);
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendOrganizationAutoscaledEmailAsync(Arg.Any<Organization>(),
+                Arg.Any<int>(),
+                Arg.Any<IEnumerable<string>>());
+    }
 }
