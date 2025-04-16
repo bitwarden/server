@@ -571,11 +571,11 @@ public class NonAnonymousSendCommandTests
         await _sendValidationService.Received(1).StorageRemainingForSendAsync(send);
 
         // Verify no further methods were called
-        _sendRepository.When(x => x.CreateAsync(Arg.Any<Send>())).Throw<Exception>();
-        _sendRepository.When(x => x.UpsertAsync(Arg.Any<Send>())).Throw<Exception>();
-        _sendFileStorageService.When(x => x.GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>())).Throw<Exception>();
-        _pushNotificationService.When(x => x.PushSyncSendCreateAsync(Arg.Any<Send>())).Throw<Exception>();
-        _pushNotificationService.When(x => x.PushSyncSendUpdateAsync(Arg.Any<Send>())).Throw<Exception>();
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
     }
 
     [Fact]
