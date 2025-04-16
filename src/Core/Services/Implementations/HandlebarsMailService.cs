@@ -1,4 +1,7 @@
-﻿using System.Net;
+﻿#nullable enable
+
+using System.Diagnostics;
+using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
@@ -213,6 +216,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails)
     {
+        Debug.Assert(organization.Seats.HasValue, "Organization is expected to have a non-null value for seats at the time of sending this email");
         var message = CreateDefaultMessage($"{organization.DisplayName()} Seat Count Has Increased", ownerEmails);
         var model = new OrganizationSeatsAutoscaledViewModel
         {
@@ -286,7 +290,7 @@ public class HandlebarsMailService : IMailService
 
         var messageModels = orgInvitesInfo.OrgUserTokenPairs.Select(orgUserTokenPair =>
         {
-
+            Debug.Assert(orgUserTokenPair.OrgUser.Email is not null);
             var orgUserInviteViewModel = OrganizationUserInvitedViewModel.CreateFromInviteInfo(
                 orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token, _globalSettings);
             return CreateMessage(orgUserTokenPair.OrgUser.Email, orgUserInviteViewModel);
@@ -358,7 +362,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
             ProviderId = provider.Id,
-            ProviderName = CoreHelpers.SanitizeForEmail(provider.DisplayName(), false),
+            ProviderName = CoreHelpers.SanitizeForEmail(provider.DisplayName()!, false),
             ProviderNameUrlEncoded = WebUtility.UrlEncode(provider.Name),
             ProviderBillingEmail = provider.BillingEmail,
             ProviderCreationDate = provider.CreationDate.ToLongDateString(),
@@ -448,7 +452,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendLicenseExpiredAsync(IEnumerable<string> emails, string organizationName = null)
+    public async Task SendLicenseExpiredAsync(IEnumerable<string> emails, string? organizationName = null)
     {
         var message = CreateDefaultMessage("License Expired", emails);
         var model = new LicenseExpiredViewModel();
@@ -598,12 +602,14 @@ public class HandlebarsMailService : IMailService
     }
 
     private async Task AddMessageContentAsync<T>(MailMessage message, string templateName, T model)
+        where T : notnull
     {
         message.HtmlContent = await RenderAsync($"{templateName}.html", model);
         message.TextContent = await RenderAsync($"{templateName}.text", model);
     }
 
-    private async Task<string> RenderAsync<T>(string templateName, T model)
+    private async Task<string?> RenderAsync<T>(string templateName, T model)
+        where T : notnull
     {
         await RegisterHelpersAndPartialsAsync();
         if (!_templateCache.TryGetValue(templateName, out var template))
@@ -618,7 +624,7 @@ public class HandlebarsMailService : IMailService
         return template != null ? template(model) : null;
     }
 
-    private async Task<string> ReadSourceAsync(string templateName)
+    private async Task<string?> ReadSourceAsync(string templateName)
     {
         var assembly = typeof(HandlebarsMailService).GetTypeInfo().Assembly;
         var fullTemplateName = $"{Namespace}.{templateName}.hbs";
@@ -626,7 +632,7 @@ public class HandlebarsMailService : IMailService
         {
             return null;
         }
-        using (var s = assembly.GetManifestResourceStream(fullTemplateName))
+        using (var s = assembly.GetManifestResourceStream(fullTemplateName)!)
         using (var sr = new StreamReader(s))
         {
             return await sr.ReadToEndAsync();
@@ -757,7 +763,7 @@ public class HandlebarsMailService : IMailService
             var emailList = new List<string>();
             if (parameters[0] is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Array)
             {
-                emailList = jsonElement.EnumerateArray().Select(e => e.GetString()).ToList();
+                emailList = jsonElement.EnumerateArray().Select(e => e.GetString()!).ToList();
             }
             else if (parameters[0] is IEnumerable<string> emails)
             {
@@ -1276,7 +1282,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName)
+    public async Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string? userName)
     {
         var templateName = _globalSettings.SelfHosted ?
             "AdminConsole.SelfHostNotifyAdminDeviceApprovalRequested" :
@@ -1313,7 +1319,7 @@ public class HandlebarsMailService : IMailService
         await EnqueueMailAsync(messageModels.ToList());
     }
 
-    private static string GetUserIdentifier(string email, string userName)
+    private static string GetUserIdentifier(string email, string? userName)
     {
         return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
     }
