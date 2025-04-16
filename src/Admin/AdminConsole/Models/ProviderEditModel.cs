@@ -6,7 +6,6 @@ using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.SharedWeb.Utilities;
-using BitPayLight.Models.Invoice;
 
 namespace Bit.Admin.AdminConsole.Models;
 
