@@ -9,26 +9,32 @@ using Bit.Core.Settings;
 /// </summary>
 public class RequireSsoPolicyRequirement : IPolicyRequirement
 {
-    private readonly IEnumerable<PolicyDetails> _policyDetails;
+    /// <summary>
+    /// Indicates whether the user can use passkey login.
+    /// </summary>
+    /// <remarks>
+    /// The user can use passkey login if they are not a member (Accepted/Confirmed) of an organization
+    /// that has the Require SSO policy enabled.
+    /// </remarks>
+    public bool CanUsePasskeyLogin { get; init; }
+
+    /// <summary>
+    /// Indicates whether SSO requirement is enforced for the user.
+    /// </summary>
+    /// <remarks>
+    /// The user is required to login with SSO if they are a confirmed member of an organization
+    /// that has the Require SSO policy enabled.
+    /// </remarks>
+    public bool SsoRequired { get; init; }
 
     public RequireSsoPolicyRequirement(IEnumerable<PolicyDetails> policyDetails)
     {
-        _policyDetails = policyDetails;
+        CanUsePasskeyLogin = policyDetails.All(p =>
+            p.OrganizationUserStatus < OrganizationUserStatusType.Accepted);
+
+        SsoRequired = policyDetails.Any(p =>
+            p.OrganizationUserStatus >= OrganizationUserStatusType.Confirmed);
     }
-
-    /// <summary>
-    /// Indicates whether the user can use passkey login.
-    /// Policy is enforced for users with status >= Accepted.
-    /// </summary>
-    public bool CanUsePasskeyLogin => _policyDetails.Any(p =>
-        p.OrganizationUserStatus >= OrganizationUserStatusType.Accepted);
-
-    /// <summary>
-    /// Indicates whether SSO is required for login.
-    /// Policy is enforced for users with status >= Confirmed.
-    /// </summary>
-    public bool SsoRequired => _policyDetails.Any(p =>
-        p.OrganizationUserStatus >= OrganizationUserStatusType.Confirmed);
 }
 
 
