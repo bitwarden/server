@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.Enums;
-using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
@@ -12,67 +11,93 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyRequire
 public class RequireSsoPolicyRequirementFactoryTests
 {
     [Theory, BitAutoData]
-    public void CanUsePasskeyLogin_WithNoPolicies_ReturnsFalse(SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
+    public void CanUsePasskeyLogin_WithNoPolicies_ReturnsTrue(
+        SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create([]);
 
-        Assert.False(actual.CanUsePasskeyLogin);
+        Assert.True(actual.CanUsePasskeyLogin);
     }
 
-    [Theory, BitAutoData]
-    public void CanUsePasskeyLogin_WithInvalidPolicies_ReturnsFalse(
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed)]
+    public void CanUsePasskeyLogin_WithOrganizationMembership_ReturnsFalse(
+        OrganizationUserStatusType userStatus,
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create(
         [
-            new PolicyDetails { PolicyType = PolicyType.RequireSso, OrganizationUserStatus = OrganizationUserStatusType.Revoked },
-            new PolicyDetails { PolicyType = PolicyType.RequireSso, OrganizationUserStatus = OrganizationUserStatusType.Invited }
+            new PolicyDetails
+            {
+                PolicyType = PolicyType.RequireSso,
+                OrganizationUserStatus = userStatus
+            }
         ]);
 
         Assert.False(actual.CanUsePasskeyLogin);
     }
 
-    [Theory, BitAutoData]
-    public void CanUsePasskeyLogin_WithValidPolicies_ReturnsTrue(
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Revoked)]
+    [BitAutoData(OrganizationUserStatusType.Invited)]
+    public void CanUsePasskeyLogin_WithoutOrganizationMembership_ReturnsTrue(
+        OrganizationUserStatusType userStatus,
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create(
         [
-            new PolicyDetails { PolicyType = PolicyType.RequireSso, OrganizationUserStatus = OrganizationUserStatusType.Accepted },
-            new PolicyDetails { PolicyType = PolicyType.RequireSso, OrganizationUserStatus = OrganizationUserStatusType.Confirmed }
+            new PolicyDetails
+            {
+                PolicyType = PolicyType.RequireSso,
+                OrganizationUserStatus = userStatus
+            }
         ]);
 
         Assert.True(actual.CanUsePasskeyLogin);
     }
 
     [Theory, BitAutoData]
-    public void SsoRequired_WithNoPolicies_ReturnsFalse(SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
+    public void SsoRequired_WithNoPolicies_ReturnsFalse(
+        SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create([]);
 
         Assert.False(actual.SsoRequired);
     }
 
-    [Theory, BitAutoData]
-    public void SsoRequired_WithInvalidPolicies_ReturnsFalse(
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Revoked)]
+    [BitAutoData(OrganizationUserStatusType.Invited)]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    public void SsoRequired_WithoutConfirmedOrganizationMembership_ReturnsFalse(
+        OrganizationUserStatusType userStatus,
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create(
         [
-            new PolicyDetails { PolicyType = PolicyType.RequireSso, OrganizationUserStatus = OrganizationUserStatusType.Revoked },
-            new PolicyDetails { PolicyType = PolicyType.RequireSso, OrganizationUserStatus = OrganizationUserStatusType.Invited },
-            new PolicyDetails { PolicyType = PolicyType.RequireSso, OrganizationUserStatus = OrganizationUserStatusType.Accepted }
+            new PolicyDetails
+            {
+                PolicyType = PolicyType.RequireSso,
+                OrganizationUserStatus = userStatus
+            }
         ]);
 
         Assert.False(actual.SsoRequired);
     }
 
     [Theory, BitAutoData]
-    public void SsoRequired_WithValidPolicies_ReturnsTrue(
-        [PolicyDetails(PolicyType.RequireSso, userStatus: OrganizationUserStatusType.Confirmed)] PolicyDetails[] policies,
+    public void SsoRequired_WithConfirmedOrganizationMembership_ReturnsTrue(
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
-        var actual = sutProvider.Sut.Create(policies);
+        var actual = sutProvider.Sut.Create(
+        [
+            new PolicyDetails
+            {
+                PolicyType = PolicyType.RequireSso,
+                OrganizationUserStatus = OrganizationUserStatusType.Confirmed
+            }
+        ]);
 
         Assert.True(actual.SsoRequired);
     }
