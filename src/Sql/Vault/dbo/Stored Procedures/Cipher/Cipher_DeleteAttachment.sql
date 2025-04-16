@@ -28,8 +28,15 @@ BEGIN
         RETURN;
     END
 
+    -- Validate the initial JSON
+    IF ISJSON(@CurrentAttachments) = 0
+    BEGIN
+        THROW 50000, 'Current initial attachments data is not valid JSON', 1;
+        RETURN;
+    END
+
     -- Check if the attachment exists before trying to remove it
-    IF JSON_VALUE(@CurrentAttachments, @AttachmentIdPath) IS NULL
+    IF JSON_PATH_EXISTS(@CurrentAttachments, @AttachmentIdPath) = 0
     BEGIN
         -- Attachment doesn't exist, nothing to do
         RETURN;

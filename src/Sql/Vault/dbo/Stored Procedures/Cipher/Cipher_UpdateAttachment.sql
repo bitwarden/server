@@ -15,6 +15,23 @@ BEGIN
         RETURN;
     END
 
+    -- Validate that AttachmentData has the expected structure
+    -- Check for required fields
+    IF JSON_VALUE(@AttachmentData, '$.FileName') IS NULL OR
+       JSON_VALUE(@AttachmentData, '$.Size') IS NULL
+    BEGIN
+        THROW 50000, 'AttachmentData is missing required fields (FileName, Size)', 1;
+        RETURN;
+    END
+
+    -- Validate data types for critical fields
+    DECLARE @Size BIGINT = TRY_CAST(JSON_VALUE(@AttachmentData, '$.Size') AS BIGINT)
+    IF @Size IS NULL OR @Size <= 0
+    BEGIN
+        THROW 50000, 'AttachmentData has invalid Size value', 1;
+        RETURN;
+    END
+
     DECLARE @AttachmentIdKey VARCHAR(50) = CONCAT('"', @AttachmentId, '"')
     DECLARE @AttachmentIdPath VARCHAR(50) = CONCAT('$.', @AttachmentIdKey)
     DECLARE @NewAttachments NVARCHAR(MAX)
@@ -38,6 +55,13 @@ BEGIN
     END
     ELSE
     BEGIN
+        -- Validate existing attachments
+        IF ISJSON(@CurrentAttachments) = 0
+        BEGIN
+            THROW 50000, 'Current attachments data is not valid JSON', 1;
+            RETURN;
+        END
+
         -- Modify existing JSON
         SET @NewAttachments = JSON_MODIFY(@CurrentAttachments, @AttachmentIdPath, JSON_QUERY(@AttachmentData, '$'))
 
