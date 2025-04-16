@@ -3,7 +3,6 @@ using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
@@ -12,7 +11,6 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
@@ -85,7 +83,7 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task AttestationOptions_WithPolicyRequirementsFeatureEnabled_RequireSsoPolicyApplicable_ThrowsBadRequestException(
+    public async Task AttestationOptions_WithPolicyRequirementsEnabled_CanUsePasskeyLoginFalse_ThrowsBadRequestException(
         SecretVerificationRequestModel requestModel, User user, SutProvider<WebAuthnController> sutProvider)
     {
         // Arrange
@@ -94,11 +92,7 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<RequireSsoPolicyRequirement>(user.Id)
-            .ReturnsForAnyArgs(
-                new RequireSsoPolicyRequirement(
-                [
-                     new PolicyDetails { PolicyType = PolicyType.RequireSso, OrganizationUserStatus = OrganizationUserStatusType.Confirmed }
-                ]));
+            .ReturnsForAnyArgs(new RequireSsoPolicyRequirement([]) { CanUsePasskeyLogin = false });
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -238,7 +232,7 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Post_WithPolicyRequirementsFeatureEnabled_RequireSsoPolicyApplicable_ThrowsBadRequestException(
+    public async Task Post_WithPolicyRequirementsEnabled_CanUsePasskeyLoginFalse_ThrowsBadRequestException(
         WebAuthnLoginCredentialCreateRequestModel requestModel,
         CredentialCreateOptions createOptions,
         User user,
@@ -258,11 +252,7 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<RequireSsoPolicyRequirement>(user.Id)
-            .ReturnsForAnyArgs(
-                new RequireSsoPolicyRequirement(
-                [
-                    new PolicyDetails { PolicyType = PolicyType.RequireSso, OrganizationUserStatus = OrganizationUserStatusType.Confirmed }
-                ]));
+            .ReturnsForAnyArgs(new RequireSsoPolicyRequirement([]) { CanUsePasskeyLogin = false });
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
