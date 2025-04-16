@@ -1,5 +1,15 @@
 IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Organization]') AND name = 'UseAdminSponsoredFamilies')
 BEGIN
+    -- First drop the default constraint
+    DECLARE @ConstraintName nvarchar(200)
+    SELECT @ConstraintName = name FROM sys.default_constraints 
+    WHERE parent_object_id = OBJECT_ID(N'[dbo].[Organization]')
+    AND parent_column_id = (SELECT column_id FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Organization]') AND name = 'UseAdminSponsoredFamilies')
+    
+    IF @ConstraintName IS NOT NULL
+        EXEC('ALTER TABLE [dbo].[Organization] DROP CONSTRAINT ' + @ConstraintName)
+        
+    -- Then drop the column
     ALTER TABLE [dbo].[Organization] DROP COLUMN [UseAdminSponsoredFamilies]
 END
 GO;
@@ -9,6 +19,16 @@ GO;
 
 IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationSponsorship]') AND name = 'IsAdminInitiated')
 BEGIN
+    -- First drop the default constraint
+    DECLARE @ConstraintName nvarchar(200)
+    SELECT @ConstraintName = name FROM sys.default_constraints 
+    WHERE parent_object_id = OBJECT_ID(N'[dbo].[OrganizationSponsorship]')
+    AND parent_column_id = (SELECT column_id FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationSponsorship]') AND name = 'IsAdminInitiated')
+    
+    IF @ConstraintName IS NOT NULL
+        EXEC('ALTER TABLE [dbo].[OrganizationSponsorship] DROP CONSTRAINT ' + @ConstraintName)
+        
+    -- Then drop the column
     ALTER TABLE [dbo].[OrganizationSponsorship] DROP COLUMN [IsAdminInitiated]
 END
 GO;
@@ -18,6 +38,7 @@ GO;
 
 IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationSponsorship]') AND name = 'Notes')
 BEGIN
+    -- Notes column doesn't have a default constraint, so we can just drop it
     ALTER TABLE [dbo].[OrganizationSponsorship] DROP COLUMN [Notes]
 END
 GO;
