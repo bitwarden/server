@@ -1,11 +1,29 @@
+IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Organization]') AND name = 'UseAdminSponsoredFamilies')
+BEGIN
+    ALTER TABLE [dbo].[Organization] DROP COLUMN [UseAdminSponsoredFamilies]
+END
+GO;
+
 ALTER TABLE [dbo].[Organization] ADD [UseAdminSponsoredFamilies] bit NOT NULL CONSTRAINT [DF_Organization_UseAdminSponsoredFamilies] default (0)
-    GO;
+GO;
+
+IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationSponsorship]') AND name = 'IsAdminInitiated')
+BEGIN
+    ALTER TABLE [dbo].[OrganizationSponsorship] DROP COLUMN [IsAdminInitiated]
+END
+GO;
 
 ALTER TABLE [dbo].[OrganizationSponsorship] ADD [IsAdminInitiated] BIT CONSTRAINT [DF_OrganizationSponsorship_IsAdminInitiated] DEFAULT (0) NOT NULL
-    GO;
+GO;
+
+IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationSponsorship]') AND name = 'Notes')
+BEGIN
+    ALTER TABLE [dbo].[OrganizationSponsorship] DROP COLUMN [Notes]
+END
+GO;
 
 ALTER TABLE [dbo].[OrganizationSponsorship] ADD [Notes] NVARCHAR(512) NULL
-    GO;
+GO;
 
 CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
