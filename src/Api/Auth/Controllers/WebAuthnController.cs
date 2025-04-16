@@ -74,7 +74,7 @@ public class WebAuthnController : Controller
     public async Task<WebAuthnCredentialCreateOptionsResponseModel> AttestationOptions([FromBody] SecretVerificationRequestModel model)
     {
         var user = await VerifyUserAsync(model);
-        await ValidateRequireSsoPolicyDisabledOrNotApplicable(user.Id);
+        await ValidateIfUserCanUsePasskeyLogin(user.Id);
         var options = await _getWebAuthnLoginCredentialCreateOptionsCommand.GetWebAuthnLoginCredentialCreateOptionsAsync(user);
 
         var tokenable = new WebAuthnCredentialCreateOptionsTokenable(user, options);
@@ -107,7 +107,7 @@ public class WebAuthnController : Controller
     public async Task Post([FromBody] WebAuthnLoginCredentialCreateRequestModel model)
     {
         var user = await GetUserAsync();
-        await ValidateRequireSsoPolicyDisabledOrNotApplicable(user.Id);
+        await ValidateIfUserCanUsePasskeyLogin(user.Id);
         var tokenable = _createOptionsDataProtector.Unprotect(model.Token);
 
         if (!tokenable.TokenIsValid(user))
@@ -134,10 +134,15 @@ public class WebAuthnController : Controller
 
     private async Task ValidateIfUserCanUsePasskeyLogin(Guid userId)
     {
-        var canUsePasskeyLogin = (await _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(userId))
-            .CanUsePasskeyLogin;
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            await ValidateRequireSsoPolicyDisabledOrNotApplicable(userId);
+            return;
+        }
 
-        if (!canUsePasskeyLogin)
+        var requireSsoPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(userId);
+
+        if (!requireSsoPolicyRequirement.CanUsePasskeyLogin)
         {
             throw new BadRequestException("Passkeys cannot be created for your account. SSO login is required.");
         }
