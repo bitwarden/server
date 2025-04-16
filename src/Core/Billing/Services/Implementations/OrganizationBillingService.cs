@@ -73,7 +73,9 @@ public class OrganizationBillingService(
             return OrganizationMetadata.Default;
         }
 
-        var isEligibleForSelfHost = await IsEligibleForSelfHostAsync(organization);
+        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+
+        var isEligibleForSelfHost = plan.HasSelfHost;
 
         var isManaged = organization.Status == OrganizationStatusType.Managed;
 
@@ -86,28 +88,30 @@ public class OrganizationBillingService(
             };
         }
 
-        var customer = await subscriberService.GetCustomer(organization,
-            new CustomerGetOptions { Expand = ["discount.coupon.applies_to"] });
+        var customerGetOptions = new CustomerGetOptions
+        {
+            Expand = ["discount.coupon.applies_to", "subscriptions", "subscriptions.data.latest_invoice"]
+        };
+        var customer = await subscriberService.GetCustomerOrThrow(organization, customerGetOptions);
 
-        var subscription = await subscriberService.GetSubscription(organization);
+        var subscription = customer.Subscriptions.FirstOrDefault(x => x.Id == organization.GatewaySubscriptionId);
 
-        var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
+        var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(customer, subscription, plan);
 
-        var invoice = !string.IsNullOrEmpty(subscription.LatestInvoiceId)
-            ? await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions())
-            : null;
+        var invoice = subscription?.LatestInvoice;
 
         return new OrganizationMetadata(
             isEligibleForSelfHost,
             isManaged,
             isOnSecretsManagerStandalone,
-            subscription.Status == StripeConstants.SubscriptionStatus.Unpaid,
+            subscription?.Status == StripeConstants.SubscriptionStatus.Unpaid,
             true,
             invoice?.Status == StripeConstants.InvoiceStatus.Open,
-            subscription.Status == StripeConstants.SubscriptionStatus.Canceled,
+            subscription?.Status == StripeConstants.SubscriptionStatus.Canceled,
             invoice?.DueDate,
             invoice?.Created,
-            subscription.CurrentPeriodEnd);
+            subscription?.CurrentPeriodEnd,
+            customer.IsPaymentMethodConfigured());
     }
 
     public async Task UpdatePaymentMethod(
@@ -403,34 +407,22 @@ public class OrganizationBillingService(
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
     }
 
-    private async Task<bool> IsEligibleForSelfHostAsync(
-        Organization organization)
-    {
-        var plans = await pricingClient.ListPlans();
-
-        var eligibleSelfHostPlans = plans.Where(plan => plan.HasSelfHost).Select(plan => plan.Type);
-
-        return eligibleSelfHostPlans.Contains(organization.PlanType);
-    }
-
-    private async Task<bool> IsOnSecretsManagerStandalone(
-        Organization organization,
+    private bool IsOnSecretsManagerStandalone(
         Customer? customer,
-        Subscription? subscription)
+        Subscription? subscription,
+        Bit.Core.Models.StaticStore.Plan plan)
     {
-        if (customer == null || subscription == null)
+        if (subscription == null)
         {
             return false;
         }
-
-        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
         if (!plan.SupportsSecretsManager)
         {
             return false;
         }
 
-        var hasCoupon = customer.Discount?.Coupon?.Id == StripeConstants.CouponIDs.SecretsManagerStandalone;
+        var hasCoupon = customer?.Discount?.Coupon?.Id == StripeConstants.CouponIDs.SecretsManagerStandalone;
 
         if (!hasCoupon)
         {
@@ -439,7 +431,7 @@ public class OrganizationBillingService(
 
         var subscriptionProductIds = subscription.Items.Data.Select(item => item.Plan.ProductId);
 
-        var couponAppliesTo = customer.Discount?.Coupon?.AppliesTo?.Products;
+        var couponAppliesTo = customer?.Discount?.Coupon?.AppliesTo?.Products;
 
         return subscriptionProductIds.Intersect(couponAppliesTo ?? []).Any();
     }

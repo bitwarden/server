@@ -27,4 +27,20 @@ public static class CustomerExtensions
     {
         return customer != null ? customer.Balance / 100M : default;
     }
+
+    /// <summary>
+    /// Returns whether a payment method is configured for a customer.
+    /// </summary>
+    /// <param name="customer"></param>
+    /// <returns></returns>
+    public static bool IsPaymentMethodConfigured(this Customer customer)
+    {
+        return customer.InvoiceSettings.DefaultPaymentMethodId != null ||
+            customer.IsUsingPayPal();
+    }
+
+    public static bool IsUsingPayPal(this Customer customer)
+    {
+        return customer.Metadata != null && customer.Metadata.ContainsKey("btCustomerId");
+    }
 }
