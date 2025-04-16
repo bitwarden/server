@@ -188,7 +188,6 @@ public static class FeatureFlagKeys
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
     public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
-    public const string ExportAttachments = "export-attachments";
     public const string GeneratorToolsModernization = "generator-tools-modernization";
 
     /* Vault Team */
