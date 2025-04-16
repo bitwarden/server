@@ -1,14 +1,7 @@
 ﻿using System.Text.Json;
-using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CurrentContextFixtures;
@@ -20,7 +13,6 @@ using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Commands;
 using Bit.Core.Tools.Services;
-using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -67,20 +59,6 @@ public class NonAnonymousSendCommandTests
             _sendCoreHelperService
         );
     }
-
-    // TODO: REMOVE
-    // private void SaveSendAsync_Setup(SendType sendType, bool disableSendPolicyAppliesToUser,
-    //     SutProvider<NonAnonymousSendCommand> sutProvider, Send send, User user)
-    // {
-    //     send.Id = default;
-    //     send.Type = sendType;
-    //
-    //     sutProvider.GetDependency<IPolicyService>().AnyPoliciesApplicableToUserAsync(
-    //         Arg.Any<Guid>(), PolicyType.DisableSend).Returns(disableSendPolicyAppliesToUser);
-    //
-    //     sutProvider.GetDependency<IUserRepository>().GetByIdAsync(Arg.Any<Guid>()).Returns(user);
-    //     sutProvider.GetDependency<ISendValidationService>().ValidateUserCanSaveAsync(send.UserId, send);
-    // }
 
     // Disable Send policy check
     [Theory]
@@ -173,29 +151,6 @@ public class NonAnonymousSendCommandTests
             await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
             await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         }
-    }
-
-    // TODO: REMOVE
-    // Send Options Policy - Disable Hide Email check
-    private void SaveSendAsync_HideEmail_Setup(bool disableHideEmailAppliesToUser,
-        SutProvider<NonAnonymousSendCommand> sutProvider, Send send, Policy policy)
-    {
-        send.HideEmail = true;
-
-        var sendOptions = new SendOptionsPolicyData
-        {
-            DisableHideEmail = disableHideEmailAppliesToUser
-        };
-        policy.Data = JsonSerializer.Serialize(sendOptions, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
-
-        sutProvider.GetDependency<IPolicyService>().GetPoliciesApplicableToUserAsync(
-            Arg.Any<Guid>(), PolicyType.SendOptions).Returns(new List<OrganizationUserPolicyDetails>()
-            {
-                new() { PolicyType = policy.Type, PolicyData = policy.Data, OrganizationId = policy.OrganizationId, PolicyEnabled = policy.Enabled }
-            });
     }
 
     [Theory]
@@ -295,20 +250,6 @@ public class NonAnonymousSendCommandTests
             await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
             await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         }
-    }
-
-    // TODO: REMOVE
-    // Disable Send policy check - vNext
-    private void SaveSendAsync_Setup_vNext(SutProvider<NonAnonymousSendCommand> sutProvider, Send send,
-        SendOptionsPolicyRequirement sendOptionsPolicyRequirement)
-    {
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(send.UserId!.Value)
-            .Returns(sendOptionsPolicyRequirement);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
-
-        // Should not be called in these tests
-        sutProvider.GetDependency<IPolicyService>().AnyPoliciesApplicableToUserAsync(
-            Arg.Any<Guid>(), Arg.Any<PolicyType>()).ThrowsAsync<Exception>();
     }
 
     [Theory]
@@ -630,11 +571,11 @@ public class NonAnonymousSendCommandTests
         await _sendValidationService.Received(1).StorageRemainingForSendAsync(send);
 
         // Verify no further methods were called
-        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
-        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
-        await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
-        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+        _sendRepository.When(x => x.CreateAsync(Arg.Any<Send>())).Throw<Exception>();
+        _sendRepository.When(x => x.UpsertAsync(Arg.Any<Send>())).Throw<Exception>();
+        _sendFileStorageService.When(x => x.GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>())).Throw<Exception>();
+        _pushNotificationService.When(x => x.PushSyncSendCreateAsync(Arg.Any<Send>())).Throw<Exception>();
+        _pushNotificationService.When(x => x.PushSyncSendUpdateAsync(Arg.Any<Send>())).Throw<Exception>();
     }
 
     [Fact]

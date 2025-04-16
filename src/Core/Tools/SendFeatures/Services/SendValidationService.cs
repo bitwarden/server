@@ -96,7 +96,17 @@ public class SendValidationService : ISendValidationService
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
-            await ValidateUserCanSaveAsync_vNext(userId, send);
+            if (!userId.HasValue)
+            {
+                return;
+            }
+
+            var sendOptionsRequirement = await _policyRequirementQuery.GetAsync<SendOptionsPolicyRequirement>(userId.Value);
+            if (sendOptionsRequirement.DisableHideEmail && send.HideEmail.GetValueOrDefault())
+            {
+                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
+            }
+
             return;
         }
 
@@ -121,19 +131,7 @@ public class SendValidationService : ISendValidationService
             }
         }
     }
-    public async Task ValidateUserCanSaveAsync_vNext(Guid? userId, Send send)
-    {
-        if (!userId.HasValue)
-        {
-            return;
-        }
 
-        var sendOptionsRequirement = await _policyRequirementQuery.GetAsync<SendOptionsPolicyRequirement>(userId.Value);
-        if (sendOptionsRequirement.DisableHideEmail && send.HideEmail.GetValueOrDefault())
-        {
-            throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
-        }
-    }
     public async Task<long> StorageRemainingForSendAsync(Send send)
     {
         var storageBytesRemaining = 0L;
@@ -158,8 +156,8 @@ public class SendValidationService : ISendValidationService
             {
                 // Users that get access to file storage/premium from their organization get the default
                 // 1 GB max storage.
-                storageBytesRemaining = user.StorageBytesRemaining(
-                    _globalSettings.SelfHosted ? (short)10240 : (short)1);
+                short limit = _globalSettings.SelfHosted ? (short)10240 : (short)1;
+                storageBytesRemaining = user.StorageBytesRemaining(limit);
             }
         }
         else if (send.OrganizationId.HasValue)
