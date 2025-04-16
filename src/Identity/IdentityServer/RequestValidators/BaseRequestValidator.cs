@@ -352,12 +352,12 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         // Check if user belongs to any organization with an active SSO policy
-        var anySsoPoliciesApplicableToUser = FeatureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            ? (await PolicyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(user.Id))
+        var ssoRequired = FeatureService.IsEnabled(FeatureFlagKeys.PolicyRequirements) ?
+            (await PolicyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(user.Id))
                 .SsoRequired
             : await PolicyService.AnyPoliciesApplicableToUserAsync(
                 user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
-        if (anySsoPoliciesApplicableToUser)
+        if (ssoRequired)
         {
             return true;
         }
