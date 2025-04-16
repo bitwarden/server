@@ -48,9 +48,6 @@ public class RequireSsoPolicyRequirementFactory : BasePolicyRequirementFactory<R
             ? Array.Empty<OrganizationUserType>()
             : [OrganizationUserType.Owner, OrganizationUserType.Admin];
 
-    protected override IEnumerable<OrganizationUserStatusType> ExemptStatuses =>
-        Array.Empty<OrganizationUserStatusType>();
-
     public override RequireSsoPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
         var result = new RequireSsoPolicyRequirement(policyDetails);
