@@ -64,6 +64,16 @@ public class SlackEventHandlerTests
         return [config, config2];
     }
 
+    private List<OrganizationIntegrationConfigurationDetails> WrongConfiguration()
+    {
+        var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
+        config.Configuration = JsonSerializer.Serialize(new { });
+        config.IntegrationConfiguration = JsonSerializer.Serialize(new { });
+        config.Template = "Date: #Date#, Type: #Type#, UserId: #UserId#";
+
+        return [config];
+    }
+
     [Theory, BitAutoData]
     public async Task HandleEventAsync_NoConfigurations_DoesNothing(EventMessage eventMessage)
     {
@@ -105,6 +115,15 @@ public class SlackEventHandlerTests
                 $"Date: {eventMessage.Date}, Type: {eventMessage.Type}, UserId: {eventMessage.UserId}")),
             Arg.Is(AssertHelper.AssertPropertyEqual(_channelId2))
         );
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleEventAsync_WrongConfiguration_DoesNothing(EventMessage eventMessage)
+    {
+        var sutProvider = GetSutProvider(WrongConfiguration());
+
+        await sutProvider.Sut.HandleEventAsync(eventMessage);
+        sutProvider.GetDependency<ISlackService>().DidNotReceiveWithAnyArgs();
     }
 
     [Theory, BitAutoData]

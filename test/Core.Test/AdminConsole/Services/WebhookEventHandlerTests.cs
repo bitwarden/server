@@ -57,12 +57,12 @@ public class WebhookEventHandlerTests
             .Create();
     }
 
-    List<OrganizationIntegrationConfigurationDetails> NoConfigurations()
+    private static List<OrganizationIntegrationConfigurationDetails> NoConfigurations()
     {
         return [];
     }
 
-    List<OrganizationIntegrationConfigurationDetails> OneConfiguration()
+    private static List<OrganizationIntegrationConfigurationDetails> OneConfiguration()
     {
         var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
         config.Configuration = null;
@@ -72,7 +72,7 @@ public class WebhookEventHandlerTests
         return [config];
     }
 
-    List<OrganizationIntegrationConfigurationDetails> TwoConfigurations()
+    private static List<OrganizationIntegrationConfigurationDetails> TwoConfigurations()
     {
         var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
         config.Configuration = null;
@@ -84,6 +84,16 @@ public class WebhookEventHandlerTests
         config2.Template = _template;
 
         return [config, config2];
+    }
+
+    private static List<OrganizationIntegrationConfigurationDetails> WrongConfiguration()
+    {
+        var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
+        config.Configuration = null;
+        config.IntegrationConfiguration = JsonSerializer.Serialize(new { error = string.Empty });
+        config.Template = _template;
+
+        return [config];
     }
 
     [Theory, BitAutoData]
@@ -118,6 +128,19 @@ public class WebhookEventHandlerTests
         Assert.Equal(HttpMethod.Post, request.Method);
         Assert.Equal(_webhookUrl, request.RequestUri.ToString());
         AssertHelper.AssertPropertyEqual(expected, returned);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleEventAsync_WrongConfigurations_DoesNothing(EventMessage eventMessage)
+    {
+        var sutProvider = GetSutProvider(WrongConfiguration());
+
+        await sutProvider.Sut.HandleEventAsync(eventMessage);
+        sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient(
+            Arg.Is(AssertHelper.AssertPropertyEqual(WebhookEventHandler.HttpClientName))
+        );
+
+        Assert.Empty(_handler.CapturedRequests);
     }
 
     [Theory, BitAutoData]

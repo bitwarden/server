@@ -64,7 +64,7 @@ public class OrganizationIntegrationConfigurationController(
         var configuration = await integrationConfigurationRepository.GetByIdAsync(configurationId);
         if (configuration is null || configuration.OrganizationIntegrationId != integrationId)
         {
-            throw new BadRequestException();
+            throw new NotFoundException();
         }
 
         var newConfiguration = model.ToOrganizationIntegrationConfiguration(configuration);

@@ -65,6 +65,9 @@ public class OrganizationIntegrationsConfigurationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationRepository>()
             .GetByIdAsync(Arg.Any<Guid>())
             .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .ReturnsNull();
 
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.DeleteAsync(organizationId, Guid.Empty, Guid.Empty));
     }
@@ -462,6 +465,37 @@ public class OrganizationIntegrationsConfigurationControllerTests
         Assert.Equal(expected.Configuration, requestAction.Configuration);
         Assert.Equal(expected.EventType, requestAction.EventType);
         Assert.Equal(expected.Template, requestAction.Template);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_IntegrationConfigurationDoesNotExist_ThrowsNotFound(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        OrganizationIntegrationConfigurationRequestModel model)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegration.Type = IntegrationType.Webhook;
+        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        model.Configuration = JsonSerializer.Serialize(webhookConfig);
+        model.Template = "Template String";
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.UpdateAsync(
+            organizationId,
+            organizationIntegration.Id,
+            Guid.Empty,
+            model));
     }
 
     [Theory, BitAutoData]

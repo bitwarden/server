@@ -34,7 +34,7 @@ public class SlackServiceTests
     }
 
     [Fact]
-    public async Task GetChannelIdsAsync_Returns_Correct_ChannelIds()
+    public async Task GetChannelIdsAsync_ReturnsCorrectChannelIds()
     {
         var response = JsonSerializer.Serialize(
             new
@@ -62,7 +62,7 @@ public class SlackServiceTests
     }
 
     [Fact]
-    public async Task GetChannelIdsAsync_Handles_Pagination_Correctly()
+    public async Task GetChannelIdsAsync_WithPagination_ReturnsCorrectChannelIds()
     {
         var firstPageResponse = JsonSerializer.Serialize(
             new
@@ -99,7 +99,7 @@ public class SlackServiceTests
     }
 
     [Fact]
-    public async Task GetChannelIdsAsync_Handles_Api_Error_Gracefully()
+    public async Task GetChannelIdsAsync_ApiError_ReturnsEmptyResult()
     {
         var errorResponse = JsonSerializer.Serialize(
             new { ok = false, error = "rate_limited" }
@@ -118,7 +118,7 @@ public class SlackServiceTests
     }
 
     [Fact]
-    public async Task GetChannelIdsAsync_Returns_Empty_When_No_Channels_Found()
+    public async Task GetChannelIdsAsync_NoChannelsFound_ReturnsEmptyResult()
     {
         var emptyResponse = JsonSerializer.Serialize(
             new
@@ -140,7 +140,7 @@ public class SlackServiceTests
     }
 
     [Fact]
-    public async Task GetChannelIdAsync_Returns_Correct_ChannelId()
+    public async Task GetChannelIdAsync_ReturnsCorrectChannelId()
     {
         var sutProvider = GetSutProvider();
         var response = new
@@ -164,7 +164,7 @@ public class SlackServiceTests
     }
 
     [Fact]
-    public async Task GetDmChannelByEmailAsync_Returns_Correct_DmChannelId()
+    public async Task GetDmChannelByEmailAsync_ReturnsCorrectDmChannelId()
     {
         var sutProvider = GetSutProvider();
         var email = "user@example.com";
@@ -196,6 +196,58 @@ public class SlackServiceTests
         Assert.Equal(dmChannelId, result);
     }
 
+    [Fact]
+    public async Task GetDmChannelByEmailAsync_ApiErrorDmResponse_ReturnsEmptyString()
+    {
+        var sutProvider = GetSutProvider();
+        var email = "user@example.com";
+        var userId = "U12345";
+
+        var userResponse = new
+        {
+            ok = true,
+            user = new { id = userId }
+        };
+
+        var dmResponse = new
+        {
+            ok = false,
+            error = "An error occured"
+        };
+
+        _handler.When($"https://slack.com/api/users.lookupByEmail?email={email}")
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent(JsonSerializer.Serialize(userResponse)));
+
+        _handler.When("https://slack.com/api/conversations.open")
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent(JsonSerializer.Serialize(dmResponse)));
+
+        var result = await sutProvider.Sut.GetDmChannelByEmailAsync(_token, email);
+
+        Assert.Equal(string.Empty, result);
+    }
+
+    [Fact]
+    public async Task GetDmChannelByEmailAsync_ApiErrorUserResponse_ReturnsEmptyString()
+    {
+        var sutProvider = GetSutProvider();
+        var email = "user@example.com";
+
+        var userResponse = new
+        {
+            ok = false,
+            error = "An error occured"
+        };
+
+        _handler.When($"https://slack.com/api/users.lookupByEmail?email={email}")
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent(JsonSerializer.Serialize(userResponse)));
+
+        var result = await sutProvider.Sut.GetDmChannelByEmailAsync(_token, email);
+
+        Assert.Equal(string.Empty, result);
+    }
 
     [Fact]
     public void GetRedirectUrl_ReturnsCorrectUrl()

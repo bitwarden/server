@@ -21,7 +21,7 @@ public class SlackService(
 
     public async Task<string> GetChannelIdAsync(string token, string channelName)
     {
-        return (await GetChannelIdsAsync(token, new List<string> { channelName })).FirstOrDefault();
+        return (await GetChannelIdsAsync(token, [channelName])).FirstOrDefault();
     }
 
     public async Task<List<string>> GetChannelIdsAsync(string token, List<string> channelNames)
@@ -48,7 +48,7 @@ public class SlackService(
             var response = await _httpClient.SendAsync(request);
             var result = await response.Content.ReadFromJsonAsync<SlackChannelListResponse>();
 
-            if (result != null && result.Ok)
+            if (result is { Ok: true })
             {
                 matchingChannelIds.AddRange(result.Channels
                     .Where(channel => channelNames.Contains(channel.Name))
@@ -128,11 +128,6 @@ public class SlackService(
         var response = await _httpClient.SendAsync(request);
         var result = await response.Content.ReadFromJsonAsync<SlackUserResponse>();
 
-        if (result == null)
-        {
-            logger.LogError("Error retrieving Slack user ID: Unknown error");
-            return string.Empty;
-        }
         if (!result.Ok)
         {
             logger.LogError("Error retrieving Slack user ID: {Error}", result.Error);
@@ -144,6 +139,9 @@ public class SlackService(
 
     private async Task<string> OpenDmChannel(string token, string userId)
     {
+        if (string.IsNullOrEmpty(userId))
+            return string.Empty;
+
         var payload = JsonContent.Create(new { users = userId });
         var request = new HttpRequestMessage(HttpMethod.Post, "https://slack.com/api/conversations.open");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -151,11 +149,6 @@ public class SlackService(
         var response = await _httpClient.SendAsync(request);
         var result = await response.Content.ReadFromJsonAsync<SlackDmResponse>();
 
-        if (result == null)
-        {
-            logger.LogError("Error opening DM channel: Unknown error");
-            return string.Empty;
-        }
         if (!result.Ok)
         {
             logger.LogError("Error opening DM channel: {Error}", result.Error);

@@ -30,7 +30,7 @@ public class WebhookEventHandler(
         foreach (var configuration in configurations)
         {
             var config = configuration.MergedConfiguration.Deserialize<WebhookIntegrationConfigurationDetils>();
-            if (config is null)
+            if (config is null || string.IsNullOrEmpty(config.url))
             {
                 continue;
             }
