@@ -181,28 +181,28 @@ public class AccountsController : Controller
                     await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash,
                         model.EmailVerificationToken);
 
-                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                return ProcessRegistrationResult(identityResult, user);
             case RegisterFinishTokenType.OrganizationInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
                     model.OrgInviteToken, model.OrganizationUserId);
 
-                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                return ProcessRegistrationResult(identityResult, user);
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, model.MasterPasswordHash, model.OrgSponsoredFreeFamilyPlanToken);
 
-                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                return ProcessRegistrationResult(identityResult, user);
             case RegisterFinishTokenType.EmergencyAccessInvite:
                 Debug.Assert(model.AcceptEmergencyAccessId.HasValue);
                 identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(user, model.MasterPasswordHash,
                     model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
 
-                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                return ProcessRegistrationResult(identityResult, user);
             case RegisterFinishTokenType.ProviderInvite:
                 Debug.Assert(model.ProviderUserId.HasValue);
                 identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(user, model.MasterPasswordHash,
                     model.ProviderInviteToken, model.ProviderUserId.Value);
 
-                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                return ProcessRegistrationResult(identityResult, user);
             default:
                 throw new BadRequestException("Invalid registration finish request");
         }
