@@ -124,11 +124,20 @@ public class WebAuthnController : Controller
 
     private async Task ValidateRequireSsoPolicyDisabledOrNotApplicable(Guid userId)
     {
-        var requireSsoLogin = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            ? (await _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(userId)).CanUsePasskeyLogin
-            : await _policyService.AnyPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso);
+        var requireSsoLogin = await _policyService.AnyPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso);
 
         if (requireSsoLogin)
+        {
+            throw new BadRequestException("Passkeys cannot be created for your account. SSO login is required.");
+        }
+    }
+
+    private async Task ValidateIfUserCanUsePasskeyLogin(Guid userId)
+    {
+        var canUsePasskeyLogin = (await _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(userId))
+            .CanUsePasskeyLogin;
+
+        if (!canUsePasskeyLogin)
         {
             throw new BadRequestException("Passkeys cannot be created for your account. SSO login is required.");
         }
