@@ -114,6 +114,11 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// </summary>
     public bool UseRiskInsights { get; set; }
 
+    /// <summary>
+    /// If set to true, admins can initiate organization-issued sponsorships.
+    /// </summary>
+    public bool UseAdminSponsoredFamilies { get; set; }
+
     public void SetNewId()
     {
         if (Id == default(Guid))
