@@ -26,15 +26,6 @@ public class RequireSsoPolicyRequirement : IPolicyRequirement
     /// that has the Require SSO policy enabled.
     /// </remarks>
     public bool SsoRequired { get; init; }
-
-    public RequireSsoPolicyRequirement(IEnumerable<PolicyDetails> policyDetails)
-    {
-        CanUsePasskeyLogin = policyDetails.All(p =>
-            p.OrganizationUserStatus < OrganizationUserStatusType.Accepted);
-
-        SsoRequired = policyDetails.Any(p =>
-            p.OrganizationUserStatus >= OrganizationUserStatusType.Confirmed);
-    }
 }
 
 
@@ -56,7 +47,13 @@ public class RequireSsoPolicyRequirementFactory : BasePolicyRequirementFactory<R
 
     public override RequireSsoPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
-        var result = new RequireSsoPolicyRequirement(policyDetails);
+        var result = new RequireSsoPolicyRequirement
+        {
+            CanUsePasskeyLogin = policyDetails.All(p =>
+                p.OrganizationUserStatus < OrganizationUserStatusType.Accepted),
+            SsoRequired = policyDetails.Any(p =>
+                p.OrganizationUserStatus >= OrganizationUserStatusType.Confirmed)
+        };
 
         return result;
     }

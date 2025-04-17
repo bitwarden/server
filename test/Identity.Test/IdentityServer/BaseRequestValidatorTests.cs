@@ -299,7 +299,7 @@ public class BaseRequestValidatorTests
 
         context.ValidatedTokenRequest.GrantType = grantType;
         // Configure requirement to require SSO
-        var requirement = new RequireSsoPolicyRequirement([]) { SsoRequired = true };
+        var requirement = new RequireSsoPolicyRequirement { SsoRequired = true };
         _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(Arg.Any<Guid>()).Returns(requirement);
 
         // Act
@@ -333,7 +333,7 @@ public class BaseRequestValidatorTests
         context.ValidatedTokenRequest.ClientId = "web";
 
         // Configure requirement to not require SSO
-        var requirement = new RequireSsoPolicyRequirement([]) { SsoRequired = false };
+        var requirement = new RequireSsoPolicyRequirement { SsoRequired = false };
         _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(Arg.Any<Guid>()).Returns(requirement);
 
         _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
