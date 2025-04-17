@@ -46,7 +46,6 @@ public class ProviderBillingService(
     [FromKeyedServices(AutomaticTaxFactory.BusinessUse)] IAutomaticTaxStrategy automaticTaxStrategy)
     : IProviderBillingService
 {
-    [RequireFeature(FeatureFlagKeys.P15179_AddExistingOrgsFromProviderPortal)]
     public async Task AddExistingOrganization(
         Provider provider,
         Organization organization,
@@ -312,7 +311,6 @@ public class ProviderBillingService(
         return memoryStream.ToArray();
     }
 
-    [RequireFeature(FeatureFlagKeys.P15179_AddExistingOrgsFromProviderPortal)]
     public async Task<IEnumerable<AddableOrganization>> GetAddableOrganizations(
         Provider provider,
         Guid userId)
