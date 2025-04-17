@@ -1,9 +1,9 @@
 ﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Queries.Projects.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Utilities;
 
 namespace Bit.Commercial.Core.SecretsManager.Queries.Projects;
 
@@ -11,13 +11,16 @@ public class MaxProjectsQuery : IMaxProjectsQuery
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly IPricingClient _pricingClient;
 
     public MaxProjectsQuery(
         IOrganizationRepository organizationRepository,
-        IProjectRepository projectRepository)
+        IProjectRepository projectRepository,
+        IPricingClient pricingClient)
     {
         _organizationRepository = organizationRepository;
         _projectRepository = projectRepository;
+        _pricingClient = pricingClient;
     }
 
     public async Task<(short? max, bool? overMax)> GetByOrgIdAsync(Guid organizationId, int projectsToAdd)
@@ -28,8 +31,7 @@ public class MaxProjectsQuery : IMaxProjectsQuery
             throw new NotFoundException();
         }
 
-        // TODO: PRICING -> https://bitwarden.atlassian.net/browse/PM-17122
-        var plan = StaticStore.GetPlan(org.PlanType);
+        var plan = await _pricingClient.GetPlan(org.PlanType);
         if (plan?.SecretsManager == null)
         {
             throw new BadRequestException("Existing plan not found.");

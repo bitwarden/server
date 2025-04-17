@@ -91,6 +91,15 @@ public class OrganizationBillingService(
 
         var subscription = await subscriberService.GetSubscription(organization);
 
+        if (customer == null || subscription == null)
+        {
+            return OrganizationMetadata.Default with
+            {
+                IsEligibleForSelfHost = isEligibleForSelfHost,
+                IsManaged = isManaged
+            };
+        }
+
         var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
 
         var invoice = !string.IsNullOrEmpty(subscription.LatestInvoiceId)

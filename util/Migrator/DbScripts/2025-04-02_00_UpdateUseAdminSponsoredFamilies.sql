@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Organization_Update]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @Id UNIQUEIDENTIFIER,
     @Identifier NVARCHAR(50),
     @Name NVARCHAR(50),
@@ -124,3 +124,4 @@ BEGIN
     WHERE
         [Id] = @Id
 END
+GO 
