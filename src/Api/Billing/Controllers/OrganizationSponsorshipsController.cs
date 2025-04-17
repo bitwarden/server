@@ -84,10 +84,27 @@ public class OrganizationSponsorshipsController : Controller
             throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
         }
 
+        if (!_featureService.IsEnabled(Bit.Core.FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
+        {
+            if (model.SponsoringUserId.HasValue)
+            {
+                throw new NotFoundException();
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.Notes))
+            {
+                model.Notes = null;
+            }
+        }
+
+        var targetUser = model.SponsoringUserId ?? _currentContext.UserId!.Value;
         var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
             sponsoringOrg,
-            await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
-            model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
+            await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, targetUser),
+            model.PlanSponsorshipType,
+            model.SponsoredEmail,
+            model.FriendlyName,
+            model.Notes);
         await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
     }
 
