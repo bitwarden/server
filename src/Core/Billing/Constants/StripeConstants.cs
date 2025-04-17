@@ -46,6 +46,7 @@ public static class StripeConstants
 
     public static class MetadataKeys
     {
+        public const string InvoiceApproved = "invoice_approved";
         public const string OrganizationId = "organizationId";
         public const string ProviderId = "providerId";
         public const string UserId = "userId";

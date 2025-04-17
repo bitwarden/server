@@ -149,6 +149,7 @@ public static class FeatureFlagKeys
     public const string PM19147_AutomaticTaxImprovements = "pm-19147-automatic-tax-improvements";
     public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
     public const string PM18770_EnableOrganizationBusinessUnitConversion = "pm-18770-enable-organization-business-unit-conversion";
+    public const string PM199566_UpdateMSPToChargeAutomatically = "pm-199566-update-msp-to-charge-automatically";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -202,6 +203,7 @@ public static class FeatureFlagKeys
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string DesktopCipherForms = "pm-18520-desktop-cipher-forms";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
+    public const string EndUserNotifications = "pm-10609-end-user-notifications";
 
     public static List<string> GetAllKeys()
     {
