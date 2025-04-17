@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -11,7 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
-[Route("organizations/{organizationId:guid}/integrations/slack/")]
+[Route("organizations/{organizationId:guid}/integrations/slack")]
 [Authorize("Application")]
 public class SlackIntegrationController(
     ICurrentContext currentContext,
@@ -69,6 +70,8 @@ public class SlackIntegrationController(
             Type = IntegrationType.Slack,
             Configuration = JsonSerializer.Serialize(new SlackIntegration(token)),
         });
-        return Ok(new { id = integration.Id });
+        var location = $"/organizations/{organizationId}/integrations/{integration.Id}";
+
+        return Created(location, new OrganizationIntegrationResponseModel(integration));
     }
 }

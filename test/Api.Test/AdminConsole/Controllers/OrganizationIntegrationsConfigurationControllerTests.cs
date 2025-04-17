@@ -167,7 +167,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
             .Returns(organizationIntegrationConfiguration);
-        var requestAction = await sutProvider.Sut.PostAsync(organizationId, organizationIntegration.Id, model);
+        var requestAction = await sutProvider.Sut.CreateAsync(organizationId, organizationIntegration.Id, model);
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>());
@@ -204,7 +204,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
             .Returns(organizationIntegrationConfiguration);
-        var requestAction = await sutProvider.Sut.PostAsync(organizationId, organizationIntegration.Id, model);
+        var requestAction = await sutProvider.Sut.CreateAsync(organizationId, organizationIntegration.Id, model);
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>());
@@ -237,7 +237,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
             .Returns(organizationIntegrationConfiguration);
 
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.PostAsync(
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.CreateAsync(
             organizationId,
             organizationIntegration.Id,
             model));
@@ -265,7 +265,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
             .Returns(organizationIntegrationConfiguration);
 
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.PostAsync(
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.CreateAsync(
             organizationId,
             organizationIntegration.Id,
             model));
@@ -284,7 +284,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
             .GetByIdAsync(Arg.Any<Guid>())
             .ReturnsNull();
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.PostAsync(
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(
             organizationId,
             Guid.Empty,
             new OrganizationIntegrationConfigurationRequestModel()));
@@ -304,7 +304,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
             .GetByIdAsync(Arg.Any<Guid>())
             .Returns(organizationIntegration);
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.PostAsync(
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(
             organizationId,
             organizationIntegration.Id,
             new OrganizationIntegrationConfigurationRequestModel()));
@@ -334,7 +334,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
             .Returns(organizationIntegrationConfiguration);
 
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.PostAsync(
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.CreateAsync(
             organizationId,
             organizationIntegration.Id,
             model));
@@ -365,7 +365,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
             .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
             .Returns(organizationIntegrationConfiguration);
 
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.PostAsync(
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.CreateAsync(
             organizationId,
             organizationIntegration.Id,
             model));
@@ -379,7 +379,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
             .OrganizationOwner(organizationId)
             .Returns(false);
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.PostAsync(organizationId, Guid.Empty, new OrganizationIntegrationConfigurationRequestModel()));
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CreateAsync(organizationId, Guid.Empty, new OrganizationIntegrationConfigurationRequestModel()));
     }
 
     [Theory, BitAutoData]

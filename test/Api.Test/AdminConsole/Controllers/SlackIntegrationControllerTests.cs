@@ -34,7 +34,7 @@ public class SlackIntegrationControllerTests
 
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
             .CreateAsync(Arg.Any<OrganizationIntegration>());
-        Assert.IsType<OkObjectResult>(requestAction);
+        Assert.IsType<CreatedResult>(requestAction);
     }
 
     [Theory, BitAutoData]

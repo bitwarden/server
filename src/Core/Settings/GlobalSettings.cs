@@ -274,6 +274,7 @@ public class GlobalSettings : IGlobalSettings
 
     public class SlackSettings
     {
+        public virtual string ApiBaseUrl { get; set; } = "https://slack.com/api";
         public virtual string ClientId { get; set; }
         public virtual string ClientSecret { get; set; }
         public virtual string Scopes { get; set; }

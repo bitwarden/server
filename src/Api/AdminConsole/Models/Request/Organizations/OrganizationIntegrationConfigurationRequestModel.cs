@@ -8,7 +8,7 @@ using Bit.Core.Models.Data.Integrations;
 
 namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 
-public class OrganizationIntegrationConfigurationRequestModel : IValidatableObject
+public class OrganizationIntegrationConfigurationRequestModel
 {
     public string? Configuration { get; set; }
 
@@ -17,7 +17,7 @@ public class OrganizationIntegrationConfigurationRequestModel : IValidatableObje
 
     public string? Template { get; set; }
 
-    public bool isValidForType(IntegrationType integrationType)
+    public bool IsValidForType(IntegrationType integrationType)
     {
         switch (integrationType)
         {
@@ -51,11 +51,6 @@ public class OrganizationIntegrationConfigurationRequestModel : IValidatableObje
         currentConfiguration.Template = Template;
 
         return currentConfiguration;
-    }
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        return [];
     }
 
     private bool IsConfigurationValid<T>()

@@ -16,12 +16,12 @@ public class OrganizationIntegrationConfigurationController(
     IOrganizationIntegrationConfigurationRepository integrationConfigurationRepository) : Controller
 {
     [HttpPost("")]
-    public async Task<OrganizationIntegrationConfigurationResponseModel> PostAsync(
+    public async Task<OrganizationIntegrationConfigurationResponseModel> CreateAsync(
         Guid organizationId,
         Guid integrationId,
         [FromBody] OrganizationIntegrationConfigurationRequestModel model)
     {
-        if (!await currentContext.OrganizationOwner(organizationId))
+        if (!await HasPermission(organizationId))
         {
             throw new NotFoundException();
         }
@@ -30,7 +30,7 @@ public class OrganizationIntegrationConfigurationController(
         {
             throw new NotFoundException();
         }
-        if (!model.isValidForType(integration.Type))
+        if (!model.IsValidForType(integration.Type))
         {
             throw new BadRequestException($"Invalid Configuration and/or Template for integration type {integration.Type}");
         }
@@ -47,7 +47,7 @@ public class OrganizationIntegrationConfigurationController(
         Guid configurationId,
         [FromBody] OrganizationIntegrationConfigurationRequestModel model)
     {
-        if (!await currentContext.OrganizationOwner(organizationId))
+        if (!await HasPermission(organizationId))
         {
             throw new NotFoundException();
         }
@@ -56,7 +56,7 @@ public class OrganizationIntegrationConfigurationController(
         {
             throw new NotFoundException();
         }
-        if (!model.isValidForType(integration.Type))
+        if (!model.IsValidForType(integration.Type))
         {
             throw new BadRequestException($"Invalid Configuration and/or Template for integration type {integration.Type}");
         }
@@ -77,7 +77,7 @@ public class OrganizationIntegrationConfigurationController(
     [HttpPost("{configurationId:guid}/delete")]
     public async Task DeleteAsync(Guid organizationId, Guid integrationId, Guid configurationId)
     {
-        if (!await currentContext.OrganizationOwner(organizationId))
+        if (!await HasPermission(organizationId))
         {
             throw new NotFoundException();
         }
@@ -94,5 +94,10 @@ public class OrganizationIntegrationConfigurationController(
         }
 
         await integrationConfigurationRepository.DeleteAsync(configuration);
+    }
+
+    private async Task<bool> HasPermission(Guid organizationId)
+    {
+        return await currentContext.OrganizationOwner(organizationId);
     }
 }

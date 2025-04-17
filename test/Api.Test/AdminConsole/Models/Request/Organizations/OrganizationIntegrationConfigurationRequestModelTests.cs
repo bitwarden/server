@@ -17,7 +17,7 @@ public class OrganizationIntegrationConfigurationRequestModelTests
             Template = "template"
         };
 
-        Assert.False(model.isValidForType(IntegrationType.CloudBillingSync));
+        Assert.False(model.IsValidForType(IntegrationType.CloudBillingSync));
     }
 
     [Theory]
@@ -32,7 +32,7 @@ public class OrganizationIntegrationConfigurationRequestModelTests
             Template = "template"
         };
 
-        var result = model.isValidForType(IntegrationType.Slack);
+        var result = model.IsValidForType(IntegrationType.Slack);
 
         Assert.False(result);
     }
@@ -50,7 +50,7 @@ public class OrganizationIntegrationConfigurationRequestModelTests
             Template = template
         };
 
-        Assert.False(model.isValidForType(IntegrationType.Webhook));
+        Assert.False(model.IsValidForType(IntegrationType.Webhook));
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class OrganizationIntegrationConfigurationRequestModelTests
             Template = "template"
         };
 
-        Assert.False(model.isValidForType(IntegrationType.Webhook));
+        Assert.False(model.IsValidForType(IntegrationType.Webhook));
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class OrganizationIntegrationConfigurationRequestModelTests
             Template = "template"
         };
 
-        Assert.False(model.isValidForType(IntegrationType.Scim));
+        Assert.False(model.IsValidForType(IntegrationType.Scim));
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public class OrganizationIntegrationConfigurationRequestModelTests
             Template = "template"
         };
 
-        Assert.True(model.isValidForType(IntegrationType.Slack));
+        Assert.True(model.IsValidForType(IntegrationType.Slack));
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class OrganizationIntegrationConfigurationRequestModelTests
             Template = "template"
         };
 
-        Assert.True(model.isValidForType(IntegrationType.Webhook));
+        Assert.True(model.IsValidForType(IntegrationType.Webhook));
     }
 
     [Fact]
@@ -115,6 +115,6 @@ public class OrganizationIntegrationConfigurationRequestModelTests
 
         var unknownType = (IntegrationType)999;
 
-        Assert.False(model.isValidForType(unknownType));
+        Assert.False(model.IsValidForType(unknownType));
     }
 }

@@ -16,6 +16,7 @@ public class SlackService(
     private readonly string _clientId = globalSettings.Slack.ClientId;
     private readonly string _clientSecret = globalSettings.Slack.ClientSecret;
     private readonly string _scopes = globalSettings.Slack.Scopes;
+    private readonly string _slackApiBaseUrl = globalSettings.Slack.ApiBaseUrl;
 
     public const string HttpClientName = "SlackServiceHttpClient";
 
@@ -27,7 +28,7 @@ public class SlackService(
     public async Task<List<string>> GetChannelIdsAsync(string token, List<string> channelNames)
     {
         var matchingChannelIds = new List<string>();
-        var baseUrl = "https://slack.com/api/conversations.list";
+        var baseUrl = $"{_slackApiBaseUrl}/conversations.list";
         var nextCursor = string.Empty;
 
         do
@@ -57,6 +58,7 @@ public class SlackService(
             }
             else
             {
+                logger.LogError("Error getting Channel Ids: {Error}", result.Error);
                 nextCursor = string.Empty;
             }
 
@@ -78,7 +80,7 @@ public class SlackService(
 
     public async Task<string> ObtainTokenViaOAuth(string code, string redirectUrl)
     {
-        var tokenResponse = await _httpClient.PostAsync("https://slack.com/api/oauth.v2.access",
+        var tokenResponse = await _httpClient.PostAsync($"{_slackApiBaseUrl}/oauth.v2.access",
             new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string, string>("client_id", _clientId),
@@ -114,7 +116,7 @@ public class SlackService(
     public async Task SendSlackMessageByChannelIdAsync(string token, string message, string channelId)
     {
         var payload = JsonContent.Create(new { channel = channelId, text = message });
-        var request = new HttpRequestMessage(HttpMethod.Post, "https://slack.com/api/chat.postMessage");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{_slackApiBaseUrl}/chat.postMessage");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = payload;
 
@@ -123,7 +125,7 @@ public class SlackService(
 
     private async Task<string> GetUserIdByEmailAsync(string token, string email)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, $"https://slack.com/api/users.lookupByEmail?email={email}");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{_slackApiBaseUrl}/users.lookupByEmail?email={email}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await _httpClient.SendAsync(request);
         var result = await response.Content.ReadFromJsonAsync<SlackUserResponse>();
@@ -143,7 +145,7 @@ public class SlackService(
             return string.Empty;
 
         var payload = JsonContent.Create(new { users = userId });
-        var request = new HttpRequestMessage(HttpMethod.Post, "https://slack.com/api/conversations.open");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{_slackApiBaseUrl}/conversations.open");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = payload;
         var response = await _httpClient.SendAsync(request);

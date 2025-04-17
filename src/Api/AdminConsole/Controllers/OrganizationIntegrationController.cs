@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
-[Route("organizations/{organizationId:guid}/integrations/")]
+[Route("organizations/{organizationId:guid}/integrations")]
 [Authorize("Application")]
 public class OrganizationIntegrationController(
     ICurrentContext currentContext,
@@ -25,6 +25,24 @@ public class OrganizationIntegrationController(
         }
 
         var integration = await integrationRepository.CreateAsync(model.ToOrganizationIntegration(organizationId));
+        return new OrganizationIntegrationResponseModel(integration);
+    }
+
+    [HttpPut("{integrationId:guid}")]
+    public async Task<OrganizationIntegrationResponseModel> UpdateAsync(Guid organizationId, Guid integrationId, [FromBody] OrganizationIntegrationRequestModel model)
+    {
+        if (!await HasPermission(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var integration = await integrationRepository.GetByIdAsync(integrationId);
+        if (integration is null || integration.OrganizationId != organizationId)
+        {
+            throw new NotFoundException();
+        }
+
+        await integrationRepository.ReplaceAsync(model.ToOrganizationIntegration(integration));
         return new OrganizationIntegrationResponseModel(integration);
     }
 
@@ -44,24 +62,6 @@ public class OrganizationIntegrationController(
         }
 
         await integrationRepository.DeleteAsync(integration);
-    }
-
-    [HttpPut("{integrationId:guid}")]
-    public async Task<OrganizationIntegrationResponseModel> UpdateAsync(Guid organizationId, Guid integrationId, [FromBody] OrganizationIntegrationRequestModel model)
-    {
-        if (!await HasPermission(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var integration = await integrationRepository.GetByIdAsync(integrationId);
-        if (integration is null || integration.OrganizationId != organizationId)
-        {
-            throw new NotFoundException();
-        }
-
-        await integrationRepository.ReplaceAsync(model.ToOrganizationIntegration(integration));
-        return new OrganizationIntegrationResponseModel(integration);
     }
 
     private async Task<bool> HasPermission(Guid organizationId)

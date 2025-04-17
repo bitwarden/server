@@ -28,8 +28,12 @@ public class SlackServiceTests
         var clientFactory = Substitute.For<IHttpClientFactory>();
         clientFactory.CreateClient(SlackService.HttpClientName).Returns(_httpClient);
 
+        var globalSettings = Substitute.For<GlobalSettings>();
+        globalSettings.Slack.ApiBaseUrl.Returns("https://slack.com/api");
+
         return new SutProvider<SlackService>()
             .SetDependency(clientFactory)
+            .SetDependency(globalSettings)
             .Create();
     }
 
