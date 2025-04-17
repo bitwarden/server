@@ -27,13 +27,15 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
     private readonly IDeviceRepository _deviceRepository;
     private readonly IGlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly TimeProvider _timeProvider;
 
     public RelayPushNotificationService(
         IHttpClientFactory httpFactory,
         IDeviceRepository deviceRepository,
         GlobalSettings globalSettings,
         IHttpContextAccessor httpContextAccessor,
-        ILogger<RelayPushNotificationService> logger)
+        ILogger<RelayPushNotificationService> logger,
+        TimeProvider timeProvider)
         : base(
             httpFactory,
             globalSettings.PushRelayBaseUri,
@@ -46,6 +48,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         _deviceRepository = deviceRepository;
         _globalSettings = globalSettings;
         _httpContextAccessor = httpContextAccessor;
+        _timeProvider = timeProvider;
     }
 
     public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
@@ -147,7 +150,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
 
     private async Task PushUserAsync(Guid userId, PushType type, bool excludeCurrentContext = false)
     {
-        var message = new UserPushNotification { UserId = userId, Date = DateTime.UtcNow };
+        var message = new UserPushNotification { UserId = userId, Date = _timeProvider.GetUtcNow().UtcDateTime };
 
         await SendPayloadToUserAsync(userId, type, message, excludeCurrentContext);
     }
@@ -210,6 +213,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
+            TaskId = notification.TaskId,
             Title = notification.Title,
             Body = notification.Body,
             CreationDate = notification.CreationDate,
@@ -247,6 +251,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
+            TaskId = notification.TaskId,
             Title = notification.Title,
             Body = notification.Body,
             CreationDate = notification.CreationDate,
