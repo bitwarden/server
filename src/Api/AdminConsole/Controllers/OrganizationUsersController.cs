@@ -602,7 +602,7 @@ public class OrganizationUsersController : Controller
 
         }
 
-        return result.MapToActionResultWithSingleErrorMessage();
+        return result.MapToAction();
     }
 
     [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]
