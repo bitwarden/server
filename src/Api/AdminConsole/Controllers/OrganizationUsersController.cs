@@ -594,7 +594,7 @@ public class OrganizationUsersController : Controller
             return NotFound();
         }
 
-        var result = await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
+        var result = await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Value);
 
         if (result is Success<DeleteUserResponse>)
         {
@@ -626,7 +626,7 @@ public class OrganizationUsersController : Controller
         return MapToOrganizationUserBulkResponseModel(result);
     }
 
-    private static ListResponseModel<OrganizationUserBulkResponseModel> MapToOrganizationUserBulkResponseModel(Partial<Core.Models.Data.Organizations.DeleteUserResponse> result)
+    private static ListResponseModel<OrganizationUserBulkResponseModel> MapToOrganizationUserBulkResponseModel(Partial<DeleteUserResponse> result)
     {
         var failures = result.Failures.Select(failure => new OrganizationUserBulkResponseModel(failure.ErroredValue.OrganizationUserId, failure.Message));
         var successes = result.Successes.Select(success => new OrganizationUserBulkResponseModel(success.OrganizationUserId, string.Empty));
