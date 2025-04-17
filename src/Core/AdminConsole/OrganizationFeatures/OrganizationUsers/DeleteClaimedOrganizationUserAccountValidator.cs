@@ -27,7 +27,7 @@ public class DeleteClaimedOrganizationUserAccountValidator(
                 EnsureUserBelongsToOrganization,
                 EnsureUserStatusIsNotInvited,
                 PreventSelfDeletion,
-                EnsureUserIsManagedByOrganization
+                EnsureUserIsClaimedByOrganization
             };
 
             var asyncValidators = new[]
@@ -95,9 +95,9 @@ public class DeleteClaimedOrganizationUserAccountValidator(
         return new Valid<DeleteUserValidationRequest>();
     }
 
-    private static ValidationResult<DeleteUserValidationRequest> EnsureUserIsManagedByOrganization(DeleteUserValidationRequest request)
+    private static ValidationResult<DeleteUserValidationRequest> EnsureUserIsClaimedByOrganization(DeleteUserValidationRequest request)
     {
-        if (request.IsClaimed == true)
+        if (request.IsClaimed)
         {
             return new Valid<DeleteUserValidationRequest>();
         }
@@ -116,7 +116,7 @@ public class DeleteClaimedOrganizationUserAccountValidator(
 
     private static ValidationResult<DeleteUserValidationRequest> PreventSelfDeletion(DeleteUserValidationRequest request)
     {
-        if (request.OrganizationUser.UserId == request.DeletingUserId)
+        if (request.OrganizationUser!.UserId == request.DeletingUserId)
         {
             return new Invalid<DeleteUserValidationRequest>(new BadRequestError<DeleteUserValidationRequest>("You cannot delete yourself.", request));
         }
@@ -126,7 +126,7 @@ public class DeleteClaimedOrganizationUserAccountValidator(
 
     private async Task<ValidationResult<DeleteUserValidationRequest>> EnsureOnlyOwnersCanDeleteOwnersAsync(DeleteUserValidationRequest request)
     {
-        if (request.OrganizationUser.Type != OrganizationUserType.Owner)
+        if (request.OrganizationUser!.Type != OrganizationUserType.Owner)
         {
             return new Valid<DeleteUserValidationRequest>(request);
         }
@@ -162,7 +162,7 @@ public class DeleteClaimedOrganizationUserAccountValidator(
 
     private async Task<ValidationResult<DeleteUserValidationRequest>> EnsureCustomUsersCannotDeleteAdminsAsync(DeleteUserValidationRequest request)
     {
-        if (request.OrganizationUser.Type == OrganizationUserType.Admin && await currentContext.OrganizationCustom(request.OrganizationId))
+        if (request.OrganizationUser!.Type == OrganizationUserType.Admin && await currentContext.OrganizationCustom(request.OrganizationId))
         {
             return new Invalid<DeleteUserValidationRequest>(new BadRequestError<DeleteUserValidationRequest>("Custom users can not delete admins.", request));
         }
