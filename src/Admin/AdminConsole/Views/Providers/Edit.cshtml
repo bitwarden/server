@@ -136,6 +136,17 @@
                 </div>
             </div>
         </div>
+        @if (FeatureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) && Model.Provider.Type == ProviderType.Msp && Model.Provider.IsBillable())
+        {
+            <div class="row">
+                <div class="col-sm">
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" asp-for="PayByInvoice">
+                        <label class="form-check-label" asp-for="PayByInvoice"></label>
+                    </div>
+                </div>
+            </div>
+        }
     }
 </form>
 @await Html.PartialAsync("Organizations", Model)
