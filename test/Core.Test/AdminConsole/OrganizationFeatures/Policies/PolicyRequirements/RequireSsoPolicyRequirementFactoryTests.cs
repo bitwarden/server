@@ -22,7 +22,7 @@ public class RequireSsoPolicyRequirementFactoryTests
     [Theory]
     [BitAutoData(OrganizationUserStatusType.Accepted)]
     [BitAutoData(OrganizationUserStatusType.Confirmed)]
-    public void CanUsePasskeyLogin_WithOrganizationMembership_ReturnsFalse(
+    public void CanUsePasskeyLogin_WithoutExemptStatus_ReturnsFalse(
         OrganizationUserStatusType userStatus,
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
@@ -41,7 +41,7 @@ public class RequireSsoPolicyRequirementFactoryTests
     [Theory]
     [BitAutoData(OrganizationUserStatusType.Revoked)]
     [BitAutoData(OrganizationUserStatusType.Invited)]
-    public void CanUsePasskeyLogin_WithoutOrganizationMembership_ReturnsTrue(
+    public void CanUsePasskeyLogin_WithExemptStatus_ReturnsTrue(
         OrganizationUserStatusType userStatus,
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
@@ -70,7 +70,7 @@ public class RequireSsoPolicyRequirementFactoryTests
     [BitAutoData(OrganizationUserStatusType.Revoked)]
     [BitAutoData(OrganizationUserStatusType.Invited)]
     [BitAutoData(OrganizationUserStatusType.Accepted)]
-    public void SsoRequired_WithoutConfirmedOrganizationMembership_ReturnsFalse(
+    public void SsoRequired_WithoutExemptStatus_ReturnsFalse(
         OrganizationUserStatusType userStatus,
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
@@ -87,7 +87,7 @@ public class RequireSsoPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void SsoRequired_WithConfirmedOrganizationMembership_ReturnsTrue(
+    public void SsoRequired_WithExemptStatus_ReturnsTrue(
         SutProvider<RequireSsoPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create(
