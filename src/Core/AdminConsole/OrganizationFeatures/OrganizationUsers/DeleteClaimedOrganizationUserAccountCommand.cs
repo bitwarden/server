@@ -59,26 +59,28 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
 
     public async Task<CommandResult<DeleteUserResponse>> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
     {
-        var result = await InternalDeleteManyUsersAsync(organizationId, [organizationUserId], deletingUserId);
+        var result = await DeleteManyUsersAsync(organizationId, [organizationUserId], deletingUserId);
 
-        var error = result.InvalidResults.FirstOrDefault()?.Errors.FirstOrDefault();
-
-        if (error != null)
+        if (result.Successes.Any())
         {
-            return error.ToFailure<DeleteUserValidationRequest, DeleteUserResponse>();
+            return new Success<DeleteUserResponse>(result.Successes.First());
         }
 
-        var valid = result.ValidResults.First();
-
-        return new Success<DeleteUserResponse>(new DeleteUserResponse
-        {
-            OrganizationUserId = valid!.Value.OrganizationUserId
-        });
+        return new Failure<DeleteUserResponse>(result.Failures.First());
     }
 
     public async Task<Partial<DeleteUserResponse>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid deletingUserId)
     {
-        var result = await InternalDeleteManyUsersAsync(organizationId, orgUserIds, deletingUserId);
+        var orgUsers = await _organizationUserRepository.GetManyAsync(orgUserIds);
+        var users = await GetUsersAsync(orgUsers);
+        var claimedStatuses = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, orgUserIds);
+
+        var requests = CreateRequests(organizationId, deletingUserId, orgUserIds, orgUsers, users, claimedStatuses);
+        var result = await _deleteClaimedOrganizationUserAccountValidator.ValidateAsync(requests);
+
+        await CancelPremiumsAsync(result.ValidResults);
+        await HandleUserDeletionsAsync(result.ValidResults);
+        await LogDeletedOrganizationUsersAsync(result.ValidResults);
 
         var successes = result.ValidResults.Select(valid => new DeleteUserResponse { OrganizationUserId = valid.Value.OrganizationUser!.Id });
         var errors = result.InvalidResults
@@ -86,22 +88,6 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
             .Select(error => error.ToError(new DeleteUserResponse() { OrganizationUserId = error.ErroredValue.OrganizationUserId }));
 
         return new Partial<DeleteUserResponse>(successes, errors);
-    }
-
-    private async Task<PartialValidationResult<DeleteUserValidationRequest>> InternalDeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid deletingUserId)
-    {
-        var orgUsers = await _organizationUserRepository.GetManyAsync(orgUserIds);
-        var users = await GetUsersAsync(orgUsers);
-        var claimedStatuses = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, orgUserIds);
-
-        var requests = CreateRequests(organizationId, deletingUserId, orgUserIds, orgUsers, users, claimedStatuses);
-        var results = await _deleteClaimedOrganizationUserAccountValidator.ValidateAsync(requests);
-
-        await CancelPremiumsAsync(results.ValidResults);
-        await HandleUserDeletionsAsync(results.ValidResults);
-        await LogDeletedOrganizationUsersAsync(results.ValidResults);
-
-        return results;
     }
 
     private List<DeleteUserValidationRequest> CreateRequests(

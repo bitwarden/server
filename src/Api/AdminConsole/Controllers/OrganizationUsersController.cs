@@ -588,10 +588,10 @@ public class OrganizationUsersController : Controller
             return NotFound();
         }
 
-        var currentUser = await _userService.GetUserByPrincipalAsync(User);
+        var currentUser = _userService.GetProperUserId(User); ;
         if (currentUser == null)
         {
-            return Unauthorized();
+            return NotFound();
         }
 
         var result = await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
