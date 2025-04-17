@@ -349,7 +349,7 @@ public class InviteOrganizationUserCommandTests
         Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
 
         await sutProvider.GetDependency<IPaymentService>()
-            .AdjustSeatsAsync(organization, inviteOrganization.Plan, passwordManagerUpdate.SeatsRequiredToAdd);
+            .AdjustSeatsAsync(organization, inviteOrganization.Plan, passwordManagerUpdate.UpdatedSeatTotal!.Value);
 
         await orgRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(x => x.Seats == passwordManagerUpdate.UpdatedSeatTotal));
 
