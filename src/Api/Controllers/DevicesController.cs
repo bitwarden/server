@@ -128,6 +128,7 @@ public class DevicesController : Controller
     }
 
     [HttpPost("{identifier}/retrieve-keys")]
+    [Obsolete("This endpoint is deprecated. The keys are on the regular device GET endpoints now.")]
     public async Task<ProtectedDeviceResponseModel> GetDeviceKeys(string identifier)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
