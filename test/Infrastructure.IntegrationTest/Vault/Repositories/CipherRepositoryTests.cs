@@ -15,7 +15,7 @@ namespace Bit.Infrastructure.IntegrationTest.Repositories;
 
 public class CipherRepositoryTests
 {
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task DeleteAsync_UpdatesUserRevisionDate(
         IUserRepository userRepository,
         ICipherRepository cipherRepository)
@@ -45,7 +45,7 @@ public class CipherRepositoryTests
         Assert.NotEqual(updatedUser.AccountRevisionDate, user.AccountRevisionDate);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task CreateAsync_UpdateWithCollections_Works(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -86,7 +86,7 @@ public class CipherRepositoryTests
             OrganizationId = organization.Id
         });
 
-        await Task.Delay(100);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
 
         await collectionRepository.UpdateUsersAsync(collection.Id, new[]
         {
@@ -99,7 +99,7 @@ public class CipherRepositoryTests
             },
         });
 
-        await Task.Delay(100);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
 
         await cipherRepository.CreateAsync(new CipherDetails
         {
@@ -121,7 +121,7 @@ public class CipherRepositoryTests
         Assert.NotEmpty(collectionCiphers);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task ReplaceAsync_SuccessfullyMovesCipherToOrganization(IUserRepository userRepository,
         ICipherRepository cipherRepository,
         IOrganizationRepository organizationRepository,
@@ -200,7 +200,7 @@ public class CipherRepositoryTests
         Assert.Equal(folder.Id, userProperty.Value.GetGuid());
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetCipherPermissionsForOrganizationAsync_Works(
         ICipherRepository cipherRepository,
         IUserRepository userRepository,
@@ -434,7 +434,7 @@ public class CipherRepositoryTests
         Assert.False(unassignedCipherPermission.ViewPassword);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetCipherPermissionsForOrganizationAsync_ManageProperty_RespectsCollectionUserRules(
         ICipherRepository cipherRepository,
         IUserRepository userRepository,
@@ -465,7 +465,7 @@ public class CipherRepositoryTests
         Assert.False(nonManagePermission.Manage, "Collection with Manage=false should not grant Manage permission");
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetCipherPermissionsForOrganizationAsync_ManageProperty_RespectsCollectionGroupRules(
         ICipherRepository cipherRepository,
         IUserRepository userRepository,
@@ -499,7 +499,7 @@ public class CipherRepositoryTests
         Assert.False(nonManagePermission.Manage, "Collection with Group Manage=false should not grant Manage permission");
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetManyByUserIdAsync_ManageProperty_RespectsCollectionAndOwnershipRules(
         ICipherRepository cipherRepository,
         IUserRepository userRepository,
@@ -536,7 +536,7 @@ public class CipherRepositoryTests
         Assert.True(personalPermission.Manage, "Personal ciphers should always have Manage permission");
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetByIdAsync_ManageProperty_RespectsCollectionAndOwnershipRules(
         ICipherRepository cipherRepository,
         IUserRepository userRepository,
@@ -705,7 +705,7 @@ public class CipherRepositoryTests
         });
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetUserSecurityTasksByCipherIdsAsync_Works(
         ICipherRepository cipherRepository,
         IUserRepository userRepository,
@@ -884,7 +884,7 @@ public class CipherRepositoryTests
         Assert.Contains(user2TaskCiphers, t => t.CipherId == manageCipher2.Id && t.TaskId == securityTasks[1].Id);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task UpdateCiphersAsync_Works(ICipherRepository cipherRepository, IUserRepository userRepository)
     {
         var user = await userRepository.CreateAsync(new User

@@ -14,7 +14,7 @@ public class CollectionRepositoryTests
     /// <summary>
     /// Test to ensure that access relationships are retrieved when requested
     /// </summary>
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetByIdWithPermissionsAsync_WithRelationships_Success(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
@@ -80,7 +80,7 @@ public class CollectionRepositoryTests
     /// Test to ensure that a user's explicitly assigned permissions replaces any group permissions
     /// that user may belong to
     /// </summary>
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetByIdWithPermissionsAsync_UserOverrideGroup_Success(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
@@ -149,7 +149,7 @@ public class CollectionRepositoryTests
     /// Test to ensure that the returned permissions are the most permissive combination of group permissions when
     /// multiple groups are assigned to the same collection with different permissions
     /// </summary>
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetByIdWithPermissionsAsync_CombineGroupPermissions_Success(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
@@ -225,7 +225,7 @@ public class CollectionRepositoryTests
     /// <summary>
     /// Test to ensure the basic usage works as expected
     /// </summary>
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetManyByOrganizationIdWithPermissionsAsync_Success(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
@@ -338,7 +338,7 @@ public class CollectionRepositoryTests
     /// <summary>
     /// Test to ensure collections assigned to multiple groups do not duplicate in the results
     /// </summary>
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetManyByOrganizationIdWithPermissionsAsync_GroupBy_Success(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
@@ -464,7 +464,7 @@ public class CollectionRepositoryTests
         });
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task ReplaceAsync_Works(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,

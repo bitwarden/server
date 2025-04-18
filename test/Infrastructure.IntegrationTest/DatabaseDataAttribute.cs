@@ -113,7 +113,7 @@ public class DatabaseDataAttribute : DataAttribute
         {
             theories.Add(new TheoryDataRow
             {
-                // TestDisplayName = $"{testMethod.Name}({unconfiguredDatabase})",
+                TestDisplayName = $"{testMethod.Name}({unconfiguredDatabase})",
                 Skip = "Unconfigured",
                 Traits = new Dictionary<string, HashSet<string>>
                 {

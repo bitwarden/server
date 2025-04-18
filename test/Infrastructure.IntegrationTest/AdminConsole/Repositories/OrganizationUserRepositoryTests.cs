@@ -12,7 +12,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class OrganizationUserRepositoryTests
 {
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task DeleteAsync_Works(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository)
@@ -46,7 +46,7 @@ public class OrganizationUserRepositoryTests
         Assert.NotEqual(newUser.AccountRevisionDate, user.AccountRevisionDate);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task DeleteManyAsync_Works(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository)
@@ -103,7 +103,7 @@ public class OrganizationUserRepositoryTests
         Assert.NotEqual(updatedUser2.AccountRevisionDate, user2.AccountRevisionDate);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetManyAccountRecoveryDetailsByOrganizationUserAsync_Works(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository)
@@ -184,7 +184,7 @@ public class OrganizationUserRepositoryTests
             r.EncryptedPrivateKey == "privatekey");
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetManyDetailsByUserAsync_Works(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository)
@@ -264,7 +264,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(organization.UseAdminSponsoredFamilies, result.UseAdminSponsoredFamilies);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetManyByOrganizationWithClaimedDomainsAsync_WithVerifiedDomain_WithOneMatchingEmailDomain_ReturnsSingle(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -360,7 +360,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(orgUser1.Id, responseModel.Single().Id);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task CreateManyAsync_NoId_Works(IOrganizationRepository organizationRepository,
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository)
@@ -394,7 +394,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(createdOrgUserIds.ToHashSet(), readOrgUserIds.ToHashSet());
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task CreateManyAsync_WithId_Works(IOrganizationRepository organizationRepository,
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository)
@@ -429,7 +429,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(createdOrgUserIds.ToHashSet(), readOrgUserIds.ToHashSet());
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task CreateManyAsync_WithCollectionAndGroup_SaveSuccessfully(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,

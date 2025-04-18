@@ -8,7 +8,7 @@ namespace Bit.Infrastructure.IntegrationTest.Auth.Repositories;
 
 public class EmergencyAccessRepositoriesTests
 {
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task DeleteAsync_UpdatesRevisionDate(IUserRepository userRepository,
       IEmergencyAccessRepository emergencyAccessRepository)
     {

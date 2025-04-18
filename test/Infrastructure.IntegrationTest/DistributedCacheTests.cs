@@ -7,7 +7,7 @@ namespace Bit.Infrastructure.IntegrationTest;
 
 public class DistributedCacheTests
 {
-    [DatabaseTheory, DatabaseData(UseFakeTimeProvider = true)]
+    [Theory, DatabaseData(UseFakeTimeProvider = true)]
     public async Task Simple_NotExpiredItem_StartsScan(IDistributedCache cache, TimeProvider timeProvider)
     {
         if (cache is not EntityFrameworkCache efCache)
@@ -42,7 +42,7 @@ public class DistributedCacheTests
         Assert.Null(secondValue);
     }
 
-    [DatabaseTheory, DatabaseData(UseFakeTimeProvider = true)]
+    [Theory, DatabaseData(UseFakeTimeProvider = true)]
     public async Task ParallelReadsAndWrites_Work(IDistributedCache cache, TimeProvider timeProvider)
     {
         var fakeTimeProvider = (FakeTimeProvider)timeProvider;
@@ -62,10 +62,10 @@ public class DistributedCacheTests
         });
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task MultipleWritesOnSameKey_ShouldNotThrow(IDistributedCache cache)
     {
-        await cache.SetAsync("test-duplicate", "some-value"u8.ToArray());
-        await cache.SetAsync("test-duplicate", "some-value"u8.ToArray());
+        await cache.SetAsync("test-duplicate", "some-value"u8.ToArray(), TestContext.Current.CancellationToken);
+        await cache.SetAsync("test-duplicate", "some-value"u8.ToArray(), TestContext.Current.CancellationToken);
     }
 }

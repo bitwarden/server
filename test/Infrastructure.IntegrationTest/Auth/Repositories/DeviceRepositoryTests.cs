@@ -9,7 +9,7 @@ namespace Bit.Infrastructure.IntegrationTest.Auth.Repositories;
 
 public class DeviceRepositoryTests
 {
-    [DatabaseTheory]
+    [Theory]
     [DatabaseData]
     public async Task GetManyByUserIdWithDeviceAuth_Works_ReturnsExpectedResults(
         IDeviceRepository sutRepository,
@@ -73,7 +73,7 @@ public class DeviceRepositoryTests
         Assert.Equal(response.First().AuthRequestId, freshAuthRequest.Id);
     }
 
-    [DatabaseTheory]
+    [Theory]
     [DatabaseData]
     public async Task GetManyByUserIdWithDeviceAuth_WorksWithMultipleUsersOnSameDevice_ReturnsExpectedResults(
         IDeviceRepository sutRepository,
@@ -138,7 +138,7 @@ public class DeviceRepositoryTests
         Assert.Null(response.First().AuthRequestCreatedAt);
     }
 
-    [DatabaseTheory]
+    [Theory]
     [DatabaseData]
     public async Task GetManyByUserIdWithDeviceAuth_WorksWithNoAuthRequestAndMultipleDevices_ReturnsExpectedResults(
         IDeviceRepository sutRepository,
@@ -180,7 +180,7 @@ public class DeviceRepositoryTests
         Assert.True(response.Count == 2);
     }
 
-    [DatabaseTheory]
+    [Theory]
     [DatabaseData]
     public async Task GetManyByUserIdWithDeviceAuth_FailsToRespondWithAnyAuthData_ReturnsEmptyResults(
         IDeviceRepository sutRepository,
