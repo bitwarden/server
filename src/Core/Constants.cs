@@ -176,6 +176,7 @@ public static class FeatureFlagKeys
     public const string PM3553_MobileSimpleLoginSelfHostAlias = "simple-login-self-host-alias";
     public const string EnablePMFlightRecorder = "enable-pm-flight-recorder";
     public const string MobileErrorReporting = "mobile-error-reporting";
+    public const string AndroidChromeAutofill = "android-chrome-autofill";
 
     /* Platform Team */
     public const string PersistPopupView = "persist-popup-view";
