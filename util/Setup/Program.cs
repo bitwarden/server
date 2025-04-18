@@ -279,9 +279,10 @@ public class Program
                     break;
             }
 
-            if (Environment.GetEnvironmentVariable("BW_INSTALLATION_URL") != null)
+            string installationUrl = Environment.GetEnvironmentVariable("BW_INSTALLATION_URL");
+            if (!string.IsNullOrEmpty(installationUrl))
             {
-                url = $"{Environment.GetEnvironmentVariable("BW_INSTALLATION_URL")}/installations/";
+                url = $"{installationUrl}/installations/";
             }
 
             var response = new HttpClient().GetAsync(url + _context.Install.InstallationId).GetAwaiter().GetResult();
