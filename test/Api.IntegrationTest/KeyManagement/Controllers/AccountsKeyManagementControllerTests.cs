@@ -8,6 +8,7 @@ using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -290,6 +291,14 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, ssoUserEmail,
             OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Invited);
 
+        var ssoUser = await _userRepository.GetByEmailAsync(ssoUserEmail);
+        Assert.NotNull(ssoUser);
+
+        request.Keys = new KeysRequestModel
+        {
+            PublicKey = ssoUser.PublicKey,
+            EncryptedPrivateKey = ssoUser.PrivateKey
+        };
         request.Key = _mockEncryptedString;
         request.OrgIdentifier = organizationSsoIdentifier;
 
