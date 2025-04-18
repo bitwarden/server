@@ -40,7 +40,7 @@ public class ProviderViewModel
                 ProviderPlanViewModels.Add(new ProviderPlanViewModel("Enterprise (Monthly) Subscription", enterpriseProviderPlan, usedEnterpriseSeats));
             }
         }
-        else if (Provider.Type == ProviderType.MultiOrganizationEnterprise)
+        else if (Provider.Type == ProviderType.BusinessUnit)
         {
             var usedEnterpriseSeats = ProviderOrganizations.Where(po => po.PlanType == PlanType.EnterpriseMonthly)
                 .Sum(po => po.OccupiedSeats).GetValueOrDefault(0);

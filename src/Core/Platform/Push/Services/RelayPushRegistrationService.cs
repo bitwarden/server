@@ -1,4 +1,6 @@
-﻿using Bit.Core.Enums;
+﻿#nullable enable
+
+using Bit.Core.Enums;
 using Bit.Core.IdentityServer;
 using Bit.Core.Models.Api;
 using Bit.Core.NotificationHub;

@@ -17,6 +17,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
+using NSubstitute.ClearExtensions;
 using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
@@ -94,6 +95,11 @@ public class ImportCiphersControllerTests
         // Arrange
         var globalSettings = sutProvider.GetDependency<Core.Settings.GlobalSettings>();
         globalSettings.SelfHosted = false;
+
+        var userService = sutProvider.GetDependency<Bit.Core.Services.IUserService>();
+        userService.GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(null as Guid?);
+
         globalSettings.ImportCiphersLimitation = new GlobalSettings.ImportCiphersLimitationSettings()
         { // limits are set in appsettings.json, making values small for test to run faster.
             CiphersLimit = 200,
@@ -243,7 +249,7 @@ public class ImportCiphersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PostImportOrganization_WithExistingCollectionsAndWithoutImportCiphersPermissions_NotFoundException(
+    public async Task PostImportOrganization_WithExistingCollectionsAndWithoutImportCiphersPermissions_ThrowsException(
         SutProvider<ImportCiphersController> sutProvider,
         IFixture fixture,
         User user)
@@ -255,9 +261,7 @@ public class ImportCiphersControllerTests
 
         sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
 
-        sutProvider.GetDependency<Bit.Core.Services.IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
-            .Returns(user.Id);
+        SetupUserService(sutProvider, user);
 
         var request = fixture.Build<ImportOrganizationCiphersRequestModel>()
             .With(x => x.Ciphers, fixture.Build<CipherRequestModel>()
@@ -288,22 +292,22 @@ public class ImportCiphersControllerTests
                 Arg.Any<IEnumerable<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
                     reqs.Contains(BulkCollectionOperations.Create)))
-            .Returns(AuthorizationResult.Success());
+            .Returns(AuthorizationResult.Failed());
 
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByOrganizationIdAsync(orgIdGuid)
             .Returns(existingCollections.Select(c => new Collection { Id = orgIdGuid }).ToList());
 
         // Act
-        var exception = await Assert.ThrowsAsync<Bit.Core.Exceptions.NotFoundException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.PostImport(orgId, request));
 
         // Assert
-        Assert.IsType<Bit.Core.Exceptions.NotFoundException>(exception);
+        Assert.IsType<Bit.Core.Exceptions.BadRequestException>(exception);
     }
 
     [Theory, BitAutoData]
-    public async Task PostImportOrganization_WithoutCreatePermissions_NotFoundException(
+    public async Task PostImportOrganization_WithoutCreatePermissions_ThrowsException(
         SutProvider<ImportCiphersController> sutProvider,
         IFixture fixture,
         User user)
@@ -340,7 +344,7 @@ public class ImportCiphersControllerTests
                 Arg.Any<IEnumerable<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
                     reqs.Contains(BulkCollectionOperations.ImportCiphers)))
-            .Returns(AuthorizationResult.Success());
+            .Returns(AuthorizationResult.Failed());
 
         // BulkCollectionOperations.Create permission setup
         sutProvider.GetDependency<IAuthorizationService>()
@@ -355,10 +359,386 @@ public class ImportCiphersControllerTests
             .Returns(existingCollections.Select(c => new Collection { Id = orgIdGuid }).ToList());
 
         // Act
-        var exception = await Assert.ThrowsAsync<Bit.Core.Exceptions.NotFoundException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.PostImport(orgId, request));
 
         // Assert
-        Assert.IsType<Bit.Core.Exceptions.NotFoundException>(exception);
+        Assert.IsType<Bit.Core.Exceptions.BadRequestException>(exception);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostImportOrganization_CanCreateChildCollectionsWithCreateAndImportPermissionsAsync(
+        SutProvider<ImportCiphersController> sutProvider,
+        IFixture fixture,
+        User user)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+
+        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+
+        SetupUserService(sutProvider, user);
+
+        // Create new collections
+        var newCollections = fixture.Build<CollectionWithIdRequestModel>()
+                .CreateMany(2).ToArray();
+
+        // define existing collections
+        var existingCollections = fixture.CreateMany<CollectionWithIdRequestModel>(2).ToArray();
+
+        // import model includes new and existing collection
+        var request = new ImportOrganizationCiphersRequestModel
+        {
+            Collections = newCollections.Concat(existingCollections).ToArray(),
+            Ciphers = fixture.Build<CipherRequestModel>()
+                .With(_ => _.OrganizationId, orgId.ToString())
+                .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .CreateMany(2).ToArray(),
+            CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
+        };
+
+        // AccessImportExport permission - false
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessImportExport(Arg.Any<Guid>())
+            .Returns(false);
+
+        // BulkCollectionOperations.ImportCiphers permission - true
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.ImportCiphers)))
+            .Returns(AuthorizationResult.Success());
+
+        // BulkCollectionOperations.Create permission - true
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.Create)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(orgId)
+            .Returns(existingCollections.Select(c =>
+                new Collection { OrganizationId = orgId, Id = c.Id.GetValueOrDefault() })
+                .ToList());
+
+        // Act
+        // User imports into collections and creates new collections
+        // User has ImportCiphers and Create ciphers permission
+        await sutProvider.Sut.PostImport(orgId.ToString(), request);
+
+        // Assert
+        await sutProvider.GetDependency<IImportCiphersCommand>()
+            .Received(1)
+            .ImportIntoOrganizationalVaultAsync(
+                Arg.Any<List<Collection>>(),
+                Arg.Any<List<CipherDetails>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
+                Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostImportOrganization_CannotCreateChildCollectionsWithoutCreatePermissionsAsync(
+        SutProvider<ImportCiphersController> sutProvider,
+        IFixture fixture,
+        User user)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+
+        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+
+        SetupUserService(sutProvider, user);
+
+        // Create new collections
+        var newCollections = fixture.Build<CollectionWithIdRequestModel>()
+                .CreateMany(2).ToArray();
+
+        // define existing collections
+        var existingCollections = fixture.CreateMany<CollectionWithIdRequestModel>(2).ToArray();
+
+        // import model includes new and existing collection
+        var request = new ImportOrganizationCiphersRequestModel
+        {
+            Collections = newCollections.Concat(existingCollections).ToArray(),
+            Ciphers = fixture.Build<CipherRequestModel>()
+                .With(_ => _.OrganizationId, orgId.ToString())
+                .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .CreateMany(2).ToArray(),
+            CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
+        };
+
+        // AccessImportExport permission - false
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessImportExport(Arg.Any<Guid>())
+            .Returns(false);
+
+        // BulkCollectionOperations.ImportCiphers permission - true
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.ImportCiphers)))
+            .Returns(AuthorizationResult.Success());
+
+        // BulkCollectionOperations.Create permission - FALSE
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.Create)))
+            .Returns(AuthorizationResult.Failed());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(orgId)
+            .Returns(existingCollections.Select(c =>
+                new Collection { OrganizationId = orgId, Id = c.Id.GetValueOrDefault() })
+                .ToList());
+
+        // Act
+        // User imports into an existing collection and creates new collections
+        // User has ImportCiphers permission only and doesn't have Create permission
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
+        {
+            await sutProvider.Sut.PostImport(orgId.ToString(), request);
+        });
+
+        // Assert
+        Assert.IsType<BadRequestException>(exception);
+        await sutProvider.GetDependency<IImportCiphersCommand>()
+            .DidNotReceive()
+            .ImportIntoOrganizationalVaultAsync(
+                Arg.Any<List<Collection>>(),
+                Arg.Any<List<CipherDetails>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
+                Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostImportOrganization_ImportIntoNewCollectionWithCreatePermissionsOnlyAsync(
+      SutProvider<ImportCiphersController> sutProvider,
+      IFixture fixture,
+      User user)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+
+        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        SetupUserService(sutProvider, user);
+
+        // Create new collections
+        var newCollections = fixture.CreateMany<CollectionWithIdRequestModel>(1).ToArray();
+
+        // Define existing collections
+        var existingCollections = new List<CollectionWithIdRequestModel>();
+
+        // Import model includes new and existing collection
+        var request = new ImportOrganizationCiphersRequestModel
+        {
+            Collections = newCollections.Concat(existingCollections).ToArray(),
+            Ciphers = fixture.Build<CipherRequestModel>()
+                .With(_ => _.OrganizationId, orgId.ToString())
+                .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .CreateMany(2).ToArray(),
+            CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
+        };
+
+        // AccessImportExport permission - false
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessImportExport(Arg.Any<Guid>())
+            .Returns(false);
+
+        // BulkCollectionOperations.ImportCiphers permission - FALSE
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.ImportCiphers)))
+            .Returns(AuthorizationResult.Failed());
+
+        // BulkCollectionOperations.Create permission - TRUE
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.Create)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(orgId)
+            .Returns(new List<Collection>());
+
+        // Act
+        // User imports/creates a new collection - existing collections not affected
+        // User has create permissions and doesn't need import permissions
+        await sutProvider.Sut.PostImport(orgId.ToString(), request);
+
+        // Assert
+        await sutProvider.GetDependency<IImportCiphersCommand>()
+            .Received(1)
+            .ImportIntoOrganizationalVaultAsync(
+                Arg.Any<List<Collection>>(),
+                Arg.Any<List<CipherDetails>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
+                Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostImportOrganization_ImportIntoExistingCollectionWithImportPermissionsOnlySuccessAsync(
+      SutProvider<ImportCiphersController> sutProvider,
+      IFixture fixture,
+      User user)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+
+        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+
+        SetupUserService(sutProvider, user);
+
+        // No new collections
+        var newCollections = new List<CollectionWithIdRequestModel>();
+
+        // Define existing collections
+        var existingCollections = fixture.CreateMany<CollectionWithIdRequestModel>(1).ToArray();
+
+        // Import model includes new and existing collection
+        var request = new ImportOrganizationCiphersRequestModel
+        {
+            Collections = newCollections.Concat(existingCollections).ToArray(),
+            Ciphers = fixture.Build<CipherRequestModel>()
+                .With(_ => _.OrganizationId, orgId.ToString())
+                .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .CreateMany(2).ToArray(),
+            CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
+        };
+
+        // AccessImportExport permission - false
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessImportExport(Arg.Any<Guid>())
+            .Returns(false);
+
+        // BulkCollectionOperations.ImportCiphers permission - true
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.ImportCiphers)))
+            .Returns(AuthorizationResult.Success());
+
+        // BulkCollectionOperations.Create permission - FALSE
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.Create)))
+            .Returns(AuthorizationResult.Failed());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(orgId)
+            .Returns(existingCollections.Select(c =>
+                new Collection { OrganizationId = orgId, Id = c.Id.GetValueOrDefault() })
+                .ToList());
+
+        // Act
+        // User import into existing collection
+        // User has ImportCiphers permission only and doesn't need create permission
+        await sutProvider.Sut.PostImport(orgId.ToString(), request);
+
+        // Assert
+        await sutProvider.GetDependency<IImportCiphersCommand>()
+            .Received(1)
+            .ImportIntoOrganizationalVaultAsync(
+                Arg.Any<List<Collection>>(),
+                Arg.Any<List<CipherDetails>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
+                Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostImportOrganization_ImportWithNoCollectionsWithCreatePermissionsOnlySuccessAsync(
+      SutProvider<ImportCiphersController> sutProvider,
+      IFixture fixture,
+      User user)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+
+        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+
+        SetupUserService(sutProvider, user);
+
+        // Import model includes new and existing collection
+        var request = new ImportOrganizationCiphersRequestModel
+        {
+            Collections = new List<CollectionWithIdRequestModel>().ToArray(),   // No collections
+            Ciphers = fixture.Build<CipherRequestModel>()
+                .With(_ => _.OrganizationId, orgId.ToString())
+                .With(_ => _.FolderId, Guid.NewGuid().ToString())
+                .CreateMany(2).ToArray(),
+            CollectionRelationships = new List<KeyValuePair<int, int>>().ToArray(),
+        };
+
+        // AccessImportExport permission - false
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessImportExport(Arg.Any<Guid>())
+            .Returns(false);
+
+        // BulkCollectionOperations.ImportCiphers permission - false
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.ImportCiphers)))
+            .Returns(AuthorizationResult.Failed());
+
+        // BulkCollectionOperations.Create permission - TRUE
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Contains(BulkCollectionOperations.Create)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(orgId)
+            .Returns(new List<Collection>());
+
+        // Act
+        // import ciphers only and no collections
+        // User has Create permissions
+        // expected to be successful
+        await sutProvider.Sut.PostImport(orgId.ToString(), request);
+
+        // Assert
+        await sutProvider.GetDependency<IImportCiphersCommand>()
+            .Received(1)
+            .ImportIntoOrganizationalVaultAsync(
+                Arg.Any<List<Collection>>(),
+                Arg.Any<List<CipherDetails>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
+                Arg.Any<Guid>());
+    }
+
+    private static void SetupUserService(SutProvider<ImportCiphersController> sutProvider, User user)
+    {
+        // This is a workaround for the NSubstitute issue with ambiguous arguments
+        // when using Arg.Any<ClaimsPrincipal>() in the GetProperUserId method
+        // It clears the previous calls to the userService and sets up a new call
+        // with the same argument
+        var userService = sutProvider.GetDependency<Bit.Core.Services.IUserService>();
+        try
+        {
+            // in order to fix the Ambiguous Arguments error in NSubstitute
+            // we need to clear the previous calls
+            userService.ClearSubstitute();
+            userService.ClearReceivedCalls();
+            userService.GetProperUserId(Arg.Any<ClaimsPrincipal>());
+        }
+        catch { }
+
+        userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(user.Id);
     }
 }

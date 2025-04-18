@@ -74,20 +74,20 @@
                 </div>
                 break;
             }
-            case ProviderType.MultiOrganizationEnterprise:
+            case ProviderType.BusinessUnit:
             {
                 <div class="row">
                     <div class="col-sm">
                         <div class="mb-3">
                             @{
-                                var multiOrgPlans = new List<PlanType>
+                                var businessUnitPlanTypes = new List<PlanType>
                                 {
                                     PlanType.EnterpriseAnnually,
                                     PlanType.EnterpriseMonthly
                                 };
                             }
                             <label asp-for="Plan" class="form-label"></label>
-                            <select class="form-control" asp-for="Plan" asp-items="Html.GetEnumSelectList(multiOrgPlans)">
+                            <select class="form-control" asp-for="Plan" asp-items="Html.GetEnumSelectList(businessUnitPlanTypes)">
                                 <option value="">--</option>
                             </select>
                         </div>

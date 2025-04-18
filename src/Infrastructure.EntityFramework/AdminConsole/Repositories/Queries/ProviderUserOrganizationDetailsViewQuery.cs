@@ -49,6 +49,7 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             LimitItemDeletion = x.o.LimitItemDeletion,
             AllowAdminAccessToAllCollectionItems = x.o.AllowAdminAccessToAllCollectionItems,
             UseRiskInsights = x.o.UseRiskInsights,
+            UseAdminSponsoredFamilies = x.o.UseAdminSponsoredFamilies,
             ProviderType = x.p.Type
         });
     }

@@ -1,4 +1,5 @@
-﻿using Bit.Api.Tools.Authorization;
+﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.Tools.Authorization;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Bit.Core.IdentityServer;
@@ -109,6 +110,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthorizationHandler, VaultExportAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, SecurityTaskAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, SecurityTaskOrganizationAuthorizationHandler>();
+
+        services.AddScoped<IAuthorizationHandler, OrganizationRequirementHandler>();
     }
 
     public static void AddPhishingDomainServices(this IServiceCollection services, GlobalSettings globalSettings)

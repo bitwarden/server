@@ -59,4 +59,5 @@ public class OrganizationUserOrganizationDetails
     public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     public bool UseRiskInsights { get; set; }
+    public bool UseAdminSponsoredFamilies { get; set; }
 }

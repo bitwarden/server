@@ -1,0 +1,75 @@
+@model Bit.Admin.Billing.Models.BusinessUnitConversionModel
+
+@{
+    ViewData["Title"] = "Convert Organization to Business Unit";
+}
+
+@if (!string.IsNullOrEmpty(Model.ProviderAdminEmail))
+{
+    <h1>Convert @Model.Organization.Name to Business Unit</h1>
+    @if (!string.IsNullOrEmpty(Model.Success))
+    {
+        <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+            @Model.Success
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (Model.Errors?.Any() ?? false)
+    {
+        @foreach (var error in Model.Errors)
+        {
+            <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                @error
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+    }
+    <p>This organization has a business unit conversion in progress.</p>
+
+    <div class="mb-3">
+        <label asp-for="ProviderAdminEmail" class="form-label"></label>
+        <input type="email" class="form-control" asp-for="ProviderAdminEmail" disabled></input>
+    </div>
+
+    <div class="d-flex gap-2">
+        <form method="post" asp-controller="BusinessUnitConversion" asp-action="ResendInvite" asp-route-organizationId="@Model.Organization.Id">
+            <input type="hidden" asp-for="ProviderAdminEmail" />
+            <button type="submit" class="btn btn-primary mb-2">Resend Invite</button>
+        </form>
+        <form method="post" asp-controller="BusinessUnitConversion" asp-action="Reset" asp-route-organizationId="@Model.Organization.Id">
+            <input type="hidden" asp-for="ProviderAdminEmail" />
+            <button type="submit" class="btn btn-danger mb-2">Reset Conversion</button>
+        </form>
+        @if (Model.ProviderId.HasValue)
+        {
+            <a asp-controller="Providers"
+               asp-action="Edit"
+               asp-route-id="@Model.ProviderId"
+               class="btn btn-secondary mb-2">
+                Go to Provider
+            </a>
+        }
+    </div>
+}
+else
+{
+    <h1>Convert @Model.Organization.Name to Business Unit</h1>
+    @if (Model.Errors?.Any() ?? false)
+    {
+        @foreach (var error in Model.Errors)
+        {
+            <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                @error
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+    }
+    <form method="post" asp-controller="BusinessUnitConversion" asp-action="Initiate" asp-route-organizationId="@Model.Organization.Id">
+        <div asp-validation-summary="All" class="alert alert-danger"></div>
+        <div class="mb-3">
+            <label asp-for="ProviderAdminEmail" class="form-label"></label>
+            <input type="email" class="form-control" asp-for="ProviderAdminEmail" />
+        </div>
+        <button type="submit" class="btn btn-primary mb-2">Convert</button>
+    </form>
+}
