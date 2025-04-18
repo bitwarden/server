@@ -206,10 +206,26 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task SendAdditionalEmailsAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
-        await SendPasswordManagerMaxSeatLimitEmailsAsync(validatedResult, organization);
+        await NotifyOwnersIfAutoscaleOccursAsync(validatedResult, organization);
+        await NotifyOwnersIfPasswordManagerMaxSeatLimitReachedAsync(validatedResult, organization);
     }
 
-    private async Task SendPasswordManagerMaxSeatLimitEmailsAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
+    private async Task NotifyOwnersIfAutoscaleOccursAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
+    {
+        if (validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd > 0
+            && !organization.OwnersNotifiedOfAutoscaling.HasValue)
+        {
+            await mailService.SendOrganizationAutoscaledEmailAsync(
+                organization,
+                validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats!.Value,
+                await GetOwnerEmailAddressesAsync(validatedResult.Value.InviteOrganization));
+
+            organization.OwnersNotifiedOfAutoscaling = validatedResult.Value.PerformedAt.UtcDateTime;
+            await organizationRepository.UpsertAsync(organization);
+        }
+    }
+
+    private async Task NotifyOwnersIfPasswordManagerMaxSeatLimitReachedAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
         if (!validatedResult.Value.PasswordManagerSubscriptionUpdate.MaxSeatsReached)
         {

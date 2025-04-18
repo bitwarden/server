@@ -289,6 +289,77 @@ public class InviteOrganizationUserCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task InviteScimOrganizationUserAsync_WhenValidInviteCausesOrgToAutoscale_ThenOrganizationOwnersShouldBeNotified(
+            MailAddress address,
+            Organization organization,
+            OrganizationUser user,
+            FakeTimeProvider timeProvider,
+            string externalId,
+            OrganizationUserUserDetails ownerDetails,
+            SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        // Arrange
+        user.Email = address.Address;
+        organization.Seats = 1;
+        organization.MaxAutoscaleSeats = 2;
+        organization.OwnersNotifiedOfAutoscaling = null;
+        ownerDetails.Type = OrganizationUserType.Owner;
+
+        var inviteOrganization = new InviteOrganization(organization, new Enterprise2019Plan(true));
+
+        var request = new InviteOrganizationUsersRequest(
+            invites:
+            [
+                new OrganizationUserInvite(
+                    email: user.Email,
+                    assignedCollections: [],
+                    groups: [],
+                    type: OrganizationUserType.User,
+                    permissions: new Permissions(),
+                    externalId: externalId,
+                    accessSecretsManager: true)
+            ],
+            inviteOrganization: inviteOrganization,
+            performedBy: Guid.Empty,
+            timeProvider.GetUtcNow());
+
+        var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+        orgUserRepository
+            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .Returns([]);
+        orgUserRepository
+            .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
+            .Returns([ownerDetails]);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IInviteUsersValidator>()
+            .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
+            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(
+                GetInviteValidationRequestMock(request, inviteOrganization, organization)
+                    .WithPasswordManagerUpdate(
+                        new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1))));
+
+        // Act
+        var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
+
+        // Assert
+        Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
+
+        Assert.NotNull(inviteOrganization.MaxAutoScaleSeats);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendOrganizationAutoscaledEmailAsync(organization,
+                inviteOrganization.Seats.Value,
+                Arg.Is<IEnumerable<string>>(emails => emails.Any(email => email == ownerDetails.Email)));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task InviteScimOrganizationUserAsync_WhenValidInviteIncreasesSeats_ThenSeatTotalShouldBeUpdated(
         MailAddress address,
         Organization organization,
@@ -609,5 +680,238 @@ public class InviteOrganizationUserCommandTests
         sutProvider.GetDependency<IMailService>().Received(1)
             .SendOrganizationMaxSeatLimitReachedEmailAsync(organization, 2,
                 Arg.Is<IEnumerable<string>>(emails => emails.Any(email => email == "provider@email.com")));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task InviteScimOrganizationUserAsync_WhenAnOrganizationIsManagedByAProviderAndAutoscaleOccurs_ThenAnEmailShouldBeSentToTheProvider(
+        MailAddress address,
+        Organization organization,
+        OrganizationUser user,
+        FakeTimeProvider timeProvider,
+        string externalId,
+        OrganizationUserUserDetails ownerDetails,
+        ProviderOrganization providerOrganization,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        // Arrange
+        user.Email = address.Address;
+        organization.Seats = 1;
+        organization.SmSeats = 1;
+        organization.MaxAutoscaleSeats = 2;
+        organization.MaxAutoscaleSmSeats = 2;
+        organization.OwnersNotifiedOfAutoscaling = null;
+        ownerDetails.Type = OrganizationUserType.Owner;
+
+        providerOrganization.OrganizationId = organization.Id;
+
+        var inviteOrganization = new InviteOrganization(organization, new Enterprise2019Plan(true));
+
+        var request = new InviteOrganizationUsersRequest(
+            invites: [
+                new OrganizationUserInvite(
+                    email: user.Email,
+                    assignedCollections: [],
+                    groups: [],
+                    type: OrganizationUserType.User,
+                    permissions: new Permissions(),
+                    externalId: externalId,
+                    accessSecretsManager: true)
+            ],
+            inviteOrganization: inviteOrganization,
+            performedBy: Guid.Empty,
+            timeProvider.GetUtcNow());
+
+        var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, inviteOrganization.Plan, true)
+            .AdjustSeats(request.Invites.Count(x => x.AccessSecretsManager));
+
+        var passwordManagerSubscriptionUpdate =
+            new PasswordManagerSubscriptionUpdate(inviteOrganization, 1, request.Invites.Length);
+
+        var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+        orgUserRepository
+            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .Returns([]);
+        orgUserRepository
+            .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
+            .Returns([ownerDetails]);
+
+        var orgRepository = sutProvider.GetDependency<IOrganizationRepository>();
+
+        orgRepository.GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IInviteUsersValidator>()
+            .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
+            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
+                .WithPasswordManagerUpdate(passwordManagerSubscriptionUpdate)
+                .WithSecretsManagerUpdate(secretsManagerSubscriptionUpdate)));
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>()
+            .GetByOrganizationId(organization.Id)
+            .Returns(providerOrganization);
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyDetailsByProviderAsync(providerOrganization.ProviderId, ProviderUserStatusType.Confirmed)
+            .Returns(new List<ProviderUserUserDetails>
+            {
+                new()
+                {
+                    Email = "provider@email.com"
+                }
+            });
+
+        // Act
+        var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
+
+        // Assert
+        Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
+
+        sutProvider.GetDependency<IMailService>().Received(1)
+            .SendOrganizationAutoscaledEmailAsync(organization, 1,
+                Arg.Is<IEnumerable<string>>(emails => emails.Any(email => email == "provider@email.com")));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task InviteScimOrganizationUserAsync_WhenAnOrganizationAutoscalesButOwnersHaveAlreadyBeenNotified_ThenAnEmailShouldNotBeSent(
+        MailAddress address,
+        Organization organization,
+        OrganizationUser user,
+        FakeTimeProvider timeProvider,
+        string externalId,
+        OrganizationUserUserDetails ownerDetails,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        // Arrange
+        user.Email = address.Address;
+        organization.Seats = 1;
+        organization.MaxAutoscaleSeats = 2;
+        organization.OwnersNotifiedOfAutoscaling = DateTime.UtcNow;
+        ownerDetails.Type = OrganizationUserType.Owner;
+
+        var inviteOrganization = new InviteOrganization(organization, new Enterprise2019Plan(true));
+
+        var request = new InviteOrganizationUsersRequest(
+            invites:
+            [
+                new OrganizationUserInvite(
+                    email: user.Email,
+                    assignedCollections: [],
+                    groups: [],
+                    type: OrganizationUserType.User,
+                    permissions: new Permissions(),
+                    externalId: externalId,
+                    accessSecretsManager: true)
+            ],
+            inviteOrganization: inviteOrganization,
+            performedBy: Guid.Empty,
+            timeProvider.GetUtcNow());
+
+        var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+        orgUserRepository
+            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .Returns([]);
+        orgUserRepository
+            .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
+            .Returns([ownerDetails]);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IInviteUsersValidator>()
+            .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
+            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(
+                GetInviteValidationRequestMock(request, inviteOrganization, organization)
+                    .WithPasswordManagerUpdate(
+                        new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1))));
+
+        // Act
+        var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
+
+        // Assert
+        Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
+
+        Assert.NotNull(inviteOrganization.MaxAutoScaleSeats);
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendOrganizationAutoscaledEmailAsync(Arg.Any<Organization>(),
+                Arg.Any<int>(),
+                Arg.Any<IEnumerable<string>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task InviteScimOrganizationUserAsync_WhenAnOrganizationDoesNotAutoScale_ThenAnEmailShouldNotBeSent(
+        MailAddress address,
+        Organization organization,
+        OrganizationUser user,
+        FakeTimeProvider timeProvider,
+        string externalId,
+        OrganizationUserUserDetails ownerDetails,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        // Arrange
+        user.Email = address.Address;
+        organization.Seats = 2;
+        organization.MaxAutoscaleSeats = 2;
+        organization.OwnersNotifiedOfAutoscaling = DateTime.UtcNow;
+        ownerDetails.Type = OrganizationUserType.Owner;
+
+        var inviteOrganization = new InviteOrganization(organization, new Enterprise2019Plan(true));
+
+        var request = new InviteOrganizationUsersRequest(
+            invites:
+            [
+                new OrganizationUserInvite(
+                    email: user.Email,
+                    assignedCollections: [],
+                    groups: [],
+                    type: OrganizationUserType.User,
+                    permissions: new Permissions(),
+                    externalId: externalId,
+                    accessSecretsManager: true)
+            ],
+            inviteOrganization: inviteOrganization,
+            performedBy: Guid.Empty,
+            timeProvider.GetUtcNow());
+
+        var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+
+        orgUserRepository
+            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .Returns([]);
+        orgUserRepository
+            .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
+            .Returns([ownerDetails]);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IInviteUsersValidator>()
+            .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
+            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(
+                GetInviteValidationRequestMock(request, inviteOrganization, organization)
+                    .WithPasswordManagerUpdate(
+                        new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1))));
+
+        // Act
+        var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
+
+        // Assert
+        Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
+
+        Assert.NotNull(inviteOrganization.MaxAutoScaleSeats);
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendOrganizationAutoscaledEmailAsync(Arg.Any<Organization>(),
+                Arg.Any<int>(),
+                Arg.Any<IEnumerable<string>>());
     }
 }

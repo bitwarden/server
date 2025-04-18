@@ -1,4 +1,6 @@
-﻿using Bit.Identity.Models.Request.Accounts;
+﻿using Bit.Core;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Enums;
 using Bit.IntegrationTestCommon.Factories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
@@ -40,11 +42,20 @@ public class EventsApplicationFactory : WebApplicationFactoryBase<Startup>
     /// </summary>
     public async Task<(string Token, string RefreshToken)> LoginWithNewAccount(string email = "integration-test@bitwarden.com", string masterPasswordHash = "master_password_hash")
     {
-        await _identityApplicationFactory.RegisterAsync(new RegisterRequestModel
-        {
-            Email = email,
-            MasterPasswordHash = masterPasswordHash,
-        });
+        await _identityApplicationFactory.RegisterNewIdentityFactoryUserAsync(
+            new RegisterFinishRequestModel
+            {
+                Email = email,
+                MasterPasswordHash = masterPasswordHash,
+                Kdf = KdfType.PBKDF2_SHA256,
+                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                UserAsymmetricKeys = new KeysRequestModel()
+                {
+                    PublicKey = "public_key",
+                    EncryptedPrivateKey = "private_key"
+                },
+                UserSymmetricKey = "sym_key",
+            });
 
         return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);
     }

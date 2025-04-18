@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿#nullable enable
+using System.Net;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.KeyManagement.Models.Requests;
@@ -7,6 +8,7 @@ using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -31,6 +33,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     private readonly IUserRepository _userRepository;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly IOrganizationRepository _organizationRepository;
     private string _ownerEmail = null!;
 
     public AccountsKeyManagementControllerTests(ApiApplicationFactory factory)
@@ -45,6 +48,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         _emergencyAccessRepository = _factory.GetService<IEmergencyAccessRepository>();
         _organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
         _passwordHasher = _factory.GetService<IPasswordHasher<User>>();
+        _organizationRepository = _factory.GetService<IOrganizationRepository>();
     }
 
     public async Task InitializeAsync()
@@ -174,7 +178,8 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeysAsync_NotLoggedIn_Unauthorized(RotateUserAccountKeysAndDataRequestModel request)
+    public async Task RotateUserAccountKeysAsync_NotLoggedIn_Unauthorized(
+        RotateUserAccountKeysAndDataRequestModel request)
     {
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
 
@@ -255,5 +260,98 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfIterations, userNewState.KdfIterations);
         Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfMemory, userNewState.KdfMemory);
         Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism, userNewState.KdfParallelism);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetKeyConnectorKeyAsync_NotLoggedIn_Unauthorized(SetKeyConnectorKeyRequestModel request)
+    {
+        var response = await _client.PostAsJsonAsync("/accounts/set-key-connector-key", request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetKeyConnectorKeyAsync_Success(string organizationSsoIdentifier,
+        SetKeyConnectorKeyRequestModel request)
+    {
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            PlanType.EnterpriseAnnually, _ownerEmail, passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card);
+        organization.UseKeyConnector = true;
+        organization.UseSso = true;
+        organization.Identifier = organizationSsoIdentifier;
+        await _organizationRepository.ReplaceAsync(organization);
+
+        var ssoUserEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(ssoUserEmail);
+        await _loginHelper.LoginAsync(ssoUserEmail);
+
+        await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, ssoUserEmail,
+            OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Invited);
+
+        var ssoUser = await _userRepository.GetByEmailAsync(ssoUserEmail);
+        Assert.NotNull(ssoUser);
+
+        request.Keys = new KeysRequestModel
+        {
+            PublicKey = ssoUser.PublicKey,
+            EncryptedPrivateKey = ssoUser.PrivateKey
+        };
+        request.Key = _mockEncryptedString;
+        request.OrgIdentifier = organizationSsoIdentifier;
+
+        var response = await _client.PostAsJsonAsync("/accounts/set-key-connector-key", request);
+        response.EnsureSuccessStatusCode();
+
+        var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
+        Assert.NotNull(user);
+        Assert.Equal(request.Key, user.Key);
+        Assert.True(user.UsesKeyConnector);
+        Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
+        var ssoOrganizationUser =
+            await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
+        Assert.NotNull(ssoOrganizationUser);
+        Assert.Equal(OrganizationUserStatusType.Accepted, ssoOrganizationUser.Status);
+        Assert.Equal(user.Id, ssoOrganizationUser.UserId);
+        Assert.Null(ssoOrganizationUser.Email);
+    }
+
+    [Fact]
+    public async Task PostConvertToKeyConnectorAsync_NotLoggedIn_Unauthorized()
+    {
+        var response = await _client.PostAsJsonAsync("/accounts/convert-to-key-connector", new { });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostConvertToKeyConnectorAsync_Success()
+    {
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            PlanType.EnterpriseAnnually, _ownerEmail, passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card);
+        organization.UseKeyConnector = true;
+        organization.UseSso = true;
+        await _organizationRepository.ReplaceAsync(organization);
+
+        var ssoUserEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(ssoUserEmail);
+        await _loginHelper.LoginAsync(ssoUserEmail);
+
+        await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, ssoUserEmail,
+            OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Accepted);
+
+        var response = await _client.PostAsJsonAsync("/accounts/convert-to-key-connector", new { });
+        response.EnsureSuccessStatusCode();
+
+        var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
+        Assert.NotNull(user);
+        Assert.Null(user.MasterPassword);
+        Assert.True(user.UsesKeyConnector);
+        Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
     }
 }

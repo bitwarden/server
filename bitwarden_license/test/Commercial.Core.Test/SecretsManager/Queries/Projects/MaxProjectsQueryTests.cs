@@ -1,11 +1,9 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Queries.Projects;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -68,9 +66,6 @@ public class MaxProjectsQueryTests
         SutProvider<MaxProjectsQuery> sutProvider, Organization organization)
     {
         organization.PlanType = planType;
-
-        sutProvider.GetDependency<IPricingClient>().GetPlan(planType).Returns(StaticStore.GetPlan(planType));
-
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         var (limit, overLimit) = await sutProvider.Sut.GetByOrgIdAsync(organization.Id, 1);
@@ -111,9 +106,6 @@ public class MaxProjectsQueryTests
         SutProvider<MaxProjectsQuery> sutProvider, Organization organization)
     {
         organization.PlanType = planType;
-
-        sutProvider.GetDependency<IPricingClient>().GetPlan(planType).Returns(StaticStore.GetPlan(planType));
-
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IProjectRepository>().GetProjectCountByOrganizationIdAsync(organization.Id)
             .Returns(projects);
