@@ -572,13 +572,13 @@ public class CollectionRepositoryTests
 
         Assert.Equal(2, groups.Length);
 
-        var actualGroup2 = Assert.Single(groups.Where(g => g.Id == group2.Id));
+        var actualGroup2 = Assert.Single(groups, g => g.Id == group2.Id);
 
         Assert.True(actualGroup2.Manage);
         Assert.True(actualGroup2.HidePasswords);
         Assert.False(actualGroup2.ReadOnly);
 
-        var actualGroup3 = Assert.Single(groups.Where(g => g.Id == group3.Id));
+        var actualGroup3 = Assert.Single(groups, g => g.Id == group3.Id);
 
         Assert.False(actualGroup3.Manage);
         Assert.False(actualGroup3.HidePasswords);
@@ -588,13 +588,13 @@ public class CollectionRepositoryTests
 
         Assert.Equal(2, users.Length);
 
-        var actualOrgUser2 = Assert.Single(users.Where(u => u.Id == orgUser2.Id));
+        var actualOrgUser2 = Assert.Single(users, u => u.Id == orgUser2.Id);
 
         Assert.False(actualOrgUser2.Manage);
         Assert.False(actualOrgUser2.HidePasswords);
         Assert.True(actualOrgUser2.ReadOnly);
 
-        var actualOrgUser3 = Assert.Single(users.Where(u => u.Id == orgUser3.Id));
+        var actualOrgUser3 = Assert.Single(users, u => u.Id == orgUser3.Id);
 
         Assert.True(actualOrgUser3.Manage);
         Assert.False(actualOrgUser3.HidePasswords);
