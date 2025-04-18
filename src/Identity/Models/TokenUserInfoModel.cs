@@ -1,4 +1,4 @@
-namespace Bit.Identity.Models;
+﻿namespace Bit.Identity.Models;
 
 #nullable enable
 
