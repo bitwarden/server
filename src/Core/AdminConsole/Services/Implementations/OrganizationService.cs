@@ -1246,6 +1246,13 @@ public class OrganizationService : IOrganizationService
                 .Where(u => existingUsersDict.ContainsKey(u) && existingUsersDict[u].Type != OrganizationUserType.Owner)
                 .Select(u => existingUsersDict[u]);
 
+            var tdeUsers = existingExternalUsers.Any(u => u.HasMasterPassword == false);
+
+            if (tdeUsers)
+            {
+                throw new BadRequestException("Cannot remove member accounts with TDE enabled");
+            }
+
             await _organizationUserRepository.DeleteManyAsync(removeUsersSet.Select(u => u.Id));
             events.AddRange(removeUsersSet.Select(u => (
               u,
@@ -1257,6 +1264,13 @@ public class OrganizationService : IOrganizationService
 
         if (overwriteExisting)
         {
+            var tdeUsers = existingExternalUsers.Any(u => u.HasMasterPassword == false);
+
+            if (tdeUsers)
+            {
+                throw new BadRequestException("Cannot remove member accounts with TDE enabled");
+            }
+
             // Remove existing external users that are not in new user set
             var usersToDelete = existingExternalUsers.Where(u =>
                 u.Type != OrganizationUserType.Owner &&
