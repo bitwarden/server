@@ -13,7 +13,17 @@ public static class PolicyDetailResponses
         {
             throw new ArgumentException($"'{nameof(policy)}' must be of type '{nameof(PolicyType.SingleOrg)}'.", nameof(policy));
         }
+        return new PolicyDetailResponseModel(policy, await CanToggleState());
 
-        return new PolicyDetailResponseModel(policy, !await hasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policy.OrganizationId));
+        async Task<bool> CanToggleState()
+        {
+            if (!await hasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policy.OrganizationId))
+            {
+                return true;
+            }
+
+            return !policy.Enabled;
+        }
     }
+
 }

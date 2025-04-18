@@ -75,25 +75,25 @@ public class ProvidersControllerTests
     }
     #endregion
 
-    #region CreateMultiOrganizationEnterpriseAsync
+    #region CreateBusinessUnitAsync
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
-    public async Task CreateMultiOrganizationEnterpriseAsync_WithValidModel_CreatesProvider(
-        CreateMultiOrganizationEnterpriseProviderModel model,
+    public async Task CreateBusinessUnitAsync_WithValidModel_CreatesProvider(
+        CreateBusinessUnitProviderModel model,
         SutProvider<ProvidersController> sutProvider)
     {
         // Arrange
 
         // Act
-        var actual = await sutProvider.Sut.CreateMultiOrganizationEnterprise(model);
+        var actual = await sutProvider.Sut.CreateBusinessUnit(model);
 
         // Assert
         Assert.NotNull(actual);
         await sutProvider.GetDependency<ICreateProviderCommand>()
             .Received(Quantity.Exactly(1))
-            .CreateMultiOrganizationEnterpriseAsync(
-                Arg.Is<Provider>(x => x.Type == ProviderType.MultiOrganizationEnterprise),
+            .CreateBusinessUnitAsync(
+                Arg.Is<Provider>(x => x.Type == ProviderType.BusinessUnit),
                 model.OwnerEmail,
                 Arg.Is<PlanType>(y => y == model.Plan),
                 model.EnterpriseSeatMinimum);
@@ -102,16 +102,16 @@ public class ProvidersControllerTests
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
-    public async Task CreateMultiOrganizationEnterpriseAsync_RedirectsToExpectedPage_AfterCreatingProvider(
-        CreateMultiOrganizationEnterpriseProviderModel model,
+    public async Task CreateBusinessUnitAsync_RedirectsToExpectedPage_AfterCreatingProvider(
+        CreateBusinessUnitProviderModel model,
         Guid expectedProviderId,
         SutProvider<ProvidersController> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<ICreateProviderCommand>()
             .When(x =>
-                x.CreateMultiOrganizationEnterpriseAsync(
-                    Arg.Is<Provider>(y => y.Type == ProviderType.MultiOrganizationEnterprise),
+                x.CreateBusinessUnitAsync(
+                    Arg.Is<Provider>(y => y.Type == ProviderType.BusinessUnit),
                     model.OwnerEmail,
                     Arg.Is<PlanType>(y => y == model.Plan),
                     model.EnterpriseSeatMinimum))
@@ -122,7 +122,7 @@ public class ProvidersControllerTests
             });
 
         // Act
-        var actual = await sutProvider.Sut.CreateMultiOrganizationEnterprise(model);
+        var actual = await sutProvider.Sut.CreateBusinessUnit(model);
 
         // Assert
         Assert.NotNull(actual);

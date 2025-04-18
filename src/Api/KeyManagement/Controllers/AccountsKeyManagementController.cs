@@ -8,6 +8,7 @@ using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -43,6 +44,7 @@ public class AccountsKeyManagementController : Controller
         _organizationUserValidator;
     private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
         _webauthnKeyValidator;
+    private readonly IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> _deviceValidator;
 
     public AccountsKeyManagementController(IUserService userService,
         IFeatureService featureService,
@@ -57,8 +59,8 @@ public class AccountsKeyManagementController : Controller
             emergencyAccessValidator,
         IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
             organizationUserValidator,
-        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
-            webAuthnKeyValidator)
+        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator,
+        IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> deviceValidator)
     {
         _userService = userService;
         _featureService = featureService;
@@ -72,6 +74,7 @@ public class AccountsKeyManagementController : Controller
         _emergencyAccessValidator = emergencyAccessValidator;
         _organizationUserValidator = organizationUserValidator;
         _webauthnKeyValidator = webAuthnKeyValidator;
+        _deviceValidator = deviceValidator;
     }
 
     [HttpPost("key-management/regenerate-keys")]
@@ -110,6 +113,7 @@ public class AccountsKeyManagementController : Controller
             EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.AccountUnlockData.EmergencyAccessUnlockData),
             OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.AccountUnlockData.OrganizationAccountRecoveryUnlockData),
             WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.AccountUnlockData.PasskeyUnlockData),
+            DeviceKeys = await _deviceValidator.ValidateAsync(user, model.AccountUnlockData.DeviceKeyUnlockData),
 
             Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
             Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),

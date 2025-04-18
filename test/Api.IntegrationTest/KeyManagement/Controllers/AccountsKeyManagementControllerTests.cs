@@ -30,6 +30,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
     private readonly IUserRepository _userRepository;
+    private readonly IDeviceRepository _deviceRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IOrganizationRepository _organizationRepository;
     private string _ownerEmail = null!;
@@ -42,6 +43,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _userRepository = _factory.GetService<IUserRepository>();
+        _deviceRepository = _factory.GetService<IDeviceRepository>();
         _emergencyAccessRepository = _factory.GetService<IEmergencyAccessRepository>();
         _organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
         _passwordHasher = _factory.GetService<IPasswordHasher<User>>();
@@ -242,10 +244,12 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         ];
         request.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey = _mockEncryptedString;
         request.AccountUnlockData.PasskeyUnlockData = [];
+        request.AccountUnlockData.DeviceKeyUnlockData = [];
         request.AccountUnlockData.EmergencyAccessUnlockData = [];
         request.AccountUnlockData.OrganizationAccountRecoveryUnlockData = [];
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
+        var responseMessage = await response.Content.ReadAsStringAsync();
         response.EnsureSuccessStatusCode();
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);

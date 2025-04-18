@@ -48,7 +48,7 @@ public class CreateProviderCommand : ICreateProviderCommand
         await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Created);
     }
 
-    public async Task CreateMultiOrganizationEnterpriseAsync(Provider provider, string ownerEmail, PlanType plan, int minimumSeats)
+    public async Task CreateBusinessUnitAsync(Provider provider, string ownerEmail, PlanType plan, int minimumSeats)
     {
         var providerId = await CreateProviderAsync(provider, ownerEmail);
 
