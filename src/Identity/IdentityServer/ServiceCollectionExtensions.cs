@@ -1,4 +1,4 @@
-using Bit.Identity.IdentityServer;
+﻿using Bit.Identity.IdentityServer;
 
 namespace Microsoft.Extensions.DependencyInjection;
 

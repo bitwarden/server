@@ -1,4 +1,4 @@
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
 using Bit.Core.Repositories;
@@ -44,7 +44,7 @@ internal class OrganizationClientProvider : IClientProvider
             ClientId = $"organization.{organization.Id}",
             RequireClientSecret = true,
             ClientSecrets = [new Secret(orgApiKey.ApiKey.Sha256())],
-            AllowedScopes = [ ApiScopes.ApiOrganization ],
+            AllowedScopes = [ApiScopes.ApiOrganization],
             AllowedGrantTypes = GrantTypes.ClientCredentials,
             AccessTokenLifetime = 3600 * 1,
             Enabled = organization.Enabled && organization.UseApi,

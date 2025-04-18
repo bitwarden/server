@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;

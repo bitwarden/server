@@ -1,4 +1,4 @@
-using Bit.Core.Identity;
+﻿using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
@@ -34,13 +34,13 @@ internal class SecretsManagerApiKeyProvider : IClientProvider
 
         switch (apiKey)
         {
-          case ServiceAccountApiKeyDetails key:
-            var org = await _organizationRepository.GetByIdAsync(key.ServiceAccountOrganizationId);
-            if (!org.UseSecretsManager || !org.Enabled)
-            {
-                return null;
-            }
-            break;
+            case ServiceAccountApiKeyDetails key:
+                var org = await _organizationRepository.GetByIdAsync(key.ServiceAccountOrganizationId);
+                if (!org.UseSecretsManager || !org.Enabled)
+                {
+                    return null;
+                }
+                break;
         }
 
         var client = new Client

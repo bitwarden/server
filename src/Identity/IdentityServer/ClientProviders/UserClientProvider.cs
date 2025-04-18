@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Collections.ObjectModel;
 using System.Security.Claims;
