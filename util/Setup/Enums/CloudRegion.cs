@@ -8,4 +8,6 @@ public enum CloudRegion
     US = 0,
     [Display(Name = "EU")]
     EU = 1,
+    [Display(Name = "DEV")]
+    DEV = 2,
 }

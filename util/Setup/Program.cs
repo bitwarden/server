@@ -205,6 +205,7 @@ public class Program
     {
         var installationId = string.Empty;
         var installationKey = string.Empty;
+        var InstallationUrl = string.Empty;
         CloudRegion cloudRegion;
 
         if (_context.Parameters.ContainsKey("install-id"))
@@ -243,6 +244,11 @@ public class Program
             }
         }
 
+        if (Environment.GetEnvironmentVariable("BW_INSTALLATION_URL") != null)
+        {
+            InstallationUrl = Environment.GetEnvironmentVariable("BW_INSTALLATION_URL");
+        }
+
         if (_context.Parameters.ContainsKey("cloud-region"))
         {
             Enum.TryParse(_context.Parameters["cloud-region"], out cloudRegion);
@@ -263,22 +269,35 @@ public class Program
 
         _context.Install.InstallationId = installationidGuid;
         _context.Install.InstallationKey = installationKey;
+        _context.Install.InstallationUrl = InstallationUrl;
         _context.Install.CloudRegion = cloudRegion;
 
         try
         {
-            string url;
+            string regionBaseUrl;
             switch (cloudRegion)
             {
                 case CloudRegion.EU:
-                    url = "https://api.bitwarden.eu/installations/";
+                    regionBaseUrl = "bitwarden.eu";
                     break;
                 case CloudRegion.US:
                 default:
-                    url = "https://api.bitwarden.com/installations/";
+                    regionBaseUrl = "bitwarden.com";
+                    break;
+                case CloudRegion.DEV:
+                    regionBaseUrl = "bitwarden.pw";
                     break;
             }
-            var response = new HttpClient().GetAsync(url + _context.Install.InstallationId).GetAwaiter().GetResult();
+
+            HttpResponseMessage response;
+            if (_context.Install.InstallationUrl != null)
+            {
+                response = new HttpClient().GetAsync($"https://api.{_context.Install.InstallationUrl}.{regionBaseUrl}/installations/{_context.Install.InstallationId}").GetAwaiter().GetResult();
+            }
+            else
+            {
+                response = new HttpClient().GetAsync($"https://api.{regionBaseUrl}/installations/{_context.Install.InstallationId}").GetAwaiter().GetResult();
+            }
 
             if (!response.IsSuccessStatusCode)
             {

@@ -185,6 +185,7 @@ public class Context
     {
         public Guid InstallationId { get; set; }
         public string InstallationKey { get; set; }
+        public string InstallationUrl { get; set; }
         public CloudRegion CloudRegion { get; set; }
         public bool DiffieHellman { get; set; }
         public bool Trusted { get; set; }
