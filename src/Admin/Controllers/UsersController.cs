@@ -167,7 +167,6 @@ public class UsersController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequirePermission(Permission.User_NewDeviceException_Edit)]
-    [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
     public async Task<IActionResult> ToggleNewDeviceVerification(Guid id)
     {
         var user = await _userRepository.GetByIdAsync(id);
