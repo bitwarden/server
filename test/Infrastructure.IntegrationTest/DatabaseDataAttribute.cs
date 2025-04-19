@@ -49,7 +49,6 @@ public class DatabaseDataAttribute : DataAttribute
 
     public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
     {
-        // TODO: Move off of Theory
         var config = GetConfiguration();
 
         HashSet<SupportedDatabaseProviders> unconfiguredDatabases = 
@@ -68,15 +67,11 @@ public class DatabaseDataAttribute : DataAttribute
 
             if (!database.Enabled)
             {
-                theories.Add(new TheoryDataRow
-                {
-                    // TestDisplayName = $"{testMethod.DeclaringType.FullName}.{testMethod.Name}({database.Type})",
-                    Skip = "Not-Enabled",
-                    Traits = new Dictionary<string, HashSet<string>>
-                    {
-                        { "Database", [database.Type.ToString()] },
-                    },
-                });
+                // theories.Add(new TheoryDataRow()
+                //     .WithTestDisplayName($"{testMethod.DeclaringType.FullName}.{database.Type}.{testMethod.Name}")
+                //     .WithSkip("Not-Enabled")
+                //     .WithTrait("Database", database.Type.ToString())
+                // );
                 continue;
             }
 
@@ -99,27 +94,19 @@ public class DatabaseDataAttribute : DataAttribute
 
             // Could do some async work here
             var serviceTheory = new ServiceBasedTheoryDataRow(serviceProvider, testMethod)
-            {
-                // TestDisplayName = $"{testMethod.Name}({database.Type})",
-                Traits = new Dictionary<string, HashSet<string>>
-                {
-                    { "Database", [database.Type.ToString()] },
-                },
-            };
+                .WithTestDisplayName($"{testMethod.DeclaringType.FullName}.{database.Type}.{testMethod.Name}")
+                .WithTrait("Database", database.Type.ToString())
+                .WithTrait("ConnectionString", database.ConnectionString);
             theories.Add(serviceTheory);
         }
 
         foreach (var unconfiguredDatabase in unconfiguredDatabases)
         {
-            theories.Add(new TheoryDataRow
-            {
-                TestDisplayName = $"{testMethod.Name}({unconfiguredDatabase})",
-                Skip = "Unconfigured",
-                Traits = new Dictionary<string, HashSet<string>>
-                {
-                    { "Database", [unconfiguredDatabase.ToString()] },
-                },
-            });
+            // theories.Add(new TheoryDataRow()
+            //     .WithTestDisplayName($"{testMethod.DeclaringType.FullName}.{unconfiguredDatabase}.{testMethod.Name}")
+            //     .WithSkip("Unconfigured")
+            //     .WithTrait("Database", unconfiguredDatabase.ToString())
+            // );
         }
 
         return new(theories);
@@ -131,7 +118,7 @@ public class DatabaseDataAttribute : DataAttribute
         services.AddDataProtection();
         services.AddLogging(logging =>
         {
-            logging.AddXUnit(TestContext.Current.TestOutputHelper);
+            logging.AddProvider(new XUnitLoggerProvider());
         });
         if (UseFakeTimeProvider)
         {
