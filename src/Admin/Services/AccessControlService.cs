@@ -29,12 +29,12 @@ public class AccessControlService : IAccessControlService
         }
 
         var userRole = GetUserRoleFromClaim();
-        if (string.IsNullOrEmpty(userRole) || !RolePermissionMapping.RolePermissions.ContainsKey(userRole))
+        if (string.IsNullOrEmpty(userRole) || !RolePermissionMapping.RolePermissions.TryGetValue(userRole, out var rolePermissions))
         {
             return false;
         }
 
-        return RolePermissionMapping.RolePermissions[userRole].Contains(permission);
+        return rolePermissions.Contains(permission);
     }
 
     public string GetUserRole(string userEmail)

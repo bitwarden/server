@@ -325,12 +325,10 @@ public class CipherService : ICipherService
             }
 
             var attachments = cipher.GetAttachments();
-            if (!attachments.ContainsKey(attachmentId))
+            if (!attachments.TryGetValue(attachmentId, out var originalAttachmentMetadata))
             {
                 throw new BadRequestException($"Cipher does not own specified attachment");
             }
-
-            var originalAttachmentMetadata = attachments[attachmentId];
 
             if (originalAttachmentMetadata.TempMetadata != null)
             {
@@ -408,12 +406,11 @@ public class CipherService : ICipherService
     {
         var attachments = cipher?.GetAttachments() ?? new Dictionary<string, CipherAttachment.MetaData>();
 
-        if (!attachments.ContainsKey(attachmentId))
+        if (!attachments.TryGetValue(attachmentId, out var data))
         {
             throw new NotFoundException();
         }
 
-        var data = attachments[attachmentId];
         var response = new AttachmentResponseData
         {
             Cipher = cipher,
