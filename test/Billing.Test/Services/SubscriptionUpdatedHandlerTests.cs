@@ -1,7 +1,6 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -31,7 +30,6 @@ public class SubscriptionUpdatedHandlerTests
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISchedulerFactory _schedulerFactory;
-    private readonly IFeatureService _featureService;
     private readonly IOrganizationEnableCommand _organizationEnableCommand;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
     private readonly IPricingClient _pricingClient;
@@ -49,7 +47,6 @@ public class SubscriptionUpdatedHandlerTests
         _pushNotificationService = Substitute.For<IPushNotificationService>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _schedulerFactory = Substitute.For<ISchedulerFactory>();
-        _featureService = Substitute.For<IFeatureService>();
         _organizationEnableCommand = Substitute.For<IOrganizationEnableCommand>();
         _organizationDisableCommand = Substitute.For<IOrganizationDisableCommand>();
         _pricingClient = Substitute.For<IPricingClient>();
@@ -67,7 +64,6 @@ public class SubscriptionUpdatedHandlerTests
             _pushNotificationService,
             _organizationRepository,
             _schedulerFactory,
-            _featureService,
             _organizationEnableCommand,
             _organizationDisableCommand,
             _pricingClient);
@@ -96,9 +92,6 @@ public class SubscriptionUpdatedHandlerTests
 
         _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(organizationId, null, null));
-
-        _featureService.IsEnabled(FeatureFlagKeys.ResellerManagedOrgAlert)
-            .Returns(true);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
