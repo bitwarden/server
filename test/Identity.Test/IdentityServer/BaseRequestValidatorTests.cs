@@ -81,36 +81,6 @@ public class BaseRequestValidatorTests
     }
 
     /* Logic path
-     * ValidateAsync -> _Logger.LogInformation
-     *            |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
-     *                                     |-> SetErrorResult
-     */
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_IsBot_UserNotNull_ShouldBuildErrorResult_ShouldLogFailedLoginEvent(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
-    {
-        // Arrange
-        var context = CreateContext(tokenRequest, requestContext, grantResult);
-
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = true;
-        _sut.isValid = true;
-
-        // Act
-        await _sut.ValidateAsync(context);
-
-        var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-
-        // Assert
-        await _eventService.Received(1)
-                           .LogUserEventAsync(context.CustomValidatorRequestContext.User.Id,
-                                             EventType.User_FailedLogIn);
-        Assert.True(context.GrantResult.IsError);
-        Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
-    }
-
-    /* Logic path
      * ValidateAsync -> UpdateFailedAuthDetailsAsync -> _mailService.SendFailedLoginAttemptsEmailAsync
      *            |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
      *                       (self hosted) |-> _logger.LogWarning()
@@ -124,7 +94,6 @@ public class BaseRequestValidatorTests
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _globalSettings.Captcha.Returns(new GlobalSettings.CaptchaSettings());
         _globalSettings.SelfHosted = true;
         _sut.isValid = false;
@@ -152,7 +121,6 @@ public class BaseRequestValidatorTests
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
 
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         // This needs to be n-1 of the max failed login attempts
         context.CustomValidatorRequestContext.User.FailedLoginCount = 2;
         context.CustomValidatorRequestContext.KnownDevice = false;
@@ -185,7 +153,6 @@ public class BaseRequestValidatorTests
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         // 1 -> to pass
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
 
         // 2 -> will result to false with no extra configuration
@@ -222,7 +189,6 @@ public class BaseRequestValidatorTests
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         // 1 -> to pass
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
 
         // 2 -> will result to false with no extra configuration
@@ -259,7 +225,6 @@ public class BaseRequestValidatorTests
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
 
         context.ValidatedTokenRequest.GrantType = grantType;
@@ -290,7 +255,6 @@ public class BaseRequestValidatorTests
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
 
         context.ValidatedTokenRequest.GrantType = grantType;
@@ -328,7 +292,6 @@ public class BaseRequestValidatorTests
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
 
         context.ValidatedTokenRequest.GrantType = grantType;
@@ -366,7 +329,6 @@ public class BaseRequestValidatorTests
         var user = context.CustomValidatorRequestContext.User;
         user.Key = null;
 
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         context.ValidatedTokenRequest.ClientId = "Not Web";
         _sut.isValid = true;
         _twoFactorAuthenticationValidator

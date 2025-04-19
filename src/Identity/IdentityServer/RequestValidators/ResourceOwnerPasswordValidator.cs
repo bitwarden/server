@@ -85,37 +85,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             Device = knownDevice ?? requestDevice,
         };
 
-        string bypassToken = null;
-        if (!validatorContext.KnownDevice &&
-            _captchaValidationService.RequireCaptchaValidation(_currentContext, user))
-        {
-            var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
-
-            if (string.IsNullOrWhiteSpace(captchaResponse))
-            {
-                context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Captcha required.",
-                    new Dictionary<string, object>
-                    {
-                        { _captchaValidationService.SiteKeyResponseKeyName, _captchaValidationService.SiteKey },
-                    });
-                return;
-            }
-
-            validatorContext.CaptchaResponse = await _captchaValidationService.ValidateCaptchaResponseAsync(
-                captchaResponse, _currentContext.IpAddress, user);
-            if (!validatorContext.CaptchaResponse.Success)
-            {
-                await BuildErrorResultAsync("Captcha is invalid. Please refresh and try again", false, context, null);
-                return;
-            }
-            bypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
-        }
-
         await ValidateAsync(context, context.Request, validatorContext);
-        if (context.Result.CustomResponse != null && bypassToken != null)
-        {
-            context.Result.CustomResponse["CaptchaBypassToken"] = bypassToken;
-        }
+
     }
 
     protected async override Task<bool> ValidateContextAsync(ResourceOwnerPasswordValidationContext context,
