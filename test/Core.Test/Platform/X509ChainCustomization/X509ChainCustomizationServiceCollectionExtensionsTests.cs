@@ -257,6 +257,41 @@ public class X509ChainCustomizationServiceCollectionExtensionsTests
         Assert.Equal("Hi", response);
     }
 
+    [Fact]
+    public async Task CallHttp_ReachingOutToServerTrustedThroughSystemCA()
+    {
+        var services = CreateServices((gs, environment, config) => { }, services =>
+        {
+            services.Configure<X509ChainOptions>(options =>
+            {
+                options.AdditionalCustomTrustCertificates = [];
+            });
+        });
+
+        var httpClient = services.GetRequiredService<IHttpClientFactory>().CreateClient();
+
+        var response = await httpClient.GetAsync("https://example.com");
+        response.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task CallHttpWithCustomTrustForSelfSigned_ReachingOutToServerTrustedThroughSystemCA()
+    {
+        var selfSignedCertificate = CreateSelfSignedCert("localhost");
+        var services = CreateServices((gs, environment, config) => { }, services =>
+        {
+            services.Configure<X509ChainOptions>(options =>
+            {
+                options.AdditionalCustomTrustCertificates = [selfSignedCertificate];
+            });
+        });
+
+        var httpClient = services.GetRequiredService<IHttpClientFactory>().CreateClient();
+
+        var response = await httpClient.GetAsync("https://example.com");
+        response.EnsureSuccessStatusCode();
+    }
+
     private static async Task<IAsyncDisposable> CreateServerAsync(int port, Action<HttpsConnectionAdapterOptions> configure)
     {
         var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());

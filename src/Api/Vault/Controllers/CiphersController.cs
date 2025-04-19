@@ -177,12 +177,7 @@ public class CiphersController : Controller
         }
 
         await _cipherService.SaveDetailsAsync(cipher, user.Id, model.Cipher.LastKnownRevisionDate, model.CollectionIds, cipher.OrganizationId.HasValue);
-        var response = new CipherResponseModel(
-            cipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings);
-        return response;
+        return await Get(cipher.Id);
     }
 
     [HttpPost("admin")]
@@ -1091,9 +1086,9 @@ public class CiphersController : Controller
             throw new BadRequestException(ModelState);
         }
 
-        // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
+        // If Account Deprovisioning is enabled, we need to check if the user is claimed by any organization.
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
+            && await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
         {
             throw new BadRequestException("Cannot purge accounts owned by an organization. Contact your organization administrator for additional details.");
         }

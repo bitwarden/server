@@ -1,4 +1,6 @@
-﻿using Bit.Core.Enums;
+﻿#nullable enable
+
+using Bit.Core.Enums;
 using Bit.Core.NotificationHub;
 
 namespace Bit.Core.Platform.Push;
