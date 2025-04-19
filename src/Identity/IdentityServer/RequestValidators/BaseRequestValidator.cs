@@ -77,23 +77,12 @@ public abstract class BaseRequestValidator<T> where T : class
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
-        // 1. We need to check if the user is a bot and if their master password hash is correct.
-        var isBot = validatorContext.CaptchaResponse?.IsBot ?? false;
-        var valid = await ValidateContextAsync(context, validatorContext);
+        // 1. We need to check if the user's master password hash is correct.
         var user = validatorContext.User;
-        if (!valid || isBot)
+        var valid = await ValidateContextAsync(context, validatorContext);
+        if (!valid)
         {
-            if (isBot)
-            {
-                _logger.LogInformation(Constants.BypassFiltersEventId,
-                    "Login attempt for {UserName} detected as a captcha bot with score {CaptchaScore}.",
-                    request.UserName, validatorContext.CaptchaResponse.Score);
-            }
-
-            if (!valid)
-            {
-                await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
-            }
+            await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
 
             await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
             return;
