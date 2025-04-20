@@ -94,7 +94,6 @@ public class BaseRequestValidatorTests
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
-        _globalSettings.Captcha.Returns(new GlobalSettings.CaptchaSettings());
         _globalSettings.SelfHosted = true;
         _sut.isValid = false;
 
