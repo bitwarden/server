@@ -106,43 +106,6 @@ public class BaseRequestValidatorTests
         Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
     }
 
-    /* Logic path
-     * ValidateAsync -> UpdateFailedAuthDetailsAsync -> _mailService.SendFailedLoginAttemptsEmailAsync
-     *            |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
-     *                                     |-> SetErrorResult
-     */
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_ContextNotValid_MaxAttemptLogin_ShouldSendEmail(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
-    {
-        // Arrange
-        var context = CreateContext(tokenRequest, requestContext, grantResult);
-
-        // This needs to be n-1 of the max failed login attempts
-        context.CustomValidatorRequestContext.User.FailedLoginCount = 2;
-        context.CustomValidatorRequestContext.KnownDevice = false;
-
-        _globalSettings.Captcha.Returns(
-            new GlobalSettings.CaptchaSettings
-            {
-                MaximumFailedLoginAttempts = 3
-            });
-        _sut.isValid = false;
-
-        // Act
-        await _sut.ValidateAsync(context);
-
-        // Assert
-        await _mailService.Received(1)
-                          .SendFailedLoginAttemptsEmailAsync(
-                            Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
-        Assert.True(context.GrantResult.IsError);
-        var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-        Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
-    }
-
     [Theory, BitAutoData]
     public async Task ValidateAsync_DeviceNotValidated_ShouldLogError(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,

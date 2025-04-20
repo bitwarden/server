@@ -1135,40 +1135,6 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        var message = CreateDefaultMessage("Failed login attempts detected", email);
-        var model = new FailedAuthAttemptsModel()
-        {
-            TheDate = utcNow.ToLongDateString(),
-            TheTime = utcNow.ToShortTimeString(),
-            TimeZone = _utcTimeZoneDisplay,
-            IpAddress = ip,
-            AffectedEmail = email
-
-        };
-        await AddMessageContentAsync(message, "Auth.FailedLoginAttempts", model);
-        message.Category = "FailedLoginAttempts";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
-    public async Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        var message = CreateDefaultMessage("Failed login attempts detected", email);
-        var model = new FailedAuthAttemptsModel()
-        {
-            TheDate = utcNow.ToLongDateString(),
-            TheTime = utcNow.ToShortTimeString(),
-            TimeZone = _utcTimeZoneDisplay,
-            IpAddress = ip,
-            AffectedEmail = email
-
-        };
-        await AddMessageContentAsync(message, "Auth.FailedTwoFactorAttempts", model);
-        message.Category = "FailedTwoFactorAttempts";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
     public async Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
     {
         var message = CreateDefaultMessage("Domain not verified", adminEmails);
