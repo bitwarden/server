@@ -6,5 +6,5 @@ public class RegisterResponseModel : ResponseModel
 {
     public RegisterResponseModel()
         : base("register")
-    {}
+    { }
 }
