@@ -372,32 +372,6 @@ public abstract class BaseRequestValidator<T> where T : class
         user.FailedLoginCount = ++user.FailedLoginCount;
         user.LastFailedLoginDate = user.RevisionDate = utcNow;
         await _userRepository.ReplaceAsync(user);
-
-        if (ValidateFailedAuthEmailConditions(unknownDevice, user))
-        {
-            if (twoFactorInvalid)
-            {
-                await _mailService.SendFailedTwoFactorAttemptsEmailAsync(user.Email, utcNow, CurrentContext.IpAddress);
-            }
-            else
-            {
-                await _mailService.SendFailedLoginAttemptsEmailAsync(user.Email, utcNow, CurrentContext.IpAddress);
-            }
-        }
-    }
-
-    /// <summary>
-    /// checks to see if a user is trying to log into a new device
-    /// and has reached the maximum number of failed login attempts.
-    /// </summary>
-    /// <param name="unknownDevice">boolean</param>
-    /// <param name="user">current user</param>
-    /// <returns></returns>
-    private bool ValidateFailedAuthEmailConditions(bool unknownDevice, User user)
-    {
-        var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;
-        var failedLoginCount = user?.FailedLoginCount ?? 0;
-        return unknownDevice && failedLoginCeiling > 0 && failedLoginCount == failedLoginCeiling;
     }
 
     private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicyAsync(User user)
