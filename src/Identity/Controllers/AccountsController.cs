@@ -5,7 +5,6 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Context;
@@ -37,7 +36,6 @@ public class AccountsController : Controller
     private readonly ILogger<AccountsController> _logger;
     private readonly IUserRepository _userRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
-    private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
@@ -85,7 +83,6 @@ public class AccountsController : Controller
         ILogger<AccountsController> logger,
         IUserRepository userRepository,
         IRegisterUserCommand registerUserCommand,
-        ICaptchaValidationService captchaValidationService,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
         ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
@@ -99,7 +96,6 @@ public class AccountsController : Controller
         _logger = logger;
         _userRepository = userRepository;
         _registerUserCommand = registerUserCommand;
-        _captchaValidationService = captchaValidationService;
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
         _sendVerificationEmailForRegistrationCommand = sendVerificationEmailForRegistrationCommand;
@@ -212,8 +208,7 @@ public class AccountsController : Controller
     {
         if (result.Succeeded)
         {
-            var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
-            return new RegisterResponseModel(captchaBypassToken);
+            return new RegisterResponseModel();
         }
 
         foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))

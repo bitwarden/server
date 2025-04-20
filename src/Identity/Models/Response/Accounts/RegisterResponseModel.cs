@@ -2,13 +2,9 @@
 
 namespace Bit.Identity.Models.Response.Accounts;
 
-public class RegisterResponseModel : ResponseModel, ICaptchaProtectedResponseModel
+public class RegisterResponseModel : ResponseModel
 {
-    public RegisterResponseModel(string captchaBypassToken)
+    public RegisterResponseModel()
         : base("register")
-    {
-        CaptchaBypassToken = captchaBypassToken;
-    }
-
-    public string CaptchaBypassToken { get; set; }
+    {}
 }

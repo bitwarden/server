@@ -2,7 +2,6 @@
 using Bit.Core;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
@@ -20,7 +19,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
 {
     private UserManager<User> _userManager;
     private readonly ICurrentContext _currentContext;
-    private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IDeviceValidator _deviceValidator;
     public ResourceOwnerPasswordValidator(
@@ -34,7 +32,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        ICaptchaValidationService captchaValidationService,
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
@@ -60,7 +57,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
     {
         _userManager = userManager;
         _currentContext = currentContext;
-        _captchaValidationService = captchaValidationService;
         _authRequestRepository = authRequestRepository;
         _deviceValidator = deviceValidator;
     }

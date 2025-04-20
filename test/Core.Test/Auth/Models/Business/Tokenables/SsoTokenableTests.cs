@@ -1,4 +1,5 @@
-﻿using AutoFixture.Xunit2;
+﻿using Amazon.Runtime.Credentials.Internal;
+using AutoFixture.Xunit2;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Tokens;
@@ -67,7 +68,7 @@ public class SsoTokenableTests
             ExpirationDate = expectedDateTime
         };
 
-        var result = Tokenable.FromToken<HCaptchaTokenable>(token.ToToken());
+        var result = Tokenable.FromToken<SsoTokenable>(token.ToToken());
 
         Assert.Equal(expectedDateTime, result.ExpirationDate, TimeSpan.FromMilliseconds(10));
     }

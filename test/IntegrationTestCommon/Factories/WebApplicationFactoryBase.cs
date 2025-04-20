@@ -206,9 +206,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             Replace<IEventRepository, EventRepository>(services);
 
             Replace<IMailDeliveryService, NoopMailDeliveryService>(services);
-
-            Replace<ICaptchaValidationService, NoopCaptchaValidationService>(services);
-
+            
             // TODO: Install and use azurite in CI pipeline
             Replace<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>(services);
 
