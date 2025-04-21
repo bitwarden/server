@@ -125,11 +125,8 @@ public class VerifyOrganizationDomainCommand(
 
     private async Task DomainVerificationSideEffectsAsync(OrganizationDomain domain, IActingUser actingUser)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
-        {
-            await EnableSingleOrganizationPolicyAsync(domain.OrganizationId, actingUser);
-            await SendVerifiedDomainUserEmailAsync(domain);
-        }
+        await EnableSingleOrganizationPolicyAsync(domain.OrganizationId, actingUser);
+        await SendVerifiedDomainUserEmailAsync(domain);
     }
 
     private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser) =>

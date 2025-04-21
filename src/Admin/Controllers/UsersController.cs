@@ -89,7 +89,7 @@ public class UsersController : Controller
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
 
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
-        var verifiedDomain = await AccountDeprovisioningEnabled(user.Id);
+        var verifiedDomain = await _userService.IsClaimedByAnyOrganizationAsync(user.Id);
         return View(UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, verifiedDomain));
     }
 
@@ -106,7 +106,7 @@ public class UsersController : Controller
         var billingInfo = await _paymentService.GetBillingAsync(user);
         var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
-        var verifiedDomain = await AccountDeprovisioningEnabled(user.Id);
+        var verifiedDomain = await _userService.IsClaimedByAnyOrganizationAsync(user.Id);
         var deviceVerificationRequired = await _userService.ActiveNewDeviceVerificationException(user.Id);
 
         return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings, verifiedDomain, deviceVerificationRequired));
@@ -178,13 +178,5 @@ public class UsersController : Controller
 
         await _userService.ToggleNewDeviceVerificationException(user.Id);
         return RedirectToAction("Edit", new { id });
-    }
-
-    // TODO: Feature flag to be removed in PM-14207
-    private async Task<bool?> AccountDeprovisioningEnabled(Guid userId)
-    {
-        return _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            ? await _userService.IsClaimedByAnyOrganizationAsync(userId)
-            : null;
     }
 }

@@ -61,16 +61,9 @@ public class SingleOrgPolicyValidator : IPolicyValidator
     {
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {
-            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
-            {
-                var currentUser = _currentContext.UserId ?? Guid.Empty;
-                var isOwnerOrProvider = await _currentContext.OrganizationOwner(policyUpdate.OrganizationId);
-                await RevokeNonCompliantUsersAsync(policyUpdate.OrganizationId, policyUpdate.PerformedBy ?? new StandardUser(currentUser, isOwnerOrProvider));
-            }
-            else
-            {
-                await RemoveNonCompliantUsersAsync(policyUpdate.OrganizationId);
-            }
+            var currentUser = _currentContext.UserId ?? Guid.Empty;
+            var isOwnerOrProvider = await _currentContext.OrganizationOwner(policyUpdate.OrganizationId);
+            await RevokeNonCompliantUsersAsync(policyUpdate.OrganizationId, policyUpdate.PerformedBy ?? new StandardUser(currentUser, isOwnerOrProvider));
         }
     }
 
@@ -165,8 +158,7 @@ public class SingleOrgPolicyValidator : IPolicyValidator
                 return validateDecryptionErrorMessage;
             }
 
-            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-                && await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policyUpdate.OrganizationId))
+            if (await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policyUpdate.OrganizationId))
             {
                 return ClaimedDomainSingleOrganizationRequiredErrorMessage;
             }

@@ -1374,11 +1374,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<IEnumerable<Organization>> GetOrganizationsClaimingUserAsync(Guid userId)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
-        {
-            return Enumerable.Empty<Organization>();
-        }
-
         // Get all organizations that have verified the user's email domain.
         var organizationsWithVerifiedUserEmailDomain = await _organizationRepository.GetByVerifiedUserEmailDomainAsync(userId);
 
@@ -1443,22 +1438,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
         {
             var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
-            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
-            {
-                await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-                    new RevokeOrganizationUsersRequest(
-                        p.OrganizationId,
-                        [new OrganizationUserUserDetails { Id = p.OrganizationUserId, OrganizationId = p.OrganizationId }],
-                        new SystemUser(EventSystemUser.TwoFactorDisabled)));
-                await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
-            }
-            else
-            {
-                await _removeOrganizationUserCommand.RemoveUserAsync(p.OrganizationId, user.Id);
-                await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                    organization.DisplayName(), user.Email);
-            }
-
+            await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+                new RevokeOrganizationUsersRequest(
+                    p.OrganizationId,
+                    [new OrganizationUserUserDetails { Id = p.OrganizationUserId, OrganizationId = p.OrganizationId }],
+                    new SystemUser(EventSystemUser.TwoFactorDisabled)));
+            await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
         }).ToArray();
 
         await Task.WhenAll(removeOrgUserTasks);
