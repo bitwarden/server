@@ -110,6 +110,11 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
             claims.Add(new Claim(nameof(OrganizationLicenseConstants.SmServiceAccounts), entity.SmServiceAccounts.ToString()));
         }
 
+        if (licenseContext.SmMaxProjects.HasValue)
+        {
+            claims.Add(new Claim(nameof(OrganizationLicenseConstants.SmMaxProjects), licenseContext.SmMaxProjects.ToString()));
+        }
+
         return Task.FromResult(claims);
     }
 
