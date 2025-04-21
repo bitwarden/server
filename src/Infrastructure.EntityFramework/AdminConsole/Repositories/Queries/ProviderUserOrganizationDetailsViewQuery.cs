@@ -50,9 +50,8 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             AllowAdminAccessToAllCollectionItems = x.o.AllowAdminAccessToAllCollectionItems,
             UseRiskInsights = x.o.UseRiskInsights,
             ProviderType = x.p.Type,
-            UseOrganizationDomains = x.o.UseOrganizationDomains
+            UseOrganizationDomains = x.o.UseOrganizationDomains,
             UseAdminSponsoredFamilies = x.o.UseAdminSponsoredFamilies,
-            ProviderType = x.p.Type
         });
     }
 }

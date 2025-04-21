@@ -71,7 +71,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         LimitItemDeletion = o.LimitItemDeletion,
                         AllowAdminAccessToAllCollectionItems = o.AllowAdminAccessToAllCollectionItems,
                         UseRiskInsights = o.UseRiskInsights,
-                        UseOrganizationDomains = o.UseOrganizationDomains
+                        UseOrganizationDomains = o.UseOrganizationDomains,
                         UseAdminSponsoredFamilies = o.UseAdminSponsoredFamilies,
                     };
         return query;
