@@ -18,6 +18,16 @@ namespace Bit.Infrastructure.IntegrationTest;
 
 public class DatabaseDataAttribute : DataAttribute
 {
+    private static readonly Dictionary<string, Type> _seederMap;
+
+    static DatabaseDataAttribute()
+    {
+        _seederMap = typeof(DatabaseDataAttribute).Assembly.GetCustomAttributesData()
+            .Where(ad => ad.AttributeType.IsGenericType
+                && ad.AttributeType.GetGenericTypeDefinition() == typeof(SeedConfigurationAttribute<>))
+            .ToDictionary(ad => (string)ad.ConstructorArguments[0].Value, ad => ad.AttributeType.GetGenericArguments()[0]);
+    }
+
     private static IConfiguration? _cachedConfiguration;
     private static IConfiguration GetConfiguration()
     {
@@ -32,6 +42,7 @@ public class DatabaseDataAttribute : DataAttribute
     public bool SelfHosted { get; set; }
     public bool UseFakeTimeProvider { get; set; }
     public string? MigrationName { get; set; }
+    public string? Seed { get; set; }
 
     private void AddSqlMigrationTester(IServiceCollection services, string connectionString, string migrationName)
     {
@@ -47,11 +58,11 @@ public class DatabaseDataAttribute : DataAttribute
         });
     }
 
-    public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
+    public override async ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
     {
         var config = GetConfiguration();
 
-        HashSet<SupportedDatabaseProviders> unconfiguredDatabases = 
+        HashSet<SupportedDatabaseProviders> unconfiguredDatabases =
         [
             SupportedDatabaseProviders.MySql,
             SupportedDatabaseProviders.Postgres,
@@ -92,8 +103,24 @@ public class DatabaseDataAttribute : DataAttribute
             var serviceProvider = services.BuildServiceProvider();
             disposalTracker.Add(serviceProvider);
 
+            SeedContext? seedContext = null;
+
             // Could do some async work here
-            var serviceTheory = new ServiceBasedTheoryDataRow(serviceProvider, testMethod)
+            if (!string.IsNullOrEmpty(Seed))
+            {
+                if (!_seederMap.TryGetValue(Seed, out var seederType))
+                {
+                    throw new InvalidOperationException($"No SeederConfigurationAttribute found for seed '{Seed}'");
+                }
+
+                var seeder = (ISeeder)ActivatorUtilities.CreateInstance(serviceProvider, seederType);
+                disposalTracker.Add(seeder);
+
+                seedContext = new SeedContext();
+                await seeder.SeedAsync(seedContext);
+            }
+
+            var serviceTheory = new ServiceBasedTheoryDataRow(serviceProvider, testMethod, seedContext)
                 .WithTestDisplayName($"{testMethod.DeclaringType.FullName}.{database.Type}.{testMethod.Name}")
                 .WithTrait("Database", database.Type.ToString())
                 .WithTrait("ConnectionString", database.ConnectionString);
@@ -109,7 +136,7 @@ public class DatabaseDataAttribute : DataAttribute
             // );
         }
 
-        return new(theories);
+        return theories;
     }
 
     private void AddCommonServices(IServiceCollection services)
@@ -190,22 +217,36 @@ public class DatabaseDataAttribute : DataAttribute
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly MethodInfo _testMethod;
+        private readonly SeedContext? _seedContext;
 
-        public ServiceBasedTheoryDataRow(IServiceProvider serviceProvider, MethodInfo testMethod)
+        public ServiceBasedTheoryDataRow(IServiceProvider serviceProvider, MethodInfo testMethod, SeedContext? seedContext)
         {
             _serviceProvider = serviceProvider;
             _testMethod = testMethod;
+            _seedContext = seedContext;
         }
 
         protected override object?[] GetData()
         {
             var parameters = _testMethod.GetParameters();
-            
+
             var services = new object?[parameters.Length];
 
             for (var i = 0; i < parameters.Length; i++)
             {
                 var parameter = parameters[i];
+
+                // Special case SeedContext so that we don't have to build services twice.
+                if (parameter.ParameterType == typeof(SeedContext))
+                {
+                    if (_seedContext == null)
+                    {
+                        throw new InvalidOperationException("This test was not marked with a Seed");
+                    }
+                    services[i] = _seedContext;
+                    continue;
+                }
+
                 // TODO: Could support keyed services/optional/nullable
                 services[i] = _serviceProvider.GetRequiredService(parameter.ParameterType);
             }
