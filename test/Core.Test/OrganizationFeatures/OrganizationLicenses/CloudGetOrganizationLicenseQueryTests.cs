@@ -1,8 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
