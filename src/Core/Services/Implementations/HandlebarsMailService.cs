@@ -299,20 +299,6 @@ public class HandlebarsMailService : IMailService
         await EnqueueMailAsync(messageModels);
     }
 
-    public async Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
-    {
-        var message = CreateDefaultMessage($"You have been removed from {organizationName}", email);
-        var model = new OrganizationUserRemovedForPolicyTwoStepViewModel
-        {
-            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
-            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-            SiteName = _globalSettings.SiteName
-        };
-        await AddMessageContentAsync(message, "OrganizationUserRemovedForPolicyTwoStep", model);
-        message.Category = "OrganizationUserRemovedForPolicyTwoStep";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
     public async Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email)
     {
         var message = CreateDefaultMessage($"You have been revoked from {organizationName}", email);
@@ -527,20 +513,6 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "Auth.RecoverTwoFactor", model);
         message.Category = "RecoverTwoFactor";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
-    public async Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email)
-    {
-        var message = CreateDefaultMessage($"You have been removed from {organizationName}", email);
-        var model = new OrganizationUserRemovedForPolicySingleOrgViewModel
-        {
-            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
-            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-            SiteName = _globalSettings.SiteName
-        };
-        await AddMessageContentAsync(message, "OrganizationUserRemovedForPolicySingleOrg", model);
-        message.Category = "OrganizationUserRemovedForPolicySingleOrg";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
@@ -1166,19 +1138,6 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "Auth.FailedTwoFactorAttempts", model);
         message.Category = "FailedTwoFactorAttempts";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
-    public async Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
-    {
-        var message = CreateDefaultMessage("Domain not verified", adminEmails);
-        var model = new OrganizationDomainUnverifiedViewModel
-        {
-            Url = $"{_globalSettings.BaseServiceUri.VaultWithHash}/organizations/{organizationId}/settings/domain-verification",
-            DomainName = domainName
-        };
-        await AddMessageContentAsync(message, "OrganizationDomainUnverified", model);
-        message.Category = "UnverifiedOrganizationDomain";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 

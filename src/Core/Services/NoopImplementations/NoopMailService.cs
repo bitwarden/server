@@ -79,11 +79,6 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
-    {
-        return Task.FromResult(0);
-    }
-
     public Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email) =>
         Task.CompletedTask;
 
@@ -150,11 +145,6 @@ public class NoopMailService : IMailService
     }
 
     public Task SendRecoverTwoFactorEmail(string email, DateTime timestamp, string ip)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email)
     {
         return Task.FromResult(0);
     }
@@ -273,11 +263,6 @@ public class NoopMailService : IMailService
     }
 
     public Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
     {
         return Task.FromResult(0);
     }

@@ -109,42 +109,6 @@ public class SingleOrgPolicyValidator : IPolicyValidator
             _mailService.SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(), x.Email)));
     }
 
-    private async Task RemoveNonCompliantUsersAsync(Guid organizationId)
-    {
-        // Remove non-compliant users
-        var savingUserId = _currentContext.UserId;
-        // Note: must get OrganizationUserUserDetails so that Email is always populated from the User object
-        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-        var org = await _organizationRepository.GetByIdAsync(organizationId);
-        if (org == null)
-        {
-            throw new NotFoundException(OrganizationNotFoundErrorMessage);
-        }
-
-        var removableOrgUsers = orgUsers.Where(ou =>
-            ou.Status != OrganizationUserStatusType.Invited &&
-            ou.Status != OrganizationUserStatusType.Revoked &&
-            ou.Type != OrganizationUserType.Owner &&
-            ou.Type != OrganizationUserType.Admin &&
-            ou.UserId != savingUserId
-        ).ToList();
-
-        var userOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
-            removableOrgUsers.Select(ou => ou.UserId!.Value));
-        foreach (var orgUser in removableOrgUsers)
-        {
-            if (userOrgs.Any(ou => ou.UserId == orgUser.UserId
-                                   && ou.OrganizationId != org.Id
-                                   && ou.Status != OrganizationUserStatusType.Invited))
-            {
-                await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id, savingUserId);
-
-                await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
-                    org.DisplayName(), orgUser.Email);
-            }
-        }
-    }
-
     public async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         if (policyUpdate is not { Enabled: true })
