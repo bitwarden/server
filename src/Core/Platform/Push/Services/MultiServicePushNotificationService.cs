@@ -33,170 +33,162 @@ public class MultiServicePushNotificationService : IPushNotificationService
 
     public Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
     {
-        PushToServices((s) => s.PushSyncCipherCreateAsync(cipher, collectionIds));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushSyncCipherCreateAsync(cipher, collectionIds));
     }
 
     public Task PushSyncCipherUpdateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
     {
-        PushToServices((s) => s.PushSyncCipherUpdateAsync(cipher, collectionIds));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushSyncCipherUpdateAsync(cipher, collectionIds));
     }
 
     public Task PushSyncCipherDeleteAsync(Cipher cipher)
     {
-        PushToServices((s) => s.PushSyncCipherDeleteAsync(cipher));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushSyncCipherDeleteAsync(cipher));
     }
 
     public Task PushSyncFolderCreateAsync(Folder folder)
     {
-        PushToServices((s) => s.PushSyncFolderCreateAsync(folder));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushSyncFolderCreateAsync(folder));
     }
 
     public Task PushSyncFolderUpdateAsync(Folder folder)
     {
-        PushToServices((s) => s.PushSyncFolderUpdateAsync(folder));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushSyncFolderUpdateAsync(folder));
     }
 
     public Task PushSyncFolderDeleteAsync(Folder folder)
     {
-        PushToServices((s) => s.PushSyncFolderDeleteAsync(folder));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushSyncFolderDeleteAsync(folder));
     }
 
     public Task PushSyncCiphersAsync(Guid userId)
     {
-        PushToServices((s) => s.PushSyncCiphersAsync(userId));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushSyncCiphersAsync(userId));
     }
 
     public Task PushSyncVaultAsync(Guid userId)
     {
-        PushToServices((s) => s.PushSyncVaultAsync(userId));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushSyncVaultAsync(userId));
     }
 
     public Task PushSyncOrganizationsAsync(Guid userId)
     {
-        PushToServices((s) => s.PushSyncOrganizationsAsync(userId));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushSyncOrganizationsAsync(userId));
     }
 
     public Task PushSyncOrgKeysAsync(Guid userId)
     {
-        PushToServices((s) => s.PushSyncOrgKeysAsync(userId));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushSyncOrgKeysAsync(userId));
     }
 
     public Task PushSyncSettingsAsync(Guid userId)
     {
-        PushToServices((s) => s.PushSyncSettingsAsync(userId));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushSyncSettingsAsync(userId));
     }
 
     public Task PushLogOutAsync(Guid userId, bool excludeCurrentContext = false)
     {
-        PushToServices((s) => s.PushLogOutAsync(userId, excludeCurrentContext));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushLogOutAsync(userId, excludeCurrentContext));
     }
 
     public Task PushSyncSendCreateAsync(Send send)
     {
-        PushToServices((s) => s.PushSyncSendCreateAsync(send));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushSyncSendCreateAsync(send));
     }
 
     public Task PushSyncSendUpdateAsync(Send send)
     {
-        PushToServices((s) => s.PushSyncSendUpdateAsync(send));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushSyncSendUpdateAsync(send));
     }
 
     public Task PushAuthRequestAsync(AuthRequest authRequest)
     {
-        PushToServices((s) => s.PushAuthRequestAsync(authRequest));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushAuthRequestAsync(authRequest));
     }
 
     public Task PushAuthRequestResponseAsync(AuthRequest authRequest)
     {
-        PushToServices((s) => s.PushAuthRequestResponseAsync(authRequest));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushAuthRequestResponseAsync(authRequest));
     }
 
     public Task PushSyncSendDeleteAsync(Send send)
     {
-        PushToServices((s) => s.PushSyncSendDeleteAsync(send));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushSyncSendDeleteAsync(send));
     }
 
     public Task PushSyncOrganizationStatusAsync(Organization organization)
     {
-        PushToServices((s) => s.PushSyncOrganizationStatusAsync(organization));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.PushSyncOrganizationStatusAsync(organization));
     }
 
     public Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization)
     {
-        PushToServices(s => s.PushSyncOrganizationCollectionManagementSettingsAsync(organization));
-        return Task.CompletedTask;
+        return PushToServices(s => s.PushSyncOrganizationCollectionManagementSettingsAsync(organization));
     }
 
     public Task PushNotificationAsync(Notification notification)
     {
-        PushToServices((s) => s.PushNotificationAsync(notification));
-        return Task.CompletedTask;
+        return PushToServices((s) => s.PushNotificationAsync(notification));
     }
 
     public Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
     {
-        PushToServices((s) => s.PushNotificationStatusAsync(notification, notificationStatus));
-        return Task.CompletedTask;
+        return PushToServices((s) => s.PushNotificationStatusAsync(notification, notificationStatus));
     }
 
     public Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload, string? identifier,
         string? deviceId = null, ClientType? clientType = null)
     {
-        PushToServices((s) =>
+        return PushToServices((s) =>
             s.SendPayloadToInstallationAsync(installationId, type, payload, identifier, deviceId, clientType));
-        return Task.CompletedTask;
     }
 
     public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
         string? deviceId = null, ClientType? clientType = null)
     {
-        PushToServices((s) => s.SendPayloadToUserAsync(userId, type, payload, identifier, deviceId, clientType));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.SendPayloadToUserAsync(userId, type, payload, identifier, deviceId, clientType));
     }
 
     public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string? identifier,
         string? deviceId = null, ClientType? clientType = null)
     {
-        PushToServices((s) => s.SendPayloadToOrganizationAsync(orgId, type, payload, identifier, deviceId, clientType));
-        return Task.FromResult(0);
+        return PushToServices((s) => s.SendPayloadToOrganizationAsync(orgId, type, payload, identifier, deviceId, clientType));
     }
 
     public Task PushPendingSecurityTasksAsync(Guid userId)
     {
-        PushToServices((s) => s.PushPendingSecurityTasksAsync(userId));
-        return Task.CompletedTask;
+        return PushToServices((s) => s.PushPendingSecurityTasksAsync(userId));
     }
 
-    private void PushToServices(Func<IPushNotificationService, Task> pushFunc)
+    private Task PushToServices(Func<IPushNotificationService, Task> pushFunc)
     {
         if (!_services.Any())
         {
             _logger.LogWarning("No services found to push notification");
-            return;
+            return Task.CompletedTask;
         }
+
+
+        #if DEBUG
+        var tasks = new List<Task>();
+        #endif
 
         foreach (var service in _services)
         {
             _logger.LogDebug("Pushing notification to service {ServiceName}", service.GetType().Name);
+            #if DEBUG
+            var task =
+            #endif
             pushFunc(service);
+            #if DEBUG
+            tasks.Add(task);
+            #endif
         }
+
+        #if DEBUG
+        return Task.WhenAll(tasks);
+        #else
+        return Task.CompletedTask;
+        #endif
     }
 }
