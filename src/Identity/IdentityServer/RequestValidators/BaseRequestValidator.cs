@@ -16,7 +16,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Bit.Identity.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
 
@@ -241,15 +240,6 @@ public abstract class BaseRequestValidator<T> where T : class
         customResponse.Add("KdfMemory", user.KdfMemory);
         customResponse.Add("KdfParallelism", user.KdfParallelism);
         customResponse.Add("UserDecryptionOptions", await CreateUserDecryptionOptionsAsync(user, device, GetSubject(context)));
-        customResponse.Add("UserInfo", new TokenUserInfoModel
-        {
-            Id = user.Id,
-            Name = user.Name,
-            Email = user.Email,
-            EmailVerified = user.EmailVerified,
-            CreationDate = user.CreationDate,
-            Premium = user.Premium,
-        });
 
         if (sendRememberToken)
         {
