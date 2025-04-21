@@ -31,7 +31,7 @@ public static class ServiceCollectionExtensions
                 options.LicenseKey = globalSettings.IdentityServer.LicenseKey;
                 options.Endpoints.EnableIntrospectionEndpoint = false;
                 options.Endpoints.EnableEndSessionEndpoint = false;
-                options.Endpoints.EnableUserInfoEndpoint = false;
+                options.Endpoints.EnableUserInfoEndpoint = true;
                 options.Endpoints.EnableCheckSessionEndpoint = false;
                 options.Endpoints.EnableTokenRevocationEndpoint = false;
                 options.IssuerUri = $"{issuerUri.Scheme}://{issuerUri.Host}";

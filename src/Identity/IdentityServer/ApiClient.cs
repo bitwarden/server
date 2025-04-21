@@ -77,7 +77,7 @@ public class ApiClient : Client
 
         if (scopes == null)
         {
-            scopes = new string[] { "api" };
+            scopes = new string[] { "api", "openid" };
         }
         AllowedScopes = scopes;
     }

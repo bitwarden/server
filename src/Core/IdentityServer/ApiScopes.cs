@@ -11,12 +11,14 @@ public static class ApiScopes
     public const string ApiPush = "api.push";
     public const string ApiSecrets = "api.secrets";
     public const string Internal = "internal";
+    public const string OpenId = "openid";
 
     public static IEnumerable<ApiScope> GetApiScopes()
     {
         return new List<ApiScope>
         {
             new(Api, "API Access"),
+            new(OpenId, "OpenID Connect Access"),
             new(ApiPush, "API Push Access"),
             new(ApiLicensing, "API Licensing Access"),
             new(ApiOrganization, "API Organization Access"),
