@@ -713,6 +713,7 @@ public static class CoreHelpers
             new(JwtClaimTypes.Email, user.Email),
             new(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false"),
             new(Claims.SecurityStamp, user.SecurityStamp),
+            new(Claims.AccountCreationDate, user.CreationDate.ToString("o")),
         };
 
         if (!string.IsNullOrWhiteSpace(user.Name))

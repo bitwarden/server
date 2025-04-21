@@ -7,6 +7,7 @@ public static class Claims
     public const string Premium = "premium";
     public const string Device = "device";
     public const string DeviceType = "devicetype";
+    public const string AccountCreationDate = "accountcreationdate";
 
     public const string OrganizationOwner = "orgowner";
     public const string OrganizationAdmin = "orgadmin";
