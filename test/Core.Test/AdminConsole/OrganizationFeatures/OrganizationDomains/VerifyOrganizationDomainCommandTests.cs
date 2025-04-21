@@ -192,32 +192,6 @@ public class VerifyOrganizationDomainCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UserVerifyOrganizationDomainAsync_GivenOrganizationDomainWithAccountDeprovisioningDisabled_WhenDomainIsVerified_ThenSingleOrgPolicyShouldBeNotBeEnabled(
-        OrganizationDomain domain, SutProvider<VerifyOrganizationDomainCommand> sutProvider)
-    {
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .GetClaimedDomainsByDomainNameAsync(domain.DomainName)
-            .Returns([]);
-
-        sutProvider.GetDependency<IDnsResolverService>()
-            .ResolveAsync(domain.DomainName, domain.Txt)
-            .Returns(true);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .UserId.Returns(Guid.NewGuid());
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            .Returns(false);
-
-        _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
-
-        await sutProvider.GetDependency<ISavePolicyCommand>()
-            .DidNotReceive()
-            .SaveAsync(Arg.Any<PolicyUpdate>());
-    }
-
-    [Theory, BitAutoData]
     public async Task UserVerifyOrganizationDomainAsync_WhenDomainIsNotVerified_ThenSingleOrgPolicyShouldNotBeEnabled(
         OrganizationDomain domain, SutProvider<VerifyOrganizationDomainCommand> sutProvider)
     {

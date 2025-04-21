@@ -341,27 +341,11 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task IsClaimedByAnyOrganizationAsync_WithAccountDeprovisioningDisabled_ReturnsFalse(
-        SutProvider<UserService> sutProvider, Guid userId)
-    {
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            .Returns(false);
-
-        var result = await sutProvider.Sut.IsClaimedByAnyOrganizationAsync(userId);
-        Assert.False(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task IsClaimedByAnyOrganizationAsync_WithAccountDeprovisioningEnabled_WithManagingEnabledOrganization_ReturnsTrue(
+    public async Task IsClaimedByAnyOrganizationAsync_WithManagingEnabledOrganization_ReturnsTrue(
         SutProvider<UserService> sutProvider, Guid userId, Organization organization)
     {
         organization.Enabled = true;
         organization.UseSso = true;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByVerifiedUserEmailDomainAsync(userId)
@@ -372,15 +356,11 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task IsClaimedByAnyOrganizationAsync_WithAccountDeprovisioningEnabled_WithManagingDisabledOrganization_ReturnsFalse(
+    public async Task IsClaimedByAnyOrganizationAsync_WithManagingDisabledOrganization_ReturnsFalse(
         SutProvider<UserService> sutProvider, Guid userId, Organization organization)
     {
         organization.Enabled = false;
         organization.UseSso = true;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByVerifiedUserEmailDomainAsync(userId)
@@ -391,15 +371,11 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task IsClaimedByAnyOrganizationAsync_WithAccountDeprovisioningEnabled_WithOrganizationUseSsoFalse_ReturnsFalse(
+    public async Task IsClaimedByAnyOrganizationAsync_WithOrganizationUseSsoFalse_ReturnsFalse(
         SutProvider<UserService> sutProvider, Guid userId, Organization organization)
     {
         organization.Enabled = true;
         organization.UseSso = false;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByVerifiedUserEmailDomainAsync(userId)
@@ -500,7 +476,7 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task DisableTwoFactorProviderAsync_WithAccountDeprovisioningEnabled_WhenOrganizationHas2FAPolicyEnabled_DisablingAllProviders_RevokesUserAndSendsEmail(
+    public async Task DisableTwoFactorProviderAsync_WhenOrganizationHas2FAPolicyEnabled_DisablingAllProviders_RevokesUserAndSendsEmail(
         SutProvider<UserService> sutProvider, User user,
         Organization organization1, Guid organizationUserId1,
         Organization organization2, Guid organizationUserId2)
@@ -513,9 +489,6 @@ public class UserServiceTests
         organization1.Enabled = organization2.Enabled = true;
         organization1.UseSso = organization2.UseSso = true;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            .Returns(true);
         sutProvider.GetDependency<IPolicyService>()
             .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication)
             .Returns(
@@ -578,7 +551,7 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task DisableTwoFactorProviderAsync_WithAccountDeprovisioningEnabled_UserHasOneProviderEnabled_DoesNotRemoveUserFromOrganization(
+    public async Task DisableTwoFactorProviderAsync_UserHasOneProviderEnabled_DoesNotRemoveUserFromOrganization(
         SutProvider<UserService> sutProvider, User user, Organization organization)
     {
         // Arrange
