@@ -36,7 +36,7 @@ public class WebhookEventHandler(
             }
 
             var content = new StringContent(
-                TemplateProcessor.ReplaceTokens(configuration.Template, eventMessage),
+                IntegrationTemplateProcessor.ReplaceTokens(configuration.Template, eventMessage),
                 Encoding.UTF8,
                 "application/json"
             );

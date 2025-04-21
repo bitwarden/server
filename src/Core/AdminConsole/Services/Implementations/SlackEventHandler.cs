@@ -30,7 +30,7 @@ public class SlackEventHandler(
 
             await slackService.SendSlackMessageByChannelIdAsync(
                 config.token,
-                TemplateProcessor.ReplaceTokens(configuration.Template, eventMessage),
+                IntegrationTemplateProcessor.ReplaceTokens(configuration.Template, eventMessage),
                 config.channelId
             );
         }

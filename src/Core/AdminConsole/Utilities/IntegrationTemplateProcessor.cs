@@ -2,7 +2,7 @@
 
 namespace Bit.Core.AdminConsole.Utilities;
 
-public static partial class TemplateProcessor
+public static partial class IntegrationTemplateProcessor
 {
     [GeneratedRegex(@"#(\w+)#")]
     private static partial Regex TokenRegex();
