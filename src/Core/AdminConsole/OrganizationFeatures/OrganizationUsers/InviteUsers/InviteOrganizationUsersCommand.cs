@@ -159,13 +159,13 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task RevertPasswordManagerChangesAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
-        if (validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd > 0)
+        if (validatedResult.Value.PasswordManagerSubscriptionUpdate is { Seats: > 0, SeatsRequiredToAdd: > 0 })
         {
-            // When reverting seats, we have to tell payments service that the seats are going back down by what we attempted to add.
-            // However, this might lead to a problem if we don't actually update stripe but throw any ways.
-            // stripe could not be updated, and then we would decrement the number of seats in stripe accidentally.
-            var seatsToRemove = validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd;
-            await paymentService.AdjustSeatsAsync(organization, validatedResult.Value.InviteOrganization.Plan, -seatsToRemove);
+
+
+            await paymentService.AdjustSeatsAsync(organization,
+                validatedResult.Value.InviteOrganization.Plan,
+                validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats.Value);
 
             organization.Seats = (short?)validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats;
 
@@ -274,25 +274,25 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task AdjustPasswordManagerSeatsAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
-        if (validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd <= 0)
+        if (validatedResult.Value.PasswordManagerSubscriptionUpdate is { SeatsRequiredToAdd: > 0, UpdatedSeatTotal: > 0 })
         {
-            return;
+            await paymentService.AdjustSeatsAsync(organization,
+                validatedResult.Value.InviteOrganization.Plan,
+                validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal.Value);
+
+            organization.Seats = (short?)validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal;
+
+            await organizationRepository.ReplaceAsync(organization); // could optimize this with only a property update
+            await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+
+            await referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, currentContext)
+                {
+                    PlanName = validatedResult.Value.InviteOrganization.Plan.Name,
+                    PlanType = validatedResult.Value.InviteOrganization.Plan.Type,
+                    Seats = validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal,
+                    PreviousSeats = validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats
+                });
         }
-
-        await paymentService.AdjustSeatsAsync(organization, validatedResult.Value.InviteOrganization.Plan, validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd);
-
-        organization.Seats = (short?)validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal;
-
-        await organizationRepository.ReplaceAsync(organization); // could optimize this with only a property update
-        await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
-
-        await referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, currentContext)
-            {
-                PlanName = validatedResult.Value.InviteOrganization.Plan.Name,
-                PlanType = validatedResult.Value.InviteOrganization.Plan.Type,
-                Seats = validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal,
-                PreviousSeats = validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats
-            });
     }
 }
