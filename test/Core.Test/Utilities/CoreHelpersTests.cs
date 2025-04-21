@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Identity;
 using Bit.Core.Test.AutoFixture.UserFixtures;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
@@ -294,6 +295,7 @@ public class CoreHelpersTests
             { JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false" },
             { JwtClaimTypes.Name, user.Name },
             { "sstamp", user.SecurityStamp },
+            { Claims.AccountCreationDate, user.CreationDate.ToString("o")}
         }.ToList();
 
         var actual = CoreHelpers.BuildIdentityClaims(user, Array.Empty<CurrentContextOrganization>(),
