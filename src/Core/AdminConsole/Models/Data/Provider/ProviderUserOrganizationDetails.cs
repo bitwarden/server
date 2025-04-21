@@ -46,5 +46,6 @@ public class ProviderUserOrganizationDetails
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     public bool UseRiskInsights { get; set; }
     public bool UseOrganizationDomains { get; set; }
+    public bool UseAdminSponsoredFamilies { get; set; }
     public ProviderType ProviderType { get; set; }
 }

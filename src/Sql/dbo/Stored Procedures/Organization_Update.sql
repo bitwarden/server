@@ -57,6 +57,7 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @UseRiskInsights BIT = 0,
     @LimitItemDeletion BIT = 0,
     @UseOrganizationDomains BIT = 0
+    @UseAdminSponsoredFamilies BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -121,6 +122,7 @@ BEGIN
         [UseRiskInsights] = @UseRiskInsights,
         [LimitItemDeletion] = @LimitItemDeletion,
         [UseOrganizationDomains] = @UseOrganizationDomains
+        [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies
     WHERE
         [Id] = @Id
 END

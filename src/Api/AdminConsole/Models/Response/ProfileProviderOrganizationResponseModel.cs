@@ -51,5 +51,6 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         UseRiskInsights = organization.UseRiskInsights;
         UseOrganizationDomains = organization.UseOrganizationDomains;
+        UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
     }
 }

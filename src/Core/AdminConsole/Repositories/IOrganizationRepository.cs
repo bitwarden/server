@@ -24,4 +24,5 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     /// </summary>
     Task<ICollection<Organization>> GetByVerifiedUserEmailDomainAsync(Guid userId);
     Task<ICollection<Organization>> GetAddableToProviderByUserIdAsync(Guid userId, ProviderType providerType);
+    Task<ICollection<Organization>> GetManyByIdsAsync(IEnumerable<Guid> ids);
 }

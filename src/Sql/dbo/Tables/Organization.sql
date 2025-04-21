@@ -57,6 +57,7 @@ CREATE TABLE [dbo].[Organization] (
     [AllowAdminAccessToAllCollectionItems]   BIT              NOT NULL CONSTRAINT [DF_Organization_AllowAdminAccessToAllCollectionItems] DEFAULT (0),
     [UseRiskInsights]               BIT              NOT NULL CONSTRAINT [DF_Organization_UseRiskInsights] DEFAULT (0),
     [UseOrganizationDomains]               BIT              NOT NULL CONSTRAINT [DF_Organization_UseOrganizationDomains] DEFAULT (0),
+    [UseAdminSponsoredFamilies]     BIT              NOT NULL CONSTRAINT [DF_Organization_UseAdminSponsoredFamilies] DEFAULT (0),
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

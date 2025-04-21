@@ -159,6 +159,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("Use2fa")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseAdminSponsoredFamilies")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseApi")
                         .HasColumnType("INTEGER");
 
@@ -1303,7 +1306,13 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsAdminInitiated")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime?>("LastSyncDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("OfferedToEmail")

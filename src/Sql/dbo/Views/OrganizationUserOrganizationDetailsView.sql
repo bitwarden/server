@@ -52,6 +52,7 @@ SELECT
     O.[UseRiskInsights],
     O.[LimitItemDeletion],
     O.[UseOrganizationDomains]
+    O.[UseAdminSponsoredFamilies],
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

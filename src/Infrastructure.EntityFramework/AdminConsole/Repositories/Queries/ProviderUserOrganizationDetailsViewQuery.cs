@@ -51,6 +51,8 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             UseRiskInsights = x.o.UseRiskInsights,
             ProviderType = x.p.Type,
             UseOrganizationDomains = x.o.UseOrganizationDomains
+            UseAdminSponsoredFamilies = x.o.UseAdminSponsoredFamilies,
+            ProviderType = x.p.Type
         });
     }
 }

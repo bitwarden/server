@@ -166,6 +166,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("Use2fa")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UseAdminSponsoredFamilies")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UseApi")
                         .HasColumnType("boolean");
 
@@ -1319,8 +1322,14 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<bool>("IsAdminInitiated")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime?>("LastSyncDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
 
                     b.Property<string>("OfferedToEmail")
                         .HasMaxLength(256)
