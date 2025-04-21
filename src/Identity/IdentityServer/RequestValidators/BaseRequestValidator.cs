@@ -78,8 +78,8 @@ public abstract class BaseRequestValidator<T> where T : class
         CustomValidatorRequestContext validatorContext)
     {
         // 1. We need to check if the user's master password hash is correct.
-        var user = validatorContext.User;
         var valid = await ValidateContextAsync(context, validatorContext);
+        var user = validatorContext.User;
         if (!valid)
         {
             await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
