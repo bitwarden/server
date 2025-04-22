@@ -3,6 +3,16 @@
 ALTER TABLE [dbo].[Organization] ADD [UseOrganizationDomains] bit NOT NULL CONSTRAINT [DF_Organization_UseOrganizationDomains] default (0)
 GO
 
+/* update the new column to have the value used in UseSso to preserve existing orgs ability */
+
+UPDATE
+    [dbo].[Organization]
+SET
+    [UseOrganizationDomains] = [UseSso]
+WHERE
+    [UseOrganizationDomains] IS NULL
+GO
+
 /* add column to Organization_Create*/
 
 CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
