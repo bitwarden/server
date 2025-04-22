@@ -2,21 +2,20 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations
+namespace Bit.MySqlMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class OICCascadeDelete : Migration
 {
     /// <inheritdoc />
-    public partial class OICCascadeDelete : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
 
-        }
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
 
-        }
     }
 }
