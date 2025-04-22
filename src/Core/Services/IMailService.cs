@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Billing.Enums;
@@ -55,7 +57,7 @@ public interface IMailService
         bool mentionInvoices);
     Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices);
     Task SendAddedCreditAsync(string email, decimal amount);
-    Task SendLicenseExpiredAsync(IEnumerable<string> emails, string organizationName = null);
+    Task SendLicenseExpiredAsync(IEnumerable<string> emails, string? organizationName = null);
     Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip);
     Task SendRecoverTwoFactorEmail(string email, DateTime timestamp, string ip);
     Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email);
@@ -96,9 +98,11 @@ public interface IMailService
     Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token);
     Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token);
     Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent);
+#nullable disable
     Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate, string organizationId,
         string organizationName);
+#nullable enable
     Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList);
-    Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName);
+    Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string? userName);
     Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotifications, IEnumerable<string> adminOwnerEmails);
 }

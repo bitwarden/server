@@ -599,5 +599,11 @@ public class CollectionRepositoryTests
         Assert.True(actualOrgUser3.Manage);
         Assert.False(actualOrgUser3.HidePasswords);
         Assert.True(actualOrgUser3.ReadOnly);
+
+        // Clean up data
+        await userRepository.DeleteAsync(user);
+        await organizationRepository.DeleteAsync(organization);
+        await groupRepository.DeleteManyAsync([group1.Id, group2.Id, group3.Id]);
+        await organizationUserRepository.DeleteManyAsync([orgUser1.Id, orgUser2.Id, orgUser3.Id]);
     }
 }
