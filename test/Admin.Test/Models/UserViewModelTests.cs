@@ -4,7 +4,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Admin.Test.Models;
-
+// comment for test commit
 public class UserViewModelTests
 {
     [Theory]
