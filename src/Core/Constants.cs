@@ -112,7 +112,6 @@ public static class FeatureFlagKeys
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
-    public const string DuoRedirect = "duo-redirect";
     public const string EmailVerification = "email-verification";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
@@ -149,6 +148,7 @@ public static class FeatureFlagKeys
     public const string PM19147_AutomaticTaxImprovements = "pm-19147-automatic-tax-improvements";
     public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
     public const string PM18770_EnableOrganizationBusinessUnitConversion = "pm-18770-enable-organization-business-unit-conversion";
+    public const string PM199566_UpdateMSPToChargeAutomatically = "pm-199566-update-msp-to-charge-automatically";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -175,6 +175,7 @@ public static class FeatureFlagKeys
     public const string PM3553_MobileSimpleLoginSelfHostAlias = "simple-login-self-host-alias";
     public const string EnablePMFlightRecorder = "enable-pm-flight-recorder";
     public const string MobileErrorReporting = "mobile-error-reporting";
+    public const string AndroidChromeAutofill = "android-chrome-autofill";
 
     /* Platform Team */
     public const string PersistPopupView = "persist-popup-view";
@@ -188,7 +189,6 @@ public static class FeatureFlagKeys
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
     public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
-    public const string GeneratorToolsModernization = "generator-tools-modernization";
 
     /* Vault Team */
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
@@ -201,6 +201,7 @@ public static class FeatureFlagKeys
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string DesktopCipherForms = "pm-18520-desktop-cipher-forms";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
+    public const string EndUserNotifications = "pm-10609-end-user-notifications";
 
     public static List<string> GetAllKeys()
     {
@@ -213,9 +214,6 @@ public static class FeatureFlagKeys
     public static Dictionary<string, string> GetLocalOverrideFlagValues()
     {
         // place overriding values when needed locally (offline), or return null
-        return new Dictionary<string, string>()
-        {
-            { DuoRedirect, "true" },
-        };
+        return null;
     }
 }
