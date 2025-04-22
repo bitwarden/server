@@ -580,6 +580,7 @@ public class OrganizationService : IOrganizationService
             SmSeats = license.SmSeats,
             SmServiceAccounts = license.SmServiceAccounts,
             UseRiskInsights = license.UseRiskInsights,
+            UseOrganizationDomains = license.UseOrganizationDomains,
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);

@@ -121,6 +121,7 @@ BEGIN
         [AllowAdminAccessToAllCollectionItems],
         [UseRiskInsights],
         [LimitItemDeletion],
+        [UseOrganizationDomains],
         [UseAdminSponsoredFamilies]
     )
     VALUES
@@ -182,6 +183,7 @@ BEGIN
         @AllowAdminAccessToAllCollectionItems,
         @UseRiskInsights,
         @LimitItemDeletion,
+        @UseOrganizationDomains,
         @UseAdminSponsoredFamilies
     )
 END

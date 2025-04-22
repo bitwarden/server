@@ -113,6 +113,10 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// Risk Insights is a reporting feature that provides insights into the security of an organization's vault.
     /// </summary>
     public bool UseRiskInsights { get; set; }
+
+    /// <summary>
+    /// If true, the organization can claim domains, which unlocks additional enterprise features
+    /// </summary>
     public bool UseOrganizationDomains { get; set; }
 
     /// <summary>
