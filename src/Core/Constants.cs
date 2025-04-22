@@ -150,6 +150,10 @@ public static class FeatureFlagKeys
     public const string PM18770_EnableOrganizationBusinessUnitConversion = "pm-18770-enable-organization-business-unit-conversion";
     public const string PM199566_UpdateMSPToChargeAutomatically = "pm-199566-update-msp-to-charge-automatically";
 
+    /* Data Insights and Reporting Team */
+    public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
+    public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
+
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
@@ -186,8 +190,6 @@ public static class FeatureFlagKeys
 
     /* Tools Team */
     public const string ItemShare = "item-share";
-    public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
-    public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
 
     /* Vault Team */
