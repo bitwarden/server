@@ -215,6 +215,8 @@ public class OrganizationLicense : ILicense
                     (Version >= 14 || !p.Name.Equals(nameof(LimitCollectionCreationDeletion))) &&
                     // AllowAdminAccessToAllCollectionItems was added in Version 15
                     (Version >= 15 || !p.Name.Equals(nameof(AllowAdminAccessToAllCollectionItems))) &&
+                    // UseOrganizationDomains was added in version 16
+                    (Version >= 15 || !p.Name.Equals(nameof(UseOrganizationDomains))) &&
                     (
                         !forHash ||
                         (
