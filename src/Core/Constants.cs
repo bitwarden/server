@@ -203,6 +203,9 @@ public static class FeatureFlagKeys
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
     public const string EndUserNotifications = "pm-10609-end-user-notifications";
 
+    /* Innovation */
+    public const string ArchiveVaultItems = "pm-19148-innovation-archive";
+
     public static List<string> GetAllKeys()
     {
         return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
