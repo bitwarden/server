@@ -14,7 +14,7 @@ CREATE TABLE [dbo].[Notification]
     CONSTRAINT [PK_Notification] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Notification_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
     CONSTRAINT [FK_Notification_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
-    CONSTRAINT [FK_Notification_SecurityTask] FOREIGN KEY ([TaskId]) REFERENCES [dbo].[SecurityTask] ([Id])
+    CONSTRAINT [FK_Notification_SecurityTask] FOREIGN KEY ([TaskId]) REFERENCES [dbo].[SecurityTask] ([Id]) ON DELETE CASCADE,
 );
 
 

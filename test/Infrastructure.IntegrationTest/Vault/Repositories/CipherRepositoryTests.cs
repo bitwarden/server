@@ -962,6 +962,8 @@ public class CipherRepositoryTests
         Assert.Null(deletedCipher1);
 
         // Delete cipher with completed security task
+        await cipherRepository.DeleteAsync(cipher2);
+
         var deletedCipher2 = await cipherRepository.GetByIdAsync(cipher2.Id);
 
         Assert.Null(deletedCipher2);
