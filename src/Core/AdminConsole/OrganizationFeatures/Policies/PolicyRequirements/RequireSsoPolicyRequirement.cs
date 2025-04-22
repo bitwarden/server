@@ -50,9 +50,11 @@ public class RequireSsoPolicyRequirementFactory : BasePolicyRequirementFactory<R
         var result = new RequireSsoPolicyRequirement
         {
             CanUsePasskeyLogin = policyDetails.All(p =>
-                p.OrganizationUserStatus < OrganizationUserStatusType.Accepted),
+                p.OrganizationUserStatus == OrganizationUserStatusType.Revoked ||
+                p.OrganizationUserStatus == OrganizationUserStatusType.Invited),
+
             SsoRequired = policyDetails.Any(p =>
-                p.OrganizationUserStatus >= OrganizationUserStatusType.Confirmed)
+                p.OrganizationUserStatus == OrganizationUserStatusType.Confirmed)
         };
 
         return result;
