@@ -14,7 +14,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 public class CreateSponsorshipCommand(
     ICurrentContext currentContext,
     IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-    IUserService userService) : ICreateSponsorshipCommand
+    IUserService userService,
+    IOrganizationService organizationService) : ICreateSponsorshipCommand
 {
     public async Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrganization,
         OrganizationUser sponsoringMember, PlanSponsorshipType sponsorshipType, string sponsoredEmail,
@@ -48,12 +49,14 @@ public class CreateSponsorshipCommand(
             throw new BadRequestException("Can only sponsor one organization per Organization User.");
         }
 
-        var sponsorship = new OrganizationSponsorship();
-        sponsorship.SponsoringOrganizationId = sponsoringOrganization.Id;
-        sponsorship.SponsoringOrganizationUserId = sponsoringMember.Id;
-        sponsorship.FriendlyName = friendlyName;
-        sponsorship.OfferedToEmail = sponsoredEmail;
-        sponsorship.PlanSponsorshipType = sponsorshipType;
+        var sponsorship = new OrganizationSponsorship
+        {
+            SponsoringOrganizationId = sponsoringOrganization.Id,
+            SponsoringOrganizationUserId = sponsoringMember.Id,
+            FriendlyName = friendlyName,
+            OfferedToEmail = sponsoredEmail,
+            PlanSponsorshipType = sponsorshipType
+        };
 
         if (existingOrgSponsorship != null)
         {
@@ -86,6 +89,11 @@ public class CreateSponsorshipCommand(
 
         sponsorship.IsAdminInitiated = isAdminInitiated;
         sponsorship.Notes = notes;
+
+        if (isAdminInitiated && sponsoringOrganization.Seats.HasValue)
+        {
+            await organizationService.AutoAddSeatsAsync(sponsoringOrganization, 1);
+        }
 
         try
         {
