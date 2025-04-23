@@ -112,7 +112,6 @@ public static class FeatureFlagKeys
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
-    public const string DuoRedirect = "duo-redirect";
     public const string EmailVerification = "email-verification";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
@@ -190,7 +189,6 @@ public static class FeatureFlagKeys
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
     public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
-    public const string ExportAttachments = "export-attachments";
 
     /* Vault Team */
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
@@ -216,9 +214,6 @@ public static class FeatureFlagKeys
     public static Dictionary<string, string> GetLocalOverrideFlagValues()
     {
         // place overriding values when needed locally (offline), or return null
-        return new Dictionary<string, string>()
-        {
-            { DuoRedirect, "true" },
-        };
+        return null;
     }
 }
