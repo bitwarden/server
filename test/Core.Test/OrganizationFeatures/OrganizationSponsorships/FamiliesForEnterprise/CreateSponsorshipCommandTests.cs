@@ -170,6 +170,8 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
         sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
         sponsoringOrg.UseAdminSponsoredFamilies = true;
+        sponsoringOrg.MaxAutoscaleSeats = 10;
+        sponsoringOrg.Seats = 5;
 
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId!.Value).Returns(user);
         sutProvider.GetDependency<IOrganizationSponsorshipRepository>().WhenForAnyArgs(x => x.UpsertAsync(null!)).Do(callInfo =>
@@ -177,16 +179,16 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             var sponsorship = callInfo.Arg<OrganizationSponsorship>();
             sponsorship.Id = sponsorshipId;
         });
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>().GetManyBySponsoringOrganizationAsync(sponsoringOrg.Id).Returns(new List<OrganizationSponsorship>());
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(sponsoringOrgUser.UserId.Value);
-        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns(new List<CurrentContextOrganization>
-        {
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns([
             new()
             {
                 Id = sponsoringOrg.Id,
                 Type = OrganizationUserType.Owner,
                 Permissions = new Permissions { ManageUsers = true }
             }
-        });
+        ]);
 
         await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
             PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, null);
@@ -215,7 +217,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
         sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
 
-        var expectedException = new Exception();
+        var expectedException = new BadRequestException("There are not enough available seats to cover the sponsorship.");
         OrganizationSponsorship createdSponsorship = null;
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId!.Value).Returns(user);
         sutProvider.GetDependency<IOrganizationSponsorshipRepository>().UpsertAsync(null!).ThrowsForAnyArgs(callInfo =>
@@ -234,7 +236,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             }
         ]);
 
-        var actualException = await Assert.ThrowsAsync<Exception>(() =>
+        var actualException = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
                 PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, null));
         Assert.Same(expectedException, actualException);
