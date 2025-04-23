@@ -9,9 +9,9 @@ public interface ISendCoreHelperService
     /// <summary>
     /// Securely generates a random string of the specified length.
     /// </summary>
-    /// <param name="length"></param>
-    /// <param name="useUpperCase"></param>
-    /// <param name="useSpecial"></param>
-    /// <returns></returns>
+    /// <param name="length">Desired string length to be returned</param>
+    /// <param name="useUpperCase">Desired casing for the string</param>
+    /// <param name="useSpecial">Determines if special characters will be used in string</param>
+    /// <returns>A secure random string with the desired parameters</returns>
     string SecureRandomString(int length, bool useUpperCase, bool useSpecial);
 }
