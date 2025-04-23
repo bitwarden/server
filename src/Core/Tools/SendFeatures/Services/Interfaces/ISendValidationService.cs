@@ -32,6 +32,14 @@ public interface ISendValidationService
     Task ValidateUserCanSaveAsync(Guid? userId, Send send);
 
     /// <summary>
+    /// Validates a file can be saved by specified user with different policy based on feature flag
+    /// </summary>
+    /// <param name="userId"></param>
+    /// <param name="send"></param>
+    /// <returns></returns>
+    Task ValidateUserCanSaveAsync_vNext(Guid? userId, Send send);
+
+    /// <summary>
     /// Calculates the remaining storage for a Send.
     /// </summary>
     /// <param name="send"></param>

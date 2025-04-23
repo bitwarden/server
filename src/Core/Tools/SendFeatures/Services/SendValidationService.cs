@@ -96,17 +96,7 @@ public class SendValidationService : ISendValidationService
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
-            if (!userId.HasValue)
-            {
-                return;
-            }
-
-            var sendOptionsRequirement = await _policyRequirementQuery.GetAsync<SendOptionsPolicyRequirement>(userId.Value);
-            if (sendOptionsRequirement.DisableHideEmail && send.HideEmail.GetValueOrDefault())
-            {
-                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
-            }
-
+            await ValidateUserCanSaveAsync_vNext(userId, send);
             return;
         }
 
@@ -129,6 +119,19 @@ public class SendValidationService : ISendValidationService
             {
                 throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
             }
+        }
+    }
+    public async Task ValidateUserCanSaveAsync_vNext(Guid? userId, Send send)
+    {
+        if (!userId.HasValue)
+        {
+            return;
+        }
+
+        var sendOptionsRequirement = await _policyRequirementQuery.GetAsync<SendOptionsPolicyRequirement>(userId.Value);
+        if (sendOptionsRequirement.DisableHideEmail && send.HideEmail.GetValueOrDefault())
+        {
+            throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
         }
     }
 
