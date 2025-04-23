@@ -1,4 +1,4 @@
-﻿using Duende.IdentityModel;
+﻿using IdentityModel;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Bit.Notifications;

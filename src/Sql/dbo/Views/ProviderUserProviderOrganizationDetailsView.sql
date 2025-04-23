@@ -36,6 +36,7 @@ SELECT
     O.[LimitCollectionDeletion],
     O.[AllowAdminAccessToAllCollectionItems],
     O.[UseRiskInsights],
+    O.[UseAdminSponsoredFamilies],
     P.[Type] ProviderType,
     O.[LimitItemDeletion]
 FROM

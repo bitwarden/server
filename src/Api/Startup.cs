@@ -5,7 +5,7 @@ using Bit.Core.Settings;
 using AspNetCoreRateLimit;
 using Stripe;
 using Bit.Core.Utilities;
-using Duende.IdentityModel;
+using IdentityModel;
 using System.Globalization;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
@@ -27,8 +27,10 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Api.Auth.Models.Request.WebAuthn;
+using Bit.Core.AdminConsole.Services.NoopImplementations;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Identity.TokenProviders;
+using Bit.Core.Services;
 using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Tools.ReportFeatures;
 using Bit.Core.Auth.Models.Api.Request;
@@ -214,6 +216,19 @@ public class Startup
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
         {
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
+        }
+
+        // Slack
+        if (CoreHelpers.SettingHasValue(globalSettings.Slack.ClientId) &&
+            CoreHelpers.SettingHasValue(globalSettings.Slack.ClientSecret) &&
+            CoreHelpers.SettingHasValue(globalSettings.Slack.Scopes))
+        {
+            services.AddHttpClient(SlackService.HttpClientName);
+            services.AddSingleton<ISlackService, SlackService>();
+        }
+        else
+        {
+            services.AddSingleton<ISlackService, NoopSlackService>();
         }
 
         // This should be registered last because it customizes the primary http message handler and we want it to win.

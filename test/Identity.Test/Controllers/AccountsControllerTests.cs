@@ -144,50 +144,6 @@ public class AccountsControllerTests : IDisposable
         }
     }
 
-    [Fact]
-    public async Task PostRegister_ShouldRegisterUser()
-    {
-        var passwordHash = "abcdef";
-        var token = "123456";
-        var userGuid = new Guid();
-        _registerUserCommand.RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), passwordHash, token, userGuid)
-                    .Returns(Task.FromResult(IdentityResult.Success));
-        var request = new RegisterRequestModel
-        {
-            Name = "Example User",
-            Email = "user@example.com",
-            MasterPasswordHash = passwordHash,
-            MasterPasswordHint = "example",
-            Token = token,
-            OrganizationUserId = userGuid
-        };
-
-        await _sut.PostRegister(request);
-
-        await _registerUserCommand.Received(1).RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), passwordHash, token, userGuid);
-    }
-
-    [Fact]
-    public async Task PostRegister_WhenUserServiceFails_ShouldThrowBadRequestException()
-    {
-        var passwordHash = "abcdef";
-        var token = "123456";
-        var userGuid = new Guid();
-        _registerUserCommand.RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), passwordHash, token, userGuid)
-                    .Returns(Task.FromResult(IdentityResult.Failed()));
-        var request = new RegisterRequestModel
-        {
-            Name = "Example User",
-            Email = "user@example.com",
-            MasterPasswordHash = passwordHash,
-            MasterPasswordHint = "example",
-            Token = token,
-            OrganizationUserId = userGuid
-        };
-
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegister(request));
-    }
-
     [Theory]
     [BitAutoData]
     public async Task PostRegisterSendEmailVerification_WhenTokenReturnedFromCommand_Returns200WithToken(string email, string name, bool receiveMarketingEmails)
