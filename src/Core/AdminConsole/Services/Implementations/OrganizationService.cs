@@ -6,12 +6,13 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -26,7 +27,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Models.Mail;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -36,8 +36,10 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Stripe;
+using OrganizationUserInvite = Bit.Core.Models.Business.OrganizationUserInvite;
 
 namespace Bit.Core.Services;
 
@@ -58,7 +60,6 @@ public class OrganizationService : IOrganizationService
     private readonly IPaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
-    private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IGlobalSettings _globalSettings;
@@ -70,13 +71,14 @@ public class OrganizationService : IOrganizationService
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IProviderRepository _providerRepository;
-    private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory;
-    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
+    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
+    private readonly IDataProtector _dataProtector;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -94,7 +96,6 @@ public class OrganizationService : IOrganizationService
         IPaymentService paymentService,
         IPolicyRepository policyRepository,
         IPolicyService policyService,
-        ISsoConfigRepository ssoConfigRepository,
         ISsoUserRepository ssoUserRepository,
         IReferenceEventService referenceEventService,
         IGlobalSettings globalSettings,
@@ -104,15 +105,17 @@ public class OrganizationService : IOrganizationService
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderUserRepository providerUserRepository,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
-        IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IProviderRepository providerRepository,
         IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
+        IDataProtectionProvider dataProtectionProvider
+        )
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -129,7 +132,6 @@ public class OrganizationService : IOrganizationService
         _paymentService = paymentService;
         _policyRepository = policyRepository;
         _policyService = policyService;
-        _ssoConfigRepository = ssoConfigRepository;
         _ssoUserRepository = ssoUserRepository;
         _referenceEventService = referenceEventService;
         _globalSettings = globalSettings;
@@ -141,13 +143,14 @@ public class OrganizationService : IOrganizationService
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _providerRepository = providerRepository;
-        _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
-        _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
         _policyRequirementQuery = policyRequirementQuery;
+        _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
+        _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
+        _dataProtector = dataProtectionProvider.CreateProtector(OrgUserInviteTokenable.DataProtectorPurpose);
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -575,6 +578,7 @@ public class OrganizationService : IOrganizationService
             UseSecretsManager = license.UseSecretsManager,
             SmSeats = license.SmSeats,
             SmServiceAccounts = license.SmServiceAccounts,
+            UseRiskInsights = license.UseRiskInsights,
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
@@ -1054,74 +1058,14 @@ public class OrganizationService : IOrganizationService
         await SendInviteAsync(orgUser, org, initOrganization);
     }
 
-    private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization)
-    {
-        var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(orgUsers, organization);
+    private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization) =>
+        await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(orgUsers, organization));
 
-        await _mailService.SendOrganizationInviteEmailsAsync(orgInvitesInfo);
-    }
-
-    private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization)
-    {
-        // convert single org user into array of 1 org user
-        var orgUsers = new[] { orgUser };
-
-        var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(orgUsers, organization, initOrganization);
-
-        await _mailService.SendOrganizationInviteEmailsAsync(orgInvitesInfo);
-    }
-
-    private async Task<OrganizationInvitesInfo> BuildOrganizationInvitesInfoAsync(
-        IEnumerable<OrganizationUser> orgUsers,
-        Organization organization,
-        bool initOrganization = false)
-    {
-        // Materialize the sequence into a list to avoid multiple enumeration warnings
-        var orgUsersList = orgUsers.ToList();
-
-        // Email links must include information about the org and user for us to make routing decisions client side
-        // Given an org user, determine if existing BW user exists
-        var orgUserEmails = orgUsersList.Select(ou => ou.Email).ToList();
-        var existingUsers = await _userRepository.GetManyByEmailsAsync(orgUserEmails);
-
-        // hash existing users emails list for O(1) lookups
-        var existingUserEmailsHashSet = new HashSet<string>(existingUsers.Select(u => u.Email));
-
-        // Create a dictionary of org user guids and bools for whether or not they have an existing BW user
-        var orgUserHasExistingUserDict = orgUsersList.ToDictionary(
-            ou => ou.Id,
-            ou => existingUserEmailsHashSet.Contains(ou.Email)
-        );
-
-        // Determine if org has SSO enabled and if user is required to login with SSO
-        // Note: we only want to call the DB after checking if the org can use SSO per plan and if they have any policies enabled.
-        var orgSsoEnabled = organization.UseSso && (await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id))?.Enabled == true;
-        // Even though the require SSO policy can be turned on regardless of SSO being enabled, for this logic, we only
-        // need to check the policy if the org has SSO enabled.
-        var orgSsoLoginRequiredPolicyEnabled = orgSsoEnabled &&
-                                               organization.UsePolicies &&
-                                               (await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.RequireSso))?.Enabled == true;
-
-        // Generate the list of org users and expiring tokens
-        // create helper function to create expiring tokens
-        (OrganizationUser, ExpiringToken) MakeOrgUserExpiringTokenPair(OrganizationUser orgUser)
-        {
-            var orgUserInviteTokenable = _orgUserInviteTokenableFactory.CreateToken(orgUser);
-            var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
-            return (orgUser, new ExpiringToken(protectedToken, orgUserInviteTokenable.ExpirationDate));
-        }
-
-        var orgUsersWithExpTokens = orgUsers.Select(MakeOrgUserExpiringTokenPair);
-
-        return new OrganizationInvitesInfo(
-            organization,
-            orgSsoEnabled,
-            orgSsoLoginRequiredPolicyEnabled,
-            orgUsersWithExpTokens,
-            orgUserHasExistingUserDict,
-            initOrganization
-        );
-    }
+    private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization) =>
+        await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(
+            users: [orgUser],
+            organization: organization,
+            initOrganization: initOrganization));
 
     internal async Task<(bool canScale, string failureReason)> CanScaleAsync(
         Organization organization,
@@ -1484,28 +1428,6 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey)
-    {
-        if (!await _currentContext.ManageResetPassword(orgId))
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        // If the keys already exist, error out
-        var org = await _organizationRepository.GetByIdAsync(orgId);
-        if (org.PublicKey != null && org.PrivateKey != null)
-        {
-            throw new BadRequestException("Organization Keys already exist");
-        }
-
-        // Update org with generated public/private key
-        org.PublicKey = publicKey;
-        org.PrivateKey = privateKey;
-        await UpdateAsync(org);
-
-        return org;
-    }
-
     private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,
         Dictionary<string, Guid> existingUsersIdDict, HashSet<Guid> existingUsers = null)
     {
@@ -1790,7 +1712,7 @@ public class OrganizationService : IOrganizationService
         await RepositoryRevokeUserAsync(organizationUser);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+        if (organizationUser.UserId.HasValue)
         {
             await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
         }
@@ -1802,7 +1724,7 @@ public class OrganizationService : IOrganizationService
         await RepositoryRevokeUserAsync(organizationUser);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, systemUser);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+        if (organizationUser.UserId.HasValue)
         {
             await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
         }
@@ -1871,7 +1793,7 @@ public class OrganizationService : IOrganizationService
                 await _organizationUserRepository.RevokeAsync(organizationUser.Id);
                 organizationUser.Status = OrganizationUserStatusType.Revoked;
                 await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
-                if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+                if (organizationUser.UserId.HasValue)
                 {
                     await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
                 }
@@ -2000,9 +1922,28 @@ public class OrganizationService : IOrganizationService
         });
     }
 
-    public async Task InitPendingOrganization(Guid userId, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName)
+    public async Task InitPendingOrganization(User user, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName, string emailToken)
     {
-        await ValidateSignUpPoliciesAsync(userId);
+        await ValidateSignUpPoliciesAsync(user.Id);
+
+        var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+        if (orgUser == null)
+        {
+            throw new BadRequestException("User invalid.");
+        }
+
+        // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
+        var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+            _orgUserInviteTokenDataFactory, emailToken, orgUser);
+
+        var tokenValid = newTokenValid ||
+                         CoreHelpers.UserInviteTokenIsValid(_dataProtector, emailToken, user.Email, orgUser.Id,
+                             _globalSettings);
+
+        if (!tokenValid)
+        {
+            throw new BadRequestException("Invalid token.");
+        }
 
         var org = await GetOrgById(organizationId);
 
