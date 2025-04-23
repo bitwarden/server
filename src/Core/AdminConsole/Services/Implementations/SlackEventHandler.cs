@@ -1,49 +1,38 @@
-﻿using System.Text;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Integrations;
 using Bit.Core.Repositories;
 
-#nullable enable
-
 namespace Bit.Core.Services;
 
-public class WebhookEventHandler(
-    IHttpClientFactory httpClientFactory,
-    IOrganizationIntegrationConfigurationRepository configurationRepository)
+public class SlackEventHandler(
+    IOrganizationIntegrationConfigurationRepository configurationRepository,
+    ISlackService slackService)
     : IEventMessageHandler
 {
-    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(HttpClientName);
-
-    public const string HttpClientName = "WebhookEventHandlerHttpClient";
-
     public async Task HandleEventAsync(EventMessage eventMessage)
     {
         var organizationId = eventMessage.OrganizationId ?? Guid.Empty;
         var configurations = await configurationRepository.GetConfigurationDetailsAsync(
             organizationId,
-            IntegrationType.Webhook,
+            IntegrationType.Slack,
             eventMessage.Type);
 
         foreach (var configuration in configurations)
         {
-            var config = configuration.MergedConfiguration.Deserialize<WebhookIntegrationConfigurationDetils>();
-            if (config is null || string.IsNullOrEmpty(config.url))
+            var config = configuration.MergedConfiguration.Deserialize<SlackIntegrationConfigurationDetails>();
+            if (config is null)
             {
                 continue;
             }
 
-            var content = new StringContent(
+            await slackService.SendSlackMessageByChannelIdAsync(
+                config.token,
                 IntegrationTemplateProcessor.ReplaceTokens(configuration.Template, eventMessage),
-                Encoding.UTF8,
-                "application/json"
+                config.channelId
             );
-            var response = await _httpClient.PostAsync(
-                config.url,
-                content);
-            response.EnsureSuccessStatusCode();
         }
     }
 

@@ -2,6 +2,8 @@
 
 public enum IntegrationType : int
 {
-    Slack = 1,
-    Webhook = 2,
+    CloudBillingSync = 1,
+    Scim = 2,
+    Slack = 3,
+    Webhook = 4,
 }
