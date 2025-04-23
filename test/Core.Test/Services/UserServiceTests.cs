@@ -391,7 +391,7 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task IsManagedByAnyOrganizationAsync_WithAccountDeprovisioningEnabled_WithOrganizationUseSsoFalse_ReturnsFalse(
+    public async Task IsClaimedByAnyOrganizationAsync_WithAccountDeprovisioningEnabled_WithOrganizationUseSsoFalse_ReturnsFalse(
         SutProvider<UserService> sutProvider, Guid userId, Organization organization)
     {
         organization.Enabled = true;
