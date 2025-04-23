@@ -56,7 +56,7 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @AllowAdminAccessToAllCollectionItems BIT = 0,
     @UseRiskInsights BIT = 0,
     @LimitItemDeletion BIT = 0,
-    @UseOrganizationDomains BIT = 0
+    @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0
 AS
 BEGIN
@@ -121,7 +121,7 @@ BEGIN
         [AllowAdminAccessToAllCollectionItems] = @AllowAdminAccessToAllCollectionItems,
         [UseRiskInsights] = @UseRiskInsights,
         [LimitItemDeletion] = @LimitItemDeletion,
-        [UseOrganizationDomains] = @UseOrganizationDomains
+        [UseOrganizationDomains] = @UseOrganizationDomains,
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies
     WHERE
         [Id] = @Id

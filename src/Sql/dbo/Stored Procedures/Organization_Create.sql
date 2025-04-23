@@ -56,7 +56,7 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @AllowAdminAccessToAllCollectionItems BIT = 0,
     @UseRiskInsights BIT = 0,
     @LimitItemDeletion BIT = 0,
-    @UseOrganizationDomains BIT = 0
+    @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0
 AS
 BEGIN
