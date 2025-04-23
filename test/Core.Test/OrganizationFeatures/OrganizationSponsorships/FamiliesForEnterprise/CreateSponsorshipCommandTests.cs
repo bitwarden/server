@@ -246,7 +246,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
                 PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, true, null));
 
-        Assert.Equal("You do not have permissions to send sponsorships on behalf of the organization.", actual.Message);
+        Assert.Equal("You do not have permissions to send sponsorships on behalf of the organization", actual.Message);
     }
 
     [Theory]
@@ -280,7 +280,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
                 PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, true, null));
 
-        Assert.Equal("You do not have permissions to send sponsorships on behalf of the organization.", actual.Message);
+        Assert.Equal("You do not have permissions to send sponsorships on behalf of the organization", actual.Message);
     }
 
     [Theory]
@@ -330,6 +330,6 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         Assert.True(SponsorshipValidator(expectedSponsorship, actual));
 
         await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
-            .UpsertAsync(Arg.Is<OrganizationSponsorship>(s => SponsorshipValidator(s, expectedSponsorship)));
+            .CreateAsync(Arg.Is<OrganizationSponsorship>(s => SponsorshipValidator(s, expectedSponsorship)));
     }
 }
