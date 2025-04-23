@@ -51,14 +51,19 @@ public class CreateSponsorshipCommand(
         var isAdminInitiated = false;
         if (currentContext.UserId == sponsoringMember.UserId)
         {
-            var organization = currentContext.Organizations.First(x => x.Id == sponsoringOrganization.Id);
+            var organization = currentContext.Organizations?.FirstOrDefault(x => x.Id == sponsoringOrganization.Id);
+            if (organization == null)
+            {
+                throw new UnauthorizedAccessException("You do not have access to this organization.");
+            }
+
             OrganizationUserType[] allowedUserTypes =
             [
                 OrganizationUserType.Admin,
                 OrganizationUserType.Owner
             ];
 
-            if (!organization.Permissions.ManageUsers && allowedUserTypes.All(x => x != organization.Type))
+            if (!organization.Permissions.ManageUsers || !allowedUserTypes.Contains(organization.Type))
             {
                 throw new UnauthorizedAccessException("You do not have permissions to send sponsorships on behalf of the organization.");
             }

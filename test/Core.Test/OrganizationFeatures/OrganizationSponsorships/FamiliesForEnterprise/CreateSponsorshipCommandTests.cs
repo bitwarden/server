@@ -27,6 +27,13 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         try
         {
             AssertHelper.AssertPropertyEqual(sponsorship, expectedSponsorship, nameof(OrganizationSponsorship.Id));
+            AssertHelper.AssertPropertyEqual(sponsorship, expectedSponsorship, nameof(OrganizationSponsorship.SponsoringOrganizationId));
+            AssertHelper.AssertPropertyEqual(sponsorship, expectedSponsorship, nameof(OrganizationSponsorship.SponsoringOrganizationUserId));
+            AssertHelper.AssertPropertyEqual(sponsorship, expectedSponsorship, nameof(OrganizationSponsorship.FriendlyName));
+            AssertHelper.AssertPropertyEqual(sponsorship, expectedSponsorship, nameof(OrganizationSponsorship.OfferedToEmail));
+            AssertHelper.AssertPropertyEqual(sponsorship, expectedSponsorship, nameof(OrganizationSponsorship.PlanSponsorshipType));
+            AssertHelper.AssertPropertyEqual(sponsorship, expectedSponsorship, nameof(OrganizationSponsorship.IsAdminInitiated));
+            AssertHelper.AssertPropertyEqual(sponsorship, expectedSponsorship, nameof(OrganizationSponsorship.Notes));
             return true;
         }
         catch
@@ -107,12 +114,15 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
     {
         org.PlanType = PlanType.EnterpriseAnnually;
         orgUser.Status = OrganizationUserStatusType.Confirmed;
+        sponsorship.SponsoredOrganizationId = Guid.NewGuid();
 
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(orgUser.UserId!.Value).Returns(user);
         sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
             .GetBySponsoringOrganizationUserIdAsync(orgUser.Id).Returns(sponsorship);
 
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(orgUser.UserId.Value);
+        var differentUserId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(differentUserId);
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns(new List<CurrentContextOrganization> { new() { Id = org.Id } });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.CreateSponsorshipAsync(org, orgUser, sponsorship.PlanSponsorshipType!.Value, null, null, null));
@@ -159,6 +169,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
     {
         sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
         sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
+        sponsoringOrg.UseAdminSponsoredFamilies = true;
 
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId!.Value).Returns(user);
         sutProvider.GetDependency<IOrganizationSponsorshipRepository>().WhenForAnyArgs(x => x.UpsertAsync(null!)).Do(callInfo =>
@@ -167,7 +178,15 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             sponsorship.Id = sponsorshipId;
         });
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(sponsoringOrgUser.UserId.Value);
-
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns(new List<CurrentContextOrganization>
+        {
+            new()
+            {
+                Id = sponsoringOrg.Id,
+                Type = OrganizationUserType.Owner,
+                Permissions = new Permissions { ManageUsers = true }
+            }
+        });
 
         await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
             PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, null);
@@ -180,7 +199,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             FriendlyName = friendlyName,
             OfferedToEmail = sponsoredEmail,
             PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
-            IsAdminInitiated = false,
+            IsAdminInitiated = true,
             Notes = null
         };
 
@@ -206,6 +225,14 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             return expectedException;
         });
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(sponsoringOrgUser.UserId.Value);
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns([
+            new()
+            {
+                Id = sponsoringOrg.Id,
+                Permissions = new Permissions { ManageUsers = true },
+                Type = OrganizationUserType.Admin
+            }
+        ]);
 
         var actualException = await Assert.ThrowsAsync<Exception>(() =>
             sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
@@ -220,7 +247,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
     [BitAutoData]
     public async Task CreateSponsorship_MissingManageUsersPermission_ThrowsUnauthorizedException(
         Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, User user, string sponsoredEmail,
-        string friendlyName, Guid sponsorshipId, Guid currentUserId, SutProvider<CreateSponsorshipCommand> sutProvider)
+        string friendlyName, Guid sponsorshipId, SutProvider<CreateSponsorshipCommand> sutProvider)
     {
         sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
         sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
@@ -231,16 +258,15 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             var sponsorship = callInfo.Arg<OrganizationSponsorship>();
             sponsorship.Id = sponsorshipId;
         });
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(currentUserId);
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(sponsoringOrgUser.UserId.Value);
         sutProvider.GetDependency<ICurrentContext>().Organizations.Returns([
             new()
             {
                 Id = sponsoringOrg.Id,
-                Permissions = new Permissions(),
-                Type = OrganizationUserType.Custom
+                Permissions = new Permissions { ManageUsers = false },
+                Type = OrganizationUserType.Admin
             }
         ]);
-
 
         var actual = await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
             await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
@@ -255,7 +281,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
     public async Task CreateSponsorship_InvalidUserType_ThrowsUnauthorizedException(
         OrganizationUserType organizationUserType,
         Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, User user, string sponsoredEmail,
-        string friendlyName, Guid sponsorshipId, Guid currentUserId, SutProvider<CreateSponsorshipCommand> sutProvider)
+        string friendlyName, Guid sponsorshipId, SutProvider<CreateSponsorshipCommand> sutProvider)
     {
         sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
         sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
@@ -266,12 +292,12 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             var sponsorship = callInfo.Arg<OrganizationSponsorship>();
             sponsorship.Id = sponsorshipId;
         });
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(currentUserId);
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(sponsoringOrgUser.UserId.Value);
         sutProvider.GetDependency<ICurrentContext>().Organizations.Returns([
             new()
             {
                 Id = sponsoringOrg.Id,
-                Permissions = new Permissions(),
+                Permissions = new Permissions { ManageUsers = true },
                 Type = organizationUserType
             }
         ]);
@@ -289,11 +315,13 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
     public async Task CreateSponsorship_CreatesAdminInitiatedSponsorship(
         OrganizationUserType organizationUserType,
         Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, User user, string sponsoredEmail,
-        string friendlyName, Guid sponsorshipId, Guid currentUserId, string notes, SutProvider<CreateSponsorshipCommand> sutProvider)
+        string friendlyName, Guid sponsorshipId, string notes, SutProvider<CreateSponsorshipCommand> sutProvider)
     {
         sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
         sponsoringOrg.UseAdminSponsoredFamilies = true;
         sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
+        sponsoringOrg.MaxAutoscaleSeats = 10;
+        sponsoringOrg.Seats = 5;
 
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId!.Value).Returns(user);
         sutProvider.GetDependency<IOrganizationSponsorshipRepository>().WhenForAnyArgs(x => x.UpsertAsync(null!)).Do(callInfo =>
@@ -301,7 +329,8 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             var sponsorship = callInfo.Arg<OrganizationSponsorship>();
             sponsorship.Id = sponsorshipId;
         });
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(currentUserId);
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>().GetManyBySponsoringOrganizationAsync(sponsoringOrg.Id).Returns(new List<OrganizationSponsorship>());
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(sponsoringOrgUser.UserId.Value);
         sutProvider.GetDependency<ICurrentContext>().Organizations.Returns([
             new()
             {
@@ -313,7 +342,6 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
 
         var actual = await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
             PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, notes);
-
 
         var expectedSponsorship = new OrganizationSponsorship
         {
