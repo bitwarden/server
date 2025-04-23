@@ -27,6 +27,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Api.Auth.Models.Request.WebAuthn;
+using Bit.Api.Billing;
 using Bit.Core.AdminConsole.Services.NoopImplementations;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Identity.TokenProviders;
@@ -182,6 +183,8 @@ public class Startup
         services.AddBillingOperations();
         services.AddReportingServices();
         services.AddImportServices();
+
+        services.AddBillingQueries();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();
