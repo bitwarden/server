@@ -6,7 +6,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
-using Duende.IdentityModel;
+using IdentityModel;
 
 namespace Bit.Events;
 
