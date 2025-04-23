@@ -5,7 +5,7 @@ using Bit.Core.Settings;
 using AspNetCoreRateLimit;
 using Stripe;
 using Bit.Core.Utilities;
-using Duende.IdentityModel;
+using IdentityModel;
 using System.Globalization;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
