@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Settings;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Duende.IdentityServer.Models;
+using IdentityModel;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -77,7 +78,7 @@ public class ApiClient : Client
 
         if (scopes == null)
         {
-            scopes = new string[] { "api", "openid" };
+            scopes = new string[] { "api", OidcConstants.StandardScopes.OpenId };
         }
         AllowedScopes = scopes;
     }
