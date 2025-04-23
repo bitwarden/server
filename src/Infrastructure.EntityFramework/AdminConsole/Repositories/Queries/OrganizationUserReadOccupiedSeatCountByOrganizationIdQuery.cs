@@ -16,7 +16,7 @@ public class OrganizationUserReadOccupiedSeatCountByOrganizationIdQuery : IQuery
     {
         var orgUsersQuery = from ou in dbContext.OrganizationUsers
                             where ou.OrganizationId == _organizationId && ou.Status >= OrganizationUserStatusType.Invited
-                            select ou;
+                            select new OrganizationUser { Id = ou.Id, OrganizationId = ou.OrganizationId, Status = ou.Status };
 
         // As of https://bitwarden.atlassian.net/browse/PM-17772, a seat is also occupied by a Families for Enterprise sponsorship sent by an
         // organization admin, even if the user sent the invitation doesn't have a corresponding OrganizationUser in the Enterprise organization.
