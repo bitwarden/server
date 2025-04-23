@@ -128,6 +128,12 @@ public class SendValidationService : ISendValidationService
             return;
         }
 
+        var disableSendRequirement = await _policyRequirementQuery.GetAsync<DisableSendPolicyRequirement>(userId.Value);
+        if (disableSendRequirement.DisableSend)
+        {
+            throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
+        }
+
         var sendOptionsRequirement = await _policyRequirementQuery.GetAsync<SendOptionsPolicyRequirement>(userId.Value);
         if (sendOptionsRequirement.DisableHideEmail && send.HideEmail.GetValueOrDefault())
         {
