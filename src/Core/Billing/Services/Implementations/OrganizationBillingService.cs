@@ -42,7 +42,7 @@ public class OrganizationBillingService(
 
         var customer = string.IsNullOrEmpty(organization.GatewayCustomerId) && customerSetup != null
             ? await CreateCustomerAsync(organization, customerSetup)
-            : await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = ["tax"] });
+            : await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
 
         var subscription = await CreateSubscriptionAsync(organization.Id, customer, subscriptionSetup);
 
@@ -91,9 +91,20 @@ public class OrganizationBillingService(
 
         var subscription = await subscriberService.GetSubscription(organization);
 
+        if (customer == null || subscription == null)
+        {
+            return OrganizationMetadata.Default with
+            {
+                IsEligibleForSelfHost = isEligibleForSelfHost,
+                IsManaged = isManaged
+            };
+        }
+
         var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
 
-        var invoice = await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions());
+        var invoice = !string.IsNullOrEmpty(subscription.LatestInvoiceId)
+            ? await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions())
+            : null;
 
         return new OrganizationMetadata(
             isEligibleForSelfHost,

@@ -4,6 +4,7 @@ using Bit.Commercial.Core.Billing;
 using Bit.Commercial.Core.Billing.Models;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
@@ -115,6 +116,8 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         // Arrange
+        provider.Type = ProviderType.BusinessUnit;
+
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
         var existingPlan = new ProviderPlan
         {
@@ -132,10 +135,7 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(existingPlan.PlanType)
             .Returns(StaticStore.GetPlan(existingPlan.PlanType));
 
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.ProviderSubscriptionGetAsync(
-                Arg.Is(provider.GatewaySubscriptionId),
-                Arg.Is(provider.Id))
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider)
             .Returns(new Subscription
             {
                 Id = provider.GatewaySubscriptionId,
@@ -158,7 +158,7 @@ public class ProviderBillingServiceTests
             });
 
         var command =
-            new ChangeProviderPlanCommand(providerPlanId, PlanType.EnterpriseMonthly, provider.GatewaySubscriptionId);
+            new ChangeProviderPlanCommand(provider, providerPlanId, PlanType.EnterpriseMonthly);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(command.NewPlan)
             .Returns(StaticStore.GetPlan(command.NewPlan));
@@ -169,6 +169,8 @@ public class ProviderBillingServiceTests
         // Assert
         await providerPlanRepository.Received(1)
             .ReplaceAsync(Arg.Is<ProviderPlan>(p => p.PlanType == PlanType.EnterpriseMonthly));
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         await stripeAdapter.Received(1)
             .SubscriptionUpdateAsync(
@@ -405,6 +407,23 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
+        var subscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Teams } },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Enterprise }
+                    }
+                ]
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
+
         // 50 seats currently assigned with a seat minimum of 100
         var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
 
@@ -427,11 +446,9 @@ public class ProviderBillingServiceTests
         await sutProvider.Sut.ScaleSeats(provider, PlanType.TeamsMonthly, 10);
 
         // 50 assigned seats + 10 seat scale up = 60 seats, well below the 100 minimum
-        await sutProvider.GetDependency<IPaymentService>().DidNotReceiveWithAnyArgs().AdjustSeats(
-            Arg.Any<Provider>(),
-            Arg.Any<Bit.Core.Models.StaticStore.Plan>(),
-            Arg.Any<int>(),
-            Arg.Any<int>());
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs().SubscriptionUpdateAsync(
+            Arg.Any<string>(),
+            Arg.Any<SubscriptionUpdateOptions>());
 
         await sutProvider.GetDependency<IProviderPlanRepository>().Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
             pPlan => pPlan.AllocatedSeats == 60));
@@ -474,6 +491,23 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
+        var subscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Teams } },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Enterprise }
+                    }
+                ]
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
+
         // 95 seats currently assigned with a seat minimum of 100
         var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
 
@@ -496,11 +530,12 @@ public class ProviderBillingServiceTests
         await sutProvider.Sut.ScaleSeats(provider, PlanType.TeamsMonthly, 10);
 
         // 95 current + 10 seat scale = 105 seats, 5 above the minimum
-        await sutProvider.GetDependency<IPaymentService>().Received(1).AdjustSeats(
-            provider,
-            StaticStore.GetPlan(providerPlan.PlanType),
-            providerPlan.SeatMinimum!.Value,
-            105);
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).SubscriptionUpdateAsync(
+            provider.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(
+                options =>
+                    options.Items.First().Price == ProviderPriceAdapter.MSP.Active.Teams &&
+                    options.Items.First().Quantity == 105));
 
         // 105 total seats - 100 minimum = 5 purchased seats
         await sutProvider.GetDependency<IProviderPlanRepository>().Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
@@ -544,6 +579,23 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
+        var subscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Teams } },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Enterprise }
+                    }
+                ]
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
+
         // 110 seats currently assigned with a seat minimum of 100
         var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
 
@@ -566,11 +618,12 @@ public class ProviderBillingServiceTests
         await sutProvider.Sut.ScaleSeats(provider, PlanType.TeamsMonthly, 10);
 
         // 110 current + 10 seat scale up = 120 seats
-        await sutProvider.GetDependency<IPaymentService>().Received(1).AdjustSeats(
-            provider,
-            StaticStore.GetPlan(providerPlan.PlanType),
-            110,
-            120);
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).SubscriptionUpdateAsync(
+            provider.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(
+                options =>
+                    options.Items.First().Price == ProviderPriceAdapter.MSP.Active.Teams &&
+                    options.Items.First().Quantity == 120));
 
         // 120 total seats - 100 seat minimum = 20 purchased seats
         await sutProvider.GetDependency<IProviderPlanRepository>().Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
@@ -614,6 +667,23 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
+        var subscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Teams } },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Enterprise }
+                    }
+                ]
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
+
         // 110 seats currently assigned with a seat minimum of 100
         var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
 
@@ -636,11 +706,12 @@ public class ProviderBillingServiceTests
         await sutProvider.Sut.ScaleSeats(provider, PlanType.TeamsMonthly, -30);
 
         // 110 seats - 30 scale down seats = 80 seats, below the 100 seat minimum.
-        await sutProvider.GetDependency<IPaymentService>().Received(1).AdjustSeats(
-            provider,
-            StaticStore.GetPlan(providerPlan.PlanType),
-            110,
-            providerPlan.SeatMinimum!.Value);
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).SubscriptionUpdateAsync(
+            provider.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(
+                options =>
+                    options.Items.First().Price == ProviderPriceAdapter.MSP.Active.Teams &&
+                    options.Items.First().Quantity == providerPlan.SeatMinimum!.Value));
 
         // Being below the seat minimum means no purchased seats.
         await sutProvider.GetDependency<IProviderPlanRepository>().Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
@@ -977,6 +1048,7 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider)
     {
+        provider.Type = ProviderType.Msp;
         provider.GatewaySubscriptionId = null;
 
         var customer = new Customer
@@ -1020,9 +1092,6 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
 
-        var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
-        var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
-
         var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
 
         sutProvider.GetDependency<IAutomaticTaxStrategy>()
@@ -1045,9 +1114,9 @@ public class ProviderBillingServiceTests
                 sub.Customer == "customer_id" &&
                 sub.DaysUntilDue == 30 &&
                 sub.Items.Count == 2 &&
-                sub.Items.ElementAt(0).Price == teamsPlan.PasswordManager.StripeProviderPortalSeatPlanId &&
+                sub.Items.ElementAt(0).Price == ProviderPriceAdapter.MSP.Active.Teams &&
                 sub.Items.ElementAt(0).Quantity == 100 &&
-                sub.Items.ElementAt(1).Price == enterprisePlan.PasswordManager.StripeProviderPortalSeatPlanId &&
+                sub.Items.ElementAt(1).Price == ProviderPriceAdapter.MSP.Active.Enterprise &&
                 sub.Items.ElementAt(1).Quantity == 100 &&
                 sub.Metadata["providerId"] == provider.Id.ToString() &&
                 sub.OffSession == true &&
@@ -1069,8 +1138,7 @@ public class ProviderBillingServiceTests
     {
         // Arrange
         var command = new UpdateProviderSeatMinimumsCommand(
-            provider.Id,
-            provider.GatewaySubscriptionId,
+            provider,
             [
                 (PlanType.TeamsMonthly, -10),
                 (PlanType.EnterpriseMonthly, 50)
@@ -1089,6 +1157,8 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         // Arrange
+        provider.Type = ProviderType.Msp;
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
 
@@ -1118,9 +1188,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.ProviderSubscriptionGetAsync(
-            provider.GatewaySubscriptionId,
-            provider.Id).Returns(subscription);
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1137,8 +1205,7 @@ public class ProviderBillingServiceTests
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(
-            provider.Id,
-            provider.GatewaySubscriptionId,
+            provider,
             [
                 (PlanType.EnterpriseMonthly, 30),
                 (PlanType.TeamsMonthly, 20)
@@ -1170,6 +1237,8 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         // Arrange
+        provider.Type = ProviderType.Msp;
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
 
@@ -1199,7 +1268,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.ProviderSubscriptionGetAsync(provider.GatewaySubscriptionId, provider.Id).Returns(subscription);
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1216,8 +1285,7 @@ public class ProviderBillingServiceTests
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(
-            provider.Id,
-            provider.GatewaySubscriptionId,
+            provider,
             [
                 (PlanType.EnterpriseMonthly, 70),
                 (PlanType.TeamsMonthly, 50)
@@ -1249,6 +1317,8 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         // Arrange
+        provider.Type = ProviderType.Msp;
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
 
@@ -1278,7 +1348,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.ProviderSubscriptionGetAsync(provider.GatewaySubscriptionId, provider.Id).Returns(subscription);
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1295,8 +1365,7 @@ public class ProviderBillingServiceTests
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(
-            provider.Id,
-            provider.GatewaySubscriptionId,
+            provider,
             [
                 (PlanType.EnterpriseMonthly, 60),
                 (PlanType.TeamsMonthly, 60)
@@ -1322,6 +1391,8 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         // Arrange
+        provider.Type = ProviderType.Msp;
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
 
@@ -1351,7 +1422,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.ProviderSubscriptionGetAsync(provider.GatewaySubscriptionId, provider.Id).Returns(subscription);
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1368,8 +1439,7 @@ public class ProviderBillingServiceTests
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(
-            provider.Id,
-            provider.GatewaySubscriptionId,
+            provider,
             [
                 (PlanType.EnterpriseMonthly, 80),
                 (PlanType.TeamsMonthly, 80)
@@ -1401,6 +1471,8 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         // Arrange
+        provider.Type = ProviderType.Msp;
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
 
@@ -1430,7 +1502,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.ProviderSubscriptionGetAsync(provider.GatewaySubscriptionId, provider.Id).Returns(subscription);
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1447,8 +1519,7 @@ public class ProviderBillingServiceTests
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(
-            provider.Id,
-            provider.GatewaySubscriptionId,
+            provider,
             [
                 (PlanType.EnterpriseMonthly, 70),
                 (PlanType.TeamsMonthly, 30)

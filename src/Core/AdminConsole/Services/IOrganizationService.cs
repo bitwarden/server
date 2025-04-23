@@ -43,7 +43,6 @@ public interface IOrganizationService
         IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
         bool overwriteExisting, EventSystemUser eventSystemUser);
     Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
-    Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey);
     Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId);
     Task RevokeUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser);
     Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
@@ -55,7 +54,7 @@ public interface IOrganizationService
     /// <remarks>
     /// This method must target a disabled Organization that has null keys and status as 'Pending'.
     /// </remarks>
-    Task InitPendingOrganization(Guid userId, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName);
+    Task InitPendingOrganization(User user, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName, string emailToken);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
 
     void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);

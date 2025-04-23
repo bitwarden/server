@@ -1,5 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
@@ -250,18 +250,6 @@ public class StripePaymentService : IPaymentService
 
     public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
-
-    public Task<string> AdjustSeats(
-        Provider provider,
-        StaticStore.Plan plan,
-        int currentlySubscribedSeats,
-        int newlySubscribedSeats)
-        => FinalizeSubscriptionChangeAsync(
-            provider,
-            new ProviderSubscriptionUpdate(
-                plan,
-                currentlySubscribedSeats,
-                newlySubscribedSeats));
 
     public Task<string> AdjustSmSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(
@@ -1123,14 +1111,27 @@ public class StripePaymentService : IPaymentService
             new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount),
             true);
 
-    public async Task<bool> HasSecretsManagerStandalone(Organization organization)
+    public async Task<bool> HasSecretsManagerStandalone(Organization organization) =>
+        await HasSecretsManagerStandaloneAsync(gatewayCustomerId: organization.GatewayCustomerId,
+            organizationHasSecretsManager: organization.UseSecretsManager);
+
+    public async Task<bool> HasSecretsManagerStandalone(InviteOrganization organization) =>
+        await HasSecretsManagerStandaloneAsync(gatewayCustomerId: organization.GatewayCustomerId,
+            organizationHasSecretsManager: organization.UseSecretsManager);
+
+    private async Task<bool> HasSecretsManagerStandaloneAsync(string gatewayCustomerId, bool organizationHasSecretsManager)
     {
-        if (string.IsNullOrEmpty(organization.GatewayCustomerId))
+        if (string.IsNullOrEmpty(gatewayCustomerId))
         {
             return false;
         }
 
-        var customer = await _stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId);
+        if (organizationHasSecretsManager is false)
+        {
+            return false;
+        }
+
+        var customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
 
         return customer?.Discount?.Coupon?.Id == SecretsManagerStandaloneDiscountId;
     }
@@ -1264,7 +1265,7 @@ public class StripePaymentService : IPaymentService
         {
             var invoice = await _stripeAdapter.InvoiceCreatePreviewAsync(options);
 
-            var effectiveTaxRate = invoice.Tax != null && invoice.TotalExcludingTax != null
+            var effectiveTaxRate = invoice.Tax != null && invoice.TotalExcludingTax != null && invoice.TotalExcludingTax.Value != 0
                 ? invoice.Tax.Value.ToMajor() / invoice.TotalExcludingTax.Value.ToMajor()
                 : 0M;
 
@@ -1299,6 +1300,7 @@ public class StripePaymentService : IPaymentService
         string gatewaySubscriptionId)
     {
         var plan = await _pricingClient.GetPlanOrThrow(parameters.PasswordManager.Plan);
+        var isSponsored = parameters.PasswordManager.SponsoredPlan.HasValue;
 
         var options = new InvoiceCreatePreviewOptions
         {
@@ -1324,45 +1326,47 @@ public class StripePaymentService : IPaymentService
             },
         };
 
-        if (plan.PasswordManager.HasAdditionalSeatsOption)
+        if (isSponsored)
         {
+            var sponsoredPlan = Utilities.StaticStore.GetSponsoredPlan(parameters.PasswordManager.SponsoredPlan.Value);
             options.SubscriptionDetails.Items.Add(
-                new()
-                {
-                    Quantity = parameters.PasswordManager.Seats,
-                    Plan = plan.PasswordManager.StripeSeatPlanId
-                }
+                new() { Quantity = 1, Plan = sponsoredPlan.StripePlanId }
             );
         }
         else
         {
-            options.SubscriptionDetails.Items.Add(
-                new()
-                {
-                    Quantity = 1,
-                    Plan = plan.PasswordManager.StripePlanId
-                }
-            );
-        }
-
-        if (plan.SupportsSecretsManager)
-        {
-            if (plan.SecretsManager.HasAdditionalSeatsOption)
+            if (plan.PasswordManager.HasAdditionalSeatsOption)
             {
-                options.SubscriptionDetails.Items.Add(new()
-                {
-                    Quantity = parameters.SecretsManager?.Seats ?? 0,
-                    Plan = plan.SecretsManager.StripeSeatPlanId
-                });
+                options.SubscriptionDetails.Items.Add(
+                    new() { Quantity = parameters.PasswordManager.Seats, Plan = plan.PasswordManager.StripeSeatPlanId }
+                );
+            }
+            else
+            {
+                options.SubscriptionDetails.Items.Add(
+                    new() { Quantity = 1, Plan = plan.PasswordManager.StripePlanId }
+                );
             }
 
-            if (plan.SecretsManager.HasAdditionalServiceAccountOption)
+            if (plan.SupportsSecretsManager)
             {
-                options.SubscriptionDetails.Items.Add(new()
+                if (plan.SecretsManager.HasAdditionalSeatsOption)
                 {
-                    Quantity = parameters.SecretsManager?.AdditionalMachineAccounts ?? 0,
-                    Plan = plan.SecretsManager.StripeServiceAccountPlanId
-                });
+                    options.SubscriptionDetails.Items.Add(new()
+                    {
+                        Quantity = parameters.SecretsManager?.Seats ?? 0,
+                        Plan = plan.SecretsManager.StripeSeatPlanId
+                    });
+                }
+
+                if (plan.SecretsManager.HasAdditionalServiceAccountOption)
+                {
+                    options.SubscriptionDetails.Items.Add(new()
+                    {
+                        Quantity = parameters.SecretsManager?.AdditionalMachineAccounts ?? 0,
+                        Plan = plan.SecretsManager.StripeServiceAccountPlanId
+                    });
+                }
             }
         }
 
@@ -1419,7 +1423,7 @@ public class StripePaymentService : IPaymentService
         {
             var invoice = await _stripeAdapter.InvoiceCreatePreviewAsync(options);
 
-            var effectiveTaxRate = invoice.Tax != null && invoice.TotalExcludingTax != null
+            var effectiveTaxRate = invoice.Tax != null && invoice.TotalExcludingTax != null && invoice.TotalExcludingTax.Value != 0
                 ? invoice.Tax.Value.ToMajor() / invoice.TotalExcludingTax.Value.ToMajor()
                 : 0M;
 
