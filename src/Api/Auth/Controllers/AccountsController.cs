@@ -124,11 +124,11 @@ public class AccountsController : Controller
             throw new BadRequestException("MasterPasswordHash", "Invalid password.");
         }
 
-        var managedUserValidationResult = await _userService.ValidateManagedUserDomainAsync(user, model.NewEmail);
+        var claimedUserValidationResult = await _userService.ValidateClaimedUserDomainAsync(user, model.NewEmail);
 
-        if (!managedUserValidationResult.Succeeded)
+        if (!claimedUserValidationResult.Succeeded)
         {
-            throw new BadRequestException(managedUserValidationResult.Errors);
+            throw new BadRequestException(claimedUserValidationResult.Errors);
         }
 
         await _userService.InitiateEmailChangeAsync(user, model.NewEmail);
@@ -284,52 +284,6 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    [HttpPost("set-key-connector-key")]
-    public async Task PostSetKeyConnectorKeyAsync([FromBody] SetKeyConnectorKeyRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var result = await _userService.SetKeyConnectorKeyAsync(model.ToUser(user), model.Key, model.OrgIdentifier);
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        throw new BadRequestException(ModelState);
-    }
-
-    [HttpPost("convert-to-key-connector")]
-    public async Task PostConvertToKeyConnector()
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var result = await _userService.ConvertToKeyConnectorAsync(user);
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        throw new BadRequestException(ModelState);
-    }
-
     [HttpPost("kdf")]
     public async Task PostKdf([FromBody] KdfRequestModel model)
     {
@@ -437,11 +391,11 @@ public class AccountsController : Controller
 
         var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
-        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
+        var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
         var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, twoFactorEnabled,
-            hasPremiumFromOrg, organizationIdsManagingActiveUser);
+            hasPremiumFromOrg, organizationIdsClaimingActiveUser);
         return response;
     }
 
@@ -451,9 +405,9 @@ public class AccountsController : Controller
         var userId = _userService.GetProperUserId(User);
         var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(userId.Value,
             OrganizationUserStatusType.Confirmed);
-        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(userId.Value);
+        var organizationIdsClaimingUser = await GetOrganizationIdsClaimingUserAsync(userId.Value);
 
-        var responseData = organizationUserDetails.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsManagingActiveUser));
+        var responseData = organizationUserDetails.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingUser));
         return new ListResponseModel<ProfileOrganizationResponseModel>(responseData);
     }
 
@@ -471,9 +425,9 @@ public class AccountsController : Controller
 
         var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
-        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
+        var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
-        var response = new ProfileResponseModel(user, null, null, null, twoFactorEnabled, hasPremiumFromOrg, organizationIdsManagingActiveUser);
+        var response = new ProfileResponseModel(user, null, null, null, twoFactorEnabled, hasPremiumFromOrg, organizationIdsClaimingActiveUser);
         return response;
     }
 
@@ -490,9 +444,9 @@ public class AccountsController : Controller
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
+        var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
-        var response = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsManagingActiveUser);
+        var response = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);
         return response;
     }
 
@@ -560,9 +514,9 @@ public class AccountsController : Controller
         }
         else
         {
-            // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
+            // If Account Deprovisioning is enabled, we need to check if the user is claimed by any organization.
             if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-                && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
+                && await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
             {
                 throw new BadRequestException("Cannot delete accounts owned by an organization. Contact your organization administrator for additional details.");
             }
@@ -763,9 +717,9 @@ public class AccountsController : Controller
         await _userService.SaveUserAsync(user);
     }
 
-    private async Task<IEnumerable<Guid>> GetOrganizationIdsManagingUserAsync(Guid userId)
+    private async Task<IEnumerable<Guid>> GetOrganizationIdsClaimingUserAsync(Guid userId)
     {
-        var organizationManagingUser = await _userService.GetOrganizationsManagingUserAsync(userId);
-        return organizationManagingUser.Select(o => o.Id);
+        var organizationsClaimingUser = await _userService.GetOrganizationsClaimingUserAsync(userId);
+        return organizationsClaimingUser.Select(o => o.Id);
     }
 }

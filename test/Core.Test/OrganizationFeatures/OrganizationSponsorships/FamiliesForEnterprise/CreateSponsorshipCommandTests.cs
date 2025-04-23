@@ -225,10 +225,6 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
         sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(Arg.Is<string>(p => p == FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
-            .Returns(true);
-
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId!.Value).Returns(user);
         sutProvider.GetDependency<IOrganizationSponsorshipRepository>().WhenForAnyArgs(x => x.UpsertAsync(null!)).Do(callInfo =>
         {
@@ -248,7 +244,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
 
         var actual = await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
             await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
-                PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, null));
+                PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, notes: null));
 
         Assert.Equal("You do not have permissions to send sponsorships on behalf of the organization.", actual.Message);
     }
@@ -264,10 +260,6 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
         sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(Arg.Is<string>(p => p == FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
-            .Returns(true);
-
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId!.Value).Returns(user);
         sutProvider.GetDependency<IOrganizationSponsorshipRepository>().WhenForAnyArgs(x => x.UpsertAsync(null!)).Do(callInfo =>
         {
@@ -279,14 +271,14 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             new()
             {
                 Id = sponsoringOrg.Id,
+                Permissions = new Permissions(),
                 Type = organizationUserType
             }
         ]);
 
-
         var actual = await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
             await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
-                PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, null));
+                PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, notes: null));
 
         Assert.Equal("You do not have permissions to send sponsorships on behalf of the organization.", actual.Message);
     }
@@ -300,11 +292,8 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         string friendlyName, Guid sponsorshipId, Guid currentUserId, string notes, SutProvider<CreateSponsorshipCommand> sutProvider)
     {
         sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
+        sponsoringOrg.UseAdminSponsoredFamilies = true;
         sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(Arg.Is<string>(p => p == FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
-            .Returns(true);
 
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId!.Value).Returns(user);
         sutProvider.GetDependency<IOrganizationSponsorshipRepository>().WhenForAnyArgs(x => x.UpsertAsync(null!)).Do(callInfo =>
@@ -317,6 +306,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             new()
             {
                 Id = sponsoringOrg.Id,
+                Permissions = new Permissions { ManageUsers = true },
                 Type = organizationUserType
             }
         ]);

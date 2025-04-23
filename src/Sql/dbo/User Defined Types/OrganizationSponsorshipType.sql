@@ -9,6 +9,6 @@ CREATE TYPE [dbo].[OrganizationSponsorshipType] AS TABLE(
     [LastSyncDate] DATETIME2(7),
     [ValidUntil] DATETIME2(7),
     [ToDelete] BIT,
-    [IsAdminInitiated] BIT,
-    [Notes] NVARCHAR(512)
+    [IsAdminInitiated] BIT DEFAULT 0,
+    [Notes] NVARCHAR(512) NULL
 )
