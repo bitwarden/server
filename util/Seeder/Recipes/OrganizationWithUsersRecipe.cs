@@ -7,7 +7,7 @@ namespace Bit.Seeder.Recipes;
 
 public class OrganizationWithUsersRecipe(DatabaseContext db)
 {
-    public void Seed(string name, int users, string domain)
+    public Guid Seed(string name, int users, string domain)
     {
         var organization = OrganizationSeeder.CreateEnterprise(name, domain, users);
         var user = UserSeeder.CreateUser($"admin@{domain}");
@@ -31,5 +31,7 @@ public class OrganizationWithUsersRecipe(DatabaseContext db)
         // Use LinqToDB's BulkCopy for significant better performance
         db.BulkCopy(additionalUsers);
         db.BulkCopy(additionalOrgUsers);
+
+        return organization.Id;
     }
 }
