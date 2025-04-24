@@ -31,7 +31,7 @@ public class OrganizationUsersControllerTest : IClassFixture<ApiApplicationFacto
         return Task.CompletedTask;
     }
 
-    [Fact]
+    [Fact(Skip = "Performance testing")]
     public async Task Get_SmallOrg()
     {
         var db = _factory.GetDatabaseContext();
@@ -54,7 +54,7 @@ public class OrganizationUsersControllerTest : IClassFixture<ApiApplicationFacto
         _testOutputHelper.WriteLine($"Request duration: {stopwatch.ElapsedMilliseconds} ms");
     }
 
-    [Fact]
+    [Fact(Skip = "Performance testing")]
     public async Task Get_LargeOrg()
     {
         var db = _factory.GetDatabaseContext();
