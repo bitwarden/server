@@ -1,4 +1,6 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Net;
+using System.Net.Http.Headers;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.Storage.Queues;
 using Bit.Api.IntegrationTest.Factories;
@@ -244,6 +246,113 @@ public class PushControllerTests
     [MemberData(nameof(SendData))]
     public async Task Send_Works(PushSendRequestModel pushSendRequestModel, string expectedHubTagExpression, bool expectHubCall)
     {
+        var (apiFactory, httpClient, installation, queueClient, notificationHubProxy) = await SetupTest();
+
+        // Act
+        var pushSendResponse = await httpClient.PostAsJsonAsync("push/send", pushSendRequestModel);
+
+        // Assert 
+        pushSendResponse.EnsureSuccessStatusCode();
+
+        // Relayed notifications, the ones coming to this endpoint should
+        // not make their way into our Azure Queue and instead should only be sent to Azure Notifications
+        // hub.
+        await queueClient
+            .Received(0)
+            .SendMessageAsync(Arg.Any<string>());
+
+        // Check that this notification was sent through hubs the expected number of times
+        await notificationHubProxy
+            .Received(expectHubCall ? 1 : 0)
+            .SendTemplateNotificationAsync(
+                Arg.Any<Dictionary<string, string>>(),
+                Arg.Is(expectedHubTagExpression.Replace("%installation%", installation.Id.ToString()))
+            );
+
+        // TODO: Expect on the dictionary more?
+
+        // Notifications being relayed from SH should have the device id
+        // tracked so that we can later send the notification to that device.
+        await apiFactory.GetService<IInstallationDeviceRepository>()
+            .Received(1)
+            .UpsertAsync(Arg.Is<InstallationDeviceEntity>(
+                ide => ide.PartitionKey == installation.Id.ToString() && ide.RowKey == pushSendRequestModel.DeviceId
+            ));
+    }
+
+    [Fact]
+    public async Task Send_InstallationNotification_NotAuthenticatedInstallation_Fails()
+    {
+        var (_, httpClient, _, _, _) = await SetupTest();
+
+        var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel
+        {
+            Type = PushType.NotificationStatus,
+            InstallationId = Guid.NewGuid().ToString(),
+            Payload = new {}
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonNode>();
+        Assert.Equal(JsonValueKind.Object, body.GetValueKind());
+        Assert.True(body.AsObject().TryGetPropertyValue("message", out var message));
+        Assert.Equal(JsonValueKind.String, message.GetValueKind());
+        Assert.Equal("InstallationId does not match current context.", message.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task Send_InstallationNotification_Works()
+    {
+        var (apiFactory, httpClient, installation, _, notificationHubProxy) = await SetupTest();
+
+        var deviceId = Guid.NewGuid();
+
+        var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel
+        {
+            Type = PushType.NotificationStatus,
+            InstallationId = installation.Id.ToString(),
+            Payload = new {},
+            DeviceId = deviceId.ToString(),
+            ClientType = ClientType.Web,
+        });
+
+        response.EnsureSuccessStatusCode();
+
+        await notificationHubProxy
+            .Received(1)
+            .SendTemplateNotificationAsync(
+                Arg.Any<Dictionary<string, string>>(),
+                Arg.Is($"(template:payload && installationId:{installation.Id} && clientType:Web)")
+            );
+
+        await apiFactory.GetService<IInstallationDeviceRepository>()
+            .Received(1)
+            .UpsertAsync(Arg.Is<InstallationDeviceEntity>(
+                ide => ide.PartitionKey == installation.Id.ToString() && ide.RowKey == deviceId.ToString()
+            ));
+    }
+
+    [Fact]
+    public async Task Send_NoOrganizationNoInstallationNoUser_FailsModelValidation()
+    {
+        var (_, client, _, _, _) = await SetupTest();
+
+        var response = await client.PostAsJsonAsync("push/send", new PushSendRequestModel
+        {
+            Type = PushType.AuthRequest,
+            Payload = new {},
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonNode>();
+        Assert.Equal(JsonValueKind.Object, body.GetValueKind());
+        Assert.True(body.AsObject().TryGetPropertyValue("message", out var message));
+        Assert.Equal(JsonValueKind.String, message.GetValueKind());
+        Assert.Equal("The model state is invalid.", message.GetValue<string>());
+    }
+
+    private static async Task<(ApiApplicationFactory Factory, HttpClient AuthedClient, Installation Installation, QueueClient MockedQueue, INotificationHubProxy MockedHub)> SetupTest()
+    {
         // Arrange
         var apiFactory = new ApiApplicationFactory();
 
@@ -335,35 +444,6 @@ public class PushControllerTests
             connectTokenResponseModel["access_token"].GetValue<string>()
         );
 
-        // Act
-        var pushSendResponse = await httpClient.PostAsJsonAsync("push/send", pushSendRequestModel);
-
-        // Assert 
-        pushSendResponse.EnsureSuccessStatusCode();
-
-        // Relayed notifications, the ones coming to this endpoint should
-        // not make their way into our Azure Queue and instead should only be sent to Azure Notifications
-        // hub.
-        await queueClient
-            .Received(0)
-            .SendMessageAsync(Arg.Any<string>());
-
-        // Check that this notification was sent through hubs the expected number of times
-        await notificationHubProxy
-            .Received(expectHubCall ? 1 : 0)
-            .SendTemplateNotificationAsync(
-                Arg.Any<Dictionary<string, string>>(),
-                Arg.Is(expectedHubTagExpression.Replace("%installation%", installation.Id.ToString()))
-            );
-
-        // TODO: Expect on the dictionary more?
-
-        // Notifications being relayed from SH should have the device id
-        // tracked so that we can later send the notification to that device.
-        await apiFactory.GetService<IInstallationDeviceRepository>()
-            .Received(1)
-            .UpsertAsync(Arg.Is<InstallationDeviceEntity>(
-                ide => ide.PartitionKey == installation.Id.ToString() && ide.RowKey == pushSendRequestModel.DeviceId
-            ));
+        return (apiFactory, httpClient, installation, queueClient, notificationHubProxy);
     }
 }
