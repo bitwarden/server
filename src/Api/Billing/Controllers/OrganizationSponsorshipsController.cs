@@ -88,9 +88,9 @@ public class OrganizationSponsorshipsController : Controller
 
         if (!_featureService.IsEnabled(Bit.Core.FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
         {
-            if (model.SponsoringUserId.HasValue)
+            if (model.IsAdminInitiated.GetValueOrDefault())
             {
-                throw new NotFoundException();
+                throw new BadRequestException();
             }
 
             if (!string.IsNullOrWhiteSpace(model.Notes))
@@ -99,18 +99,15 @@ public class OrganizationSponsorshipsController : Controller
             }
         }
 
-        var targetUser = model.SponsoringUserId ?? _currentContext.UserId!.Value;
         var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
             sponsoringOrg,
-            await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, targetUser),
+            await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
             model.PlanSponsorshipType,
             model.SponsoredEmail,
             model.FriendlyName,
+            model.IsAdminInitiated.GetValueOrDefault(),
             model.Notes);
-        if (sponsorship.OfferedToEmail is not null)
-        {
-            await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
-        }
+        await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
     }
 
     [Authorize("Application")]
