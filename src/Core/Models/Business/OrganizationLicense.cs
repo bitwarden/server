@@ -444,6 +444,7 @@ public class OrganizationLicense : ILicense
         var usePasswordManager = claimsPrincipal.GetValue<bool>(nameof(UsePasswordManager));
         var smSeats = claimsPrincipal.GetValue<int?>(nameof(SmSeats));
         var smServiceAccounts = claimsPrincipal.GetValue<int?>(nameof(SmServiceAccounts));
+        var useAdminSponsoredFamilies = claimsPrincipal.GetValue<bool>(nameof(UseAdminSponsoredFamilies));
 
         return issued <= DateTime.UtcNow &&
                expires >= DateTime.UtcNow &&
@@ -471,7 +472,9 @@ public class OrganizationLicense : ILicense
                useSecretsManager == organization.UseSecretsManager &&
                usePasswordManager == organization.UsePasswordManager &&
                smSeats == organization.SmSeats &&
-               smServiceAccounts == organization.SmServiceAccounts;
+               smServiceAccounts == organization.SmServiceAccounts &&
+               useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies;
+
     }
 
     /// <summary>
