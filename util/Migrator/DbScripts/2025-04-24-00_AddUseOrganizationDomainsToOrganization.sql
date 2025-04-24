@@ -9,8 +9,6 @@ UPDATE
     [dbo].[Organization]
 SET
     [UseOrganizationDomains] = [UseSso]
-WHERE
-    [UseOrganizationDomains] IS NULL
 GO
 
 /* add column to Organization_Create*/
@@ -73,7 +71,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @AllowAdminAccessToAllCollectionItems BIT = 0,
     @UseRiskInsights BIT = 0,
     @LimitItemDeletion BIT = 0,
-    @UseOrganizationDomains BIT = 0
+    @UseOrganizationDomains BIT = 0,
+    @UseAdminSponsoredFamilies BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -136,7 +135,9 @@ BEGIN
         [LimitCollectionDeletion],
         [AllowAdminAccessToAllCollectionItems],
         [UseRiskInsights],
-        [LimitItemDeletion]
+        [LimitItemDeletion],
+        [UseOrganizationDomains],
+        [UseAdminSponsoredFamilies]
     )
     VALUES
     (
@@ -196,7 +197,9 @@ BEGIN
         @LimitCollectionDeletion,
         @AllowAdminAccessToAllCollectionItems,
         @UseRiskInsights,
-        @LimitItemDeletion
+        @LimitItemDeletion,
+        @UseOrganizationDomains,
+        @UseAdminSponsoredFamilies
     )
 END
 GO
@@ -295,7 +298,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @AllowAdminAccessToAllCollectionItems BIT = 0,
     @UseRiskInsights BIT = 0,
     @LimitItemDeletion BIT = 0,
-    @UseOrganizationDomains BIT = 0
+    @UseOrganizationDomains BIT = 0,
+    @UseAdminSponsoredFamilies BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -359,7 +363,8 @@ BEGIN
         [AllowAdminAccessToAllCollectionItems] = @AllowAdminAccessToAllCollectionItems,
         [UseRiskInsights] = @UseRiskInsights,
         [LimitItemDeletion] = @LimitItemDeletion,
-        [UseOrganizationDomains] = @UseOrganizationDomains
+        [UseOrganizationDomains] = @UseOrganizationDomains,
+        [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies
     WHERE
         [Id] = @Id
 END
