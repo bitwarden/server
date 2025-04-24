@@ -25,11 +25,16 @@ public class MemberResponseModelTests
         Assert.True(sut.ResetPasswordEnrolled);
     }
 
-    [Fact]
-    public void ResetPasswordEnrolled_ShouldBeFalse_WhenUserDoesNotHaveResetPasswordKey()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ResetPasswordEnrolled_ShouldBeFalse_WhenResetPasswordKeyIsInvalid(string? resetPasswordKey)
     {
         // Arrange
         var user = Substitute.For<OrganizationUser>();
+        user.ResetPasswordKey = resetPasswordKey;
+
         var collections = Substitute.For<IEnumerable<CollectionAccessSelection>>();
 
         // Act
