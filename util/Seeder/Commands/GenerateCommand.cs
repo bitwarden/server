@@ -1,8 +1,6 @@
-﻿using Bit.Infrastructure.EntityFramework.Models;
-using Bit.Seeder.Factories;
+﻿using Bit.Seeder.Recipes;
 using Bit.Seeder.Settings;
 using Bit.SharedWeb.Utilities;
-using LinqToDB.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -19,40 +17,15 @@ public class GenerateCommand
         ConfigureServices(services);
         var serviceProvider = services.BuildServiceProvider();
 
-        var logger = serviceProvider.GetRequiredService<ILogger<GenerateCommand>>();
+        // TODO: Can we remove GenerateCommand and provide a RecipeFactory or something. Or wire up DI.
+        using var scope = serviceProvider.CreateScope();
+        var scopedServices = scope.ServiceProvider;
+        var db = scopedServices.GetRequiredService<DatabaseContext>();
 
-        var organization = OrganizationSeeder.CreateEnterprise(name, domain, users);
-        var user = UserSeeder.CreateUser($"admin@{domain}");
-        var orgUser = organization.CreateOrganizationUser(user);
-
-        var additionalUsers = new List<User>();
-        var additionalOrgUsers = new List<OrganizationUser>();
-        for (var i = 0; i < users; i++)
-        {
-            var additionalUser = UserSeeder.CreateUser($"user{i}@{domain}");
-            additionalUsers.Add(additionalUser);
-            additionalOrgUsers.Add(organization.CreateOrganizationUser(additionalUser));
-        }
-
-
-        using (var scope = serviceProvider.CreateScope())
-        {
-            var scopedServices = scope.ServiceProvider;
-            var db = scopedServices.GetRequiredService<DatabaseContext>();
-
-            db.Add(organization);
-            db.Add(user);
-            db.Add(orgUser);
-
-            db.SaveChanges();
-
-            // Use LinqToDB's BulkCopy for significant better performance
-            db.BulkCopy(additionalUsers);
-            db.BulkCopy(additionalOrgUsers);
-        }
+        var recipe = new OrganizationWithUsersRecipe(db);
+        recipe.Seed(name, users, domain);
 
         return true;
-
     }
 
     private void ConfigureServices(ServiceCollection services)
