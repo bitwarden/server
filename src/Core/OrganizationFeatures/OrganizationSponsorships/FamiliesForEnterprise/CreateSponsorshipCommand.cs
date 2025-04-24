@@ -85,7 +85,6 @@ public class CreateSponsorshipCommand(
                 // Replace existing invalid offer with our new sponsorship offer
                 sponsorship.Id = existingOrgSponsorship.Id;
             }
-
         }
 
         if (isAdminInitiated && sponsoringOrganization.Seats.HasValue)
