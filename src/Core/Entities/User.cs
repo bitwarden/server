@@ -146,8 +146,8 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         try
         {
             _twoFactorProviders ??=
-                JsonSerializer.Deserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
-                    TwoFactorProviders, _jsonSerializerCaseInsensitive);
+                JsonHelpers.LegacyDeserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
+                    TwoFactorProviders);
 
             /*
                 U2F is no longer supported, and all users keys should have been migrated to WebAuthn.
@@ -177,7 +177,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public void SetTwoFactorProviders(Dictionary<TwoFactorProviderType, TwoFactorProvider> providers)
     {
         // When replacing with system.text remember to remove the extra serialization in WebAuthnTokenProvider.
-        TwoFactorProviders = JsonSerializer.Serialize(providers, _jsonSerializerCaseInsensitive);
+        TwoFactorProviders = JsonHelpers.LegacySerialize(providers);
         _twoFactorProviders = providers;
     }
 

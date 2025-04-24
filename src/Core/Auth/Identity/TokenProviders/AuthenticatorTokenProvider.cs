@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +11,6 @@ public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
 {
     private const string CacheKeyFormat = "Authenticator_TOTP_{0}_{1}";
 
-    private readonly IServiceProvider _serviceProvider;
     private readonly IDistributedCache _distributedCache;
     private readonly DistributedCacheEntryOptions _distributedCacheEntryOptions;
 
@@ -21,7 +19,6 @@ public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
         [FromKeyedServices("persistent")]
         IDistributedCache distributedCache)
     {
-        _serviceProvider = serviceProvider;
         _distributedCache = distributedCache;
         _distributedCacheEntryOptions = new DistributedCacheEntryOptions
         {
@@ -36,8 +33,7 @@ public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
         {
             return false;
         }
-        return await _serviceProvider.GetRequiredService<IUserService>()
-            .TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Authenticator, user);
+        return true;
     }
 
     public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)

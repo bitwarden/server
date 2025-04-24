@@ -23,19 +23,21 @@ public class YubicoOtpTokenProvider : IUserTwoFactorTokenProvider<User>
 
     public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
+        // Ensure the user has access to premium
         var userService = _serviceProvider.GetRequiredService<IUserService>();
         if (!await userService.CanAccessPremium(user))
         {
             return false;
         }
 
+        // Check if the user has a YubiKey provider configured
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
         if (!provider?.MetaData.Values.Any(v => !string.IsNullOrWhiteSpace((string)v)) ?? true)
         {
             return false;
         }
 
-        return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.YubiKey, user);
+        return true;
     }
 
     public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)

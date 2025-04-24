@@ -15,12 +15,12 @@ public class DuoUniversalTokenProvider(
     IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory,
     IDuoUniversalTokenService duoUniversalTokenService) : IUserTwoFactorTokenProvider<User>
 {
-    /// <summary>
-    /// We need the IServiceProvider to resolve the IUserService. There is a complex dependency dance
-    /// occurring between IUserService, which extends the UserManager<User>, and the usage of the 
-    /// UserManager<User> within this class. Trying to resolve the IUserService using the DI pipeline
-    /// will not allow the server to start and it will hang and give no helpful indication as to the problem.
-    /// </summary>
+    /*
+     * We need the IServiceProvider to resolve the IUserService. There is a complex dependency dance
+     * occurring between IUserService, which extends the UserManager, and the usage of the
+     * UserManager within this class. Trying to resolve the IUserService using the DI pipeline
+     * will not allow the server to start and it will hang and give no helpful indication as to the problem.
+    */
     private readonly IServiceProvider _serviceProvider = serviceProvider;
     private readonly IDataProtectorTokenFactory<DuoUserStateTokenable> _tokenDataFactory = tokenDataFactory;
     private readonly IDuoUniversalTokenService _duoUniversalTokenService = duoUniversalTokenService;
@@ -33,7 +33,8 @@ public class DuoUniversalTokenProvider(
         {
             return false;
         }
-        return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Duo, user);
+
+        return true;
     }
 
     public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
@@ -57,7 +58,7 @@ public class DuoUniversalTokenProvider(
     }
 
     /// <summary>
-    /// Get the Duo Two Factor Provider for the user if they have access to Duo
+    /// Get the Duo Two Factor Provider for the user if they have premium access to Duo
     /// </summary>
     /// <param name="user">Active User</param>
     /// <returns>null or Duo TwoFactorProvider</returns>

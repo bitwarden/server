@@ -4,6 +4,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
@@ -24,6 +25,7 @@ public class TwoFactorAuthenticationValidator(
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationRepository organizationRepository,
     IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmail2faSessionTokeFactory,
+    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     ICurrentContext currentContext) : ITwoFactorAuthenticationValidator
 {
     private readonly IUserService _userService = userService;
@@ -33,6 +35,7 @@ public class TwoFactorAuthenticationValidator(
     private readonly IOrganizationUserRepository _organizationUserRepository = organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository = organizationRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmail2faSessionTokeFactory = ssoEmail2faSessionTokeFactory;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     private readonly ICurrentContext _currentContext = currentContext;
 
     public async Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request)
@@ -128,7 +131,7 @@ public class TwoFactorAuthenticationValidator(
 
         // These cases we want to always return false, U2f is deprecated and OrganizationDuo
         // uses a different flow than the other two factor providers, it follows the same
-        // structure of a UserTokenProvider but has it's logic ran outside the usual token
+        // structure of a UserTokenProvider but has it's logic runs outside the usual token
         // provider flow. See IOrganizationDuoUniversalTokenProvider.cs
         if (type is TwoFactorProviderType.U2f or TwoFactorProviderType.OrganizationDuo)
         {
@@ -138,12 +141,12 @@ public class TwoFactorAuthenticationValidator(
         // Now we are concerning the rest of the Two Factor Provider Types
 
         // The intent of this check is to make sure that the user is using a 2FA provider that
-        // is enabled and allowed by their premium status. The exception for Remember
-        // is because it is a "special" 2FA type that isn't ever explicitly
+        // is enabled and allowed by their premium status.
+        // The exception for Remember is because it is a "special" 2FA type that isn't ever explicitly
         // enabled by a user, so we can't check the user's 2FA providers to see if they're
         // enabled. We just have to check if the token is valid.
         if (type != TwoFactorProviderType.Remember &&
-            !await _userService.TwoFactorProviderIsEnabledAsync(type, user))
+            user.GetTwoFactorProvider(type) == null)
         {
             return false;
         }
