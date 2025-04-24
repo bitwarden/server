@@ -166,10 +166,10 @@ public class OrganizationLicense : ILicense
     /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
     /// getting out of date license errors
     /// </remarks>
-    public const int CurrentLicenseFileVersion = 14;
+    public const int CurrentLicenseFileVersion = 15;
     private bool ValidLicenseVersion
     {
-        get => Version is >= 1 and <= 15;
+        get => Version is >= 1 and <= 16;
     }
 
     public byte[] GetDataBytes(bool forHash = false)
@@ -216,7 +216,7 @@ public class OrganizationLicense : ILicense
                     // AllowAdminAccessToAllCollectionItems was added in Version 15
                     (Version >= 15 || !p.Name.Equals(nameof(AllowAdminAccessToAllCollectionItems))) &&
                     // UseOrganizationDomains was added in version 16
-                    (Version >= 15 || !p.Name.Equals(nameof(UseOrganizationDomains))) &&
+                    (Version >= 16 || !p.Name.Equals(nameof(UseOrganizationDomains))) &&
                     (
                         !forHash ||
                         (
