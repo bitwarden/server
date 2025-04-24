@@ -288,52 +288,6 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    [HttpPost("set-key-connector-key")]
-    public async Task PostSetKeyConnectorKeyAsync([FromBody] SetKeyConnectorKeyRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var result = await _userService.SetKeyConnectorKeyAsync(model.ToUser(user), model.Key, model.OrgIdentifier);
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        throw new BadRequestException(ModelState);
-    }
-
-    [HttpPost("convert-to-key-connector")]
-    public async Task PostConvertToKeyConnector()
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var result = await _userService.ConvertToKeyConnectorAsync(user);
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        throw new BadRequestException(ModelState);
-    }
-
     [HttpPost("kdf")]
     public async Task PostKdf([FromBody] KdfRequestModel model)
     {
