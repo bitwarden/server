@@ -16,6 +16,12 @@ public interface IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
 
+    Task<Customer> UpdateCustomer(
+        string customerId,
+        CustomerUpdateOptions customerUpdateOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
+
     Task<Event> GetEvent(
         string eventId,
         EventGetOptions eventGetOptions = null,

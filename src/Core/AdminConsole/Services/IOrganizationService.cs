@@ -43,7 +43,6 @@ public interface IOrganizationService
         IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
         bool overwriteExisting, EventSystemUser eventSystemUser);
     Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
-    Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey);
     Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId);
     Task RevokeUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser);
     Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
@@ -62,5 +61,4 @@ public interface IOrganizationService
     Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
         OrganizationUserType? oldType, Permissions permissions);
     Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType);
-    Task ValidateSignUpPoliciesAsync(Guid ownerId);
 }
