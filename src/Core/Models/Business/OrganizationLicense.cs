@@ -133,6 +133,7 @@ public class OrganizationLicense : ILicense
             Trial = false;
         }
 
+        UseAdminSponsoredFamilies = org.UseAdminSponsoredFamilies;
         Hash = Convert.ToBase64String(ComputeHash());
         Signature = Convert.ToBase64String(licenseService.SignLicense(this));
     }
@@ -181,6 +182,7 @@ public class OrganizationLicense : ILicense
 
     public bool Trial { get; set; }
     public LicenseType? LicenseType { get; set; }
+    public bool UseAdminSponsoredFamilies { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
     public string Token { get; set; }
