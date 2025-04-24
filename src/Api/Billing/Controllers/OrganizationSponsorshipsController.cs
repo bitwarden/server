@@ -107,7 +107,10 @@ public class OrganizationSponsorshipsController : Controller
             model.FriendlyName,
             model.IsAdminInitiated.GetValueOrDefault(),
             model.Notes);
-        await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
+        if (sponsorship.OfferedToEmail != null)
+        {
+            await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
+        }
     }
 
     [Authorize("Application")]
