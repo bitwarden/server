@@ -195,7 +195,6 @@ public static class FeatureFlagKeys
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
     public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
-    public const string VaultBulkManagementAction = "vault-bulk-management-action";
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string SecurityTasks = "security-tasks";
     public const string CipherKeyEncryption = "cipher-key-encryption";
