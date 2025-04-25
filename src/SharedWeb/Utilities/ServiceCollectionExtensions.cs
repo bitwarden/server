@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
 using Azure.Storage.Queues;
+using Bit.Core;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
@@ -365,7 +366,13 @@ public static class ServiceCollectionExtensions
             services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("storage");
             services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
         }
-        services.AddScoped<IEventWriteService, EventRouteService>();
+        services.AddScoped<IEventWriteService>(sp =>
+        {
+            var featureService = sp.GetRequiredService<IFeatureService>();
+            var key = featureService.IsEnabled(FeatureFlagKeys.EventBasedOrganizationIntegrations)
+                ? "broadcast" : "storage";
+            return sp.GetRequiredKeyedService<IEventWriteService>(key);
+        });
 
         if (CoreHelpers.SettingHasValue(globalSettings.Attachment.ConnectionString))
         {
