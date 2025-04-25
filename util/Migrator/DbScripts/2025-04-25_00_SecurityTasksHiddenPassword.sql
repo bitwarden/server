@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
+CREATE OR ALTER PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
     @UserId UNIQUEIDENTIFIER,
     @Status TINYINT = NULL
 AS
@@ -54,3 +54,4 @@ BEGIN
         ST.RevisionDate
     ORDER BY ST.[CreationDate] DESC
 END
+GO

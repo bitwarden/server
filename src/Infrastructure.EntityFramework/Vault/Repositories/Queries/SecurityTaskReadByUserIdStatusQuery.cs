@@ -59,7 +59,8 @@ public class SecurityTaskReadByUserIdStatusQuery : IQuery<SecurityTask>
                             (
                                 c != null &&
                                 (
-                                    (cu != null && !cu.ReadOnly) || (cg != null && !cg.ReadOnly && cu == null)
+                                    (cu != null && !cu.ReadOnly && !cu.HidePasswords) ||
+                                    (cg != null && !cg.ReadOnly && !cg.HidePasswords && cu == null)
                                 )
                             )
                         ) &&
