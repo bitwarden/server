@@ -17,11 +17,7 @@ public class OrganizationSponsorshipCreateRequestModel
     [StringLength(256)]
     public string FriendlyName { get; set; }
 
-    /// <summary>
-    /// (optional) The user to target for the sponsorship.
-    /// </summary>
-    /// <remarks>Left empty when creating a sponsorship for the authenticated user.</remarks>
-    public Guid? SponsoringUserId { get; set; }
+    public bool? IsAdminInitiated { get; set; }
 
     [EncryptedString]
     [EncryptedStringLength(512)]
