@@ -1302,11 +1302,10 @@ public class CiphersController : Controller
 
     [HttpDelete("{id}/attachment/{attachmentId}/admin")]
     [HttpPost("{id}/attachment/{attachmentId}/delete-admin")]
-    public async Task<DeleteAttachmentResponseData> DeleteAttachmentAdmin(string id, string attachmentId)
+    public async Task<DeleteAttachmentResponseData> DeleteAttachmentAdmin(Guid id, string attachmentId)
     {
-        var idGuid = new Guid(id);
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(idGuid);
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
