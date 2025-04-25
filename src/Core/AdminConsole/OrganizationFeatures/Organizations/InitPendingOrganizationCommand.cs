@@ -10,7 +10,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
@@ -58,17 +57,11 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             throw new BadRequestException("User invalid.");
         }
 
-        // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-        var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-            _orgUserInviteTokenDataFactory, emailToken, orgUser);
-
-        var tokenValid = newTokenValid ||
-                         CoreHelpers.UserInviteTokenIsValid(_dataProtector, emailToken, user.Email, orgUser.Id,
-                             _globalSettings);
+        var tokenValid = ValidateInviteToken(orgUser, user, emailToken);
 
         if (!tokenValid)
         {
-            throw new BadRequestException("Invalid token.");
+            throw new BadRequestException("Invalid token");
         }
 
         var org = await _organizationRepository.GetByIdAsync(organizationId);
@@ -115,7 +108,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         }
     }
 
-    public async Task ValidateSignUpPoliciesAsync(Guid ownerId)
+    private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
     {
         var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
         if (anySingleOrgPolicies)
@@ -123,5 +116,13 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             throw new BadRequestException("You may not create an organization. You belong to an organization " +
                 "which has a policy that prohibits you from being a member of any other organization.");
         }
+    }
+
+    private bool ValidateInviteToken(OrganizationUser orgUser, User user, string emailToken)
+    {
+        var tokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+            _orgUserInviteTokenDataFactory, emailToken, orgUser);
+
+        return tokenValid;
     }
 }
