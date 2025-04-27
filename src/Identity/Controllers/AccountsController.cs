@@ -163,7 +163,7 @@ public class AccountsController : Controller
     }
 
     [HttpPost("register/finish")]
-    public async Task<RegisterResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
+    public async Task<RegisterFinishResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
         var user = model.ToUser();
 
@@ -204,11 +204,11 @@ public class AccountsController : Controller
         }
     }
 
-    private RegisterResponseModel ProcessRegistrationResult(IdentityResult result, User user)
+    private RegisterFinishResponseModel ProcessRegistrationResult(IdentityResult result, User user)
     {
         if (result.Succeeded)
         {
-            return new RegisterResponseModel();
+            return new RegisterFinishResponseModel();
         }
 
         foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
