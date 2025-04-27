@@ -221,7 +221,6 @@ public class BaseRequestValidatorTests
         // Arrange
         _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
 
         context.ValidatedTokenRequest.GrantType = grantType;
@@ -253,7 +252,6 @@ public class BaseRequestValidatorTests
         // Arrange
         _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
 
         context.ValidatedTokenRequest.GrantType = grantType;
