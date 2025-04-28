@@ -10,8 +10,8 @@ public interface ISendAuthorizationService
     /// <summary>
     /// Checks if a Send can be accessed while updating the Send, pushing a notification, and sending a reference event.
     /// </summary>
-    /// <param name="sendId">Guid of the Send needing to be accessed</param>
-    /// <param name="password">Password will be validated and used to determine access</param>
+    /// <param name="sendId"><see cref="Guid" /> of the <see cref="Send" /> needing to be accessed</param>
+    /// <param name="password">A hashed and base64-encoded password. This is compared with the send's password to authorize access.</param>
     /// <returns>Async Task object with Tuple containing the Send object, boolean that identifies if
     /// passwordRequiredError occurred, and another boolean that identifies if passwordInvalidError occurred.
     /// </returns>

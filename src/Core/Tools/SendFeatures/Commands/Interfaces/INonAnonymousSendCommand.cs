@@ -9,32 +9,35 @@ namespace Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 public interface INonAnonymousSendCommand
 {
     /// <summary>
-    /// Saves a Send to the database.
+    /// Saves a <see cref="Send" /> to the database.
     /// </summary>
-    /// <param name="send">Send object that is to be saved to database</param>
-    /// <returns>Task object for async operations</returns>
+    /// <param name="send"><see cref="Send" /> that will save to database</param>
+    /// <returns>Task completes as <see cref="Send" /> saves to the database</returns>
     Task SaveSendAsync(Send send);
 
     /// <summary>
-    /// Save File to the database.
+    /// Saves the <see cref="Send" /> and <see cref="SendFileData" /> to the database.
     /// </summary>
-    /// <param name="send">Send object that is to be saved to database</param>
-    /// <param name="data">SendFileData to be saved to database</param>
-    /// <param name="fileLength">Length of file help with saving to database</param>
+    /// <param name="send"><see cref="Send" /> that will save to the database</param>
+    /// <param name="data"><see cref="SendFileData" /> that will save to file storage</param>
+    /// <param name="fileLength">Length of file help with saving to file storage</param>
     /// <returns>Task object for async operations with file upload url</returns>
     Task<string> SaveFileSendAsync(Send send, SendFileData data, long fileLength);
+
     /// <summary>
-    /// Upload a file to an existing Send.
+    /// Upload a file to an existing <see cref="Send" />.
     /// </summary>
-    /// <param name="stream">Stream of file to be uploaded</param>
-    /// <param name="send">Send object to help with uploading file</param>
-    /// <returns>Task object for async operations</returns>
+    /// <param name="stream"><see cref="Stream" /> of file to be uploaded. Assumes the
+    /// <see cref="Stream" /> position is at the start of the file.
+    /// </param>
+    /// <param name="send"><see cref="Send" /> used to help with uploading file</param>
+    /// <returns>Task completes after saving <see cref="Stream" /> and <see cref="Send" /> metadata to the file storage</returns>
     Task UploadFileToExistingSendAsync(Stream stream, Send send);
 
     /// <summary>
-    /// Deletes a Send from the database.
+    /// Deletes a <see cref="Send" /> from the database and file storage.
     /// </summary>
-    /// <param name="send">Send object to be used to delete from database</param>
-    /// <returns>Task object for async operations</returns>
+    /// <param name="send"><see cref="Send" /> is used to delete from database and file storage</param>
+    /// <returns>Task completes once <see cref="Send" /> has been deleted from database and file storage.</returns>
     Task DeleteSendAsync(Send send);
 }
