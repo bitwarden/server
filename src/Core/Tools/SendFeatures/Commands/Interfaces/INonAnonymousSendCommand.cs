@@ -18,8 +18,8 @@ public interface INonAnonymousSendCommand
     /// <summary>
     /// Save File to the database.
     /// </summary>
-    /// <param name="send">Send object that is to be saved to database</param>
-    /// <param name="data">SendFileData to be saved to database</param>
+    /// <param name="send"><see cref="Send" /> that is to be saved to database</param>
+    /// <param name="data"><see cref="SendFileData" /> to be saved to database</param>
     /// <param name="fileLength">Length of file help with saving to database</param>
     /// <returns>Task object for async operations with file upload url</returns>
     Task<string> SaveFileSendAsync(Send send, SendFileData data, long fileLength);
