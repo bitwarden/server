@@ -29,7 +29,6 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IDeviceValidator _deviceValidator;
     private readonly ITwoFactorAuthenticationValidator _twoFactorAuthenticationValidator;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IMailService _mailService;
     private readonly ILogger _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
@@ -49,7 +48,6 @@ public abstract class BaseRequestValidator<T> where T : class
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
         ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
@@ -66,7 +64,6 @@ public abstract class BaseRequestValidator<T> where T : class
         _deviceValidator = deviceValidator;
         _twoFactorAuthenticationValidator = twoFactorAuthenticationValidator;
         _organizationUserRepository = organizationUserRepository;
-        _mailService = mailService;
         _logger = logger;
         CurrentContext = currentContext;
         _globalSettings = globalSettings;
@@ -86,7 +83,7 @@ public abstract class BaseRequestValidator<T> where T : class
         var user = validatorContext.User;
         if (!valid)
         {
-            await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
+            await UpdateFailedAuthDetailsAsync(user);
 
             await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
             return;
@@ -156,7 +153,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 else
                 {
-                    await UpdateFailedAuthDetailsAsync(user, true, !validatorContext.KnownDevice);
+                    await UpdateFailedAuthDetailsAsync(user);
                     await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                 }
                 return;
@@ -368,7 +365,7 @@ public abstract class BaseRequestValidator<T> where T : class
         await _userRepository.ReplaceAsync(user);
     }
 
-    private async Task UpdateFailedAuthDetailsAsync(User user, bool twoFactorInvalid, bool unknownDevice)
+    private async Task UpdateFailedAuthDetailsAsync(User user)
     {
         if (user == null)
         {

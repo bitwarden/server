@@ -29,7 +29,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
@@ -47,7 +46,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             deviceValidator,
             twoFactorAuthenticationValidator,
             organizationUserRepository,
-            mailService,
             logger,
             currentContext,
             globalSettings,
@@ -85,7 +83,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         };
 
         await ValidateAsync(context, context.Request, validatorContext);
-
     }
 
     protected async override Task<bool> ValidateContextAsync(ResourceOwnerPasswordValidationContext context,
