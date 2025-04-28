@@ -57,7 +57,13 @@ public interface ISendFileStorageService
     /// <param name="send">Send object help validate file</param>
     /// <param name="fileId">File id to identify which file to validate</param>
     /// <param name="expectedFileSize">Expected file size of the file</param>
-    /// <param name="leeway">Leeway will be used as tolerance range when validating the file size</param>
+    /// <param name="leeway">
+    /// Send file size tolerance in bytes. When an uploaded file's `expectedFileSize`
+    /// is outside of the leeway, the storage operation fails.
+    /// </param>
+    /// <throws>
+    /// ❌ Fill this in with an explanation of the error thrown when `leeway` is incorrect
+    /// </throws>
     /// <returns>Task object for async operations with Tuple of boolean that determines if file was valid and long that
     /// the actual file size of the file.
     /// </returns>
