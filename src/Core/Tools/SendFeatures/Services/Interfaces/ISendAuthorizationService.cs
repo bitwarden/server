@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Models.Data;
 
 namespace Bit.Core.Tools.Services;
 
@@ -8,16 +9,18 @@ namespace Bit.Core.Tools.Services;
 public interface ISendAuthorizationService
 {
     /// <summary>
-    /// Checks if a Send can be accessed while updating the Send, pushing a notification, and sending a reference event.
+    /// Checks if a <see cref="Send" /> can be accessed while updating the <see cref="Send" />, pushing a notification, and sending a reference event.
     /// </summary>
-    /// <param name="sendId"><see cref="Guid" /> of the <see cref="Send" /> needing to be accessed</param>
+    /// <param name="send"><see cref="Send" /> used to determine access</param>
     /// <param name="password">A hashed and base64-encoded password. This is compared with the send's password to authorize access.</param>
-    /// <returns>Async Task object with Tuple containing the Send object, boolean that identifies if
-    /// passwordRequiredError occurred, and another boolean that identifies if passwordInvalidError occurred.
+    /// <returns><see cref="SendAccessResult" /> will be returned to determine if the user can access send. There are 4
+    /// possible results: SendAccessResult.Granted, SendAccessResult.PasswordRequired,SendAccessResult.PasswordInvalid,
+    /// and SendAccessResult.Denied
     /// </returns>
-    Task<(Send, bool, bool)> AccessAsync(Guid sendId, string password);
-    (bool grant, bool passwordRequiredError, bool passwordInvalidError) SendCanBeAccessed(Send send,
+    Task<SendAccessResult> AccessAsync(Send send, string password);
+    SendAccessResult SendCanBeAccessed(Send send,
         string password);
+
     /// <summary>
     /// Hashes the password using the password hasher.
     /// </summary>

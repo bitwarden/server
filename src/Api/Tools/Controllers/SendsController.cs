@@ -72,21 +72,24 @@ public class SendsController : Controller
         //}
 
         var guid = new Guid(CoreHelpers.Base64UrlDecode(id));
-        var (send, passwordRequired, passwordInvalid) =
-            await _sendAuthorizationService.AccessAsync(guid, model.Password);
-        if (passwordRequired)
+        var send = await _sendRepository.GetByIdAsync(guid);
+        SendAccessResult sendAuthResult =
+            await _sendAuthorizationService.AccessAsync(send, model.Password);
+        if (sendAuthResult.Equals(SendAccessResult.PasswordRequired))
         {
             return new UnauthorizedResult();
         }
-        if (passwordInvalid)
+        if (sendAuthResult.Equals(SendAccessResult.PasswordInvalid))
         {
             await Task.Delay(2000);
             throw new BadRequestException("Invalid password.");
         }
-        if (send == null)
+        if (sendAuthResult.Equals(SendAccessResult.Denied))
         {
             throw new NotFoundException();
         }
+
+
 
         var sendResponse = new SendAccessResponseModel(send, _globalSettings);
         if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
@@ -117,19 +120,19 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
-        var (url, passwordRequired, passwordInvalid) = await _anonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId,
+        var (url, result) = await _anonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId,
             model.Password);
 
-        if (passwordRequired)
+        if (result.Equals(SendAccessResult.PasswordRequired))
         {
             return new UnauthorizedResult();
         }
-        if (passwordInvalid)
+        if (result.Equals(SendAccessResult.PasswordInvalid))
         {
             await Task.Delay(2000);
             throw new BadRequestException("Invalid password.");
         }
-        if (send == null)
+        if (result.Equals(SendAccessResult.Denied))
         {
             throw new NotFoundException();
         }

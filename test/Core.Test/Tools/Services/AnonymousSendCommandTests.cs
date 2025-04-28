@@ -3,6 +3,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Commands;
 using Bit.Core.Tools.Services;
@@ -50,20 +51,18 @@ public class AnonymousSendCommandTests
 
         _sendAuthorizationService
             .SendCanBeAccessed(send, password)
-            .Returns((true, false, false));
+            .Returns(SendAccessResult.Granted);
 
         _sendFileStorageService
             .GetSendFileDownloadUrlAsync(send, fileId)
             .Returns(expectedUrl);
 
         // Act
-        var (url, passwordRequired, passwordInvalid) =
+        var result =
             await _anonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId, password);
 
         // Assert
-        Assert.Equal(expectedUrl, url);
-        Assert.False(passwordRequired);
-        Assert.False(passwordInvalid);
+        Assert.Equal(expectedUrl, result.Item1);
         Assert.Equal(1, send.AccessCount);
 
         await _sendRepository.Received(1).ReplaceAsync(send);
@@ -85,16 +84,15 @@ public class AnonymousSendCommandTests
 
         _sendAuthorizationService
             .SendCanBeAccessed(send, password)
-            .Returns((false, true, true));
+            .Returns(SendAccessResult.Denied);
 
         // Act
-        var (url, passwordRequired, passwordInvalid) =
+        var result =
             await _anonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId, password);
 
         // Assert
-        Assert.Null(url);
-        Assert.True(passwordRequired);
-        Assert.True(passwordInvalid);
+        Assert.Null(result.Item1);
+        Assert.Equal(SendAccessResult.Denied, result.Item2);
         Assert.Equal(0, send.AccessCount);
 
         await _sendRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(default);

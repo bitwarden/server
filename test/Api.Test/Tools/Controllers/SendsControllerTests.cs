@@ -10,6 +10,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Tools.Services;
@@ -78,7 +79,8 @@ public class SendsControllerTests : IDisposable
         send.Data = JsonSerializer.Serialize(new Dictionary<string, string>());
         send.HideEmail = true;
 
-        _sendAuthorizationService.AccessAsync(id, null).Returns((send, false, false));
+        _sendRepository.GetByIdAsync(Arg.Any<Guid>()).Returns(send);
+        _sendAuthorizationService.AccessAsync(send, null).Returns(SendAccessResult.Granted);
         _userService.GetUserByIdAsync(Arg.Any<Guid>()).Returns(user);
 
         var request = new SendAccessRequestModel();

@@ -2,6 +2,7 @@
 using Bit.Core.Platform.Push;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Tools.Services;
@@ -29,23 +30,23 @@ public class AnonymousSendCommand : IAnonymousSendCommand
     }
 
     // Response: Send, password required, password invalid
-    public async Task<(string, bool, bool)> GetSendFileDownloadUrlAsync(Send send, string fileId, string password)
+    public async Task<(string, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId, string password)
     {
         if (send.Type != SendType.File)
         {
             throw new BadRequestException("Can only get a download URL for a file type of Send");
         }
 
-        var (grantAccess, passwordRequired, passwordInvalid) = _sendAuthorizationService.SendCanBeAccessed(send, password);
+        var result = _sendAuthorizationService.SendCanBeAccessed(send, password);
 
-        if (!grantAccess)
+        if (!result.Equals(SendAccessResult.Granted))
         {
-            return (null, passwordRequired, passwordInvalid);
+            return (null, result);
         }
 
         send.AccessCount++;
         await _sendRepository.ReplaceAsync(send);
         await _pushNotificationService.PushSyncSendUpdateAsync(send);
-        return (await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId), false, false);
+        return (await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId), result);
     }
 }

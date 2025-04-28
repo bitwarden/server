@@ -4,6 +4,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Microsoft.AspNetCore.Identity;
 
@@ -31,7 +32,7 @@ public class SendAuthorizationService : ISendAuthorizationService
         _currentContext = currentContext;
     }
 
-    public (bool grant, bool passwordRequiredError, bool passwordInvalidError) SendCanBeAccessed(Send send,
+    public SendAccessResult SendCanBeAccessed(Send send,
         string password)
     {
         var now = DateTime.UtcNow;
@@ -39,13 +40,13 @@ public class SendAuthorizationService : ISendAuthorizationService
             send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < now || send.Disabled ||
             send.DeletionDate < now)
         {
-            return (false, false, false);
+            return SendAccessResult.Denied;
         }
         if (!string.IsNullOrWhiteSpace(send.Password))
         {
             if (string.IsNullOrWhiteSpace(password))
             {
-                return (false, true, false);
+                return SendAccessResult.PasswordRequired;
             }
             var passwordResult = _passwordHasher.VerifyHashedPassword(new User(), send.Password, password);
             if (passwordResult == PasswordVerificationResult.SuccessRehashNeeded)
@@ -54,46 +55,43 @@ public class SendAuthorizationService : ISendAuthorizationService
             }
             if (passwordResult == PasswordVerificationResult.Failed)
             {
-                return (false, false, true);
+                return SendAccessResult.PasswordInvalid;
             }
         }
 
-        return (true, false, false);
+        return SendAccessResult.Granted;
     }
 
-    // Response: Send, password required, password invalid
-    public async Task<(Send, bool, bool)> AccessAsync(Guid sendId, string password)
+    public async Task<SendAccessResult> AccessAsync(Send sendToBeAccessed, string password)
     {
-        var send = await _sendRepository.GetByIdAsync(sendId);
-        var (grantAccess, passwordRequired, passwordInvalid) = SendCanBeAccessed(send, password);
+        var accessResult = SendCanBeAccessed(sendToBeAccessed, password);
 
-        if (!grantAccess)
+        if (!accessResult.Equals(SendAccessResult.Granted))
         {
-            return (null, passwordRequired, passwordInvalid);
+            return accessResult;
         }
 
-        // TODO: maybe move this to a simple ++ sproc?
-        if (send.Type != SendType.File)
+        if (sendToBeAccessed.Type != SendType.File)
         {
             // File sends are incremented during file download
-            send.AccessCount++;
+            sendToBeAccessed.AccessCount++;
         }
 
-        await _sendRepository.ReplaceAsync(send);
-        await _pushNotificationService.PushSyncSendUpdateAsync(send);
+        await _sendRepository.ReplaceAsync(sendToBeAccessed);
+        await _pushNotificationService.PushSyncSendUpdateAsync(sendToBeAccessed);
         await _referenceEventService.RaiseEventAsync(new ReferenceEvent
         {
-            Id = send.UserId ?? default,
+            Id = sendToBeAccessed.UserId ?? default,
             Type = ReferenceEventType.SendAccessed,
             Source = ReferenceEventSource.User,
-            SendType = send.Type,
-            MaxAccessCount = send.MaxAccessCount,
-            HasPassword = !string.IsNullOrWhiteSpace(send.Password),
-            SendHasNotes = send.Data?.Contains("Notes"),
+            SendType = sendToBeAccessed.Type,
+            MaxAccessCount = sendToBeAccessed.MaxAccessCount,
+            HasPassword = !string.IsNullOrWhiteSpace(sendToBeAccessed.Password),
+            SendHasNotes = sendToBeAccessed.Data?.Contains("Notes"),
             ClientId = _currentContext.ClientId,
             ClientVersion = _currentContext.ClientVersion
         });
-        return (send, false, false);
+        return accessResult;
     }
 
     public string HashPassword(string password)

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Platform.Push;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
 using Microsoft.AspNetCore.Identity;
@@ -58,13 +59,11 @@ public class SendAuthorizationServiceTests
             .Returns(PasswordVerificationResult.Success);
 
         // Act
-        var (grant, passwordRequiredError, passwordInvalidError) =
+        var result =
             _sendAuthorizationService.SendCanBeAccessed(send, password);
 
         // Assert
-        Assert.True(grant);
-        Assert.False(passwordRequiredError);
-        Assert.False(passwordInvalidError);
+        Assert.Equal(SendAccessResult.Granted, result);
     }
 
     [Fact]
@@ -90,13 +89,10 @@ public class SendAuthorizationServiceTests
             .Returns(PasswordVerificationResult.Success);
 
         // Act
-        var (grant, passwordRequiredError, passwordInvalidError) =
-            _sendAuthorizationService.SendCanBeAccessed(send, password);
+        var result = _sendAuthorizationService.SendCanBeAccessed(send, password);
 
         // Assert
-        Assert.True(grant);
-        Assert.False(passwordRequiredError);
-        Assert.False(passwordInvalidError);
+        Assert.Equal(SendAccessResult.Granted, result);
     }
 
     [Fact]
@@ -108,13 +104,11 @@ public class SendAuthorizationServiceTests
             .Returns(PasswordVerificationResult.Success);
 
         // Act
-        var (grant, passwordRequiredError, passwordInvalidError) =
+        var result =
             _sendAuthorizationService.SendCanBeAccessed(null, "TEST");
 
         // Assert
-        Assert.False(grant);
-        Assert.False(passwordRequiredError);
-        Assert.False(passwordInvalidError);
+        Assert.Equal(SendAccessResult.Denied, result);
     }
 
     [Fact]
@@ -139,7 +133,7 @@ public class SendAuthorizationServiceTests
             .Returns(PasswordVerificationResult.SuccessRehashNeeded);
 
         // Act
-        var (grant, passwordRequiredError, passwordInvalidError) =
+        var result =
             _sendAuthorizationService.SendCanBeAccessed(send, "TEST");
 
         // Assert
@@ -147,9 +141,7 @@ public class SendAuthorizationServiceTests
             .Received(1)
             .HashPassword(Arg.Any<Bit.Core.Entities.User>(), "TEST");
 
-        Assert.True(grant);
-        Assert.False(passwordRequiredError);
-        Assert.False(passwordInvalidError);
+        Assert.Equal(SendAccessResult.Granted, result);
     }
 
     [Fact]
@@ -174,12 +166,10 @@ public class SendAuthorizationServiceTests
             .Returns(PasswordVerificationResult.Failed);
 
         // Act
-        var (grant, passwordRequiredError, passwordInvalidError) =
+        var result =
             _sendAuthorizationService.SendCanBeAccessed(send, "TEST");
 
         // Assert
-        Assert.False(grant);
-        Assert.False(passwordRequiredError);
-        Assert.True(passwordInvalidError);
+        Assert.Equal(SendAccessResult.PasswordInvalid, result);
     }
 }
