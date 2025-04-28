@@ -4,7 +4,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 public interface IInitPendingOrganizationCommand
 {
     /// <summary>
-    /// Accept an invitation to initialize and join an organization created via the Admin Portal
+    /// Update an Organization entry by setting the public/private keys, set it as 'Enabled' and move the Status from 'Pending' to 'Created'.
     /// </summary>
     /// <remarks>
     /// This method must target a disabled Organization that has null keys and status as 'Pending'.
