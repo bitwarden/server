@@ -255,6 +255,12 @@ public class OrganizationsController : Controller
             Seats = organization.Seats
         };
 
+        if (model.PlanType == PlanType.Free && model.Seats > 2)
+        {
+            TempData["Error"] = "Organizations with more than 2 seats cannot be downgraded to the Free plan";
+            return RedirectToAction("Edit", new { id });
+        }
+
         UpdateOrganization(organization, model);
 
         var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
@@ -483,6 +489,11 @@ public class OrganizationsController : Controller
             organization.Gateway = model.Gateway;
             organization.GatewayCustomerId = model.GatewayCustomerId;
             organization.GatewaySubscriptionId = model.GatewaySubscriptionId;
+        }
+
+        if (model.PlanType == PlanType.Free && organization.GatewaySubscriptionId is not null)
+        {
+            organization.GatewaySubscriptionId = null;
         }
     }
 
