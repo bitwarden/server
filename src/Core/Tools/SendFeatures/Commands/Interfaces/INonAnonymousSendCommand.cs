@@ -12,7 +12,7 @@ public interface INonAnonymousSendCommand
     /// Saves a Send to the database.
     /// </summary>
     /// <param name="send">Send object that is to be saved to database</param>
-    /// <returns>Task object for async operations</returns>
+    /// <returns>A task that completes when the save is successful or throws if the save is unsuccessful.</returns>
     Task SaveSendAsync(Send send);
 
     /// <summary>
