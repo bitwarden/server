@@ -26,6 +26,7 @@ public class NotificationResponseModelTests
             ClientType = ClientType.All,
             Title = "Test Title",
             Body = "Test Body",
+            TaskId = Guid.NewGuid(),
             RevisionDate = DateTime.UtcNow - TimeSpan.FromMinutes(3),
             ReadDate = DateTime.UtcNow - TimeSpan.FromMinutes(1),
             DeletedDate = DateTime.UtcNow,
@@ -39,5 +40,6 @@ public class NotificationResponseModelTests
         Assert.Equal(model.Date, notificationStatusDetails.RevisionDate);
         Assert.Equal(model.ReadDate, notificationStatusDetails.ReadDate);
         Assert.Equal(model.DeletedDate, notificationStatusDetails.DeletedDate);
+        Assert.Equal(model.TaskId, notificationStatusDetails.TaskId);
     }
 }

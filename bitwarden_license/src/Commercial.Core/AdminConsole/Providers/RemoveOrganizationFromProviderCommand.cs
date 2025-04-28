@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Providers.Interfaces;
@@ -7,10 +8,12 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Implementations.AutomaticTax;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Stripe;
 
 namespace Bit.Commercial.Core.AdminConsole.Providers;
@@ -28,6 +31,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly ISubscriberService _subscriberService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
+    private readonly IAutomaticTaxStrategy _automaticTaxStrategy;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
@@ -40,7 +44,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IProviderBillingService providerBillingService,
         ISubscriberService subscriberService,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        [FromKeyedServices(AutomaticTaxFactory.BusinessUse)] IAutomaticTaxStrategy automaticTaxStrategy)
     {
         _eventService = eventService;
         _mailService = mailService;
@@ -53,6 +58,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         _subscriberService = subscriberService;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
+        _automaticTaxStrategy = automaticTaxStrategy;
     }
 
     public async Task RemoveOrganizationFromProvider(
@@ -104,13 +110,19 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IEnumerable<string> organizationOwnerEmails)
     {
         if (provider.IsBillable() &&
-            organization.IsValidClient() &&
-            !string.IsNullOrEmpty(organization.GatewayCustomerId))
+            organization.IsValidClient())
         {
-            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            // An organization converted to a business unit will not have a Customer since it was given to the business unit.
+            if (string.IsNullOrEmpty(organization.GatewayCustomerId))
+            {
+                await _providerBillingService.CreateCustomerForClientOrganization(provider, organization);
+            }
+
+            var customer = await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Description = string.Empty,
-                Email = organization.BillingEmail
+                Email = organization.BillingEmail,
+                Expand = ["tax", "tax_ids"]
             });
 
             var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
@@ -120,7 +132,6 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 Customer = organization.GatewayCustomerId,
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
                 DaysUntilDue = 30,
-                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
                 Metadata = new Dictionary<string, string>
                 {
                     { "organizationId", organization.Id.ToString() }
@@ -129,6 +140,18 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
                 Items = [new SubscriptionItemOptions { Price = plan.PasswordManager.StripeSeatPlanId, Quantity = organization.Seats }]
             };
+
+            if (_featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+            {
+                _automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
+            }
+            else
+            {
+                subscriptionCreateOptions.AutomaticTax ??= new SubscriptionAutomaticTaxOptions
+                {
+                    Enabled = true
+                };
+            }
 
             var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 

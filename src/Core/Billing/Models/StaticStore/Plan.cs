@@ -75,6 +75,7 @@ public abstract record Plan
         // Seats
         public string StripePlanId { get; init; }
         public string StripeSeatPlanId { get; init; }
+        [Obsolete("No longer used to retrieve a provider's price ID. Use ProviderPriceAdapter instead.")]
         public string StripeProviderPortalSeatPlanId { get; init; }
         public decimal BasePrice { get; init; }
         public decimal SeatPrice { get; init; }

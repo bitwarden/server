@@ -691,10 +691,10 @@ public class ProviderService : IProviderService
                     throw new BadRequestException($"Managed Service Providers cannot manage organizations with the plan type {requestedType}. Only Teams (Monthly) and Enterprise (Monthly) are allowed.");
                 }
                 break;
-            case ProviderType.MultiOrganizationEnterprise:
+            case ProviderType.BusinessUnit:
                 if (requestedType is not (PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually))
                 {
-                    throw new BadRequestException($"Multi-organization Enterprise Providers cannot manage organizations with the plan type {requestedType}. Only Enterprise (Monthly) and Enterprise (Annually) are allowed.");
+                    throw new BadRequestException($"Business Unit Providers cannot manage organizations with the plan type {requestedType}. Only Enterprise (Monthly) and Enterprise (Annually) are allowed.");
                 }
                 break;
             case ProviderType.Reseller:

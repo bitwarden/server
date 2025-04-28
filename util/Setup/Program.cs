@@ -277,6 +277,13 @@ public class Program
                     url = "https://api.bitwarden.com/installations/";
                     break;
             }
+
+            string installationUrl = Environment.GetEnvironmentVariable("BW_INSTALLATION_URL");
+            if (!string.IsNullOrEmpty(installationUrl))
+            {
+                url = $"{installationUrl}/installations/";
+            }
+
             var response = new HttpClient().GetAsync(url + _context.Install.InstallationId).GetAwaiter().GetResult();
 
             if (!response.IsSuccessStatusCode)
