@@ -44,6 +44,6 @@ public class EmailTwoFactorTokenProvider : EmailTokenProvider
     private static bool HasProperMetaData(TwoFactorProvider provider)
     {
         return provider?.MetaData != null && provider.MetaData.ContainsKey("Email") &&
-               !string.IsNullOrWhiteSpace((string)provider.MetaData["Email"]);
+            !string.IsNullOrWhiteSpace((string)provider.MetaData["Email"]);
     }
 }

@@ -14,10 +14,6 @@ namespace Bit.Core.Entities;
 public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFactorProvidersUser, IReferenceable
 {
     private Dictionary<TwoFactorProviderType, TwoFactorProvider>? _twoFactorProviders;
-    private readonly JsonSerializerOptions _jsonSerializerCaseInsensitive = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
 
     public Guid Id { get; set; }
     [MaxLength(50)]
@@ -170,6 +166,11 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return Id;
     }
 
+    public bool GetPremium()
+    {
+        return Premium;
+    }
+
     /// <summary>
     /// Serializes the C# object to the User.TwoFactorProviders property in JSON format.
     /// </summary>
@@ -177,7 +178,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public void SetTwoFactorProviders(Dictionary<TwoFactorProviderType, TwoFactorProvider> providers)
     {
         // When replacing with system.text remember to remove the extra serialization in WebAuthnTokenProvider.
-        TwoFactorProviders = JsonHelpers.LegacySerialize(providers);
+        TwoFactorProviders = JsonHelpers.LegacySerialize(providers, JsonHelpers.LegacyEnumKeyResolver);
         _twoFactorProviders = providers;
     }
 

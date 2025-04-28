@@ -30,8 +30,8 @@ public class TwoFactorIsEnabledQuery(IUserRepository userRepository) : ITwoFacto
 
             // Get all enabled providers
             var enabledProviderKeys = from provider in providers
-                                        where provider.Value?.Enabled ?? false
-                                        select provider.Key;
+                                      where provider.Value?.Enabled ?? false
+                                      select provider.Key;
 
             // If no providers are enabled then two factor is not enabled
             if (!enabledProviderKeys.Any())
@@ -43,7 +43,8 @@ public class TwoFactorIsEnabledQuery(IUserRepository userRepository) : ITwoFacto
             // check if user only has premium two factor options
             var onlyHasPremiumTwoFactor = enabledProviderKeys.All(TwoFactorProvider.RequiresPremium);
             // If the user only has premium two factor options then their two factor is dictated by their access to premium
-            if (onlyHasPremiumTwoFactor){
+            if (onlyHasPremiumTwoFactor)
+            {
                 result.Add((userDetail.Id, userDetail.HasPremiumAccess));
                 continue;
             }

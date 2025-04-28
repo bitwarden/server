@@ -1258,7 +1258,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return false;
         }
 
-        return (await _userRepository.GetCalculatedPremiumAsync((Guid)userId)).HasPremiumAccess;
+        return user.GetPremium() || await this.HasPremiumFromOrganization(user);
     }
 
     public async Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user)
