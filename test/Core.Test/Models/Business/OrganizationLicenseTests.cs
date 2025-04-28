@@ -1,9 +1,6 @@
 ﻿using System.Security.Claims;
-using System.Text.Json;
 using Bit.Core.Models.Business;
-using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
@@ -35,23 +32,5 @@ public class OrganizationLicenseTests
             Id = new Guid(OrganizationLicenseFileFixtures.InstallationId)
         });
         Assert.True(license.VerifyData(organization, claimsPrincipal, globalSettings));
-    }
-
-    /// <summary>
-    /// Helper used to generate a new json string to be added in OrganizationLicenseFileFixtures.
-    /// Uncomment [Fact], run the test and copy the value of the `result` variable into OrganizationLicenseFileFixtures,
-    /// following the instructions in that class.
-    /// </summary>
-    // [Fact]
-    private void GenerateLicenseFileJsonString()
-    {
-        var organization = OrganizationLicenseFileFixtures.OrganizationFactory();
-        var licensingService = Substitute.For<ILicensingService>();
-        var installationId = new Guid(OrganizationLicenseFileFixtures.InstallationId);
-
-        var license = new OrganizationLicense(organization, null, installationId, licensingService);
-
-        var result = JsonSerializer.Serialize(license, JsonHelpers.Indented).Replace("\"", "'");
-        // Put a break after this line, then copy and paste the value of `result` into OrganizationLicenseFileFixtures
     }
 }
