@@ -333,6 +333,68 @@ public class PushControllerTests
     }
 
     [Fact]
+    public async Task Send_NonGuidDeviceId_Works_ButDoesNotUpdateInstallationDeviceRepository()
+    {
+        var (apiFactory, httpClient, installation, _, notificationHubProxy) = await SetupTest();
+
+        var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel
+        {
+            Type = PushType.NotificationStatus,
+            InstallationId = installation.Id.ToString(),
+            Payload = new {},
+            DeviceId = "non-guid",
+            ClientType = ClientType.Web,
+        });
+
+        response.EnsureSuccessStatusCode();
+
+        await notificationHubProxy
+            .Received(1)
+            .SendTemplateNotificationAsync(
+                Arg.Any<Dictionary<string, string>>(),
+                Arg.Is($"(template:payload && installationId:{installation.Id} && clientType:Web)")
+            );
+
+        // Since device id wasn't a valid installation device this won't get added
+        await apiFactory.GetService<IInstallationDeviceRepository>()
+            .Received(0)
+            .UpsertAsync(Arg.Any<InstallationDeviceEntity>());
+    }
+
+    [Fact]
+    public async Task Send_NonGuidOrganizationId_Works()
+    {
+        var (apiFactory, httpClient, installation, _, notificationHubProxy) = await SetupTest();
+
+        var deviceId = Guid.NewGuid();
+
+        var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel
+        {
+            Type = PushType.NotificationStatus,
+            OrganizationId = "non-guid-org",
+            Payload = new {},
+            DeviceId = deviceId.ToString(),
+            ClientType = ClientType.Web,
+        });
+
+        response.EnsureSuccessStatusCode();
+
+        await notificationHubProxy
+            .Received(1)
+            .SendTemplateNotificationAsync(
+                Arg.Any<Dictionary<string, string>>(),
+                Arg.Is($"(template:payload && organizationId:{installation.Id}_non-guid-org && clientType:Web)")
+            );
+
+        // Since device id wasn't a valid installation device this won't get added
+        await apiFactory.GetService<IInstallationDeviceRepository>()
+            .Received(1)
+            .UpsertAsync(Arg.Is<InstallationDeviceEntity>(
+                ide => ide.PartitionKey == installation.Id.ToString() && ide.RowKey == deviceId.ToString()
+            ));
+    }
+
+    [Fact]
     public async Task Send_NoOrganizationNoInstallationNoUser_FailsModelValidation()
     {
         var (_, client, _, _, _) = await SetupTest();
