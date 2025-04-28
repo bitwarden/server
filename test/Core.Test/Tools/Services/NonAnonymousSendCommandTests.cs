@@ -1016,6 +1016,45 @@ public class NonAnonymousSendCommandTests
     }
 
     [Fact]
+    public async Task UpdateFileToExistingSendAsync_StreamPositionRestToZero_Success()
+    {
+        // Arrange
+        var stream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 });
+        stream.Position = 2;
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var fileId = "existingfileid123";
+
+        var sendFileData = new SendFileData { Id = fileId, Size = 1000, Validated = false };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(sendFileData)
+        };
+
+        // Setup validation to succeed
+        _sendValidationService.ValidateSendFile(send)
+            .Returns(true);
+
+        // Act
+        await _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send);
+
+        // Assert
+        // Verify file was uploaded with correct parameters
+        await _sendFileStorageService.Received(1).UploadNewFileAsync(
+            Arg.Is<Stream>(s => s == stream && s.Position == 0), // Ensure stream position is reset
+            Arg.Is<Send>(s => s.Id == sendId && s.UserId == userId),
+            Arg.Is<string>(id => id == fileId)
+        );
+
+        // Verify validation was called
+        await _sendValidationService.Received(1).ValidateSendFile(send);
+    }
+
+
+    [Fact]
     public async Task UpdateFileToExistingSendAsync_Success()
     {
         // Arrange

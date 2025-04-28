@@ -27,9 +27,8 @@ public interface INonAnonymousSendCommand
     /// <summary>
     /// Upload a file to an existing <see cref="Send" />.
     /// </summary>
-    /// <param name="stream"><see cref="Stream" /> of file to be uploaded. Assumes the
-    /// <see cref="Stream" /> position is at the start of the file.
-    /// </param>
+    /// <param name="stream"><see cref="Stream" /> of file to be uploaded. The <see cref="Stream" /> position
+    /// will be set to 0 before uploading the file.</param>
     /// <param name="send"><see cref="Send" /> used to help with uploading file</param>
     /// <returns>Task completes after saving <see cref="Stream" /> and <see cref="Send" /> metadata to the file storage</returns>
     Task UploadFileToExistingSendAsync(Stream stream, Send send);

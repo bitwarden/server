@@ -116,6 +116,11 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
     public async Task UploadFileToExistingSendAsync(Stream stream, Send send)
     {
+        if (stream.Position > 0)
+        {
+            stream.Position = 0;
+        }
+
         if (send?.Data == null)
         {
             throw new BadRequestException("Send does not have file data");
