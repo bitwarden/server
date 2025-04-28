@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -38,7 +39,7 @@ public class ProviderServiceTests
     public async Task CompleteSetupAsync_UserIdIsInvalid_Throws(SutProvider<ProviderService> sutProvider)
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CompleteSetupAsync(default, default, default, default));
+            () => sutProvider.Sut.CompleteSetupAsync(default, default, default, default, null));
         Assert.Contains("Invalid owner.", exception.Message);
     }
 
@@ -50,12 +51,12 @@ public class ProviderServiceTests
         userService.GetUserByIdAsync(user.Id).Returns(user);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CompleteSetupAsync(provider, user.Id, default, default));
+            () => sutProvider.Sut.CompleteSetupAsync(provider, user.Id, default, default, null));
         Assert.Contains("Invalid token.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task CompleteSetupAsync_Success(User user, Provider provider, string key, TaxInfo taxInfo,
+    public async Task CompleteSetupAsync_Success(User user, Provider provider, string key, TaxInfo taxInfo, TokenizedPaymentSource tokenizedPaymentSource,
             [ProviderUser] ProviderUser providerUser,
             SutProvider<ProviderService> sutProvider)
     {
@@ -75,7 +76,7 @@ public class ProviderServiceTests
         var providerBillingService = sutProvider.GetDependency<IProviderBillingService>();
 
         var customer = new Customer { Id = "customer_id" };
-        providerBillingService.SetupCustomer(provider, taxInfo).Returns(customer);
+        providerBillingService.SetupCustomer(provider, taxInfo, tokenizedPaymentSource).Returns(customer);
 
         var subscription = new Subscription { Id = "subscription_id" };
         providerBillingService.SetupSubscription(provider).Returns(subscription);
@@ -84,7 +85,7 @@ public class ProviderServiceTests
 
         var token = protector.Protect($"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
 
-        await sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key, taxInfo);
+        await sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key, taxInfo, tokenizedPaymentSource);
 
         await sutProvider.GetDependency<IProviderRepository>().Received().UpsertAsync(Arg.Is<Provider>(
             p =>

@@ -82,7 +82,8 @@ public interface IProviderBillingService
     /// <returns>The newly created <see cref="Stripe.Customer"/> for the <paramref name="provider"/>.</returns>
     Task<Customer> SetupCustomer(
         Provider provider,
-        TaxInfo taxInfo);
+        TaxInfo taxInfo,
+        TokenizedPaymentSource tokenizedPaymentSource = null);
 
     /// <summary>
     /// For use during the provider setup process, this method starts a Stripe <see cref="Stripe.Subscription"/> for the given <paramref name="provider"/>.
