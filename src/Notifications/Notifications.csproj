@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup Label="Pinned transitive dependencies">
-    <PackageReference Include="MessagePack" Version="2.5.192" />
+    <PackageReference Include="MessagePack" Version="2.5.198" />
   </ItemGroup>
 
   <ItemGroup>
