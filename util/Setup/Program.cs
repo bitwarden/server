@@ -42,7 +42,7 @@ public class Program
         }
         if (_context.Parameters.TryGetValue("stub", out var stub))
         {
-            _context.Stub = stub == "true" ||  stub == "1";
+            _context.Stub = stub == "true" || stub == "1";
         }
 
         Helpers.WriteLine(_context);
