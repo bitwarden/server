@@ -1,3 +1,11 @@
+-- Update OrganizationUser_ReadOccupiedSeatCountByOrganizationId to include admin-initiated sponsorships
+-- Based on https://bitwarden.atlassian.net/browse/PM-17772
+IF OBJECT_ID('[dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]
+END
+GO
+
 CREATE PROCEDURE [dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
@@ -21,3 +29,4 @@ BEGIN
             AND IsAdminInitiated = 1
         )
 END
+GO 
