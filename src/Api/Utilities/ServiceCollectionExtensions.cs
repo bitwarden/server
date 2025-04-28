@@ -119,7 +119,7 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient("PhishingDomains", client =>
         {
             client.DefaultRequestHeaders.Add("User-Agent", globalSettings.SelfHosted ? "Bitwarden Self-Hosted" : "Bitwarden");
-            client.Timeout = TimeSpan.FromSeconds(30);
+            client.Timeout = TimeSpan.FromSeconds(1000); // the source list is very slow
         });
 
         services.AddSingleton<AzurePhishingDomainStorageService>();
