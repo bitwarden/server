@@ -12,7 +12,7 @@ public interface IAnonymousSendCommand
     /// </summary>
     /// <param name="send">Send object to help get file download url and validate file</param>
     /// <param name="fileId">FileId get file download url</param>
-    /// <param name="password">Password will be validated and used to determine access</param>
+    /// <param name="password">A hashed and base64-encoded password. This is compared with the send's password to authorize access.</param>
     /// <returns>Async Task object with Tuple containing the string of download url, boolean that identifies if
     /// passwordRequiredError occurred, and another boolean that identifies if passwordInvalidError occurred.
     /// </returns>
