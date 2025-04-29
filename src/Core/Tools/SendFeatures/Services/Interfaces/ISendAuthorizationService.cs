@@ -13,9 +13,7 @@ public interface ISendAuthorizationService
     /// </summary>
     /// <param name="send"><see cref="Send" /> used to determine access</param>
     /// <param name="password">A hashed and base64-encoded password. This is compared with the send's password to authorize access.</param>
-    /// <returns><see cref="SendAccessResult" /> will be returned to determine if the user can access send. There are 4
-    /// possible results: SendAccessResult.Granted, SendAccessResult.PasswordRequired,SendAccessResult.PasswordInvalid,
-    /// and SendAccessResult.Denied
+    /// <returns><see cref="SendAccessResult" /> will be returned to determine if the user can access send.
     /// </returns>
     Task<SendAccessResult> AccessAsync(Send send, string password);
     SendAccessResult SendCanBeAccessed(Send send,

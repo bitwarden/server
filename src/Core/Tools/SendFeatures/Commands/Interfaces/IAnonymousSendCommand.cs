@@ -15,8 +15,7 @@ public interface IAnonymousSendCommand
     /// <param name="fileId">FileId get file download url</param>
     /// <param name="password">A hashed and base64-encoded password. This is compared with the send's password to authorize access.</param>
     /// <returns>Async Task object with Tuple containing the string of download url and <see cref="SendAccessResult" />
-    /// to determine if the user can access send. There are 4 possible results: SendAccessResult.Granted,
-    /// SendAccessResult.PasswordRequired,SendAccessResult.PasswordInvalid, and SendAccessResult.Denied
+    /// to determine if the user can access send.
     /// </returns>
     Task<(string, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId, string password);
 }
