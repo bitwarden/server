@@ -193,19 +193,25 @@ public class TwoFactorIsEnabledQueryTests
             { freeProviderType, new TwoFactorProvider { Enabled = true } }
         };
 
-        user.Premium = false;
         user.SetTwoFactorProviders(twoFactorProviders);
 
+        var calculatedUser = new UserWithCalculatedPremium
+        {
+            Id = user.Id,
+            Premium = false,
+            HasPremiumAccess = false,
+            TwoFactorProviders = user.TwoFactorProviders
+        };
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyWithCalculatedPremiumAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(user.Id)))
+            .Returns([calculatedUser]);
 
         // Act
         var result = await sutProvider.Sut.TwoFactorIsEnabledAsync(user);
 
         // Assert
         Assert.True(result);
-
-        await sutProvider.GetDependency<IUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .GetManyWithCalculatedPremiumAsync(default);
     }
 
     [Theory]
@@ -214,10 +220,15 @@ public class TwoFactorIsEnabledQueryTests
         SutProvider<TwoFactorIsEnabledQuery> sutProvider,
         User user)
     {
+        Dictionary<string, object> metadata = new Dictionary<string, object>
+        {
+            {"Email", "something" }
+        };
+
         // Arrange
         var twoFactorProviders = new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
-            { TwoFactorProviderType.Email, new TwoFactorProvider { Enabled = false } }
+            { TwoFactorProviderType.Email, new TwoFactorProvider { Enabled = true } }
         };
 
         user.SetTwoFactorProviders(twoFactorProviders);
@@ -227,10 +238,6 @@ public class TwoFactorIsEnabledQueryTests
 
         // Assert
         Assert.False(result);
-
-        await sutProvider.GetDependency<IUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .GetManyWithCalculatedPremiumAsync(default);
     }
 
     [Theory]
@@ -276,18 +283,25 @@ public class TwoFactorIsEnabledQueryTests
             { premiumProviderType, new TwoFactorProvider { Enabled = true } }
         };
 
-        user.Premium = true;
         user.SetTwoFactorProviders(twoFactorProviders);
+
+        var calculatedUser = new UserWithCalculatedPremium
+        {
+            Id = user.Id,
+            Premium = true,
+            HasPremiumAccess = true,
+            TwoFactorProviders = user.TwoFactorProviders
+        };
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyWithCalculatedPremiumAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(user.Id)))
+            .Returns([calculatedUser]);
 
         // Act
         var result = await sutProvider.Sut.TwoFactorIsEnabledAsync(user);
 
         // Assert
         Assert.True(result);
-
-        await sutProvider.GetDependency<IUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .GetManyWithCalculatedPremiumAsync(default);
     }
 
     [Theory]
