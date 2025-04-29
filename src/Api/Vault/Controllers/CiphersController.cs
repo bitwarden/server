@@ -1305,7 +1305,7 @@ public class CiphersController : Controller
     public async Task<DeleteAttachmentResponseData> DeleteAttachmentAdmin(Guid id, string attachmentId)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await GetByIdAsync(id, userId);
+        var cipher = await _cipherRepository.GetByIdAsync(id);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
