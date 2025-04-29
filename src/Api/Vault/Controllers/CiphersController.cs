@@ -1244,7 +1244,6 @@ public class CiphersController : Controller
     [HttpGet("{id}/attachment/{attachmentId}/admin")]
     public async Task<AttachmentResponseModel> GetAttachmentDataAdmin(Guid id, string attachmentId)
     {
-        var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
