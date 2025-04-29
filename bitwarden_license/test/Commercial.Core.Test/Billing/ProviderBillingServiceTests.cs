@@ -1461,7 +1461,8 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<ISetupIntentCache>().Get(provider.Id).Returns(setupIntentId);
 
-        sutProvider.GetDependency<IStripeAdapter>().SetupIntentGet(setupIntentId).Returns(new SetupIntent
+        sutProvider.GetDependency<IStripeAdapter>().SetupIntentGet(setupIntentId, Arg.Is<SetupIntentGetOptions>(options =>
+            options.Expand.Contains("payment_method"))).Returns(new SetupIntent
         {
             Id = setupIntentId,
             Status = "requires_action",
