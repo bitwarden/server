@@ -490,11 +490,6 @@ public class OrganizationsController : Controller
             organization.GatewayCustomerId = model.GatewayCustomerId;
             organization.GatewaySubscriptionId = model.GatewaySubscriptionId;
         }
-
-        if (model.PlanType == PlanType.Free && organization.GatewaySubscriptionId is not null)
-        {
-            organization.GatewaySubscriptionId = null;
-        }
     }
 
     private async Task HandlePotentialProviderSeatScalingAsync(
