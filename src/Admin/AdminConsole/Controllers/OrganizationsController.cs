@@ -257,8 +257,11 @@ public class OrganizationsController : Controller
 
         if (organization.PlanType != PlanType.Free && model.PlanType == PlanType.Free && model.Seats > 2)
         {
-            TempData["Error"] = "Organizations with more than 2 seats cannot be downgraded to the Free plan";
-            return RedirectToAction("Edit", new { id });
+            model.Seats = 2;
+            model.MaxCollections = 2;
+            model.MaxStorageGb = null;
+            model.ExpirationDate = null;
+            model.Enabled = true;
         }
 
         UpdateOrganization(organization, model);
