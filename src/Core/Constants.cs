@@ -108,6 +108,7 @@ public static class FeatureFlagKeys
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string SsoExternalIdVisibility = "pm-18630-sso-external-id-visibility";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
+    public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
@@ -142,13 +143,16 @@ public static class FeatureFlagKeys
     public const string TrialPayment = "PM-8163-trial-payment";
     public const string PM17772_AdminInitiatedSponsorships = "pm-17772-admin-initiated-sponsorships";
     public const string UsePricingService = "use-pricing-service";
-    public const string P15179_AddExistingOrgsFromProviderPortal = "pm-15179-add-existing-orgs-from-provider-portal";
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
     public const string PM18794_ProviderPaymentMethod = "pm-18794-provider-payment-method";
     public const string PM19147_AutomaticTaxImprovements = "pm-19147-automatic-tax-improvements";
     public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
     public const string PM18770_EnableOrganizationBusinessUnitConversion = "pm-18770-enable-organization-business-unit-conversion";
     public const string PM199566_UpdateMSPToChargeAutomatically = "pm-199566-update-msp-to-charge-automatically";
+
+    /* Data Insights and Reporting Team */
+    public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
+    public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -186,8 +190,6 @@ public static class FeatureFlagKeys
 
     /* Tools Team */
     public const string ItemShare = "item-share";
-    public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
-    public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
 
     /* Vault Team */
