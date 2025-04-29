@@ -15,7 +15,6 @@ public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
     private readonly DistributedCacheEntryOptions _distributedCacheEntryOptions;
 
     public AuthenticatorTokenProvider(
-        IServiceProvider serviceProvider,
         [FromKeyedServices("persistent")]
         IDistributedCache distributedCache)
     {
