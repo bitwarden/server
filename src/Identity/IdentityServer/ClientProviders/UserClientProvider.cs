@@ -8,8 +8,8 @@ using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using IdentityModel;
 using Duende.IdentityServer.Models;
+using IdentityModel;
 
 namespace Bit.Identity.IdentityServer.ClientProviders;
 

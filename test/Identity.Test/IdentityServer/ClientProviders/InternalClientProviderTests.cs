@@ -1,4 +1,4 @@
-using Bit.Core.IdentityServer;
+﻿using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Identity.IdentityServer.ClientProviders;
 using IdentityModel;

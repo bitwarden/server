@@ -2,8 +2,8 @@
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
-using IdentityModel;
 using Duende.IdentityServer.Models;
+using IdentityModel;
 
 namespace Bit.Identity.IdentityServer.ClientProviders;
 

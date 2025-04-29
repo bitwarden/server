@@ -1,4 +1,4 @@
-using Bit.Identity.IdentityServer;
+﻿using Bit.Identity.IdentityServer;
 using Duende.IdentityServer.Models;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
