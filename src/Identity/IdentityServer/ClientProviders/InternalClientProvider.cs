@@ -15,7 +15,7 @@ internal class InternalClientProvider : IClientProvider
     public InternalClientProvider(GlobalSettings globalSettings)
     {
         // This class should not have been registered when it's not self hosted
-        Debug.Assert(!globalSettings.SelfHosted);
+        Debug.Assert(globalSettings.SelfHosted);
 
         _globalSettings = globalSettings;
     }
