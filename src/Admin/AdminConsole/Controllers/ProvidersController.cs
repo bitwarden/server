@@ -470,6 +470,19 @@ public class ProvidersController : Controller
     [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> Delete(Guid id, string providerName)
     {
+        var provider = await _providerRepository.GetByIdAsync(id);
+
+        if (provider is null)
+        {
+            return BadRequest("Provider does not exist");
+        }
+
+        if (provider.Status == ProviderStatusType.Pending)
+        {
+            await _providerService.DeleteAsync(provider);
+            return NoContent();
+        }
+
         if (string.IsNullOrWhiteSpace(providerName))
         {
             return BadRequest("Invalid provider name");
@@ -480,13 +493,6 @@ public class ProvidersController : Controller
         if (providerOrganizations.Count > 0)
         {
             return BadRequest("You must unlink all clients before you can delete a provider");
-        }
-
-        var provider = await _providerRepository.GetByIdAsync(id);
-
-        if (provider is null)
-        {
-            return BadRequest("Provider does not exist");
         }
 
         if (!string.Equals(providerName.Trim(), provider.DisplayName(), StringComparison.OrdinalIgnoreCase))
