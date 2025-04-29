@@ -565,32 +565,32 @@ public class ProviderBillingService(
             switch (type)
             {
                 case PaymentMethodType.BankAccount:
-                {
-                    var setupIntent =
-                        (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = token }))
-                        .FirstOrDefault();
-
-                    if (setupIntent == null)
                     {
-                        logger.LogError("Cannot create customer for provider ({ProviderID}) without a setup intent for their bank account", provider.Id);
-                        throw new BillingException();
-                    }
+                        var setupIntent =
+                            (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = token }))
+                            .FirstOrDefault();
 
-                    await setupIntentCache.Set(provider.Id, setupIntent.Id);
-                    break;
-                }
+                        if (setupIntent == null)
+                        {
+                            logger.LogError("Cannot create customer for provider ({ProviderID}) without a setup intent for their bank account", provider.Id);
+                            throw new BillingException();
+                        }
+
+                        await setupIntentCache.Set(provider.Id, setupIntent.Id);
+                        break;
+                    }
                 case PaymentMethodType.Card:
-                {
-                    options.PaymentMethod = token;
-                    options.InvoiceSettings.DefaultPaymentMethod = token;
-                    break;
-                }
+                    {
+                        options.PaymentMethod = token;
+                        options.InvoiceSettings.DefaultPaymentMethod = token;
+                        break;
+                    }
                 case PaymentMethodType.PayPal:
-                {
-                    braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(provider, token);
-                    options.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
-                    break;
-                }
+                    {
+                        braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(provider, token);
+                        options.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
+                        break;
+                    }
             }
         }
 
@@ -619,18 +619,18 @@ public class ProviderBillingService(
                 switch (tokenizedPaymentSource.Type)
                 {
                     case PaymentMethodType.BankAccount:
-                    {
-                        var setupIntentId = await setupIntentCache.Get(provider.Id);
-                        await stripeAdapter.SetupIntentCancel(setupIntentId,
-                            new SetupIntentCancelOptions { CancellationReason = "abandoned" });
-                        await setupIntentCache.Remove(provider.Id);
-                        break;
-                    }
+                        {
+                            var setupIntentId = await setupIntentCache.Get(provider.Id);
+                            await stripeAdapter.SetupIntentCancel(setupIntentId,
+                                new SetupIntentCancelOptions { CancellationReason = "abandoned" });
+                            await setupIntentCache.Remove(provider.Id);
+                            break;
+                        }
                     case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
-                    {
-                        await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
-                        break;
-                    }
+                        {
+                            await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
+                            break;
+                        }
                 }
             }
         }

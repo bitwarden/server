@@ -1463,18 +1463,18 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<IStripeAdapter>().SetupIntentGet(setupIntentId, Arg.Is<SetupIntentGetOptions>(options =>
             options.Expand.Contains("payment_method"))).Returns(new SetupIntent
-        {
-            Id = setupIntentId,
-            Status = "requires_action",
-            NextAction = new SetupIntentNextAction
             {
-                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
-            },
-            PaymentMethod = new PaymentMethod
-            {
-                UsBankAccount = new PaymentMethodUsBankAccount()
-            }
-        });
+                Id = setupIntentId,
+                Status = "requires_action",
+                NextAction = new SetupIntentNextAction
+                {
+                    VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
+                },
+                PaymentMethod = new PaymentMethod
+                {
+                    UsBankAccount = new PaymentMethodUsBankAccount()
+                }
+            });
 
         sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(
             sub =>
