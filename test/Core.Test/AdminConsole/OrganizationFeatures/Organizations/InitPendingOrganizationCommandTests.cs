@@ -26,16 +26,7 @@ public class InitPendingOrganizationCommandTests
     public async Task Init_Organization_Success(User user, Guid orgId, Guid orgUserId, string publicKey,
             string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
     {
-        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
-        sutProvider.Create();
-
-        _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(orgUser)
-        {
-            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-        });
-
-        var token = CreateToken(orgUser);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(orgUser);
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
 
         org.PrivateKey = null;
         org.PublicKey = null;
@@ -58,18 +49,8 @@ public class InitPendingOrganizationCommandTests
     public async Task Init_Organization_With_CollectionName_Success(User user, Guid orgId, Guid orgUserId, string publicKey,
             string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, string collectionName, OrganizationUser orgUser)
     {
-        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
-        sutProvider.Create();
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
 
-        _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(orgUser)
-        {
-            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-        });
-
-        var token = CreateToken(orgUser);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(orgUser);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(orgUser);
         org.PrivateKey = null;
         org.PublicKey = null;
         org.Id = orgId;
@@ -97,16 +78,7 @@ public class InitPendingOrganizationCommandTests
             string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
 
     {
-        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
-        sutProvider.Create();
-
-        _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(orgUser)
-        {
-            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-        });
-
-        var token = CreateToken(orgUser);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(orgUser);
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
 
         org.Enabled = true;
 
@@ -124,16 +96,9 @@ public class InitPendingOrganizationCommandTests
             string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
 
     {
-        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
-        sutProvider.Create();
 
-        _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(orgUser)
-        {
-            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-        });
 
-        var token = CreateToken(orgUser);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(orgUser);
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
 
         org.Status = Enums.OrganizationStatusType.Created;
 
@@ -151,16 +116,7 @@ public class InitPendingOrganizationCommandTests
             string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
 
     {
-        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
-        sutProvider.Create();
-
-        _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(orgUser)
-        {
-            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-        });
-
-        var token = CreateToken(orgUser);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(orgUser);
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
 
         org.PublicKey = publicKey;
 
@@ -178,16 +134,8 @@ public class InitPendingOrganizationCommandTests
             string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
 
     {
-        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
-        sutProvider.Create();
 
-        _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(orgUser)
-        {
-            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-        });
-
-        var token = CreateToken(orgUser);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(orgUser);
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
 
         org.PublicKey = null;
         org.PrivateKey = privateKey;
@@ -202,10 +150,19 @@ public class InitPendingOrganizationCommandTests
 
     }
 
-    public string CreateToken(OrganizationUser orgUser)
+    public string CreateToken(OrganizationUser orgUser, Guid orgUserId, SutProvider<InitPendingOrganizationCommand> sutProvider)
     {
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.Create();
+
+        _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(orgUser)
+        {
+            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+        });
+
         var orgUserInviteTokenable = _orgUserInviteTokenableFactory.CreateToken(orgUser);
         var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(orgUser);
 
         return protectedToken;
     }
