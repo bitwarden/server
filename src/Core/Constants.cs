@@ -203,6 +203,7 @@ public static class FeatureFlagKeys
     public const string DesktopCipherForms = "pm-18520-desktop-cipher-forms";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
     public const string EndUserNotifications = "pm-10609-end-user-notifications";
+    public const string PhishingDetection = "phishing-detection";
 
     public static List<string> GetAllKeys()
     {
