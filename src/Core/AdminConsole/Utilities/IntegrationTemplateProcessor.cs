@@ -20,4 +20,27 @@ public static partial class IntegrationTemplateProcessor
             return property?.GetValue(values)?.ToString() ?? match.Value;
         });
     }
+
+    public static bool TemplateRequiresUser(string template)
+    {
+        if (string.IsNullOrEmpty(template)) return false;
+
+        return template.Contains("#UserName#", StringComparison.Ordinal)
+               || template.Contains("#UserEmail#", StringComparison.Ordinal);
+    }
+
+    public static bool TemplateRequiresActingUser(string template)
+    {
+        if (string.IsNullOrEmpty(template)) return false;
+
+        return template.Contains("#ActingUserName#", StringComparison.Ordinal)
+               || template.Contains("#ActingUserEmail#", StringComparison.Ordinal);
+    }
+
+    public static bool TemplateRequiresOrganization(string template)
+    {
+        if (string.IsNullOrEmpty(template)) return false;
+
+        return template.Contains("#OrganizationName#", StringComparison.Ordinal);
+    }
 }
