@@ -16,7 +16,7 @@ public class PushSendRequestModelTests
     public void Validate_UserIdOrganizationIdInstallationIdNullOrEmpty_Invalid(string? userId, string? organizationId,
         string? installationId)
     {
-        var model = new PushSendRequestModel
+        var model = new PushSendRequestModel<string>
         {
             UserId = userId,
             OrganizationId = organizationId,
@@ -37,7 +37,7 @@ public class PushSendRequestModelTests
     public void Validate_UserIdProvidedOrganizationIdInstallationIdNullOrEmpty_Valid(string? organizationId,
         string? installationId)
     {
-        var model = new PushSendRequestModel
+        var model = new PushSendRequestModel<string>
         {
             UserId = Guid.NewGuid().ToString(),
             OrganizationId = organizationId,
@@ -56,7 +56,7 @@ public class PushSendRequestModelTests
     public void Validate_OrganizationIdProvidedUserIdInstallationIdNullOrEmpty_Valid(string? userId,
         string? installationId)
     {
-        var model = new PushSendRequestModel
+        var model = new PushSendRequestModel<string>
         {
             UserId = userId,
             OrganizationId = Guid.NewGuid().ToString(),
@@ -75,7 +75,7 @@ public class PushSendRequestModelTests
     public void Validate_InstallationIdProvidedUserIdOrganizationIdNullOrEmpty_Valid(string? userId,
         string? organizationId)
     {
-        var model = new PushSendRequestModel
+        var model = new PushSendRequestModel<string>
         {
             UserId = userId,
             OrganizationId = organizationId,
@@ -94,7 +94,7 @@ public class PushSendRequestModelTests
     [BitAutoData("Type")]
     public void Validate_RequiredFieldNotProvided_Invalid(string requiredField)
     {
-        var model = new PushSendRequestModel
+        var model = new PushSendRequestModel<string>
         {
             UserId = Guid.NewGuid().ToString(),
             OrganizationId = Guid.NewGuid().ToString(),
@@ -115,7 +115,7 @@ public class PushSendRequestModelTests
 
         var serialized = JsonSerializer.Serialize(dictionary, JsonHelpers.IgnoreWritingNull);
         var jsonException =
-            Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PushSendRequestModel>(serialized));
+            Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PushSendRequestModel<string>>(serialized));
         Assert.Contains($"missing required properties, including the following: {requiredField}",
             jsonException.Message);
     }
@@ -123,7 +123,7 @@ public class PushSendRequestModelTests
     [Fact]
     public void Validate_AllFieldsPresent_Valid()
     {
-        var model = new PushSendRequestModel
+        var model = new PushSendRequestModel<string>
         {
             UserId = Guid.NewGuid().ToString(),
             OrganizationId = Guid.NewGuid().ToString(),
@@ -139,7 +139,7 @@ public class PushSendRequestModelTests
         Assert.Empty(results);
     }
 
-    private static List<ValidationResult> Validate(PushSendRequestModel model)
+    private static List<ValidationResult> Validate<T>(PushSendRequestModel<T> model)
     {
         var results = new List<ValidationResult>();
         Validator.TryValidateObject(model, new ValidationContext(model), results, true);

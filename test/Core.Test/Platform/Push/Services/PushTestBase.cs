@@ -15,10 +15,27 @@ using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using RichardSzalay.MockHttp;
 using Xunit;
+
+public class EngineWrapper(IPushEngine pushEngine, FakeTimeProvider fakeTimeProvider, Guid installationId) : IPushNotificationService
+{
+    public Guid InstallationId { get; } = installationId;
+
+    public TimeProvider TimeProvider { get; } = fakeTimeProvider;
+
+    public ILogger Logger => NullLogger<EngineWrapper>.Instance;
+
+    public Task PushAsync<T>(PushNotification<T> pushNotification) where T : class
+        => pushEngine.PushAsync(pushNotification);
+
+    public Task PushCipherAsync(Cipher cipher, PushType pushType, IEnumerable<Guid>? collectionIds)
+        => pushEngine.PushCipherAsync(cipher, pushType, collectionIds);
+}
 
 public abstract class PushTestBase
 {
@@ -51,7 +68,7 @@ public abstract class PushTestBase
         FakeTimeProvider.SetUtcNow(DateTimeOffset.UtcNow);
     }
 
-    protected abstract IPushNotificationService CreateService();
+    protected abstract IPushEngine CreateService();
 
     protected abstract string ExpectedClientUrl();
 
@@ -480,7 +497,7 @@ public abstract class PushTestBase
             })
             .Respond(HttpStatusCode.OK);
 
-        await test(CreateService());
+        await test(new EngineWrapper(CreateService(), FakeTimeProvider, Guid.Empty));
 
         Assert.NotNull(actualNode);
 

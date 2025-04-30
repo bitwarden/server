@@ -1,8 +1,11 @@
-﻿using Bit.Core.Context;
+﻿using System.Diagnostics;
+using System.Text.Json;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.NotificationHub;
 using Bit.Core.Platform.Push;
+using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -20,14 +23,14 @@ namespace Bit.Api.Platform.Push;
 public class PushController : Controller
 {
     private readonly IPushRegistrationService _pushRegistrationService;
-    private readonly IPushNotificationService _pushNotificationService;
+    private readonly IPushRelayer _pushRelayer;
     private readonly IWebHostEnvironment _environment;
     private readonly ICurrentContext _currentContext;
     private readonly IGlobalSettings _globalSettings;
 
     public PushController(
         IPushRegistrationService pushRegistrationService,
-        IPushNotificationService pushNotificationService,
+        IPushRelayer pushRelayer,
         IWebHostEnvironment environment,
         ICurrentContext currentContext,
         IGlobalSettings globalSettings)
@@ -35,7 +38,7 @@ public class PushController : Controller
         _currentContext = currentContext;
         _environment = environment;
         _pushRegistrationService = pushRegistrationService;
-        _pushNotificationService = pushNotificationService;
+        _pushRelayer = pushRelayer;
         _globalSettings = globalSettings;
     }
 
@@ -74,9 +77,12 @@ public class PushController : Controller
     }
 
     [HttpPost("send")]
-    public async Task SendAsync([FromBody] PushSendRequestModel model)
+    public async Task SendAsync([FromBody] PushSendRequestModel<JsonElement> model)
     {
         CheckUsage();
+
+        NotificationTarget target;
+        Guid targetId;
 
         if (!string.IsNullOrWhiteSpace(model.InstallationId))
         {
@@ -85,20 +91,38 @@ public class PushController : Controller
                 throw new BadRequestException("InstallationId does not match current context.");
             }
 
-            await _pushNotificationService.SendPayloadToInstallationAsync(
-                _currentContext.InstallationId.Value.ToString(), model.Type, model.Payload, Prefix(model.Identifier),
-                Prefix(model.DeviceId), model.ClientType);
+            target = NotificationTarget.Installation;
+            targetId = _currentContext.InstallationId.Value;
         }
         else if (!string.IsNullOrWhiteSpace(model.UserId))
         {
-            await _pushNotificationService.SendPayloadToUserAsync(Prefix(model.UserId),
-                model.Type, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId), model.ClientType);
+            target = NotificationTarget.User;
+            // TODO: Make it a guid on the model?
+            targetId = Guid.Parse(model.UserId);
         }
         else if (!string.IsNullOrWhiteSpace(model.OrganizationId))
         {
-            await _pushNotificationService.SendPayloadToOrganizationAsync(Prefix(model.OrganizationId),
-                model.Type, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId), model.ClientType);
+            target = NotificationTarget.Organization;
+            // TODO: Make it a guid on the model?
+            targetId = Guid.Parse(model.OrganizationId);
         }
+        else
+        {
+            throw new UnreachableException("Model validation should have prevented getting here.");
+        }
+
+        var notification = new RelayedNotification
+        {
+            Type = model.Type,
+            Target = target,
+            TargetId = targetId,
+            Payload = model.Payload,
+            Identifier = model.Identifier,
+            DeviceId = Guid.Parse(model.DeviceId),
+            ClientType = model.ClientType,
+        };
+
+        await _pushRelayer.RelayAsync(_currentContext.InstallationId.Value, notification);
     }
 
     private string Prefix(string value)

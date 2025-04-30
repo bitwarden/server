@@ -24,7 +24,7 @@ public interface IPushNotificationService
         => PushCipherAsync(cipher, PushType.SyncCipherUpdate, collectionIds);
 
     Task PushSyncCipherDeleteAsync(Cipher cipher)
-        => PushCipherAsync(cipher, PushType.SyncCipherUpdate, null);
+        => PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
 
     Task PushSyncFolderCreateAsync(Folder folder)
         => PushAsync(new PushNotification<SyncFolderPushNotification>

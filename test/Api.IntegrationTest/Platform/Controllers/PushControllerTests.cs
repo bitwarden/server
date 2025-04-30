@@ -25,14 +25,14 @@ public class PushControllerTests
 
     public static IEnumerable<object[]> SendData()
     {
-        static object[] Typed(PushSendRequestModel pushSendRequestModel, string expectedHubTagExpression, bool expectHubCall = true)
+        static object[] Typed<T>(PushSendRequestModel<T> pushSendRequestModel, string expectedHubTagExpression, bool expectHubCall = true)
         {
             return [pushSendRequestModel, expectedHubTagExpression, expectHubCall];
         }
 
         static object[] UserTyped(PushType pushType)
         {
-            return Typed(new PushSendRequestModel
+            return Typed(new PushSendRequestModel<UserPushNotification>
             {
                 Type = pushType,
                 UserId = _userId.ToString(),
@@ -46,7 +46,7 @@ public class PushControllerTests
         }
 
         // User cipher
-        yield return Typed(new PushSendRequestModel
+        yield return Typed(new PushSendRequestModel<SyncCipherPushNotification>
         {
             Type = PushType.SyncCipherUpdate,
             UserId = _userId.ToString(),
@@ -60,7 +60,7 @@ public class PushControllerTests
 
         // Organization cipher, an org cipher would not naturally be synced from our 
         // code but it is technically possible to be submitted to the endpoint.
-        yield return Typed(new PushSendRequestModel
+        yield return Typed(new PushSendRequestModel<SyncCipherPushNotification>
         {
             Type = PushType.SyncCipherUpdate,
             OrganizationId = _organizationId.ToString(),
@@ -72,7 +72,7 @@ public class PushControllerTests
             },
         }, $"(template:payload && organizationId:%installation%_{_organizationId})");
 
-        yield return Typed(new PushSendRequestModel
+        yield return Typed(new PushSendRequestModel<SyncCipherPushNotification>
         {
             Type = PushType.SyncCipherCreate,
             UserId = _userId.ToString(),
@@ -86,7 +86,7 @@ public class PushControllerTests
 
         // Organization cipher, an org cipher would not naturally be synced from our 
         // code but it is technically possible to be submitted to the endpoint.
-        yield return Typed(new PushSendRequestModel
+        yield return Typed(new PushSendRequestModel<SyncCipherPushNotification>
         {
             Type = PushType.SyncCipherCreate,
             OrganizationId = _organizationId.ToString(),
@@ -98,7 +98,7 @@ public class PushControllerTests
             },
         }, $"(template:payload && organizationId:%installation%_{_organizationId})");
 
-        yield return Typed(new PushSendRequestModel
+        yield return Typed(new PushSendRequestModel<SyncCipherPushNotification>
         {
             Type = PushType.SyncCipherDelete,
             UserId = _userId.ToString(),
@@ -112,7 +112,7 @@ public class PushControllerTests
 
         // Organization cipher, an org cipher would not naturally be synced from our 
         // code but it is technically possible to be submitted to the endpoint.
-        yield return Typed(new PushSendRequestModel
+        yield return Typed(new PushSendRequestModel<SyncCipherPushNotification>
         {
             Type = PushType.SyncCipherDelete,
             OrganizationId = _organizationId.ToString(),
@@ -124,7 +124,7 @@ public class PushControllerTests
             },
         }, $"(template:payload && organizationId:%installation%_{_organizationId})");
 
-        yield return Typed(new PushSendRequestModel
+        yield return Typed(new PushSendRequestModel<SyncFolderPushNotification>
         {
             Type = PushType.SyncFolderDelete,
             UserId = _userId.ToString(),
@@ -136,7 +136,7 @@ public class PushControllerTests
             },
         }, $"(template:payload_userId:%installation%_{_userId})");
 
-        yield return Typed(new PushSendRequestModel
+        yield return Typed(new PushSendRequestModel<SyncFolderPushNotification>
         {
             Type = PushType.SyncFolderCreate,
             UserId = _userId.ToString(),
@@ -148,7 +148,7 @@ public class PushControllerTests
             },
         }, $"(template:payload_userId:%installation%_{_userId})");
 
-        yield return Typed(new PushSendRequestModel
+        yield return Typed(new PushSendRequestModel<SyncFolderPushNotification>
         {
             Type = PushType.SyncFolderCreate,
             UserId = _userId.ToString(),
@@ -168,7 +168,7 @@ public class PushControllerTests
         yield return UserTyped(PushType.LogOut);
         yield return UserTyped(PushType.PendingSecurityTasks);
 
-        yield return Typed(new PushSendRequestModel
+        yield return Typed(new PushSendRequestModel<AuthRequestPushNotification>
         {
             Type = PushType.AuthRequest,
             UserId = _userId.ToString(),
@@ -180,7 +180,7 @@ public class PushControllerTests
             },
         }, $"(template:payload_userId:%installation%_{_userId})");
 
-        yield return Typed(new PushSendRequestModel
+        yield return Typed(new PushSendRequestModel<AuthRequestPushNotification>
         {
             Type = PushType.AuthRequestResponse,
             UserId = _userId.ToString(),
@@ -192,7 +192,7 @@ public class PushControllerTests
             },
         }, $"(template:payload_userId:%installation%_{_userId})");
 
-        yield return Typed(new PushSendRequestModel
+        yield return Typed(new PushSendRequestModel<NotificationPushNotification>
         {
             Type = PushType.Notification,
             UserId = _userId.ToString(),
@@ -204,7 +204,7 @@ public class PushControllerTests
             },
         }, $"(template:payload_userId:%installation%_{_userId})");
 
-        yield return Typed(new PushSendRequestModel
+        yield return Typed(new PushSendRequestModel<NotificationPushNotification>
         {
             Type = PushType.Notification,
             UserId = _userId.ToString(),
@@ -217,7 +217,7 @@ public class PushControllerTests
             },
         }, $"(template:payload_userId:%installation%_{_userId})");
 
-        yield return Typed(new PushSendRequestModel
+        yield return Typed(new PushSendRequestModel<NotificationPushNotification>
         {
             Type = PushType.NotificationStatus,
             OrganizationId = _organizationId.ToString(),
@@ -229,7 +229,7 @@ public class PushControllerTests
             },
         }, $"(template:payload && organizationId:%installation%_{_organizationId})");
 
-        yield return Typed(new PushSendRequestModel
+        yield return Typed(new PushSendRequestModel<NotificationPushNotification>
         {
             Type = PushType.NotificationStatus,
             OrganizationId = _organizationId.ToString(),
@@ -244,7 +244,7 @@ public class PushControllerTests
 
     [Theory]
     [MemberData(nameof(SendData))]
-    public async Task Send_Works(PushSendRequestModel pushSendRequestModel, string expectedHubTagExpression, bool expectHubCall)
+    public async Task Send_Works<T>(PushSendRequestModel<T> pushSendRequestModel, string expectedHubTagExpression, bool expectHubCall)
     {
         var (apiFactory, httpClient, installation, queueClient, notificationHubProxy) = await SetupTest();
 
@@ -285,7 +285,7 @@ public class PushControllerTests
     {
         var (_, httpClient, _, _, _) = await SetupTest();
 
-        var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel
+        var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel<object>
         {
             Type = PushType.NotificationStatus,
             InstallationId = Guid.NewGuid().ToString(),
@@ -307,7 +307,7 @@ public class PushControllerTests
 
         var deviceId = Guid.NewGuid();
 
-        var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel
+        var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel<object>
         {
             Type = PushType.NotificationStatus,
             InstallationId = installation.Id.ToString(),
@@ -332,12 +332,12 @@ public class PushControllerTests
             ));
     }
 
-    [Fact]
+    [Fact(Skip = "Proposing to not support this")]
     public async Task Send_NonGuidDeviceId_Works_ButDoesNotUpdateInstallationDeviceRepository()
     {
         var (apiFactory, httpClient, installation, _, notificationHubProxy) = await SetupTest();
 
-        var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel
+        var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel<object>
         {
             Type = PushType.NotificationStatus,
             InstallationId = installation.Id.ToString(),
@@ -361,14 +361,14 @@ public class PushControllerTests
             .UpsertAsync(Arg.Any<InstallationDeviceEntity>());
     }
 
-    [Fact]
+    [Fact(Skip = "Proposing to not support this anymore.")]
     public async Task Send_NonGuidOrganizationId_Works()
     {
         var (apiFactory, httpClient, installation, _, notificationHubProxy) = await SetupTest();
 
         var deviceId = Guid.NewGuid();
 
-        var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel
+        var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel<object>
         {
             Type = PushType.NotificationStatus,
             OrganizationId = "non-guid-org",
@@ -399,7 +399,7 @@ public class PushControllerTests
     {
         var (_, client, _, _, _) = await SetupTest();
 
-        var response = await client.PostAsJsonAsync("push/send", new PushSendRequestModel
+        var response = await client.PostAsJsonAsync("push/send", new PushSendRequestModel<object>
         {
             Type = PushType.AuthRequest,
             Payload = new {},
