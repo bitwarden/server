@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
 using Azure.Storage.Queues;
+using Bit.Core;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
@@ -333,34 +334,46 @@ public static class ServiceCollectionExtensions
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
         {
+            services.AddKeyedSingleton<IEventWriteService, AzureQueueEventWriteService>("storage");
+
             if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.TopicName))
             {
-                services.AddSingleton<IEventWriteService, AzureServiceBusEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, AzureServiceBusEventWriteService>("broadcast");
             }
             else
             {
-                services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
             }
         }
         else if (globalSettings.SelfHosted)
         {
+            services.AddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("storage");
+
             if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HostName) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Username) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Password) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.ExchangeName))
             {
-                services.AddSingleton<IEventWriteService, RabbitMqEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, RabbitMqEventWriteService>("broadcast");
             }
             else
             {
-                services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
             }
         }
         else
         {
-            services.AddSingleton<IEventWriteService, NoopEventWriteService>();
+            services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("storage");
+            services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
         }
+        services.AddScoped<IEventWriteService>(sp =>
+        {
+            var featureService = sp.GetRequiredService<IFeatureService>();
+            var key = featureService.IsEnabled(FeatureFlagKeys.EventBasedOrganizationIntegrations)
+                ? "broadcast" : "storage";
+            return sp.GetRequiredKeyedService<IEventWriteService>(key);
+        });
 
         if (CoreHelpers.SettingHasValue(globalSettings.Attachment.ConnectionString))
         {
