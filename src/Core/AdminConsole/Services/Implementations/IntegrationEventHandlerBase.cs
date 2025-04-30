@@ -24,10 +24,9 @@ public abstract class IntegrationEventHandlerBase(
         foreach (var configuration in configurations)
         {
             var context = await BuildContextAsync(eventMessage, configuration.Template);
-            var renderedTemplate = RenderTemplate(configuration.Template, context);
+            var renderedTemplate = IntegrationTemplateProcessor.ReplaceTokens(configuration.Template, context);
 
-            await ProcessEventIntegrationAsync(configuration.MergedConfiguration,
-                renderedTemplate);
+            await ProcessEventIntegrationAsync(configuration.MergedConfiguration, renderedTemplate);
         }
     }
 
@@ -59,11 +58,6 @@ public abstract class IntegrationEventHandlerBase(
         }
 
         return context;
-    }
-
-    private string RenderTemplate(string template, IntegrationTemplateContext context)
-    {
-        return IntegrationTemplateProcessor.ReplaceTokens(template, context);
     }
 
     protected abstract IntegrationType GetIntegrationType();
