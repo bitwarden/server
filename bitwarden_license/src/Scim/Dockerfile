@@ -9,11 +9,11 @@ ARG TARGETPLATFORM
 # Determine proper runtime value for .NET
 # We put the value in a file to be read by later layers.
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
-      RID=linux-x64 ; \
+    RID=linux-x64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
-      RID=linux-arm64 ; \
+    RID=linux-arm64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
-      RID=linux-arm ; \
+    RID=linux-arm ; \
     fi \
     && echo "RID=$RID" > /tmp/rid.txt
 
@@ -31,8 +31,6 @@ COPY Directory.Build.props .
 WORKDIR /source/bitwarden_license/src/Scim
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
-WORKDIR /source/bitwarden_license/src/Scim
-
 # Copy required project files
 WORKDIR /source
 COPY .editorconfig /source
@@ -41,7 +39,6 @@ COPY src/Core/. ./src/Core/
 COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
 COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
-COPY .git/. ./.git/
 
 # Build project
 WORKDIR /source/bitwarden_license/src/Scim

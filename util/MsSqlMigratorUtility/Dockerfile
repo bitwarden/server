@@ -38,7 +38,6 @@ COPY util/MsSqlMigratorUtility/. ./util/MsSqlMigratorUtility/
 COPY src/Core/. ./src/Core/
 COPY util/Migrator/. ./util/Migrator/
 COPY util/Server/. ./util/Server/
-COPY .git/. ./.git/
 COPY .editorconfig /source
 
 # Build project

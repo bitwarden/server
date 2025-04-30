@@ -31,8 +31,6 @@ COPY Directory.Build.props .
 WORKDIR /source/bitwarden_license/src/Sso
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
-WORKDIR /source/bitwarden_license/src/Sso
-
 # Copy required project files
 WORKDIR /source
 COPY .editorconfig /source
@@ -41,7 +39,6 @@ COPY src/Core/. ./src/Core/
 COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
 COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
-COPY .git/. ./.git/
 
 # Build project
 WORKDIR /source/bitwarden_license/src/Sso
