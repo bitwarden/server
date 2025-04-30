@@ -11,4 +11,12 @@ public interface ISendTrialInitiationEmailForRegistrationCommand
         bool receiveMarketingEmails,
         ProductTierType productTier,
         IEnumerable<ProductType> products);
+
+    public Task<string?> Handle(
+        string email,
+        string? name,
+        bool receiveMarketingEmails,
+        ProductTierType productTier,
+        IEnumerable<ProductType> products,
+        int? trialLengthInDays = null);
 }

@@ -16,12 +16,15 @@ public class TrialInitiationVerifyEmail : RegisterVerifyEmail
                $"&email={Email}" +
                $"&fromEmail=true" +
                $"&productTier={(int)ProductTier}" +
-               $"&product={string.Join(",", Product.Select(p => (int)p))}";
+               $"&product={string.Join(",", Product.Select(p => (int)p))}" +
+               $"&trialLengthInDays={TrialLengthInDays}";
     }
 
     public ProductTierType ProductTier { get; set; }
 
     public IEnumerable<ProductType> Product { get; set; }
+
+    public int TrialLengthInDays { get; set; }
 
     /// <summary>
     /// Currently we only support one product type at a time, despite Product being a collection.

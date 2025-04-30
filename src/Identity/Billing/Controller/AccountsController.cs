@@ -26,7 +26,8 @@ public class AccountsController(
             model.Name,
             model.ReceiveMarketingEmails,
             model.ProductTier,
-            model.Products);
+            model.Products,
+            model.TrialLengthInDays);
 
         var refEvent = new ReferenceEvent
         {

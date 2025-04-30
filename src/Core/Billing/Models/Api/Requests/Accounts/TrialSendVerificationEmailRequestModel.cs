@@ -7,4 +7,5 @@ public class TrialSendVerificationEmailRequestModel : RegisterSendVerificationEm
 {
     public ProductTierType ProductTier { get; set; }
     public IEnumerable<ProductType> Products { get; set; }
+    public int? TrialLengthInDays { get; set; }
 }

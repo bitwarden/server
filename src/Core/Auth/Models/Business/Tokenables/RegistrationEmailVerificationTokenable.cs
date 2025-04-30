@@ -1,4 +1,6 @@
-﻿using System.Text.Json.Serialization;
+﻿#nullable enable
+
+using System.Text.Json.Serialization;
 using Bit.Core.Tokens;
 
 namespace Bit.Core.Auth.Models.Business.Tokenables;
@@ -11,56 +13,61 @@ public class RegistrationEmailVerificationTokenable : ExpiringTokenable
 {
     public static TimeSpan GetTokenLifetime() => TimeSpan.FromMinutes(15);
 
-    public const string ClearTextPrefix = "BwRegistrationEmailVerificationToken_";
-    public const string DataProtectorPurpose = "RegistrationEmailVerificationTokenDataProtector";
+    public const string ClearTextPrefix = "BWRegistrationEmailVerification_";
+    public const string DataProtectorPurpose = "RegistrationEmailVerificationDataProtector";
     public const string TokenIdentifier = "RegistrationEmailVerificationToken";
-
     public string Identifier { get; set; } = TokenIdentifier;
-
-    public string Name { get; set; }
-    public string Email { get; set; }
-    public bool ReceiveMarketingEmails { get; set; }
 
     [JsonConstructor]
     public RegistrationEmailVerificationTokenable()
     {
         ExpirationDate = DateTime.UtcNow.Add(GetTokenLifetime());
+        Email = string.Empty;
+        Name = null;
+        ReceiveMarketingEmails = false;
+        TrialLengthInDays = 7;
     }
 
-    public RegistrationEmailVerificationTokenable(string email, string name = default, bool receiveMarketingEmails = default) : this()
+    public RegistrationEmailVerificationTokenable(string? email, string? name, bool receiveMarketingEmails, int trialLengthInDays = 7)
+        : this()
     {
-        if (string.IsNullOrEmpty(email))
+        if (email == null)
         {
             throw new ArgumentNullException(nameof(email));
+        }
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            throw new ArgumentException("Email cannot be empty or whitespace.", nameof(email));
         }
 
         Email = email;
         Name = name;
         ReceiveMarketingEmails = receiveMarketingEmails;
+        TrialLengthInDays = trialLengthInDays;
     }
+
+    public string Email { get; set; }
+    public string? Name { get; set; }
+    public bool ReceiveMarketingEmails { get; set; }
+    public int TrialLengthInDays { get; set; }
 
     public bool TokenIsValid(string email)
     {
-        if (Email == default || email == default)
-        {
-            return false;
-        }
-
-        return Email.Equals(email, StringComparison.InvariantCultureIgnoreCase);
+        return Valid && Email.Equals(email, StringComparison.InvariantCultureIgnoreCase);
     }
 
-    // Validates deserialized
     protected override bool TokenIsValid() =>
-        Identifier == TokenIdentifier
-        && !string.IsNullOrWhiteSpace(Email);
+        Identifier == TokenIdentifier &&
+        !string.IsNullOrWhiteSpace(Email);
 
-
-    public static bool ValidateToken(IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> dataProtectorTokenFactory, string token, string userEmail)
+    public static bool ValidateToken(
+        IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory,
+        string token,
+        string email)
     {
-        return dataProtectorTokenFactory.TryUnprotect(token, out var tokenable)
-               && tokenable.Valid
-               && tokenable.TokenIsValid(userEmail);
+        return tokenDataFactory.TryUnprotect(token, out var decryptedToken)
+               && decryptedToken.Valid
+               && decryptedToken.TokenIsValid(email);
     }
-
-
 }

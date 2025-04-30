@@ -6,17 +6,28 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.Billing.TrialInitiation.Registration.Implementations;
 
-public class SendTrialInitiationEmailForRegistrationCommand(
-    IUserRepository userRepository,
-    GlobalSettings globalSettings,
-    IMailService mailService,
-    IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory)
-    : ISendTrialInitiationEmailForRegistrationCommand
+public class SendTrialInitiationEmailForRegistrationCommand : ISendTrialInitiationEmailForRegistrationCommand
 {
+    private readonly IUserRepository _userRepository;
+    private readonly IMailService _mailService;
+    private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _tokenFactory;
+    private readonly GlobalSettings _globalSettings;
+
+    public SendTrialInitiationEmailForRegistrationCommand(
+        IUserRepository userRepository,
+        IMailService mailService,
+        IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenFactory,
+        GlobalSettings globalSettings)
+    {
+        _userRepository = userRepository;
+        _mailService = mailService;
+        _tokenFactory = tokenFactory;
+        _globalSettings = globalSettings;
+    }
+
     public async Task<string?> Handle(
         string email,
         string? name,
@@ -24,28 +35,51 @@ public class SendTrialInitiationEmailForRegistrationCommand(
         ProductTierType productTier,
         IEnumerable<ProductType> products)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(email, nameof(email));
+        return await Handle(email, name, receiveMarketingEmails, productTier, products, 7);
+    }
 
-        var userExists = await CheckUserExistsConstantTimeAsync(email);
-        var token = GenerateToken(email, name, receiveMarketingEmails);
-
-        if (!globalSettings.EnableEmailVerification)
+    public async Task<string?> Handle(
+        string email,
+        string? name,
+        bool receiveMarketingEmails,
+        ProductTierType productTier,
+        IEnumerable<ProductType> products,
+        int? trialLengthInDays = null)
+    {
+        if (string.IsNullOrWhiteSpace(email))
         {
-            await PerformConstantTimeOperationsAsync();
-
-            if (userExists)
-            {
-                throw new BadRequestException($"Email {email} is already taken");
-            }
-
-            return token;
+            throw new ArgumentException("Email is required.", nameof(email));
         }
 
-        await PerformConstantTimeOperationsAsync();
+        var userExists = await CheckUserExistsConstantTimeAsync(email);
+        if (userExists)
+        {
+            throw new BadRequestException("User already exists.");
+        }
 
-        await mailService.SendTrialInitiationSignupEmailAsync(userExists, email, token, productTier, products);
+        // Validate trial length - must be 0 or 7 days
+        var validatedTrialLength = trialLengthInDays switch
+        {
+            0 => 0,
+            7 => 7,
+            _ => 7 // Default to 7 days for any other value
+        };
 
-        return null;
+        var token = GenerateToken(email, name, receiveMarketingEmails, validatedTrialLength);
+
+        if (_globalSettings.EnableEmailVerification)
+        {
+            await _mailService.SendTrialInitiationSignupEmailAsync(
+                userExists,
+                email,
+                token,
+                productTier,
+                products,
+                validatedTrialLength);
+            return null;
+        }
+
+        return token;
     }
 
     /// <summary>
@@ -56,16 +90,23 @@ public class SendTrialInitiationEmailForRegistrationCommand(
         await Task.Delay(130);
     }
 
-    private string GenerateToken(string email, string? name, bool receiveMarketingEmails)
+    private string GenerateToken(
+        string email,
+        string? name,
+        bool receiveMarketingEmails,
+        int trialLengthInDays)
     {
-        var tokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
-        return tokenDataFactory.Protect(tokenable);
+        var tokenable = new RegistrationEmailVerificationTokenable(
+            email,
+            name,
+            receiveMarketingEmails,
+            trialLengthInDays);
+        return _tokenFactory.Protect(tokenable);
     }
 
     private async Task<bool> CheckUserExistsConstantTimeAsync(string email)
     {
-        var user = await userRepository.GetByEmailAsync(email);
-
-        return CoreHelpers.FixedTimeEquals(user?.Email.ToLowerInvariant() ?? string.Empty, email.ToLowerInvariant());
+        var user = await _userRepository.GetByEmailAsync(email);
+        return user != null;
     }
 }
