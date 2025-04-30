@@ -19,15 +19,15 @@ public class EmailTwoFactorTokenProvider : EmailTokenProvider
         TokenLength = 6;
     }
 
-    public override async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
+    public override Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
         if (!HasProperMetaData(provider))
         {
-            return false;
+            return Task.FromResult(false);
         }
 
-        return true;
+        return Task.FromResult(true);
     }
 
     public override Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)

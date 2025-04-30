@@ -25,14 +25,14 @@ public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
         };
     }
 
-    public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
+    public Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
         if (string.IsNullOrWhiteSpace((string)provider?.MetaData["Key"]))
         {
-            return false;
+            return Task.FromResult(false);
         }
-        return true;
+        return Task.FromResult(true);
     }
 
     public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
