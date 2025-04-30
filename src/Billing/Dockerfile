@@ -38,6 +38,7 @@ COPY src/Core/. ./src/Core/
 COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
 COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
+COPY .git/. ./.git/
 COPY .editorconfig .
 
 # Build project
