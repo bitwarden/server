@@ -264,7 +264,7 @@ public class OrganizationSponsorshipsController : Controller
         var organization = _currentContext.Organizations.First(x => x.Id == sponsoringOrg.Id);
         if (!await _currentContext.OrganizationOwner(sponsoringOrg.Id) && !await _currentContext.OrganizationAdmin(sponsoringOrg.Id) && !organization.Permissions.ManageUsers)
         {
-            throw new NotFoundException();
+            throw new UnauthorizedAccessException();
         }
 
         var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
