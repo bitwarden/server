@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -7,11 +8,13 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Integrations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
+[RequireFeature(FeatureFlagKeys.EventBasedOrganizationIntegrations)]
 [Route("organizations/{organizationId:guid}/integrations/slack")]
 [Authorize("Application")]
 public class SlackIntegrationController(
