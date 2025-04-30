@@ -79,6 +79,7 @@ public interface IProviderBillingService
     /// </summary>
     /// <param name="provider">The <see cref="Provider"/> to create a Stripe customer for.</param>
     /// <param name="taxInfo">The <see cref="TaxInfo"/> to use for calculating the customer's automatic tax.</param>
+    /// <param name="tokenizedPaymentSource">The <see cref="TokenizedPaymentSource"/> (ex. Credit Card) to attach to the customer.</param>
     /// <returns>The newly created <see cref="Stripe.Customer"/> for the <paramref name="provider"/>.</returns>
     Task<Customer> SetupCustomer(
         Provider provider,

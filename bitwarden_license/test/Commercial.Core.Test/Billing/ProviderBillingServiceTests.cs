@@ -27,12 +27,17 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Braintree;
 using CsvHelper;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Stripe;
 using Xunit;
 using static Bit.Core.Test.Billing.Utilities;
+using Address = Stripe.Address;
+using Customer = Stripe.Customer;
 using PaymentMethod = Stripe.PaymentMethod;
+using Subscription = Stripe.Subscription;
 
 namespace Bit.Commercial.Core.Test.Billing;
 
@@ -837,7 +842,7 @@ public class ProviderBillingServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SetupCustomer_Success(
+    public async Task SetupCustomer_NoPaymentMethod_Success(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider,
         TaxInfo taxInfo)
@@ -879,6 +884,138 @@ public class ProviderBillingServiceTests
         var actual = await sutProvider.Sut.SetupCustomer(provider, taxInfo);
 
         Assert.Equivalent(expected, actual);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetupCustomer_InvalidRequiredPaymentMethod_ThrowsBillingException(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        TaxInfo taxInfo,
+        TokenizedPaymentSource tokenizedPaymentSource)
+    {
+        provider.Name = "MSP";
+
+        sutProvider.GetDependency<ITaxService>()
+            .GetStripeTaxCode(Arg.Is<string>(
+                    p => p == taxInfo.BillingAddressCountry),
+                Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
+            .Returns(taxInfo.TaxIdType);
+
+        taxInfo.BillingAddressCountry = "AD";
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
+
+        tokenizedPaymentSource = tokenizedPaymentSource with { Type = PaymentMethodType.BitPay };
+
+        await ThrowsBillingExceptionAsync(() =>
+            sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetupCustomer_WithBankAccount_Error_Reverts(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        TaxInfo taxInfo)
+    {
+        provider.Name = "MSP";
+
+        sutProvider.GetDependency<ITaxService>()
+            .GetStripeTaxCode(Arg.Is<string>(
+                    p => p == taxInfo.BillingAddressCountry),
+                Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
+            .Returns(taxInfo.TaxIdType);
+
+        taxInfo.BillingAddressCountry = "AD";
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.BankAccount, "token");
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
+
+        stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options =>
+            options.PaymentMethod == tokenizedPaymentSource.Token)).Returns([
+            new SetupIntent { Id = "setup_intent_id" }
+        ]);
+
+        stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
+                o.Address.Country == taxInfo.BillingAddressCountry &&
+                o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
+                o.Address.Line1 == taxInfo.BillingAddressLine1 &&
+                o.Address.Line2 == taxInfo.BillingAddressLine2 &&
+                o.Address.City == taxInfo.BillingAddressCity &&
+                o.Address.State == taxInfo.BillingAddressState &&
+                o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
+                o.Email == provider.BillingEmail &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == "MSP" &&
+                o.Metadata["region"] == "" &&
+                o.TaxIdData.FirstOrDefault().Type == taxInfo.TaxIdType &&
+                o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber))
+            .Throws<StripeException>();
+
+        sutProvider.GetDependency<ISetupIntentCache>().Get(provider.Id).Returns("setup_intent_id");
+
+        await Assert.ThrowsAsync<StripeException>(() =>
+            sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource));
+
+        await sutProvider.GetDependency<ISetupIntentCache>().Received(1).Set(provider.Id, "setup_intent_id");
+
+        await stripeAdapter.Received(1).SetupIntentCancel("setup_intent_id", Arg.Is<SetupIntentCancelOptions>(options =>
+            options.CancellationReason == "abandoned"));
+
+        await sutProvider.GetDependency<ISetupIntentCache>().Received(1).Remove(provider.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetupCustomer_WithPayPal_Error_Reverts(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        TaxInfo taxInfo)
+    {
+        provider.Name = "MSP";
+
+        sutProvider.GetDependency<ITaxService>()
+            .GetStripeTaxCode(Arg.Is<string>(
+                    p => p == taxInfo.BillingAddressCountry),
+                Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
+            .Returns(taxInfo.TaxIdType);
+
+        taxInfo.BillingAddressCountry = "AD";
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.PayPal, "token");
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
+
+        sutProvider.GetDependency<ISubscriberService>().CreateBraintreeCustomer(provider, tokenizedPaymentSource.Token)
+            .Returns("braintree_customer_id");
+
+        stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
+                o.Address.Country == taxInfo.BillingAddressCountry &&
+                o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
+                o.Address.Line1 == taxInfo.BillingAddressLine1 &&
+                o.Address.Line2 == taxInfo.BillingAddressLine2 &&
+                o.Address.City == taxInfo.BillingAddressCity &&
+                o.Address.State == taxInfo.BillingAddressState &&
+                o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
+                o.Email == provider.BillingEmail &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == "MSP" &&
+                o.Metadata["region"] == "" &&
+                o.Metadata["btCustomerId"] == "braintree_customer_id" &&
+                o.TaxIdData.FirstOrDefault().Type == taxInfo.TaxIdType &&
+                o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber))
+            .Throws<StripeException>();
+
+        await Assert.ThrowsAsync<StripeException>(() =>
+            sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource));
+
+        await sutProvider.GetDependency<IBraintreeGateway>().Customer.Received(1).DeleteAsync("braintree_customer_id");
     }
 
     [Theory, BitAutoData]
