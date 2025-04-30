@@ -204,6 +204,7 @@ public static class FeatureFlagKeys
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
     public const string EndUserNotifications = "pm-10609-end-user-notifications";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
+    public const string PhishingDetection = "phishing-detection";
 
     public static List<string> GetAllKeys()
     {
