@@ -110,9 +110,14 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IEnumerable<string> organizationOwnerEmails)
     {
         if (provider.IsBillable() &&
-            organization.IsValidClient() &&
-            !string.IsNullOrEmpty(organization.GatewayCustomerId))
+            organization.IsValidClient())
         {
+            // An organization converted to a business unit will not have a Customer since it was given to the business unit.
+            if (string.IsNullOrEmpty(organization.GatewayCustomerId))
+            {
+                await _providerBillingService.CreateCustomerForClientOrganization(provider, organization);
+            }
+
             var customer = await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Description = string.Empty,
