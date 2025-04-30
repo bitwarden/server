@@ -26,6 +26,10 @@ public class OrganizationUserUserDetailsAuthorizationHandler
             case not null when requirement.Name == nameof(OrganizationUserUserDetailsOperations.ReadAll):
                 authorized = await CanReadAllAsync(organizationScope);
                 break;
+
+            case not null when requirement.Name == nameof(OrganizationUserUserDetailsOperations.ReadAccountRecovery):
+                authorized = ReadWithAccountRecovery(organizationScope);
+                break;
         }
 
         if (authorized)
@@ -48,5 +52,19 @@ public class OrganizationUserUserDetailsAuthorizationHandler
 
         // Allow provider users to read all organization users if they are a provider for the target organization
         return await _currentContext.ProviderUserForOrgAsync(organizationId);
+    }
+
+    private bool ReadWithAccountRecovery(Guid organizationId)
+    {
+        var organization = _currentContext.GetOrganization(organizationId);
+        if (organization is
+        { Permissions.ManageUsers: false } and
+        { Permissions.ManageResetPassword: true }
+        )
+        {
+            return true;
+        }
+
+        return false;
     }
 }

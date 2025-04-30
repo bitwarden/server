@@ -159,6 +159,12 @@ public class OrganizationUsersController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+        {
+            return await GetvNextAsync(orgId, includeGroups, includeCollections);
+        }
+
         var authorized = (await _authorizationService.AuthorizeAsync(
             User, new OrganizationScope(orgId), OrganizationUserUserDetailsOperations.ReadAll)).Succeeded;
         if (!authorized)
@@ -186,6 +192,46 @@ public class OrganizationUsersController : Controller
                 return orgUser;
             });
         return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
+    }
+
+    private async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> GetvNextAsync(Guid orgId, bool includeGroups = false, bool includeCollections = false)
+    {
+        var request = new OrganizationUserUserDetailsQueryRequest
+        {
+            OrganizationId = orgId,
+            IncludeGroups = includeGroups,
+            IncludeCollections = includeCollections,
+        };
+
+        var readAllAuthorized = (await _authorizationService.AuthorizeAsync(
+            User, new OrganizationScope(orgId), OrganizationUserUserDetailsOperations.ReadAll)).Succeeded;
+
+        if (!readAllAuthorized)
+        {
+            var readWithAccountRecovery = (await _authorizationService.AuthorizeAsync(
+                User, new OrganizationScope(orgId), OrganizationUserUserDetailsOperations.ReadAccountRecovery)).Succeeded;
+
+            if (!readWithAccountRecovery)
+            {
+                throw new NotFoundException();
+            }
+
+            var confirmedUsers = await _organizationUserUserDetailsQuery.GetConfirmed(request);
+            var confirmedResponseList = confirmedUsers
+            .Select(result => new OrganizationUserUserDetailsResponseModel(result.Item1, result.Item2, result.Item3))
+            .Where(model => model.ResetPasswordEnrolled)
+            .ToList();
+
+            return (new ListResponseModel<OrganizationUserUserDetailsResponseModel>(confirmedResponseList));
+
+        }
+
+        var results = await _organizationUserUserDetailsQuery.Get(request);
+        var responseList = results
+        .Select(result => new OrganizationUserUserDetailsResponseModel(result.Item1, result.Item2, result.Item3))
+        .ToList();
+
+        return (new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responseList));
     }
 
     [HttpGet("{id}/groups")]

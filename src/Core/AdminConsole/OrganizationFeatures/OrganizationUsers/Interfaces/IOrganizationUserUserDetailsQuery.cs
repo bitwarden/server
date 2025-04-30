@@ -6,4 +6,8 @@ namespace Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 public interface IOrganizationUserUserDetailsQuery
 {
     Task<IEnumerable<OrganizationUserUserDetails>> GetOrganizationUserUserDetails(OrganizationUserUserDetailsQueryRequest request);
+
+    Task<IEnumerable<(OrganizationUserUserDetails, bool, bool)>> Get(OrganizationUserUserDetailsQueryRequest request);
+
+    Task<IEnumerable<(OrganizationUserUserDetails, bool, bool)>> GetConfirmed(OrganizationUserUserDetailsQueryRequest request);
 }
