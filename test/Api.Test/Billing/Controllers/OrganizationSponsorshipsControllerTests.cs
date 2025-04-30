@@ -185,7 +185,7 @@ public class OrganizationSponsorshipsControllerTests
         sutProvider.GetDependency<ICurrentContext>().Organizations.Returns(new List<CurrentContextOrganization> { currentContextOrg });
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sutProvider.Sut.GetSponsoredOrganizations(sponsoringOrg.Id));
 
         await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
