@@ -28,7 +28,7 @@ public class Program
         ServiceCollectionExtension.ConfigureServices(services);
         var serviceProvider = services.BuildServiceProvider();
 
-        // TODO: Can we remove GenerateCommand and provide a RecipeFactory or something. Or wire up DI.
+        // Get a scoped DB context
         using var scope = serviceProvider.CreateScope();
         var scopedServices = scope.ServiceProvider;
         var db = scopedServices.GetRequiredService<DatabaseContext>();
