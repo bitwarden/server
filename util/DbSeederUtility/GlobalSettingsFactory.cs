@@ -9,15 +9,7 @@ public static class GlobalSettingsFactory
 
     public static GlobalSettings GlobalSettings
     {
-        get
-        {
-            if (_globalSettings == null)
-            {
-                _globalSettings = LoadGlobalSettings();
-            }
-
-            return _globalSettings;
-        }
+        get { return _globalSettings ??= LoadGlobalSettings(); }
     }
 
     private static GlobalSettings LoadGlobalSettings()
@@ -34,31 +26,8 @@ public static class GlobalSettingsFactory
         var configuration = configBuilder.Build();
         var globalSettingsSection = configuration.GetSection("globalSettings");
 
-        // Debug: Print all settings from globalSettings section
-        foreach (var setting in globalSettingsSection.GetChildren())
-        {
-            Console.WriteLine($"Found setting: {setting.Key}");
-            foreach (var child in setting.GetChildren())
-            {
-                Console.WriteLine($"  - {setting.Key}.{child.Key}");
-            }
-        }
-
         var settings = new GlobalSettings();
         globalSettingsSection.Bind(settings);
-
-        // Output the loaded settings
-        Console.WriteLine($"Loaded DatabaseProvider: {settings.DatabaseProvider}");
-        Console.WriteLine($"PostgreSql settings loaded: {settings.PostgreSql != null}");
-        Console.WriteLine($"SqlServer settings loaded: {settings.SqlServer != null}");
-        Console.WriteLine($"MySql settings loaded: {settings.MySql != null}");
-        Console.WriteLine($"Sqlite settings loaded: {settings.Sqlite != null}");
-
-        // Check for case sensitivity issue with PostgreSql/postgresql keys
-        var postgresqlValue = globalSettingsSection.GetSection("postgresql")?.Value;
-        var postgreSqlValue = globalSettingsSection.GetSection("postgreSql")?.Value;
-        Console.WriteLine($"Raw check - postgresql setting exists: {postgresqlValue != null}");
-        Console.WriteLine($"Raw check - postgreSql setting exists: {postgreSqlValue != null}");
 
         return settings;
     }

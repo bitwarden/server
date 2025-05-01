@@ -9,9 +9,6 @@ public class Program
 {
     private static int Main(string[] args)
     {
-        // Ensure global settings are loaded
-        var globalSettings = GlobalSettingsFactory.GlobalSettings;
-
         return new AppRunner<Program>()
             .Run(args);
     }
