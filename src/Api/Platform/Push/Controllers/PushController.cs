@@ -97,13 +97,11 @@ public class PushController : Controller
         else if (model.UserId.HasValue)
         {
             target = NotificationTarget.User;
-            // TODO: Make it a guid on the model?
             targetId = model.UserId.Value;
         }
         else if (model.OrganizationId.HasValue)
         {
             target = NotificationTarget.Organization;
-            // TODO: Make it a guid on the model?
             targetId = model.OrganizationId.Value;
         }
         else
