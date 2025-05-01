@@ -5,7 +5,7 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Models;
-using Bit.Core.Billing.Services.Contracts;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Models.Business;
 using Stripe;
 

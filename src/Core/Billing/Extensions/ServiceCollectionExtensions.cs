@@ -5,7 +5,7 @@ using Bit.Core.Billing.Premium.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
-using Bit.Core.Billing.Services.Implementations.AutomaticTax;
+using Bit.Core.Billing.Tax.Services;
 
 namespace Bit.Core.Billing.Extensions;
 

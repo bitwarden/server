@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Services;
 using Stripe;
 
 namespace Bit.Core.Test.Billing.Stubs;

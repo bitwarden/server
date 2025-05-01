@@ -1,11 +1,11 @@
 ﻿#nullable enable
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services.Contracts;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 
-namespace Bit.Core.Billing.Services.Implementations.AutomaticTax;
+namespace Bit.Core.Billing.Tax.Services;
 
 public class AutomaticTaxFactory(
     IFeatureService featureService,

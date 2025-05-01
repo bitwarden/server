@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Tax.Models;
 
 namespace Bit.Core.Billing.Models.Sales;
 

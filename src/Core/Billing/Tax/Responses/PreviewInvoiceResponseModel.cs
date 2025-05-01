@@ -1,6 +1,6 @@
-﻿namespace Bit.Core.Billing.Models;
+﻿namespace Bit.Core.Billing.Tax.Responses;
 
-public record PreviewInvoiceInfo(
+public record PreviewInvoiceResponseModel(
     decimal EffectiveTaxRate,
     decimal TaxableBaseAmount,
     decimal TaxAmount,

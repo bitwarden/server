@@ -3,7 +3,7 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Services;
 using Stripe;
 
-namespace Bit.Core.Billing.Services.Implementations.AutomaticTax;
+namespace Bit.Core.Billing.Tax.Services;
 
 public class PersonalUseAutomaticTaxStrategy(IFeatureService featureService) : IAutomaticTaxStrategy
 {

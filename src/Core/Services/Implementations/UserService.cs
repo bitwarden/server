@@ -17,6 +17,7 @@ using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Billing.Premium.Services;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;

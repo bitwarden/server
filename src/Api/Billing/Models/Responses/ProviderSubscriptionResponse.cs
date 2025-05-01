@@ -4,6 +4,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Providers.Models;
+using Bit.Core.Billing.Tax.Models;
 using Stripe;
 
 namespace Bit.Api.Billing.Models.Responses;

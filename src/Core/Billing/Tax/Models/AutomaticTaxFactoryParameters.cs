@@ -2,7 +2,7 @@
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 
-namespace Bit.Core.Billing.Services.Contracts;
+namespace Bit.Core.Billing.Tax.Models;
 
 public class AutomaticTaxFactoryParameters
 {
