@@ -3,7 +3,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Migration.Models;
 using Bit.Core.Billing.Providers.Models;

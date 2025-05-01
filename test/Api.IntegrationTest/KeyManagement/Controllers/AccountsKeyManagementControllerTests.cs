@@ -9,7 +9,7 @@ using Bit.Api.Vault.Models.Request;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;

@@ -1,5 +1,6 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Pricing.Enums;
 using Stripe;
+using Plan = Bit.Core.Billing.Pricing.Static.Plan;
 
 namespace Bit.Core.Models.Business;
 
@@ -39,12 +40,12 @@ public abstract class SubscriptionUpdate
         return subscriptionItem;
     }
 
-    protected static string GetPasswordManagerPlanId(StaticStore.Plan plan)
+    protected static string GetPasswordManagerPlanId(Plan plan)
         => IsNonSeatBasedPlan(plan)
             ? plan.PasswordManager.StripePlanId
             : plan.PasswordManager.StripeSeatPlanId;
 
-    protected static bool IsNonSeatBasedPlan(StaticStore.Plan plan)
+    protected static bool IsNonSeatBasedPlan(Plan plan)
         => plan.Type is
             >= PlanType.FamiliesAnnually2019 and <= PlanType.EnterpriseAnnually2019
             or PlanType.FamiliesAnnually

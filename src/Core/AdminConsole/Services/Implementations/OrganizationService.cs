@@ -16,9 +16,10 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.Enums;
+using Bit.Core.Billing.Pricing.HTTP;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -37,6 +38,7 @@ using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using OrganizationUserInvite = Bit.Core.Models.Business.OrganizationUserInvite;
+using Plan = Bit.Core.Billing.Pricing.Static.Plan;
 
 namespace Bit.Core.Services;
 
@@ -1456,7 +1458,7 @@ public class OrganizationService : IOrganizationService
         return await _organizationRepository.GetByIdAsync(id);
     }
 
-    private static void ValidatePlan(Models.StaticStore.Plan plan, int additionalSeats, string productType)
+    private static void ValidatePlan(Plan plan, int additionalSeats, string productType)
     {
         if (plan is null)
         {
@@ -1474,7 +1476,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
+    public void ValidatePasswordManagerPlan(Plan plan, OrganizationUpgrade upgrade)
     {
         ValidatePlan(plan, upgrade.AdditionalSeats, "Password Manager");
 
@@ -1516,7 +1518,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
+    public void ValidateSecretsManagerPlan(Plan plan, OrganizationUpgrade upgrade)
     {
         if (plan.SupportsSecretsManager == false)
         {

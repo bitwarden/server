@@ -2,6 +2,7 @@
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.HTTP;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;

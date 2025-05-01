@@ -1,5 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Models.Business;
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Models;

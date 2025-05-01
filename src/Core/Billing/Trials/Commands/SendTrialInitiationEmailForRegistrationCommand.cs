@@ -1,6 +1,6 @@
 ﻿#nullable enable
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

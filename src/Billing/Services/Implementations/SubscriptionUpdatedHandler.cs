@@ -2,6 +2,7 @@
 using Bit.Billing.Jobs;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.HTTP;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;

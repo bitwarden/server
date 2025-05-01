@@ -1,8 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
+using Bit.Core.Billing.Pricing.Static;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.StaticStore;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;

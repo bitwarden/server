@@ -1,7 +1,7 @@
 ﻿#nullable enable
 
 using System.ComponentModel.DataAnnotations;
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;

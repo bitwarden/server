@@ -1,16 +1,17 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Stripe;
+using Plan = Bit.Core.Billing.Pricing.Static.Plan;
 
 namespace Bit.Core.Models.Business;
 
 public class ServiceAccountSubscriptionUpdate : SubscriptionUpdate
 {
     private long? _prevServiceAccounts;
-    private readonly StaticStore.Plan _plan;
+    private readonly Plan _plan;
     private readonly long? _additionalServiceAccounts;
     protected override List<string> PlanIds => new() { _plan.SecretsManager.StripeServiceAccountPlanId };
 
-    public ServiceAccountSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalServiceAccounts)
+    public ServiceAccountSubscriptionUpdate(Organization organization, Plan plan, long? additionalServiceAccounts)
     {
         _plan = plan;
         _additionalServiceAccounts = additionalServiceAccounts;

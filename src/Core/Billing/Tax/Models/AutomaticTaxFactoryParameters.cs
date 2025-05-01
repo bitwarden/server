@@ -1,5 +1,5 @@
 ﻿#nullable enable
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
 using Bit.Core.Entities;
 
 namespace Bit.Core.Billing.Tax.Models;

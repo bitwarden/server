@@ -1,8 +1,9 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.Enums;
+using Bit.Core.Billing.Pricing.HTTP;
 using Bit.Core.Context;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;

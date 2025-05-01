@@ -1,10 +1,10 @@
 ﻿using System.Collections.Immutable;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Models.StaticStore.Plans;
+using Bit.Core.Billing.Pricing.Enums;
+using Bit.Core.Billing.Pricing.Static;
+using Bit.Core.Billing.Pricing.Static.Plans;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Utilities;
 

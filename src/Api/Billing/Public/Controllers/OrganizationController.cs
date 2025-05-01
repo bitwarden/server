@@ -2,6 +2,7 @@
 using Bit.Api.Billing.Public.Models;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.HTTP;
 using Bit.Core.Context;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;

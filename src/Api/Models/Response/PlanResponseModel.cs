@@ -1,8 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing.Enums;
+using Bit.Core.Billing.Pricing.Static;
 using Bit.Core.Models.Api;
-using Bit.Core.Models.StaticStore;
 
 namespace Bit.Api.Models.Response;
 

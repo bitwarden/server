@@ -1,5 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;

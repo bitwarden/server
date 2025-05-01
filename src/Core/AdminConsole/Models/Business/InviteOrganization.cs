@@ -1,5 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Models.StaticStore;
+using Bit.Core.Billing.Pricing.Static;
 
 namespace Bit.Core.AdminConsole.Models.Business;
 

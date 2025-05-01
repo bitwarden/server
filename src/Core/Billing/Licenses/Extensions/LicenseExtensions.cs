@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.Billing.Licenses.Extensions;

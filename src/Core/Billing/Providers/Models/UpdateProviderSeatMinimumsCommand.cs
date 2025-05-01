@@ -1,5 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
 
 namespace Bit.Core.Billing.Providers.Models;
 

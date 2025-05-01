@@ -5,8 +5,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.V
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Payments;
 using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models.StaticStore.Plans;
+using Bit.Core.Billing.Pricing.Enums;
+using Bit.Core.Billing.Pricing.Static.Plans;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 

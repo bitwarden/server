@@ -1,5 +1,6 @@
-﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Pricing;
+﻿using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.Enums;
+using Bit.Core.Billing.Pricing.HTTP;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;

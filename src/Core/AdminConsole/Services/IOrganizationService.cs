@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Billing.Pricing.Static;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -50,8 +51,8 @@ public interface IOrganizationService
     Task CreatePendingOrganization(Organization organization, string ownerEmail, ClaimsPrincipal user, IUserService userService, bool salesAssistedTrialStarted);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
 
-    void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
-    void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
+    void ValidatePasswordManagerPlan(Plan plan, OrganizationUpgrade upgrade);
+    void ValidateSecretsManagerPlan(Plan plan, OrganizationUpgrade upgrade);
     Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
         OrganizationUserType? oldType, Permissions permissions);
     Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType);

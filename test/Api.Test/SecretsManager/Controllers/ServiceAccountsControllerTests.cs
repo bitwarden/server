@@ -3,6 +3,7 @@ using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.HTTP;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;

@@ -7,6 +7,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Payment.Services;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.HTTP;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Services;

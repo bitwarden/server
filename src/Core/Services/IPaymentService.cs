@@ -4,11 +4,11 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Requests;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Premium.Requests;
+using Bit.Core.Billing.Pricing.Static;
 using Bit.Core.Billing.Tax.Responses;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Services;
 

@@ -1,7 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.Enums;
+using Bit.Core.Billing.Pricing.HTTP;
+using Bit.Core.Billing.Pricing.Static.Plans;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;

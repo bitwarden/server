@@ -1,5 +1,7 @@
-﻿using Bit.Core.Models.Business;
+﻿using Bit.Core.Billing.Pricing.Static;
+using Bit.Core.Models.Business;
 using Stripe;
+using Plan = Bit.Core.Billing.Pricing.Static.Plan;
 
 namespace Bit.Core.Billing.Organizations.Models;
 
@@ -10,7 +12,7 @@ public class SponsorOrganizationSubscriptionUpdate : SubscriptionUpdate
     private readonly bool _applySponsorship;
     protected override List<string> PlanIds => new() { _existingPlanStripeId, _sponsoredPlanStripeId };
 
-    public SponsorOrganizationSubscriptionUpdate(Core.Models.StaticStore.Plan existingPlan, Core.Models.StaticStore.SponsoredPlan sponsoredPlan, bool applySponsorship)
+    public SponsorOrganizationSubscriptionUpdate(Plan existingPlan, SponsoredPlan sponsoredPlan, bool applySponsorship)
     {
         _existingPlanStripeId = existingPlan.PasswordManager.StripePlanId;
         _sponsoredPlanStripeId = sponsoredPlan?.StripePlanId

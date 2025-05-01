@@ -1,4 +1,4 @@
-﻿using Bit.Core.Models.StaticStore;
+﻿using Bit.Core.Billing.Pricing.Static;
 
 namespace Bit.Core.Billing.Providers.Models;
 

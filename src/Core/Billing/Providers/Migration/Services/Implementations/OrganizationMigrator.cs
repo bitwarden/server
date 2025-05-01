@@ -1,7 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.Enums;
+using Bit.Core.Billing.Pricing.HTTP;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Migration.Models;
 using Bit.Core.Billing.Providers.Repositories;
@@ -10,7 +11,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
-using Plan = Bit.Core.Models.StaticStore.Plan;
+using Plan = Bit.Core.Billing.Pricing.Static.Plan;
 
 namespace Bit.Core.Billing.Providers.Migration.Services.Implementations;
 

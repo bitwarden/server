@@ -4,6 +4,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.HTTP;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;

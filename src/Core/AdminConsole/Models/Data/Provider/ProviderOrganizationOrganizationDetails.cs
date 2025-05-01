@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 

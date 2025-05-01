@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;

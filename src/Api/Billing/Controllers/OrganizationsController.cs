@@ -10,6 +10,7 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Entities;
 using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.HTTP;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;

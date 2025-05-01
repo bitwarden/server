@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Pricing.Static;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.StaticStore;
 
 namespace Bit.Api.Models.Request.Organizations;
 

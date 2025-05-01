@@ -1,7 +1,7 @@
 ﻿#nullable enable
 
 using System.Text.Json.Serialization;
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;

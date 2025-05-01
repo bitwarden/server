@@ -2,12 +2,11 @@
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Requests;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Premium.Requests;
-using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.HTTP;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Responses;
@@ -23,7 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using PaymentMethod = Stripe.PaymentMethod;
-using StaticStore = Bit.Core.Models.StaticStore;
+using Plan = Bit.Core.Billing.Pricing.Static.Plan;
 
 namespace Bit.Core.Services;
 
@@ -224,7 +223,7 @@ public class StripePaymentService : IPaymentService
 
     public async Task<string> AdjustSubscription(
         Organization organization,
-        StaticStore.Plan updatedPlan,
+        Plan updatedPlan,
         int newlyPurchasedPasswordManagerSeats,
         bool subscribedToSecretsManager,
         int? newlyPurchasedSecretsManagerSeats,
@@ -249,17 +248,17 @@ public class StripePaymentService : IPaymentService
                 }), true);
     }
 
-    public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
+    public Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
 
-    public Task<string> AdjustSmSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
+    public Task<string> AdjustSmSeatsAsync(Organization organization, Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(
             organization,
             new SmSeatSubscriptionUpdate(organization, plan, additionalSeats));
 
     public Task<string> AdjustServiceAccountsAsync(
         Organization organization,
-        StaticStore.Plan plan,
+        Plan plan,
         int additionalServiceAccounts) =>
         FinalizeSubscriptionChangeAsync(
             organization,
@@ -1104,7 +1103,7 @@ public class StripePaymentService : IPaymentService
 
     public async Task<string> AddSecretsManagerToSubscription(
         Organization org,
-        StaticStore.Plan plan,
+        Plan plan,
         int additionalSmSeats,
         int additionalServiceAccount) =>
         await FinalizeSubscriptionChangeAsync(

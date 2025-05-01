@@ -1,9 +1,10 @@
 ﻿using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.Enums;
+using Bit.Core.Billing.Pricing.HTTP;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Services;

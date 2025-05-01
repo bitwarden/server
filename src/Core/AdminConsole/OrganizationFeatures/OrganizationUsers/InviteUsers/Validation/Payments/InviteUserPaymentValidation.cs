@@ -2,7 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Payments;
 using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 

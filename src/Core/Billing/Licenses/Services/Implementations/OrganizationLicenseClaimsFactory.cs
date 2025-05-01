@@ -1,9 +1,9 @@
 ﻿using System.Globalization;
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Licenses.Models;
+using Bit.Core.Billing.Pricing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 

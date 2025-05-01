@@ -3,6 +3,7 @@ using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Payment.Services;
 using Bit.Core.Billing.Premium.Services;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.HTTP;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.Tax.Services;

@@ -1,16 +1,17 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Stripe;
+using Plan = Bit.Core.Billing.Pricing.Static.Plan;
 
 namespace Bit.Core.Models.Business;
 
 public class SmSeatSubscriptionUpdate : SubscriptionUpdate
 {
     private readonly int _previousSeats;
-    private readonly StaticStore.Plan _plan;
+    private readonly Plan _plan;
     private readonly long? _additionalSeats;
     protected override List<string> PlanIds => new() { _plan.SecretsManager.StripeSeatPlanId };
 
-    public SmSeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats)
+    public SmSeatSubscriptionUpdate(Organization organization, Plan plan, long? additionalSeats)
     {
         _plan = plan;
         _additionalSeats = additionalSeats;

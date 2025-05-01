@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Pricing.Static;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Models.Business;
 

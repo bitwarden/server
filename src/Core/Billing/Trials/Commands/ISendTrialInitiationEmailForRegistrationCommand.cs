@@ -1,5 +1,5 @@
 ﻿#nullable enable
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
 
 namespace Bit.Core.Billing.Trials.Commands;
 

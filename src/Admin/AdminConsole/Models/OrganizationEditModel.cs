@@ -3,13 +3,13 @@ using System.Net;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Pricing.Enums;
+using Bit.Core.Billing.Pricing.Static;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Models.StaticStore;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
@@ -27,8 +27,8 @@ public class OrganizationEditModel : OrganizationViewModel
     {
         Provider = provider;
         BillingEmail = provider.Type == ProviderType.Reseller ? provider.BillingEmail : string.Empty;
-        PlanType = Core.Billing.Enums.PlanType.TeamsMonthly;
-        Plan = Core.Billing.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
+        PlanType = Core.Billing.Pricing.Enums.PlanType.TeamsMonthly;
+        Plan = Core.Billing.Pricing.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
         LicenseKey = RandomLicenseKey;
         _plans = plans;
     }

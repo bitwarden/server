@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Models.Business;
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Enums;
 using Bit.Core.Entities;
 
 namespace Bit.Core.Models.Mail;

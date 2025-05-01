@@ -1,4 +1,4 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Pricing.Enums;
 
 namespace Bit.Core.Billing.Models.Sales;
 

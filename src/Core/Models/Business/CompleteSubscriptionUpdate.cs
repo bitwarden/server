@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Exceptions;
 using Stripe;
-using Plan = Bit.Core.Models.StaticStore.Plan;
+using Plan = Bit.Core.Billing.Pricing.Static.Plan;
 
 namespace Bit.Core.Models.Business;
 
