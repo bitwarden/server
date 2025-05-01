@@ -183,6 +183,7 @@ public class Startup
         services.AddBillingOperations();
         services.AddReportingServices();
         services.AddImportServices();
+        services.AddPhishingDomainServices(globalSettings);
 
         services.AddBillingQueries();
 
