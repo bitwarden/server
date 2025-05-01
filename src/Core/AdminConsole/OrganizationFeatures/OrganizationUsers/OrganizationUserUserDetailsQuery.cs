@@ -63,15 +63,8 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
 
         var organizationUsersTwoFactorEnabled = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers)).ToDictionary(u => u.user.Id);
         var organizationUsersClaimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(request.OrganizationId, organizationUsers.Select(o => o.Id));
-        var responses = organizationUsers
-            .Select(o =>
-            {
-                var userTwoFactorEnabled = organizationUsersTwoFactorEnabled[o.Id].twoFactorIsEnabled;
-                var claimedByOrganization = organizationUsersClaimedStatus[o.Id];
-                var result = (o, userTwoFactorEnabled, claimedByOrganization);
+        var responses = organizationUsers.Select(o => (o, organizationUsersTwoFactorEnabled[o.Id].twoFactorIsEnabled, organizationUsersClaimedStatus[o.Id]));
 
-                return result;
-            });
 
         return responses;
     }
@@ -90,14 +83,7 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
         var organizationUsersClaimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(request.OrganizationId, organizationUsers.Select(o => o.Id));
         var responses = organizationUsers
             .Where(o => o.Status.Equals(OrganizationUserStatusType.Confirmed) && o.UsesKeyConnector == false && !String.IsNullOrEmpty(o.ResetPasswordKey))
-            .Select(o =>
-            {
-                var userTwoFactorEnabled = organizationUsersTwoFactorEnabled[o.Id].twoFactorIsEnabled;
-                var claimedByOrganization = organizationUsersClaimedStatus[o.Id];
-                var result = (o, userTwoFactorEnabled, claimedByOrganization);
-
-                return result;
-            });
+            .Select(o => (o, organizationUsersTwoFactorEnabled[o.Id].twoFactorIsEnabled, organizationUsersClaimedStatus[o.Id]));
 
         return responses;
     }

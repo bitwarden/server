@@ -222,7 +222,6 @@ public class OrganizationUsersController : Controller
 
     private ListResponseModel<OrganizationUserUserDetailsResponseModel> GetResultListResponseModel(IEnumerable<(OrganizationUserUserDetails OrgUser,
                 bool TwoFactorEnabled, bool ClaimedByOrganization)> results)
-
     {
         return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(results
             .Select(result => new OrganizationUserUserDetailsResponseModel(result.OrgUser, result.TwoFactorEnabled, result.ClaimedByOrganization))
