@@ -16,13 +16,13 @@ public class TwoFactorIsEnabledQuery(IUserRepository userRepository) : ITwoFacto
             return result;
         }
 
-        var userDetails = await _userRepository.GetManyWithCalculatedPremiumAsync(userIds.ToList());
+        var userDetails = await _userRepository.GetManyWithCalculatedPremiumAsync([.. userIds]);
 
         foreach (var userDetail in userDetails)
         {
             var providers = userDetail.GetTwoFactorProviders();
             // if providers are null then two factor is not enabled
-            if (providers == null)
+            if (providers == null || providers.Count == 0)
             {
                 result.Add((userDetail.Id, false));
                 continue;
@@ -87,6 +87,35 @@ public class TwoFactorIsEnabledQuery(IUserRepository userRepository) : ITwoFacto
 
     public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)
     {
-        return (await TwoFactorIsEnabledAsync([user])).First().twoFactorIsEnabled;
+        // If user is null, then two factor is not enabled
+        var userId = user.GetUserId();
+        if (!userId.HasValue)
+        {
+            return false;
+        }
+
+        // If there are no providers, then two factor is not enabled
+        var providers = user.GetTwoFactorProviders();
+        if (providers == null || providers.Count == 0)
+        {
+            return false;
+        }
+
+        // we should only
+        var userDetail = (await _userRepository.GetManyWithCalculatedPremiumAsync([userId.Value])).FirstOrDefault();
+        if (userDetail == null)
+        {
+            return false;
+        }
+
+        // check if user only has premium two factor options
+        var onlyHasPremiumTwoFactor = providers.Keys.All(TwoFactorProvider.RequiresPremium);
+        // If the user only has premium two factor options then their two factor is dictated by their access to premium
+        if (onlyHasPremiumTwoFactor)
+        {
+            return userDetail.HasPremiumAccess;
+        }
+
+        return true;
     }
 }
