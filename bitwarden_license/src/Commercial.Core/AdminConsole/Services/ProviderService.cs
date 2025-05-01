@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -82,7 +83,7 @@ public class ProviderService : IProviderService
         _pricingClient = pricingClient;
     }
 
-    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo = null)
+    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo, TokenizedPaymentSource tokenizedPaymentSource = null)
     {
         var owner = await _userService.GetUserByIdAsync(ownerUserId);
         if (owner == null)
@@ -111,7 +112,20 @@ public class ProviderService : IProviderService
         {
             throw new BadRequestException("Both address and postal code are required to set up your provider.");
         }
-        var customer = await _providerBillingService.SetupCustomer(provider, taxInfo);
+
+        var requireProviderPaymentMethodDuringSetup =
+            _featureService.IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup);
+
+        if (requireProviderPaymentMethodDuringSetup && tokenizedPaymentSource is not
+            {
+                Type: PaymentMethodType.BankAccount or PaymentMethodType.Card or PaymentMethodType.PayPal,
+                Token: not null and not ""
+            })
+        {
+            throw new BadRequestException("A payment method is required to set up your provider.");
+        }
+
+        var customer = await _providerBillingService.SetupCustomer(provider, taxInfo, tokenizedPaymentSource);
         provider.GatewayCustomerId = customer.Id;
         var subscription = await _providerBillingService.SetupSubscription(provider);
         provider.GatewaySubscriptionId = subscription.Id;
