@@ -257,8 +257,18 @@ public class OrganizationsController : Controller
 
         if (organization.PlanType != PlanType.Free && model.PlanType == PlanType.Free && model.Seats > 2)
         {
-            model.Seats = 2;
-            model.MaxCollections = 2;
+            TempData["Error"] = "Organizations with more than 2 seats cannot be downgraded to the Free plan";
+            return RedirectToAction("Edit", new { id });
+        }
+
+        if (organization.PlanType != PlanType.Free && model.PlanType == PlanType.Free && model.MaxCollections > 2)
+        {
+            TempData["Error"] = $"Organizations with more than 2 collections cannot be downgraded to the Free plan. Your organization currently has {organization.MaxCollections} collections.";
+            return RedirectToAction("Edit", new { id });
+        }
+
+        if (organization.PlanType != PlanType.Free && model.PlanType == PlanType.Free)
+        {
             model.MaxStorageGb = null;
             model.ExpirationDate = null;
             model.Enabled = true;
