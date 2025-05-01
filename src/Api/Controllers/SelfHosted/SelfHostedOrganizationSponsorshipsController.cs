@@ -47,9 +47,9 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
     {
         if (!_featureService.IsEnabled(Bit.Core.FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
         {
-            if (model.SponsoringUserId.HasValue)
+            if (model.IsAdminInitiated.GetValueOrDefault())
             {
-                throw new NotFoundException();
+                throw new BadRequestException();
             }
 
             if (!string.IsNullOrWhiteSpace(model.Notes))
@@ -60,8 +60,12 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
 
         await _offerSponsorshipCommand.CreateSponsorshipAsync(
             await _organizationRepository.GetByIdAsync(sponsoringOrgId),
-            await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, model.SponsoringUserId ?? _currentContext.UserId ?? default),
-            model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName, model.Notes);
+            await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
+            model.PlanSponsorshipType,
+            model.SponsoredEmail,
+            model.FriendlyName,
+            model.IsAdminInitiated.GetValueOrDefault(),
+            model.Notes);
     }
 
     [HttpDelete("{sponsoringOrgId}")]

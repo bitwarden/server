@@ -48,13 +48,6 @@ public interface IOrganizationService
     Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? revokingUserId);
     Task CreatePendingOrganization(Organization organization, string ownerEmail, ClaimsPrincipal user, IUserService userService, bool salesAssistedTrialStarted);
-    /// <summary>
-    /// Update an Organization entry by setting the public/private keys, set it as 'Enabled' and move the Status from 'Pending' to 'Created'.
-    /// </summary>
-    /// <remarks>
-    /// This method must target a disabled Organization that has null keys and status as 'Pending'.
-    /// </remarks>
-    Task InitPendingOrganization(User user, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName, string emailToken);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
 
     void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);

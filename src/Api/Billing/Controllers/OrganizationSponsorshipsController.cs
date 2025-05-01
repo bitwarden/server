@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Models.Request.Organizations;
+using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
@@ -8,6 +9,7 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
+using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -86,9 +88,9 @@ public class OrganizationSponsorshipsController : Controller
 
         if (!_featureService.IsEnabled(Bit.Core.FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
         {
-            if (model.SponsoringUserId.HasValue)
+            if (model.IsAdminInitiated.GetValueOrDefault())
             {
-                throw new NotFoundException();
+                throw new BadRequestException();
             }
 
             if (!string.IsNullOrWhiteSpace(model.Notes))
@@ -97,15 +99,18 @@ public class OrganizationSponsorshipsController : Controller
             }
         }
 
-        var targetUser = model.SponsoringUserId ?? _currentContext.UserId!.Value;
         var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
             sponsoringOrg,
-            await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, targetUser),
+            await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
             model.PlanSponsorshipType,
             model.SponsoredEmail,
             model.FriendlyName,
+            model.IsAdminInitiated.GetValueOrDefault(),
             model.Notes);
-        await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
+        if (sponsorship.OfferedToEmail != null)
+        {
+            await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
+        }
     }
 
     [Authorize("Application")]
@@ -244,6 +249,28 @@ public class OrganizationSponsorshipsController : Controller
 
         var lastSyncDate = await _organizationSponsorshipRepository.GetLatestSyncDateBySponsoringOrganizationIdAsync(sponsoringOrg.Id);
         return new OrganizationSponsorshipSyncStatusResponseModel(lastSyncDate);
+    }
+
+    [Authorize("Application")]
+    [HttpGet("{sponsoringOrgId}/sponsored")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<ListResponseModel<OrganizationSponsorshipInvitesResponseModel>> GetSponsoredOrganizations(Guid sponsoringOrgId)
+    {
+        var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
+        if (sponsoringOrg == null)
+        {
+            throw new NotFoundException();
+        }
+        var organization = _currentContext.Organizations.First(x => x.Id == sponsoringOrg.Id);
+        if (!await _currentContext.OrganizationOwner(sponsoringOrg.Id) && !await _currentContext.OrganizationAdmin(sponsoringOrg.Id) && !organization.Permissions.ManageUsers)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
+        return new ListResponseModel<OrganizationSponsorshipInvitesResponseModel>(sponsorships.Select(s =>
+            new OrganizationSponsorshipInvitesResponseModel(new OrganizationSponsorshipData(s))));
+
     }
 
     private Task<User> CurrentUser => _userService.GetUserByIdAsync(_currentContext.UserId.Value);
