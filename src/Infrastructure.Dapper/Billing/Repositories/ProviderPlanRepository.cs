@@ -1,5 +1,7 @@
 ﻿using System.Data;
 using Bit.Core.Billing.Entities;
+using Bit.Core.Billing.Providers.Entities;
+using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;

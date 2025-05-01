@@ -1,8 +1,10 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Providers;
 using Bit.Commercial.Core.AdminConsole.Services;
 using Bit.Commercial.Core.Billing;
+using Bit.Commercial.Core.Billing.Providers.Services;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Microsoft.Extensions.DependencyInjection;
 
