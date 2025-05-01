@@ -1,4 +1,12 @@
-IF OBJECT_ID('[dbo].[SsoUser]') IS NOT NULL
+IF EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'dbo'
+      AND TABLE_NAME = 'SsoUser'
+      AND COLUMN_NAME = 'ExternalId'
+      AND DATA_TYPE = 'nvarchar'
+      AND CHARACTER_MAXIMUM_LENGTH < 300
+)
 BEGIN
     -- Update table ExternalId column size
     ALTER TABLE [dbo].[SsoUser]
