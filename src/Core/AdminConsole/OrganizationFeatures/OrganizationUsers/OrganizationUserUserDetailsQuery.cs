@@ -68,9 +68,9 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
             {
                 var userTwoFactorEnabled = organizationUsersTwoFactorEnabled[o.Id].twoFactorIsEnabled;
                 var claimedByOrganization = organizationUsersClaimedStatus[o.Id];
-                var orgUser = (o, userTwoFactorEnabled, claimedByOrganization);
+                var result = (o, userTwoFactorEnabled, claimedByOrganization);
 
-                return orgUser;
+                return result;
             });
 
         return responses;
@@ -78,7 +78,7 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
 
     /// <summary>
     /// Get the organization users user details, two factor enabled status, and
-    /// claimed status for confirmed users.
+    /// claimed status for confirmed users that are enrolled in account recovery
     /// </summary>
     /// <param name="request">Request details for the query</param>
     /// <returns>List of OrganizationUserUserDetails</returns>
