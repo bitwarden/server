@@ -9,7 +9,6 @@ using Bit.Core.Billing.Providers.Migration.Models;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
-using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Repositories;

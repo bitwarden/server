@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Api.Requests;
-using Bit.Core.Billing.Models.Api.Requests.Organizations;
 using Bit.Core.Billing.Models.StaticStore.Plans;
+using Bit.Core.Billing.Organizations.Requests;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;

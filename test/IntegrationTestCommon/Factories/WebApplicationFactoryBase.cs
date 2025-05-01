@@ -1,5 +1,6 @@
 ﻿using AspNetCoreRateLimit;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Platform.Push;
 using Bit.Core.Platform.Push.Internal;

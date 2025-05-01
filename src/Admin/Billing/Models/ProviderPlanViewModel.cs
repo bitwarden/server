@@ -1,5 +1,4 @@
-﻿using Bit.Core.Billing.Entities;
-using Bit.Core.Billing.Providers.Entities;
+﻿using Bit.Core.Billing.Providers.Entities;
 
 namespace Bit.Admin.Billing.Models;
 

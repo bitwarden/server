@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Billing.Entities;
+namespace Bit.Core.Billing.Organizations.Entities;
 
 #nullable enable
 

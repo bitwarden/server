@@ -5,6 +5,8 @@ using Bit.Api.Billing.Models.Responses;
 using Bit.Core;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;

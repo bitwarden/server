@@ -4,7 +4,9 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -14,12 +16,11 @@ using Bit.Core.Settings;
 using Braintree;
 using Microsoft.Extensions.Logging;
 using Stripe;
-
 using static Bit.Core.Billing.Utilities;
 using Customer = Stripe.Customer;
 using Subscription = Stripe.Subscription;
 
-namespace Bit.Core.Billing.Services.Implementations;
+namespace Bit.Core.Billing.Organizations.Services;
 
 #nullable enable
 

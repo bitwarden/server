@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Billing.Models;
+﻿namespace Bit.Core.Billing.Organizations.Models;
 
 public record OrganizationMetadata(
     bool IsEligibleForSelfHost,
