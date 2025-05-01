@@ -63,6 +63,7 @@ public class OrganizationUsersController : Controller
     private readonly IPricingClient _pricingClient;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
+    private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -89,7 +90,8 @@ public class OrganizationUsersController : Controller
         IFeatureService featureService,
         IPricingClient pricingClient,
         IConfirmOrganizationUserCommand confirmOrganizationUserCommand,
-        IRestoreOrganizationUserCommand restoreOrganizationUserCommand)
+        IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
+        IInitPendingOrganizationCommand initPendingOrganizationCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -116,6 +118,7 @@ public class OrganizationUsersController : Controller
         _pricingClient = pricingClient;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
+        _initPendingOrganizationCommand = initPendingOrganizationCommand;
     }
 
     [HttpGet("{id}")]
@@ -359,7 +362,7 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        await _organizationService.InitPendingOrganization(user, orgId, organizationUserId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName, model.Token);
+        await _initPendingOrganizationCommand.InitPendingOrganizationAsync(user, orgId, organizationUserId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName, model.Token);
         await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
         await _confirmOrganizationUserCommand.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id);
     }
