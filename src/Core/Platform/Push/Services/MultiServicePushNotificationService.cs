@@ -43,27 +43,27 @@ public class MultiServicePushNotificationService : IPushNotificationService
         }
 
 
-        #if DEBUG
+#if DEBUG
         var tasks = new List<Task>();
-        #endif
+#endif
 
         foreach (var service in _services)
         {
             Logger.LogDebug("Pushing notification to service {ServiceName}", service.GetType().Name);
-            #if DEBUG
+#if DEBUG
             var task =
-            #endif
+#endif
             pushFunc(service);
-            #if DEBUG
+#if DEBUG
             tasks.Add(task);
-            #endif
+#endif
         }
 
-        #if DEBUG
+#if DEBUG
         return Task.WhenAll(tasks);
-        #else
+#else
         return Task.CompletedTask;
-        #endif
+#endif
     }
 
     public Task PushCipherAsync(Cipher cipher, PushType pushType, IEnumerable<Guid>? collectionIds)

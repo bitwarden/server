@@ -106,7 +106,7 @@ public class NotificationHubPushNotificationService : IPushEngine, IPushRelayer
     }
 
     public async Task PushAsync<T>(PushNotification<T> pushNotification)
-        where T : class 
+        where T : class
     {
         var initialTag = pushNotification.Target switch
         {

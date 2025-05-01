@@ -802,7 +802,7 @@ public class AzureQueuePushNotificationServiceTests
                pushNotificationData.Type == pushType &&
                expectedPayloadEquatable.Equals(pushNotificationData.Payload) &&
                pushNotificationData.ContextId == contextId;
-}
+    }
 
     private class NotificationPushNotificationEquals(
         Notification notification,

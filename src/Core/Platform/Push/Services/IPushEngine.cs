@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using Bit.Core.Enums;
 using Bit.Core.Vault.Entities;
 

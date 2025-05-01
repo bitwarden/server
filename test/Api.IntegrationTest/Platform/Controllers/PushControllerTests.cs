@@ -289,7 +289,7 @@ public class PushControllerTests
         {
             Type = PushType.NotificationStatus,
             InstallationId = Guid.NewGuid().ToString(),
-            Payload = new {}
+            Payload = new { }
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -311,7 +311,7 @@ public class PushControllerTests
         {
             Type = PushType.NotificationStatus,
             InstallationId = installation.Id.ToString(),
-            Payload = new {},
+            Payload = new { },
             DeviceId = deviceId.ToString(),
             ClientType = ClientType.Web,
         });
@@ -341,7 +341,7 @@ public class PushControllerTests
         {
             Type = PushType.NotificationStatus,
             InstallationId = installation.Id.ToString(),
-            Payload = new {},
+            Payload = new { },
             DeviceId = "non-guid",
             ClientType = ClientType.Web,
         });
@@ -372,7 +372,7 @@ public class PushControllerTests
         {
             Type = PushType.NotificationStatus,
             OrganizationId = "non-guid-org",
-            Payload = new {},
+            Payload = new { },
             DeviceId = deviceId.ToString(),
             ClientType = ClientType.Web,
         });
@@ -402,7 +402,7 @@ public class PushControllerTests
         var response = await client.PostAsJsonAsync("push/send", new PushSendRequestModel<object>
         {
             Type = PushType.AuthRequest,
-            Payload = new {},
+            Payload = new { },
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

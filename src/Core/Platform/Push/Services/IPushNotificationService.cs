@@ -16,7 +16,7 @@ public interface IPushNotificationService
     TimeProvider TimeProvider { get; }
     ILogger Logger { get; }
 
-#region Legacy method, to be removed soon.
+    #region Legacy method, to be removed soon.
     Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
         => PushCipherAsync(cipher, PushType.SyncCipherCreate, collectionIds);
 
@@ -402,7 +402,7 @@ public interface IPushNotificationService
             },
             ExcludeCurrentContext = false,
         });
-#endregion
+    #endregion
 
     Task PushCipherAsync(Cipher cipher, PushType pushType, IEnumerable<Guid>? collectionIds);
 
