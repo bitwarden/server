@@ -164,7 +164,7 @@ public class OrganizationUsersController : Controller
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
             return await GetvNextAsync(orgId, includeGroups, includeCollections);
         }
@@ -207,34 +207,28 @@ public class OrganizationUsersController : Controller
             IncludeCollections = includeCollections,
         };
 
-        var readAllAuthorized = (await _authorizationService.AuthorizeAsync(
-            User, new OrganizationScope(orgId), OrganizationUserUserDetailsOperations.ReadAll)).Succeeded;
-
-        if (readAllAuthorized)
+        if ((await _authorizationService.AuthorizeAsync(User, new ManageUsersRequirement())).Succeeded)
         {
-            var results = await _organizationUserUserDetailsQuery.Get(request);
-            var responseList = results
-            .Select(result => new OrganizationUserUserDetailsResponseModel(result.OrgUser, result.TwoFactorEnabled, result.ClaimedByOrganization))
-            .ToList();
-
-            return (new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responseList));
+            return GetResultListResponseModel(await _organizationUserUserDetailsQuery.Get(request));
         }
 
-        var readWithAccountRecovery = (await _authorizationService.AuthorizeAsync(User, new ManageAccountRecoveryRequirement())).Succeeded;
-
-        if (readWithAccountRecovery)
+        if ((await _authorizationService.AuthorizeAsync(User, new ManageAccountRecoveryRequirement())).Succeeded)
         {
-            var accountRecoveryResults = await _organizationUserUserDetailsQuery.GetAccountRecoveryEnrolledUsers(request);
-            var accountRecoveryResponseList = accountRecoveryResults
-            .Select(result => new OrganizationUserUserDetailsResponseModel(result.OrgUser, result.TwoFactorEnabled, result.ClaimedByOrganization))
-            .ToList();
-
-            return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(accountRecoveryResponseList);
+            return GetResultListResponseModel(await _organizationUserUserDetailsQuery.GetAccountRecoveryEnrolledUsers(request));
         }
-
 
         throw new NotFoundException();
     }
+
+    private ListResponseModel<OrganizationUserUserDetailsResponseModel> GetResultListResponseModel(IEnumerable<(OrganizationUserUserDetails OrgUser,
+                bool TwoFactorEnabled, bool ClaimedByOrganization)> results)
+
+    {
+        return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(results
+            .Select(result => new OrganizationUserUserDetailsResponseModel(result.OrgUser, result.TwoFactorEnabled, result.ClaimedByOrganization))
+            .ToList());
+    }
+
 
     [HttpGet("{id}/groups")]
     public async Task<IEnumerable<string>> GetGroups(string orgId, string id)
