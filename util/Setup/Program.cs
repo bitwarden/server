@@ -2,6 +2,7 @@
 using System.Net.Http.Json;
 using Bit.Migrator;
 using Bit.Setup.Enums;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Setup;
 
@@ -285,7 +286,14 @@ public class Program
                 url = $"{installationUrl}/installations/";
             }
 
-            var response = new HttpClient().GetAsync(url + _context.Install.InstallationId).GetAwaiter().GetResult();
+            // We need to get an HttpClient that has been configured with custom trust certificates.
+            var httpClient = new ServiceCollection()
+                .AddX509ChainCustomization()
+                .BuildServiceProvider()
+                .GetRequiredService<IHttpClientFactory>()
+                .CreateClient();
+
+            var response = httpClient.GetAsync(url + _context.Install.InstallationId).GetAwaiter().GetResult();
 
             if (!response.IsSuccessStatusCode)
             {

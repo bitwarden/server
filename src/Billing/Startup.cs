@@ -10,6 +10,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Quartz;
 using Stripe;
 
@@ -101,6 +102,15 @@ public class Startup
         services.AddHttpClient("OnyxApi", client =>
         {
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", billingSettings.Onyx.ApiKey);
+        });
+        services.AddHttpClient("Freshsales", (sp, client) =>
+        {
+            var billingSettings = sp.GetRequiredService<IOptions<BillingSettings>>().Value;
+            client.BaseAddress = new Uri("https://bitwarden.freshsales.io/api/");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                "Token",
+                $"token={billingSettings.FreshsalesApiKey}"
+            );
         });
 
         services.AddScoped<IStripeFacade, StripeFacade>();
