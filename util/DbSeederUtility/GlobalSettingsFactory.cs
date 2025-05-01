@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Settings;
 using Microsoft.Extensions.Configuration;
 
-namespace Bit.Seeder.Settings;
+namespace Bit.DbSeederUtility;
 
 public static class GlobalSettingsFactory
 {
@@ -61,27 +61,5 @@ public static class GlobalSettingsFactory
         Console.WriteLine($"Raw check - postgreSql setting exists: {postgreSqlValue != null}");
 
         return settings;
-    }
-}
-
-// Non-static version that can accept command-line arguments
-public class GlobalSettingsFactoryWithArgs
-{
-    public GlobalSettings GlobalSettings { get; }
-
-    public GlobalSettingsFactoryWithArgs(string[] args)
-    {
-        GlobalSettings = new GlobalSettings();
-
-        var config = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true, reloadOnChange: true)
-            .AddUserSecrets("bitwarden-Api")
-            .AddCommandLine(args)
-            .AddEnvironmentVariables()
-            .Build();
-
-        config.GetSection("globalSettings").Bind(GlobalSettings);
     }
 }

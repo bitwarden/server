@@ -75,10 +75,6 @@ public class OrganizationUsersControllerTest : IClassFixture<ApiApplicationFacto
 
         stopwatch.Stop();
         _testOutputHelper.WriteLine($"Request duration: {stopwatch.ElapsedMilliseconds} ms");
-
-        // var result = await response.Content.ReadFromJsonAsync<ListResponseModel<OrganizationUserUserDetailsResponseModel>>();
-        // Assert.NotNull(result?.Data);
-        // Assert.Equal(600001, result.Data.Count());
     }
 
 }
