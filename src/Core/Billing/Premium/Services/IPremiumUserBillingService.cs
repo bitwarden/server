@@ -1,9 +1,9 @@
 ﻿using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Entities;
 
-namespace Bit.Core.Billing.Services;
+namespace Bit.Core.Billing.Premium.Services;
 
 public interface IPremiumUserBillingService
 {

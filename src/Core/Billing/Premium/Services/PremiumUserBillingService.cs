@@ -3,6 +3,8 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Payment.Services;
+using Bit.Core.Billing.Premium.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations.AutomaticTax;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -17,7 +19,7 @@ using Stripe;
 using Customer = Stripe.Customer;
 using Subscription = Stripe.Subscription;
 
-namespace Bit.Core.Billing.Services.Implementations;
+namespace Bit.Core.Billing.Premium.Services;
 
 using static Utilities;
 

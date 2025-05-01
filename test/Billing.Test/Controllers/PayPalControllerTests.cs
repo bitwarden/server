@@ -3,6 +3,7 @@ using Bit.Billing.Controllers;
 using Bit.Billing.Test.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Premium.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;

@@ -1,9 +1,11 @@
-﻿using Bit.Core.Billing.Payment.Models;
+﻿using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 
-namespace Bit.Core.Billing.Models.Sales;
+namespace Bit.Core.Billing.Premium.Models;
 
 #nullable enable
 
