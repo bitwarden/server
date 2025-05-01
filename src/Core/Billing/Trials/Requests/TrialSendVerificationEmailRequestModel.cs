@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Billing.Enums;
 
-namespace Bit.Core.Billing.Models.Api.Requests.Accounts;
+namespace Bit.Core.Billing.Trials.Requests;
 
 public class TrialSendVerificationEmailRequestModel : RegisterSendVerificationEmailRequestModel
 {

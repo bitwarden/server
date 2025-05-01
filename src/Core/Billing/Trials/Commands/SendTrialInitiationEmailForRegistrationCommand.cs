@@ -8,7 +8,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Billing.TrialInitiation.Registration.Implementations;
+namespace Bit.Core.Billing.Trials.Commands;
 
 public class SendTrialInitiationEmailForRegistrationCommand(
     IUserRepository userRepository,

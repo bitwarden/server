@@ -1,5 +1,5 @@
-﻿using Bit.Core.Billing.Models.Api.Requests.Accounts;
-using Bit.Core.Billing.TrialInitiation.Registration;
+﻿using Bit.Core.Billing.Trials.Commands;
+using Bit.Core.Billing.Trials.Requests;
 using Bit.Core.Context;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;

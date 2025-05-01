@@ -1,8 +1,7 @@
-﻿using Bit.Core.Billing.TrialInitiation.Registration;
-using Bit.Core.Billing.TrialInitiation.Registration.Implementations;
+﻿using Bit.Core.Billing.Trials.Commands;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Core.Billing.TrialInitiation;
+namespace Bit.Core.Billing.Trials;
 
 public static class TrialInitiationCollectionExtensions
 {

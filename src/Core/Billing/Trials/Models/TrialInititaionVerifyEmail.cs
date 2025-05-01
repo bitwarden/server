@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
 
-namespace Bit.Core.Billing.Models.Mail;
+namespace Bit.Core.Billing.Trials.Models;
 
 public class TrialInitiationVerifyEmail : RegisterVerifyEmail
 {

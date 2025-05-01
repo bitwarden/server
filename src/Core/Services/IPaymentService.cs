@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.Models.Api.Responses;
 using Bit.Core.Billing.Organizations.Requests;
 using Bit.Core.Billing.Payment.Models;

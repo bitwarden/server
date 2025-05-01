@@ -10,7 +10,7 @@ using Bit.Core.AdminConsole.Models.Mail;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models.Mail;
+using Bit.Core.Billing.Trials.Models;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;

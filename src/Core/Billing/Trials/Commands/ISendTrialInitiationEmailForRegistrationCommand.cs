@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using Bit.Core.Billing.Enums;
 
-namespace Bit.Core.Billing.TrialInitiation.Registration;
+namespace Bit.Core.Billing.Trials.Commands;
 
 public interface ISendTrialInitiationEmailForRegistrationCommand
 {
