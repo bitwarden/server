@@ -23,7 +23,19 @@ public class OrganizationUserReadOccupiedSeatCountByOrganizationIdQuery : IQuery
         var sponsorshipsQuery = from os in dbContext.OrganizationSponsorships
                                 where os.SponsoringOrganizationId == _organizationId &&
                                       os.IsAdminInitiated &&
-                                      !os.ToDelete
+                                      (
+                                          // Not marked for deletion - always count
+                                          (!os.ToDelete) ||
+                                          // Marked for deletion but has a valid until date in the future (RevokeWhenExpired status)
+                                          (os.ToDelete && os.ValidUntil.HasValue && os.ValidUntil.Value > DateTime.UtcNow)
+                                      ) &&
+                                      (
+                                          // SENT status: When SponsoredOrganizationId is null
+                                          os.SponsoredOrganizationId == null ||
+                                          // ACCEPTED status: When SponsoredOrganizationId is not null and ValidUntil is null or in the future
+                                          (os.SponsoredOrganizationId != null &&
+                                           (!os.ValidUntil.HasValue || os.ValidUntil.Value > DateTime.UtcNow))
+                                      )
                                 select new OrganizationUser
                                 {
                                     Id = os.Id,
