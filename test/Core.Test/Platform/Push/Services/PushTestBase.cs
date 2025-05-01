@@ -497,7 +497,7 @@ public abstract class PushTestBase
             })
             .Respond(HttpStatusCode.OK);
 
-        await test(new EngineWrapper(CreateService(), FakeTimeProvider, Guid.Empty));
+        await test(new EngineWrapper(CreateService(), FakeTimeProvider, GlobalSettings.Installation.Id));
 
         Assert.NotNull(actualNode);
 

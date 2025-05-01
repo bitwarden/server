@@ -223,10 +223,6 @@ public interface IPushNotificationService
 
     Task PushNotificationAsync(Notification notification)
     {
-        Guid? installationId = notification.Global && InstallationId != Guid.Empty
-            ? InstallationId
-            : null;
-
         var message = new NotificationPushNotification
         {
             Id = notification.Id,
@@ -235,7 +231,7 @@ public interface IPushNotificationService
             ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
-            InstallationId = installationId,
+            InstallationId = notification.Global ? InstallationId : null,
             TaskId = notification.TaskId,
             Title = notification.Title,
             Body = notification.Body,
@@ -243,65 +239,44 @@ public interface IPushNotificationService
             RevisionDate = notification.RevisionDate,
         };
 
+        NotificationTarget target;
+        Guid targetId;
+
         if (notification.Global)
         {
-            if (installationId.HasValue)
-            {
-                return PushAsync(new PushNotification<NotificationPushNotification>
-                {
-                    Type = PushType.Notification,
-                    Target = NotificationTarget.Installation,
-                    TargetId = installationId.Value,
-                    ExcludeCurrentContext = true,
-                    Payload = message,
-                    ClientType = notification.ClientType,
-                });
-            }
-            else
-            {
-                Logger.LogWarning(
-                    "Invalid global notification id {NotificationId} push notification. No installation id provided.",
-                    notification.Id);
-            }
+            // TODO: Think about this a bit more
+            target = NotificationTarget.Installation;
+            targetId = InstallationId;
         }
         else if (notification.UserId.HasValue)
         {
-            return PushAsync(new PushNotification<NotificationPushNotification>
-            {
-                Type = PushType.Notification,
-                Target = NotificationTarget.User,
-                TargetId = notification.UserId.Value,
-                Payload = message,
-                ExcludeCurrentContext = true,
-                ClientType = notification.ClientType,
-            });
+            target = NotificationTarget.User;
+            targetId = notification.UserId.Value;
         }
         else if (notification.OrganizationId.HasValue)
         {
-            return PushAsync(new PushNotification<NotificationPushNotification>
-            {
-                Type = PushType.Notification,
-                Target = NotificationTarget.Organization,
-                TargetId = notification.OrganizationId.Value,
-                Payload = message,
-                ExcludeCurrentContext = true,
-                ClientType = notification.ClientType,
-            });
+            target = NotificationTarget.Organization;
+            targetId = notification.OrganizationId.Value;
         }
         else
         {
             Logger.LogWarning("Invalid notification id {NotificationId} push notification", notification.Id);
+            return Task.CompletedTask;
         }
 
-        return Task.CompletedTask;
+        return PushAsync(new PushNotification<NotificationPushNotification>
+        {
+            Type = PushType.Notification,
+            Target = target,
+            TargetId = targetId,
+            Payload = message,
+            ExcludeCurrentContext = true,
+            ClientType = notification.ClientType,
+        });
     }
 
     Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
     {
-        Guid? installationId = notification.Global && InstallationId != Guid.Empty
-            ? InstallationId
-            : null;
-
         var message = new NotificationPushNotification
         {
             Id = notification.Id,
@@ -310,7 +285,7 @@ public interface IPushNotificationService
             ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
-            InstallationId = installationId,
+            InstallationId = notification.Global ? InstallationId : null,
             TaskId = notification.TaskId,
             Title = notification.Title,
             Body = notification.Body,
@@ -320,57 +295,40 @@ public interface IPushNotificationService
             DeletedDate = notificationStatus.DeletedDate,
         };
 
+        NotificationTarget target;
+        Guid targetId;
+
         if (notification.Global)
         {
-            if (installationId.HasValue)
-            {
-                return PushAsync(new PushNotification<NotificationPushNotification>
-                {
-                    Type = PushType.NotificationStatus,
-                    Target = NotificationTarget.Installation,
-                    TargetId = installationId.Value,
-                    ExcludeCurrentContext = true,
-                    Payload = message,
-                    ClientType = notification.ClientType,
-                });
-            }
-            else
-            {
-                Logger.LogWarning(
-                    "Invalid global notification status id {NotificationId} push notification. No installation id provided.",
-                    notification.Id);
-            }
+            // TODO: Think about this a bit more
+            target = NotificationTarget.Installation;
+            targetId = InstallationId;
         }
         else if (notification.UserId.HasValue)
         {
-            return PushAsync(new PushNotification<NotificationPushNotification>
-            {
-                Type = PushType.NotificationStatus,
-                Target = NotificationTarget.User,
-                TargetId = notification.UserId.Value,
-                Payload = message,
-                ExcludeCurrentContext = true,
-                ClientType = notification.ClientType,
-            });
+            target = NotificationTarget.User;
+            targetId = notification.UserId.Value;
         }
         else if (notification.OrganizationId.HasValue)
         {
-            return PushAsync(new PushNotification<NotificationPushNotification>
-            {
-                Type = PushType.NotificationStatus,
-                Target = NotificationTarget.Organization,
-                TargetId = notification.OrganizationId.Value,
-                Payload = message,
-                ExcludeCurrentContext = true,
-                ClientType = notification.ClientType,
-            });
+            target = NotificationTarget.Organization;
+            targetId = notification.OrganizationId.Value;
         }
         else
         {
             Logger.LogWarning("Invalid notification status id {NotificationId} push notification", notification.Id);
+            return Task.CompletedTask;
         }
 
-        return Task.CompletedTask;
+        return PushAsync(new PushNotification<NotificationPushNotification>
+        {
+            Type = PushType.NotificationStatus,
+            Target = target,
+            TargetId = targetId,
+            Payload = message,
+            ExcludeCurrentContext = true,
+            ClientType = notification.ClientType,
+        });
     }
 
     Task PushAuthRequestAsync(AuthRequest authRequest)

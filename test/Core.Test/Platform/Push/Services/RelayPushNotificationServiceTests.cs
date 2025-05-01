@@ -4,7 +4,6 @@ using System.Text.Json.Nodes;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.Platform.Push;
 using Bit.Core.Platform.Push.Internal;
@@ -15,7 +14,6 @@ using Bit.Core.Vault.Entities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
-using Xunit;
 
 namespace Bit.Core.Test.Platform.Push.Services;
 
