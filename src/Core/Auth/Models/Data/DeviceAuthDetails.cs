@@ -29,6 +29,8 @@ public class DeviceAuthDetails : Device
         Identifier = device.Identifier;
         CreationDate = device.CreationDate;
         IsTrusted = device.IsTrusted();
+        EncryptedPublicKey = device.EncryptedPublicKey;
+        EncryptedUserKey = device.EncryptedUserKey;
         AuthRequestId = authRequestId;
         AuthRequestCreatedAt = authRequestCreationDate;
     }
@@ -74,6 +76,8 @@ public class DeviceAuthDetails : Device
             EncryptedPrivateKey = encryptedPrivateKey,
             Active = active
         }.IsTrusted();
+        EncryptedPublicKey = encryptedPublicKey;
+        EncryptedUserKey = encryptedUserKey;
         AuthRequestId = authRequestId != Guid.Empty ? authRequestId : null;
         AuthRequestCreatedAt =
             authRequestCreationDate != DateTime.MinValue ? authRequestCreationDate : null;

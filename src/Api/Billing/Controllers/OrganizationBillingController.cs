@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
+using Bit.Core;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
@@ -18,7 +19,9 @@ namespace Bit.Api.Billing.Controllers;
 [Route("organizations/{organizationId:guid}/billing")]
 [Authorize("Application")]
 public class OrganizationBillingController(
+    IBusinessUnitConverter businessUnitConverter,
     ICurrentContext currentContext,
+    IFeatureService featureService,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
@@ -295,5 +298,41 @@ public class OrganizationBillingController(
         }
 
         return TypedResults.Ok();
+    }
+
+    [HttpPost("setup-business-unit")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> SetupBusinessUnitAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] SetupBusinessUnitRequestBody requestBody)
+    {
+        var enableOrganizationBusinessUnitConversion =
+            featureService.IsEnabled(FeatureFlagKeys.PM18770_EnableOrganizationBusinessUnitConversion);
+
+        if (!enableOrganizationBusinessUnitConversion)
+        {
+            return Error.NotFound();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        if (!await currentContext.OrganizationUser(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var providerId = await businessUnitConverter.FinalizeConversion(
+            organization,
+            requestBody.UserId,
+            requestBody.Token,
+            requestBody.ProviderKey,
+            requestBody.OrganizationKey);
+
+        return TypedResults.Ok(providerId);
     }
 }

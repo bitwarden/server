@@ -814,48 +814,6 @@ public class OrganizationServiceTests
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
     }
 
-    [Theory, BitAutoData]
-    public async Task UpdateOrganizationKeysAsync_WithoutManageResetPassword_Throws(Guid orgId, string publicKey,
-        string privateKey, SutProvider<OrganizationService> sutProvider)
-    {
-        var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.ManageResetPassword(orgId).Returns(false);
-
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => sutProvider.Sut.UpdateOrganizationKeysAsync(orgId, publicKey, privateKey));
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateOrganizationKeysAsync_KeysAlreadySet_Throws(Organization org, string publicKey,
-        string privateKey, SutProvider<OrganizationService> sutProvider)
-    {
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
-        currentContext.ManageResetPassword(org.Id).Returns(true);
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(org.Id).Returns(org);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateOrganizationKeysAsync(org.Id, publicKey, privateKey));
-        Assert.Contains("Organization Keys already exist", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateOrganizationKeysAsync_KeysAlreadySet_Success(Organization org, string publicKey,
-        string privateKey, SutProvider<OrganizationService> sutProvider)
-    {
-        org.PublicKey = null;
-        org.PrivateKey = null;
-
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
-        currentContext.ManageResetPassword(org.Id).Returns(true);
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(org.Id).Returns(org);
-
-        await sutProvider.Sut.UpdateOrganizationKeysAsync(org.Id, publicKey, privateKey);
-    }
-
     [Theory]
     [PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually)]
     [BitAutoData("Cannot set max seat autoscaling below seat count", 1, 0, 2, 2)]

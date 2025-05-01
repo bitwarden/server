@@ -60,6 +60,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationDomainCommandsQueries();
         services.AddOrganizationSignUpCommands();
         services.AddOrganizationDeleteCommands();
+        services.AddOrganizationUpdateCommands();
         services.AddOrganizationEnableCommands();
         services.AddOrganizationDisableCommands();
         services.AddOrganizationAuthCommands();
@@ -75,6 +76,11 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<IOrganizationDeleteCommand, OrganizationDeleteCommand>();
         services.AddScoped<IOrganizationInitiateDeleteCommand, OrganizationInitiateDeleteCommand>();
+    }
+
+    private static void AddOrganizationUpdateCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IOrganizationUpdateKeysCommand, OrganizationUpdateKeysCommand>();
     }
 
     private static void AddOrganizationEnableCommands(this IServiceCollection services) =>
@@ -121,7 +127,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IRevokeNonCompliantOrganizationUserCommand, RevokeNonCompliantOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserCommand, UpdateOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
-        services.AddScoped<IDeleteManagedOrganizationUserAccountCommand, DeleteManagedOrganizationUserAccountCommand>();
+        services.AddScoped<IDeleteClaimedOrganizationUserAccountCommand, DeleteClaimedOrganizationUserAccountCommand>();
         services.AddScoped<IConfirmOrganizationUserCommand, ConfirmOrganizationUserCommand>();
     }
 
@@ -172,7 +178,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<ICountNewSmSeatsRequiredQuery, CountNewSmSeatsRequiredQuery>();
         services.AddScoped<IAcceptOrgUserCommand, AcceptOrgUserCommand>();
         services.AddScoped<IOrganizationUserUserDetailsQuery, OrganizationUserUserDetailsQuery>();
-        services.AddScoped<IGetOrganizationUsersManagementStatusQuery, GetOrganizationUsersManagementStatusQuery>();
+        services.AddScoped<IGetOrganizationUsersClaimedStatusQuery, GetOrganizationUsersClaimedStatusQuery>();
 
         services.AddScoped<IRestoreOrganizationUserCommand, RestoreOrganizationUserCommand>();
 
