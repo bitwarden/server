@@ -84,9 +84,9 @@ public class PushController : Controller
         NotificationTarget target;
         Guid targetId;
 
-        if (!string.IsNullOrWhiteSpace(model.InstallationId))
+        if (model.InstallationId.HasValue)
         {
-            if (_currentContext.InstallationId!.Value.ToString() != model.InstallationId!)
+            if (_currentContext.InstallationId!.Value != model.InstallationId.Value)
             {
                 throw new BadRequestException("InstallationId does not match current context.");
             }
@@ -94,17 +94,17 @@ public class PushController : Controller
             target = NotificationTarget.Installation;
             targetId = _currentContext.InstallationId.Value;
         }
-        else if (!string.IsNullOrWhiteSpace(model.UserId))
+        else if (model.UserId.HasValue)
         {
             target = NotificationTarget.User;
             // TODO: Make it a guid on the model?
-            targetId = Guid.Parse(model.UserId);
+            targetId = model.UserId.Value;
         }
-        else if (!string.IsNullOrWhiteSpace(model.OrganizationId))
+        else if (model.OrganizationId.HasValue)
         {
             target = NotificationTarget.Organization;
             // TODO: Make it a guid on the model?
-            targetId = Guid.Parse(model.OrganizationId);
+            targetId = model.OrganizationId.Value;
         }
         else
         {
@@ -118,7 +118,7 @@ public class PushController : Controller
             TargetId = targetId,
             Payload = model.Payload,
             Identifier = model.Identifier,
-            DeviceId = Guid.Parse(model.DeviceId),
+            DeviceId = model.DeviceId,
             ClientType = model.ClientType,
         };
 

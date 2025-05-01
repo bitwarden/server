@@ -21,7 +21,7 @@ public class PushControllerTests
 {
     private static readonly Guid _userId = Guid.NewGuid();
     private static readonly Guid _organizationId = Guid.NewGuid();
-    private static readonly string _deviceId = Guid.NewGuid().ToString();
+    private static readonly Guid _deviceId = Guid.NewGuid();
 
     public static IEnumerable<object[]> SendData()
     {
@@ -35,7 +35,7 @@ public class PushControllerTests
             return Typed(new PushSendRequestModel<UserPushNotification>
             {
                 Type = pushType,
-                UserId = _userId.ToString(),
+                UserId = _userId,
                 DeviceId = _deviceId,
                 Payload = new UserPushNotification
                 {
@@ -49,7 +49,7 @@ public class PushControllerTests
         yield return Typed(new PushSendRequestModel<SyncCipherPushNotification>
         {
             Type = PushType.SyncCipherUpdate,
-            UserId = _userId.ToString(),
+            UserId = _userId,
             DeviceId = _deviceId,
             Payload = new SyncCipherPushNotification
             {
@@ -63,7 +63,7 @@ public class PushControllerTests
         yield return Typed(new PushSendRequestModel<SyncCipherPushNotification>
         {
             Type = PushType.SyncCipherUpdate,
-            OrganizationId = _organizationId.ToString(),
+            OrganizationId = _organizationId,
             DeviceId = _deviceId,
             Payload = new SyncCipherPushNotification
             {
@@ -75,7 +75,7 @@ public class PushControllerTests
         yield return Typed(new PushSendRequestModel<SyncCipherPushNotification>
         {
             Type = PushType.SyncCipherCreate,
-            UserId = _userId.ToString(),
+            UserId = _userId,
             DeviceId = _deviceId,
             Payload = new SyncCipherPushNotification
             {
@@ -89,7 +89,7 @@ public class PushControllerTests
         yield return Typed(new PushSendRequestModel<SyncCipherPushNotification>
         {
             Type = PushType.SyncCipherCreate,
-            OrganizationId = _organizationId.ToString(),
+            OrganizationId = _organizationId,
             DeviceId = _deviceId,
             Payload = new SyncCipherPushNotification
             {
@@ -101,7 +101,7 @@ public class PushControllerTests
         yield return Typed(new PushSendRequestModel<SyncCipherPushNotification>
         {
             Type = PushType.SyncCipherDelete,
-            UserId = _userId.ToString(),
+            UserId = _userId,
             DeviceId = _deviceId,
             Payload = new SyncCipherPushNotification
             {
@@ -115,7 +115,7 @@ public class PushControllerTests
         yield return Typed(new PushSendRequestModel<SyncCipherPushNotification>
         {
             Type = PushType.SyncCipherDelete,
-            OrganizationId = _organizationId.ToString(),
+            OrganizationId = _organizationId,
             DeviceId = _deviceId,
             Payload = new SyncCipherPushNotification
             {
@@ -127,7 +127,7 @@ public class PushControllerTests
         yield return Typed(new PushSendRequestModel<SyncFolderPushNotification>
         {
             Type = PushType.SyncFolderDelete,
-            UserId = _userId.ToString(),
+            UserId = _userId,
             DeviceId = _deviceId,
             Payload = new SyncFolderPushNotification
             {
@@ -139,7 +139,7 @@ public class PushControllerTests
         yield return Typed(new PushSendRequestModel<SyncFolderPushNotification>
         {
             Type = PushType.SyncFolderCreate,
-            UserId = _userId.ToString(),
+            UserId = _userId,
             DeviceId = _deviceId,
             Payload = new SyncFolderPushNotification
             {
@@ -151,7 +151,7 @@ public class PushControllerTests
         yield return Typed(new PushSendRequestModel<SyncFolderPushNotification>
         {
             Type = PushType.SyncFolderCreate,
-            UserId = _userId.ToString(),
+            UserId = _userId,
             DeviceId = _deviceId,
             Payload = new SyncFolderPushNotification
             {
@@ -171,7 +171,7 @@ public class PushControllerTests
         yield return Typed(new PushSendRequestModel<AuthRequestPushNotification>
         {
             Type = PushType.AuthRequest,
-            UserId = _userId.ToString(),
+            UserId = _userId,
             DeviceId = _deviceId,
             Payload = new AuthRequestPushNotification
             {
@@ -183,7 +183,7 @@ public class PushControllerTests
         yield return Typed(new PushSendRequestModel<AuthRequestPushNotification>
         {
             Type = PushType.AuthRequestResponse,
-            UserId = _userId.ToString(),
+            UserId = _userId,
             DeviceId = _deviceId,
             Payload = new AuthRequestPushNotification
             {
@@ -195,7 +195,7 @@ public class PushControllerTests
         yield return Typed(new PushSendRequestModel<NotificationPushNotification>
         {
             Type = PushType.Notification,
-            UserId = _userId.ToString(),
+            UserId = _userId,
             DeviceId = _deviceId,
             Payload = new NotificationPushNotification
             {
@@ -207,7 +207,7 @@ public class PushControllerTests
         yield return Typed(new PushSendRequestModel<NotificationPushNotification>
         {
             Type = PushType.Notification,
-            UserId = _userId.ToString(),
+            UserId = _userId,
             DeviceId = _deviceId,
             ClientType = ClientType.All,
             Payload = new NotificationPushNotification
@@ -220,7 +220,7 @@ public class PushControllerTests
         yield return Typed(new PushSendRequestModel<NotificationPushNotification>
         {
             Type = PushType.NotificationStatus,
-            OrganizationId = _organizationId.ToString(),
+            OrganizationId = _organizationId,
             DeviceId = _deviceId,
             Payload = new NotificationPushNotification
             {
@@ -232,7 +232,7 @@ public class PushControllerTests
         yield return Typed(new PushSendRequestModel<NotificationPushNotification>
         {
             Type = PushType.NotificationStatus,
-            OrganizationId = _organizationId.ToString(),
+            OrganizationId = _organizationId,
             DeviceId = _deviceId,
             Payload = new NotificationPushNotification
             {
@@ -276,7 +276,7 @@ public class PushControllerTests
         await apiFactory.GetService<IInstallationDeviceRepository>()
             .Received(1)
             .UpsertAsync(Arg.Is<InstallationDeviceEntity>(
-                ide => ide.PartitionKey == installation.Id.ToString() && ide.RowKey == pushSendRequestModel.DeviceId
+                ide => ide.PartitionKey == installation.Id.ToString() && ide.RowKey == pushSendRequestModel.DeviceId.ToString()
             ));
     }
 
@@ -288,7 +288,7 @@ public class PushControllerTests
         var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel<object>
         {
             Type = PushType.NotificationStatus,
-            InstallationId = Guid.NewGuid().ToString(),
+            InstallationId = Guid.NewGuid(),
             Payload = new { }
         });
 
@@ -310,9 +310,9 @@ public class PushControllerTests
         var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel<object>
         {
             Type = PushType.NotificationStatus,
-            InstallationId = installation.Id.ToString(),
+            InstallationId = installation.Id,
             Payload = new { },
-            DeviceId = deviceId.ToString(),
+            DeviceId = deviceId,
             ClientType = ClientType.Web,
         });
 
@@ -325,68 +325,6 @@ public class PushControllerTests
                 Arg.Is($"(template:payload && installationId:{installation.Id} && clientType:Web)")
             );
 
-        await apiFactory.GetService<IInstallationDeviceRepository>()
-            .Received(1)
-            .UpsertAsync(Arg.Is<InstallationDeviceEntity>(
-                ide => ide.PartitionKey == installation.Id.ToString() && ide.RowKey == deviceId.ToString()
-            ));
-    }
-
-    [Fact(Skip = "Proposing to not support this")]
-    public async Task Send_NonGuidDeviceId_Works_ButDoesNotUpdateInstallationDeviceRepository()
-    {
-        var (apiFactory, httpClient, installation, _, notificationHubProxy) = await SetupTest();
-
-        var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel<object>
-        {
-            Type = PushType.NotificationStatus,
-            InstallationId = installation.Id.ToString(),
-            Payload = new { },
-            DeviceId = "non-guid",
-            ClientType = ClientType.Web,
-        });
-
-        response.EnsureSuccessStatusCode();
-
-        await notificationHubProxy
-            .Received(1)
-            .SendTemplateNotificationAsync(
-                Arg.Any<Dictionary<string, string>>(),
-                Arg.Is($"(template:payload && installationId:{installation.Id} && clientType:Web)")
-            );
-
-        // Since device id wasn't a valid installation device this won't get added
-        await apiFactory.GetService<IInstallationDeviceRepository>()
-            .Received(0)
-            .UpsertAsync(Arg.Any<InstallationDeviceEntity>());
-    }
-
-    [Fact(Skip = "Proposing to not support this anymore.")]
-    public async Task Send_NonGuidOrganizationId_Works()
-    {
-        var (apiFactory, httpClient, installation, _, notificationHubProxy) = await SetupTest();
-
-        var deviceId = Guid.NewGuid();
-
-        var response = await httpClient.PostAsJsonAsync("push/send", new PushSendRequestModel<object>
-        {
-            Type = PushType.NotificationStatus,
-            OrganizationId = "non-guid-org",
-            Payload = new { },
-            DeviceId = deviceId.ToString(),
-            ClientType = ClientType.Web,
-        });
-
-        response.EnsureSuccessStatusCode();
-
-        await notificationHubProxy
-            .Received(1)
-            .SendTemplateNotificationAsync(
-                Arg.Any<Dictionary<string, string>>(),
-                Arg.Is($"(template:payload && organizationId:{installation.Id}_non-guid-org && clientType:Web)")
-            );
-
-        // Since device id wasn't a valid installation device this won't get added
         await apiFactory.GetService<IInstallationDeviceRepository>()
             .Received(1)
             .UpsertAsync(Arg.Is<InstallationDeviceEntity>(

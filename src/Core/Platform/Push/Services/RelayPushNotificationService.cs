@@ -94,13 +94,13 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushEngi
         var payload = new PushSendRequestModel<T>
         {
             Type = pushNotification.Type,
-            UserId = pushNotification.GetTargetWhen(NotificationTarget.User)?.ToString(),
-            OrganizationId = pushNotification.GetTargetWhen(NotificationTarget.Organization)?.ToString(),
-            InstallationId = pushNotification.GetTargetWhen(NotificationTarget.Installation)?.ToString(),
+            UserId = pushNotification.GetTargetWhen(NotificationTarget.User),
+            OrganizationId = pushNotification.GetTargetWhen(NotificationTarget.Organization),
+            InstallationId = pushNotification.GetTargetWhen(NotificationTarget.Installation),
             Payload = pushNotification.Payload,
             Identifier = pushNotification.ExcludeCurrentContext ? deviceIdentifier : null,
             // We set the device id regardless of if they want to exclude the current context or not
-            DeviceId = deviceId?.ToString(),
+            DeviceId = deviceId,
             ClientType = pushNotification.ClientType,
         };
 
