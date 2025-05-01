@@ -1,4 +1,5 @@
-﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
+﻿using Bit.Api.AdminConsole.Authorization.Requirements;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
@@ -209,32 +210,30 @@ public class OrganizationUsersController : Controller
         var readAllAuthorized = (await _authorizationService.AuthorizeAsync(
             User, new OrganizationScope(orgId), OrganizationUserUserDetailsOperations.ReadAll)).Succeeded;
 
-        if (!readAllAuthorized)
+        if (readAllAuthorized)
         {
-            var readWithAccountRecovery = (await _authorizationService.AuthorizeAsync(
-                User, new OrganizationScope(orgId), OrganizationUserUserDetailsOperations.ReadAccountRecovery)).Succeeded;
-
-            if (!readWithAccountRecovery)
-            {
-                throw new NotFoundException();
-            }
-
-            var confirmedUsers = await _organizationUserUserDetailsQuery.GetConfirmed(request);
-            var confirmedResponseList = confirmedUsers
-            .Select(result => new OrganizationUserUserDetailsResponseModel(result.Item1, result.Item2, result.Item3))
-            .Where(model => model.ResetPasswordEnrolled)
+            var results = await _organizationUserUserDetailsQuery.Get(request);
+            var responseList = results
+            .Select(result => new OrganizationUserUserDetailsResponseModel(result.OrgUser, result.TwoFactorEnabled, result.ClaimedByOrganization))
             .ToList();
 
-            return (new ListResponseModel<OrganizationUserUserDetailsResponseModel>(confirmedResponseList));
-
+            return (new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responseList));
         }
 
-        var results = await _organizationUserUserDetailsQuery.Get(request);
-        var responseList = results
-        .Select(result => new OrganizationUserUserDetailsResponseModel(result.Item1, result.Item2, result.Item3))
-        .ToList();
+        var readWithAccountRecovery = (await _authorizationService.AuthorizeAsync(User, new ManageAccountRecoveryRequirement())).Succeeded;
 
-        return (new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responseList));
+        if (readWithAccountRecovery)
+        {
+            var accountRecoveryResults = await _organizationUserUserDetailsQuery.GetAccountRecoveryEnrolledUsers(request);
+            var accountRecoveryResponseList = accountRecoveryResults
+            .Select(result => new OrganizationUserUserDetailsResponseModel(result.OrgUser, result.TwoFactorEnabled, result.ClaimedByOrganization))
+            .ToList();
+
+            return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(accountRecoveryResponseList);
+        }
+
+
+        throw new NotFoundException();
     }
 
     [HttpGet("{id}/groups")]

@@ -7,5 +7,4 @@ public class OrganizationUserUserDetailsOperationRequirement : OperationAuthoriz
 public static class OrganizationUserUserDetailsOperations
 {
     public static OrganizationUserUserDetailsOperationRequirement ReadAll = new() { Name = nameof(ReadAll) };
-    public static OrganizationUserUserDetailsOperationRequirement ReadAccountRecovery = new() { Name = nameof(ReadAccountRecovery) };
 }

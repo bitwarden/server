@@ -57,7 +57,7 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     /// </summary>
     /// <param name="request">Request details for the query</param>
     /// <returns>List of OrganizationUserUserDetails</returns>
-    public async Task<IEnumerable<(OrganizationUserUserDetails, bool, bool)>> Get(OrganizationUserUserDetailsQueryRequest request)
+    public async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> Get(OrganizationUserUserDetailsQueryRequest request)
     {
         var organizationUsers = await GetOrganizationUserUserDetails(request);
 
@@ -82,11 +82,22 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     /// </summary>
     /// <param name="request">Request details for the query</param>
     /// <returns>List of OrganizationUserUserDetails</returns>
-    public async Task<IEnumerable<(OrganizationUserUserDetails, bool, bool)>> GetConfirmed(OrganizationUserUserDetailsQueryRequest request)
+    public async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> GetAccountRecoveryEnrolledUsers(OrganizationUserUserDetailsQueryRequest request)
     {
+        var organizationUsers = await GetOrganizationUserUserDetails(request);
 
-        var result = await Get(request);
-        var responses = result.Where(r => r.Item1.Status.Equals(OrganizationUserStatusType.Confirmed));
+        var organizationUsersTwoFactorEnabled = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers)).ToDictionary(u => u.user.Id);
+        var organizationUsersClaimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(request.OrganizationId, organizationUsers.Select(o => o.Id));
+        var responses = organizationUsers
+            .Where(o => o.Status.Equals(OrganizationUserStatusType.Confirmed) && o.UsesKeyConnector == false && !String.IsNullOrEmpty(o.ResetPasswordKey))
+            .Select(o =>
+            {
+                var userTwoFactorEnabled = organizationUsersTwoFactorEnabled[o.Id].twoFactorIsEnabled;
+                var claimedByOrganization = organizationUsersClaimedStatus[o.Id];
+                var result = (o, userTwoFactorEnabled, claimedByOrganization);
+
+                return result;
+            });
 
         return responses;
     }
