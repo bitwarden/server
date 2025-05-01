@@ -61,12 +61,12 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     {
         var organizationUsers = await GetOrganizationUserUserDetails(request);
 
-        var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
+        var organizationUsersTwoFactorEnabled = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers)).ToDictionary(u => u.user.Id);
         var organizationUsersClaimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(request.OrganizationId, organizationUsers.Select(o => o.Id));
         var responses = organizationUsers
             .Select(o =>
             {
-                var userTwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == o.Id).twoFactorIsEnabled;
+                var userTwoFactorEnabled = organizationUsersTwoFactorEnabled[o.Id].twoFactorIsEnabled;
                 var claimedByOrganization = organizationUsersClaimedStatus[o.Id];
                 var orgUser = (o, userTwoFactorEnabled, claimedByOrganization);
 
