@@ -68,13 +68,15 @@ public static class HttpContextExtensions
     /// <exception cref="InvalidOperationException"></exception>
     public static Guid GetOrganizationId(this HttpContext httpContext)
     {
-        httpContext.GetRouteData().Values.TryGetValue("orgId", out var orgIdParam);
+        var routeValues = httpContext.GetRouteData().Values;
+
+        routeValues.TryGetValue("orgId", out var orgIdParam);
         if (orgIdParam != null && Guid.TryParse(orgIdParam.ToString(), out var orgId))
         {
             return orgId;
         }
 
-        httpContext.GetRouteData().Values.TryGetValue("organizationId", out var organizationIdParam);
+        routeValues.TryGetValue("organizationId", out var organizationIdParam);
         if (organizationIdParam != null && Guid.TryParse(organizationIdParam.ToString(), out var organizationId))
         {
             return organizationId;
