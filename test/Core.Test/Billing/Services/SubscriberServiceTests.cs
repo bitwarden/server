@@ -1,8 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Payment.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Billing.Services.Implementations;

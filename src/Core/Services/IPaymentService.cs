@@ -4,6 +4,7 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.Models.Api.Responses;
 using Bit.Core.Billing.Organizations.Requests;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;

@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.Billing.Organizations.Models;

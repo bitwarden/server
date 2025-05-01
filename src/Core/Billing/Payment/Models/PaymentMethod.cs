@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Billing.Models;
+﻿using Bit.Core.Billing.Models;
+
+namespace Bit.Core.Billing.Payment.Models;
 
 public record PaymentMethod(
     long AccountCredit,

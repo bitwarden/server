@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Enums;
 
 namespace Bit.Api.Billing.Models.Responses;

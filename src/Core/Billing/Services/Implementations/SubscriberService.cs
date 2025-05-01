@@ -1,6 +1,7 @@
-﻿using Bit.Core.Billing.Caches;
-using Bit.Core.Billing.Constants;
+﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Payment.Services;
 using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -14,7 +15,7 @@ using Stripe;
 
 using static Bit.Core.Billing.Utilities;
 using Customer = Stripe.Customer;
-using PaymentMethod = Bit.Core.Billing.Models.PaymentMethod;
+using PaymentMethod = Bit.Core.Billing.Payment.Models.PaymentMethod;
 using Subscription = Stripe.Subscription;
 
 namespace Bit.Core.Billing.Services.Implementations;

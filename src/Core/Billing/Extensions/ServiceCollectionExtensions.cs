@@ -1,7 +1,6 @@
-﻿using Bit.Core.Billing.Caches;
-using Bit.Core.Billing.Caches.Implementations;
-using Bit.Core.Billing.Licenses.Extensions;
+﻿using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Organizations.Services;
+using Bit.Core.Billing.Payment.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;

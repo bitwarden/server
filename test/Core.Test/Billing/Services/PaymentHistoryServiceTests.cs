@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Payment.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;

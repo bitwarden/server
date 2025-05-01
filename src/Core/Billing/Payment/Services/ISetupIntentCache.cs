@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Billing.Caches;
+﻿namespace Bit.Core.Billing.Payment.Services;
 
 public interface ISetupIntentCache
 {

@@ -7,6 +7,7 @@ using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.Models.Api.Responses;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Requests;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;

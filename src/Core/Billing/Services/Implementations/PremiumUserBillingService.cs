@@ -1,7 +1,8 @@
-﻿using Bit.Core.Billing.Caches;
-using Bit.Core.Billing.Constants;
+﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Payment.Services;
 using Bit.Core.Billing.Services.Implementations.AutomaticTax;
 using Bit.Core.Entities;
 using Bit.Core.Enums;

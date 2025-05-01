@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Billing.Extensions;
 using Bit.Core.Enums;
 
-namespace Bit.Core.Billing.Models;
+namespace Bit.Core.Billing.Payment.Models;
 
 public record PaymentSource(
     PaymentMethodType Type,

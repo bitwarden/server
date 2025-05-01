@@ -2,7 +2,7 @@
 using Bit.Core.Enums;
 using Stripe;
 
-namespace Bit.Core.Billing.Models;
+namespace Bit.Core.Billing.Payment.Models;
 
 public class BillingHistoryInfo
 {

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 

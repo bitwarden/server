@@ -1,8 +1,9 @@
 ﻿using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Stripe;
-using PaymentMethod = Bit.Core.Billing.Models.PaymentMethod;
+using PaymentMethod = Bit.Core.Billing.Payment.Models.PaymentMethod;
 
 namespace Bit.Core.Billing.Services;
 
@@ -63,7 +64,7 @@ public interface ISubscriberService
     /// and <see cref="GetTaxInformation"/> methods with a response that includes the customer's <see cref="Stripe.Customer.Balance"/> as account credit in order to cut down on Stripe API calls.
     /// </summary>
     /// <param name="subscriber">The subscriber to retrieve payment method for.</param>
-    /// <returns>A <see cref="Models.PaymentMethod"/> containing the subscriber's account credit, payment source and tax information.</returns>
+    /// <returns>A <see cref="PaymentMethod"/> containing the subscriber's account credit, payment source and tax information.</returns>
     Task<PaymentMethod> GetPaymentMethod(
         ISubscriber subscriber);
 

@@ -1,8 +1,8 @@
 ﻿#nullable enable
-using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Entities;
 
-namespace Bit.Core.Billing.Services;
+namespace Bit.Core.Billing.Payment.Services;
 
 public interface IPaymentHistoryService
 {

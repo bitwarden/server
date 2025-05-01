@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Core.Billing.Caches.Implementations;
+namespace Bit.Core.Billing.Payment.Services;
 
 public class SetupIntentDistributedCache(
     [FromKeyedServices("persistent")]
