@@ -440,65 +440,6 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup)
-    {
-        var plan = await _pricingClient.GetPlanOrThrow(signup.Plan);
-
-        ValidatePlan(plan, signup.AdditionalSeats, "Password Manager");
-
-        var organization = new Organization
-        {
-            // Pre-generate the org id so that we can save it with the Stripe subscription.
-            Id = CoreHelpers.GenerateComb(),
-            Name = signup.Name,
-            BillingEmail = signup.BillingEmail,
-            PlanType = plan!.Type,
-            Seats = signup.AdditionalSeats,
-            MaxCollections = plan.PasswordManager.MaxCollections,
-            MaxStorageGb = 1,
-            UsePolicies = plan.HasPolicies,
-            UseSso = plan.HasSso,
-            UseGroups = plan.HasGroups,
-            UseEvents = plan.HasEvents,
-            UseDirectory = plan.HasDirectory,
-            UseTotp = plan.HasTotp,
-            Use2fa = plan.Has2fa,
-            UseApi = plan.HasApi,
-            UseResetPassword = plan.HasResetPassword,
-            SelfHost = plan.HasSelfHost,
-            UsersGetPremium = plan.UsersGetPremium,
-            UseCustomPermissions = plan.HasCustomPermissions,
-            UseScim = plan.HasScim,
-            Plan = plan.Name,
-            Gateway = GatewayType.Stripe,
-            ReferenceData = signup.Owner.ReferenceData,
-            Enabled = true,
-            LicenseKey = CoreHelpers.SecureRandomString(20),
-            PublicKey = signup.PublicKey,
-            PrivateKey = signup.PrivateKey,
-            CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow,
-            Status = OrganizationStatusType.Created,
-            UsePasswordManager = true,
-            // Secrets Manager not available for purchase with Consolidated Billing.
-            UseSecretsManager = false,
-        };
-
-        var returnValue = await SignUpAsync(organization, default, signup.OwnerKey, signup.CollectionName, false);
-
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.Signup, organization, _currentContext)
-            {
-                PlanName = plan.Name,
-                PlanType = plan.Type,
-                Seats = returnValue.Item1.Seats,
-                SignupInitiationPath = signup.InitiationPath,
-                Storage = returnValue.Item1.MaxStorageGb,
-            });
-
-        return returnValue;
-    }
-
     private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
     {
         var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
