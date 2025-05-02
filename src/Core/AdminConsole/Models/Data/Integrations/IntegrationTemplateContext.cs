@@ -35,6 +35,3 @@ public class IntegrationTemplateContext(EventMessage eventMessage)
     public Organization? Organization { get; set; }
     public string? OrganizationName => Organization?.DisplayName();
 }
-
-
-

@@ -10,8 +10,9 @@ public static partial class IntegrationTemplateProcessor
     public static string ReplaceTokens(string template, object values)
     {
         if (string.IsNullOrEmpty(template) || values == null)
+        {
             return template;
-
+        }
         var type = values.GetType();
         return TokenRegex().Replace(template, match =>
         {
@@ -23,7 +24,10 @@ public static partial class IntegrationTemplateProcessor
 
     public static bool TemplateRequiresUser(string template)
     {
-        if (string.IsNullOrEmpty(template)) return false;
+        if (string.IsNullOrEmpty(template))
+        {
+            return false;
+        }
 
         return template.Contains("#UserName#", StringComparison.Ordinal)
                || template.Contains("#UserEmail#", StringComparison.Ordinal);
@@ -31,7 +35,10 @@ public static partial class IntegrationTemplateProcessor
 
     public static bool TemplateRequiresActingUser(string template)
     {
-        if (string.IsNullOrEmpty(template)) return false;
+        if (string.IsNullOrEmpty(template))
+        {
+            return false;
+        }
 
         return template.Contains("#ActingUserName#", StringComparison.Ordinal)
                || template.Contains("#ActingUserEmail#", StringComparison.Ordinal);
@@ -39,7 +46,10 @@ public static partial class IntegrationTemplateProcessor
 
     public static bool TemplateRequiresOrganization(string template)
     {
-        if (string.IsNullOrEmpty(template)) return false;
+        if (string.IsNullOrEmpty(template))
+        {
+            return false;
+        }
 
         return template.Contains("#OrganizationName#", StringComparison.Ordinal);
     }
