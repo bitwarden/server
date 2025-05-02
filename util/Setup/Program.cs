@@ -289,6 +289,8 @@ public class Program
             // We need to get an HttpClient that has been configured with custom trust certificates.
             var httpClient = new ServiceCollection()
                 .AddX509ChainCustomization()
+                // Setup is always ran for self hosted, so it's fine to hard code this to true and allow chain customization
+                .AddSingleton(new GlobalSettings { SelfHosted = true })
                 .BuildServiceProvider()
                 .GetRequiredService<IHttpClientFactory>()
                 .CreateClient();
