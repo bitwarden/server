@@ -6,5 +6,5 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 
 public interface IResellerClientOrganizationSignUpCommand
 {
-    Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup);
+    Task<(Organization organization, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup);
 }

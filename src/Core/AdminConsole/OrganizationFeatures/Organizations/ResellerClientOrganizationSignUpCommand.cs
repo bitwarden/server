@@ -6,9 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.StaticStore;
-using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
@@ -26,9 +24,6 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IPushRegistrationService _pushRegistrationService;
-    private readonly IPushNotificationService _pushNotificationService;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IPaymentService _paymentService;
@@ -40,9 +35,6 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
         IOrganizationRepository organizationRepository,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IApplicationCacheService applicationCacheService,
-        IOrganizationUserRepository organizationUserRepository,
-        IPushRegistrationService pushRegistrationService,
-        IPushNotificationService pushNotificationService,
         ICollectionRepository collectionRepository,
         IDeviceRepository deviceRepository,
         IPaymentService paymentService)
@@ -53,15 +45,12 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
         _organizationRepository = organizationRepository;
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _applicationCacheService = applicationCacheService;
-        _organizationUserRepository = organizationUserRepository;
-        _pushRegistrationService = pushRegistrationService;
-        _pushNotificationService = pushNotificationService;
         _collectionRepository = collectionRepository;
         _deviceRepository = deviceRepository;
         _paymentService = paymentService;
     }
 
-    public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup)
+    public async Task<(Organization organization, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup)
     {
         var plan = await _pricingClient.GetPlanOrThrow(signup.Plan);
 
@@ -105,7 +94,7 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
             UseSecretsManager = false,
         };
 
-        var returnValue = await SignUpAsync(organization, default, signup.OwnerKey, signup.CollectionName, false);
+        var returnValue = await SignUpAsync(organization, signup.CollectionName);
 
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.Signup, organization, _currentContext)
@@ -142,8 +131,8 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
     /// Private helper method to create a new organization.
     /// This is common code used by both the cloud and self-hosted methods.
     /// </summary>
-    private async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignUpAsync(Organization organization,
-        Guid ownerId, string ownerKey, string collectionName, bool withPayment)
+    private async Task<(Organization organization, Collection defaultCollection)> SignUpAsync(Organization organization,
+        string collectionName)
     {
         try
         {
@@ -157,32 +146,6 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
             });
             await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
-            // ownerId == default if the org is created by a provider - in this case it's created without an
-            // owner and the first owner is immediately invited afterwards
-            OrganizationUser orgUser = null;
-            if (ownerId != default)
-            {
-                orgUser = new OrganizationUser
-                {
-                    OrganizationId = organization.Id,
-                    UserId = ownerId,
-                    Key = ownerKey,
-                    AccessSecretsManager = organization.UseSecretsManager,
-                    Type = OrganizationUserType.Owner,
-                    Status = OrganizationUserStatusType.Confirmed,
-                    CreationDate = organization.CreationDate,
-                    RevisionDate = organization.CreationDate
-                };
-                orgUser.SetNewId();
-
-                await _organizationUserRepository.CreateAsync(orgUser);
-
-                var devices = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(devices,
-                    organization.Id.ToString());
-                await _pushNotificationService.PushSyncOrgKeysAsync(ownerId);
-            }
-
             Collection defaultCollection = null;
             if (!string.IsNullOrWhiteSpace(collectionName))
             {
@@ -194,27 +157,14 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
                     RevisionDate = organization.CreationDate
                 };
 
-                // Give the owner Can Manage access over the default collection
-                List<CollectionAccessSelection> defaultOwnerAccess = null;
-                if (orgUser != null)
-                {
-                    defaultOwnerAccess =
-                        [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }];
-                }
-
-                await _collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);
+                await _collectionRepository.CreateAsync(defaultCollection, null, null);
             }
 
-            return (organization, orgUser, defaultCollection);
+            return (organization, defaultCollection);
         }
         catch
         {
-            if (withPayment)
-            {
-                await _paymentService.CancelAndRecoverChargesAsync(organization);
-            }
-
-            if (organization.Id != default(Guid))
+            if (organization.Id != default)
             {
                 await _organizationRepository.DeleteAsync(organization);
                 await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
