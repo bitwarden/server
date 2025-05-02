@@ -16,7 +16,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
-public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizationSignUpCommand
+public class SignUpProviderClientOrganizationCommand : ISignUpProviderClientOrganizationCommand
 {
     private readonly ICurrentContext _currentContext;
     private readonly IPricingClient _pricingClient;
@@ -28,7 +28,7 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
     private readonly IDeviceRepository _deviceRepository;
     private readonly IPaymentService _paymentService;
 
-    public ResellerClientOrganizationSignUpCommand(
+    public SignUpProviderClientOrganizationCommand(
         ICurrentContext currentContext,
         IPricingClient pricingClient,
         IReferenceEventService referenceEventService,
@@ -50,7 +50,7 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
         _paymentService = paymentService;
     }
 
-    public async Task<(Organization organization, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup)
+    public async Task<(Organization organization, Collection defaultCollection)> SignUpClientOrganizationAsync(OrganizationSignup signup)
     {
         var plan = await _pricingClient.GetPlanOrThrow(signup.Plan);
 

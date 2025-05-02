@@ -22,7 +22,7 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations;
 
 [SutProviderCustomize]
-public class ResellerClientOrganizationSignUpCommandTests
+public class SignUpProviderClientOrganizationCommandTests
 {
     [Theory]
     [BitAutoData(PlanType.TeamsAnnually)]
@@ -33,7 +33,7 @@ public class ResellerClientOrganizationSignUpCommandTests
         PlanType planType,
         OrganizationSignup signup,
         string collectionName,
-        SutProvider<ResellerClientOrganizationSignUpCommand> sutProvider)
+        SutProvider<SignUpProviderClientOrganizationCommand> sutProvider)
     {
         signup.Plan = planType;
         signup.AdditionalSeats = 15;
@@ -44,7 +44,7 @@ public class ResellerClientOrganizationSignUpCommandTests
             .GetPlanOrThrow(signup.Plan)
             .Returns(plan);
 
-        var result = await sutProvider.Sut.SignupClientAsync(signup);
+        var result = await sutProvider.Sut.SignUpClientOrganizationAsync(signup);
 
         Assert.NotNull(result.organization);
         Assert.NotNull(result.defaultCollection);
@@ -105,14 +105,14 @@ public class ResellerClientOrganizationSignUpCommandTests
     [BitAutoData]
     public async Task SignupClientAsync_NullPlan_ThrowsBadRequestException(
         OrganizationSignup signup,
-        SutProvider<ResellerClientOrganizationSignUpCommand> sutProvider)
+        SutProvider<SignUpProviderClientOrganizationCommand> sutProvider)
     {
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(signup.Plan)
             .Returns((Plan)null);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SignupClientAsync(signup));
+            () => sutProvider.Sut.SignUpClientOrganizationAsync(signup));
 
         Assert.Contains("Password Manager Plan was null", exception.Message);
     }
@@ -121,7 +121,7 @@ public class ResellerClientOrganizationSignUpCommandTests
     [BitAutoData]
     public async Task SignupClientAsync_NegativeAdditionalSeats_ThrowsBadRequestException(
         OrganizationSignup signup,
-        SutProvider<ResellerClientOrganizationSignUpCommand> sutProvider)
+        SutProvider<SignUpProviderClientOrganizationCommand> sutProvider)
     {
         signup.Plan = PlanType.TeamsMonthly;
         signup.AdditionalSeats = -5;
@@ -132,7 +132,7 @@ public class ResellerClientOrganizationSignUpCommandTests
             .Returns(plan);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SignupClientAsync(signup));
+            () => sutProvider.Sut.SignUpClientOrganizationAsync(signup));
 
         Assert.Contains("You can't subtract Password Manager seats", exception.Message);
     }
@@ -142,7 +142,7 @@ public class ResellerClientOrganizationSignUpCommandTests
     public async Task SignupClientAsync_WhenExceptionIsThrown_CleanupIsPerformed(
         PlanType planType,
         OrganizationSignup signup,
-        SutProvider<ResellerClientOrganizationSignUpCommand> sutProvider)
+        SutProvider<SignUpProviderClientOrganizationCommand> sutProvider)
     {
         signup.Plan = planType;
 
@@ -156,7 +156,7 @@ public class ResellerClientOrganizationSignUpCommandTests
             .Do(_ => throw new Exception());
 
         var thrownException = await Assert.ThrowsAsync<Exception>(
-            () => sutProvider.Sut.SignupClientAsync(signup));
+            () => sutProvider.Sut.SignUpClientOrganizationAsync(signup));
 
         await sutProvider.GetDependency<IOrganizationRepository>()
             .Received(1)
