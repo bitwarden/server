@@ -49,6 +49,7 @@ public interface IOrganizationService
         IEnumerable<Guid> organizationUserIds, Guid? revokingUserId);
     Task CreatePendingOrganization(Organization organization, string ownerEmail, ClaimsPrincipal user, IUserService userService, bool salesAssistedTrialStarted);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
+    Task<(bool canScale, string failureReason)> CanScaleAsync(Organization organization, int seatsToAdd);
 
     void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
     void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
