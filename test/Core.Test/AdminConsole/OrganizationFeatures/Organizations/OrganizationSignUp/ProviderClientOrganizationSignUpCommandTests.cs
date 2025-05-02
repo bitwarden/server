@@ -19,10 +19,10 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations.OrganizationSignUp;
 
 [SutProviderCustomize]
-public class SignUpProviderClientOrganizationCommandTests
+public class ProviderClientOrganizationSignUpCommandTests
 {
     [Theory]
     [BitAutoData(PlanType.TeamsAnnually)]
@@ -33,7 +33,7 @@ public class SignUpProviderClientOrganizationCommandTests
         PlanType planType,
         OrganizationSignup signup,
         string collectionName,
-        SutProvider<SignUpProviderClientOrganizationCommand> sutProvider)
+        SutProvider<ProviderClientOrganizationSignUpCommand> sutProvider)
     {
         signup.Plan = planType;
         signup.AdditionalSeats = 15;
@@ -46,9 +46,9 @@ public class SignUpProviderClientOrganizationCommandTests
 
         var result = await sutProvider.Sut.SignUpClientOrganizationAsync(signup);
 
-        Assert.NotNull(result.organization);
-        Assert.NotNull(result.defaultCollection);
-        Assert.Equal(collectionName, result.defaultCollection.Name);
+        Assert.NotNull(result.Organization);
+        Assert.NotNull(result.DefaultCollection);
+        Assert.Equal(collectionName, result.DefaultCollection.Name);
 
         await sutProvider.GetDependency<IOrganizationRepository>()
             .Received(1)
@@ -71,8 +71,8 @@ public class SignUpProviderClientOrganizationCommandTests
                 referenceEvent.Type == ReferenceEventType.Signup &&
                 referenceEvent.PlanName == plan.Name &&
                 referenceEvent.PlanType == plan.Type &&
-                referenceEvent.Seats == result.organization.Seats &&
-                referenceEvent.Storage == result.organization.MaxStorageGb &&
+                referenceEvent.Seats == result.Organization.Seats &&
+                referenceEvent.Storage == result.Organization.MaxStorageGb &&
                 referenceEvent.SignupInitiationPath == signup.InitiationPath
             ));
 
@@ -81,7 +81,7 @@ public class SignUpProviderClientOrganizationCommandTests
             .CreateAsync(
                 Arg.Is<Collection>(c =>
                     c.Name == collectionName &&
-                    c.OrganizationId == result.organization.Id
+                    c.OrganizationId == result.Organization.Id
                 ),
                 Arg.Any<IEnumerable<CollectionAccessSelection>>(),
                 Arg.Any<IEnumerable<CollectionAccessSelection>>()
@@ -91,21 +91,21 @@ public class SignUpProviderClientOrganizationCommandTests
             .Received(1)
             .CreateAsync(
                 Arg.Is<OrganizationApiKey>(k =>
-                    k.OrganizationId == result.organization.Id &&
+                    k.OrganizationId == result.Organization.Id &&
                     k.Type == OrganizationApiKeyType.Default
                 )
             );
 
         await sutProvider.GetDependency<IApplicationCacheService>()
             .Received(1)
-            .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o => o.Id == result.organization.Id));
+            .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o => o.Id == result.Organization.Id));
     }
 
     [Theory]
     [BitAutoData]
     public async Task SignupClientAsync_NullPlan_ThrowsBadRequestException(
         OrganizationSignup signup,
-        SutProvider<SignUpProviderClientOrganizationCommand> sutProvider)
+        SutProvider<ProviderClientOrganizationSignUpCommand> sutProvider)
     {
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(signup.Plan)
@@ -121,7 +121,7 @@ public class SignUpProviderClientOrganizationCommandTests
     [BitAutoData]
     public async Task SignupClientAsync_NegativeAdditionalSeats_ThrowsBadRequestException(
         OrganizationSignup signup,
-        SutProvider<SignUpProviderClientOrganizationCommand> sutProvider)
+        SutProvider<ProviderClientOrganizationSignUpCommand> sutProvider)
     {
         signup.Plan = PlanType.TeamsMonthly;
         signup.AdditionalSeats = -5;
@@ -142,7 +142,7 @@ public class SignUpProviderClientOrganizationCommandTests
     public async Task SignupClientAsync_WhenExceptionIsThrown_CleanupIsPerformed(
         PlanType planType,
         OrganizationSignup signup,
-        SutProvider<SignUpProviderClientOrganizationCommand> sutProvider)
+        SutProvider<ProviderClientOrganizationSignUpCommand> sutProvider)
     {
         signup.Plan = planType;
 

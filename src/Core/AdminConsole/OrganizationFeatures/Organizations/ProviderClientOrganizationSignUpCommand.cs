@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -16,7 +15,21 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
-public class SignUpProviderClientOrganizationCommand : ISignUpProviderClientOrganizationCommand
+public record ProviderClientOrganizationSignUpResponse(
+    Organization Organization,
+    Collection DefaultCollection);
+
+public interface IProviderClientOrganizationSignUpCommand
+{
+    /// <summary>
+    /// Sign up a new client organization for a provider.
+    /// </summary>
+    /// <param name="signup">The signup information.</param>
+    /// <returns>A tuple containing the new organization and its default collection.</returns>
+    Task<ProviderClientOrganizationSignUpResponse> SignUpClientOrganizationAsync(OrganizationSignup signup);
+}
+
+public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizationSignUpCommand
 {
     private readonly ICurrentContext _currentContext;
     private readonly IPricingClient _pricingClient;
@@ -25,19 +38,15 @@ public class SignUpProviderClientOrganizationCommand : ISignUpProviderClientOrga
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IDeviceRepository _deviceRepository;
-    private readonly IPaymentService _paymentService;
 
-    public SignUpProviderClientOrganizationCommand(
+    public ProviderClientOrganizationSignUpCommand(
         ICurrentContext currentContext,
         IPricingClient pricingClient,
         IReferenceEventService referenceEventService,
         IOrganizationRepository organizationRepository,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IApplicationCacheService applicationCacheService,
-        ICollectionRepository collectionRepository,
-        IDeviceRepository deviceRepository,
-        IPaymentService paymentService)
+        ICollectionRepository collectionRepository)
     {
         _currentContext = currentContext;
         _pricingClient = pricingClient;
@@ -46,15 +55,13 @@ public class SignUpProviderClientOrganizationCommand : ISignUpProviderClientOrga
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _applicationCacheService = applicationCacheService;
         _collectionRepository = collectionRepository;
-        _deviceRepository = deviceRepository;
-        _paymentService = paymentService;
     }
 
-    public async Task<(Organization organization, Collection defaultCollection)> SignUpClientOrganizationAsync(OrganizationSignup signup)
+    public async Task<ProviderClientOrganizationSignUpResponse> SignUpClientOrganizationAsync(OrganizationSignup signup)
     {
         var plan = await _pricingClient.GetPlanOrThrow(signup.Plan);
 
-        ValidatePlan(plan, signup.AdditionalSeats, "Password Manager");
+        ValidatePlan(plan, signup.AdditionalSeats);
 
         var organization = new Organization
         {
@@ -101,38 +108,37 @@ public class SignUpProviderClientOrganizationCommand : ISignUpProviderClientOrga
             {
                 PlanName = plan.Name,
                 PlanType = plan.Type,
-                Seats = returnValue.Item1.Seats,
+                Seats = returnValue.Organization.Seats,
                 SignupInitiationPath = signup.InitiationPath,
-                Storage = returnValue.Item1.MaxStorageGb,
+                Storage = returnValue.Organization.MaxStorageGb,
             });
 
         return returnValue;
     }
 
-    private static void ValidatePlan(Plan plan, int additionalSeats, string productType)
+    private static void ValidatePlan(Plan plan, int additionalSeats)
     {
         if (plan is null)
         {
-            throw new BadRequestException($"{productType} Plan was null.");
+            throw new BadRequestException("Password Manager Plan was null.");
         }
 
         if (plan.Disabled)
         {
-            throw new BadRequestException($"{productType} Plan not found.");
+            throw new BadRequestException("Password Manager Plan is disabled.");
         }
 
         if (additionalSeats < 0)
         {
-            throw new BadRequestException($"You can't subtract {productType} seats!");
+            throw new BadRequestException("You can't subtract Password Manager seats!");
         }
     }
 
     /// <summary>
     /// Private helper method to create a new organization.
-    /// This is common code used by both the cloud and self-hosted methods.
     /// </summary>
-    private async Task<(Organization organization, Collection defaultCollection)> SignUpAsync(Organization organization,
-        string collectionName)
+    private async Task<ProviderClientOrganizationSignUpResponse> SignUpAsync(
+        Organization organization, string collectionName)
     {
         try
         {
@@ -160,7 +166,7 @@ public class SignUpProviderClientOrganizationCommand : ISignUpProviderClientOrga
                 await _collectionRepository.CreateAsync(defaultCollection, null, null);
             }
 
-            return (organization, defaultCollection);
+            return new ProviderClientOrganizationSignUpResponse(organization, defaultCollection);
         }
         catch
         {
@@ -172,13 +178,5 @@ public class SignUpProviderClientOrganizationCommand : ISignUpProviderClientOrga
 
             throw;
         }
-    }
-
-    private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
-    {
-        var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
-        return devices
-            .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
-            .Select(d => d.Id.ToString());
     }
 }
