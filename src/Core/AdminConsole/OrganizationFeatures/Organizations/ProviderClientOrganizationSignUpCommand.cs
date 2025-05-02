@@ -31,6 +31,10 @@ public interface IProviderClientOrganizationSignUpCommand
 
 public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizationSignUpCommand
 {
+    public const string PlanNullErrorMessage = "Password Manager Plan was null.";
+    public const string PlanDisabledErrorMessage = "Password Manager Plan is disabled.";
+    public const string AdditionalSeatsNegativeErrorMessage = "You can't subtract Password Manager seats!";
+
     private readonly ICurrentContext _currentContext;
     private readonly IPricingClient _pricingClient;
     private readonly IReferenceEventService _referenceEventService;
@@ -120,17 +124,17 @@ public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizati
     {
         if (plan is null)
         {
-            throw new BadRequestException("Password Manager Plan was null.");
+            throw new BadRequestException(PlanNullErrorMessage);
         }
 
         if (plan.Disabled)
         {
-            throw new BadRequestException("Password Manager Plan is disabled.");
+            throw new BadRequestException(PlanDisabledErrorMessage);
         }
 
         if (additionalSeats < 0)
         {
-            throw new BadRequestException("You can't subtract Password Manager seats!");
+            throw new BadRequestException(AdditionalSeatsNegativeErrorMessage);
         }
     }
 

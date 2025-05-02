@@ -114,7 +114,7 @@ public class ProviderClientOrganizationSignUpCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpClientOrganizationAsync(signup));
 
-        Assert.Contains("Password Manager Plan was null", exception.Message);
+        Assert.Contains(ProviderClientOrganizationSignUpCommand.PlanNullErrorMessage, exception.Message);
     }
 
     [Theory]
@@ -134,7 +134,7 @@ public class ProviderClientOrganizationSignUpCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpClientOrganizationAsync(signup));
 
-        Assert.Contains("You can't subtract Password Manager seats", exception.Message);
+        Assert.Contains(ProviderClientOrganizationSignUpCommand.AdditionalSeatsNegativeErrorMessage, exception.Message);
     }
 
     [Theory]
