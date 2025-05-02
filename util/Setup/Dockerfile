@@ -40,7 +40,6 @@ COPY .editorconfig /source
 WORKDIR /source/util/Setup
 RUN . /tmp/rid.txt && dotnet publish \
     --self-contained \
-    /p:PublishSingleFile=true \
     /p:SourceRevisionId="$GIT_COMMIT" \
     -r $RID \
     -o out
