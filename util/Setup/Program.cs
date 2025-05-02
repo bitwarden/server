@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Net.Http.Json;
+using Bit.Core.Settings;
 using Bit.Migrator;
 using Bit.Setup.Enums;
 using Microsoft.Extensions.DependencyInjection;
