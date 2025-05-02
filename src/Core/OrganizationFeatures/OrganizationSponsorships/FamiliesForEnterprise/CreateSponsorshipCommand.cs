@@ -15,7 +15,8 @@ public class CreateSponsorshipCommand(
     ICurrentContext currentContext,
     IOrganizationSponsorshipRepository organizationSponsorshipRepository,
     IUserService userService,
-    IOrganizationService organizationService) : ICreateSponsorshipCommand
+    IOrganizationService organizationService,
+    IOrganizationUserRepository organizationUserRepository) : ICreateSponsorshipCommand
 {
     public async Task<OrganizationSponsorship> CreateSponsorshipAsync(
         Organization sponsoringOrganization,
@@ -82,14 +83,26 @@ public class CreateSponsorshipCommand(
 
             if (existingOrgSponsorship != null)
             {
-                // Replace existing invalid offer with our new sponsorship offer
                 sponsorship.Id = existingOrgSponsorship.Id;
             }
         }
 
         if (isAdminInitiated && sponsoringOrganization.Seats.HasValue)
         {
-            await organizationService.AutoAddSeatsAsync(sponsoringOrganization, 1);
+            var occupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrganization.Id);
+            var availableSeats = sponsoringOrganization.Seats.Value - occupiedSeats;
+
+            if (availableSeats <= 0)
+            {
+                var newSeatsRequired = 1;
+                var (canScale, failureReason) = await organizationService.CanScaleAsync(sponsoringOrganization, newSeatsRequired);
+                if (!canScale)
+                {
+                    throw new BadRequestException(failureReason);
+                }
+
+                await organizationService.AutoAddSeatsAsync(sponsoringOrganization, newSeatsRequired);
+            }
         }
 
         try
