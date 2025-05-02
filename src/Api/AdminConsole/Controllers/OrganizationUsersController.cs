@@ -224,7 +224,7 @@ public class OrganizationUsersController : Controller
                 bool TwoFactorEnabled, bool ClaimedByOrganization)> results)
     {
         return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(results
-            .Select(result => new OrganizationUserUserDetailsResponseModel(result.OrgUser, result.TwoFactorEnabled, result.ClaimedByOrganization))
+            .Select(result => new OrganizationUserUserDetailsResponseModel(result))
             .ToList());
     }
 

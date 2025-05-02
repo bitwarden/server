@@ -14,7 +14,6 @@ public class ManageAccountRecoveryRequirement : IOrganizationRequirement
         {
             { Type: OrganizationUserType.Owner } => true,
             { Type: OrganizationUserType.Admin } => true,
-            { Permissions.ManageUsers: true } => true,
             { Permissions.ManageResetPassword: true } => true,
             _ => await isProviderUserForOrg()
         };

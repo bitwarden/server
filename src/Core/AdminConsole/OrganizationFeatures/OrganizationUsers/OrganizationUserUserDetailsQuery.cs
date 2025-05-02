@@ -77,12 +77,12 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     /// <returns>List of OrganizationUserUserDetails</returns>
     public async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> GetAccountRecoveryEnrolledUsers(OrganizationUserUserDetailsQueryRequest request)
     {
-        var organizationUsers = await GetOrganizationUserUserDetails(request);
+        var organizationUsers = (await GetOrganizationUserUserDetails(request))
+            .Where(o => o.Status.Equals(OrganizationUserStatusType.Confirmed) && o.UsesKeyConnector == false && !String.IsNullOrEmpty(o.ResetPasswordKey));
 
         var organizationUsersTwoFactorEnabled = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers)).ToDictionary(u => u.user.Id);
         var organizationUsersClaimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(request.OrganizationId, organizationUsers.Select(o => o.Id));
         var responses = organizationUsers
-            .Where(o => o.Status.Equals(OrganizationUserStatusType.Confirmed) && o.UsesKeyConnector == false && !String.IsNullOrEmpty(o.ResetPasswordKey))
             .Select(o => (o, organizationUsersTwoFactorEnabled[o.Id].twoFactorIsEnabled, organizationUsersClaimedStatus[o.Id]));
 
         return responses;
