@@ -7,10 +7,10 @@ DECLARE @DatabaseNameSafe varchar(100)
 SET @DatabaseNameSafe = 'vault'
 
 DECLARE @BackupFile varchar(100)
-SET @BackupFile = '/etc/bitwarden/mssql/backups/' + @DatabaseNameSafe + '_FULL_$(now).BAK'
+SET @BackupFile = '$(BACKUP_DB_DIR)' + @DatabaseNameSafe + '_FULL_$(BACKUP_DB_FILENAME).BAK'
 
 DECLARE @BackupName varchar(100)
-SET @BackupName = @DatabaseName + ' full backup for $(now)'
+SET @BackupName = @DatabaseName + ' full backup for $(BACKUP_DB_FILENAME)'
 
 DECLARE @BackupCommand NVARCHAR(1000)
 SET @BackupCommand = 'BACKUP DATABASE [' + @DatabaseName + '] TO DISK = ''' + @BackupFile + ''' WITH INIT, NAME= ''' + @BackupName + ''', NOSKIP, NOFORMAT'
