@@ -4,6 +4,7 @@ using Bit.Core.Settings;
 using Bit.Migrator;
 using Bit.Setup.Enums;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Bit.Setup;
 
@@ -292,6 +293,8 @@ public class Program
                 .AddX509ChainCustomization()
                 // Setup is always ran for self hosted, so it's fine to hard code this to true and allow chain customization
                 .AddSingleton(new GlobalSettings { SelfHosted = true })
+                .AddLogging()
+                .AddSingleton<IHostEnvironment>(new SetupHostEnvironment())
                 .BuildServiceProvider()
                 .GetRequiredService<IHttpClientFactory>()
                 .CreateClient();
@@ -321,9 +324,12 @@ public class Program
 
             return true;
         }
-        catch
+        catch (Exception ex)
         {
-            Console.WriteLine($"Unable to validate installation id. Problem contacting Bitwarden {cloudRegion.ToString()} server.");
+            // TODO: Remove exception message before main merge??
+            Console.WriteLine(
+                $"Unable to validate installation id. Problem contacting Bitwarden {cloudRegion.ToString()} server.\nError: {ex.Message}"
+            );
             return false;
         }
     }
