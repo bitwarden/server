@@ -1,7 +1,10 @@
 name: Collect code references
 
-on:
-  pull_request:
+on: 
+  push:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check-ld-secret:
@@ -37,12 +40,10 @@ jobs:
 
       - name: Collect
         id: collect
-        uses: launchdarkly/find-code-references-in-pull-request@30f4c4ab2949bbf258b797ced2fbf6dea34df9ce # v2.1.0
+        uses: launchdarkly/find-code-references@e3e9da201b87ada54eb4c550c14fb783385c5c8a # v2.13.0
         with:
-          project-key: default
-          environment-key: dev
-          access-token: ${{ secrets.LD_ACCESS_TOKEN }}
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          accessToken: ${{ secrets.LD_ACCESS_TOKEN }}
+          projKey: default
 
       - name: Add label
         if: steps.collect.outputs.any-changed == 'true'
