@@ -45,10 +45,12 @@ src/Core/IdentityServer @bitwarden/team-auth-dev
 
 **/Tools @bitwarden/team-tools-dev
 
-# Data Insights & Reporting (DIRT) team
-**/Dirt @bitwarden/team-dirt-dev
-
-
+# Dirt (Data Insights & Reporting) team
+**src/Api/Dirt @bitwarden/team-dirt-dev
+**src/Core/Dirt @bitwarden/team-dirt-dev
+**src/Infrastructure.Dapper/Dirt @bitwarden/team-dirt-dev
+**test/Api.Test/Dirt @bitwarden/team-dirt-dev
+**test/Core.Test/Dirt @bitwarden/team-dirt-dev
 
 # Vault team
 **/Vault @bitwarden/team-vault-dev
