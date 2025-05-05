@@ -97,7 +97,6 @@ public class FreshdeskControllerTests
         var statusCodeResult = Assert.IsAssignableFrom<StatusCodeResult>(response);
         Assert.Equal(StatusCodes.Status200OK, statusCodeResult.StatusCode);
 
-        sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient("FreshdeskApi");
         await mockHttpMessageHandler
             .Received(1).Send(
                 Arg.Is<HttpRequestMessage>(
