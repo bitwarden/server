@@ -74,6 +74,8 @@
   </ItemGroup>
   
   <ItemGroup>
+    <Folder Include="Dirt\Events\" />
+    <Folder Include="Dirt\Reports\" />
     <Folder Include="Resources\" />
     <Folder Include="Properties\" />
   </ItemGroup>
