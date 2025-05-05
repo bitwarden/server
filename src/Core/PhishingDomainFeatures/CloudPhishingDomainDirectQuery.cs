@@ -92,7 +92,7 @@ public class CloudPhishingDomainDirectQuery : ICloudPhishingDomainQuery
         }
 
         return content
-            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
             .Select(line => line.Trim())
             .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("#"))
             .ToList();
