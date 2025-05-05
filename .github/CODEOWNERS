@@ -45,6 +45,11 @@ src/Core/IdentityServer @bitwarden/team-auth-dev
 
 **/Tools @bitwarden/team-tools-dev
 
+# Data Insights & Reporting (DIRT) team
+**/Dirt @bitwarden/team-dirt-dev
+
+
+
 # Vault team
 **/Vault @bitwarden/team-vault-dev
 **/Vault/AuthorizationHandlers @bitwarden/team-vault-dev @bitwarden/team-admin-console-dev  # joint ownership over authorization handlers that affect organization users
