@@ -2,7 +2,6 @@
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
-using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
@@ -599,13 +598,11 @@ public class OrganizationUsersController : Controller
 
         var result = await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Value);
 
-        if (result is Success<DeleteUserResponse>)
+        return result switch
         {
-            return Ok();
-
-        }
-
-        return result.MapToAction();
+            Success<DeleteUserResponse> => Ok(),
+            _ => new BadRequestResult() // TODO
+        };
     }
 
     [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]

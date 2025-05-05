@@ -5,32 +5,6 @@ using Bit.Core.AdminConsole.Shared.Validation;
 
 namespace Bit.Core.Models.Commands;
 
-public class CommandResult(IEnumerable<string> errors)
-{
-    public CommandResult(string error) : this([error]) { }
-
-    public bool Success => ErrorMessages.Count == 0;
-    public bool HasErrors => ErrorMessages.Count > 0;
-    public List<string> ErrorMessages { get; } = errors.ToList();
-    public CommandResult() : this(Array.Empty<string>()) { }
-}
-
-public class Failure : CommandResult
-{
-    protected Failure(IEnumerable<string> errorMessages) : base(errorMessages)
-    {
-
-    }
-    public Failure(string errorMessage) : base(errorMessage)
-    {
-
-    }
-}
-
-public class Success : CommandResult
-{
-}
-
 public abstract class CommandResult<T>;
 
 public class Success<T>(T value) : CommandResult<T>
@@ -44,10 +18,6 @@ public class Failure<T>(IEnumerable<string> errorMessages) : CommandResult<T>
     public Error<T>[] Errors { get; set; } = [];
 
     public string ErrorMessage => string.Join(" ", ErrorMessages);
-
-    public Failure(string error) : this([error])
-    {
-    }
 
     public Failure(IEnumerable<Error<T>> errors) : this(errors.Select(e => e.Message))
     {
@@ -85,4 +55,27 @@ public static class CommandResultExtensions
     /// <returns></returns>
     public static CommandResult<B> MapToFailure<A, B>(this Invalid<A> invalidResult, Func<A, B> mappingFunction) =>
         new Failure<B>(invalidResult.Errors.Select(errorA => errorA.ToError(mappingFunction(errorA.ErroredValue))));
+
+    public static CommandResult<T> ToSingleResult<T>(this Partial<T> partialResult)
+    {
+        if (partialResult.Successes.Length + partialResult.Failures.Length > 1)
+        {
+            throw new Exception("Partial result has more than one success and/or failure, cannot map to a single CommandResult.");
+        }
+
+        return partialResult.Failures.Length > 0
+            ? new Failure<T>(partialResult.Failures.First())
+            : new Success<T>(partialResult.Successes.First());
+    }
+}
+
+[Obsolete("Use CommandResult<T> instead. This will be removed once old code is updated.")]
+public class CommandResult(IEnumerable<string> errors)
+{
+    public CommandResult(string error) : this([error]) { }
+
+    public bool Success => ErrorMessages.Count == 0;
+    public bool HasErrors => ErrorMessages.Count > 0;
+    public List<string> ErrorMessages { get; } = errors.ToList();
+    public CommandResult() : this(Array.Empty<string>()) { }
 }
