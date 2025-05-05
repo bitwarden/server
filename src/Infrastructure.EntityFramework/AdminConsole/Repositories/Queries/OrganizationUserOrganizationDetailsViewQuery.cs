@@ -72,6 +72,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         AllowAdminAccessToAllCollectionItems = o.AllowAdminAccessToAllCollectionItems,
                         UseRiskInsights = o.UseRiskInsights,
                         UseAdminSponsoredFamilies = o.UseAdminSponsoredFamilies,
+                        IsAdminInitiated = os.IsAdminInitiated,
                     };
         return query;
     }
