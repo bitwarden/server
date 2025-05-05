@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Setup
 
@@ -40,6 +40,8 @@ then
     mkdir -p /bitwarden/nginx
     mkdir -p /bitwarden/ca-certificates
     chown -R $USERNAME:$GROUPNAME /bitwarden
+
+    gosu_cmd="gosu $USERNAME:$GROUPNAME"
 else
     gosu_cmd=""
 fi
