@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Bit.Core.Settings;
 using Bit.Migrator;
 using Bit.Setup.Enums;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -288,9 +289,20 @@ public class Program
                 url = $"{installationUrl}/installations/";
             }
 
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string>
+                {
+                    // Setup uses a different default location for the location of the CA certificates.
+                    ["X509ChainOptions:AdditionalCustomTrustCertificatesDirectory"] = "/bitwarden/ca-certificates",
+                })
+                // Still allow customization through environment variables though
+                .AddEnvironmentVariables()
+                .Build();
+
             // We need to get an HttpClient that has been configured with custom trust certificates.
             var httpClient = new ServiceCollection()
                 .AddX509ChainCustomization()
+                .AddSingleton<IConfiguration>(config)
                 // Setup is always ran for self hosted, so it's fine to hard code this to true and allow chain customization
                 .AddSingleton(new GlobalSettings { SelfHosted = true })
                 .AddLogging()
