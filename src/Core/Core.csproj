@@ -17,7 +17,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="licensing.cer" />
-    <EmbeddedResource Include="licensing_dev.cer" />F
+    <EmbeddedResource Include="licensing_dev.cer" />
     <EmbeddedResource Include="MailTemplates\Handlebars\**\*.hbs" />
   </ItemGroup>
 
