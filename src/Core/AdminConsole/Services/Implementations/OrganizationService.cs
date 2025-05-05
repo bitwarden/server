@@ -1058,7 +1058,7 @@ public class OrganizationService : IOrganizationService
             organization: organization,
             initOrganization: initOrganization));
 
-    internal async Task<(bool canScale, string failureReason)> CanScaleAsync(
+    public async Task<(bool canScale, string failureReason)> CanScaleAsync(
         Organization organization,
         int seatsToAdd)
     {
