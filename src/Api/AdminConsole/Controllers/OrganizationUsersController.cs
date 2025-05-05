@@ -164,7 +164,7 @@ public class OrganizationUsersController : Controller
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
 
-        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+        if (_featureService.IsEnabled(FeatureFlagKeys.SeparateCustomRolePermissions))
         {
             return await GetvNextAsync(orgId, includeGroups, includeCollections);
         }
