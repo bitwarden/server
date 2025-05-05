@@ -17,7 +17,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="licensing.cer" />
-    <EmbeddedResource Include="licensing_dev.cer" />
+    <EmbeddedResource Include="licensing_dev.cer" />F
     <EmbeddedResource Include="MailTemplates\Handlebars\**\*.hbs" />
   </ItemGroup>
 
@@ -74,8 +74,6 @@
   </ItemGroup>
   
   <ItemGroup>
-    <Folder Include="Dirt\Events\" />
-    <Folder Include="Dirt\Reports\" />
     <Folder Include="Resources\" />
     <Folder Include="Properties\" />
   </ItemGroup>
