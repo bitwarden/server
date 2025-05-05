@@ -7,13 +7,13 @@ using Xunit.Abstractions;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 
-public class OrganizationUsersControllerTest : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class OrganizationUsersControllerPerformanceTest : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly ITestOutputHelper _testOutputHelper;
 
-    public OrganizationUsersControllerTest(ApiApplicationFactory factory, ITestOutputHelper testOutputHelper)
+    public OrganizationUsersControllerPerformanceTest(ApiApplicationFactory factory, ITestOutputHelper testOutputHelper)
     {
         _factory = factory;
         _testOutputHelper = testOutputHelper;
@@ -51,7 +51,7 @@ public class OrganizationUsersControllerTest : IClassFixture<ApiApplicationFacto
         Assert.NotEmpty(result);
 
         stopwatch.Stop();
-        _testOutputHelper.WriteLine($"Request duration: {stopwatch.ElapsedMilliseconds} ms");
+        _testOutputHelper.WriteLine($"Seed: 100; Request duration: {stopwatch.ElapsedMilliseconds} ms");
     }
 
     [Fact(Skip = "Performance testing")]
@@ -74,7 +74,7 @@ public class OrganizationUsersControllerTest : IClassFixture<ApiApplicationFacto
         Assert.NotEmpty(result);
 
         stopwatch.Stop();
-        _testOutputHelper.WriteLine($"Request duration: {stopwatch.ElapsedMilliseconds} ms");
+        _testOutputHelper.WriteLine($"Seed: 60000; Request duration: {stopwatch.ElapsedMilliseconds} ms");
     }
 
 }
