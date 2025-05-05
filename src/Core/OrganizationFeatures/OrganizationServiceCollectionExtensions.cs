@@ -194,6 +194,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IInviteUsersOrganizationValidator, InviteUsersOrganizationValidator>();
         services.AddScoped<IInviteUsersPasswordManagerValidator, InviteUsersPasswordManagerValidator>();
         services.AddScoped<IInviteUsersEnvironmentValidator, InviteUsersEnvironmentValidator>();
+        services.AddScoped<IInitPendingOrganizationCommand, InitPendingOrganizationCommand>();
     }
 
     // TODO: move to OrganizationSubscriptionServiceCollectionExtensions when OrganizationUser methods are moved out of

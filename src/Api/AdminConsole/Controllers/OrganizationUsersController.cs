@@ -66,6 +66,7 @@ public class OrganizationUsersController : Controller
     private readonly IPricingClient _pricingClient;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
+    private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -92,7 +93,8 @@ public class OrganizationUsersController : Controller
         IFeatureService featureService,
         IPricingClient pricingClient,
         IConfirmOrganizationUserCommand confirmOrganizationUserCommand,
-        IRestoreOrganizationUserCommand restoreOrganizationUserCommand)
+        IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
+        IInitPendingOrganizationCommand initPendingOrganizationCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -119,6 +121,7 @@ public class OrganizationUsersController : Controller
         _pricingClient = pricingClient;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
+        _initPendingOrganizationCommand = initPendingOrganizationCommand;
     }
 
     [HttpGet("{id}")]
@@ -316,7 +319,7 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        await _organizationService.InitPendingOrganization(user.Id, orgId, organizationUserId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName);
+        await _initPendingOrganizationCommand.InitPendingOrganizationAsync(user, orgId, organizationUserId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName, model.Token);
         await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
         await _confirmOrganizationUserCommand.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id);
     }
@@ -497,7 +500,7 @@ public class OrganizationUsersController : Controller
         }
 
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId);
-        var isTdeEnrollment = ssoConfig != null && ssoConfig.GetData().MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption;
+        var isTdeEnrollment = ssoConfig != null && ssoConfig.Enabled && ssoConfig.GetData().MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption;
         if (!isTdeEnrollment && !string.IsNullOrWhiteSpace(model.ResetPasswordKey) && !await _userService.VerifySecretAsync(user, model.MasterPasswordHash))
         {
             throw new BadRequestException("Incorrect password");
