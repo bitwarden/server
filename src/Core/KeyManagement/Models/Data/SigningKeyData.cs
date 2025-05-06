@@ -4,7 +4,7 @@ namespace Bit.Core.KeyManagement.Models.Data;
 
 public class SigningKeyData
 {
-    public SigningKeyType KeyType { get; set; }
+    public SigningKeyType KeyAlgorithm { get; set; }
     public string WrappedSigningKey { get; set; }
     public string VerifyingKey { get; set; }
 }

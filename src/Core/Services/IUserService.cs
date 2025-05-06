@@ -4,6 +4,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
@@ -154,4 +155,9 @@ public interface IUserService
     /// </returns>
     /// <inheritdoc cref="IsClaimedByAnyOrganizationAsync"/>
     Task<IEnumerable<Organization>> GetOrganizationsClaimingUserAsync(Guid userId);
+
+    /// <summary>
+    /// Gets the cryptographic keys for a user.
+    /// </summary>
+    Task<UserAccountKeysData> GetUserAccountKeys(User user);
 }

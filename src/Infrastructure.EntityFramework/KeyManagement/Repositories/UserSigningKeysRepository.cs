@@ -27,7 +27,7 @@ public class UserSigningKeysRepository : Repository<Core.Entities.UserSigningKey
 
         return new SigningKeyData
         {
-            KeyType = signingKeys.KeyType,
+            KeyAlgorithm = signingKeys.KeyType,
             VerifyingKey = signingKeys.VerifyingKey,
             WrappedSigningKey = signingKeys.SigningKey,
         };
@@ -43,7 +43,7 @@ public class UserSigningKeysRepository : Repository<Core.Entities.UserSigningKey
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
-                KeyType = signingKeys.KeyType,
+                KeyType = signingKeys.KeyAlgorithm,
                 VerifyingKey = signingKeys.VerifyingKey,
                 SigningKey = signingKeys.WrappedSigningKey,
                 CreationDate = DateTime.UtcNow,
@@ -63,7 +63,7 @@ public class UserSigningKeysRepository : Repository<Core.Entities.UserSigningKey
             var entity = await dbContext.UserSigningKeys.FirstOrDefaultAsync(x => x.UserId == grantorId);
             if (entity != null)
             {
-                entity.KeyType = signingKeys.KeyType;
+                entity.KeyType = signingKeys.KeyAlgorithm;
                 entity.VerifyingKey = signingKeys.VerifyingKey;
                 entity.SigningKey = signingKeys.WrappedSigningKey;
                 entity.RevisionDate = DateTime.UtcNow;

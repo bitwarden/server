@@ -110,7 +110,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
                 throw new InvalidOperationException("The provided signing key data does not match the user's current signing key data.");
             }
 
-            if (string.IsNullOrEmpty(model.AccountKeys.AsymmetricEncryptionKeyData.KeyOwnershipSignature))
+            if (string.IsNullOrEmpty(model.AccountKeys.AsymmetricEncryptionKeyData.PublicKeyOwnershipSignature))
             {
                 throw new InvalidOperationException("The provided signing key data does not contain a valid key ownership signature.");
             }

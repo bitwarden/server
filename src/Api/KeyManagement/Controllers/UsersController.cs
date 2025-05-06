@@ -37,7 +37,7 @@ public class UsersController : Controller
     }
 
     [HttpGet("{id}/keys")]
-    public async Task<UserKeysResponseModel> GetAccountKeys(string id)
+    public async Task<PublicUserKeysResponseModel> GetAccountKeys(string id)
     {
         var guidId = new Guid(id);
         var user = await _userRepository.GetByIdAsync(guidId);
@@ -47,6 +47,6 @@ public class UsersController : Controller
         }
         var signingKeys = await _signingKeysRepository.GetByUserIdAsync(guidId);
 
-        return new UserKeysResponseModel(signingKeys.VerifyingKey, user.PublicKey, null);
+        return new PublicUserKeysResponseModel(signingKeys.VerifyingKey, user.PublicKey, null);
     }
 }

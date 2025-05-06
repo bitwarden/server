@@ -18,6 +18,8 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -78,6 +80,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
     private readonly IDistributedCache _distributedCache;
+    private readonly IUserSigningKeysRepository _userSigningKeysRepository;
 
     public UserService(
         IUserRepository userRepository,
@@ -115,7 +118,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IPremiumUserBillingService premiumUserBillingService,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
-        IDistributedCache distributedCache)
+        IDistributedCache distributedCache,
+        IUserSigningKeysRepository userSigningKeysRepository)
         : base(
               store,
               optionsAccessor,
@@ -159,6 +163,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
         _distributedCache = distributedCache;
+        _userSigningKeysRepository = userSigningKeysRepository;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -1577,5 +1582,31 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         {
             await _mailService.SendWelcomeEmailAsync(user);
         }
+    }
+
+    public async Task<UserAccountKeysData> GetUserAccountKeys(User user)
+    {
+        if (user == null)
+        {
+            throw new ArgumentNullException(nameof(user));
+        }
+
+        var signingKeys = await _userSigningKeysRepository.GetByUserIdAsync(user.Id);
+        return new UserAccountKeysData
+        {
+            AsymmetricEncryptionKeyData = new AsymmetricEncryptionKeyData
+            {
+                WrappedPrivateKey = user.PrivateKey,
+                PublicKey = user.PublicKey,
+                // todo
+                PublicKeyOwnershipSignature = null,
+            },
+            SigningKeyData = new SigningKeyData
+            {
+                VerifyingKey = signingKeys?.VerifyingKey,
+                WrappedSigningKey = signingKeys?.WrappedSigningKey,
+                KeyAlgorithm = signingKeys?.KeyAlgorithm ?? SigningKeyType.Ed25519,
+            }
+        };
     }
 }

@@ -24,7 +24,7 @@ public class AccountKeysRequestModel
         {
             signingKeyData = new SigningKeyData
             {
-                KeyType = SigningKeyType.Value,
+                KeyAlgorithm = SigningKeyType.Value,
                 WrappedSigningKey = UserKeyEncryptedSigningKey,
                 VerifyingKey = VerifyingKey,
             };
@@ -36,7 +36,7 @@ public class AccountKeysRequestModel
             {
                 WrappedPrivateKey = UserKeyEncryptedAccountPrivateKey,
                 PublicKey = AccountPublicKey,
-                KeyOwnershipSignature = PublicKeyOwnershipSignature,
+                PublicKeyOwnershipSignature = PublicKeyOwnershipSignature,
             },
             SigningKeyData = signingKeyData,
         };

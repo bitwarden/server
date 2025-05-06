@@ -7,8 +7,7 @@ CREATE TABLE [dbo].[UserSigningKeys] (
     [CreationDate]              DATETIME2 (7) NOT NULL,
     [RevisionDate]              DATETIME2 (7) NOT NULL,
     CONSTRAINT [PK_UserSigningKeys] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [FK_UserSigningKeys_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
-    CONSTRAINT [FK_UserSigningKeys_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
+    CONSTRAINT [FK_UserSigningKeys_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );
 GO
 
@@ -17,7 +16,7 @@ CREATE PROCEDURE [dbo].[UserSigningKeys_ReadByUserId]
 AS
 BEGIN
     SELECT *
-    FROM [dbo].[SigningKeys]
+    FROM [dbo].[UserSigningKeys]
     WHERE [UserId] = @UserId;
 END
 GO
@@ -33,13 +32,14 @@ BEGIN
     UPDATE [dbo].[UserSigningKeys]
     SET [KeyType] = @KeyType,
         [VerifyingKey] = @VerifyingKey,
-        [SigningKey] = @SigningKey
+        [SigningKey] = @SigningKey,
         [RevisionDate] = @RevisionDate
     WHERE [UserId] = @UserId;
 END
 GO
 
 CREATE PROCEDURE [dbo].[UserSigningKeys_SetForRotation]
+    @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @KeyType TINYINT,
     @VerifyingKey VARCHAR(MAX),
@@ -52,4 +52,3 @@ BEGIN
     VALUES (@Id, @UserId, @KeyType, @VerifyingKey, @SigningKey, @CreationDate, @RevisionDate)
 END
 GO
-

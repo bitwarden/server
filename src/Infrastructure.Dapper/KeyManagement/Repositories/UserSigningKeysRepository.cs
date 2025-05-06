@@ -28,7 +28,7 @@ public class UserSigningKeysRepository : Repository<UserSigningKeys, Guid>, IUse
         using (var connection = new SqlConnection(ConnectionString))
         {
             return await connection.QuerySingleOrDefaultAsync<SigningKeyData>(
-                "[dbo].[SigningKeys_ReadByUserId]",
+                "[dbo].[UserSigningKeys_ReadByUserId]",
                 new
                 {
                     UserId = userId
@@ -41,17 +41,20 @@ public class UserSigningKeysRepository : Repository<UserSigningKeys, Guid>, IUse
     {
         return async (SqlConnection connection, SqlTransaction transaction) =>
         {
-            await using (var cmd = new SqlCommand("[dbo].[UserSigningKeys_SetForRotation]", connection, transaction))
-            {
-                cmd.Parameters.Add(new SqlParameter("@Id", SqlDbType.UniqueIdentifier) { Value = Guid.NewGuid() });
-                cmd.Parameters.Add(new SqlParameter("@UserId", SqlDbType.UniqueIdentifier) { Value = userId });
-                cmd.Parameters.Add(new SqlParameter("@KeyType", SqlDbType.TinyInt) { Value = (byte)signingKeys.KeyType });
-                cmd.Parameters.Add(new SqlParameter("@VerifyingKey", SqlDbType.NVarChar) { Value = signingKeys.VerifyingKey });
-                cmd.Parameters.Add(new SqlParameter("@SigningKey", SqlDbType.NVarChar) { Value = signingKeys.WrappedSigningKey });
-                cmd.Parameters.Add(new SqlParameter("@CreationDate", SqlDbType.DateTime) { Value = DateTime.UtcNow });
-                cmd.Parameters.Add(new SqlParameter("@RevisionDate", SqlDbType.DateTime) { Value = DateTime.UtcNow });
-                await cmd.ExecuteNonQueryAsync();
-            }
+            await connection.QueryAsync(
+                "[dbo].[UserSigningKeys_SetForRotation]",
+                new
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    KeyType = (byte)signingKeys.KeyAlgorithm,
+                    signingKeys.VerifyingKey,
+                    SigningKey = signingKeys.WrappedSigningKey,
+                    CreationDate = DateTime.UtcNow,
+                    RevisionDate = DateTime.UtcNow
+                },
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
         };
     }
 
@@ -59,15 +62,18 @@ public class UserSigningKeysRepository : Repository<UserSigningKeys, Guid>, IUse
     {
         return async (SqlConnection connection, SqlTransaction transaction) =>
         {
-            await using (var cmd = new SqlCommand("[dbo].[UserSigningKeys_UpdateForRotation]", connection, transaction))
-            {
-                cmd.Parameters.Add(new SqlParameter("@UserId", SqlDbType.UniqueIdentifier) { Value = grantorId });
-                cmd.Parameters.Add(new SqlParameter("@KeyType", SqlDbType.TinyInt) { Value = (byte)signingKeys.KeyType });
-                cmd.Parameters.Add(new SqlParameter("@VerifyingKey", SqlDbType.NVarChar) { Value = signingKeys.VerifyingKey });
-                cmd.Parameters.Add(new SqlParameter("@SigningKey", SqlDbType.NVarChar) { Value = signingKeys.WrappedSigningKey });
-                cmd.Parameters.Add(new SqlParameter("@RevisionDate", SqlDbType.DateTime) { Value = DateTime.UtcNow });
-                cmd.ExecuteNonQuery();
-            }
+            await connection.QueryAsync(
+                "[dbo].[UserSigningKeys_UpdateForRotation]",
+                new
+                {
+                    UserId = grantorId,
+                    KeyType = (byte)signingKeys.KeyAlgorithm,
+                    signingKeys.VerifyingKey,
+                    SigningKey = signingKeys.WrappedSigningKey,
+                    RevisionDate = DateTime.UtcNow
+                },
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
         };
     }
 }
