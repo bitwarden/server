@@ -8,6 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
@@ -15,7 +16,7 @@ using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using OrganizationUserInvite = Bit.Core.Models.Business.OrganizationUserInvite;
 
-public class ImportOrganizationUserCommand
+public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -74,22 +75,9 @@ public class ImportOrganizationUserCommand
 
         var events = new List<(OrganizationUserUserDetails ou, EventType e, DateTime? d)>();
 
-        // Remove Users
         if (removeUserExternalIds?.Any() ?? false)
         {
-            var existingUsersDict = existingExternalUsers.ToDictionary(u => u.ExternalId);
-            var removeUsersSet = new HashSet<string>(removeUserExternalIds)
-                .Except(newUsersSet)
-                .Where(u => existingUsersDict.ContainsKey(u) && existingUsersDict[u].Type != OrganizationUserType.Owner)
-                .Select(u => existingUsersDict[u]);
-
-            await _organizationUserRepository.DeleteManyAsync(removeUsersSet.Select(u => u.Id));
-            events.AddRange(removeUsersSet.Select(u => (
-              u,
-              EventType.OrganizationUser_Removed,
-              (DateTime?)DateTime.UtcNow
-              ))
-            );
+            await RemoveExistingExternalUsers(removeUserExternalIds, events, existingExternalUsers, newUsersSet);
         }
 
         if (overwriteExisting)
@@ -269,5 +257,27 @@ public class ImportOrganizationUserCommand
         }
 
         await _groupRepository.UpdateUsersAsync(group.Id, users);
+    }
+
+    private async Task RemoveExistingExternalUsers(
+            IEnumerable<string> removeUserExternalIds,
+            List<(OrganizationUserUserDetails ou, EventType e, DateTime? d)> events,
+            IEnumerable<OrganizationUserUserDetails> existingExternalUsers,
+            HashSet<string> newUsersSet
+    )
+    {
+        var existingUsersDict = existingExternalUsers.ToDictionary(u => u.ExternalId);
+        var removeUsersSet = new HashSet<string>(removeUserExternalIds)
+            .Except(newUsersSet)
+            .Where(u => existingUsersDict.ContainsKey(u) && existingUsersDict[u].Type != OrganizationUserType.Owner)
+            .Select(u => existingUsersDict[u]);
+
+        await _organizationUserRepository.DeleteManyAsync(removeUsersSet.Select(u => u.Id));
+        events.AddRange(removeUsersSet.Select(u => (
+          u,
+          EventType.OrganizationUser_Removed,
+          (DateTime?)DateTime.UtcNow
+          ))
+        );
     }
 }
