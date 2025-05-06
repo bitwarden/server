@@ -17,16 +17,11 @@ public class Failure<T>(Error<T> error) : CommandResult<T>
     public Error<T> Error { get; } = error;
 }
 
-public class Partial<T> : CommandResult<T>
+public class Partial<T>(IEnumerable<T> successfulItems, IEnumerable<Error<T>> failedItems)
+    : CommandResult<T>
 {
-    public T[] Successes { get; set; } = [];
-    public Error<T>[] Failures { get; set; } = [];
-
-    public Partial(IEnumerable<T> successfulItems, IEnumerable<Error<T>> failedItems)
-    {
-        Successes = successfulItems.ToArray();
-        Failures = failedItems.ToArray();
-    }
+    public IEnumerable<T> Successes { get; } = successfulItems;
+    public IEnumerable<Error<T>> Failures { get; } = failedItems;
 }
 
 public static class CommandResultExtensions
@@ -42,18 +37,6 @@ public static class CommandResultExtensions
     /// <returns></returns>
     public static CommandResult<B> MapToFailure<A, B>(this Invalid<A> invalidResult, Func<A, B> mappingFunction) =>
         new Failure<B>(invalidResult.Error.ToError(mappingFunction(invalidResult.Error.ErroredValue)));
-
-    public static CommandResult<T> ToSingleResult<T>(this Partial<T> partialResult)
-    {
-        if (partialResult.Successes.Length + partialResult.Failures.Length > 1)
-        {
-            throw new Exception("Partial result has more than one success and/or failure, cannot map to a single CommandResult.");
-        }
-
-        return partialResult.Failures.Length > 0
-            ? new Failure<T>(partialResult.Failures.First())
-            : new Success<T>(partialResult.Successes.First());
-    }
 }
 
 [Obsolete("Use CommandResult<T> instead. This will be removed once old code is updated.")]
