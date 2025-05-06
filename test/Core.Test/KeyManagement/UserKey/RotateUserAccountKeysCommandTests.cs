@@ -80,7 +80,7 @@ public class RotateUserAccountKeysCommandTests
         user.KdfMemory = 64;
         user.KdfParallelism = 4;
 
-        model.AccountPublicKey = "new-public";
+        model.AccountKeys.AsymmetricEncryptionKeyData.PublicKey = "new-public";
         model.MasterPasswordUnlockData.Email = user.Email;
         model.MasterPasswordUnlockData.KdfType = Enums.KdfType.Argon2id;
         model.MasterPasswordUnlockData.KdfIterations = 3;
@@ -108,7 +108,7 @@ public class RotateUserAccountKeysCommandTests
         model.MasterPasswordUnlockData.KdfMemory = 64;
         model.MasterPasswordUnlockData.KdfParallelism = 4;
 
-        model.AccountPublicKey = user.PublicKey;
+        model.AccountKeys.AsymmetricEncryptionKeyData.PublicKey = user.PublicKey;
 
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);

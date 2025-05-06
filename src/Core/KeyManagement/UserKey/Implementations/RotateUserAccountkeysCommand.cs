@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -25,6 +26,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     private readonly IdentityErrorDescriber _identityErrorDescriber;
     private readonly IWebAuthnCredentialRepository _credentialRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly IUserSigningKeysRepository _signingKeysRepository;
 
     /// <summary>
     /// Instantiates a new <see cref="RotateUserAccountKeysCommand"/>
@@ -45,7 +47,8 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         IEmergencyAccessRepository emergencyAccessRepository, IOrganizationUserRepository organizationUserRepository,
         IDeviceRepository deviceRepository,
         IPasswordHasher<User> passwordHasher,
-        IPushNotificationService pushService, IdentityErrorDescriber errors, IWebAuthnCredentialRepository credentialRepository)
+        IPushNotificationService pushService, IdentityErrorDescriber errors, IWebAuthnCredentialRepository credentialRepository,
+        IUserSigningKeysRepository signingKeysRepository)
     {
         _userService = userService;
         _userRepository = userRepository;
@@ -59,6 +62,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         _identityErrorDescriber = errors;
         _credentialRepository = credentialRepository;
         _passwordHasher = passwordHasher;
+        _signingKeysRepository = signingKeysRepository;
     }
 
     /// <inheritdoc />
@@ -78,6 +82,9 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         user.RevisionDate = user.AccountRevisionDate = now;
         user.LastKeyRotationDate = now;
         user.SecurityStamp = Guid.NewGuid().ToString();
+        var currentSigningKeys = await _signingKeysRepository.GetByUserIdAsync(user.Id);
+
+        List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = new();
 
         if (
             !model.MasterPasswordUnlockData.ValidateForUser(user)
@@ -86,18 +93,50 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             throw new InvalidOperationException("The provided master password unlock data is not valid for this user.");
         }
         if (
-            model.AccountPublicKey != user.PublicKey
+            model.AccountKeys.AsymmetricEncryptionKeyData.PublicKey != user.PublicKey
         )
         {
             throw new InvalidOperationException("The provided account public key does not match the user's current public key, and changing the account asymmetric keypair is currently not supported during key rotation.");
         }
+        if (currentSigningKeys != null)
+        {
+            if (model.AccountKeys.SigningKeyData == null)
+            {
+                throw new InvalidOperationException("The provided signing key data is null, but the user already has signing keys.");
+            }
+
+            if (model.AccountKeys.SigningKeyData.VerifyingKey != currentSigningKeys.VerifyingKey)
+            {
+                throw new InvalidOperationException("The provided signing key data does not match the user's current signing key data.");
+            }
+
+            if (string.IsNullOrEmpty(model.AccountKeys.AsymmetricEncryptionKeyData.KeyOwnershipSignature))
+            {
+                throw new InvalidOperationException("The provided signing key data does not contain a valid key ownership signature.");
+            }
+        }
+        else
+        {
+            if (model.AccountKeys.SigningKeyData != null)
+            {
+                if (string.IsNullOrEmpty(model.AccountKeys.SigningKeyData.VerifyingKey))
+                {
+                    throw new InvalidOperationException("The provided signing key data does not contain a valid verifying key.");
+                }
+
+                if (string.IsNullOrEmpty(model.AccountKeys.SigningKeyData.WrappedSigningKey))
+                {
+                    throw new InvalidOperationException("The provided signing key data does not contain a valid wrapped signing key.");
+                }
+                saveEncryptedDataActions.Add(_signingKeysRepository.SetUserSigningKeys(user.Id, model.AccountKeys.SigningKeyData));
+            }
+        }
 
         user.Key = model.MasterPasswordUnlockData.MasterKeyEncryptedUserKey;
-        user.PrivateKey = model.UserKeyEncryptedAccountPrivateKey;
+        user.PrivateKey = model.AccountKeys.AsymmetricEncryptionKeyData.WrappedPrivateKey;
         user.MasterPassword = _passwordHasher.HashPassword(user, model.MasterPasswordUnlockData.MasterKeyAuthenticationHash);
         user.MasterPasswordHint = model.MasterPasswordUnlockData.MasterPasswordHint;
 
-        List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = new();
         if (model.Ciphers.Any())
         {
             saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation(user.Id, model.Ciphers));
@@ -133,6 +172,11 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         if (model.DeviceKeys.Any())
         {
             saveEncryptedDataActions.Add(_deviceRepository.UpdateKeysForRotationAsync(user.Id, model.DeviceKeys));
+        }
+
+        if (model.AccountKeys.SigningKeyData != null)
+        {
+            saveEncryptedDataActions.Add(_signingKeysRepository.UpdateForKeyRotation(user.Id, model.AccountKeys.SigningKeyData));
         }
 
         await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
