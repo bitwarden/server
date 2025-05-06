@@ -82,22 +82,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
 
         if (overwriteExisting)
         {
-            // Remove existing external users that are not in new user set
-            var usersToDelete = existingExternalUsers.Where(u =>
-                u.Type != OrganizationUserType.Owner &&
-                !newUsersSet.Contains(u.ExternalId) &&
-                existingExternalUsersIdDict.ContainsKey(u.ExternalId));
-            await _organizationUserRepository.DeleteManyAsync(usersToDelete.Select(u => u.Id));
-            events.AddRange(usersToDelete.Select(u => (
-              u,
-              EventType.OrganizationUser_Removed,
-              (DateTime?)DateTime.UtcNow
-              ))
-            );
-            foreach (var deletedUser in usersToDelete)
-            {
-                existingExternalUsersIdDict.Remove(deletedUser.ExternalId);
-            }
+            await OverwriteExisting(existingExternalUsers, existingExternalUsersIdDict, newUsersSet, events);
         }
 
         if (newUsers?.Any() ?? false)
@@ -292,5 +277,31 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             existingExternalUsersIdDict.Add(invitedUser.ExternalId, invitedUser.Id);
         }
     }
+
+    private async Task OverwriteExisting(
+            IEnumerable<OrganizationUserUserDetails> existingExternalUsers,
+            IDictionary<string, Guid> existingExternalUsersIdDict,
+            HashSet<string> newUsersSet,
+            List<(OrganizationUserUserDetails ou, EventType e, DateTime? d)> events
+            )
+    {
+        // Remove existing external users that are not in new user set
+        var usersToDelete = existingExternalUsers.Where(u =>
+            u.Type != OrganizationUserType.Owner &&
+            !newUsersSet.Contains(u.ExternalId) &&
+            existingExternalUsersIdDict.ContainsKey(u.ExternalId));
+        await _organizationUserRepository.DeleteManyAsync(usersToDelete.Select(u => u.Id));
+        events.AddRange(usersToDelete.Select(u => (
+          u,
+          EventType.OrganizationUser_Removed,
+          (DateTime?)DateTime.UtcNow
+          ))
+        );
+        foreach (var deletedUser in usersToDelete)
+        {
+            existingExternalUsersIdDict.Remove(deletedUser.ExternalId);
+        }
+    }
+
 
 }
