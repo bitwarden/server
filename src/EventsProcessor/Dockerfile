@@ -62,6 +62,7 @@ ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:5000
+ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 EXPOSE 5000
 
 RUN apt-get update \
