@@ -1,5 +1,5 @@
-﻿using Bit.Core.AdminConsole.Errors;
-using Bit.Core.AdminConsole.Shared.Validation;
+﻿using Bit.Core.AdminConsole.Utilities.Errors;
+using Bit.Core.AdminConsole.Utilities.Validation;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.Shared;

@@ -1,9 +1,9 @@
 ﻿#nullable enable
 
-using Bit.Core.AdminConsole.Errors;
-using Bit.Core.AdminConsole.Shared.Validation;
+using Bit.Core.AdminConsole.Utilities.Errors;
+using Bit.Core.AdminConsole.Utilities.Validation;
 
-namespace Bit.Core.Models.Commands;
+namespace Bit.Core.AdminConsole.Utilities.Commands;
 
 public abstract class CommandResult<T>;
 

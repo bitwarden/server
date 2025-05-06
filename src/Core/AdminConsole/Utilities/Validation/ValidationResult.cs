@@ -1,6 +1,6 @@
-﻿using Bit.Core.AdminConsole.Errors;
+﻿using Bit.Core.AdminConsole.Utilities.Errors;
 
-namespace Bit.Core.AdminConsole.Shared.Validation;
+namespace Bit.Core.AdminConsole.Utilities.Validation;
 
 public abstract record ValidationResult<T>;
 
