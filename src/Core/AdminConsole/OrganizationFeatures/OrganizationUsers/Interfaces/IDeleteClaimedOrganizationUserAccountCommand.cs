@@ -1,8 +1,5 @@
 ﻿#nullable enable
 
-using Bit.Core.Models.Commands;
-using Bit.Core.Models.Data.Organizations;
-
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 public interface IDeleteClaimedOrganizationUserAccountCommand
@@ -10,7 +7,7 @@ public interface IDeleteClaimedOrganizationUserAccountCommand
     /// <summary>
     /// Removes a user from an organization and deletes all of their associated user data.
     /// </summary>
-    Task<CommandResult<DeleteUserResponse>> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId);
+    Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId);
 
     /// <summary>
     /// Removes multiple users from an organization and deletes all of their associated user data.
@@ -18,5 +15,5 @@ public interface IDeleteClaimedOrganizationUserAccountCommand
     /// <returns>
     /// An error message for each user that could not be removed, otherwise null.
     /// </returns>
-    Task<Partial<DeleteUserResponse>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid deletingUserId);
+    Task<IEnumerable<(Guid OrganizationUserId, string? ErrorMessage)>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId);
 }
