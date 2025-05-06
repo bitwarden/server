@@ -116,7 +116,7 @@ public class OrganizationSponsorshipsController : Controller
     [Authorize("Application")]
     [HttpPost("{sponsoringOrgId}/families-for-enterprise/resend")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task ResendSponsorshipOffer(Guid sponsoringOrgId)
+    public async Task ResendSponsorshipOffer(Guid sponsoringOrgId, [FromQuery] string sponsoredFriendlyName)
     {
         var freeFamiliesSponsorshipPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(sponsoringOrgId,
             PolicyType.FreeFamiliesSponsorshipPolicy);
@@ -129,11 +129,14 @@ public class OrganizationSponsorshipsController : Controller
         var sponsoringOrgUser = await _organizationUserRepository
             .GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
 
-        await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(
-            await _organizationRepository.GetByIdAsync(sponsoringOrgId),
-            sponsoringOrgUser,
-            await _organizationSponsorshipRepository
-                .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id));
+        var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
+        var filteredSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
+        if (filteredSponsorship != null)
+        {
+            await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(
+                await _organizationRepository.GetByIdAsync(sponsoringOrgId),
+                sponsoringOrgUser, filteredSponsorship);
+        }
     }
 
     [Authorize("Application")]
