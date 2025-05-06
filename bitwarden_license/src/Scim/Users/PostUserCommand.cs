@@ -76,9 +76,8 @@ public class PostUserCommand(
         var invitedOrganizationUserId = result switch
         {
             Success<ScimInviteOrganizationUsersResponse> success => success.Value.InvitedUser.Id,
-            Failure<ScimInviteOrganizationUsersResponse> failure when failure.Errors
-                    .Any(x => x.Message == NoUsersToInviteError.Code) => (Guid?)null,
-            Failure<ScimInviteOrganizationUsersResponse> failure when failure.Errors.Length != 0 => throw MapToBitException(failure.Errors),
+            Failure<ScimInviteOrganizationUsersResponse> { Error.Message: NoUsersToInviteError.Code } => (Guid?)null,
+            Failure<ScimInviteOrganizationUsersResponse> failure => throw MapToBitException(failure.Error),
             _ => throw new InvalidOperationException()
         };
 

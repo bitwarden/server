@@ -80,7 +80,7 @@ public class InviteOrganizationUserCommandTests
 
         // Assert
         Assert.IsType<Failure<ScimInviteOrganizationUsersResponse>>(result);
-        Assert.Equal(NoUsersToInviteError.Code, (result as Failure<ScimInviteOrganizationUsersResponse>).ErrorMessage);
+        Assert.Equal(NoUsersToInviteError.Code, (result as Failure<ScimInviteOrganizationUsersResponse>)!.Error.Message);
 
         await sutProvider.GetDependency<IPaymentService>()
             .DidNotReceiveWithAnyArgs()
@@ -209,7 +209,7 @@ public class InviteOrganizationUserCommandTests
         Assert.IsType<Failure<ScimInviteOrganizationUsersResponse>>(result);
         var failure = result as Failure<ScimInviteOrganizationUsersResponse>;
 
-        Assert.Equal(errorMessage, failure!.ErrorMessage);
+        Assert.Equal(errorMessage, failure!.Error.Message);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceive()
@@ -571,7 +571,7 @@ public class InviteOrganizationUserCommandTests
 
         // Assert
         Assert.IsType<Failure<ScimInviteOrganizationUsersResponse>>(result);
-        Assert.Equal(FailedToInviteUsersError.Code, (result as Failure<ScimInviteOrganizationUsersResponse>)!.ErrorMessage);
+        Assert.Equal(FailedToInviteUsersError.Code, (result as Failure<ScimInviteOrganizationUsersResponse>)!.Error.Message);
 
         // org user revert
         await orgUserRepository.Received(1).DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(x => x.Count() == 1));

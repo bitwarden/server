@@ -12,22 +12,9 @@ public class Success<T>(T value) : CommandResult<T>
     public T Value { get; } = value;
 }
 
-public class Failure<T>(IEnumerable<string> errorMessages) : CommandResult<T>
+public class Failure<T>(Error<T> error) : CommandResult<T>
 {
-    public List<string> ErrorMessages { get; } = errorMessages.ToList();
-    public Error<T>[] Errors { get; set; } = [];
-
-    public string ErrorMessage => string.Join(" ", ErrorMessages);
-
-    public Failure(IEnumerable<Error<T>> errors) : this(errors.Select(e => e.Message))
-    {
-        Errors = errors.ToArray();
-    }
-
-    public Failure(Error<T> error) : this([error.Message])
-    {
-        Errors = [error];
-    }
+    public Error<T> Error { get; } = error;
 }
 
 public class Partial<T> : CommandResult<T>

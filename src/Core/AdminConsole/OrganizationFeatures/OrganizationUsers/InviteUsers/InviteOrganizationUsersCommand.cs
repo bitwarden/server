@@ -50,11 +50,11 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         {
             case Failure<InviteOrganizationUsersResponse> failure:
                 return new Failure<ScimInviteOrganizationUsersResponse>(
-                    failure.Errors.Select(error => new Error<ScimInviteOrganizationUsersResponse>(error.Message,
+                    new Error<ScimInviteOrganizationUsersResponse>(failure.Error.Message,
                         new ScimInviteOrganizationUsersResponse
                         {
-                            InvitedUser = error.ErroredValue.InvitedUsers.FirstOrDefault()
-                        })));
+                            InvitedUser = failure.Error.ErroredValue.InvitedUsers.FirstOrDefault()
+                        }));
 
             case Success<InviteOrganizationUsersResponse> success when success.Value.InvitedUsers.Any():
                 var user = success.Value.InvitedUsers.First();
