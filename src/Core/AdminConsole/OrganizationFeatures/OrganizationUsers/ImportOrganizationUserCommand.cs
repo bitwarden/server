@@ -102,73 +102,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
 
         if (newUsers?.Any() ?? false)
         {
-            // Marry existing users
-            var existingUsersEmailsDict = existingUsers
-                .Where(u => string.IsNullOrWhiteSpace(u.ExternalId))
-                .ToDictionary(u => u.Email);
-            var newUsersEmailsDict = newUsers.ToDictionary(u => u.Email);
-            var usersToAttach = existingUsersEmailsDict.Keys.Intersect(newUsersEmailsDict.Keys).ToList();
-            var usersToUpsert = new List<OrganizationUser>();
-            foreach (var user in usersToAttach)
-            {
-                var orgUserDetails = existingUsersEmailsDict[user];
-                var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserDetails.Id);
-                if (orgUser != null)
-                {
-                    orgUser.ExternalId = newUsersEmailsDict[user].ExternalId;
-                    usersToUpsert.Add(orgUser);
-                    existingExternalUsersIdDict.Add(orgUser.ExternalId, orgUser.Id);
-                }
-            }
-            await _organizationUserRepository.UpsertManyAsync(usersToUpsert);
-
-            // Add new users
-            var existingUsersSet = new HashSet<string>(existingExternalUsersIdDict.Keys);
-            var usersToAdd = newUsersSet.Except(existingUsersSet).ToList();
-
-            var seatsAvailable = int.MaxValue;
-            var enoughSeatsAvailable = true;
-            if (organization.Seats.HasValue)
-            {
-                var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-                seatsAvailable = organization.Seats.Value - occupiedSeats;
-                enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
-            }
-
-            var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
-
-            var userInvites = new List<(OrganizationUserInvite, string)>();
-            foreach (var user in newUsers)
-            {
-                if (!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
-                {
-                    continue;
-                }
-
-                try
-                {
-                    var invite = new OrganizationUserInvite
-                    {
-                        Emails = new List<string> { user.Email },
-                        Type = OrganizationUserType.User,
-                        Collections = new List<CollectionAccessSelection>(),
-                        AccessSecretsManager = hasStandaloneSecretsManager
-                    };
-                    userInvites.Add((invite, user.ExternalId));
-                }
-                catch (BadRequestException)
-                {
-                    // Thrown when the user is already invited to the organization
-                    continue;
-                }
-            }
-
-            //@TODO: replace with command
-            var invitedUsers = await _organizationService.InviteUsersAsync(organizationId, invitingUserId: null, systemUser: eventSystemUser, userInvites);
-            foreach (var invitedUser in invitedUsers)
-            {
-                existingExternalUsersIdDict.Add(invitedUser.ExternalId, invitedUser.Id);
-            }
+            await RemoveExistingUsers(existingUsers, newUsers, existingExternalUsersIdDict, newUsersSet, organization, eventSystemUser);
         }
 
 
@@ -280,4 +214,83 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
           ))
         );
     }
+
+    private async Task RemoveExistingUsers(
+            IEnumerable<OrganizationUserUserDetails> existingUsers,
+            IEnumerable<ImportedOrganizationUser> newUsers,
+            IDictionary<string, Guid> existingExternalUsersIdDict,
+            HashSet<string> newUsersSet,
+            Organization organization,
+            EventSystemUser eventSystemUser
+            )
+    {
+        // Marry existing users
+        var existingUsersEmailsDict = existingUsers
+            .Where(u => string.IsNullOrWhiteSpace(u.ExternalId))
+            .ToDictionary(u => u.Email);
+        var newUsersEmailsDict = newUsers.ToDictionary(u => u.Email);
+        var usersToAttach = existingUsersEmailsDict.Keys.Intersect(newUsersEmailsDict.Keys).ToList();
+        var usersToUpsert = new List<OrganizationUser>();
+        foreach (var user in usersToAttach)
+        {
+            var orgUserDetails = existingUsersEmailsDict[user];
+            var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserDetails.Id);
+            if (orgUser != null)
+            {
+                orgUser.ExternalId = newUsersEmailsDict[user].ExternalId;
+                usersToUpsert.Add(orgUser);
+                existingExternalUsersIdDict.Add(orgUser.ExternalId, orgUser.Id);
+            }
+        }
+        await _organizationUserRepository.UpsertManyAsync(usersToUpsert);
+
+        // Add new users
+        var existingUsersSet = new HashSet<string>(existingExternalUsersIdDict.Keys);
+        var usersToAdd = newUsersSet.Except(existingUsersSet).ToList();
+
+        var seatsAvailable = int.MaxValue;
+        var enoughSeatsAvailable = true;
+        if (organization.Seats.HasValue)
+        {
+            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            seatsAvailable = organization.Seats.Value - occupiedSeats;
+            enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
+        }
+
+        var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
+
+        var userInvites = new List<(OrganizationUserInvite, string)>();
+        foreach (var user in newUsers)
+        {
+            if (!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
+            {
+                continue;
+            }
+
+            try
+            {
+                var invite = new OrganizationUserInvite
+                {
+                    Emails = new List<string> { user.Email },
+                    Type = OrganizationUserType.User,
+                    Collections = new List<CollectionAccessSelection>(),
+                    AccessSecretsManager = hasStandaloneSecretsManager
+                };
+                userInvites.Add((invite, user.ExternalId));
+            }
+            catch (BadRequestException)
+            {
+                // Thrown when the user is already invited to the organization
+                continue;
+            }
+        }
+
+        //@TODO: replace with command
+        var invitedUsers = await _organizationService.InviteUsersAsync(organization.Id, invitingUserId: null, systemUser: eventSystemUser, userInvites);
+        foreach (var invitedUser in invitedUsers)
+        {
+            existingExternalUsersIdDict.Add(invitedUser.ExternalId, invitedUser.Id);
+        }
+    }
+
 }
