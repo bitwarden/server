@@ -13,7 +13,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Constants;
@@ -31,12 +30,10 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using OrganizationUserInvite = Bit.Core.Models.Business.OrganizationUserInvite;
@@ -77,8 +74,6 @@ public class OrganizationService : IOrganizationService
     private readonly IPricingClient _pricingClient;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
-    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
-    private readonly IDataProtector _dataProtector;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -112,9 +107,7 @@ public class OrganizationService : IOrganizationService
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         IPolicyRequirementQuery policyRequirementQuery,
-        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        IDataProtectionProvider dataProtectionProvider
+        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand
         )
     {
         _organizationRepository = organizationRepository;
@@ -149,8 +142,6 @@ public class OrganizationService : IOrganizationService
         _pricingClient = pricingClient;
         _policyRequirementQuery = policyRequirementQuery;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
-        _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
-        _dataProtector = dataProtectionProvider.CreateProtector(OrgUserInviteTokenable.DataProtectorPurpose);
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -1069,7 +1060,7 @@ public class OrganizationService : IOrganizationService
             organization: organization,
             initOrganization: initOrganization));
 
-    internal async Task<(bool canScale, string failureReason)> CanScaleAsync(
+    public async Task<(bool canScale, string failureReason)> CanScaleAsync(
         Organization organization,
         int seatsToAdd)
     {
@@ -1922,72 +1913,5 @@ public class OrganizationService : IOrganizationService
             EventRaisedByUser = userService.GetUserName(user),
             SalesAssistedTrialStarted = salesAssistedTrialStarted,
         });
-    }
-
-    public async Task InitPendingOrganization(User user, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName, string emailToken)
-    {
-        await ValidateSignUpPoliciesAsync(user.Id);
-
-        var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-        if (orgUser == null)
-        {
-            throw new BadRequestException("User invalid.");
-        }
-
-        // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-        var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-            _orgUserInviteTokenDataFactory, emailToken, orgUser);
-
-        var tokenValid = newTokenValid ||
-                         CoreHelpers.UserInviteTokenIsValid(_dataProtector, emailToken, user.Email, orgUser.Id,
-                             _globalSettings);
-
-        if (!tokenValid)
-        {
-            throw new BadRequestException("Invalid token.");
-        }
-
-        var org = await GetOrgById(organizationId);
-
-        if (org.Enabled)
-        {
-            throw new BadRequestException("Organization is already enabled.");
-        }
-
-        if (org.Status != OrganizationStatusType.Pending)
-        {
-            throw new BadRequestException("Organization is not on a Pending status.");
-        }
-
-        if (!string.IsNullOrEmpty(org.PublicKey))
-        {
-            throw new BadRequestException("Organization already has a Public Key.");
-        }
-
-        if (!string.IsNullOrEmpty(org.PrivateKey))
-        {
-            throw new BadRequestException("Organization already has a Private Key.");
-        }
-
-        org.Enabled = true;
-        org.Status = OrganizationStatusType.Created;
-        org.PublicKey = publicKey;
-        org.PrivateKey = privateKey;
-
-        await UpdateAsync(org);
-
-        if (!string.IsNullOrWhiteSpace(collectionName))
-        {
-            // give the owner Can Manage access over the default collection
-            List<CollectionAccessSelection> defaultOwnerAccess =
-                [new CollectionAccessSelection { Id = organizationUserId, HidePasswords = false, ReadOnly = false, Manage = true }];
-
-            var defaultCollection = new Collection
-            {
-                Name = collectionName,
-                OrganizationId = org.Id
-            };
-            await _collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);
-        }
     }
 }

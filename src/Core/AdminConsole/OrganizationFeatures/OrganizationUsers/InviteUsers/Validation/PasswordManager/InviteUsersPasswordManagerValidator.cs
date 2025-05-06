@@ -44,7 +44,7 @@ public class InviteUsersPasswordManagerValidator(
             return new Invalid<PasswordManagerSubscriptionUpdate>(new PasswordManagerMustHaveSeatsError(subscriptionUpdate));
         }
 
-        if (subscriptionUpdate.MaxSeatsReached)
+        if (subscriptionUpdate.MaxSeatsExceeded)
         {
             return new Invalid<PasswordManagerSubscriptionUpdate>(
                 new PasswordManagerSeatLimitHasBeenReachedError(subscriptionUpdate));

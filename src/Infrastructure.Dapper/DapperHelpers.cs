@@ -150,6 +150,8 @@ public static class DapperHelpers
             os => os.LastSyncDate,
             os => os.ValidUntil,
             os => os.ToDelete,
+            os => os.IsAdminInitiated,
+            os => os.Notes,
         ]
     );
 

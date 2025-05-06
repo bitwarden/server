@@ -1,30 +1,38 @@
-﻿using System.Net.Http.Json;
-using Bit.Core.Models.Data;
-using Bit.Core.Settings;
+﻿using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Bit.Core.Enums;
+using Bit.Core.Models.Data.Integrations;
+using Bit.Core.Repositories;
+
+#nullable enable
 
 namespace Bit.Core.Services;
 
 public class WebhookEventHandler(
     IHttpClientFactory httpClientFactory,
-    GlobalSettings globalSettings)
-    : IEventMessageHandler
+    IUserRepository userRepository,
+    IOrganizationRepository organizationRepository,
+    IOrganizationIntegrationConfigurationRepository configurationRepository)
+    : IntegrationEventHandlerBase(userRepository, organizationRepository, configurationRepository)
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(HttpClientName);
-    private readonly string _webhookUrl = globalSettings.EventLogging.WebhookUrl;
 
     public const string HttpClientName = "WebhookEventHandlerHttpClient";
 
-    public async Task HandleEventAsync(EventMessage eventMessage)
-    {
-        var content = JsonContent.Create(eventMessage);
-        var response = await _httpClient.PostAsync(_webhookUrl, content);
-        response.EnsureSuccessStatusCode();
-    }
+    protected override IntegrationType GetIntegrationType() => IntegrationType.Webhook;
 
-    public async Task HandleManyEventsAsync(IEnumerable<EventMessage> eventMessages)
+    protected override async Task ProcessEventIntegrationAsync(JsonObject mergedConfiguration,
+        string renderedTemplate)
     {
-        var content = JsonContent.Create(eventMessages);
-        var response = await _httpClient.PostAsync(_webhookUrl, content);
+        var config = mergedConfiguration.Deserialize<WebhookIntegrationConfigurationDetils>();
+        if (config is null || string.IsNullOrEmpty(config.url))
+        {
+            return;
+        }
+
+        var content = new StringContent(renderedTemplate, Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync(config.url, content);
         response.EnsureSuccessStatusCode();
     }
 }
