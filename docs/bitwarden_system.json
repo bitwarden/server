@@ -1,0 +1,1447 @@
+{
+  "configuration" : { },
+  "description" : "General Bitwarden System",
+  "documentation" : { },
+  "id" : 1,
+  "lastModifiedAgent" : "structurizr-ui",
+  "lastModifiedDate" : "2025-05-06T21:58:53Z",
+  "model" : {
+    "people" : [ {
+      "description" : "An end user of the Bitwarden System",
+      "id" : "1",
+      "location" : "Unspecified",
+      "name" : "Bitwarden User",
+      "properties" : {
+        "structurizr.dsl.identifier" : "user"
+      },
+      "relationships" : [ {
+        "description" : "Uses",
+        "destinationId" : "16",
+        "id" : "47",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Uses",
+        "destinationId" : "15",
+        "id" : "48",
+        "linkedRelationshipId" : "47",
+        "sourceId" : "1"
+      }, {
+        "description" : "Uses",
+        "destinationId" : "17",
+        "id" : "49",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Uses",
+        "destinationId" : "18",
+        "id" : "50",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Uses",
+        "destinationId" : "19",
+        "id" : "51",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Uses",
+        "destinationId" : "20",
+        "id" : "52",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Uses",
+        "destinationId" : "21",
+        "id" : "53",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      } ],
+      "tags" : "Element,Person"
+    }, {
+      "description" : "Either a Bitwarden site-reliability engineer or administrator of a self-hosted instance",
+      "id" : "2",
+      "location" : "Unspecified",
+      "name" : "System Admin",
+      "properties" : {
+        "structurizr.dsl.identifier" : "system_admin"
+      },
+      "relationships" : [ {
+        "description" : "Administers System",
+        "destinationId" : "9",
+        "id" : "62",
+        "sourceId" : "2",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Administers System",
+        "destinationId" : "4",
+        "id" : "63",
+        "linkedRelationshipId" : "62",
+        "sourceId" : "2"
+      } ],
+      "tags" : "Element,Person,Bitwarden Employee,Self-Host Admin"
+    }, {
+      "description" : "A customer success engineer. Inspects bitwarden state through the admin portal and internal tools",
+      "group" : "Bitwarden Controlled",
+      "id" : "3",
+      "location" : "Unspecified",
+      "name" : "Customer Success",
+      "properties" : {
+        "structurizr.dsl.identifier" : "customer_success"
+      },
+      "relationships" : [ {
+        "description" : "Inspects and supports",
+        "destinationId" : "9",
+        "id" : "60",
+        "sourceId" : "3",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Inspects and supports",
+        "destinationId" : "4",
+        "id" : "61",
+        "linkedRelationshipId" : "60",
+        "sourceId" : "3"
+      } ],
+      "tags" : "Element,Person,Bitwarden Employee"
+    }, {
+      "description" : "An administrator of an organization",
+      "id" : "24",
+      "location" : "Unspecified",
+      "name" : "Organization Admin",
+      "properties" : {
+        "structurizr.dsl.identifier" : "admin"
+      },
+      "relationships" : [ {
+        "description" : "Administers Organizations",
+        "destinationId" : "16",
+        "id" : "54",
+        "sourceId" : "24",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Administers Organizations",
+        "destinationId" : "15",
+        "id" : "55",
+        "linkedRelationshipId" : "54",
+        "sourceId" : "24"
+      } ],
+      "tags" : "Element,Person,Admin"
+    }, {
+      "description" : "And employee of a managed service provider",
+      "id" : "25",
+      "location" : "Unspecified",
+      "name" : "MSP",
+      "properties" : {
+        "structurizr.dsl.identifier" : "provider"
+      },
+      "relationships" : [ {
+        "description" : "Completes Provider registration with",
+        "destinationId" : "9",
+        "id" : "56",
+        "sourceId" : "25",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Completes Provider registration with",
+        "destinationId" : "4",
+        "id" : "57",
+        "linkedRelationshipId" : "56",
+        "sourceId" : "25"
+      }, {
+        "description" : "Administers Providers and Organizations",
+        "destinationId" : "16",
+        "id" : "58",
+        "sourceId" : "25",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Administers Providers and Organizations",
+        "destinationId" : "15",
+        "id" : "59",
+        "linkedRelationshipId" : "58",
+        "sourceId" : "25"
+      } ],
+      "tags" : "Element,Person,MSP"
+    } ],
+    "properties" : {
+      "structurizr.groupSeparator" : "/"
+    },
+    "softwareSystems" : [ {
+      "containers" : [ {
+        "components" : [ {
+          "documentation" : { },
+          "id" : "6",
+          "name" : "Billing",
+          "properties" : {
+            "structurizr.dsl.identifier" : "server.api.billing"
+          },
+          "relationships" : [ {
+            "description" : "Requests payments for customers",
+            "destinationId" : "31",
+            "id" : "85",
+            "sourceId" : "6",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Requests payments for customers",
+            "destinationId" : "32",
+            "id" : "88",
+            "sourceId" : "6",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component,Billing"
+        } ],
+        "documentation" : { },
+        "id" : "5",
+        "name" : "API",
+        "properties" : {
+          "structurizr.dsl.identifier" : "server.api"
+        },
+        "relationships" : [ {
+          "description" : "Validates JWTs with",
+          "destinationId" : "29",
+          "id" : "84",
+          "sourceId" : "5",
+          "tags" : "Relationship",
+          "url" : "https://bitwarden.com"
+        }, {
+          "description" : "Requests payments for customers",
+          "destinationId" : "31",
+          "id" : "86",
+          "linkedRelationshipId" : "85",
+          "sourceId" : "5"
+        }, {
+          "description" : "Requests payments for customers",
+          "destinationId" : "32",
+          "id" : "89",
+          "linkedRelationshipId" : "88",
+          "sourceId" : "5"
+        } ],
+        "tags" : "Element,Container,API"
+      }, {
+        "documentation" : { },
+        "id" : "7",
+        "name" : "Events",
+        "properties" : {
+          "structurizr.dsl.identifier" : "server.events"
+        },
+        "tags" : "Element,Container,Events"
+      }, {
+        "documentation" : { },
+        "id" : "8",
+        "name" : "Notifications",
+        "properties" : {
+          "structurizr.dsl.identifier" : "server.notifications"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "id" : "9",
+        "name" : "Bitwarden Portal",
+        "properties" : {
+          "structurizr.dsl.identifier" : "server.portal"
+        },
+        "tags" : "Element,Container,Web"
+      }, {
+        "documentation" : { },
+        "id" : "10",
+        "name" : "Events Processor",
+        "properties" : {
+          "structurizr.dsl.identifier" : "server.events_processor"
+        },
+        "tags" : "Element,Container,Events"
+      }, {
+        "documentation" : { },
+        "id" : "11",
+        "name" : "Database",
+        "properties" : {
+          "structurizr.dsl.identifier" : "server.database"
+        },
+        "tags" : "Element,Container,Database"
+      }, {
+        "documentation" : { },
+        "id" : "12",
+        "name" : "Events Queue",
+        "properties" : {
+          "structurizr.dsl.identifier" : "server.events_queue"
+        },
+        "tags" : "Element,Container,Queue,Azure"
+      }, {
+        "documentation" : { },
+        "id" : "13",
+        "name" : "Mail Queue",
+        "properties" : {
+          "structurizr.dsl.identifier" : "server.mail_queue"
+        },
+        "tags" : "Element,Container,Queue,Azure"
+      }, {
+        "documentation" : { },
+        "id" : "14",
+        "name" : "Notifications Queue",
+        "properties" : {
+          "structurizr.dsl.identifier" : "server.notifications_queue"
+        },
+        "tags" : "Element,Container,Queue,Azure"
+      }, {
+        "documentation" : { },
+        "id" : "26",
+        "name" : "SCIM",
+        "properties" : {
+          "structurizr.dsl.identifier" : "server.scim"
+        },
+        "tags" : "Element,Container,SCIM"
+      }, {
+        "documentation" : { },
+        "id" : "29",
+        "name" : "Identity",
+        "properties" : {
+          "structurizr.dsl.identifier" : "server.identity"
+        },
+        "tags" : "Element,Container,Auth"
+      }, {
+        "documentation" : { },
+        "id" : "30",
+        "name" : "SSO",
+        "properties" : {
+          "structurizr.dsl.identifier" : "server.sso"
+        },
+        "tags" : "Element,Container,Auth"
+      }, {
+        "components" : [ {
+          "description" : "IconsController",
+          "documentation" : { },
+          "id" : "34",
+          "name" : "IconsController",
+          "properties" : {
+            "structurizr.dsl.identifier" : "server.icons.icons_controller"
+          },
+          "relationships" : [ {
+            "description" : "Requests icons from",
+            "destinationId" : "36",
+            "id" : "41",
+            "sourceId" : "34",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Caches icons in",
+            "destinationId" : "37",
+            "id" : "42",
+            "sourceId" : "34",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "C# ASP.NET Core"
+        }, {
+          "description" : "Provides information about the deployed icon service. Allow for health checks.",
+          "documentation" : { },
+          "id" : "35",
+          "name" : "InfoController",
+          "properties" : {
+            "structurizr.dsl.identifier" : "server.icons.info_controller"
+          },
+          "tags" : "Element,Component,Info,HealthCheck",
+          "technology" : "C# ASP.NET Core"
+        }, {
+          "description" : "Resolves a single source for a website icon and downloads it.",
+          "documentation" : { },
+          "id" : "36",
+          "name" : "IconDetermination",
+          "perspectives" : [ {
+            "description" : "Internal network exposure",
+            "name" : "Security",
+            "value" : "5"
+          } ],
+          "properties" : {
+            "structurizr.dsl.identifier" : "server.icons.icon_retrieval"
+          },
+          "relationships" : [ {
+            "description" : "Retrieves icons from",
+            "destinationId" : "43",
+            "id" : "44",
+            "sourceId" : "36",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component"
+        }, {
+          "description" : "Caches icons for a given domain",
+          "documentation" : { },
+          "id" : "37",
+          "name" : "IconCache",
+          "properties" : {
+            "structurizr.dsl.identifier" : "server.icons.icon_cache"
+          },
+          "tags" : "Element,Component,Cache",
+          "technology" : "C# MemoryCache"
+        } ],
+        "documentation" : { },
+        "id" : "33",
+        "name" : "Icons",
+        "properties" : {
+          "structurizr.dsl.identifier" : "server.icons"
+        },
+        "relationships" : [ {
+          "description" : "Retrieves icons from",
+          "destinationId" : "43",
+          "id" : "45",
+          "linkedRelationshipId" : "44",
+          "sourceId" : "33"
+        } ],
+        "tags" : "Element,Container"
+      } ],
+      "documentation" : { },
+      "group" : "Bitwarden Controlled",
+      "id" : "4",
+      "location" : "Unspecified",
+      "name" : "Bitwarden Server",
+      "properties" : {
+        "structurizr.dsl.identifier" : "server"
+      },
+      "relationships" : [ {
+        "description" : "Retrieves icons from",
+        "destinationId" : "43",
+        "id" : "46",
+        "linkedRelationshipId" : "44",
+        "sourceId" : "4"
+      }, {
+        "description" : "Requests payments for customers",
+        "destinationId" : "31",
+        "id" : "87",
+        "linkedRelationshipId" : "85",
+        "sourceId" : "4"
+      }, {
+        "description" : "Requests payments for customers",
+        "destinationId" : "32",
+        "id" : "90",
+        "linkedRelationshipId" : "88",
+        "sourceId" : "4"
+      } ],
+      "tags" : "Element,Software System"
+    }, {
+      "containers" : [ {
+        "documentation" : { },
+        "id" : "16",
+        "name" : "Web Application",
+        "properties" : {
+          "structurizr.dsl.identifier" : "clients.web"
+        },
+        "relationships" : [ {
+          "description" : "Makes requests to",
+          "destinationId" : "5",
+          "id" : "64",
+          "sourceId" : "16",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Makes requests to",
+          "destinationId" : "4",
+          "id" : "65",
+          "linkedRelationshipId" : "64",
+          "sourceId" : "16"
+        }, {
+          "description" : "Authenticates with",
+          "destinationId" : "29",
+          "id" : "77",
+          "sourceId" : "16",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Web"
+      }, {
+        "documentation" : { },
+        "id" : "17",
+        "name" : "iOS Application",
+        "properties" : {
+          "structurizr.dsl.identifier" : "clients.ios"
+        },
+        "relationships" : [ {
+          "description" : "Makes requests to",
+          "destinationId" : "5",
+          "id" : "67",
+          "sourceId" : "17",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Makes requests to",
+          "destinationId" : "4",
+          "id" : "68",
+          "linkedRelationshipId" : "67",
+          "sourceId" : "17"
+        }, {
+          "description" : "Authenticates With",
+          "destinationId" : "29",
+          "id" : "79",
+          "sourceId" : "17",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Mobile"
+      }, {
+        "documentation" : { },
+        "id" : "18",
+        "name" : "Android Application",
+        "properties" : {
+          "structurizr.dsl.identifier" : "clients.android"
+        },
+        "relationships" : [ {
+          "description" : "Makes requests to",
+          "destinationId" : "5",
+          "id" : "69",
+          "sourceId" : "18",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Makes requests to",
+          "destinationId" : "4",
+          "id" : "70",
+          "linkedRelationshipId" : "69",
+          "sourceId" : "18"
+        }, {
+          "description" : "Authenticates With",
+          "destinationId" : "29",
+          "id" : "80",
+          "sourceId" : "18",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Mobile"
+      }, {
+        "documentation" : { },
+        "id" : "19",
+        "name" : "Browser Extension",
+        "properties" : {
+          "structurizr.dsl.identifier" : "clients.browser_extension"
+        },
+        "relationships" : [ {
+          "description" : "Makes requests to",
+          "destinationId" : "5",
+          "id" : "71",
+          "sourceId" : "19",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Makes requests to",
+          "destinationId" : "4",
+          "id" : "72",
+          "linkedRelationshipId" : "71",
+          "sourceId" : "19"
+        }, {
+          "description" : "Authenticates With",
+          "destinationId" : "29",
+          "id" : "81",
+          "sourceId" : "19",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Browser"
+      }, {
+        "documentation" : { },
+        "id" : "20",
+        "name" : "CLI",
+        "properties" : {
+          "structurizr.dsl.identifier" : "clients.cli"
+        },
+        "relationships" : [ {
+          "description" : "Makes requests to",
+          "destinationId" : "5",
+          "id" : "73",
+          "sourceId" : "20",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Makes requests to",
+          "destinationId" : "4",
+          "id" : "74",
+          "linkedRelationshipId" : "73",
+          "sourceId" : "20"
+        }, {
+          "description" : "Authenticates With",
+          "destinationId" : "29",
+          "id" : "82",
+          "sourceId" : "20",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,CLI"
+      }, {
+        "documentation" : { },
+        "id" : "21",
+        "name" : "Desktop Application",
+        "properties" : {
+          "structurizr.dsl.identifier" : "clients.desktop"
+        },
+        "relationships" : [ {
+          "description" : "Makes requests to",
+          "destinationId" : "5",
+          "id" : "75",
+          "sourceId" : "21",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Makes requests to",
+          "destinationId" : "4",
+          "id" : "76",
+          "linkedRelationshipId" : "75",
+          "sourceId" : "21"
+        }, {
+          "description" : "Authenticates With",
+          "destinationId" : "29",
+          "id" : "83",
+          "sourceId" : "21",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Desktop"
+      } ],
+      "documentation" : { },
+      "group" : "Bitwarden Controlled",
+      "id" : "15",
+      "location" : "Unspecified",
+      "name" : "Clients",
+      "properties" : {
+        "structurizr.dsl.identifier" : "clients"
+      },
+      "relationships" : [ {
+        "description" : "Requests icons for cleartext urls from",
+        "destinationId" : "34",
+        "id" : "38",
+        "sourceId" : "15",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Requests icons for cleartext urls from",
+        "destinationId" : "33",
+        "id" : "39",
+        "linkedRelationshipId" : "38",
+        "sourceId" : "15"
+      }, {
+        "description" : "Requests icons for cleartext urls from",
+        "destinationId" : "4",
+        "id" : "40",
+        "linkedRelationshipId" : "38",
+        "sourceId" : "15"
+      }, {
+        "description" : "Makes requests to",
+        "destinationId" : "5",
+        "id" : "66",
+        "linkedRelationshipId" : "64",
+        "sourceId" : "15"
+      }, {
+        "description" : "Authenticates with",
+        "destinationId" : "29",
+        "id" : "78",
+        "linkedRelationshipId" : "77",
+        "sourceId" : "15"
+      } ],
+      "tags" : "Element,Software System"
+    }, {
+      "documentation" : { },
+      "group" : "Bitwarden Controlled",
+      "id" : "22",
+      "location" : "Unspecified",
+      "name" : "Directory Connector",
+      "properties" : {
+        "structurizr.dsl.identifier" : "directory_connector"
+      },
+      "relationships" : [ {
+        "description" : "Syncs users and groups to Bitwarden",
+        "destinationId" : "5",
+        "id" : "27",
+        "sourceId" : "22",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Syncs users and groups to Bitwarden",
+        "destinationId" : "4",
+        "id" : "28",
+        "linkedRelationshipId" : "27",
+        "sourceId" : "22"
+      } ],
+      "tags" : "Element,Software System,Directory,LDAP,Self-Hosted"
+    }, {
+      "documentation" : { },
+      "group" : "Bitwarden Controlled",
+      "id" : "23",
+      "location" : "Unspecified",
+      "name" : "Key Connector",
+      "properties" : {
+        "structurizr.dsl.identifier" : "key_connector"
+      },
+      "relationships" : [ {
+        "description" : "Validates JWTs with",
+        "destinationId" : "29",
+        "id" : "94",
+        "sourceId" : "23",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Validates JWTs with",
+        "destinationId" : "4",
+        "id" : "95",
+        "linkedRelationshipId" : "94",
+        "sourceId" : "23"
+      } ],
+      "tags" : "Element,Software System"
+    }, {
+      "description" : "Handles credit cards and subscriptions.",
+      "documentation" : { },
+      "group" : "Payment Systems",
+      "id" : "31",
+      "location" : "Unspecified",
+      "name" : "Stripe",
+      "properties" : {
+        "structurizr.dsl.identifier" : "stripe"
+      },
+      "relationships" : [ {
+        "description" : "Sends subscription events to",
+        "destinationId" : "6",
+        "id" : "91",
+        "sourceId" : "31",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Sends subscription events to",
+        "destinationId" : "5",
+        "id" : "92",
+        "linkedRelationshipId" : "91",
+        "sourceId" : "31"
+      }, {
+        "description" : "Sends subscription events to",
+        "destinationId" : "4",
+        "id" : "93",
+        "linkedRelationshipId" : "91",
+        "sourceId" : "31"
+      } ],
+      "tags" : "Element,Software System,External,Billing"
+    }, {
+      "description" : "Handles PayPal and cryptocurrency.",
+      "documentation" : { },
+      "group" : "Payment Systems",
+      "id" : "32",
+      "location" : "Unspecified",
+      "name" : "Braintree",
+      "properties" : {
+        "structurizr.dsl.identifier" : "braintree"
+      },
+      "tags" : "Element,Software System,External,Billing"
+    }, {
+      "documentation" : { },
+      "id" : "43",
+      "location" : "Unspecified",
+      "name" : "External Websites",
+      "properties" : {
+        "structurizr.dsl.identifier" : "external_websites"
+      },
+      "tags" : "Element,Software System,External,Icons"
+    } ]
+  },
+  "name" : "Bitwarden",
+  "properties" : {
+    "structurizr.dsl" : "d29ya3NwYWNlICJCaXR3YXJkZW4iICJHZW5lcmFsIEJpdHdhcmRlbiBTeXN0ZW0iIHsKCiAgIWlkZW50aWZpZXJzIGhpZXJhcmNoaWNhbAoKICBtb2RlbCB7CiAgICBwcm9wZXJ0aWVzIHsKICAgICAgInN0cnVjdHVyaXpyLmdyb3VwU2VwYXJhdG9yIiAiLyIKICAgIH0KCiAgICAjIEluY2x1ZGUgcm9vdCBsZXZlbCBtb2RlbHMKICAgICMgUGVyc29uIHR5cGVzCiAgICB1c2VyID0gcGVyc29uICJCaXR3YXJkZW4gVXNlciIgIkFuIGVuZCB1c2VyIG9mIHRoZSBCaXR3YXJkZW4gU3lzdGVtIgogICAgc3lzdGVtX2FkbWluID0gcGVyc29uICJTeXN0ZW0gQWRtaW4iICJFaXRoZXIgYSBCaXR3YXJkZW4gc2l0ZS1yZWxpYWJpbGl0eSBlbmdpbmVlciBvciBhZG1pbmlzdHJhdG9yIG9mIGEgc2VsZi1ob3N0ZWQgaW5zdGFuY2UiIHsKICAgICAgdGFncyAiQml0d2FyZGVuIEVtcGxveWVlIiAiU2VsZi1Ib3N0IEFkbWluIgogICAgfQogICAgCiAgICAKICAgIGJ3X2NvbnRyb2xsZWQgPSBncm91cCAiQml0d2FyZGVuIENvbnRyb2xsZWQiIHsKICAgICAgIyBCaXR3YXJkZW4gc3RhZmYKICAgICAgY3VzdG9tZXJfc3VjY2VzcyA9IHBlcnNvbiAiQ3VzdG9tZXIgU3VjY2VzcyIgIkEgY3VzdG9tZXIgc3VjY2VzcyBlbmdpbmVlci4gSW5zcGVjdHMgYml0d2FyZGVuIHN0YXRlIHRocm91Z2ggdGhlIGFkbWluIHBvcnRhbCBhbmQgaW50ZXJuYWwgdG9vbHMiIHsKICAgICAgICB0YWdzICJCaXR3YXJkZW4gRW1wbG95ZWUiCiAgICAgIH0KICAgICAgCiAgICAgICMgUm9vdCBzeXN0ZW1zCiAgICAgIHNlcnZlciA9IHNvZnR3YXJlU3lzdGVtICJCaXR3YXJkZW4gU2VydmVyIiB7CiAgICAgICAgYXBpID0gY29udGFpbmVyICJBUEkiIHsKICAgICAgICAgIGJpbGxpbmcgPSBjb21wb25lbnQgIkJpbGxpbmciIHsKICAgICAgICAgICAgdGFncyAiQmlsbGluZyIKICAgICAgICAgIH0KICAgICAgICAgIHRhZ3MgIkFQSSIKICAgICAgICB9CiAgICAgICAgZXZlbnRzID0gY29udGFpbmVyICJFdmVudHMiIHsKICAgICAgICAgIHRhZ3MgIkV2ZW50cyIKICAgICAgICB9CiAgICAgICAgbm90aWZpY2F0aW9ucyA9IGNvbnRhaW5lciAiTm90aWZpY2F0aW9ucyIKICAgICAgICBwb3J0YWwgPSBjb250YWluZXIgIkJpdHdhcmRlbiBQb3J0YWwiIHsKICAgICAgICAgIHRhZ3MgIldlYiIKICAgICAgICB9CiAgICAgICAgZXZlbnRzX3Byb2Nlc3NvciA9IGNvbnRhaW5lciAiRXZlbnRzIFByb2Nlc3NvciIgewogICAgICAgICAgdGFncyAiRXZlbnRzIgogICAgICAgIH0KICAgIAogICAgICAgICMgRGF0YSBzdG9yZXMKICAgICAgICBkYXRhYmFzZSA9IGNvbnRhaW5lciAiRGF0YWJhc2UiIHsKICAgICAgICAgIHRhZ3MgIkRhdGFiYXNlIgogICAgICAgIH0KICAgICAgICBldmVudHNfcXVldWUgPSBjb250YWluZXIgIkV2ZW50cyBRdWV1ZSIgewogICAgICAgICAgdGFncyAiUXVldWUiCiAgICAgICAgICB0YWdzICJBenVyZSIKICAgICAgICB9CiAgICAgICAgbWFpbF9xdWV1ZSA9IGNvbnRhaW5lciAiTWFpbCBRdWV1ZSIgewogICAgICAgICAgdGFncyAiUXVldWUiCiAgICAgICAgICB0YWdzICJBenVyZSIKICAgICAgICB9CiAgICAgICAgbm90aWZpY2F0aW9uc19xdWV1ZSA9IGNvbnRhaW5lciAiTm90aWZpY2F0aW9ucyBRdWV1ZSIgewogICAgICAgICAgdGFncyAiUXVldWUiCiAgICAgICAgICB0YWdzICJBenVyZSIKICAgICAgICB9CiAgICAgIH0KICAgICAgY2xpZW50cyA9IHNvZnR3YXJlU3lzdGVtICJDbGllbnRzIiB7CiAgICAgICAgd2ViID0gY29udGFpbmVyICJXZWIgQXBwbGljYXRpb24iIHsKICAgICAgICAgIHRhZ3MgIldlYiIKICAgICAgICB9CiAgICAgICAgaW9zID0gY29udGFpbmVyICJpT1MgQXBwbGljYXRpb24iIHsKICAgICAgICAgIHRhZ3MgIk1vYmlsZSIKICAgICAgICB9CiAgICAgICAgYW5kcm9pZCA9IGNvbnRhaW5lciAiQW5kcm9pZCBBcHBsaWNhdGlvbiIgewogICAgICAgICAgdGFncyAiTW9iaWxlIgogICAgICAgIH0KICAgICAgICBicm93c2VyX2V4dGVuc2lvbiA9IGNvbnRhaW5lciAiQnJvd3NlciBFeHRlbnNpb24iIHsKICAgICAgICAgIHRhZ3MgIkJyb3dzZXIiCiAgICAgICAgfQogICAgICAgIGNsaSA9IGNvbnRhaW5lciAiQ0xJIiB7CiAgICAgICAgICB0YWdzICJDTEkiCiAgICAgICAgfQogICAgICAgIGRlc2t0b3AgPSBjb250YWluZXIgIkRlc2t0b3AgQXBwbGljYXRpb24iIHsKICAgICAgICAgIHRhZ3MgIkRlc2t0b3AiCiAgICAgICAgfQogICAgICB9CiAgICAgIGRpcmVjdG9yeV9jb25uZWN0b3IgPSBzb2Z0d2FyZVN5c3RlbSAiRGlyZWN0b3J5IENvbm5lY3RvciIgewogICAgICAgIHRhZ3MgIkRpcmVjdG9yeSIKICAgICAgICB0YWdzICJMREFQIgogICAgICAgIHRhZ3MgIlNlbGYtSG9zdGVkIgogICAgICB9CiAgICAgIGtleV9jb25uZWN0b3IgPSBzb2Z0d2FyZVN5c3RlbSAiS2V5IENvbm5lY3RvciIgCiAgICB9CgogICAgIyBJbmNsdWRlIHRlYW0gbGV2ZWwgbW9kZWxzCiAgICBhZG1pbiA9IHBlcnNvbiAiT3JnYW5pemF0aW9uIEFkbWluIiAiQW4gYWRtaW5pc3RyYXRvciBvZiBhbiBvcmdhbml6YXRpb24iIHsKICAgICAgdGFncyAiQWRtaW4iCiAgICB9CiAgICBwcm92aWRlciA9IHBlcnNvbiAiTVNQIiAiQW5kIGVtcGxveWVlIG9mIGEgbWFuYWdlZCBzZXJ2aWNlIHByb3ZpZGVyIiB7CiAgICAgIHRhZ3MgIk1TUCIKICAgIH0KICAgIAogICAgIWVsZW1lbnQgc2VydmVyIHsKICAgICAgc2NpbSA9IGNvbnRhaW5lciAiU0NJTSIgewogICAgICAgIHRhZ3MgIlNDSU0iCiAgICAgIH0KICAgIH0KICAgIAogICAgZGlyZWN0b3J5X2Nvbm5lY3RvciAtPiBzZXJ2ZXIuYXBpICJTeW5jcyB1c2VycyBhbmQgZ3JvdXBzIHRvIEJpdHdhcmRlbiIKICAgICFlbGVtZW50IHNlcnZlciB7CiAgICAgIGlkZW50aXR5ID0gY29udGFpbmVyICJJZGVudGl0eSIgewogICAgICAgIHRhZ3MgIkF1dGgiCiAgICAgIH0KICAgICAgc3NvID0gY29udGFpbmVyICJTU08iIHsKICAgICAgICB0YWdzICJBdXRoIgogICAgICB9CiAgICB9CiAgICAjIEV4dGVybmFsIHZlbmRvcnMKICAgIGdyb3VwICJQYXltZW50IFN5c3RlbXMiIHsKICAgICAgc3RyaXBlID0gc29mdHdhcmVTeXN0ZW0gIlN0cmlwZSIgewogICAgICAgIHRhZ3MgIkV4dGVybmFsIgogICAgICAgIHRhZ3MgIkJpbGxpbmciCiAgICAgICAgZGVzY3JpcHRpb24gIkhhbmRsZXMgY3JlZGl0IGNhcmRzIGFuZCBzdWJzY3JpcHRpb25zLiIKICAgICAgfQogICAgICBicmFpbnRyZWUgPSBzb2Z0d2FyZVN5c3RlbSAiQnJhaW50cmVlIiB7CiAgICAgICAgdGFncyAiRXh0ZXJuYWwiCiAgICAgICAgdGFncyAiQmlsbGluZyIKICAgICAgICBkZXNjcmlwdGlvbiAiSGFuZGxlcyBQYXlQYWwgYW5kIGNyeXB0b2N1cnJlbmN5LiIKICAgICAgfQogICAgfQogICAgCiAgICAhZWxlbWVudCBzZXJ2ZXIgewogICAgICBpY29ucyA9IGNvbnRhaW5lciAiSWNvbnMiIHsKICAgICAgICBpY29uc19jb250cm9sbGVyID0gY29tcG9uZW50ICJJY29uc0NvbnRyb2xsZXIiIHsKICAgICAgICAgIGRlc2NyaXB0aW9uICJJY29uc0NvbnRyb2xsZXIiCiAgICAgICAgICB0ZWNobm9sb2d5ICJDIyBBU1AuTkVUIENvcmUiCiAgICAgICAgICAKICAgICAgICB9CiAgICAgICAgaW5mb19jb250cm9sbGVyID0gY29tcG9uZW50ICJJbmZvQ29udHJvbGxlciIgewogICAgICAgICAgZGVzY3JpcHRpb24gIlByb3ZpZGVzIGluZm9ybWF0aW9uIGFib3V0IHRoZSBkZXBsb3llZCBpY29uIHNlcnZpY2UuIEFsbG93IGZvciBoZWFsdGggY2hlY2tzLiIKICAgICAgICAgIHRlY2hub2xvZ3kgIkMjIEFTUC5ORVQgQ29yZSIKICAgICAgICAgIHRhZ3MgIkluZm8iICJIZWFsdGhDaGVjayIKICAgICAgICB9CiAgICAgICAgaWNvbl9yZXRyaWV2YWwgPSBjb21wb25lbnQgIkljb25EZXRlcm1pbmF0aW9uIiB7CiAgICAgICAgICBkZXNjcmlwdGlvbiAiUmVzb2x2ZXMgYSBzaW5nbGUgc291cmNlIGZvciBhIHdlYnNpdGUgaWNvbiBhbmQgZG93bmxvYWRzIGl0LiIKICAgICAgICAgIHBlcnNwZWN0aXZlcyB7CiAgICAgICAgICAgICJTZWN1cml0eSIgIkludGVybmFsIG5ldHdvcmsgZXhwb3N1cmUiIDUKICAgICAgICAgIH0KICAgICAgICB9CiAgICAgICAgaWNvbl9jYWNoZSA9IGNvbXBvbmVudCAiSWNvbkNhY2hlIiB7CiAgICAgICAgICBkZXNjcmlwdGlvbiAiQ2FjaGVzIGljb25zIGZvciBhIGdpdmVuIGRvbWFpbiIKICAgICAgICAgIHRhZ3MgIkNhY2hlIgogICAgICAgICAgdGVjaG5vbG9neSAiQyMgTWVtb3J5Q2FjaGUiCiAgICAgICAgfQogICAgCiAgICAgICAgY2xpZW50cyAtPiBpY29uc19jb250cm9sbGVyICJSZXF1ZXN0cyBpY29ucyBmb3IgY2xlYXJ0ZXh0IHVybHMgZnJvbSIKICAgICAgICBpY29uc19jb250cm9sbGVyIC0+IGljb25fcmV0cmlldmFsICJSZXF1ZXN0cyBpY29ucyBmcm9tIgogICAgICAgIGljb25zX2NvbnRyb2xsZXIgLT4gaWNvbl9jYWNoZSAiQ2FjaGVzIGljb25zIGluIgogICAgICB9CiAgICB9CiAgICAKICAgIGV4dGVybmFsX3dlYnNpdGVzID0gc29mdHdhcmVTeXN0ZW0gIkV4dGVybmFsIFdlYnNpdGVzIiB7CiAgICAgIHRhZ3MgIkV4dGVybmFsIgogICAgICB0YWdzICJJY29ucyIKICAgIH0KICAgIAogICAgc2VydmVyLmljb25zLmljb25fcmV0cmlldmFsIC0+IGV4dGVybmFsX3dlYnNpdGVzICJSZXRyaWV2ZXMgaWNvbnMgZnJvbSIKCiAgICAjIEluY2x1ZGUgcm9vdCBsZXZlbCByZWxhdGlvbnNoaXBzCiAgICAjIFVzZXIgUmVsYXRpb25zaGlwcwogICAgdXNlciAtPiBjbGllbnRzLndlYiAiVXNlcyIKICAgIHVzZXIgLT4gY2xpZW50cy5pb3MgIlVzZXMiCiAgICB1c2VyIC0+IGNsaWVudHMuYW5kcm9pZCAiVXNlcyIKICAgIHVzZXIgLT4gY2xpZW50cy5icm93c2VyX2V4dGVuc2lvbiAiVXNlcyIKICAgIHVzZXIgLT4gY2xpZW50cy5jbGkgIlVzZXMiCiAgICB1c2VyIC0+IGNsaWVudHMuZGVza3RvcCAiVXNlcyIKICAgIGFkbWluIC0+IGNsaWVudHMud2ViICJBZG1pbmlzdGVycyBPcmdhbml6YXRpb25zIgogICAgcHJvdmlkZXIgLT4gc2VydmVyLnBvcnRhbCAiQ29tcGxldGVzIFByb3ZpZGVyIHJlZ2lzdHJhdGlvbiB3aXRoIgogICAgcHJvdmlkZXIgLT4gY2xpZW50cy53ZWIgIkFkbWluaXN0ZXJzIFByb3ZpZGVycyBhbmQgT3JnYW5pemF0aW9ucyIKICAgIGN1c3RvbWVyX3N1Y2Nlc3MgLT4gc2VydmVyLnBvcnRhbCAiSW5zcGVjdHMgYW5kIHN1cHBvcnRzIgogICAgc3lzdGVtX2FkbWluIC0+IHNlcnZlci5wb3J0YWwgIkFkbWluaXN0ZXJzIFN5c3RlbSIKICAgIAogICAgIyBIaWdoLWxldmVsIENsaWVudCBSZWxhdGlvbnNoaXBzCiAgICBjbGllbnRzLndlYiAtPiBzZXJ2ZXIuYXBpICJNYWtlcyByZXF1ZXN0cyB0byIKICAgIGNsaWVudHMuaW9zIC0+IHNlcnZlci5hcGkgIk1ha2VzIHJlcXVlc3RzIHRvIgogICAgY2xpZW50cy5hbmRyb2lkIC0+IHNlcnZlci5hcGkgIk1ha2VzIHJlcXVlc3RzIHRvIgogICAgY2xpZW50cy5icm93c2VyX2V4dGVuc2lvbiAtPiBzZXJ2ZXIuYXBpICJNYWtlcyByZXF1ZXN0cyB0byIKICAgIGNsaWVudHMuY2xpIC0+IHNlcnZlci5hcGkgIk1ha2VzIHJlcXVlc3RzIHRvIgogICAgY2xpZW50cy5kZXNrdG9wIC0+IHNlcnZlci5hcGkgIk1ha2VzIHJlcXVlc3RzIHRvIgogICAgY2xpZW50cy53ZWIgLT4gc2VydmVyLmlkZW50aXR5ICJBdXRoZW50aWNhdGVzIHdpdGgiCiAgICBjbGllbnRzLmlvcyAtPiBzZXJ2ZXIuaWRlbnRpdHkgIkF1dGhlbnRpY2F0ZXMgV2l0aCIKICAgIGNsaWVudHMuYW5kcm9pZCAtPiBzZXJ2ZXIuaWRlbnRpdHkgIkF1dGhlbnRpY2F0ZXMgV2l0aCIKICAgIGNsaWVudHMuYnJvd3Nlcl9leHRlbnNpb24gLT4gc2VydmVyLmlkZW50aXR5ICJBdXRoZW50aWNhdGVzIFdpdGgiCiAgICBjbGllbnRzLmNsaSAtPiBzZXJ2ZXIuaWRlbnRpdHkgIkF1dGhlbnRpY2F0ZXMgV2l0aCIKICAgIGNsaWVudHMuZGVza3RvcCAtPiBzZXJ2ZXIuaWRlbnRpdHkgIkF1dGhlbnRpY2F0ZXMgV2l0aCIKICAgIHNlcnZlci5hcGkgLT4gc2VydmVyLmlkZW50aXR5ICJWYWxpZGF0ZXMgSldUcyB3aXRoIiB7CiAgICAgIHVybCAiaHR0cHM6Ly9iaXR3YXJkZW4uY29tIgogICAgfQoKCiAgICAjIEhpZ2gtbGV2ZWwgcHJvdmlkZXIgcmVsYXRpb25zaGlwcwogICAgc2VydmVyLmFwaS5iaWxsaW5nIC0+IHN0cmlwZSAiUmVxdWVzdHMgcGF5bWVudHMgZm9yIGN1c3RvbWVycyIKICAgIHNlcnZlci5hcGkuYmlsbGluZyAtPiBicmFpbnRyZWUgIlJlcXVlc3RzIHBheW1lbnRzIGZvciBjdXN0b21lcnMiCiAgICBzdHJpcGUgLT4gc2VydmVyLmFwaS5iaWxsaW5nICJTZW5kcyBzdWJzY3JpcHRpb24gZXZlbnRzIHRvIgogICAga2V5X2Nvbm5lY3RvciAtPiBzZXJ2ZXIuaWRlbnRpdHkgIlZhbGlkYXRlcyBKV1RzIHdpdGgiCiAgfQoKICB2aWV3cyB7CiAgICBzdHlsZXMgewogICAgICBlbGVtZW50ICJQZXJzb24iIHsKICAgICAgICBiYWNrZ3JvdW5kICMzMTA3ZDMKICAgICAgICBzaGFwZSBwZXJzb24KICAgICAgfQogICAgICBlbGVtZW50ICJNU1AiIHsKICAgICAgICBiYWNrZ3JvdW5kICMzMTA3ZDMKICAgICAgICBzaGFwZSBwZXJzb24KICAgICAgfQogICAgfQoKICAgIC8vIFRoaXMgaXMgbGFzdCB0byBvdmVycmlkZSB0ZWFtIHN0eWxlcyB3aXRoIGNvbW1vbiBzdHlsZXMKICAgIHN0eWxlcyB7CiAgICAgIHRoZW1lIGRlZmF1bHQKICAgICAgZWxlbWVudCAiRWxlbWVudCIgewogICAgICAgIGNvbG9yICMzYzNiM2IKICAgICAgfQogICAgICBlbGVtZW50ICJQZXJzb24iIHsKICAgICAgICBiYWNrZ3JvdW5kICNkMzQ0MDcKICAgICAgICBzaGFwZSBwZXJzb24KICAgICAgfQogICAgICBlbGVtZW50ICJDb250YWluZXIiIHsKICAgICAgICBiYWNrZ3JvdW5kICNmODg3MjgKICAgICAgfQogICAgICBlbGVtZW50ICJNU1AiIHsKICAgICAgICBiYWNrZ3JvdW5kICMzMTA3ZDMKICAgICAgfQogICAgICBlbGVtZW50ICJRdWV1ZSIgewogICAgICAgIHNoYXBlIHBpcGUKICAgICAgfQogICAgICBlbGVtZW50ICJNb2JpbGUiIHsKICAgICAgICBzaGFwZSBtb2JpbGVEZXZpY2VQb3J0cmFpdAogICAgICB9CiAgICAgIGVsZW1lbnQgIldlYiIgewogICAgICAgIHNoYXBlIHdlYkJyb3dzZXIKICAgICAgfQogICAgICBlbGVtZW50ICJEYXRhYmFzZSIgewogICAgICAgIHNoYXBlIGN5bGluZGVyCiAgICAgIH0KICAgICAgZWxlbWVudCAiRXh0ZXJuYWwiIHsKICAgICAgICBjb2xvciAjMDAwMDAwCiAgICAgICAgYmFja2dyb3VuZCAjYjViNWI1CiAgICAgIH0KICAgIH0KICB9Cn0="
+  },
+  "views" : {
+    "componentViews" : [ {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "containerId" : "5",
+      "elements" : [ {
+        "id" : "6",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "31",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "32",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "generatedKey" : true,
+      "key" : "Component-001",
+      "order" : 4,
+      "relationships" : [ {
+        "id" : "85"
+      }, {
+        "id" : "88"
+      }, {
+        "id" : "91"
+      } ]
+    }, {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "containerId" : "33",
+      "elements" : [ {
+        "id" : "15",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "34",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "35",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "36",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "37",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "43",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "generatedKey" : true,
+      "key" : "Component-002",
+      "order" : 5,
+      "relationships" : [ {
+        "id" : "38"
+      }, {
+        "id" : "41"
+      }, {
+        "id" : "42"
+      }, {
+        "id" : "44"
+      } ]
+    } ],
+    "configuration" : {
+      "branding" : { },
+      "lastSavedView" : "SystemLandscape-001",
+      "metadataSymbols" : "SquareBrackets",
+      "styles" : {
+        "elements" : [ {
+          "background" : "#d34407",
+          "shape" : "Person",
+          "tag" : "Person"
+        }, {
+          "background" : "#3107d3",
+          "shape" : "Person",
+          "tag" : "MSP"
+        }, {
+          "color" : "#3c3b3b",
+          "tag" : "Element"
+        }, {
+          "background" : "#f88728",
+          "tag" : "Container"
+        }, {
+          "shape" : "Pipe",
+          "tag" : "Queue"
+        }, {
+          "shape" : "MobileDevicePortrait",
+          "tag" : "Mobile"
+        }, {
+          "shape" : "WebBrowser",
+          "tag" : "Web"
+        }, {
+          "shape" : "Cylinder",
+          "tag" : "Database"
+        }, {
+          "background" : "#b5b5b5",
+          "color" : "#000000",
+          "tag" : "External"
+        } ]
+      },
+      "terminology" : { },
+      "themes" : [ "https://static.structurizr.com/themes/default/theme.json" ]
+    },
+    "containerViews" : [ {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "elements" : [ {
+        "id" : "2",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "3",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "5",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "7",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "8",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "9",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "10",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "11",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "12",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "13",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "14",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "15",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "22",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "23",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "25",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "26",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "29",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "30",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "31",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "32",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "33",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "43",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "generatedKey" : true,
+      "key" : "Container-001",
+      "order" : 3,
+      "relationships" : [ {
+        "id" : "27"
+      }, {
+        "id" : "39"
+      }, {
+        "id" : "45"
+      }, {
+        "id" : "56"
+      }, {
+        "id" : "59"
+      }, {
+        "id" : "60"
+      }, {
+        "id" : "62"
+      }, {
+        "id" : "66"
+      }, {
+        "id" : "78"
+      }, {
+        "id" : "84"
+      }, {
+        "id" : "86"
+      }, {
+        "id" : "89"
+      }, {
+        "id" : "92"
+      }, {
+        "id" : "94"
+      } ],
+      "softwareSystemId" : "4"
+    }, {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "elements" : [ {
+        "id" : "1",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "4",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "16",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "17",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "18",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "19",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "20",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "21",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "24",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "25",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "generatedKey" : true,
+      "key" : "Container-002",
+      "order" : 8,
+      "relationships" : [ {
+        "id" : "47"
+      }, {
+        "id" : "49"
+      }, {
+        "id" : "50"
+      }, {
+        "id" : "51"
+      }, {
+        "id" : "52"
+      }, {
+        "id" : "53"
+      }, {
+        "id" : "54"
+      }, {
+        "id" : "57"
+      }, {
+        "id" : "58"
+      }, {
+        "id" : "65"
+      }, {
+        "id" : "68"
+      }, {
+        "id" : "70"
+      }, {
+        "id" : "72"
+      }, {
+        "id" : "74"
+      }, {
+        "id" : "76"
+      } ],
+      "softwareSystemId" : "15"
+    } ],
+    "systemContextViews" : [ {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "elements" : [ {
+        "id" : "2",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "3",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "4",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "15",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "22",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "23",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "25",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "31",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "32",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "43",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "generatedKey" : true,
+      "key" : "SystemContext-001",
+      "order" : 2,
+      "relationships" : [ {
+        "id" : "28"
+      }, {
+        "id" : "40"
+      }, {
+        "id" : "46"
+      }, {
+        "id" : "57"
+      }, {
+        "id" : "59"
+      }, {
+        "id" : "61"
+      }, {
+        "id" : "63"
+      }, {
+        "id" : "87"
+      }, {
+        "id" : "90"
+      }, {
+        "id" : "93"
+      }, {
+        "id" : "95"
+      } ],
+      "softwareSystemId" : "4"
+    }, {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "elements" : [ {
+        "id" : "4",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "32",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "generatedKey" : true,
+      "key" : "SystemContext-002",
+      "order" : 6,
+      "relationships" : [ {
+        "id" : "90"
+      } ],
+      "softwareSystemId" : "32"
+    }, {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "elements" : [ {
+        "id" : "1",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "4",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "15",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "24",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "25",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "generatedKey" : true,
+      "key" : "SystemContext-003",
+      "order" : 7,
+      "relationships" : [ {
+        "id" : "40"
+      }, {
+        "id" : "48"
+      }, {
+        "id" : "55"
+      }, {
+        "id" : "57"
+      }, {
+        "id" : "59"
+      } ],
+      "softwareSystemId" : "15"
+    }, {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "elements" : [ {
+        "id" : "4",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "22",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "generatedKey" : true,
+      "key" : "SystemContext-004",
+      "order" : 9,
+      "relationships" : [ {
+        "id" : "28"
+      } ],
+      "softwareSystemId" : "22"
+    }, {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "elements" : [ {
+        "id" : "4",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "43",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "generatedKey" : true,
+      "key" : "SystemContext-005",
+      "order" : 10,
+      "relationships" : [ {
+        "id" : "46"
+      } ],
+      "softwareSystemId" : "43"
+    }, {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "elements" : [ {
+        "id" : "4",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "23",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "generatedKey" : true,
+      "key" : "SystemContext-006",
+      "order" : 11,
+      "relationships" : [ {
+        "id" : "95"
+      } ],
+      "softwareSystemId" : "23"
+    }, {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "elements" : [ {
+        "id" : "4",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "31",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "generatedKey" : true,
+      "key" : "SystemContext-007",
+      "order" : 12,
+      "relationships" : [ {
+        "id" : "87"
+      }, {
+        "id" : "93"
+      } ],
+      "softwareSystemId" : "31"
+    } ],
+    "systemLandscapeViews" : [ {
+      "automaticLayout" : {
+        "applied" : true,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "TopBottom",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "dimensions" : {
+        "height" : 2774,
+        "width" : 4417
+      },
+      "elements" : [ {
+        "id" : "1",
+        "x" : 2417,
+        "y" : 165
+      }, {
+        "id" : "2",
+        "x" : 200,
+        "y" : 865
+      }, {
+        "id" : "3",
+        "x" : 900,
+        "y" : 865
+      }, {
+        "id" : "4",
+        "x" : 1625,
+        "y" : 1565
+      }, {
+        "id" : "15",
+        "x" : 3100,
+        "y" : 915
+      }, {
+        "id" : "22",
+        "x" : 2350,
+        "y" : 915
+      }, {
+        "id" : "23",
+        "x" : 1600,
+        "y" : 915
+      }, {
+        "id" : "24",
+        "x" : 3117,
+        "y" : 165
+      }, {
+        "id" : "25",
+        "x" : 3817,
+        "y" : 165
+      }, {
+        "id" : "31",
+        "x" : 1625,
+        "y" : 2165
+      }, {
+        "id" : "32",
+        "x" : 875,
+        "y" : 2165
+      }, {
+        "id" : "43",
+        "x" : 2375,
+        "y" : 2165
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "generatedKey" : true,
+      "key" : "SystemLandscape-001",
+      "order" : 1,
+      "relationships" : [ {
+        "id" : "28"
+      }, {
+        "id" : "40",
+        "vertices" : [ {
+          "x" : 2950,
+          "y" : 1265
+        } ]
+      }, {
+        "id" : "46"
+      }, {
+        "id" : "48"
+      }, {
+        "id" : "55"
+      }, {
+        "id" : "57",
+        "vertices" : [ {
+          "x" : 3700,
+          "y" : 1265
+        } ]
+      }, {
+        "id" : "59"
+      }, {
+        "id" : "61"
+      }, {
+        "id" : "63",
+        "vertices" : [ {
+          "x" : 721,
+          "y" : 1265
+        } ]
+      }, {
+        "id" : "87",
+        "vertices" : [ {
+          "x" : 1700,
+          "y" : 2015
+        } ]
+      }, {
+        "id" : "90"
+      }, {
+        "id" : "93",
+        "vertices" : [ {
+          "x" : 2000,
+          "y" : 2015
+        } ]
+      }, {
+        "id" : "95"
+      } ]
+    } ]
+  }
+}
