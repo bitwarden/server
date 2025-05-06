@@ -590,7 +590,7 @@ public class OrganizationUsersController : Controller
             return NotFound();
         }
 
-        var currentUser = _userService.GetProperUserId(User); ;
+        var currentUser = _userService.GetProperUserId(User);
         if (currentUser == null)
         {
             return NotFound();
