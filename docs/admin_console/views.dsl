@@ -1,6 +1,6 @@
 styles {
   element "Person" {
-    background #d34407
+    background #3107d3
     shape person
   }
   element "MSP" {

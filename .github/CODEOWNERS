@@ -44,12 +44,15 @@ bitwarden_license/src/Sso @bitwarden/team-auth-dev
 src/Identity @bitwarden/team-auth-dev
 src/Core/Identity @bitwarden/team-auth-dev
 src/Core/IdentityServer @bitwarden/team-auth-dev
+docs/auth/* @bitwarden/team-auth-dev
 
 # Key Management team
 **/KeyManagement @bitwarden/team-key-management-dev
+docs/key_management/* @bitwarden/team-key-management-dev
 
 # Tools team
 **/Tools @bitwarden/team-tools-dev
+docs/tools/* @bitwarden/team-tools-dev
 
 # Dirt (Data Insights & Reporting) team
 **/Dirt @bitwarden/team-data-insights-and-reporting-dev
@@ -57,6 +60,7 @@ src/Core/IdentityServer @bitwarden/team-auth-dev
 # Vault team
 **/Vault @bitwarden/team-vault-dev
 **/Vault/AuthorizationHandlers @bitwarden/team-vault-dev @bitwarden/team-admin-console-dev  # joint ownership over authorization handlers that affect organization users
+docs/vault/* @bitwarden/team-vault-dev
 
 # Admin Console team
 **/AdminConsole @bitwarden/team-admin-console-dev
@@ -65,6 +69,7 @@ bitwarden_license/src/test/Scim.IntegrationTest @bitwarden/team-admin-console-de
 bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
 src/Events @bitwarden/team-admin-console-dev
 src/EventsProcessor @bitwarden/team-admin-console-dev
+docs/admin_console/* @bitwarden/team-admin-console-dev
 
 # Billing team
 **/*billing* @bitwarden/team-billing-dev
@@ -81,6 +86,7 @@ src/EventsProcessor @bitwarden/team-admin-console-dev
 **/Billing @bitwarden/team-billing-dev
 src/Admin/Controllers/ToolsController.cs @bitwarden/team-billing-dev
 src/Admin/Views/Tools @bitwarden/team-billing-dev
+docs/billing/* @bitwarden/team-billing-dev
 
 # Platform team
 .github/workflows/build.yml @bitwarden/team-platform-dev
@@ -96,6 +102,7 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 **/entrypoint.sh @bitwarden/team-platform-dev
 # The PushType enum is expected to be editted by anyone without need for Platform review
 src/Core/Platform/Push/PushType.cs
+docs/platform/* @bitwarden/team-platform-dev
 
 # SDK
 util/RustSdk @bitwarden/team-sdk-sme
@@ -108,3 +115,5 @@ Directory.Build.props
 .claude/ @bitwarden/team-ai-sme
 .github/workflows/respond.yml @bitwarden/team-ai-sme
 .github/workflows/review-code.yml @bitwarden/team-ai-sme
+
+docs/ @bitwarden/dept-architecture
