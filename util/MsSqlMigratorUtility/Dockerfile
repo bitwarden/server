@@ -60,6 +60,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
 
+ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
+
 # Copy app from the build stage
 WORKDIR /app
 COPY --from=build /source/util/MsSqlMigratorUtility/out /app

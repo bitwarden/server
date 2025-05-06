@@ -3,6 +3,8 @@ FROM --platform=$BUILDPLATFORM nginx:stable
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
 
+ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     gosu \

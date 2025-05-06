@@ -54,6 +54,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden" com.bitwarden.project="setup"
 
+ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     openssl \
