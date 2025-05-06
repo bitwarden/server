@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -16,19 +17,22 @@ public class CloudGetOrganizationLicenseQuery : ICloudGetOrganizationLicenseQuer
     private readonly ILicensingService _licensingService;
     private readonly IProviderRepository _providerRepository;
     private readonly IFeatureService _featureService;
+    private readonly IPricingClient _pricingClient;
 
     public CloudGetOrganizationLicenseQuery(
         IInstallationRepository installationRepository,
         IPaymentService paymentService,
         ILicensingService licensingService,
         IProviderRepository providerRepository,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IPricingClient pricingClient)
     {
         _installationRepository = installationRepository;
         _paymentService = paymentService;
         _licensingService = licensingService;
         _providerRepository = providerRepository;
         _featureService = featureService;
+        _pricingClient = pricingClient;
     }
 
     public async Task<OrganizationLicense> GetLicenseAsync(Organization organization, Guid installationId,
@@ -42,7 +46,11 @@ public class CloudGetOrganizationLicenseQuery : ICloudGetOrganizationLicenseQuer
 
         var subscriptionInfo = await GetSubscriptionAsync(organization);
         var license = new OrganizationLicense(organization, subscriptionInfo, installationId, _licensingService, version);
-        license.Token = await _licensingService.CreateOrganizationTokenAsync(organization, installationId, subscriptionInfo);
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        int? smMaxProjects = plan?.SupportsSecretsManager ?? false
+            ? plan.SecretsManager.MaxProjects
+            : null;
+        license.Token = await _licensingService.CreateOrganizationTokenAsync(organization, installationId, subscriptionInfo, smMaxProjects);
 
         return license;
     }
