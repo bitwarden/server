@@ -39,7 +39,7 @@ public class InviteUserPaymentValidationTests
         });
 
         Assert.IsType<Invalid<PaymentsSubscription>>(result);
-        Assert.Equal(PaymentCancelledSubscriptionError.Code, (result as Invalid<PaymentsSubscription>)!.ErrorMessageString);
+        Assert.Equal(PaymentCancelledSubscriptionError.Code, (result as Invalid<PaymentsSubscription>)!.Error.Message);
     }
 
     [Fact]

@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -11,7 +10,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.AdminConsole.Validators;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
 [SutProviderCustomize]
 public class DeleteClaimedOrganizationUserAccountValidatorTests
@@ -36,11 +35,11 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
         var result = await sutProvider.Sut.ValidateAsync([request]);
 
         // Assert
-        Assert.Single(result.InvalidResults);
+        Assert.Single(result.Invalid);
 
-        var invalidResult = result.InvalidResults.First();
-        Assert.IsType<Invalid<DeleteUserValidationRequest>>(invalidResult);
-        Assert.Equal("Member not found.", invalidResult.ErrorMessageString);
+        var error = result.Invalid.First();
+        Assert.IsType<RecordNotFoundError<DeleteUserValidationRequest>>(error);
+        Assert.Equal("Member not found.", error.Message);
 
         await sutProvider.GetDependency<ICurrentContext>()
             .DidNotReceive()
@@ -77,12 +76,11 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
         var result = await sutProvider.Sut.ValidateAsync([request]);
 
         // Assert
-        Assert.Single(result.InvalidResults);
+        Assert.Single(result.Invalid);
 
-        var invalidResult = result.InvalidResults.First();
-        Assert.IsType<Invalid<DeleteUserValidationRequest>>(invalidResult);
-        Assert.IsType<RecordNotFoundError<DeleteUserValidationRequest>>(invalidResult.Errors.First());
-        Assert.Equal("Member not found.", invalidResult.ErrorMessageString);
+        var error = result.Invalid.First();
+        Assert.IsType<RecordNotFoundError<DeleteUserValidationRequest>>(error);
+        Assert.Equal("Member not found.", error.Message);
     }
 
     [Theory]
@@ -106,10 +104,9 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
 
         var result = await sutProvider.Sut.ValidateAsync([request]);
 
-        var invalidResult = Assert.Single(result.InvalidResults);
-        Assert.IsType<Invalid<DeleteUserValidationRequest>>(invalidResult);
-        Assert.IsType<BadRequestError<DeleteUserValidationRequest>>(invalidResult.Errors.First());
-        Assert.Equal("You cannot delete a member with Invited status.", invalidResult.ErrorMessageString);
+        var error = Assert.Single(result.Invalid);
+        Assert.IsType<BadRequestError<DeleteUserValidationRequest>>(error);
+        Assert.Equal("You cannot delete a member with Invited status.", error.Message);
     }
 
     [Theory]
@@ -133,10 +130,9 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
 
         var result = await sutProvider.Sut.ValidateAsync([request]);
 
-        var invalidResult = Assert.Single(result.InvalidResults);
-        Assert.IsType<Invalid<DeleteUserValidationRequest>>(invalidResult);
-        Assert.IsType<BadRequestError<DeleteUserValidationRequest>>(invalidResult.Errors.First());
-        Assert.Equal("You cannot delete yourself.", invalidResult.ErrorMessageString);
+        var error = Assert.Single(result.Invalid);
+        Assert.IsType<BadRequestError<DeleteUserValidationRequest>>(error);
+        Assert.Equal("You cannot delete yourself.", error.Message);
     }
 
 
@@ -161,10 +157,9 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
 
         var result = await sutProvider.Sut.ValidateAsync([request]);
 
-        var invalidResult = Assert.Single(result.InvalidResults);
-        Assert.IsType<Invalid<DeleteUserValidationRequest>>(invalidResult);
-        Assert.IsType<BadRequestError<DeleteUserValidationRequest>>(invalidResult.Errors.First());
-        Assert.Equal("Member is not managed by the organization.", invalidResult.ErrorMessageString);
+        var error = Assert.Single(result.Invalid);
+        Assert.IsType<BadRequestError<DeleteUserValidationRequest>>(error);
+        Assert.Equal("Member is not managed by the organization.", error.Message);
     }
 
 
@@ -193,10 +188,9 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
 
         var result = await sutProvider.Sut.ValidateAsync([request]);
 
-        var invalidResult = Assert.Single(result.InvalidResults);
-        Assert.IsType<Invalid<DeleteUserValidationRequest>>(invalidResult);
-        Assert.IsType<BadRequestError<DeleteUserValidationRequest>>(invalidResult.Errors.First());
-        Assert.Equal("Only owners can delete other owners.", invalidResult.ErrorMessageString);
+        var error = Assert.Single(result.Invalid);
+        Assert.IsType<BadRequestError<DeleteUserValidationRequest>>(error);
+        Assert.Equal("Only owners can delete other owners.", error.Message);
 
         await sutProvider.GetDependency<ICurrentContext>()
             .Received(1)
@@ -231,10 +225,8 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
 
         var result = await sutProvider.Sut.ValidateAsync([request]);
 
-        var invalidResult = Assert.Single(result.InvalidResults);
-        Assert.IsType<Invalid<DeleteUserValidationRequest>>(invalidResult);
-        Assert.IsType<BadRequestError<DeleteUserValidationRequest>>(invalidResult.Errors.First());
-        Assert.StartsWith("Cannot delete this user because it is the sole owner", invalidResult.ErrorMessageString);
+        var invalidResult = Assert.Single(result.Invalid);
+        Assert.StartsWith("Cannot delete this user because it is the sole owner", invalidResult.Message);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
@@ -272,10 +264,9 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
 
         var result = await sutProvider.Sut.ValidateAsync([request]);
 
-        var invalidResult = Assert.Single(result.InvalidResults);
-        Assert.IsType<Invalid<DeleteUserValidationRequest>>(invalidResult);
-        Assert.IsType<BadRequestError<DeleteUserValidationRequest>>(invalidResult.Errors.First());
-        Assert.StartsWith("Cannot delete this user because it is the sole owner", invalidResult.ErrorMessageString);
+        var error = Assert.Single(result.Invalid);
+        Assert.IsType<BadRequestError<DeleteUserValidationRequest>>(error);
+        Assert.StartsWith("Cannot delete this user because it is the sole owner", error.Message);
 
         await sutProvider.GetDependency<IProviderUserRepository>()
             .Received(1)
@@ -313,10 +304,9 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
 
         var result = await sutProvider.Sut.ValidateAsync([request]);
 
-        var invalidResult = Assert.Single(result.InvalidResults);
-        Assert.IsType<Invalid<DeleteUserValidationRequest>>(invalidResult);
-        Assert.IsType<BadRequestError<DeleteUserValidationRequest>>(invalidResult.Errors.First());
-        Assert.Equal("Custom users can not delete admins.", invalidResult.ErrorMessageString);
+        var error = Assert.Single(result.Invalid);
+        Assert.IsType<BadRequestError<DeleteUserValidationRequest>>(error);
+        Assert.Equal("Custom users can not delete admins.", error.Message);
 
         await sutProvider.GetDependency<ICurrentContext>()
             .Received(1)
@@ -374,13 +364,12 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
         var result = await sutProvider.Sut.ValidateAsync([validRequest, invalidRequest]);
 
         // Assert
-        Assert.Single(result.ValidResults);
-        Assert.Single(result.InvalidResults);
+        Assert.Single(result.Valid);
+        Assert.Single(result.Invalid);
 
-        var invalid = result.InvalidResults.First();
-        Assert.IsType<Invalid<DeleteUserValidationRequest>>(invalid);
-        Assert.IsType<BadRequestError<DeleteUserValidationRequest>>(invalid.Errors.First());
-        Assert.Equal("Member is not managed by the organization.", invalid.ErrorMessageString);
+        var error = result.Invalid.First();
+        Assert.IsType<BadRequestError<DeleteUserValidationRequest>>(error);
+        Assert.Equal("Member is not managed by the organization.", error.Message);
     }
 
 }

@@ -156,6 +156,6 @@ public class InviteOrganizationUsersValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         Assert.IsType<Invalid<InviteOrganizationUsersValidationRequest>>(result);
-        Assert.Equal("Some Secrets Manager Failure", (result as Invalid<InviteOrganizationUsersValidationRequest>)!.ErrorMessageString);
+        Assert.Equal("Some Secrets Manager Failure", (result as Invalid<InviteOrganizationUsersValidationRequest>)!.Error.Message);
     }
 }

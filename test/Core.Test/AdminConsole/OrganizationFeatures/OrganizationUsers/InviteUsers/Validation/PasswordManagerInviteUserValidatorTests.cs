@@ -67,7 +67,7 @@ public class InviteUsersPasswordManagerValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(subscriptionUpdate);
 
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
-        Assert.Equal(PasswordManagerSeatLimitHasBeenReachedError.Code, (result as Invalid<PasswordManagerSubscriptionUpdate>)!.ErrorMessageString);
+        Assert.Equal(PasswordManagerSeatLimitHasBeenReachedError.Code, (result as Invalid<PasswordManagerSubscriptionUpdate>)!.Error.Message);
     }
 
     [Theory]
@@ -88,6 +88,6 @@ public class InviteUsersPasswordManagerValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(subscriptionUpdate);
 
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
-        Assert.Equal(PasswordManagerPlanDoesNotAllowAdditionalSeatsError.Code, (result as Invalid<PasswordManagerSubscriptionUpdate>)!.ErrorMessageString);
+        Assert.Equal(PasswordManagerPlanDoesNotAllowAdditionalSeatsError.Code, (result as Invalid<PasswordManagerSubscriptionUpdate>)!.Error.Message);
     }
 }

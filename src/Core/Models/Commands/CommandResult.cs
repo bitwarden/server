@@ -54,7 +54,7 @@ public static class CommandResultExtensions
     /// <typeparam name="B">Failure object's type</typeparam>
     /// <returns></returns>
     public static CommandResult<B> MapToFailure<A, B>(this Invalid<A> invalidResult, Func<A, B> mappingFunction) =>
-        new Failure<B>(invalidResult.Errors.Select(errorA => errorA.ToError(mappingFunction(errorA.ErroredValue))));
+        new Failure<B>(invalidResult.Error.ToError(mappingFunction(invalidResult.Error.ErroredValue)));
 
     public static CommandResult<T> ToSingleResult<T>(this Partial<T> partialResult)
     {

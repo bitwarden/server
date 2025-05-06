@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -72,13 +71,12 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         var validationRequests = CreateValidationRequests(organizationId, deletingUserId, orgUserIds, orgUsers, users, claimedStatuses);
         var validationResult = await _deleteClaimedOrganizationUserAccountValidator.ValidateAsync(validationRequests);
 
-        await CancelPremiumsAsync(validationResult.ValidResults);
-        await HandleUserDeletionsAsync(validationResult.ValidResults);
-        await LogDeletedOrganizationUsersAsync(validationResult.ValidResults);
+        await CancelPremiumsAsync(validationResult.Valid);
+        await HandleUserDeletionsAsync(validationResult.Valid);
+        await LogDeletedOrganizationUsersAsync(validationResult.Valid);
 
-        var successes = validationResult.ValidResults.Select(valid => new DeleteUserResponse { OrganizationUserId = valid.Value.OrganizationUser!.Id });
-        var errors = validationResult.InvalidResults
-            .Select(invalid => invalid.Errors.First())
+        var successes = validationResult.Valid.Select(valid => new DeleteUserResponse { OrganizationUserId = valid.OrganizationUser!.Id });
+        var errors = validationResult.Invalid
             .Select(error => error.ToError(new DeleteUserResponse { OrganizationUserId = error.ErroredValue.OrganizationUserId }));
 
         return new Partial<DeleteUserResponse>(successes, errors);
@@ -123,12 +121,12 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         return await _userRepository.GetManyAsync(userIds);
     }
 
-    private async Task LogDeletedOrganizationUsersAsync(List<Valid<DeleteUserValidationRequest>> requests)
+    private async Task LogDeletedOrganizationUsersAsync(IEnumerable<DeleteUserValidationRequest> requests)
     {
         var eventDate = DateTime.UtcNow;
 
         var events = requests
-            .Select(request => (request.Value.OrganizationUser!, (EventType)EventType.OrganizationUser_Deleted, (DateTime?)eventDate))
+            .Select(request => (request.OrganizationUser!, (EventType)EventType.OrganizationUser_Deleted, (DateTime?)eventDate))
             .ToList();
 
         if (events.Any())
@@ -138,10 +136,10 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
     }
 
 
-    private async Task HandleUserDeletionsAsync(List<Valid<DeleteUserValidationRequest>> requests)
+    private async Task HandleUserDeletionsAsync(IEnumerable<DeleteUserValidationRequest> requests)
     {
         var users = requests
-            .Select(request => request.Value.User!);
+            .Select(request => request.User!);
 
         if (!users.Any())
         {
@@ -158,10 +156,10 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         }
     }
 
-    private async Task CancelPremiumsAsync(List<Valid<DeleteUserValidationRequest>> requests)
+    private async Task CancelPremiumsAsync(IEnumerable<DeleteUserValidationRequest> requests)
     {
         var users = requests
-            .Select(request => request.Value.User!);
+            .Select(request => request.User!);
 
         foreach (var user in users)
         {

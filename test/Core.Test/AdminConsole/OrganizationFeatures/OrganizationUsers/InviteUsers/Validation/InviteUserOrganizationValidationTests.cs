@@ -36,7 +36,7 @@ public class InviteUserOrganizationValidationTests
         var result = await sutProvider.Sut.ValidateAsync(inviteOrganization);
 
         Assert.IsType<Invalid<InviteOrganization>>(result);
-        Assert.Equal(OrganizationNoPaymentMethodFoundError.Code, (result as Invalid<InviteOrganization>)!.ErrorMessageString);
+        Assert.Equal(OrganizationNoPaymentMethodFoundError.Code, (result as Invalid<InviteOrganization>)!.Error.Message);
     }
 
     [Theory]
@@ -53,6 +53,6 @@ public class InviteUserOrganizationValidationTests
         var result = await sutProvider.Sut.ValidateAsync(inviteOrganization);
 
         Assert.IsType<Invalid<InviteOrganization>>(result);
-        Assert.Equal(OrganizationNoSubscriptionFoundError.Code, (result as Invalid<InviteOrganization>)!.ErrorMessageString);
+        Assert.Equal(OrganizationNoSubscriptionFoundError.Code, (result as Invalid<InviteOrganization>)!.Error.Message);
     }
 }

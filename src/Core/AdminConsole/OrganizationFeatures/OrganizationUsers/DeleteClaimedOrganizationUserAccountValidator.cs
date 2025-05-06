@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Errors;
+﻿using System.Diagnostics;
+using Bit.Core.AdminConsole.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Shared.Validation;
@@ -15,8 +16,8 @@ public class DeleteClaimedOrganizationUserAccountValidator(
 {
     public async Task<PartialValidationResult<DeleteUserValidationRequest>> ValidateAsync(List<DeleteUserValidationRequest> requests)
     {
-        var invalidResults = new List<Invalid<DeleteUserValidationRequest>>();
-        var validResults = new List<Valid<DeleteUserValidationRequest>>();
+        var validResults = new List<DeleteUserValidationRequest>();
+        var invalidResults = new List<Error<DeleteUserValidationRequest>>();
 
         foreach (var request in requests)
         {
@@ -40,20 +41,23 @@ public class DeleteClaimedOrganizationUserAccountValidator(
 
             var result = await ExecuteValidatorsAsync(validators, asyncValidators, request);
 
-            if (result is Valid<DeleteUserValidationRequest> valid)
+            switch (result)
             {
-                validResults.Add(valid);
-            }
-            else
-            {
-                invalidResults.Add((Invalid<DeleteUserValidationRequest>)result);
+                case Valid<DeleteUserValidationRequest> valid:
+                    validResults.Add(valid.Value);
+                    break;
+                case Invalid<DeleteUserValidationRequest> invalid:
+                    invalidResults.Add(invalid.Error);
+                    break;
+                default:
+                    throw new UnreachableException();
             }
         }
 
         return new PartialValidationResult<DeleteUserValidationRequest>()
         {
-            InvalidResults = invalidResults,
-            ValidResults = validResults
+            Invalid = invalidResults,
+            Valid = validResults
         };
     }
 
@@ -92,14 +96,14 @@ public class DeleteClaimedOrganizationUserAccountValidator(
             return new Invalid<DeleteUserValidationRequest>(new RecordNotFoundError<DeleteUserValidationRequest>("Member not found.", request));
         }
 
-        return new Valid<DeleteUserValidationRequest>();
+        return new Valid<DeleteUserValidationRequest>(request);
     }
 
     private static ValidationResult<DeleteUserValidationRequest> EnsureUserIsClaimedByOrganization(DeleteUserValidationRequest request)
     {
         if (request.IsClaimed)
         {
-            return new Valid<DeleteUserValidationRequest>();
+            return new Valid<DeleteUserValidationRequest>(request);
         }
         return new Invalid<DeleteUserValidationRequest>(new BadRequestError<DeleteUserValidationRequest>("Member is not managed by the organization.", request));
     }
@@ -111,7 +115,7 @@ public class DeleteClaimedOrganizationUserAccountValidator(
             return new Invalid<DeleteUserValidationRequest>(new BadRequestError<DeleteUserValidationRequest>("You cannot delete a member with Invited status.", request));
         }
 
-        return new Valid<DeleteUserValidationRequest>();
+        return new Valid<DeleteUserValidationRequest>(request);
     }
 
     private static ValidationResult<DeleteUserValidationRequest> PreventSelfDeletion(DeleteUserValidationRequest request)
@@ -167,7 +171,7 @@ public class DeleteClaimedOrganizationUserAccountValidator(
             return new Invalid<DeleteUserValidationRequest>(new BadRequestError<DeleteUserValidationRequest>("Custom users can not delete admins.", request));
         }
 
-        return new Valid<DeleteUserValidationRequest>();
+        return new Valid<DeleteUserValidationRequest>(request);
     }
 
 }
