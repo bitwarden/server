@@ -338,7 +338,7 @@ public class OrganizationUserRepositoryTests
             LimitItemDeletion = false,
             AllowAdminAccessToAllCollectionItems = false,
             UseRiskInsights = false,
-            UseAdminSponsoredFamilies = false,
+            UseAdminSponsoredFamilies = false
         });
 
         var organizationDomain = new OrganizationDomain
@@ -358,6 +358,7 @@ public class OrganizationUserRepositoryTests
             UserId = user1.Id,
             Status = OrganizationUserStatusType.Confirmed,
             ResetPasswordKey = "resetpasswordkey1",
+            AccessSecretsManager = false
         });
 
         await organizationUserRepository.CreateAsync(new OrganizationUser
