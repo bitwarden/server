@@ -3,8 +3,61 @@ CREATE PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
     @Status TINYINT = NULL
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
+    WITH OrganizationAccess AS (
+        SELECT
+            OU.OrganizationId
+        FROM
+            dbo.OrganizationUser OU
+        WHERE
+            OU.UserId = @UserId
+            AND OU.Status = 2
+    ),
+    UserCollectionAccess AS (
+        SELECT
+            CC.CipherId
+        FROM
+            dbo.OrganizationUser OU
+            JOIN dbo.CollectionUser CU
+                ON CU.OrganizationUserId = OU.Id
+            JOIN dbo.CollectionCipher CC
+                ON CC.CollectionId = CU.CollectionId
+        WHERE
+            OU.UserId = @UserId
+            AND OU.Status = 2
+            AND CU.ReadOnly = 0
+    ),
+    GroupCollectionAccess AS (
+        SELECT
+            CC.CipherId
+        FROM
+            dbo.OrganizationUser OU
+            JOIN dbo.GroupUser GU
+                ON GU.OrganizationUserId = OU.Id
+            JOIN dbo.CollectionGroup CG
+                ON CG.GroupId = GU.GroupId
+            JOIN dbo.CollectionCipher CC
+                ON CC.CollectionId = CG.CollectionId
+        WHERE
+            OU.UserId = @UserId
+            AND OU.Status = 2
+            AND CG.ReadOnly = 0
+    ),
+    AccessibleCiphers AS (
+        SELECT CipherId FROM UserCollectionAccess
+        UNION ALL
+        SELECT CipherId FROM GroupCollectionAccess
+    ),
+    SecurityTasks AS (
+        SELECT
+            ST.*
+        FROM
+            dbo.SecurityTask ST
+        WHERE
+            @Status IS NULL
+            OR ST.Status = @Status
+    )
     SELECT
         ST.Id,
         ST.OrganizationId,
@@ -14,43 +67,14 @@ BEGIN
         ST.CreationDate,
         ST.RevisionDate
     FROM
-        [dbo].[SecurityTaskView] ST
-    INNER JOIN
-        [dbo].[OrganizationUserView] OU ON OU.[OrganizationId] = ST.[OrganizationId]
-    INNER JOIN
-        [dbo].[Organization] O ON O.[Id] = ST.[OrganizationId]
-    LEFT JOIN
-        [dbo].[CipherView] C ON C.[Id] = ST.[CipherId]
-    LEFT JOIN
-        [dbo].[CollectionCipher] CC ON CC.[CipherId] = C.[Id] AND C.[Id] IS NOT NULL
-    LEFT JOIN
-        [dbo].[CollectionUser] CU ON CU.[CollectionId] = CC.[CollectionId] AND CU.[OrganizationUserId] = OU.[Id] AND C.[Id] IS NOT NULL
-    LEFT JOIN
-        [dbo].[GroupUser] GU ON GU.[OrganizationUserId] = OU.[Id] AND CU.[CollectionId] IS NULL AND C.[Id] IS NOT NULL
-    LEFT JOIN
-        [dbo].[CollectionGroup] CG ON CG.[GroupId] = GU.[GroupId] AND CG.[CollectionId] = CC.[CollectionId]
+        SecurityTasks ST
+        JOIN OrganizationAccess OA
+            ON ST.OrganizationId = OA.OrganizationId
+        LEFT JOIN AccessibleCiphers AC
+            ON ST.CipherId = AC.CipherId
     WHERE
-        OU.[UserId] = @UserId
-        AND OU.[Status] = 2 -- Ensure user is confirmed
-        AND O.[Enabled] = 1
-        AND (
-            ST.[CipherId] IS NULL
-            OR (
-                C.[Id] IS NOT NULL
-                AND (
-                    CU.[ReadOnly] = 0
-                    OR CG.[ReadOnly] = 0
-                )
-            )
-        )
-        AND ST.[Status] = COALESCE(@Status, ST.[Status])
-    GROUP BY
-        ST.Id,
-        ST.OrganizationId,
-        ST.CipherId,
-        ST.Type,
-        ST.Status,
-        ST.CreationDate,
-        ST.RevisionDate
-    ORDER BY ST.[CreationDate] DESC
+        ST.CipherId IS NULL
+        OR AC.CipherId IS NOT NULL
+    ORDER BY
+        ST.CreationDate DESC;
 END
