@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using Bit.Core;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.AdminConsole.Services.NoopImplementations;
 using Bit.Core.Context;
@@ -94,13 +93,7 @@ public class Startup
                 services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
             }
         }
-        services.AddScoped<IEventWriteService>(sp =>
-        {
-            var featureService = sp.GetRequiredService<IFeatureService>();
-            var key = featureService.IsEnabled(FeatureFlagKeys.EventBasedOrganizationIntegrations)
-                ? "broadcast" : "storage";
-            return sp.GetRequiredKeyedService<IEventWriteService>(key);
-        });
+        services.AddScoped<IEventWriteService, EventRouteService>();
         services.AddScoped<IEventService, EventService>();
 
         services.AddOptionality();
