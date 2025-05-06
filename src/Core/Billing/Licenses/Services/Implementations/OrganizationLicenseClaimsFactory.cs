@@ -112,6 +112,11 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
         }
         claims.Add(new Claim(nameof(OrganizationLicenseConstants.UseAdminSponsoredFamilies), entity.UseAdminSponsoredFamilies.ToString()));
 
+        if (licenseContext.SmMaxProjects.HasValue)
+        {
+            claims.Add(new Claim(nameof(OrganizationLicenseConstants.SmMaxProjects), licenseContext.SmMaxProjects.ToString()));
+        }
+
         return Task.FromResult(claims);
     }
 

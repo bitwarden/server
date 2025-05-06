@@ -15,7 +15,8 @@ public class CreateSponsorshipCommand(
     ICurrentContext currentContext,
     IOrganizationSponsorshipRepository organizationSponsorshipRepository,
     IUserService userService,
-    IOrganizationService organizationService) : ICreateSponsorshipCommand
+    IOrganizationService organizationService,
+    IOrganizationUserRepository organizationUserRepository) : ICreateSponsorshipCommand
 {
     public async Task<OrganizationSponsorship> CreateSponsorshipAsync(
         Organization sponsoringOrganization,
@@ -47,11 +48,12 @@ public class CreateSponsorshipCommand(
             throw new BadRequestException("Only confirmed users can sponsor other organizations.");
         }
 
-        var existingOrgSponsorship = await organizationSponsorshipRepository
-            .GetBySponsoringOrganizationUserIdAsync(sponsoringMember.Id);
-        if (existingOrgSponsorship?.SponsoredOrganizationId != null)
+        var sponsorships =
+            await organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrganization.Id);
+        var existingSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName == friendlyName);
+        if (existingSponsorship != null)
         {
-            throw new BadRequestException("Can only sponsor one organization per Organization User.");
+            return existingSponsorship;
         }
 
         if (isAdminInitiated)
@@ -70,15 +72,37 @@ public class CreateSponsorshipCommand(
             Notes = notes
         };
 
-        if (existingOrgSponsorship != null)
+        if (!isAdminInitiated)
         {
-            // Replace existing invalid offer with our new sponsorship offer
-            sponsorship.Id = existingOrgSponsorship.Id;
+            var existingOrgSponsorship = await organizationSponsorshipRepository
+                .GetBySponsoringOrganizationUserIdAsync(sponsoringMember.Id);
+            if (existingOrgSponsorship?.SponsoredOrganizationId != null)
+            {
+                throw new BadRequestException("Can only sponsor one organization per Organization User.");
+            }
+
+            if (existingOrgSponsorship != null)
+            {
+                sponsorship.Id = existingOrgSponsorship.Id;
+            }
         }
 
         if (isAdminInitiated && sponsoringOrganization.Seats.HasValue)
         {
-            await organizationService.AutoAddSeatsAsync(sponsoringOrganization, 1);
+            var occupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrganization.Id);
+            var availableSeats = sponsoringOrganization.Seats.Value - occupiedSeats;
+
+            if (availableSeats <= 0)
+            {
+                var newSeatsRequired = 1;
+                var (canScale, failureReason) = await organizationService.CanScaleAsync(sponsoringOrganization, newSeatsRequired);
+                if (!canScale)
+                {
+                    throw new BadRequestException(failureReason);
+                }
+
+                await organizationService.AutoAddSeatsAsync(sponsoringOrganization, newSeatsRequired);
+            }
         }
 
         try

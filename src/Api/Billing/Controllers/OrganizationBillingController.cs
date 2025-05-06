@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
+using Bit.Api.Billing.Queries.Organizations;
 using Bit.Core;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
@@ -24,6 +25,7 @@ public class OrganizationBillingController(
     IFeatureService featureService,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
+    IOrganizationWarningsQuery organizationWarningsQuery,
     IPaymentService paymentService,
     IPricingClient pricingClient,
     ISubscriberService subscriberService,
@@ -334,5 +336,29 @@ public class OrganizationBillingController(
             requestBody.OrganizationKey);
 
         return TypedResults.Ok(providerId);
+    }
+
+    [HttpGet("warnings")]
+    public async Task<IResult> GetWarningsAsync([FromRoute] Guid organizationId)
+    {
+        /*
+         * We'll keep these available at the User level, because we're hiding any pertinent information and
+         * we want to throw as few errors as possible since these are not core features.
+         */
+        if (!await currentContext.OrganizationUser(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        var response = await organizationWarningsQuery.Run(organization);
+
+        return TypedResults.Ok(response);
     }
 }
