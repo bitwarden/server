@@ -47,9 +47,6 @@ public class Startup
 
         // Mvc
         services.AddMvc();
-
-        // This should be registered last because it customizes the primary http message handler and we want it to win.
-        services.AddX509ChainCustomization();
     }
 
     public void Configure(
