@@ -78,10 +78,13 @@ public class TwoFactorIsEnabledQuery(IUserRepository userRepository) : ITwoFacto
     }
 
     /// <summary>
-    /// Checks to see what kind of two-factor is enabled. Item1 will always be opposite Item2.
+    /// Checks to see what kind of two-factor is enabled.
+    /// We use a delegate to check if the user has premium access, since there are multiple ways to
+    /// determine if a user has premium access.
     /// </summary>
     /// <param name="providers">dictionary of two factor providers</param>
-    /// <returns> </returns>
+    /// <param name="hasPremiumAccessDelegate">function to check if the user has premium access</param>
+    /// <returns> true if the user has two factor enabled; false otherwise;</returns>
     private async static Task<bool> TwoFactorEnabledAsync(
         Dictionary<TwoFactorProviderType, TwoFactorProvider> providers,
         Func<Task<bool>> hasPremiumAccessDelegate)
