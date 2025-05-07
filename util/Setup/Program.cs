@@ -312,6 +312,9 @@ public class Program
         }
         catch
         {
+            Console.WriteLine(
+                $"Unable to validate installation id. Problem contacting Bitwarden {cloudRegion.ToString()} server.\nError: {ex.Message}"
+            );
             return false;
         }
     }
