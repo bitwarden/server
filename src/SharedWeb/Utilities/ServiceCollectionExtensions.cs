@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Net;
+﻿using System.Net;
 using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
@@ -493,8 +492,6 @@ public static class ServiceCollectionExtensions
         Action<AuthorizationOptions> addAuthorization)
     {
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            // If we ever use the overload here with a different authentication scheme name then
-            // we need to change the AddOptions call below.
             .AddJwtBearer(options =>
             {
                 options.MapInboundClaims = false;
@@ -512,24 +509,6 @@ public static class ServiceCollectionExtensions
                         return Task.CompletedTask;
                     }
                 };
-            });
-
-        // This is done through a Configure method instead of above so that we can avoid
-        // an early creation of services but still use a service that should centrally control how HttpMessageHandlers
-        // are created.
-        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
-            .Configure<IHttpMessageHandlerFactory>((options, httpMessageHandlerFactory) =>
-            {
-                // Since we don't manually set the Backchannel and the Post stage configuration shouldn't have
-                // ran yet we don't expect this option to be set. If it is set, it was likely set with a
-                // handler already and won't respect the BackchannelHttpHandler we are about to set.
-                Debug.Assert(options.Backchannel is null);
-
-                // Do a few debug checks to make sure we are customizing the expected options configured above.
-                Debug.Assert(!options.TokenValidationParameters.ValidateAudience);
-                Debug.Assert(options.TokenValidationParameters.ValidTypes.Single() == "at+jwt");
-                Debug.Assert(options.TokenValidationParameters.NameClaimType == ClaimTypes.Email);
-                options.BackchannelHttpHandler = httpMessageHandlerFactory.CreateHandler();
             });
 
         if (addAuthorization != null)

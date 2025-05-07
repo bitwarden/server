@@ -35,7 +35,6 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
     private readonly Dictionary<string, DynamicAuthenticationScheme> _cachedHandlerSchemes;
     private readonly SemaphoreSlim _semaphore;
     private readonly IServiceProvider _serviceProvider;
-    private readonly IHttpMessageHandlerFactory _httpMessageHandlerFactory;
     private DateTime? _lastSchemeLoad;
     private IEnumerable<DynamicAuthenticationScheme> _schemesCopy = Array.Empty<DynamicAuthenticationScheme>();
     private IEnumerable<DynamicAuthenticationScheme> _handlerSchemesCopy = Array.Empty<DynamicAuthenticationScheme>();
