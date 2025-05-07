@@ -9,6 +9,8 @@ UPDATE
     [dbo].[Organization]
 SET
     [UseOrganizationDomains] = [UseSso]
+WHERE
+    [UseSso] = 1
 GO
 
 /* add column to Organization_Create*/
