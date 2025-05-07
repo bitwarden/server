@@ -1,6 +1,6 @@
 ﻿#nullable enable
 
-using Bit.Core.Models.Commands;
+using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.Models.Data.Organizations;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
