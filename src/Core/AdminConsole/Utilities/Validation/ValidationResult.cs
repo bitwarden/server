@@ -8,12 +8,6 @@ public record Valid<T>(T Value) : ValidationResult<T>;
 
 public record Invalid<T>(Error<T> Error) : ValidationResult<T>;
 
-public record PartialValidationResult<T> : ValidationResult<T>
-{
-    public IEnumerable<T> Valid { get; init; } = [];
-    public IEnumerable<Error<T>> Invalid { get; init; } = [];
-}
-
 public static class ValidationResultMappers
 {
     public static ValidationResult<B> Map<A, B>(this ValidationResult<A> validationResult, B invalidValue) =>
