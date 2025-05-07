@@ -1,7 +1,7 @@
 ﻿using System.Text.RegularExpressions;
-using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Tax.Models;
 
-namespace Bit.Core.Billing.Services;
+namespace Bit.Core.Billing.Tax.Services.Implementations;
 
 public class TaxService : ITaxService
 {
