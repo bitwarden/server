@@ -47,6 +47,20 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         _organizationService = organizationService;
     }
 
+    private IEnumerable<OrganizationUserUserDetails> GetExistingExternalUsers(ICollection<OrganizationUserUserDetails> existingUsers)
+    {
+        return existingUsers
+            .Where(u => !string.IsNullOrWhiteSpace(u.ExternalId))
+            .ToList();
+    }
+
+    private Dictionary<string, Guid> GetExistingExternalUsersIdDict(ICollection<OrganizationUserUserDetails> existingUsers)
+    {
+        return existingUsers
+            .Where(u => !string.IsNullOrWhiteSpace(u.ExternalId))
+            .ToDictionary(u => u.ExternalId, u => u.Id);
+    }
+
     public async Task ImportAsync(Guid organizationId,
         IEnumerable<ImportedGroup> groups,
         IEnumerable<ImportedOrganizationUser> newUsers,
@@ -66,94 +80,30 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             throw new BadRequestException("Organization cannot use directory syncing.");
         }
 
-        var newUsersSet = new HashSet<string>(newUsers?.Select(u => u.ExternalId) ?? new List<string>());
         var existingUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-        var existingExternalUsers = existingUsers.Where(u => !string.IsNullOrWhiteSpace(u.ExternalId)).ToList();
-        var existingExternalUsersIdDict = existingExternalUsers.ToDictionary(u => u.ExternalId, u => u.Id);
 
-        // Users
+        var syncData = new OrganizationUserSyncData
+        {
+            NewUsersSet = new HashSet<string>(newUsers?.Select(u => u.ExternalId) ?? new List<string>()),
+            ExistingUsers = existingUsers,
+            ExistingExternalUsers = GetExistingExternalUsers(existingUsers),
+            ExistingExternalUsersIdDict = GetExistingExternalUsersIdDict(existingUsers)
+        };
 
         var events = new List<(OrganizationUserUserDetails ou, EventType e, DateTime? d)>();
 
-        if (removeUserExternalIds?.Any() ?? false)
-        {
-            await RemoveExistingExternalUsers(removeUserExternalIds, events, existingExternalUsers, newUsersSet);
-        }
+        // Users
+        await RemoveExistingExternalUsers(removeUserExternalIds, events, syncData);
 
         if (overwriteExisting)
         {
-            await OverwriteExisting(existingExternalUsers, existingExternalUsersIdDict, newUsersSet, events);
+            await OverwriteExisting(events, syncData);
         }
 
-        if (newUsers?.Any() ?? false)
-        {
-            await RemoveExistingUsers(existingUsers, newUsers, existingExternalUsersIdDict, newUsersSet, organization, eventSystemUser);
-        }
-
+        await RemoveExistingUsers(existingUsers, newUsers, organization, eventSystemUser, syncData);
 
         // Groups
-        if (groups?.Any() ?? false)
-        {
-            if (!organization.UseGroups)
-            {
-                throw new BadRequestException("Organization cannot use groups.");
-            }
-
-            var groupsDict = groups.ToDictionary(g => g.Group.ExternalId);
-            var existingGroups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
-            var existingExternalGroups = existingGroups
-                .Where(u => !string.IsNullOrWhiteSpace(u.ExternalId)).ToList();
-            var existingExternalGroupsDict = existingExternalGroups.ToDictionary(g => g.ExternalId);
-
-            var newGroups = groups
-                .Where(g => !existingExternalGroupsDict.ContainsKey(g.Group.ExternalId))
-                .Select(g => g.Group).ToList();
-
-            var savedGroups = new List<Group>();
-            foreach (var group in newGroups)
-            {
-                group.CreationDate = group.RevisionDate = DateTime.UtcNow;
-
-                savedGroups.Add(await _groupRepository.CreateAsync(group));
-                await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds,
-                    existingExternalUsersIdDict);
-            }
-
-            await _eventService.LogGroupEventsAsync(
-                savedGroups.Select(g => (g, EventType.Group_Created, (EventSystemUser?)eventSystemUser, (DateTime?)DateTime.UtcNow)));
-
-            var updateGroups = existingExternalGroups
-                .Where(g => groupsDict.ContainsKey(g.ExternalId))
-                .ToList();
-
-            if (updateGroups.Any())
-            {
-                var groupUsers = await _groupRepository.GetManyGroupUsersByOrganizationIdAsync(organizationId);
-                var existingGroupUsers = groupUsers
-                    .GroupBy(gu => gu.GroupId)
-                    .ToDictionary(g => g.Key, g => new HashSet<Guid>(g.Select(gr => gr.OrganizationUserId)));
-
-                foreach (var group in updateGroups)
-                {
-                    var updatedGroup = groupsDict[group.ExternalId].Group;
-                    if (group.Name != updatedGroup.Name)
-                    {
-                        group.RevisionDate = DateTime.UtcNow;
-                        group.Name = updatedGroup.Name;
-
-                        await _groupRepository.ReplaceAsync(group);
-                    }
-
-                    await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds,
-                        existingExternalUsersIdDict,
-                        existingGroupUsers.ContainsKey(group.Id) ? existingGroupUsers[group.Id] : null);
-
-                }
-
-                await _eventService.LogGroupEventsAsync(
-                    updateGroups.Select(g => (g, EventType.Group_Updated, (EventSystemUser?)eventSystemUser, (DateTime?)DateTime.UtcNow)));
-            }
-        }
+        await SyncGroups(organization, groups, eventSystemUser, syncData);
 
         await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.ou, e.e, eventSystemUser, e.d)));
         await _referenceEventService.RaiseEventAsync(
@@ -181,13 +131,17 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
     private async Task RemoveExistingExternalUsers(
             IEnumerable<string> removeUserExternalIds,
             List<(OrganizationUserUserDetails ou, EventType e, DateTime? d)> events,
-            IEnumerable<OrganizationUserUserDetails> existingExternalUsers,
-            HashSet<string> newUsersSet
+            OrganizationUserSyncData syncData
     )
     {
-        var existingUsersDict = existingExternalUsers.ToDictionary(u => u.ExternalId);
+        if (!removeUserExternalIds.Any())
+        {
+            return;
+        }
+
+        var existingUsersDict = syncData.ExistingExternalUsers.ToDictionary(u => u.ExternalId);
         var removeUsersSet = new HashSet<string>(removeUserExternalIds)
-            .Except(newUsersSet)
+            .Except(syncData.NewUsersSet)
             .Where(u => existingUsersDict.ContainsKey(u) && existingUsersDict[u].Type != OrganizationUserType.Owner)
             .Select(u => existingUsersDict[u]);
 
@@ -203,12 +157,16 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
     private async Task RemoveExistingUsers(
             IEnumerable<OrganizationUserUserDetails> existingUsers,
             IEnumerable<ImportedOrganizationUser> newUsers,
-            IDictionary<string, Guid> existingExternalUsersIdDict,
-            HashSet<string> newUsersSet,
             Organization organization,
-            EventSystemUser eventSystemUser
+            EventSystemUser eventSystemUser,
+            OrganizationUserSyncData syncData
             )
     {
+        if (!newUsers.Any())
+        {
+            return;
+        }
+
         // Marry existing users
         var existingUsersEmailsDict = existingUsers
             .Where(u => string.IsNullOrWhiteSpace(u.ExternalId))
@@ -224,14 +182,14 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             {
                 orgUser.ExternalId = newUsersEmailsDict[user].ExternalId;
                 usersToUpsert.Add(orgUser);
-                existingExternalUsersIdDict.Add(orgUser.ExternalId, orgUser.Id);
+                syncData.ExistingExternalUsersIdDict.Add(orgUser.ExternalId, orgUser.Id);
             }
         }
         await _organizationUserRepository.UpsertManyAsync(usersToUpsert);
 
         // Add new users
-        var existingUsersSet = new HashSet<string>(existingExternalUsersIdDict.Keys);
-        var usersToAdd = newUsersSet.Except(existingUsersSet).ToList();
+        var existingUsersSet = new HashSet<string>(syncData.ExistingExternalUsersIdDict.Keys);
+        var usersToAdd = syncData.NewUsersSet.Except(existingUsersSet).ToList();
 
         var seatsAvailable = int.MaxValue;
         var enoughSeatsAvailable = true;
@@ -274,22 +232,20 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         var invitedUsers = await _organizationService.InviteUsersAsync(organization.Id, invitingUserId: null, systemUser: eventSystemUser, userInvites);
         foreach (var invitedUser in invitedUsers)
         {
-            existingExternalUsersIdDict.Add(invitedUser.ExternalId, invitedUser.Id);
+            syncData.ExistingExternalUsersIdDict.Add(invitedUser.ExternalId, invitedUser.Id);
         }
     }
 
     private async Task OverwriteExisting(
-            IEnumerable<OrganizationUserUserDetails> existingExternalUsers,
-            IDictionary<string, Guid> existingExternalUsersIdDict,
-            HashSet<string> newUsersSet,
-            List<(OrganizationUserUserDetails ou, EventType e, DateTime? d)> events
+            List<(OrganizationUserUserDetails ou, EventType e, DateTime? d)> events,
+            OrganizationUserSyncData syncData
             )
     {
         // Remove existing external users that are not in new user set
-        var usersToDelete = existingExternalUsers.Where(u =>
+        var usersToDelete = syncData.ExistingExternalUsers.Where(u =>
             u.Type != OrganizationUserType.Owner &&
-            !newUsersSet.Contains(u.ExternalId) &&
-            existingExternalUsersIdDict.ContainsKey(u.ExternalId));
+            !syncData.NewUsersSet.Contains(u.ExternalId) &&
+            syncData.ExistingExternalUsersIdDict.ContainsKey(u.ExternalId));
         await _organizationUserRepository.DeleteManyAsync(usersToDelete.Select(u => u.Id));
         events.AddRange(usersToDelete.Select(u => (
           u,
@@ -299,7 +255,80 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         );
         foreach (var deletedUser in usersToDelete)
         {
-            existingExternalUsersIdDict.Remove(deletedUser.ExternalId);
+            syncData.ExistingExternalUsersIdDict.Remove(deletedUser.ExternalId);
+        }
+    }
+
+    private async Task SyncGroups(Organization organization,
+            IEnumerable<ImportedGroup> groups,
+            EventSystemUser eventSystemUser,
+            OrganizationUserSyncData syncData
+            )
+    {
+
+        if (!groups.Any())
+        {
+            return;
+        }
+
+        if (!organization.UseGroups)
+        {
+            throw new BadRequestException("Organization cannot use groups.");
+        }
+
+        var groupsDict = groups.ToDictionary(g => g.Group.ExternalId);
+        var existingGroups = await _groupRepository.GetManyByOrganizationIdAsync(organization.Id);
+        var existingExternalGroups = existingGroups
+            .Where(u => !string.IsNullOrWhiteSpace(u.ExternalId)).ToList();
+        var existingExternalGroupsDict = existingExternalGroups.ToDictionary(g => g.ExternalId);
+
+        var newGroups = groups
+            .Where(g => !existingExternalGroupsDict.ContainsKey(g.Group.ExternalId))
+            .Select(g => g.Group).ToList();
+
+        var savedGroups = new List<Group>();
+        foreach (var group in newGroups)
+        {
+            group.CreationDate = group.RevisionDate = DateTime.UtcNow;
+
+            savedGroups.Add(await _groupRepository.CreateAsync(group));
+            await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds,
+                syncData.ExistingExternalUsersIdDict);
+        }
+
+        await _eventService.LogGroupEventsAsync(
+            savedGroups.Select(g => (g, EventType.Group_Created, (EventSystemUser?)eventSystemUser, (DateTime?)DateTime.UtcNow)));
+
+        var updateGroups = existingExternalGroups
+            .Where(g => groupsDict.ContainsKey(g.ExternalId))
+            .ToList();
+
+        if (updateGroups.Any())
+        {
+            var groupUsers = await _groupRepository.GetManyGroupUsersByOrganizationIdAsync(organization.Id);
+            var existingGroupUsers = groupUsers
+                .GroupBy(gu => gu.GroupId)
+                .ToDictionary(g => g.Key, g => new HashSet<Guid>(g.Select(gr => gr.OrganizationUserId)));
+
+            foreach (var group in updateGroups)
+            {
+                var updatedGroup = groupsDict[group.ExternalId].Group;
+                if (group.Name != updatedGroup.Name)
+                {
+                    group.RevisionDate = DateTime.UtcNow;
+                    group.Name = updatedGroup.Name;
+
+                    await _groupRepository.ReplaceAsync(group);
+                }
+
+                await UpdateUsersAsync(group, groupsDict[group.ExternalId].ExternalUserIds,
+                    syncData.ExistingExternalUsersIdDict,
+                    existingGroupUsers.ContainsKey(group.Id) ? existingGroupUsers[group.Id] : null);
+
+            }
+
+            await _eventService.LogGroupEventsAsync(
+                updateGroups.Select(g => (g, EventType.Group_Updated, (EventSystemUser?)eventSystemUser, (DateTime?)DateTime.UtcNow)));
         }
     }
 
