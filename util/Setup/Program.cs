@@ -285,7 +285,6 @@ public class Program
                 url = $"{installationUrl}/installations/";
             }
 
-
             var response = new HttpClient().GetAsync(url + _context.Install.InstallationId).GetAwaiter().GetResult();
 
             if (!response.IsSuccessStatusCode)

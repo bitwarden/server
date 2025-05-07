@@ -11,17 +11,13 @@ namespace Bit.Admin.Controllers;
 public class HomeController : Controller
 {
     private readonly GlobalSettings _globalSettings;
-    private readonly HttpClient _httpClient;
+    private readonly HttpClient _httpClient = new HttpClient();
     private readonly ILogger<HomeController> _logger;
 
-    public HomeController(
-        GlobalSettings globalSettings,
-        ILogger<HomeController> logger,
-        IHttpClientFactory httpClientFactory)
+    public HomeController(GlobalSettings globalSettings, ILogger<HomeController> logger)
     {
         _globalSettings = globalSettings;
         _logger = logger;
-        _httpClient = httpClientFactory.CreateClient();
     }
 
     [Authorize]

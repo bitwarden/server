@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Net.Http.Headers;
+using System.Text.Json.Serialization;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -24,16 +25,23 @@ public class FreshsalesController : Controller
         IOrganizationRepository organizationRepository,
         IOptions<BillingSettings> billingSettings,
         ILogger<FreshsalesController> logger,
-        GlobalSettings globalSettings,
-        IHttpClientFactory httpClientFactory)
+        GlobalSettings globalSettings)
     {
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
         _logger = logger;
         _globalSettings = globalSettings;
-        _httpClient = httpClientFactory.CreateClient("Freshsales");
+
+        _httpClient = new HttpClient
+        {
+            BaseAddress = new Uri("https://bitwarden.freshsales.io/api/")
+        };
 
         _freshsalesApiKey = billingSettings.Value.FreshsalesApiKey;
+
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Token",
+            $"token={_freshsalesApiKey}");
     }
 
 

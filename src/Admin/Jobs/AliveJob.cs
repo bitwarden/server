@@ -8,16 +8,14 @@ namespace Bit.Admin.Jobs;
 public class AliveJob : BaseJob
 {
     private readonly GlobalSettings _globalSettings;
-    private readonly HttpClient _httpClient;
+    private HttpClient _httpClient = new HttpClient();
 
     public AliveJob(
         GlobalSettings globalSettings,
-        ILogger<AliveJob> logger,
-        IHttpClientFactory httpClientFactory)
+        ILogger<AliveJob> logger)
         : base(logger)
     {
         _globalSettings = globalSettings;
-        _httpClient = httpClientFactory.CreateClient();
     }
 
     protected async override Task ExecuteJobAsync(IJobExecutionContext context)

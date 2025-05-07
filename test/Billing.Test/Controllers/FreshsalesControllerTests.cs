@@ -31,18 +31,12 @@ public class FreshsalesControllerTests
         var globalSettings = new GlobalSettings();
         globalSettings.BaseServiceUri.Admin = "https://test.com";
 
-        var httpClientFactory = Substitute.For<IHttpClientFactory>();
-        httpClientFactory
-            .CreateClient("Freshsales")
-            .Returns(new HttpClient());
-
         var sut = new FreshsalesController(
             userRepository,
             organizationRepository,
             billingSettings,
             Substitute.For<ILogger<FreshsalesController>>(),
-            globalSettings,
-            httpClientFactory
+            globalSettings
         );
 
         return (sut, userRepository, organizationRepository);
