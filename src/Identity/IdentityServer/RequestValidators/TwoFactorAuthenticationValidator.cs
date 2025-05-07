@@ -130,12 +130,6 @@ public class TwoFactorAuthenticationValidator(
             twoFactorResultDict.Add("Email", user.Email);
         }
 
-        if (enabledProviders.Count == 1 && enabledProviders.First().Key == TwoFactorProviderType.Email)
-        {
-            // Send email now if this is their only 2FA method
-            await _userService.SendTwoFactorEmailAsync(user);
-        }
-
         return twoFactorResultDict;
     }
 
