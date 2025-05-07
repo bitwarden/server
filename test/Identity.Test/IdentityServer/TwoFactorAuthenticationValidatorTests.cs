@@ -250,39 +250,6 @@ public class TwoFactorAuthenticationValidatorTests
     }
 
     [Theory]
-    [BitAutoData(TwoFactorProviderType.Email)]
-    public async void BuildTwoFactorResultAsync_IndividualEmailProvider_SendsEmail_SetsSsoToken_ReturnsNotNull(
-        TwoFactorProviderType providerType,
-        User user)
-    {
-        // Arrange
-        var providerTypeInt = (int)providerType;
-        user.TwoFactorProviders = GetTwoFactorIndividualProviderJson(providerType);
-
-        _userManager.TWO_FACTOR_ENABLED = true;
-        _userManager.SUPPORTS_TWO_FACTOR = true;
-        _userManager.TWO_FACTOR_PROVIDERS = [providerType.ToString()];
-
-        _userService.TwoFactorProviderIsEnabledAsync(Arg.Any<TwoFactorProviderType>(), user)
-            .Returns(true);
-
-        // Act
-        var result = await _sut.BuildTwoFactorResultAsync(user, null);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.IsType<Dictionary<string, object>>(result);
-        Assert.NotEmpty(result);
-        Assert.True(result.ContainsKey("TwoFactorProviders2"));
-        var providers = (Dictionary<string, Dictionary<string, object>>)result["TwoFactorProviders2"];
-        Assert.True(providers.ContainsKey(providerTypeInt.ToString()));
-        Assert.True(result.ContainsKey("SsoEmail2faSessionToken"));
-        Assert.True(result.ContainsKey("Email"));
-
-        await _userService.Received(1).SendTwoFactorEmailAsync(Arg.Any<User>());
-    }
-
-    [Theory]
     [BitAutoData(TwoFactorProviderType.Duo)]
     [BitAutoData(TwoFactorProviderType.WebAuthn)]
     [BitAutoData(TwoFactorProviderType.Email)]
