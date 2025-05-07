@@ -1,6 +1,4 @@
-﻿using Bit.Core.Models.Commands;
-
-namespace Bit.Core.AdminConsole.Errors;
+namespace Bit.Core.AdminConsole.Utilities.Errors;
 
 public record Error<T>(string Message, T ErroredValue);
 

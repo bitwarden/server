@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.AdminConsole.Errors;
+﻿namespace Bit.Core.AdminConsole.Utilities.Errors;
 
 public record InsufficientPermissionsError<T>(string Message, T ErroredValue) : Error<T>(Message, ErroredValue)
 {

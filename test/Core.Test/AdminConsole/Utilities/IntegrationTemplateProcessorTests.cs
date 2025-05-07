@@ -89,4 +89,61 @@ public class IntegrationTemplateProcessorTests
 
         Assert.Equal(expected, result);
     }
+
+    [Theory]
+    [InlineData("User name is #UserName#")]
+    [InlineData("Email: #UserEmail#")]
+    public void TemplateRequiresUser_ContainingKeys_ReturnsTrue(string template)
+    {
+        var result = IntegrationTemplateProcessor.TemplateRequiresUser(template);
+        Assert.True(result);
+    }
+
+    [Theory]
+    [InlineData("#UserId#")]  // This is on the base class, not fetched, so should be false
+    [InlineData("No User Tokens")]
+    [InlineData("")]
+    public void TemplateRequiresUser_EmptyInputOrNoMatchingKeys_ReturnsFalse(string template)
+    {
+        var result = IntegrationTemplateProcessor.TemplateRequiresUser(template);
+        Assert.False(result);
+    }
+
+    [Theory]
+    [InlineData("Acting user is #ActingUserName#")]
+    [InlineData("Acting user's email is #ActingUserEmail#")]
+    public void TemplateRequiresActingUser_ContainingKeys_ReturnsTrue(string template)
+    {
+        var result = IntegrationTemplateProcessor.TemplateRequiresActingUser(template);
+        Assert.True(result);
+    }
+
+    [Theory]
+    [InlineData("No ActiveUser tokens")]
+    [InlineData("#ActiveUserId#")]  // This is on the base class, not fetched, so should be false
+    [InlineData("")]
+    public void TemplateRequiresActingUser_EmptyInputOrNoMatchingKeys_ReturnsFalse(string template)
+    {
+        var result = IntegrationTemplateProcessor.TemplateRequiresActingUser(template);
+        Assert.False(result);
+    }
+
+    [Theory]
+    [InlineData("Organization: #OrganizationName#")]
+    [InlineData("Welcome to #OrganizationName#")]
+    public void TemplateRequiresOrganization_ContainingKeys_ReturnsTrue(string template)
+    {
+        var result = IntegrationTemplateProcessor.TemplateRequiresOrganization(template);
+        Assert.True(result);
+    }
+
+    [Theory]
+    [InlineData("No organization tokens")]
+    [InlineData("#OrganizationId#")]  // This is on the base class, not fetched, so should be false
+    [InlineData("")]
+    public void TemplateRequiresOrganization_EmptyInputOrNoMatchingKeys_ReturnsFalse(string template)
+    {
+        var result = IntegrationTemplateProcessor.TemplateRequiresOrganization(template);
+        Assert.False(result);
+    }
 }
