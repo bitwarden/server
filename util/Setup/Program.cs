@@ -310,12 +310,8 @@ public class Program
 
             return true;
         }
-        catch (Exception ex)
+        catch
         {
-            // TODO: Remove exception message before main merge??
-            Console.WriteLine(
-                $"Unable to validate installation id. Problem contacting Bitwarden {cloudRegion.ToString()} server.\nError: {ex.Message}"
-            );
             return false;
         }
     }
