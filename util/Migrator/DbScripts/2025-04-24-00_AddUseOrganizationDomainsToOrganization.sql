@@ -233,6 +233,7 @@ BEGIN
         [AllowAdminAccessToAllCollectionItems],
         [UseRiskInsights],
         [LimitItemDeletion],
+        [UseAdminSponsoredFamilies],
         [UseOrganizationDomains]
     FROM
         [dbo].[Organization]
