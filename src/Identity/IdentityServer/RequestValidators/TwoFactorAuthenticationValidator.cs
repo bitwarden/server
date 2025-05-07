@@ -4,7 +4,6 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
@@ -25,7 +24,6 @@ public class TwoFactorAuthenticationValidator(
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationRepository organizationRepository,
     IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmail2faSessionTokeFactory,
-    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     ICurrentContext currentContext) : ITwoFactorAuthenticationValidator
 {
     private readonly IUserService _userService = userService;
@@ -35,7 +33,6 @@ public class TwoFactorAuthenticationValidator(
     private readonly IOrganizationUserRepository _organizationUserRepository = organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository = organizationRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmail2faSessionTokeFactory = ssoEmail2faSessionTokeFactory;
-    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     private readonly ICurrentContext _currentContext = currentContext;
 
     public async Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request)
@@ -98,12 +95,6 @@ public class TwoFactorAuthenticationValidator(
                 _ssoEmail2faSessionTokeFactory.Protect(new SsoEmail2faSessionTokenable(user)));
 
             twoFactorResultDict.Add("Email", user.Email);
-        }
-
-        if (enabledProviders.Count == 1 && enabledProviders.First().Key == TwoFactorProviderType.Email)
-        {
-            // Send email now if this is their only 2FA method
-            await _userService.SendTwoFactorEmailAsync(user);
         }
 
         return twoFactorResultDict;
