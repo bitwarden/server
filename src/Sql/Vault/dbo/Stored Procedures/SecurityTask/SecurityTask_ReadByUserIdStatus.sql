@@ -45,10 +45,19 @@ BEGIN
             AND CG.ReadOnly = 0
     ),
     AccessibleCiphers AS (
-        SELECT CipherId FROM UserCollectionAccess
+        SELECT CipherId
+        FROM UserCollectionAccess
+
         UNION ALL
-        SELECT CipherId FROM GroupCollectionAccess
-    ),
+
+        SELECT GC.CipherId
+        FROM GroupCollectionAccess AS GC
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM UserCollectionAccess AS UA
+            WHERE UA.CipherId = GC.CipherId
+        )
+    )
     SecurityTasks AS (
         SELECT
             ST.*
