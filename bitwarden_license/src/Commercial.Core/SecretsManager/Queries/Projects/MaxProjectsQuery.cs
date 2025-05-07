@@ -1,9 +1,14 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Licenses;
+using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Queries.Projects.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Utilities;
+using Bit.Core.Services;
+using Bit.Core.Settings;
 
 namespace Bit.Commercial.Core.SecretsManager.Queries.Projects;
 
@@ -11,13 +16,22 @@ public class MaxProjectsQuery : IMaxProjectsQuery
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly IGlobalSettings _globalSettings;
+    private readonly ILicensingService _licensingService;
+    private readonly IPricingClient _pricingClient;
 
     public MaxProjectsQuery(
         IOrganizationRepository organizationRepository,
-        IProjectRepository projectRepository)
+        IProjectRepository projectRepository,
+        IGlobalSettings globalSettings,
+        ILicensingService licensingService,
+        IPricingClient pricingClient)
     {
         _organizationRepository = organizationRepository;
         _projectRepository = projectRepository;
+        _globalSettings = globalSettings;
+        _licensingService = licensingService;
+        _pricingClient = pricingClient;
     }
 
     public async Task<(short? max, bool? overMax)> GetByOrgIdAsync(Guid organizationId, int projectsToAdd)
@@ -28,19 +42,47 @@ public class MaxProjectsQuery : IMaxProjectsQuery
             throw new NotFoundException();
         }
 
-        // TODO: PRICING -> https://bitwarden.atlassian.net/browse/PM-17122
-        var plan = StaticStore.GetPlan(org.PlanType);
-        if (plan?.SecretsManager == null)
+        var (planType, maxProjects) = await GetPlanTypeAndMaxProjectsAsync(org);
+
+        if (planType != PlanType.Free)
         {
-            throw new BadRequestException("Existing plan not found.");
+            return (null, null);
         }
 
-        if (plan.Type == PlanType.Free)
+        var projects = await _projectRepository.GetProjectCountByOrganizationIdAsync(organizationId);
+        return ((short? max, bool? overMax))(projects + projectsToAdd > maxProjects ? (maxProjects, true) : (maxProjects, false));
+    }
+
+    private async Task<(PlanType planType, int maxProjects)> GetPlanTypeAndMaxProjectsAsync(Organization organization)
+    {
+        if (_globalSettings.SelfHosted)
         {
-            var projects = await _projectRepository.GetProjectCountByOrganizationIdAsync(organizationId);
-            return ((short? max, bool? overMax))(projects + projectsToAdd > plan.SecretsManager.MaxProjects ? (plan.SecretsManager.MaxProjects, true) : (plan.SecretsManager.MaxProjects, false));
+            var license = await _licensingService.ReadOrganizationLicenseAsync(organization);
+
+            if (license == null)
+            {
+                throw new BadRequestException("License not found.");
+            }
+
+            var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
+            var maxProjects = claimsPrincipal.GetValue<int?>(OrganizationLicenseConstants.SmMaxProjects);
+
+            if (!maxProjects.HasValue)
+            {
+                throw new BadRequestException("License does not contain a value for max Secrets Manager projects");
+            }
+
+            var planType = claimsPrincipal.GetValue<PlanType>(OrganizationLicenseConstants.PlanType);
+            return (planType, maxProjects.Value);
         }
 
-        return (null, null);
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
+
+        if (plan is { SupportsSecretsManager: true })
+        {
+            return (plan.Type, plan.SecretsManager.MaxProjects);
+        }
+
+        throw new BadRequestException("Existing plan not found.");
     }
 }
