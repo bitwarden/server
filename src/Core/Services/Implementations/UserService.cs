@@ -1596,10 +1596,10 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         {
             AsymmetricEncryptionKeyData = new AsymmetricEncryptionKeyData
             {
-                WrappedPrivateKey = user.PrivateKey,
+                WrappedPrivateKey = user.WrappedPrivateKey,
                 PublicKey = user.PublicKey,
                 // todo
-                PublicKeyOwnershipSignature = null,
+                SignedPublicKeyOwnershipClaim = null,
             },
             SigningKeyData = new SigningKeyData
             {

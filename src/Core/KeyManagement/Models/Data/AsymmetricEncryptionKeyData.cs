@@ -4,5 +4,5 @@ public class AsymmetricEncryptionKeyData
 {
     public string WrappedPrivateKey { get; set; }
     public string PublicKey { get; set; }
-    public string PublicKeyOwnershipSignature { get; set; }
+    public string SignedPublicKeyOwnershipClaim { get; set; }
 }

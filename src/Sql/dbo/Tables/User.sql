@@ -14,6 +14,7 @@
     [AccountRevisionDate]              DATETIME2 (7)    NOT NULL,
     [Key]                              VARCHAR (MAX)    NULL,
     [PublicKey]                        VARCHAR (MAX)    NULL,
+    [SignedPublicKeyOwnershipClaim]    VARCHAR (MAX)    NULL;
     [PrivateKey]                       VARCHAR (MAX)    NULL,
     [Premium]                          BIT              NOT NULL,
     [PremiumExpirationDate]            DATETIME2 (7)    NULL,

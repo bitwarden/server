@@ -42,6 +42,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     /// <param name="pushService">Logs out user from other devices after successful rotation</param>
     /// <param name="errors">Provides a password mismatch error if master password hash validation fails</param>
     /// <param name="credentialRepository">Provides a method to update re-encrypted WebAuthn keys</param>
+    /// <param name="signingKeysRepository">Provides a method to update re-encrypted Signing keys</param>
     public RotateUserAccountKeysCommand(IUserService userService, IUserRepository userRepository,
         ICipherRepository cipherRepository, IFolderRepository folderRepository, ISendRepository sendRepository,
         IEmergencyAccessRepository emergencyAccessRepository, IOrganizationUserRepository organizationUserRepository,
@@ -110,7 +111,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
                 throw new InvalidOperationException("The provided signing key data does not match the user's current signing key data.");
             }
 
-            if (string.IsNullOrEmpty(model.AccountKeys.AsymmetricEncryptionKeyData.PublicKeyOwnershipSignature))
+            if (string.IsNullOrEmpty(model.AccountKeys.AsymmetricEncryptionKeyData.SignedPublicKeyOwnershipClaim))
             {
                 throw new InvalidOperationException("The provided signing key data does not contain a valid key ownership signature.");
             }
@@ -176,6 +177,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
         if (model.AccountKeys.SigningKeyData != null)
         {
+            user.SignedPublicKeyOwnershipClaim = model.AccountKeys.AsymmetricEncryptionKeyData.SignedPublicKeyOwnershipClaim;
             saveEncryptedDataActions.Add(_signingKeysRepository.UpdateForKeyRotation(user.Id, model.AccountKeys.SigningKeyData));
         }
 

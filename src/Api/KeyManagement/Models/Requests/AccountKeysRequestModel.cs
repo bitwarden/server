@@ -36,7 +36,7 @@ public class AccountKeysRequestModel
             {
                 WrappedPrivateKey = UserKeyEncryptedAccountPrivateKey,
                 PublicKey = AccountPublicKey,
-                PublicKeyOwnershipSignature = PublicKeyOwnershipSignature,
+                SignedPublicKeyOwnershipClaim = PublicKeyOwnershipSignature,
             },
             SigningKeyData = signingKeyData,
         };

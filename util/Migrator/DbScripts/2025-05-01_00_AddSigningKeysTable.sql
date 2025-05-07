@@ -52,3 +52,8 @@ BEGIN
     VALUES (@Id, @UserId, @KeyType, @VerifyingKey, @SigningKey, @CreationDate, @RevisionDate)
 END
 GO
+ 
+BEGIN ALTER TABLE [dbo].[User]
+ADD [SignedPublicKeyOwnershipClaim] VARCHAR(MAX) NULL;
+END
+GO
