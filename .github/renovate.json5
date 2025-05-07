@@ -20,7 +20,7 @@
       ],
       commitMessagePrefix: "[deps] BRE:",
       reviewers: ["team:dept-bre"],
-      addLabels: ["hold"]
+      addLabels: ["hold"],
     },
     {
       groupName: "dockerfile minor",
@@ -45,7 +45,7 @@
           "/^Microsoft\\.AspNetCore\\./",
       ],
       matchUpdateTypes: ["patch"],
-      dependencyDashboardApproval: false
+      dependencyDashboardApproval: false,
     },
     {
       matchManagers: ["dockerfile", "docker-compose"],
