@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
-public class OrganizationUserSyncData
+public class OrganizationUserImportData
 {
     public HashSet<string> NewUsersSet { get; set; }
     public ICollection<OrganizationUserUserDetails> ExistingUsers { get; set; }
