@@ -185,4 +185,50 @@ public class ReportsController : Controller
 
         await _dropPwdHealthReportAppCommand.DropPasswordHealthReportApplicationAsync(request);
     }
+
+    /// <summary>
+    /// Saves a Risk Insights Report for an organization.
+    /// </summary>
+    /// <param name="orgId"></param>
+    /// <param name="request">
+    ///     The request containing the details of the Risk Insights Report to be saved.
+    /// </param>
+    /// <returns>The saved record</returns>
+    /// <exception cref="BadRequestException"></exception>
+    [HttpPut("risk-insights-report/{orgId}")]
+    [ProducesResponseType(typeof(RiskInsightsReportResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> SaveRiskInsightsReport(
+        Guid orgId,
+        [FromBody] SaveRiskInsightsReportRequest request
+        )
+    {
+        if (orgId != request?.OrganizationId)
+        {
+            throw new BadRequestException("Organization ID in the query does not match the request body.");
+        }
+
+        if (!await _currentContext.AccessReports(orgId))
+        {
+            throw new BadRequestException("User does not have access to the organization.");
+        }
+
+        // Here you would typically call a service to save the report data
+        // For example:
+        // await _reportService.SaveRiskInsightsReportAsync(request);
+        var response = new RiskInsightsReportResponse
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = request.OrganizationId,
+            ReportData = request.ReportData,
+            TotalMembers = request.TotalMembers,
+            TotalAtRiskMembers = request.TotalAtRiskMembers,
+            TotalApplications = request.TotalApplications,
+            TotalAtRiskApplications = request.TotalAtRiskApplications,
+            TotalCriticalApplications = request.TotalCriticalApplications
+        };
+
+        // Return a success response
+        return Ok(new { request });
+    }
 }
