@@ -1,4 +1,5 @@
-﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
+﻿using System.Diagnostics;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
@@ -624,14 +625,14 @@ public class OrganizationUsersController : Controller
 
         var result = await _deleteClaimedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
 
-        return MapToOrganizationUserBulkResponseModel(result);
-    }
+        var responses = result.Select(r => r switch
+        {
+            Success<DeleteUserResponse> => new OrganizationUserBulkResponseModel(r.Value.OrganizationUserId, string.Empty),
+            Failure<DeleteUserResponse> failure => new OrganizationUserBulkResponseModel(r.Value.OrganizationUserId, failure.Error.Message),
+            _ => throw new UnreachableException()
+        });
 
-    private static ListResponseModel<OrganizationUserBulkResponseModel> MapToOrganizationUserBulkResponseModel(Partial<DeleteUserResponse> result)
-    {
-        var failures = result.Failures.Select(failure => new OrganizationUserBulkResponseModel(failure.ErroredValue.OrganizationUserId, failure.Message));
-        var successes = result.Successes.Select(success => new OrganizationUserBulkResponseModel(success.OrganizationUserId, string.Empty));
-        return new ListResponseModel<OrganizationUserBulkResponseModel>(failures.Concat(successes));
+        return new ListResponseModel<OrganizationUserBulkResponseModel>(responses);
     }
 
     [HttpPatch("{id}/revoke")]

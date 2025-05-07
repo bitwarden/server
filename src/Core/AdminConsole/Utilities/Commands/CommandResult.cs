@@ -5,23 +5,16 @@ using Bit.Core.AdminConsole.Utilities.Validation;
 
 namespace Bit.Core.AdminConsole.Utilities.Commands;
 
-public abstract class CommandResult<T>;
-
-public class Success<T>(T value) : CommandResult<T>
+public abstract class CommandResult<T>(T value)
 {
     public T Value { get; } = value;
 }
 
-public class Failure<T>(Error<T> error) : CommandResult<T>
-{
-    public Error<T> Error { get; } = error;
-}
+public class Success<T>(T value) : CommandResult<T>(value);
 
-public class Partial<T>(IEnumerable<T> successfulItems, IEnumerable<Error<T>> failedItems)
-    : CommandResult<T>
+public class Failure<T>(T value, Error error) : CommandResult<T>(value)
 {
-    public IEnumerable<T> Successes { get; } = successfulItems;
-    public IEnumerable<Error<T>> Failures { get; } = failedItems;
+    public Error Error { get; } = error;
 }
 
 public static class CommandResultExtensions

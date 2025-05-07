@@ -1,6 +1,7 @@
 ﻿namespace Bit.Core.AdminConsole.Utilities.Errors;
 
 public record Error<T>(string Message, T ErroredValue);
+public record Error(string Message);
 
 public static class ErrorMappers
 {
