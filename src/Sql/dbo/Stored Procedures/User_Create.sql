@@ -111,6 +111,7 @@ BEGIN
         @AccountRevisionDate,
         @Key,
         @PublicKey,
+        @SignedPublicKeyOwnershipClaim,
         @PrivateKey,
         @Premium,
         @PremiumExpirationDate,
