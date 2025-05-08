@@ -16,4 +16,10 @@ public class OrganizationSponsorshipCreateRequestModel
 
     [StringLength(256)]
     public string FriendlyName { get; set; }
+
+    public bool? IsAdminInitiated { get; set; }
+
+    [EncryptedString]
+    [EncryptedStringLength(512)]
+    public string Notes { get; set; }
 }

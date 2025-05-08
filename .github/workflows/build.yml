@@ -14,6 +14,7 @@ on:
 
 env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
+  _GITHUB_PR_REPO_NAME: ${{ github.event.pull_request.head.repo.full_name }}
 
 jobs:
   lint:
@@ -234,10 +235,16 @@ jobs:
       - name: Generate Docker image tag
         id: tag
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
-            IMAGE_TAG=$(echo "${GITHUB_HEAD_REF}" | sed "s#/#-#g")
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" || "${GITHUB_EVENT_NAME}" == "pull_request_target" ]]; then
+            IMAGE_TAG=$(echo "${GITHUB_HEAD_REF}" | sed "s/[^a-zA-Z0-9]/-/g") # Sanitize branch name to alphanumeric only
           else
             IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")
+          fi
+
+          if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
+            SANITIZED_REPO_NAME=$(echo "$_GITHUB_PR_REPO_NAME" | sed "s/[^a-zA-Z0-9]/-/g") # Sanitize repo name to alphanumeric only
+            IMAGE_TAG=$SANITIZED_REPO_NAME-$IMAGE_TAG # Add repo name to the tag
+            IMAGE_TAG=${IMAGE_TAG:0:128}  # Limit to 128 characters, as that's the max length for Docker image tags
           fi
 
           if [[ "$IMAGE_TAG" == "main" ]]; then
@@ -627,55 +634,16 @@ jobs:
               }
             })
 
-  trigger-ee-updates:
-    name: Trigger Ephemeral Environment updates
-    if: |
-      needs.build-artifacts.outputs.has_secrets == 'true'
-      && github.event_name == 'pull_request'
-      && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
-    runs-on: ubuntu-24.04
-    needs:
-      - build-docker
-    steps:
-      - name: Log in to Azure - CI subscription
-        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
-        with:
-          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
-
-      - name: Retrieve GitHub PAT secrets
-        id: retrieve-secret-pat
-        uses: bitwarden/gh-actions/get-keyvault-secrets@main
-        with:
-          keyvault: "bitwarden-ci"
-          secrets: "github-pat-bitwarden-devops-bot-repo-scope"
-
-      - name: Trigger Ephemeral Environment update
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        with:
-          github-token: ${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: 'bitwarden',
-              repo: 'devops',
-              workflow_id: '_update_ephemeral_tags.yml',
-              ref: 'main',
-              inputs: {
-                ephemeral_env_branch: process.env.GITHUB_HEAD_REF
-              }
-            })
-
-  trigger-ephemeral-environment-sync:
-    name: Trigger Ephemeral Environment Sync
-    needs: trigger-ee-updates
+  setup-ephemeral-environment:
+    name: Setup Ephemeral Environment
+    needs: build-docker
     if: |
       needs.build-artifacts.outputs.has_secrets == 'true'
       && github.event_name == 'pull_request'
       && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
     uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
     with:
-      ephemeral_env_branch: process.env.GITHUB_HEAD_REF
       project: server
-      sync_environment: true
       pull_request_number: ${{ github.event.number }}
     secrets: inherit
 

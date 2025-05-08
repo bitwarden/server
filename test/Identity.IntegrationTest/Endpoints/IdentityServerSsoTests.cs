@@ -1,11 +1,13 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
@@ -13,12 +15,11 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
-using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Helpers;
-using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
+using IdentityModel;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using Xunit;
@@ -545,16 +546,15 @@ public class IdentityServerSsoTests
     {
         var factory = new IdentityApplicationFactory();
 
-
         var authorizationCode = new AuthorizationCode
         {
             ClientId = "web",
             CreationTime = DateTime.UtcNow,
             Lifetime = (int)TimeSpan.FromMinutes(5).TotalSeconds,
             RedirectUri = "https://localhost:8080/sso-connector.html",
-            RequestedScopes = new[] { "api", "offline_access" },
+            RequestedScopes = ["api", "offline_access"],
             CodeChallenge = challenge.Sha256(),
-            CodeChallengeMethod = "plain", //
+            CodeChallengeMethod = "plain",
             Subject = null!, // Temporarily set it to null
         };
 
@@ -564,16 +564,20 @@ public class IdentityServerSsoTests
                 .Returns(authorizationCode);
         });
 
-        // This starts the server and finalizes services
-        var registerResponse = await factory.RegisterAsync(new RegisterRequestModel
-        {
-            Email = TestEmail,
-            MasterPasswordHash = "master_password_hash",
-        });
-
-        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
-        var user = await userRepository.GetByEmailAsync(TestEmail);
-        Assert.NotNull(user);
+        var user = await factory.RegisterNewIdentityFactoryUserAsync(
+            new RegisterFinishRequestModel
+            {
+                Email = TestEmail,
+                MasterPasswordHash = "masterPasswordHash",
+                Kdf = KdfType.PBKDF2_SHA256,
+                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                UserAsymmetricKeys = new KeysRequestModel()
+                {
+                    PublicKey = "public_key",
+                    EncryptedPrivateKey = "private_key"
+                },
+                UserSymmetricKey = "sym_key",
+            });
 
         var organizationRepository = factory.Services.GetRequiredService<IOrganizationRepository>();
         var organization = await organizationRepository.CreateAsync(new Organization

@@ -37,11 +37,21 @@ util/Setup/** @bitwarden/dept-bre @bitwarden/team-platform-dev
 **/Auth @bitwarden/team-auth-dev
 bitwarden_license/src/Sso @bitwarden/team-auth-dev
 src/Identity @bitwarden/team-auth-dev
+src/Core/Identity @bitwarden/team-auth-dev
+src/Core/IdentityServer @bitwarden/team-auth-dev
 
 # Key Management team
 **/KeyManagement @bitwarden/team-key-management-dev
 
+# Tools team
 **/Tools @bitwarden/team-tools-dev
+
+# Dirt (Data Insights & Reporting) team
+src/Api/Controllers/Dirt @bitwarden/team-data-insights-and-reporting-dev
+src/Core/Dirt @bitwarden/team-data-insights-and-reporting-dev
+src/Infrastructure.Dapper/Dirt @bitwarden/team-data-insights-and-reporting-dev
+test/Api.Test/Dirt @bitwarden/team-data-insights-and-reporting-dev
+test/Core.Test/Dirt @bitwarden/team-data-insights-and-reporting-dev
 
 # Vault team
 **/Vault @bitwarden/team-vault-dev

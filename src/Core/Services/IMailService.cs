@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Billing.Enums;
@@ -19,9 +21,10 @@ public interface IMailService
         string email,
         string token,
         ProductTierType productTier,
-        IEnumerable<ProductType> products);
+        IEnumerable<ProductType> products,
+        int trialLength);
     Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token);
-    Task SendCannotDeleteManagedAccountEmailAsync(string email);
+    Task SendCannotDeleteClaimedAccountEmailAsync(string email);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
     Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true);
@@ -55,7 +58,7 @@ public interface IMailService
         bool mentionInvoices);
     Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices);
     Task SendAddedCreditAsync(string email, decimal amount);
-    Task SendLicenseExpiredAsync(IEnumerable<string> emails, string organizationName = null);
+    Task SendLicenseExpiredAsync(IEnumerable<string> emails, string? organizationName = null);
     Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip);
     Task SendRecoverTwoFactorEmail(string email, DateTime timestamp, string ip);
     Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email);
@@ -70,6 +73,7 @@ public interface IMailService
     Task SendEnqueuedMailMessageAsync(IMailQueueMessage queueMessage);
     Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName);
     Task SendProviderSetupInviteEmailAsync(Provider provider, string token, string email);
+    Task SendBusinessUnitConversionInviteAsync(Organization organization, string token, string email);
     Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email);
     Task SendProviderConfirmedEmailAsync(string providerName, string email);
     Task SendProviderUserRemoved(string providerName, string email);
@@ -95,9 +99,11 @@ public interface IMailService
     Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token);
     Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token);
     Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent);
+#nullable disable
     Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate, string organizationId,
         string organizationName);
-    Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList);
-    Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName);
+#nullable enable
+    Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList);
+    Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string? userName);
     Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotifications, IEnumerable<string> adminOwnerEmails);
 }
