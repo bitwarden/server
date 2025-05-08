@@ -115,7 +115,6 @@ public static class FeatureFlagKeys
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
     public const string EmailVerification = "email-verification";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
-    public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
     public const string NewDeviceVerification = "new-device-verification";
     public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
@@ -197,8 +196,6 @@ public static class FeatureFlagKeys
     /* Vault Team */
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
-    public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
-    public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string SecurityTasks = "security-tasks";
     public const string CipherKeyEncryption = "cipher-key-encryption";
