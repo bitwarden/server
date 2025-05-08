@@ -5,6 +5,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -106,7 +107,7 @@ public class UserDecryptionOptionsBuilderTests
     {
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
         ssoConfig.Data = configurationData.Serialize();
-        approvingDevice.Type = DeviceType.Android; // Android maps to ClientType.Mobile which can approve
+        approvingDevice.Type = DeviceTypes.MobileTypes.First();
         _deviceRepository.GetManyByUserIdAsync(user.Id).Returns(new Device[] { approvingDevice });
 
         var result = await _builder.ForUser(user).WithSso(ssoConfig).WithDevice(device).BuildAsync();
