@@ -25,6 +25,12 @@
             "Subscriptions": [
               {
                 "Name": "events-write-subscription"
+              },
+              {
+                "Name": "events-slack-subscription"
+              },
+              {
+                "Name": "events-webhook-subscription"
               }
             ]
           }

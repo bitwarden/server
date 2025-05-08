@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
@@ -61,7 +62,8 @@ IBaseRequestValidatorTestWrapper
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder) :
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IPolicyRequirementQuery policyRequirementQuery) :
          base(
             userManager,
             userService,
@@ -77,7 +79,8 @@ IBaseRequestValidatorTestWrapper
             policyService,
             featureService,
             ssoConfigRepository,
-            userDecryptionOptionsBuilder)
+            userDecryptionOptionsBuilder,
+            policyRequirementQuery)
     {
     }
 
@@ -93,6 +96,7 @@ IBaseRequestValidatorTestWrapper
         return context.ValidatedTokenRequest.Subject ?? new ClaimsPrincipal();
     }
 
+    [Obsolete]
     protected override void SetErrorResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
@@ -100,6 +104,7 @@ IBaseRequestValidatorTestWrapper
         context.GrantResult = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
     }
 
+    [Obsolete]
     protected override void SetSsoResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
@@ -118,6 +123,7 @@ IBaseRequestValidatorTestWrapper
         return Task.CompletedTask;
     }
 
+    [Obsolete]
     protected override void SetTwoFactorResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
