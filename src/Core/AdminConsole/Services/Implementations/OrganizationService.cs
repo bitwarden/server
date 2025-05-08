@@ -3,7 +3,6 @@ using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -26,7 +25,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
-using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -74,7 +72,6 @@ public class OrganizationService : IOrganizationService
     private readonly IPricingClient _pricingClient;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
-    private readonly IImportOrganizationUserCommand _importOrganizationUserCommand;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -108,8 +105,7 @@ public class OrganizationService : IOrganizationService
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         IPolicyRequirementQuery policyRequirementQuery,
-        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
-        IImportOrganizationUserCommand importOrganizationUserCommand
+        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand
         )
     {
         _organizationRepository = organizationRepository;
@@ -144,7 +140,6 @@ public class OrganizationService : IOrganizationService
         _pricingClient = pricingClient;
         _policyRequirementQuery = policyRequirementQuery;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
-        _importOrganizationUserCommand = importOrganizationUserCommand;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -1201,23 +1196,6 @@ public class OrganizationService : IOrganizationService
         await _organizationUserRepository.ReplaceAsync(orgUser);
         await _eventService.LogOrganizationUserEventAsync(orgUser, resetPasswordKey != null ?
             EventType.OrganizationUser_ResetPassword_Enroll : EventType.OrganizationUser_ResetPassword_Withdraw);
-    }
-
-    public async Task ImportAsync(Guid organizationId,
-        IEnumerable<ImportedGroup> groups,
-        IEnumerable<ImportedOrganizationUser> newUsers,
-        IEnumerable<string> removeUserExternalIds,
-        bool overwriteExisting,
-        EventSystemUser eventSystemUser
-    )
-    {
-        // @TODO DEVELOPMENT FLAG FOR TESTING ---- REVERT THIS LATER
-        await _importOrganizationUserCommand.ImportAsync(organizationId,
-                groups,
-                newUsers,
-                removeUserExternalIds,
-                overwriteExisting,
-                eventSystemUser);
     }
 
     public async Task DeleteSsoUserAsync(Guid userId, Guid? organizationId)

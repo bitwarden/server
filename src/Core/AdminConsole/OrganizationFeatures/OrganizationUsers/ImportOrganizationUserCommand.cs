@@ -1,12 +1,15 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
+using Bit.Core.Models.Commands;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
@@ -14,7 +17,6 @@ using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
-using OrganizationUserInvite = Bit.Core.Models.Business.OrganizationUserInvite;
 
 public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
 {
@@ -26,6 +28,8 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
     private readonly IOrganizationService _organizationService;
+    private readonly IInviteOrganizationUsersCommand _inviteOrganizationUsersCommand;
+    private readonly IPricingClient _pricingClient;
 
     public ImportOrganizationUserCommand(IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
@@ -34,7 +38,9 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             IEventService eventService,
             IReferenceEventService referenceEventService,
             ICurrentContext currentContext,
-            IOrganizationService organizationService
+            IOrganizationService organizationService,
+            IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
+            IPricingClient pricingClient
             )
     {
         _organizationRepository = organizationRepository;
@@ -45,6 +51,8 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
         _organizationService = organizationService;
+        _inviteOrganizationUsersCommand = inviteOrganizationUsersCommand;
+        _pricingClient = pricingClient;
     }
 
     public async Task ImportAsync(Guid organizationId,
@@ -187,7 +195,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
 
         var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
 
-        var userInvites = new List<(OrganizationUserInvite, string)>();
+        var userInvites = new List<OrganizationUserInviteCommandModel>();
         foreach (var user in newUsers)
         {
             if (!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
@@ -197,14 +205,8 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
 
             try
             {
-                var invite = new OrganizationUserInvite
-                {
-                    Emails = new List<string> { user.Email },
-                    Type = OrganizationUserType.User,
-                    Collections = new List<CollectionAccessSelection>(),
-                    AccessSecretsManager = hasStandaloneSecretsManager
-                };
-                userInvites.Add((invite, user.ExternalId));
+                var invite = new OrganizationUserInviteCommandModel(user.Email, user.ExternalId);
+                userInvites.Add(new OrganizationUserInviteCommandModel(invite, hasStandaloneSecretsManager));
             }
             catch (BadRequestException)
             {
@@ -213,12 +215,23 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             }
         }
 
-        //@TODO: replace with command
-        var invitedUsers = await _organizationService.InviteUsersAsync(organization.Id, invitingUserId: null, systemUser: eventSystemUser, userInvites);
-        foreach (var invitedUser in invitedUsers)
-        {
-            importData.ExistingExternalUsersIdDict.Add(invitedUser.ExternalId, invitedUser.Id);
-        }
+        var commandResult = await InviteUsersAsync(userInvites, organization);
+
+        //@TODO: replace with command, add invited users from commandResult to importData
+        //var invitedUsers = await _organizationService.InviteUsersAsync(organization.Id, invitingUserId: null, systemUser: eventSystemUser, userInvites);
+        //foreach (var invitedUser in invitedUsers)
+        //{
+        //   importData.ExistingExternalUsersIdDict.Add(invitedUser.ExternalId, invitedUser.Id);
+        //}
+    }
+
+    private async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteUsersAsync(List<OrganizationUserInviteCommandModel> invites, Organization organization)
+    {
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+        var inviteOrganization = new InviteOrganization(organization, plan);
+        var request = new InviteOrganizationUsersRequest(invites.ToArray(), inviteOrganization, Guid.Empty, DateTimeOffset.UtcNow);
+
+        return await _inviteOrganizationUsersCommand.InviteScimOrganizationUserAsync(request);
     }
 
     private async Task OverwriteExisting(
