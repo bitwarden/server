@@ -5,6 +5,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -51,6 +52,39 @@ public class TwoFactorIsEnabledQueryTests
         {
             Assert.Contains(result, res => res.userId == userDetail.Id && res.twoFactorIsEnabled == true);
         }
+    }
+
+    [Theory, BitAutoData]
+    public async Task TwoFactorIsEnabledQuery_DatabaseReturnsEmpty_ResultEmpty(
+        SutProvider<TwoFactorIsEnabledQuery> sutProvider,
+        List<UserWithCalculatedPremium> usersWithCalculatedPremium)
+    {
+        // Arrange
+        var userIds = usersWithCalculatedPremium.Select(u => u.Id).ToList();
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyWithCalculatedPremiumAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([]);
+
+        // Act
+        var result = await sutProvider.Sut.TwoFactorIsEnabledAsync(userIds);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Theory]
+    [BitAutoData((IEnumerable<Guid>)null)]
+    [BitAutoData([])]
+    public async Task TwoFactorIsEnabledQuery_UserIdsNullorEmpty_ResultEmpty(
+    IEnumerable<Guid> userIds,
+    SutProvider<TwoFactorIsEnabledQuery> sutProvider)
+    {
+        // Act
+        var result = await sutProvider.Sut.TwoFactorIsEnabledAsync(userIds);
+
+        // Assert
+        Assert.Empty(result);
     }
 
     [Theory]
@@ -122,8 +156,11 @@ public class TwoFactorIsEnabledQueryTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task TwoFactorIsEnabledQuery_WithNullTwoFactorProviders_ReturnsAllTwoFactorDisabled(
+    [BitAutoData("")]
+    [BitAutoData("{}")]
+    [BitAutoData((string)null)]
+    public async Task TwoFactorIsEnabledQuery_WithNullOrEmptyTwoFactorProviders_ReturnsAllTwoFactorDisabled(
+        string twoFactorProviders,
         SutProvider<TwoFactorIsEnabledQuery> sutProvider,
         List<UserWithCalculatedPremium> usersWithCalculatedPremium)
     {
@@ -132,7 +169,7 @@ public class TwoFactorIsEnabledQueryTests
 
         foreach (var user in usersWithCalculatedPremium)
         {
-            user.TwoFactorProviders = null; // No two-factor providers configured
+            user.TwoFactorProviders = twoFactorProviders; // No two-factor providers configured
         }
 
         sutProvider.GetDependency<IUserRepository>()
@@ -174,6 +211,21 @@ public class TwoFactorIsEnabledQueryTests
         await sutProvider.GetDependency<IUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .GetManyWithCalculatedPremiumAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task TwoFactorIsEnabledQuery_UserIdNull_ReturnsFalse(
+        SutProvider<TwoFactorIsEnabledQuery> sutProvider,
+        User user)
+    {
+        // Arrange
+
+        // Act
+        var result = await sutProvider.Sut.TwoFactorIsEnabledAsync(user);
+
+        // Assert
+        Assert.False(result);
     }
 
     [Theory]
@@ -347,5 +399,26 @@ public class TwoFactorIsEnabledQueryTests
         await sutProvider.GetDependency<IUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .GetCalculatedPremiumAsync(default);
+    }
+
+    private class TestTwoFactorProviderUser : ITwoFactorProvidersUser
+    {
+        public Guid? Id { get; set; }
+        public string TwoFactorProviders { get; set; }
+        public bool Premium { get; set; }
+        public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
+        {
+            return JsonHelpers.LegacyDeserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(TwoFactorProviders);
+        }
+
+        public Guid? GetUserId()
+        {
+            return Id;
+        }
+
+        public bool GetPremium()
+        {
+            return Premium;
+        }
     }
 }
