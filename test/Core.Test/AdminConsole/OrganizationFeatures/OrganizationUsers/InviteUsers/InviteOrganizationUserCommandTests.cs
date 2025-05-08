@@ -677,7 +677,7 @@ public class InviteOrganizationUserCommandTests
         // Assert
         Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
 
-        sutProvider.GetDependency<IMailService>().Received(1)
+        await sutProvider.GetDependency<IMailService>().Received(1)
             .SendOrganizationMaxSeatLimitReachedEmailAsync(organization, 2,
                 Arg.Is<IEnumerable<string>>(emails => emails.Any(email => email == "provider@email.com")));
     }
@@ -768,7 +768,7 @@ public class InviteOrganizationUserCommandTests
         // Assert
         Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
 
-        sutProvider.GetDependency<IMailService>().Received(1)
+        await sutProvider.GetDependency<IMailService>().Received(1)
             .SendOrganizationAutoscaledEmailAsync(organization, 1,
                 Arg.Is<IEnumerable<string>>(emails => emails.Any(email => email == "provider@email.com")));
     }
