@@ -229,9 +229,7 @@ public class OrganizationBillingService(
                         customerSetup.TaxInformation.Country,
                         customerSetup.TaxInformation.TaxId);
 
-                    throw new BillingException(
-                        response:
-                        "The tax ID you entered is not valid for your country. Please try again or contact support.");
+                    throw new BadRequestException("billingTaxIdTypeInferenceError");
                 }
 
                 customerCreateOptions.TaxIdData =
