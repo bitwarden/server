@@ -15,12 +15,13 @@ public class DuoUniversalTokenProvider(
     IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory,
     IDuoUniversalTokenService duoUniversalTokenService) : IUserTwoFactorTokenProvider<User>
 {
-    /*
-     * We need the IServiceProvider to resolve the IUserService. There is a complex dependency dance
-     * occurring between IUserService, which extends the UserManager, and the usage of the
-     * UserManager within this class. Trying to resolve the IUserService using the DI pipeline
-     * will not allow the server to start and it will hang and give no helpful indication as to the problem.
-    */
+    /// <summary>
+    /// We need the IServiceProvider to resolve the <see cref="IUserService"/>. There is a complex dependency dance
+    /// occurring between <see cref="IUserService"/>, which extends the <see cref="UserManager{User}"/>, and the usage
+    /// of the <see cref="UserManager{User}"/> within this class. Trying to resolve the <see cref="IUserService"/> using
+    /// the DI pipeline will not allow the server to start and it will hang and give no helpful indication as to the
+    /// problem.
+    /// </summary>
     private readonly IServiceProvider _serviceProvider = serviceProvider;
     private readonly IDataProtectorTokenFactory<DuoUserStateTokenable> _tokenDataFactory = tokenDataFactory;
     private readonly IDuoUniversalTokenService _duoUniversalTokenService = duoUniversalTokenService;
