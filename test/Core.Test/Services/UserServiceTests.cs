@@ -14,6 +14,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -324,7 +325,8 @@ public class UserServiceTests
             sutProvider.GetDependency<IPremiumUserBillingService>(),
             sutProvider.GetDependency<IRemoveOrganizationUserCommand>(),
             sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>(),
-            sutProvider.GetDependency<IDistributedCache>()
+            sutProvider.GetDependency<IDistributedCache>(),
+            sutProvider.GetDependency<IUserSigningKeysRepository>()
             );
 
         var actualIsVerified = await sut.VerifySecretAsync(user, secret);
@@ -911,7 +913,8 @@ public class UserServiceTests
             sutProvider.GetDependency<IPremiumUserBillingService>(),
             sutProvider.GetDependency<IRemoveOrganizationUserCommand>(),
             sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>(),
-            sutProvider.GetDependency<IDistributedCache>()
+            sutProvider.GetDependency<IDistributedCache>(),
+            sutProvider.GetDependency<IUserSigningKeysRepository>()
             );
     }
 }

@@ -24,7 +24,7 @@ public class UsersController : Controller
     }
 
     [HttpGet("{id}/public-key")]
-    public async Task<UserKeyResponseModel> Get(string id)
+    public async Task<UserKeyResponseModel> GetPublicKey(string id)
     {
         var guidId = new Guid(id);
         var key = await _userRepository.GetPublicKeyAsync(guidId);
@@ -45,8 +45,10 @@ public class UsersController : Controller
         {
             throw new NotFoundException();
         }
-        var signingKeys = await _signingKeysRepository.GetByUserIdAsync(guidId);
 
-        return new PublicUserKeysResponseModel(signingKeys.VerifyingKey, user.PublicKey, null);
+        var signingKeys = await _signingKeysRepository.GetByUserIdAsync(guidId);
+        var verifyingKey = signingKeys?.VerifyingKey;
+
+        return new PublicUserKeysResponseModel(verifyingKey, user.PublicKey, null);
     }
 }

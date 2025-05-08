@@ -107,6 +107,9 @@ public class AccountsKeyManagementController : Controller
             OldMasterKeyAuthenticationHash = model.OldMasterKeyAuthenticationHash,
 
             AccountKeys = model.AccountKeys.ToKeys(),
+            // Deprecated
+            UserKeyEncryptedAccountPrivateKey = model.AccountKeys.UserKeyEncryptedAccountPrivateKey,
+            AccountPublicKey = model.AccountKeys.AccountPublicKey,
 
             MasterPasswordUnlockData = model.AccountUnlockData.MasterPasswordUnlockData.ToUnlockData(),
             EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.AccountUnlockData.EmergencyAccessUnlockData),

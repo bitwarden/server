@@ -11,6 +11,11 @@ public class RotateUserAccountKeysData
     // Authentication for this requests
     public string OldMasterKeyAuthenticationHash { get; set; }
 
+    [Obsolete("Use AccountKeys instead")]
+    public string UserKeyEncryptedAccountPrivateKey { get; set; }
+    [Obsolete("Use AccountKeys instead")]
+    public string AccountPublicKey { get; set; }
+
     public UserAccountKeysData AccountKeys { get; set; }
 
     // All methods to get to the userkey
