@@ -14,7 +14,7 @@
     @AccountRevisionDate DATETIME2(7),
     @Key NVARCHAR(MAX),
     @PublicKey NVARCHAR(MAX),
-    @SignedPublicKeyOwnershipClaim VARCHAR(MAX),
+    @SignedPublicKeyOwnershipClaim NVARCHAR(MAX),
     @PrivateKey NVARCHAR(MAX),
     @Premium BIT,
     @PremiumExpirationDate DATETIME2(7),
