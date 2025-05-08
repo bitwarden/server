@@ -727,14 +727,14 @@ public class TaxService : ITaxService
             Example = "123-45-67890",
             ValidationExpression = new Regex("^[0-9]{3}-?[0-9]{2}-?[0-9]{5}$")
         },
-        new()
-        {
-            Country = "ES",
-            Code = "es_cif",
-            Description = "Spanish NIF/CIF number",
-            Example = "A12345678",
-            ValidationExpression = new Regex("^[A-Z]{1}[0-9]{8}$")
-        },
+        // new()
+        // {
+        //     Country = "ES",
+        //     Code = "es_cif",
+        //     Description = "Spanish NIF/CIF number",
+        //     Example = "A12345678",
+        //     ValidationExpression = new Regex("^[A-Z]{1}[0-9]{8}$")
+        // },
         new()
         {
             Country = "ES",
