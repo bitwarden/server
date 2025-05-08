@@ -14,8 +14,7 @@ public class SendTrialInitiationEmailForRegistrationCommand(
     IUserRepository userRepository,
     GlobalSettings globalSettings,
     IMailService mailService,
-    IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory,
-    IFeatureService featureService)
+    IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory)
     : ISendTrialInitiationEmailForRegistrationCommand
 {
     public async Task<string?> Handle(
@@ -45,9 +44,7 @@ public class SendTrialInitiationEmailForRegistrationCommand(
 
         await PerformConstantTimeOperationsAsync();
 
-        var allowTrialLength0 = featureService.IsEnabled(FeatureFlagKeys.PM20322_AllowTrialLength0);
-
-        if (!allowTrialLength0 || (trialLength != 0 && trialLength != 7))
+        if (trialLength != 0 && trialLength != 7)
         {
             trialLength = 7;
         }
