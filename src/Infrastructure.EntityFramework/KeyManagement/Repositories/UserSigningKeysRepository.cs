@@ -11,7 +11,7 @@ namespace Bit.Infrastructure.EntityFramework.KeyManagement.Repositories;
 
 public class UserSigningKeysRepository : Repository<Core.Entities.UserSigningKeys, Models.UserSigningKeys, Guid>, IUserSigningKeysRepository
 {
-    public UserSigningKeysRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper, Func<DatabaseContext, DbSet<Models.UserSigningKeys>> getDbSet) : base(serviceScopeFactory, mapper, getDbSet)
+    public UserSigningKeysRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper) : base(serviceScopeFactory, mapper, context => context.UserSigningKeys)
     {
     }
 
