@@ -150,6 +150,7 @@ public static class FeatureFlagKeys
     public const string PM199566_UpdateMSPToChargeAutomatically = "pm-199566-update-msp-to-charge-automatically";
     public const string PM19956_RequireProviderPaymentMethodDuringSetup = "pm-19956-require-provider-payment-method-during-setup";
     public const string UseOrganizationWarningsService = "use-organization-warnings-service";
+    public const string PM20322_AllowTrialLength0 = "pm-20322-allow-trial-length-0";
 
     /* Data Insights and Reporting Team */
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
