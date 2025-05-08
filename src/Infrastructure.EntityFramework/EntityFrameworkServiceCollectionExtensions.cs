@@ -103,6 +103,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IPasswordHealthReportApplicationRepository, PasswordHealthReportApplicationRepository>();
         services.AddSingleton<ISecurityTaskRepository, SecurityTaskRepository>();
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
+        services.AddSingleton<IUserSigningKeysRepository, UserSigningKeysRepository>();
 
         if (selfHosted)
         {
