@@ -26,8 +26,8 @@ public class EventRouteServiceTests
 
         await Subject.CreateAsync(eventMessage);
 
-        _broadcastEventWriteService.DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<EventMessage>());
-        _storageEventWriteService.Received(1).CreateAsync(eventMessage);
+        await _broadcastEventWriteService.DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<EventMessage>());
+        await _storageEventWriteService.Received(1).CreateAsync(eventMessage);
     }
 
     [Theory, BitAutoData]
@@ -37,8 +37,8 @@ public class EventRouteServiceTests
 
         await Subject.CreateAsync(eventMessage);
 
-        _broadcastEventWriteService.Received(1).CreateAsync(eventMessage);
-        _storageEventWriteService.DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<EventMessage>());
+        await _broadcastEventWriteService.Received(1).CreateAsync(eventMessage);
+        await _storageEventWriteService.DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<EventMessage>());
     }
 
     [Theory, BitAutoData]
@@ -48,8 +48,8 @@ public class EventRouteServiceTests
 
         await Subject.CreateManyAsync(eventMessages);
 
-        _broadcastEventWriteService.DidNotReceiveWithAnyArgs().CreateManyAsync(Arg.Any<IEnumerable<EventMessage>>());
-        _storageEventWriteService.Received(1).CreateManyAsync(eventMessages);
+        await _broadcastEventWriteService.DidNotReceiveWithAnyArgs().CreateManyAsync(Arg.Any<IEnumerable<EventMessage>>());
+        await _storageEventWriteService.Received(1).CreateManyAsync(eventMessages);
     }
 
     [Theory, BitAutoData]
@@ -59,7 +59,7 @@ public class EventRouteServiceTests
 
         await Subject.CreateManyAsync(eventMessages);
 
-        _broadcastEventWriteService.Received(1).CreateManyAsync(eventMessages);
-        _storageEventWriteService.DidNotReceiveWithAnyArgs().CreateManyAsync(Arg.Any<IEnumerable<EventMessage>>());
+        await _broadcastEventWriteService.Received(1).CreateManyAsync(eventMessages);
+        await _storageEventWriteService.DidNotReceiveWithAnyArgs().CreateManyAsync(Arg.Any<IEnumerable<EventMessage>>());
     }
 }
