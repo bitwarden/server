@@ -1,5 +1,4 @@
-﻿using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Services.Contracts;
+﻿using Bit.Core.Billing.Services.Contracts;
 
 namespace Bit.Core.Billing.Tax.Services;
 

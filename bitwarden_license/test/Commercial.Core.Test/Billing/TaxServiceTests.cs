@@ -1,5 +1,4 @@
-﻿using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Services.Implementations;
+﻿using Bit.Core.Billing.Tax.Services.Implementations;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;

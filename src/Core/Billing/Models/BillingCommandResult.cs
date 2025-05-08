@@ -13,7 +13,7 @@ public record Unhandled(string TranslationKey = BillingErrorTranslationKeys.Unha
 
 public class BillingCommandResult<T> : OneOfBase<T, BadRequest, Unhandled>
 {
-    private BillingCommandResult(OneOf<T, BadRequest, Unhandled> input) : base(input) {}
+    private BillingCommandResult(OneOf<T, BadRequest, Unhandled> input) : base(input) { }
 
     public static implicit operator BillingCommandResult<T>(T output) => new(output);
     public static implicit operator BillingCommandResult<T>(BadRequest badRequest) => new(badRequest);

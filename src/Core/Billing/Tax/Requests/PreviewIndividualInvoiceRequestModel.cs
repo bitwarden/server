@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Billing.Models.Api.Requests;
 
 namespace Bit.Core.Billing.Tax.Requests;
 
