@@ -11,8 +11,7 @@ namespace Bit.Core.Billing.Services.Implementations;
 
 public class PaymentHistoryService(
     IStripeAdapter stripeAdapter,
-    ITransactionRepository transactionRepository,
-    ILogger<PaymentHistoryService> logger) : IPaymentHistoryService
+    ITransactionRepository transactionRepository) : IPaymentHistoryService
 {
     public async Task<IEnumerable<BillingHistoryInfo.BillingInvoice>> GetInvoiceHistoryAsync(
         ISubscriber subscriber,
