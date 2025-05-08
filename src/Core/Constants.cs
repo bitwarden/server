@@ -150,6 +150,7 @@ public static class FeatureFlagKeys
     public const string PM18770_EnableOrganizationBusinessUnitConversion = "pm-18770-enable-organization-business-unit-conversion";
     public const string PM199566_UpdateMSPToChargeAutomatically = "pm-199566-update-msp-to-charge-automatically";
     public const string PM19956_RequireProviderPaymentMethodDuringSetup = "pm-19956-require-provider-payment-method-during-setup";
+    public const string UseOrganizationWarningsService = "use-organization-warnings-service";
 
     /* Data Insights and Reporting Team */
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
@@ -196,14 +197,13 @@ public static class FeatureFlagKeys
     /* Vault Team */
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
-    public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
-    public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string SecurityTasks = "security-tasks";
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string DesktopCipherForms = "pm-18520-desktop-cipher-forms";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
     public const string EndUserNotifications = "pm-10609-end-user-notifications";
+    public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string PhishingDetection = "phishing-detection";
 
     public static List<string> GetAllKeys()

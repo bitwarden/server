@@ -46,10 +46,12 @@ public static class StripeConstants
     {
         public const string Draft = "draft";
         public const string Open = "open";
+        public const string Paid = "paid";
     }
 
     public static class MetadataKeys
     {
+        public const string BraintreeCustomerId = "btCustomerId";
         public const string InvoiceApproved = "invoice_approved";
         public const string OrganizationId = "organizationId";
         public const string ProviderId = "providerId";
