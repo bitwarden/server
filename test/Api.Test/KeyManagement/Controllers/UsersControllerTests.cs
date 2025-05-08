@@ -83,6 +83,6 @@ public class UsersControllerTests
         var result = await sutProvider.Sut.GetAccountKeys(userId.ToString());
         Assert.NotNull(result);
         Assert.Equal("publicKey", result.PublicKey);
-        Assert.Equal("verifyingKey", null);
+        Assert.Null(result.VerifyingKey);
     }
 }
