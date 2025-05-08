@@ -209,6 +209,9 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         request.AccountUnlockData.MasterPasswordUnlockData.Email = user.Email;
         request.AccountKeys.AccountPublicKey = "publicKey";
         request.AccountKeys.UserKeyEncryptedAccountPrivateKey = _mockEncryptedString;
+        request.AccountKeys.UserKeyEncryptedSigningKey = null;
+        request.AccountKeys.VerifyingKey = null;
+        request.AccountKeys.SigningKeyType = null;
 
         request.OldMasterKeyAuthenticationHash = "newMasterPassword";
 
