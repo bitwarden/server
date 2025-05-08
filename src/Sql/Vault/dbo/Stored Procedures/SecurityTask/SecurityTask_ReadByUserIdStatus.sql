@@ -57,7 +57,7 @@ BEGIN
             FROM UserCollectionAccess AS UA
             WHERE UA.CipherId = GC.CipherId
         )
-    )
+    ),
     SecurityTasks AS (
         SELECT
             ST.*
