@@ -216,10 +216,13 @@ public class TwoFactorIsEnabledQueryTests
     [Theory]
     [BitAutoData]
     public async Task TwoFactorIsEnabledQuery_UserIdNull_ReturnsFalse(
-        SutProvider<TwoFactorIsEnabledQuery> sutProvider,
-        User user)
+        SutProvider<TwoFactorIsEnabledQuery> sutProvider)
     {
         // Arrange
+        var user = new TestTwoFactorProviderUser
+        {
+            Id = null
+        };
 
         // Act
         var result = await sutProvider.Sut.TwoFactorIsEnabledAsync(user);
