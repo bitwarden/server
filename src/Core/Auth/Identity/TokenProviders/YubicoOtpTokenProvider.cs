@@ -31,13 +31,13 @@ public class YubicoOtpTokenProvider : IUserTwoFactorTokenProvider<User>
         }
 
         // Check if the user has a YubiKey provider configured
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
-        if (!provider?.MetaData.Values.Any(v => !string.IsNullOrWhiteSpace((string)v)) ?? true)
+        var yubicoProvider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
+        if (!yubicoProvider?.MetaData.Values.Any(v => !string.IsNullOrWhiteSpace((string)v)) ?? true)
         {
             return false;
         }
 
-        return true;
+        return yubicoProvider.Enabled;
     }
 
     public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)

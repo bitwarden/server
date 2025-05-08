@@ -34,7 +34,7 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
             return Task.FromResult(false);
         }
 
-        return Task.FromResult(true);
+        return Task.FromResult(webAuthnProvider.Enabled);
     }
 
     public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)

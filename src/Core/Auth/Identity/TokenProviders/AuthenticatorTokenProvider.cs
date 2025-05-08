@@ -27,12 +27,12 @@ public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
 
     public Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
-        if (string.IsNullOrWhiteSpace((string)provider?.MetaData["Key"]))
+        var authenticatorProvider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
+        if (string.IsNullOrWhiteSpace((string)authenticatorProvider?.MetaData["Key"]))
         {
             return Task.FromResult(false);
         }
-        return Task.FromResult(true);
+        return Task.FromResult(authenticatorProvider.Enabled);
     }
 
     public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)

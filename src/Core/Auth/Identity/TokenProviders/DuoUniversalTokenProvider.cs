@@ -28,13 +28,13 @@ public class DuoUniversalTokenProvider(
     public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
-        var provider = await GetDuoTwoFactorProvider(user, userService);
-        if (provider == null)
+        var duoUniversalTokenProvider = await GetDuoTwoFactorProvider(user, userService);
+        if (duoUniversalTokenProvider == null)
         {
             return false;
         }
 
-        return true;
+        return duoUniversalTokenProvider.Enabled;
     }
 
     public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
