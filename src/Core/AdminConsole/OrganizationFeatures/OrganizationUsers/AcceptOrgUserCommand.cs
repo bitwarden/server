@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
@@ -25,6 +26,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private readonly IMailService _mailService;
     private readonly IUserRepository _userRepository;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
+    private readonly IFeatureService _featureService;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public AcceptOrgUserCommand(
         IDataProtectionProvider dataProtectionProvider,
@@ -34,9 +37,10 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         IPolicyService policyService,
         IMailService mailService,
         IUserRepository userRepository,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
+        IFeatureService featureService,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
-
         // TODO: remove data protector when old token validation removed
         _dataProtector = dataProtectionProvider.CreateProtector(OrgUserInviteTokenable.DataProtectorPurpose);
         _globalSettings = globalSettings;
@@ -46,6 +50,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _mailService = mailService;
         _userRepository = userRepository;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
+        _featureService = featureService;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
     public async Task<OrganizationUser> AcceptOrgUserByEmailTokenAsync(Guid organizationUserId, User user, string emailToken,
@@ -194,12 +200,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         // Enforce Two Factor Authentication Policy of organization user is trying to join
         if (!await userService.TwoFactorIsEnabledAsync(user))
         {
-            var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
-                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
-            if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
-            {
-                throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
-            }
+            await ValidateTwoFactorAuthenticationPolicy(user, orgUser.OrganizationId);
         }
 
         orgUser.Status = OrganizationUserStatusType.Accepted;
@@ -220,4 +221,24 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         return orgUser;
     }
 
+    private async Task ValidateTwoFactorAuthenticationPolicy(User user, Guid organizationId)
+    {
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            var requireTwoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
+            if (requireTwoFactorPolicyRequirement.RequireTwoFactor)
+            {
+                throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
+            }
+        }
+        else
+        {
+            var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
+                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
+            if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == organizationId))
+            {
+                throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
+            }
+        }
+    }
 }
