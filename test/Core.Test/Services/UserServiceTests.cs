@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -324,6 +325,7 @@ public class UserServiceTests
             sutProvider.GetDependency<IPremiumUserBillingService>(),
             sutProvider.GetDependency<IRemoveOrganizationUserCommand>(),
             sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>(),
+            sutProvider.GetDependency<ITwoFactorIsEnabledQuery>(),
             sutProvider.GetDependency<IDistributedCache>()
             );
 
@@ -476,6 +478,9 @@ public class UserServiceTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user)
+            .Returns(true);
         var expectedSavedProviders = JsonHelpers.LegacySerialize(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
             [TwoFactorProviderType.Remember] = new() { Enabled = true }
@@ -911,6 +916,7 @@ public class UserServiceTests
             sutProvider.GetDependency<IPremiumUserBillingService>(),
             sutProvider.GetDependency<IRemoveOrganizationUserCommand>(),
             sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>(),
+            sutProvider.GetDependency<ITwoFactorIsEnabledQuery>(),
             sutProvider.GetDependency<IDistributedCache>()
             );
     }
