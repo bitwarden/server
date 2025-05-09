@@ -17,7 +17,7 @@ public class EventIntegrationHandler<T>(
 {
     public async Task HandleEventAsync(EventMessage eventMessage)
     {
-        var organizationId = eventMessage.OrganizationId ?? Guid.Parse("f431e04c-f2c3-473c-8cd1-b291014b0236");
+        var organizationId = eventMessage.OrganizationId ?? Guid.Empty;
         var configurations = await configurationRepository.GetConfigurationDetailsAsync(
             organizationId,
             integrationType,
