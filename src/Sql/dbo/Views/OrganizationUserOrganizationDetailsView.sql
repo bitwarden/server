@@ -1,4 +1,4 @@
-ALTER VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
 AS
 SELECT
     OU.[UserId],

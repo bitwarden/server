@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[OrganizationSponsorship_ReadBySponsoringOrganizationUserId]
+CREATE PROCEDURE [dbo].[OrganizationSponsorship_ReadBySponsoringOrganizationUserId]
     @SponsoringOrganizationUserId UNIQUEIDENTIFIER,
     @IsAdminInitiated BIT = 0
 AS
