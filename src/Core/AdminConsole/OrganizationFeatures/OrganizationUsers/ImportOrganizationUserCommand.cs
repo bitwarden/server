@@ -147,7 +147,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             IEnumerable<ImportedOrganizationUser> newUsers,
             Organization organization,
             OrganizationUserImportData importData
-            )
+    )
     {
         if (!newUsers.Any())
         {
@@ -217,21 +217,29 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
 
         var commandResult = await InviteUsersAsync(userInvites, organization);
 
-        //@TODO: replace with command, add invited users from commandResult to importData
-        //var invitedUsers = await _organizationService.InviteUsersAsync(organization.Id, invitingUserId: null, systemUser: eventSystemUser, userInvites);
-        //foreach (var invitedUser in invitedUsers)
-        //{
-        //   importData.ExistingExternalUsersIdDict.Add(invitedUser.ExternalId, invitedUser.Id);
-        //}
+        switch (commandResult)
+        {
+            case Success<InviteOrganizationUsersResponse> success:
+                var result = success.Value;
+                foreach (var u in result.InvitedUsers)
+                {
+                    importData.ExistingExternalUsersIdDict.Add(u.ExternalId, u.Id);
+                }
+                break;
+            case Failure<InviteOrganizationUsersResponse> failure:
+                throw new BadRequestException(failure.ErrorMessage);
+            default:
+                throw new InvalidOperationException($"Unhandled commandResult type: {commandResult.GetType().Name}");
+        }
     }
 
-    private async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteUsersAsync(List<OrganizationUserInviteCommandModel> invites, Organization organization)
+    private async Task<CommandResult<InviteOrganizationUsersResponse>> InviteUsersAsync(List<OrganizationUserInviteCommandModel> invites, Organization organization)
     {
         var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
         var inviteOrganization = new InviteOrganization(organization, plan);
         var request = new InviteOrganizationUsersRequest(invites.ToArray(), inviteOrganization, Guid.Empty, DateTimeOffset.UtcNow);
 
-        return await _inviteOrganizationUsersCommand.InviteScimOrganizationUserAsync(request);
+        return await _inviteOrganizationUsersCommand.InviteImportedOrganizationUsersAsync(request, organization.Id);
     }
 
     private async Task OverwriteExisting(

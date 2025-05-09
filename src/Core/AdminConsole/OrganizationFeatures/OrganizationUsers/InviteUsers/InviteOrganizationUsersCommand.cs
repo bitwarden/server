@@ -76,6 +76,40 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         }
     }
 
+    public async Task<CommandResult<InviteOrganizationUsersResponse>> InviteImportedOrganizationUsersAsync(InviteOrganizationUsersRequest request, Guid organizationId)
+    {
+        var result = await InviteOrganizationUsersAsync(request);
+
+        switch (result)
+        {
+            case Failure<InviteOrganizationUsersResponse> failure:
+                return new Failure<InviteOrganizationUsersResponse>(
+                    failure.Errors.Select(error => new Error<InviteOrganizationUsersResponse>(error.Message,
+                        new InviteOrganizationUsersResponse(error.ErroredValue.InvitedUsers, organizationId)
+                        )));
+
+            case Success<InviteOrganizationUsersResponse> success when success.Value.InvitedUsers.Any():
+
+                // add a bulk method?
+                foreach (var user in success.Value.InvitedUsers)
+                {
+                    await eventService.LogOrganizationUserEventAsync<IOrganizationUser>(
+                        organizationUser: user,
+                        type: EventType.OrganizationUser_Invited,
+                        systemUser: EventSystemUser.PublicApi,
+                        date: request.PerformedAt.UtcDateTime);
+                }
+
+                return new Success<InviteOrganizationUsersResponse>(new InviteOrganizationUsersResponse(success.Value.InvitedUsers, organizationId)
+                );
+
+            default:
+                return new Failure<InviteOrganizationUsersResponse>(
+                    new InvalidResultTypeError<InviteOrganizationUsersResponse>(
+                        new InviteOrganizationUsersResponse(organizationId)));
+        }
+    }
+
     private async Task<CommandResult<InviteOrganizationUsersResponse>> InviteOrganizationUsersAsync(InviteOrganizationUsersRequest request)
     {
         var invitesToSend = (await FilterExistingUsersAsync(request)).ToArray();
