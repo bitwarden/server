@@ -3,6 +3,8 @@ CREATE PROCEDURE [dbo].[OrganizationSponsorship_ReadBySponsoringOrganizationUser
     @IsAdminInitiated BIT = 0
 AS
 BEGIN
+    SET NOCOUNT ON;
+
     SELECT
         *
     FROM
