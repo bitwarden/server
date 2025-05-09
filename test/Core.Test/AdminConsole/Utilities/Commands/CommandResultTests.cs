@@ -1,9 +1,9 @@
-﻿using Bit.Core.AdminConsole.Errors;
-using Bit.Core.Models.Commands;
+﻿using Bit.Core.AdminConsole.Utilities.Commands;
+using Bit.Core.AdminConsole.Utilities.Errors;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
-namespace Bit.Core.Test.Models.Commands;
+namespace Bit.Core.Test.AdminConsole.Utilities.Commands;
 
 public class CommandResultTests
 {

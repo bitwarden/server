@@ -1,5 +1,5 @@
-﻿using Bit.Core.AdminConsole.Errors;
-using Bit.Core.AdminConsole.Shared.Validation;
+﻿using Bit.Core.AdminConsole.Utilities.Errors;
+using Bit.Core.AdminConsole.Utilities.Validation;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.Shared;
@@ -22,13 +22,11 @@ public class IValidatorTests
         {
             if (string.IsNullOrWhiteSpace(value.Name))
             {
-                return Task.FromResult<ValidationResult<TestClass>>(new Invalid<TestClass>
-                {
-                    Errors = [new InvalidRequestError<TestClass>(value)]
-                });
+                return Task.FromResult<ValidationResult<TestClass>>(
+                    new Invalid<TestClass>(new InvalidRequestError<TestClass>(value)));
             }
 
-            return Task.FromResult<ValidationResult<TestClass>>(new Valid<TestClass> { Value = value });
+            return Task.FromResult<ValidationResult<TestClass>>(new Valid<TestClass>(value));
         }
     }
 
@@ -41,7 +39,7 @@ public class IValidatorTests
 
         Assert.IsType<Invalid<TestClass>>(result);
         var invalidResult = result as Invalid<TestClass>;
-        Assert.Equal(InvalidRequestError<TestClass>.Code, invalidResult.Errors.First().Message);
+        Assert.Equal(InvalidRequestError<TestClass>.Code, invalidResult!.Error.Message);
     }
 
     [Fact]
