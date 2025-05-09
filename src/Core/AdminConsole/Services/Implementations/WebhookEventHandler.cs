@@ -25,7 +25,7 @@ public class WebhookEventHandler(
     protected override async Task ProcessEventIntegrationAsync(JsonObject mergedConfiguration,
         string renderedTemplate)
     {
-        var config = mergedConfiguration.Deserialize<WebhookIntegrationConfigurationDetils>();
+        var config = mergedConfiguration.Deserialize<WebhookIntegrationConfigurationDetails>();
         if (config is null || string.IsNullOrEmpty(config.url))
         {
             return;
