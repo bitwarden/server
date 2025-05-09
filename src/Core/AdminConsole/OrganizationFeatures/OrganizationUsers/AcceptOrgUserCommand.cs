@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -24,6 +25,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private readonly IPolicyService _policyService;
     private readonly IMailService _mailService;
     private readonly IUserRepository _userRepository;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
 
     public AcceptOrgUserCommand(
@@ -34,6 +36,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         IPolicyService policyService,
         IMailService mailService,
         IUserRepository userRepository,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
     {
 
@@ -45,6 +48,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _policyService = policyService;
         _mailService = mailService;
         _userRepository = userRepository;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
     }
 
@@ -192,7 +196,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         }
 
         // Enforce Two Factor Authentication Policy of organization user is trying to join
-        if (!await userService.TwoFactorIsEnabledAsync(user))
+        if (!await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
         {
             var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
                 PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
