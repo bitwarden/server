@@ -33,7 +33,8 @@ public class NoopMailService : IMailService
         string email,
         string token,
         ProductTierType productTier,
-        IEnumerable<ProductType> products)
+        IEnumerable<ProductType> products,
+        int trailLength)
     {
         return Task.FromResult(0);
     }
