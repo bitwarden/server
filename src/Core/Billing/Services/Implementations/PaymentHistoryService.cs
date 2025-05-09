@@ -5,7 +5,6 @@ using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Billing.Services.Implementations;
 
