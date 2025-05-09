@@ -69,4 +69,6 @@ public class CollectionRepositoryCreateTests
         await groupRepository.DeleteManyAsync([group1.Id, group2.Id]);
         await organizationUserRepository.DeleteManyAsync([orgUser1.Id, orgUser2.Id]);
     }
+
+    // TODO: creating with no access to make sure we handle empty sets
 }

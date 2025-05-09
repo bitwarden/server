@@ -87,11 +87,12 @@ public class CollectionRepositoryReplaceTests
         Assert.Single(users, u => u.Id == orgUser3.Id && u.Manage && !u.HidePasswords && u.ReadOnly);
 
         // Clean up data
-        await userRepository.DeleteAsync(user1);
-        await userRepository.DeleteAsync(user2);
-        await userRepository.DeleteAsync(user3);
+        // TODO: why doesn't delete many work?
+        await userRepository.DeleteManyAsync([user1, user2, user3]);
         await organizationRepository.DeleteAsync(organization);
         await groupRepository.DeleteManyAsync([group1.Id, group2.Id, group3.Id]);
         await organizationUserRepository.DeleteManyAsync([orgUser1.Id, orgUser2.Id, orgUser3.Id]);
     }
+
+    // TODO: replacing with an empty list of access to make sure we handle empty sets
 }
