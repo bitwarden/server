@@ -20,7 +20,7 @@ public interface IInviteOrganizationUsersCommand
     /// <returns>Response from InviteScimOrganiation<see cref="ScimInviteOrganizationUsersResponse"/></returns>
     Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(InviteOrganizationUsersRequest request);
     /// <summary>
-    /// Sends invitations to add imported organization users via directory connector or public API.
+    /// Sends invitations to add imported organization users via the public API.
     /// This can be a Success or a Failure. Failure will contain the Error along with a representation of the errored value.
     /// Success will be the successful return object.
     /// </summary>

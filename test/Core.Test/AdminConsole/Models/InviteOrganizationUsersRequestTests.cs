@@ -16,7 +16,7 @@ public class InviteOrganizationUsersRequestTests
     public void Constructor_WhenPassedInvalidEmail_ThrowsException(string email, OrganizationUserType type, Permissions permissions, string externalId)
     {
         var exception = Assert.Throws<BadRequestException>(() =>
-            new OrganizationUserInvite(email, [], [], type, permissions, externalId, false));
+            new OrganizationUserInviteCommandModel(email, [], [], type, permissions, externalId, false));
 
         Assert.Contains(InvalidEmailErrorMessage, exception.Message);
     }
@@ -33,7 +33,7 @@ public class InviteOrganizationUsersRequestTests
         };
 
         var exception = Assert.Throws<BadRequestException>(() =>
-            new OrganizationUserInvite(
+            new OrganizationUserInviteCommandModel(
                 email: validEmail,
                 assignedCollections: [invalidCollectionConfiguration],
                 groups: [],
@@ -51,7 +51,7 @@ public class InviteOrganizationUsersRequestTests
         const string validEmail = "test@email.com";
         var validCollectionConfiguration = new CollectionAccessSelection { Id = Guid.NewGuid(), Manage = true };
 
-        var invite = new OrganizationUserInvite(
+        var invite = new OrganizationUserInviteCommandModel(
             email: validEmail,
             assignedCollections: [validCollectionConfiguration],
             groups: [],
