@@ -12,9 +12,15 @@ public abstract class CommandResult<T>(T value)
 
 public class Success<T>(T value) : CommandResult<T>(value);
 
-public class Failure<T>(T value, Error error) : CommandResult<T>(value)
+// TODO: resolve NewFailure vs. Failure
+public class NewFailure<T>(T value, Error error) : CommandResult<T>(value)
 {
     public Error Error { get; } = error;
+}
+
+public class Failure<T>(Error<T> error) : CommandResult<T>(error.ErroredValue)
+{
+    public Error<T> Error { get; } = error;
 }
 
 public static class CommandResultExtensions

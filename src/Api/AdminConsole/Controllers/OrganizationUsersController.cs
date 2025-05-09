@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
@@ -165,6 +166,12 @@ public class OrganizationUsersController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.SeparateCustomRolePermissions))
+        {
+            return await GetvNextAsync(orgId, includeGroups, includeCollections);
+        }
+
         var authorized = (await _authorizationService.AuthorizeAsync(
             User, new OrganizationScope(orgId), OrganizationUserUserDetailsOperations.ReadAll)).Succeeded;
         if (!authorized)
@@ -193,6 +200,37 @@ public class OrganizationUsersController : Controller
             });
         return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
     }
+
+    private async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> GetvNextAsync(Guid orgId, bool includeGroups = false, bool includeCollections = false)
+    {
+        var request = new OrganizationUserUserDetailsQueryRequest
+        {
+            OrganizationId = orgId,
+            IncludeGroups = includeGroups,
+            IncludeCollections = includeCollections,
+        };
+
+        if ((await _authorizationService.AuthorizeAsync(User, new ManageUsersRequirement())).Succeeded)
+        {
+            return GetResultListResponseModel(await _organizationUserUserDetailsQuery.Get(request));
+        }
+
+        if ((await _authorizationService.AuthorizeAsync(User, new ManageAccountRecoveryRequirement())).Succeeded)
+        {
+            return GetResultListResponseModel(await _organizationUserUserDetailsQuery.GetAccountRecoveryEnrolledUsers(request));
+        }
+
+        throw new NotFoundException();
+    }
+
+    private ListResponseModel<OrganizationUserUserDetailsResponseModel> GetResultListResponseModel(IEnumerable<(OrganizationUserUserDetails OrgUser,
+                bool TwoFactorEnabled, bool ClaimedByOrganization)> results)
+    {
+        return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(results
+            .Select(result => new OrganizationUserUserDetailsResponseModel(result))
+            .ToList());
+    }
+
 
     [HttpGet("{id}/groups")]
     public async Task<IEnumerable<string>> GetGroups(string orgId, string id)

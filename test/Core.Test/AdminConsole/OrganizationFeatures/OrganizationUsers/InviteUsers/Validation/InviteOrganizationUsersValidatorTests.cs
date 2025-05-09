@@ -61,7 +61,7 @@ public class InviteOrganizationUsersValidatorTests
 
         _ = await sutProvider.Sut.ValidateAsync(request);
 
-        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
             .Received(1)
             .ValidateUpdateAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(x =>
                 x.SmSeatsChanged == true && x.SmSeats == 12));

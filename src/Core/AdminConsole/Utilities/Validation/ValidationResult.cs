@@ -8,7 +8,10 @@ public abstract record ValidationResult<T>(T Value);
 
 public record Valid<T>(T Value) : ValidationResult<T>(Value);
 
-public record Invalid<T>(T Value, Error Error) : ValidationResult<T>(Value);
+// TODO: resolve Invalid vs. NewInvalid
+public record NewInvalid<T>(T Value, Error Error) : ValidationResult<T>(Value);
+
+public record Invalid<T>(Error<T> Error) : ValidationResult<T>(Error.ErroredValue);
 
 public static class ValidationResultMappers
 {

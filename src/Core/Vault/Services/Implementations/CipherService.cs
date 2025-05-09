@@ -891,7 +891,14 @@ public class CipherService : ICipherService
 
         // Update the revision date when an attachment is deleted
         cipher.RevisionDate = DateTime.UtcNow;
-        await _cipherRepository.ReplaceAsync(orgAdmin ? cipher : (CipherDetails)cipher);
+        if (orgAdmin)
+        {
+            await _cipherRepository.ReplaceAsync(cipher);
+        }
+        else
+        {
+            await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
+        }
 
         // push
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
