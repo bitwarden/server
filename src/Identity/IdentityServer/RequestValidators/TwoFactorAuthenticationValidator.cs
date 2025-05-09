@@ -121,7 +121,10 @@ public class TwoFactorAuthenticationValidator(
             { "TwoFactorProviders2", providers },
         };
 
-        // If we have email as a 2FA provider, we might need an SsoEmail2fa Session Token
+        // If we have an Email 2FA provider we need this session token so SSO users
+        // can re-request an email TOTP. The TwoFactorController.SendEmailLoginAsync
+        // endpoint requires a way to authenticate the user before sending another email with
+        // a TOTP, this token acts as the authentication mechanism.
         if (enabledProviders.Any(p => p.Key == TwoFactorProviderType.Email))
         {
             twoFactorResultDict.Add("SsoEmail2faSessionToken",
