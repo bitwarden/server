@@ -35,7 +35,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
     private readonly Dictionary<string, DynamicAuthenticationScheme> _cachedHandlerSchemes;
     private readonly SemaphoreSlim _semaphore;
     private readonly IServiceProvider _serviceProvider;
-
+    private readonly IHttpMessageHandlerFactory _httpMessageHandlerFactory;
     private DateTime? _lastSchemeLoad;
     private IEnumerable<DynamicAuthenticationScheme> _schemesCopy = Array.Empty<DynamicAuthenticationScheme>();
     private IEnumerable<DynamicAuthenticationScheme> _handlerSchemesCopy = Array.Empty<DynamicAuthenticationScheme>();
@@ -50,7 +50,8 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
         ILogger<DynamicAuthenticationSchemeProvider> logger,
         GlobalSettings globalSettings,
         SamlEnvironment samlEnvironment,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IHttpMessageHandlerFactory httpMessageHandlerFactory)
         : base(options)
     {
         _oidcPostConfigureOptions = oidcPostConfigureOptions;
@@ -78,6 +79,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
         _cachedHandlerSchemes = new Dictionary<string, DynamicAuthenticationScheme>();
         _semaphore = new SemaphoreSlim(1);
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        _httpMessageHandlerFactory = httpMessageHandlerFactory;
     }
 
     private bool CacheIsValid
@@ -310,6 +312,8 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
             // Prevents URLs that go beyond 1024 characters which may break for some servers
             AuthenticationMethod = config.RedirectBehavior,
             GetClaimsFromUserInfoEndpoint = config.GetClaimsFromUserInfoEndpoint,
+            // Make sure all communication goes through the Platform supplied HttpMessageHandler
+            BackchannelHttpHandler = _httpMessageHandlerFactory.CreateHandler(),
         };
         oidcOptions.Scope
             .AddIfNotExists(OpenIdConnectScopes.OpenId)
