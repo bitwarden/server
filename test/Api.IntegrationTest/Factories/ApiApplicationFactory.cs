@@ -24,6 +24,8 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
         _identityApplicationFactory.SqliteConnection = SqliteConnection;
     }
 
+    public IdentityApplicationFactory Identity => _identityApplicationFactory;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
