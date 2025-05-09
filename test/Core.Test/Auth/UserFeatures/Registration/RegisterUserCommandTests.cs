@@ -226,6 +226,11 @@ public class RegisterUserCommandTests
             await sutProvider.GetDependency<IReferenceEventService>()
                 .Received(1)
                 .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup && refEvent.SignupInitiationPath == default));
+
+            // Even if user doesn't have reference data, we should send them welcome email
+            await sutProvider.GetDependency<IMailService>()
+                .Received(1)
+                .SendWelcomeEmailAsync(user);
         }
 
         Assert.True(result.Succeeded);
