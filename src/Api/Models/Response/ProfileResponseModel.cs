@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Models.Response.Providers;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
@@ -15,7 +16,9 @@ public class ProfileResponseModel : ResponseModel
         IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
         bool twoFactorEnabled,
         bool premiumFromOrganization,
-        IEnumerable<Guid> organizationIdsClaimingUser) : base("profile")
+        IEnumerable<Guid> organizationIdsClaimingUser,
+        UserAccountKeysData userAccountKeysData
+        ) : base("profile")
     {
         if (user == null)
         {
@@ -30,8 +33,11 @@ public class ProfileResponseModel : ResponseModel
         PremiumFromOrganization = premiumFromOrganization;
         Culture = user.Culture;
         TwoFactorEnabled = twoFactorEnabled;
+
         Key = user.Key;
         PrivateKey = user.PrivateKey;
+        AccountKeys = new PrivateAccountKeysResponseModel(userAccountKeysData);
+
         SecurityStamp = user.SecurityStamp;
         ForcePasswordReset = user.ForcePasswordReset;
         UsesKeyConnector = user.UsesKeyConnector;
@@ -57,7 +63,9 @@ public class ProfileResponseModel : ResponseModel
     public string Culture { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public string Key { get; set; }
+    [Obsolete("This property is deprecated. Use AccountKeys instead.")]
     public string PrivateKey { get; set; }
+    public PrivateAccountKeysResponseModel AccountKeys { get; set; }
     public string SecurityStamp { get; set; }
     public bool ForcePasswordReset { get; set; }
     public bool UsesKeyConnector { get; set; }

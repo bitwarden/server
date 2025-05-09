@@ -1,11 +1,13 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.KeyManagement.UserKey.Implementations;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.KeyManagement.UserKey;
@@ -25,12 +27,14 @@ public class RotateUserAccountKeysCommandTests
 
         Assert.NotEqual(IdentityResult.Success, result);
     }
+
     [Theory, BitAutoData]
     public async Task ThrowsWhenUserIsNull(SutProvider<RotateUserAccountKeysCommand> sutProvider,
           RotateUserAccountKeysData model)
     {
         await Assert.ThrowsAsync<ArgumentNullException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(null, model));
     }
+
     [Theory, BitAutoData]
     public async Task RejectsEmailChange(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
@@ -69,7 +73,6 @@ public class RotateUserAccountKeysCommandTests
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
     }
 
-
     [Theory, BitAutoData]
     public async Task RejectsPublicKeyChange(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
@@ -80,7 +83,7 @@ public class RotateUserAccountKeysCommandTests
         user.KdfMemory = 64;
         user.KdfParallelism = 4;
 
-        model.AccountPublicKey = "new-public";
+        model.AccountKeys.AsymmetricEncryptionKeyData.PublicKey = "new-public";
         model.MasterPasswordUnlockData.Email = user.Email;
         model.MasterPasswordUnlockData.KdfType = Enums.KdfType.Argon2id;
         model.MasterPasswordUnlockData.KdfIterations = 3;
@@ -90,6 +93,119 @@ public class RotateUserAccountKeysCommandTests
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
 
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RejectsNullSigningKeys_WhenUserHasSigningKeys(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+        RotateUserAccountKeysData model, SigningKeyData currentSigningKeys)
+    {
+        user.Kdf = Enums.KdfType.PBKDF2_SHA256;
+        user.KdfIterations = 600000;
+        user.KdfMemory = null;
+        user.KdfParallelism = null;
+
+        model.MasterPasswordUnlockData.Email = user.Email;
+        model.MasterPasswordUnlockData.KdfType = Enums.KdfType.PBKDF2_SHA256;
+        model.MasterPasswordUnlockData.KdfIterations = 600000;
+        model.MasterPasswordUnlockData.KdfMemory = null;
+        model.MasterPasswordUnlockData.KdfParallelism = null;
+
+        sutProvider.GetDependency<IUserSigningKeysRepository>()
+            .GetByUserIdAsync(user.Id)
+            .Returns(currentSigningKeys);
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+        model.AccountKeys.SigningKeyData = null;
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RejectsChangedSigningKeys(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+        RotateUserAccountKeysData model, SigningKeyData currentSigningKeys)
+    {
+        sutProvider.GetDependency<IUserSigningKeysRepository>()
+            .GetByUserIdAsync(user.Id)
+            .Returns(currentSigningKeys);
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+        model.AccountKeys.SigningKeyData = new SigningKeyData
+        {
+            VerifyingKey = "new-verifying-key",
+            WrappedSigningKey = "new-wrapped-signing-key"
+        };
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RejectsNullSignedPublicKeyOwnershipClaim(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+        RotateUserAccountKeysData model, SigningKeyData currentSigningKeys)
+    {
+        user.Kdf = Enums.KdfType.PBKDF2_SHA256;
+        user.KdfIterations = 600000;
+        user.KdfMemory = null;
+        user.KdfParallelism = null;
+
+        model.MasterPasswordUnlockData.Email = user.Email;
+        model.MasterPasswordUnlockData.KdfType = Enums.KdfType.PBKDF2_SHA256;
+        model.MasterPasswordUnlockData.KdfIterations = 600000;
+        model.MasterPasswordUnlockData.KdfMemory = null;
+        model.MasterPasswordUnlockData.KdfParallelism = null;
+
+        sutProvider.GetDependency<IUserSigningKeysRepository>()
+            .GetByUserIdAsync(user.Id)
+            .Returns(currentSigningKeys);
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+        model.AccountKeys.AsymmetricEncryptionKeyData.SignedPublicKeyOwnershipClaim = null;
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RejectsWhenProvidedSigningKeysAreMissingVerifyingKey(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+        RotateUserAccountKeysData model)
+    {
+        user.Kdf = Enums.KdfType.PBKDF2_SHA256;
+        user.KdfIterations = 600000;
+        user.KdfMemory = null;
+        user.KdfParallelism = null;
+
+        model.MasterPasswordUnlockData.Email = user.Email;
+        model.MasterPasswordUnlockData.KdfType = Enums.KdfType.PBKDF2_SHA256;
+        model.MasterPasswordUnlockData.KdfIterations = 600000;
+        model.MasterPasswordUnlockData.KdfMemory = null;
+        model.MasterPasswordUnlockData.KdfParallelism = null;
+
+        sutProvider.GetDependency<IUserSigningKeysRepository>()
+            .GetByUserIdAsync(user.Id)
+            .ReturnsNull();
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+        model.AccountKeys.SigningKeyData.VerifyingKey = null;
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RejectsWhenProvidedSigningKeysAreMissingSigningKey(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+        RotateUserAccountKeysData model, SigningKeyData currentSigningKeys)
+    {
+        user.Kdf = Enums.KdfType.PBKDF2_SHA256;
+        user.KdfIterations = 600000;
+        user.KdfMemory = null;
+        user.KdfParallelism = null;
+
+        model.MasterPasswordUnlockData.Email = user.Email;
+        model.MasterPasswordUnlockData.KdfType = Enums.KdfType.PBKDF2_SHA256;
+        model.MasterPasswordUnlockData.KdfIterations = 600000;
+        model.MasterPasswordUnlockData.KdfMemory = null;
+        model.MasterPasswordUnlockData.KdfParallelism = null;
+
+        sutProvider.GetDependency<IUserSigningKeysRepository>()
+            .GetByUserIdAsync(user.Id)
+            .Returns(currentSigningKeys);
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+        model.AccountKeys.SigningKeyData.WrappedSigningKey = null;
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
     }
 
@@ -108,7 +224,7 @@ public class RotateUserAccountKeysCommandTests
         model.MasterPasswordUnlockData.KdfMemory = 64;
         model.MasterPasswordUnlockData.KdfParallelism = 4;
 
-        model.AccountPublicKey = user.PublicKey;
+        model.AccountKeys.AsymmetricEncryptionKeyData.PublicKey = user.PublicKey;
 
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
@@ -116,5 +232,18 @@ public class RotateUserAccountKeysCommandTests
         var result = await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
 
         Assert.Equal(IdentityResult.Success, result);
+
+        sutProvider.GetDependency<IUserSigningKeysRepository>()
+            .Received(1)
+            .SetUserSigningKeys(
+                user.Id,
+                model.AccountKeys.SigningKeyData
+            );
+        sutProvider.GetDependency<IUserSigningKeysRepository>()
+            .Received(1)
+            .UpdateForKeyRotation(
+                user.Id,
+                model.AccountKeys.SigningKeyData
+            );
     }
 }

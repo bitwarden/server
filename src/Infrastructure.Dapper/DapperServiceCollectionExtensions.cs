@@ -67,6 +67,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<ISecurityTaskRepository, SecurityTaskRepository>();
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
         services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
+        services.AddSingleton<IUserSigningKeysRepository, UserSigningKeysRepository>();
 
         if (selfHosted)
         {

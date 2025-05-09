@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
@@ -22,6 +23,9 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     [MaxLength(256)]
     public string Email { get; set; } = null!;
     public bool EmailVerified { get; set; }
+    /// <summary>
+    /// The server-side master-password hash
+    /// </summary>
     [MaxLength(300)]
     public string? MasterPassword { get; set; }
     [MaxLength(50)]
@@ -37,9 +41,21 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public string? EquivalentDomains { get; set; }
     public string? ExcludedGlobalEquivalentDomains { get; set; }
     public DateTime AccountRevisionDate { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// The master-password-sealed user key.
+    /// </summary>
     public string? Key { get; set; }
     public string? PublicKey { get; set; }
+    /// <summary>
+    /// User key wrapped private key.
+    /// </summary>
     public string? PrivateKey { get; set; }
+    /// <summary>
+    /// A signed claim, where the owner of the signing key claims to be the owner of the public key.
+    /// </summary>
+    public string? SignedPublicKeyOwnershipClaim { get; set; }
+
     public bool Premium { get; set; }
     public DateTime? PremiumExpirationDate { get; set; }
     public DateTime? RenewalReminderDate { get; set; }
@@ -231,5 +247,15 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public bool HasMasterPassword()
     {
         return MasterPassword != null;
+    }
+
+    public AsymmetricEncryptionKeyData GetAsymmetricEncryptionKeys()
+    {
+        return new AsymmetricEncryptionKeyData
+        {
+            WrappedPrivateKey = PrivateKey,
+            SignedPublicKeyOwnershipClaim = SignedPublicKeyOwnershipClaim,
+            PublicKey = PublicKey
+        };
     }
 }

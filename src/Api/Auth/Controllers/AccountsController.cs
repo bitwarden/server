@@ -392,10 +392,12 @@ public class AccountsController : Controller
         var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
+        var userAccountKeys = await _userService.GetUserAccountKeys(user);
 
         var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, twoFactorEnabled,
-            hasPremiumFromOrg, organizationIdsClaimingActiveUser);
+            hasPremiumFromOrg, organizationIdsClaimingActiveUser,
+            userAccountKeys);
         return response;
     }
 
@@ -426,8 +428,9 @@ public class AccountsController : Controller
         var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
+        var userAccountKeys = await _userService.GetUserAccountKeys(user);
 
-        var response = new ProfileResponseModel(user, null, null, null, twoFactorEnabled, hasPremiumFromOrg, organizationIdsClaimingActiveUser);
+        var response = new ProfileResponseModel(user, null, null, null, twoFactorEnabled, hasPremiumFromOrg, organizationIdsClaimingActiveUser, userAccountKeys);
         return response;
     }
 
@@ -445,8 +448,9 @@ public class AccountsController : Controller
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
+        var userAccountKeys = await _userService.GetUserAccountKeys(user);
 
-        var response = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);
+        var response = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingActiveUser, userAccountKeys);
         return response;
     }
 

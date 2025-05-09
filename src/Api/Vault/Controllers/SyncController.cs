@@ -7,6 +7,8 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -37,6 +39,7 @@ public class SyncController : Controller
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IUserSigningKeysRepository _signingKeysRepository;
 
     public SyncController(
         IUserService userService,
@@ -51,7 +54,8 @@ public class SyncController : Controller
         GlobalSettings globalSettings,
         ICurrentContext currentContext,
         IFeatureService featureService,
-        IApplicationCacheService applicationCacheService)
+        IApplicationCacheService applicationCacheService,
+        IUserSigningKeysRepository signingKeysRepository)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -66,6 +70,7 @@ public class SyncController : Controller
         _currentContext = currentContext;
         _featureService = featureService;
         _applicationCacheService = applicationCacheService;
+        _signingKeysRepository = signingKeysRepository;
     }
 
     [HttpGet("")]
@@ -108,8 +113,14 @@ public class SyncController : Controller
         var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
 
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var signingKeys = await _signingKeysRepository.GetByUserIdAsync(user.Id);
+        var userAccountKeysData = new UserAccountKeysData
+        {
+            AsymmetricEncryptionKeyData = user.GetAsymmetricEncryptionKeys(),
+            SigningKeyData = signingKeys
+        };
 
-        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
+        var response = new SyncResponseModel(_globalSettings, user, userAccountKeysData, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;
