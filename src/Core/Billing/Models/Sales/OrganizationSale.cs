@@ -36,7 +36,9 @@ public class OrganizationSale
 
         return new OrganizationSale
         {
-            Organization = organization, CustomerSetup = customerSetup, SubscriptionSetup = subscriptionSetup
+            Organization = organization,
+            CustomerSetup = customerSetup,
+            SubscriptionSetup = subscriptionSetup
         };
     }
 
