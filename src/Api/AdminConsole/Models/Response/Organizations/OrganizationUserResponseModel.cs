@@ -126,6 +126,26 @@ public class OrganizationUserUserMiniDetailsResponseModel : ResponseModel
 
 public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel
 {
+    public OrganizationUserUserDetailsResponseModel((OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization) data, string obj = "organizationUserUserDetails")
+        : base(data.OrgUser, obj)
+    {
+        if (data.OrgUser == null)
+        {
+            throw new ArgumentNullException(nameof(data.OrgUser));
+        }
+
+        Name = data.OrgUser.Name;
+        Email = data.OrgUser.Email;
+        AvatarColor = data.OrgUser.AvatarColor;
+        TwoFactorEnabled = data.TwoFactorEnabled;
+        SsoBound = !string.IsNullOrWhiteSpace(data.OrgUser.SsoExternalId);
+        Collections = data.OrgUser.Collections.Select(c => new SelectionReadOnlyResponseModel(c));
+        Groups = data.OrgUser.Groups;
+        // Prevent reset password when using key connector.
+        ResetPasswordEnrolled = ResetPasswordEnrolled && !data.OrgUser.UsesKeyConnector;
+        ClaimedByOrganization = data.ClaimedByOrganization;
+    }
+
     public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
         bool twoFactorEnabled, bool claimedByOrganization, string obj = "organizationUserUserDetails")
         : base(organizationUser, obj)
