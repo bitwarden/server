@@ -2,7 +2,7 @@
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 
-namespace Bit.Core.Billing.Models.Api.Requests.Organizations;
+namespace Bit.Core.Billing.Tax.Requests;
 
 public class PreviewOrganizationInvoiceRequestBody
 {

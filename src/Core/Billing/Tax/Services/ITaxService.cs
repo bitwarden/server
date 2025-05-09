@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Billing.Services;
+﻿namespace Bit.Core.Billing.Tax.Services;
 
 public interface ITaxService
 {

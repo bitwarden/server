@@ -1,7 +1,7 @@
-﻿using Bit.Core.Billing.Services;
+﻿using Bit.Core.Billing.Tax.Services;
 using Stripe;
 
-namespace Bit.Core.Test.Billing.Stubs;
+namespace Bit.Core.Test.Billing.Tax.Services;
 
 /// <param name="isAutomaticTaxEnabled">
 /// Whether the subscription options will have automatic tax enabled or not.

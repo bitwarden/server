@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace Bit.Core.Billing.Models;
+namespace Bit.Core.Billing.Tax.Models;
 
 public class TaxIdType
 {

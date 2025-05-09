@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Models.Business;
 
-namespace Bit.Core.Billing.Models;
+namespace Bit.Core.Billing.Tax.Models;
 
 public record TaxInformation(
     string Country,

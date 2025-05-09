@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Core.Billing.Models.Api.Requests.Accounts;
+namespace Bit.Core.Billing.Tax.Requests;
 
 public class PreviewIndividualInvoiceRequestBody
 {

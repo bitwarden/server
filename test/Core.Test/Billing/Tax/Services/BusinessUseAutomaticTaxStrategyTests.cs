@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Services.Implementations.AutomaticTax;
+using Bit.Core.Billing.Tax.Services.Implementations;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -7,7 +7,7 @@ using NSubstitute;
 using Stripe;
 using Xunit;
 
-namespace Bit.Core.Test.Billing.Services.Implementations.AutomaticTax;
+namespace Bit.Core.Test.Billing.Tax.Services;
 
 [SutProviderCustomize]
 public class BusinessUseAutomaticTaxStrategyTests
