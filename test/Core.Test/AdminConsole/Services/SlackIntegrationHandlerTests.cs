@@ -33,7 +33,7 @@ public class SlackIntegrationHandlerTests
         Assert.True(result.Success);
         Assert.Equal(result.Message, message);
 
-        sutProvider.GetDependency<ISlackService>().Received(1).SendSlackMessageByChannelIdAsync(
+        await sutProvider.GetDependency<ISlackService>().Received(1).SendSlackMessageByChannelIdAsync(
             Arg.Is(AssertHelper.AssertPropertyEqual(_token)),
             Arg.Is(AssertHelper.AssertPropertyEqual(message.RenderedTemplate)),
             Arg.Is(AssertHelper.AssertPropertyEqual(_channelId))
