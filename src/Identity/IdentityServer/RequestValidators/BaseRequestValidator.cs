@@ -29,7 +29,6 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IDeviceValidator _deviceValidator;
     private readonly ITwoFactorAuthenticationValidator _twoFactorAuthenticationValidator;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IMailService _mailService;
     private readonly ILogger _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
@@ -49,7 +48,6 @@ public abstract class BaseRequestValidator<T> where T : class
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
         ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
@@ -66,7 +64,6 @@ public abstract class BaseRequestValidator<T> where T : class
         _deviceValidator = deviceValidator;
         _twoFactorAuthenticationValidator = twoFactorAuthenticationValidator;
         _organizationUserRepository = organizationUserRepository;
-        _mailService = mailService;
         _logger = logger;
         CurrentContext = currentContext;
         _globalSettings = globalSettings;
@@ -81,23 +78,12 @@ public abstract class BaseRequestValidator<T> where T : class
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
-        // 1. We need to check if the user is a bot and if their master password hash is correct.
-        var isBot = validatorContext.CaptchaResponse?.IsBot ?? false;
+        // 1. We need to check if the user's master password hash is correct.
         var valid = await ValidateContextAsync(context, validatorContext);
         var user = validatorContext.User;
-        if (!valid || isBot)
+        if (!valid)
         {
-            if (isBot)
-            {
-                _logger.LogInformation(Constants.BypassFiltersEventId,
-                    "Login attempt for {UserName} detected as a captcha bot with score {CaptchaScore}.",
-                    request.UserName, validatorContext.CaptchaResponse.Score);
-            }
-
-            if (!valid)
-            {
-                await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
-            }
+            await UpdateFailedAuthDetailsAsync(user);
 
             await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
             return;
@@ -167,7 +153,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 else
                 {
-                    await UpdateFailedAuthDetailsAsync(user, true, !validatorContext.KnownDevice);
+                    await UpdateFailedAuthDetailsAsync(user);
                     await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                 }
                 return;
@@ -379,7 +365,7 @@ public abstract class BaseRequestValidator<T> where T : class
         await _userRepository.ReplaceAsync(user);
     }
 
-    private async Task UpdateFailedAuthDetailsAsync(User user, bool twoFactorInvalid, bool unknownDevice)
+    private async Task UpdateFailedAuthDetailsAsync(User user)
     {
         if (user == null)
         {
@@ -390,32 +376,6 @@ public abstract class BaseRequestValidator<T> where T : class
         user.FailedLoginCount = ++user.FailedLoginCount;
         user.LastFailedLoginDate = user.RevisionDate = utcNow;
         await _userRepository.ReplaceAsync(user);
-
-        if (ValidateFailedAuthEmailConditions(unknownDevice, user))
-        {
-            if (twoFactorInvalid)
-            {
-                await _mailService.SendFailedTwoFactorAttemptsEmailAsync(user.Email, utcNow, CurrentContext.IpAddress);
-            }
-            else
-            {
-                await _mailService.SendFailedLoginAttemptsEmailAsync(user.Email, utcNow, CurrentContext.IpAddress);
-            }
-        }
-    }
-
-    /// <summary>
-    /// checks to see if a user is trying to log into a new device
-    /// and has reached the maximum number of failed login attempts.
-    /// </summary>
-    /// <param name="unknownDevice">boolean</param>
-    /// <param name="user">current user</param>
-    /// <returns></returns>
-    private bool ValidateFailedAuthEmailConditions(bool unknownDevice, User user)
-    {
-        var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;
-        var failedLoginCount = user?.FailedLoginCount ?? 0;
-        return unknownDevice && failedLoginCeiling > 0 && failedLoginCount == failedLoginCeiling;
     }
 
     private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicyAsync(User user)
