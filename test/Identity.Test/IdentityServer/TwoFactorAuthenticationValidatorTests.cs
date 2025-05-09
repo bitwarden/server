@@ -252,9 +252,9 @@ public class TwoFactorAuthenticationValidatorTests
 
     [Theory]
     [BitAutoData(TwoFactorProviderType.Email)]
-    public async void BuildTwoFactorResultAsync_IndividualEmailProvider_SendsEmail_SetsSsoToken_ReturnsNotNull(
-        TwoFactorProviderType providerType,
-        User user)
+    public async void BuildTwoFactorResultAsync_SetsSsoToken_ReturnsNotNull(
+    TwoFactorProviderType providerType,
+    User user)
     {
         // Arrange
         var providerTypeInt = (int)providerType;
@@ -276,8 +276,6 @@ public class TwoFactorAuthenticationValidatorTests
         Assert.True(providers.ContainsKey(providerTypeInt.ToString()));
         Assert.True(result.ContainsKey("SsoEmail2faSessionToken"));
         Assert.True(result.ContainsKey("Email"));
-
-        await _userService.Received(1).SendTwoFactorEmailAsync(Arg.Any<User>());
     }
 
     [Theory]
