@@ -58,7 +58,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         ProviderName = organization.ProviderName;
         ProviderType = organization.ProviderType;
         FamilySponsorshipFriendlyName = organization.FamilySponsorshipFriendlyName;
-        IsAdminInitiated = organization.IsAdminInitiated;
+        IsAdminInitiated = organization.IsAdminInitiated ?? false;
         FamilySponsorshipAvailable = (FamilySponsorshipFriendlyName == null || IsAdminInitiated) &&
             StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
             .UsersCanSponsor(organization);
