@@ -1,0 +1,16 @@
+﻿namespace Bit.Core.Models.Data.Integrations;
+
+public class IntegrationHandlerResult
+{
+    public IntegrationHandlerResult(bool success, IIntegrationMessage message)
+    {
+        Success = success;
+        Message = message;
+    }
+
+    public bool Success { get; set; } = false;
+    public bool Retryable { get; set; } = false;
+    public IIntegrationMessage Message { get; set; }
+    public DateTime? NotBeforeUtc { get; set; }
+    public string FailureReason { get; set; } = string.Empty;
+}
