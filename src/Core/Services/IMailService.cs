@@ -21,7 +21,8 @@ public interface IMailService
         string email,
         string token,
         ProductTierType productTier,
-        IEnumerable<ProductType> products);
+        IEnumerable<ProductType> products,
+        int trialLength);
     Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token);
     Task SendCannotDeleteClaimedAccountEmailAsync(string email);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
