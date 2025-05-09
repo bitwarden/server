@@ -131,16 +131,11 @@ public interface IUserService
     /// verified domains of that organization, and the user is a member of it.
     /// The organization must be enabled and able to have verified domains.
     /// </remarks>
-    /// <returns>
-    /// False if the Account Deprovisioning feature flag is disabled.
-    /// </returns>
     Task<bool> IsClaimedByAnyOrganizationAsync(Guid userId);
 
     /// <summary>
     /// Verify whether the new email domain meets the requirements for managed users.
     /// </summary>
-    /// <remarks>
-    /// </remarks>
     /// <returns>
     /// IdentityResult
     /// </returns>
@@ -149,9 +144,6 @@ public interface IUserService
     /// <summary>
     /// Gets the organizations that manage the user.
     /// </summary>
-    /// <returns>
-    /// An empty collection if the Account Deprovisioning feature flag is disabled.
-    /// </returns>
     /// <inheritdoc cref="IsClaimedByAnyOrganizationAsync"/>
     Task<IEnumerable<Organization>> GetOrganizationsClaimingUserAsync(Guid userId);
 }

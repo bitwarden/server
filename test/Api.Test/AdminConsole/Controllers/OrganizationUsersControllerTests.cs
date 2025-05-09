@@ -238,19 +238,12 @@ public class OrganizationUsersControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Invite(organizationAbility.Id, model));
     }
 
-    [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
+    [Theory, BitAutoData]
     public async Task Get_ReturnsUser(
-        bool accountDeprovisioningEnabled,
         OrganizationUserUserDetails organizationUser, ICollection<CollectionAccessSelection> collections,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         organizationUser.Permissions = null;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            .Returns(accountDeprovisioningEnabled);
 
         sutProvider.GetDependency<ICurrentContext>()
             .ManageUsers(organizationUser.OrganizationId)
@@ -267,8 +260,8 @@ public class OrganizationUsersControllerTests
         var response = await sutProvider.Sut.Get(organizationUser.Id, false);
 
         Assert.Equal(organizationUser.Id, response.Id);
-        Assert.Equal(accountDeprovisioningEnabled, response.ManagedByOrganization);
-        Assert.Equal(accountDeprovisioningEnabled, response.ClaimedByOrganization);
+        Assert.True(response.ManagedByOrganization);
+        Assert.True(response.ClaimedByOrganization);
     }
 
     [Theory]

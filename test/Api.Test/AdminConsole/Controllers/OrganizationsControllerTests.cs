@@ -140,7 +140,6 @@ public class OrganizationsControllerTests : IDisposable
         _currentContext.OrganizationUser(orgId).Returns(true);
         _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
         _userService.GetOrganizationsClaimingUserAsync(user.Id).Returns(new List<Organization> { null });
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Leave(orgId));
 
@@ -170,7 +169,6 @@ public class OrganizationsControllerTests : IDisposable
         _currentContext.OrganizationUser(orgId).Returns(true);
         _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
         _userService.GetOrganizationsClaimingUserAsync(user.Id).Returns(new List<Organization> { { foundOrg } });
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Leave(orgId));
 
@@ -205,7 +203,6 @@ public class OrganizationsControllerTests : IDisposable
         _currentContext.OrganizationUser(orgId).Returns(true);
         _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
         _userService.GetOrganizationsClaimingUserAsync(user.Id).Returns(new List<Organization>());
 
         await _sut.Leave(orgId);

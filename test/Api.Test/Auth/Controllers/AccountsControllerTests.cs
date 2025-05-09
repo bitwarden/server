@@ -7,7 +7,6 @@ using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
-using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
@@ -183,21 +182,6 @@ public class AccountsControllerTests : IDisposable
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         _userService.ChangeEmailAsync(user, default, default, default, default, default)
                     .Returns(Task.FromResult(IdentityResult.Success));
-
-        await _sut.PostEmail(new EmailRequestModel());
-
-        await _userService.Received(1).ChangeEmailAsync(user, default, default, default, default, default);
-    }
-
-    [Fact]
-    public async Task PostEmail_WithAccountDeprovisioningEnabled_WhenUserIsNotManagedByAnOrganization_ShouldChangeUserEmail()
-    {
-        var user = GenerateExampleUser();
-        ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.ChangeEmailAsync(user, default, default, default, default, default)
-                    .Returns(Task.FromResult(IdentityResult.Success));
-        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
-        _userService.IsClaimedByAnyOrganizationAsync(user.Id).Returns(false);
 
         await _sut.PostEmail(new EmailRequestModel());
 
@@ -533,12 +517,11 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Delete_WhenAccountDeprovisioningIsEnabled_WithUserManagedByAnOrganization_ThrowsBadRequestException()
+    public async Task Delete_WithUserManagedByAnOrganization_ThrowsBadRequestException()
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
-        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
         _userService.IsClaimedByAnyOrganizationAsync(user.Id).Returns(true);
 
         var result = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Delete(new SecretVerificationRequestModel()));
@@ -547,12 +530,11 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Delete_WhenAccountDeprovisioningIsEnabled_WithUserNotManagedByAnOrganization_ShouldSucceed()
+    public async Task Delete_WithUserNotManagedByAnOrganization_ShouldSucceed()
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
-        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
         _userService.IsClaimedByAnyOrganizationAsync(user.Id).Returns(false);
         _userService.DeleteAsync(user).Returns(IdentityResult.Success);
 
