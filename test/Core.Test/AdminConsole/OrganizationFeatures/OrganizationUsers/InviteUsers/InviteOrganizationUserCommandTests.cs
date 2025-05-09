@@ -708,7 +708,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -767,7 +767,7 @@ public class InviteOrganizationUserCommandTests
         // Assert
         Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
 
-        sutProvider.GetDependency<IMailService>().Received(1)
+        await sutProvider.GetDependency<IMailService>().Received(1)
             .SendOrganizationAutoscaledEmailAsync(organization, 1,
                 Arg.Is<IEnumerable<string>>(emails => emails.Any(email => email == "provider@email.com")));
     }
@@ -795,7 +795,7 @@ public class InviteOrganizationUserCommandTests
         var request = new InviteOrganizationUsersRequest(
             invites:
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -866,7 +866,7 @@ public class InviteOrganizationUserCommandTests
         var request = new InviteOrganizationUsersRequest(
             invites:
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
