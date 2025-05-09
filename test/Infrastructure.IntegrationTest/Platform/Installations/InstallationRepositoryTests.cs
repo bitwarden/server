@@ -1,4 +1,4 @@
-using Bit.Core.Platform.Installations;
+﻿using Bit.Core.Platform.Installations;
 using Bit.Infrastructure.IntegrationTest.Comparers;
 using Xunit;
 
