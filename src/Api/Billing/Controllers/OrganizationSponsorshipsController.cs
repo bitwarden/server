@@ -271,8 +271,11 @@ public class OrganizationSponsorshipsController : Controller
         }
 
         var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
-        return new ListResponseModel<OrganizationSponsorshipInvitesResponseModel>(sponsorships.Select(s =>
-            new OrganizationSponsorshipInvitesResponseModel(new OrganizationSponsorshipData(s))));
+        return new ListResponseModel<OrganizationSponsorshipInvitesResponseModel>(
+            sponsorships
+                .Where(s => s.IsAdminInitiated)
+                .Select(s => new OrganizationSponsorshipInvitesResponseModel(new OrganizationSponsorshipData(s)))
+        );
 
     }
 

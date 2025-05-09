@@ -216,6 +216,12 @@ public class OrganizationSponsorshipsControllerTests
         sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
             .GetManyBySponsoringOrganizationAsync(sponsoringOrg.Id).Returns(sponsorships);
 
+        // Set IsAdminInitiated to true for all test sponsorships
+        foreach (var sponsorship in sponsorships)
+        {
+            sponsorship.IsAdminInitiated = true;
+        }
+
         // Act
         var result = await sutProvider.Sut.GetSponsoredOrganizations(sponsoringOrg.Id);
 

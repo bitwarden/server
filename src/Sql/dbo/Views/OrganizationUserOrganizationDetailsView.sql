@@ -51,7 +51,8 @@ SELECT
     O.[AllowAdminAccessToAllCollectionItems],
     O.[UseRiskInsights],
     O.[UseAdminSponsoredFamilies],
-    O.[LimitItemDeletion]
+    O.[LimitItemDeletion],
+    OS.[IsAdminInitiated]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

@@ -316,6 +316,29 @@ public class OrganizationUserRepositoryTests
             BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULl
             Plan = "Test", // TODO: EF does not enforce this being NOT NULl
             PrivateKey = "privatekey",
+            UsePolicies = false,
+            UseSso = false,
+            UseKeyConnector = false,
+            UseScim = false,
+            UseGroups = false,
+            UseDirectory = false,
+            UseEvents = false,
+            UseTotp = false,
+            Use2fa = false,
+            UseApi = false,
+            UseResetPassword = false,
+            UseSecretsManager = false,
+            SelfHost = false,
+            UsersGetPremium = false,
+            UseCustomPermissions = false,
+            Enabled = true,
+            UsePasswordManager = false,
+            LimitCollectionCreation = false,
+            LimitCollectionDeletion = false,
+            LimitItemDeletion = false,
+            AllowAdminAccessToAllCollectionItems = false,
+            UseRiskInsights = false,
+            UseAdminSponsoredFamilies = false
         });
 
         var organizationDomain = new OrganizationDomain
@@ -335,6 +358,7 @@ public class OrganizationUserRepositoryTests
             UserId = user1.Id,
             Status = OrganizationUserStatusType.Confirmed,
             ResetPasswordKey = "resetpasswordkey1",
+            AccessSecretsManager = false
         });
 
         await organizationUserRepository.CreateAsync(new OrganizationUser
