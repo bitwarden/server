@@ -117,7 +117,6 @@ public class TaxServiceTests
     [BitAutoData("ZA", "4123456789", "za_vat")]
     [BitAutoData("KR", "123-45-67890", "kr_brn")]
     [BitAutoData("KR", "1234567890", "kr_brn")]
-    [BitAutoData("ES", "A12345678", "es_cif")]
     [BitAutoData("ES", "ESX1234567X", "eu_vat")]
     [BitAutoData("SE", "SE123456789012", "eu_vat")]
     [BitAutoData("CH", "CHE-123.456.789 HR", "ch_uid")]

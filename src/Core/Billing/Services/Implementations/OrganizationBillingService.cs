@@ -228,6 +228,8 @@ public class OrganizationBillingService(
                         organization.Id,
                         customerSetup.TaxInformation.Country,
                         customerSetup.TaxInformation.TaxId);
+
+                    throw new BadRequestException("billingTaxIdTypeInferenceError");
                 }
 
                 customerCreateOptions.TaxIdData =
