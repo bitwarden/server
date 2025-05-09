@@ -125,6 +125,10 @@
                     <label class="form-check-label" asp-for="UseSso"></label>
                 </div>
                 <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UseOrganizationDomains" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UseOrganizationDomains"></label>
+                </div>
+                <div class="form-check">
                     <input type="checkbox" class="form-check-input" asp-for="UseKeyConnector" disabled='@(canEditPlan ? null : "disabled")'>
                     <label class="form-check-label" asp-for="UseKeyConnector"></label>
                 </div>

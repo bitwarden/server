@@ -102,7 +102,7 @@ public class OrganizationEditModel : OrganizationViewModel
         MaxAutoscaleSmSeats = org.MaxAutoscaleSmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
         MaxAutoscaleSmServiceAccounts = org.MaxAutoscaleSmServiceAccounts;
-
+        UseOrganizationDomains = org.UseOrganizationDomains;
         _plans = plans;
     }
 
@@ -186,6 +186,8 @@ public class OrganizationEditModel : OrganizationViewModel
     public int? SmServiceAccounts { get; set; }
     [Display(Name = "Max Autoscale Machine Accounts")]
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
+    [Display(Name = "Use Organization Domains")]
+    public bool UseOrganizationDomains { get; set; }
 
     /**
      * Creates a Plan[] object for use in Javascript
@@ -215,6 +217,7 @@ public class OrganizationEditModel : OrganizationViewModel
                     Has2fa = p.Has2fa,
                     HasApi = p.HasApi,
                     HasSso = p.HasSso,
+                    HasOrganizationDomains = p.HasOrganizationDomains,
                     HasKeyConnector = p.HasKeyConnector,
                     HasScim = p.HasScim,
                     HasResetPassword = p.HasResetPassword,
@@ -315,6 +318,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.MaxAutoscaleSmSeats = MaxAutoscaleSmSeats;
         existingOrganization.SmServiceAccounts = SmServiceAccounts;
         existingOrganization.MaxAutoscaleSmServiceAccounts = MaxAutoscaleSmServiceAccounts;
+        existingOrganization.UseOrganizationDomains = UseOrganizationDomains;
         return existingOrganization;
     }
 }

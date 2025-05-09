@@ -38,7 +38,8 @@ SELECT
     O.[UseRiskInsights],
     O.[UseAdminSponsoredFamilies],
     P.[Type] ProviderType,
-    O.[LimitItemDeletion]
+    O.[LimitItemDeletion],
+    O.[UseOrganizationDomains]
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN
