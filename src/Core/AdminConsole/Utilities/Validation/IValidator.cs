@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.AdminConsole.Shared.Validation;
+﻿namespace Bit.Core.AdminConsole.Utilities.Validation;
 
 public interface IValidator<T>
 {
