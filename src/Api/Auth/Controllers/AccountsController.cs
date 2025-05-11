@@ -16,6 +16,7 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -45,6 +46,7 @@ public class AccountsController : Controller
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
 
     private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
@@ -68,6 +70,7 @@ public class AccountsController : Controller
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         IRotateUserKeyCommand rotateUserKeyCommand,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IFeatureService featureService,
         IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
         IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> folderValidator,
@@ -87,6 +90,7 @@ public class AccountsController : Controller
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
         _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
         _rotateUserKeyCommand = rotateUserKeyCommand;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _featureService = featureService;
         _cipherValidator = cipherValidator;
         _folderValidator = folderValidator;
@@ -389,7 +393,7 @@ public class AccountsController : Controller
             await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(user.Id,
                 ProviderUserStatusType.Confirmed);
 
-        var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
+        var twoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
@@ -423,7 +427,7 @@ public class AccountsController : Controller
 
         await _userService.SaveUserAsync(model.ToUser(user));
 
-        var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
+        var twoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
@@ -442,7 +446,7 @@ public class AccountsController : Controller
         }
         await _userService.SaveUserAsync(model.ToUser(user), true);
 
-        var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
+        var userTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
@@ -692,7 +696,6 @@ public class AccountsController : Controller
         }
     }
 
-    [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
     [AllowAnonymous]
     [HttpPost("resend-new-device-otp")]
     public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificationRequestModel request)

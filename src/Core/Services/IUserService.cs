@@ -71,11 +71,13 @@ public interface IUserService
     Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null,
         int? version = null);
     Task<bool> CheckPasswordAsync(User user, string password);
+    /// <summary>
+    /// Checks if the user has access to premium features, either through a personal subscription or through an organization.
+    /// </summary>
+    /// <param name="user">user being acted on</param>
+    /// <returns>true if they can access premium; false otherwise.</returns>
     Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
     Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user);
-    [Obsolete("Use ITwoFactorIsEnabledQuery instead.")]
-    Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user);
-    Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
 
     Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,

@@ -13,6 +13,7 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -39,6 +40,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IFeatureService _featureService;
 
@@ -63,6 +65,7 @@ public class AccountsControllerTests : IDisposable
         _policyService = Substitute.For<IPolicyService>();
         _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
         _rotateUserKeyCommand = Substitute.For<IRotateUserKeyCommand>();
+        _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
         _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _cipherValidator =
@@ -86,6 +89,7 @@ public class AccountsControllerTests : IDisposable
             _setInitialMasterPasswordCommand,
             _tdeOffboardingPasswordCommand,
             _rotateUserKeyCommand,
+            _twoFactorIsEnabledQuery,
             _featureService,
             _cipherValidator,
             _folderValidator,

@@ -258,16 +258,6 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        return Task.FromResult(0);
-    }
-
     public Task SendUnclaimedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
     {
         return Task.FromResult(0);
