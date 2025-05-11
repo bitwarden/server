@@ -20,7 +20,6 @@ public class VerifyOrganizationDomainCommand(
     IDnsResolverService dnsResolverService,
     IEventService eventService,
     IGlobalSettings globalSettings,
-    IFeatureService featureService,
     ICurrentContext currentContext,
     ISavePolicyCommand savePolicyCommand,
     IMailService mailService,
