@@ -9,6 +9,6 @@ BEGIN
     FROM
         [dbo].[OrganizationSponsorshipView]
     WHERE
-        [SponsoringOrganizationUserId] = @SponsoringOrganizationUserId
+        [SponsoringOrganizationUserID] = @SponsoringOrganizationUserId
 END
 GO
