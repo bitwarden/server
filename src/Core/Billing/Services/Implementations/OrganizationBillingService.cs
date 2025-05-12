@@ -1,11 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -33,15 +33,14 @@ public class OrganizationBillingService(
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
-    ITaxService taxService,
-    IAutomaticTaxFactory automaticTaxFactory) : IOrganizationBillingService
+    ITaxService taxService) : IOrganizationBillingService
 {
     public async Task Finalize(OrganizationSale sale)
     {
         var (organization, customerSetup, subscriptionSetup) = sale;
 
         var customer = string.IsNullOrEmpty(organization.GatewayCustomerId) && customerSetup != null
-            ? await CreateCustomerAsync(organization, customerSetup)
+            ? await CreateCustomerAsync(organization, customerSetup, subscriptionSetup.PlanType)
             : await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
 
         var subscription = await CreateSubscriptionAsync(organization.Id, customer, subscriptionSetup);
@@ -149,7 +148,8 @@ public class OrganizationBillingService(
 
     private async Task<Customer> CreateCustomerAsync(
         Organization organization,
-        CustomerSetup customerSetup)
+        CustomerSetup customerSetup,
+        PlanType? planType = null)
     {
         var displayName = organization.DisplayName();
 
@@ -210,12 +210,23 @@ public class OrganizationBillingService(
                 City = customerSetup.TaxInformation.City,
                 PostalCode = customerSetup.TaxInformation.PostalCode,
                 State = customerSetup.TaxInformation.State,
-                Country = customerSetup.TaxInformation.Country,
+                Country = customerSetup.TaxInformation.Country
             };
+
             customerCreateOptions.Tax = new CustomerTaxOptions
             {
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             };
+
+            var setNonUSBusinessUseToReverseCharge =
+                featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+            if (setNonUSBusinessUseToReverseCharge &&
+                planType.HasValue && planType.Value.GetProductTier() != ProductTierType.Families &&
+                customerSetup.TaxInformation.Country != "US")
+            {
+                customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
+            }
 
             if (!string.IsNullOrEmpty(customerSetup.TaxInformation.TaxId))
             {
@@ -397,16 +408,22 @@ public class OrganizationBillingService(
             TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
         };
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+        var setNonUSBusinessUseToReverseCharge =
+            featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+        if (setNonUSBusinessUseToReverseCharge)
         {
-            var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriptionSetup.PlanType);
-            var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
-            automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
+            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
-        else
+        else if (customer.HasRecognizedTaxLocation())
         {
-            subscriptionCreateOptions.AutomaticTax ??= new SubscriptionAutomaticTaxOptions();
-            subscriptionCreateOptions.AutomaticTax.Enabled = customer.HasBillingLocation();
+            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
+            {
+                Enabled =
+                    subscriptionSetup.PlanType.GetProductTier() == ProductTierType.Families ||
+                    customer.Address.Country == "US" ||
+                    customer.TaxIds.Any()
+            };
         }
 
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);

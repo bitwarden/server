@@ -16,7 +16,6 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
-using Bit.Core.Billing.Services.Implementations.AutomaticTax;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -25,7 +24,6 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Braintree;
 using CsvHelper;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -50,8 +48,7 @@ public class ProviderBillingService(
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
-    ITaxService taxService,
-    [FromKeyedServices(AutomaticTaxFactory.BusinessUse)] IAutomaticTaxStrategy automaticTaxStrategy)
+    ITaxService taxService)
     : IProviderBillingService
 {
     public async Task AddExistingOrganization(
@@ -233,7 +230,7 @@ public class ProviderBillingService(
 
         var providerCustomer = await subscriberService.GetCustomerOrThrow(provider, new CustomerGetOptions
         {
-            Expand = ["tax_ids"]
+            Expand = ["tax", "tax_ids"]
         });
 
         var providerTaxId = providerCustomer.TaxIds.FirstOrDefault();
@@ -280,6 +277,13 @@ public class ProviderBillingService(
                 }
             ]
         };
+
+        var setNonUSBusinessUseToReverseCharge = featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+        if (setNonUSBusinessUseToReverseCharge && providerCustomer.Address is not { Country: "US" })
+        {
+            customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
+        }
 
         var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
 
@@ -517,6 +521,13 @@ public class ProviderBillingService(
             }
         };
 
+        var setNonUSBusinessUseToReverseCharge = featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+        if (setNonUSBusinessUseToReverseCharge && taxInfo.BillingAddressCountry != "US")
+        {
+            options.TaxExempt = StripeConstants.TaxExempt.Reverse;
+        }
+
         if (!string.IsNullOrEmpty(taxInfo.TaxIdNumber))
         {
             var taxIdType = taxService.GetStripeTaxCode(
@@ -528,6 +539,7 @@ public class ProviderBillingService(
                 logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
                     taxInfo.BillingAddressCountry,
                     taxInfo.TaxIdNumber);
+
                 throw new BadRequestException("billingTaxIdTypeInferenceError");
             }
 
@@ -708,13 +720,20 @@ public class ProviderBillingService(
             TrialPeriodDays = usePaymentMethod ? 14 : null
         };
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
-        {
-            automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
-        }
-        else
+        var setNonUSBusinessUseToReverseCharge =
+            featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+        if (setNonUSBusinessUseToReverseCharge)
         {
             subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+        }
+        else if (customer.HasRecognizedTaxLocation())
+        {
+            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
+            {
+                Enabled = customer.Address.Country == "US" ||
+                          customer.TaxIds.Any()
+            };
         }
 
         try

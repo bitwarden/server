@@ -1,7 +1,10 @@
-﻿using Bit.Core.Billing.Caches;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -26,8 +29,7 @@ public class SubscriberService(
     ILogger<SubscriberService> logger,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
-    ITaxService taxService,
-    IAutomaticTaxFactory automaticTaxFactory) : ISubscriberService
+    ITaxService taxService) : ISubscriberService
 {
     public async Task CancelSubscription(
         ISubscriber subscriber,
@@ -126,7 +128,7 @@ public class SubscriberService(
                 [subscriber.BraintreeCloudRegionField()] = globalSettings.BaseServiceUri.CloudRegion
             },
             Email = subscriber.BillingEmailAddress(),
-            PaymentMethodNonce = paymentMethodNonce,
+            PaymentMethodNonce = paymentMethodNonce
         });
 
         if (customerResult.IsSuccess())
@@ -480,7 +482,7 @@ public class SubscriberService(
 
                     var matchingSetupIntent = setupIntentsForUpdatedPaymentMethod.First();
 
-                    // Find the customer's existing setup intents that should be cancelled.
+                    // Find the customer's existing setup intents that should be canceled.
                     var existingSetupIntentsForCustomer = (await getExistingSetupIntentsForCustomer)
                         .Where(si =>
                             si.Status is "requires_payment_method" or "requires_confirmation" or "requires_action");
@@ -517,7 +519,7 @@ public class SubscriberService(
                     await stripeAdapter.PaymentMethodAttachAsync(token,
                         new PaymentMethodAttachOptions { Customer = subscriber.GatewayCustomerId });
 
-                    // Find the customer's existing setup intents that should be cancelled.
+                    // Find the customer's existing setup intents that should be canceled.
                     var existingSetupIntentsForCustomer = (await getExistingSetupIntentsForCustomer)
                         .Where(si =>
                             si.Status is "requires_payment_method" or "requires_confirmation" or "requires_action");
@@ -635,7 +637,8 @@ public class SubscriberService(
                     logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
                         taxInformation.Country,
                         taxInformation.TaxId);
-                    throw new Exceptions.BadRequestException("billingTaxIdTypeInferenceError");
+
+                    throw new BadRequestException("billingTaxIdTypeInferenceError");
                 }
             }
 
@@ -652,53 +655,67 @@ public class SubscriberService(
                         logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
                             taxInformation.TaxId,
                             taxInformation.Country);
-                        throw new Exceptions.BadRequestException("billingInvalidTaxIdError");
+
+                        throw new BadRequestException("billingInvalidTaxIdError");
+
                     default:
                         logger.LogError(e,
                             "Error creating tax ID '{TaxId}' in country '{Country}' for customer '{CustomerID}'.",
                             taxInformation.TaxId,
                             taxInformation.Country,
                             customer.Id);
-                        throw new Exceptions.BadRequestException("billingTaxIdCreationError");
+
+                        throw new BadRequestException("billingTaxIdCreationError");
                 }
             }
         }
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+        var subscription =
+            customer.Subscriptions.First(subscription => subscription.Id == subscriber.GatewaySubscriptionId);
+
+        var setNonUSBusinessUseToReverseCharge =
+            featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+        if (setNonUSBusinessUseToReverseCharge)
         {
-            if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+            if (customer is
+                {
+                    Address.Country: not "US",
+                    TaxExempt: not StripeConstants.TaxExempt.Reverse
+                })
             {
-                var subscriptionGetOptions = new SubscriptionGetOptions
-                {
-                    Expand = ["customer.tax", "customer.tax_ids"]
-                };
-                var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
-                var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, subscription.Items.Select(x => x.Price.Id));
-                var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
-                var automaticTaxOptions = automaticTaxStrategy.GetUpdateOptions(subscription);
-                if (automaticTaxOptions?.AutomaticTax?.Enabled != null)
-                {
-                    await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId, automaticTaxOptions);
-                }
+                await stripeAdapter.CustomerUpdateAsync(customer.Id,
+                    new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
             }
-        }
-        else
-        {
-            if (SubscriberIsEligibleForAutomaticTax(subscriber, customer))
+
+            if (!subscription.AutomaticTax.Enabled)
             {
-                await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
+                await stripeAdapter.SubscriptionUpdateAsync(subscription.Id,
                     new SubscriptionUpdateOptions
                     {
                         AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
                     });
             }
+        }
+        else
+        {
+            var automaticTaxShouldBeEnabled = subscriber switch
+            {
+                User => true,
+                Organization organization => organization.PlanType.GetProductTier() == ProductTierType.Families ||
+                                             customer.Address.Country == "US" || (customer.TaxIds?.Any() ?? false),
+                Provider => customer.Address.Country == "US" || (customer.TaxIds?.Any() ?? false),
+                _ => false
+            };
 
-            return;
-
-            bool SubscriberIsEligibleForAutomaticTax(ISubscriber localSubscriber, Customer localCustomer)
-                => !string.IsNullOrEmpty(localSubscriber.GatewaySubscriptionId) &&
-                   (localCustomer.Subscriptions?.Any(sub => sub.Id == localSubscriber.GatewaySubscriptionId && !sub.AutomaticTax.Enabled) ?? false) &&
-                   localCustomer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
+            if (automaticTaxShouldBeEnabled && !subscription.AutomaticTax.Enabled)
+            {
+                await stripeAdapter.SubscriptionUpdateAsync(subscription.Id,
+                    new SubscriptionUpdateOptions
+                    {
+                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+                    });
+            }
         }
     }
 
