@@ -3,7 +3,6 @@ using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
@@ -21,7 +20,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
 {
     private UserManager<User> _userManager;
     private readonly ICurrentContext _currentContext;
-    private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IDeviceValidator _deviceValidator;
     public ResourceOwnerPasswordValidator(
@@ -31,11 +29,9 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        ICaptchaValidationService captchaValidationService,
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
@@ -50,7 +46,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             deviceValidator,
             twoFactorAuthenticationValidator,
             organizationUserRepository,
-            mailService,
             logger,
             currentContext,
             globalSettings,
@@ -63,7 +58,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
     {
         _userManager = userManager;
         _currentContext = currentContext;
-        _captchaValidationService = captchaValidationService;
         _authRequestRepository = authRequestRepository;
         _deviceValidator = deviceValidator;
     }
@@ -88,37 +82,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             Device = knownDevice ?? requestDevice,
         };
 
-        string bypassToken = null;
-        if (!validatorContext.KnownDevice &&
-            _captchaValidationService.RequireCaptchaValidation(_currentContext, user))
-        {
-            var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
-
-            if (string.IsNullOrWhiteSpace(captchaResponse))
-            {
-                context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Captcha required.",
-                    new Dictionary<string, object>
-                    {
-                        { _captchaValidationService.SiteKeyResponseKeyName, _captchaValidationService.SiteKey },
-                    });
-                return;
-            }
-
-            validatorContext.CaptchaResponse = await _captchaValidationService.ValidateCaptchaResponseAsync(
-                captchaResponse, _currentContext.IpAddress, user);
-            if (!validatorContext.CaptchaResponse.Success)
-            {
-                await BuildErrorResultAsync("Captcha is invalid. Please refresh and try again", false, context, null);
-                return;
-            }
-            bypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
-        }
-
         await ValidateAsync(context, context.Request, validatorContext);
-        if (context.Result.CustomResponse != null && bypassToken != null)
-        {
-            context.Result.CustomResponse["CaptchaBypassToken"] = bypassToken;
-        }
     }
 
     protected async override Task<bool> ValidateContextAsync(ResourceOwnerPasswordValidationContext context,
