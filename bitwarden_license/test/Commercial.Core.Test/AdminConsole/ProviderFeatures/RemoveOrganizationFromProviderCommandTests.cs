@@ -1,5 +1,4 @@
-﻿using System.ComponentModel;
-using Bit.Commercial.Core.AdminConsole.Providers;
+﻿using Bit.Commercial.Core.AdminConsole.Providers;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -230,13 +229,13 @@ public class RemoveOrganizationFromProviderCommandTests
             options.Email == organization.BillingEmail &&
             options.Expand[0] == "tax" &&
             options.Expand[1] == "tax_ids")).Returns(new Customer
-        {
-            Id = "customer_id",
-            Address = new Address
             {
-                Country = "US"
-            }
-        });
+                Id = "customer_id",
+                Address = new Address
+                {
+                    Country = "US"
+                }
+            });
 
         stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
         {
@@ -318,13 +317,13 @@ public class RemoveOrganizationFromProviderCommandTests
             options.Email == organization.BillingEmail &&
             options.Expand[0] == "tax" &&
             options.Expand[1] == "tax_ids")).Returns(new Customer
-        {
-            Id = "customer_id",
-            Address = new Address
             {
-                Country = "US"
-            }
-        });
+                Id = "customer_id",
+                Address = new Address
+                {
+                    Country = "US"
+                }
+            });
 
         stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
         {

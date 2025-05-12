@@ -156,45 +156,45 @@ public class StripePaymentService : IPaymentService
                 switch (subscriber)
                 {
                     case User:
-                    {
-                        subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
-                        break;
-                    }
-                    case Organization:
-                    {
-                        if (sub.Customer.Address.Country == "US")
                         {
                             subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+                            break;
                         }
-                        else
+                    case Organization:
                         {
-                            var familyPriceIds = (await Task.WhenAll(
-                                    _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019),
-                                    _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)))
-                                .Select(plan => plan.PasswordManager.StripePlanId);
+                            if (sub.Customer.Address.Country == "US")
+                            {
+                                subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+                            }
+                            else
+                            {
+                                var familyPriceIds = (await Task.WhenAll(
+                                        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019),
+                                        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)))
+                                    .Select(plan => plan.PasswordManager.StripePlanId);
 
-                            var updateIsForPersonalUse = updatedItemOptions
-                                .Select(option => option.Price)
-                                .Intersect(familyPriceIds)
-                                .Any();
+                                var updateIsForPersonalUse = updatedItemOptions
+                                    .Select(option => option.Price)
+                                    .Intersect(familyPriceIds)
+                                    .Any();
 
+                                subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
+                                {
+                                    Enabled = updateIsForPersonalUse || sub.Customer.TaxIds.Any()
+                                };
+                            }
+
+                            break;
+                        }
+                    case Provider:
+                        {
                             subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
                             {
-                                Enabled = updateIsForPersonalUse || sub.Customer.TaxIds.Any()
+                                Enabled = sub.Customer.Address.Country == "US" ||
+                                          sub.Customer.TaxIds.Any()
                             };
+                            break;
                         }
-
-                        break;
-                    }
-                    case Provider:
-                    {
-                        subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
-                        {
-                            Enabled = sub.Customer.Address.Country == "US" ||
-                                      sub.Customer.TaxIds.Any()
-                        };
-                        break;
-                    }
                 }
             }
         }

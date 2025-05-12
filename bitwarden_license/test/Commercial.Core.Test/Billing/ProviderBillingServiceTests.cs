@@ -29,7 +29,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
 using CsvHelper;
-using HandlebarsDotNet.Features;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Stripe;

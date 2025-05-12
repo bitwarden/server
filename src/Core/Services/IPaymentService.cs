@@ -5,7 +5,6 @@ using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.Models.Api.Requests.Organizations;
 using Bit.Core.Billing.Models.Api.Responses;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 
