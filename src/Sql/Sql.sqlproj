@@ -9,7 +9,6 @@
     <TargetDatabaseSet>True</TargetDatabaseSet>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <TargetFrameworkProfile />
-    <!-- <ValidateCasingOnIdentifiers>false</ValidateCasingOnIdentifiers> -->
   </PropertyGroup>
   <ItemGroup>
     <Build Remove="dbo_future/**/*" />
