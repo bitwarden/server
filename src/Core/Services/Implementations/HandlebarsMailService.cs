@@ -84,7 +84,8 @@ public class HandlebarsMailService : IMailService
         string email,
         string token,
         ProductTierType productTier,
-        IEnumerable<ProductType> products)
+        IEnumerable<ProductType> products,
+        int trialLength)
     {
         var message = CreateDefaultMessage("Verify your email", email);
         var model = new TrialInitiationVerifyEmail
@@ -95,7 +96,8 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
             ProductTier = productTier,
-            Product = products
+            Product = products,
+            TrialLength = trialLength
         };
         await AddMessageContentAsync(message, "Billing.TrialInitiationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
@@ -1132,40 +1134,6 @@ public class HandlebarsMailService : IMailService
         await AddMessageContentAsync(message, "Auth.OTPEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         message.Category = "OTP";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
-    public async Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        var message = CreateDefaultMessage("Failed login attempts detected", email);
-        var model = new FailedAuthAttemptsModel()
-        {
-            TheDate = utcNow.ToLongDateString(),
-            TheTime = utcNow.ToShortTimeString(),
-            TimeZone = _utcTimeZoneDisplay,
-            IpAddress = ip,
-            AffectedEmail = email
-
-        };
-        await AddMessageContentAsync(message, "Auth.FailedLoginAttempts", model);
-        message.Category = "FailedLoginAttempts";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
-    public async Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        var message = CreateDefaultMessage("Failed login attempts detected", email);
-        var model = new FailedAuthAttemptsModel()
-        {
-            TheDate = utcNow.ToLongDateString(),
-            TheTime = utcNow.ToShortTimeString(),
-            TimeZone = _utcTimeZoneDisplay,
-            IpAddress = ip,
-            AffectedEmail = email
-
-        };
-        await AddMessageContentAsync(message, "Auth.FailedTwoFactorAttempts", model);
-        message.Category = "FailedTwoFactorAttempts";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 

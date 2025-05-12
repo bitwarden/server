@@ -21,7 +21,8 @@ public interface IMailService
         string email,
         string token,
         ProductTierType productTier,
-        IEnumerable<ProductType> products);
+        IEnumerable<ProductType> products,
+        int trialLength);
     Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token);
     Task SendCannotDeleteClaimedAccountEmailAsync(string email);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
@@ -87,8 +88,6 @@ public interface IMailService
     Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail);
     Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, DateTime expirationDate);
     Task SendOTPEmailAsync(string email, string token);
-    Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip);
-    Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip);
     Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName);
     Task SendUnclaimedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName);
     Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);

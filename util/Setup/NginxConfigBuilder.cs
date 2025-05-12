@@ -73,7 +73,6 @@ public class NginxConfigBuilder
 
         public TemplateModel(Context context)
         {
-            Captcha = context.Config.Captcha;
             Ssl = context.Config.Ssl;
             EnableKeyConnector = context.Config.EnableKeyConnector;
             EnableScim = context.Config.EnableScim;
@@ -127,7 +126,6 @@ public class NginxConfigBuilder
             }
         }
 
-        public bool Captcha { get; set; }
         public bool Ssl { get; set; }
         public bool EnableKeyConnector { get; set; }
         public bool EnableScim { get; set; }

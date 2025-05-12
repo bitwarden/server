@@ -114,10 +114,7 @@ public static class FeatureFlagKeys
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
     public const string EmailVerification = "email-verification";
-    public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
-    public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
-    public const string NewDeviceVerification = "new-device-verification";
     public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
@@ -151,6 +148,7 @@ public static class FeatureFlagKeys
     public const string PM199566_UpdateMSPToChargeAutomatically = "pm-199566-update-msp-to-charge-automatically";
     public const string PM19956_RequireProviderPaymentMethodDuringSetup = "pm-19956-require-provider-payment-method-during-setup";
     public const string UseOrganizationWarningsService = "use-organization-warnings-service";
+    public const string PM20322_AllowTrialLength0 = "pm-20322-allow-trial-length-0";
 
     /* Data Insights and Reporting Team */
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";

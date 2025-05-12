@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using System.Diagnostics;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
@@ -292,6 +293,7 @@ public class OrganizationBillingController(
         sale.SubscriptionSetup.SkipTrial = true;
         await organizationBillingService.Finalize(sale);
         var org = await organizationRepository.GetByIdAsync(organizationId);
+        Debug.Assert(org is not null, "This organization has already been found via this same ID, this should be fine.");
         if (organizationSignup.PaymentMethodType != null)
         {
             var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
