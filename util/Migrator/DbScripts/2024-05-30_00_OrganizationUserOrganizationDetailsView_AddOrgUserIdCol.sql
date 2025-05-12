@@ -1,3 +1,4 @@
+-- Add OrganizationUserId column to OrganizationUserOrganizationDetailsView
 CREATE OR ALTER VIEW [dbo].[OrganizationUserOrganizationDetailsView]
 AS
 SELECT
