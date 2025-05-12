@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -223,7 +224,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
                 }
                 break;
             case Failure<InviteOrganizationUsersResponse> failure:
-                throw new BadRequestException(failure.ErrorMessage);
+                throw new BadRequestException(failure.Error.Message);
             default:
                 throw new InvalidOperationException($"Unhandled commandResult type: {commandResult.GetType().Name}");
         }

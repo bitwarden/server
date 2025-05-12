@@ -84,9 +84,11 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         {
             case Failure<InviteOrganizationUsersResponse> failure:
                 return new Failure<InviteOrganizationUsersResponse>(
-                    failure.Errors.Select(error => new Error<InviteOrganizationUsersResponse>(error.Message,
-                        new InviteOrganizationUsersResponse(error.ErroredValue.InvitedUsers, organizationId)
-                        )));
+                        new Error<InviteOrganizationUsersResponse>(
+                            failure.Error.Message,
+                            new InviteOrganizationUsersResponse(failure.Error.ErroredValue.InvitedUsers, organizationId)
+                            )
+                        );
 
             case Success<InviteOrganizationUsersResponse> success when success.Value.InvitedUsers.Any():
 
