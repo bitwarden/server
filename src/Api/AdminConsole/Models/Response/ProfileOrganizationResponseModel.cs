@@ -58,7 +58,8 @@ public class ProfileOrganizationResponseModel : ResponseModel
         ProviderName = organization.ProviderName;
         ProviderType = organization.ProviderType;
         FamilySponsorshipFriendlyName = organization.FamilySponsorshipFriendlyName;
-        FamilySponsorshipAvailable = FamilySponsorshipFriendlyName == null &&
+        IsAdminInitiated = organization.IsAdminInitiated ?? false;
+        FamilySponsorshipAvailable = (FamilySponsorshipFriendlyName == null || IsAdminInitiated) &&
             StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
             .UsersCanSponsor(organization);
         ProductTierType = organization.PlanType.GetProductTier();
@@ -157,4 +158,5 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool UserIsClaimedByOrganization { get; set; }
     public bool UseRiskInsights { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
+    public bool IsAdminInitiated { get; set; }
 }

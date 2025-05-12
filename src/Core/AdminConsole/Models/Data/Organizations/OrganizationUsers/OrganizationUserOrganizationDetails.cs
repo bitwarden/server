@@ -60,4 +60,5 @@ public class OrganizationUserOrganizationDetails
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     public bool UseRiskInsights { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
+    public bool? IsAdminInitiated { get; set; }
 }
