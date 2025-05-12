@@ -518,9 +518,8 @@ public class AccountsController : Controller
         }
         else
         {
-            // If Account Deprovisioning is enabled, we need to check if the user is claimed by any organization.
-            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-                && await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
+            // Check if the user is claimed by any organization.
+            if (await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
             {
                 throw new BadRequestException("Cannot delete accounts owned by an organization. Contact your organization administrator for additional details.");
             }
