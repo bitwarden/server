@@ -1,6 +1,7 @@
 ﻿using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Factories;
+using LinqToDB.EntityFrameworkCore;
 
 namespace Bit.Seeder.Recipes;
 

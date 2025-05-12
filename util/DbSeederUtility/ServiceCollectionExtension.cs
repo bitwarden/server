@@ -1,4 +1,9 @@
-﻿namespace Bit.DbSeederUtility;
+﻿using Bit.SharedWeb.Utilities;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+namespace Bit.DbSeederUtility;
 
 public static class ServiceCollectionExtension
 {

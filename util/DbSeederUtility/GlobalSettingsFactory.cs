@@ -1,4 +1,7 @@
-﻿namespace Bit.DbSeederUtility;
+﻿using Bit.Core.Settings;
+using Microsoft.Extensions.Configuration;
+
+namespace Bit.DbSeederUtility;
 
 public static class GlobalSettingsFactory
 {

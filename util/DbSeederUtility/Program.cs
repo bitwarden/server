@@ -1,4 +1,7 @@
-﻿using Bit.Seeder.Recipes;
+﻿using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Seeder.Recipes;
+using CommandDotNet;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.DbSeederUtility;
 
