@@ -4,7 +4,7 @@
     "rollForward": "latestFeature"
   },
   "msbuild-sdks": {
-    "Microsoft.Build.Traversal": "4.1.0",
+    "Microsoft.Build.Traversal": "4.1.82",
     "Microsoft.Build.Sql": "0.1.9-preview"
   }
 }
