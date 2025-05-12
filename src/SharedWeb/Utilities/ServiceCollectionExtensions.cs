@@ -151,14 +151,6 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<EmergencyAccessInviteTokenable>>>())
         );
 
-        services.AddSingleton<IDataProtectorTokenFactory<HCaptchaTokenable>>(serviceProvider =>
-            new DataProtectorTokenFactory<HCaptchaTokenable>(
-                HCaptchaTokenable.ClearTextPrefix,
-                HCaptchaTokenable.DataProtectorPurpose,
-                serviceProvider.GetDataProtectionProvider(),
-                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<HCaptchaTokenable>>>())
-        );
-
         services.AddSingleton<IDataProtectorTokenFactory<SsoTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<SsoTokenable>(
                 SsoTokenable.ClearTextPrefix,
@@ -332,34 +324,40 @@ public static class ServiceCollectionExtensions
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
         {
+            services.AddKeyedSingleton<IEventWriteService, AzureQueueEventWriteService>("storage");
+
             if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.TopicName))
             {
-                services.AddSingleton<IEventWriteService, AzureServiceBusEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, AzureServiceBusEventWriteService>("broadcast");
             }
             else
             {
-                services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
             }
         }
         else if (globalSettings.SelfHosted)
         {
+            services.AddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("storage");
+
             if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HostName) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Username) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Password) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.ExchangeName))
             {
-                services.AddSingleton<IEventWriteService, RabbitMqEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, RabbitMqEventWriteService>("broadcast");
             }
             else
             {
-                services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
             }
         }
         else
         {
-            services.AddSingleton<IEventWriteService, NoopEventWriteService>();
+            services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("storage");
+            services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
         }
+        services.AddScoped<IEventWriteService, EventRouteService>();
 
         if (CoreHelpers.SettingHasValue(globalSettings.Attachment.ConnectionString))
         {
@@ -394,16 +392,6 @@ public static class ServiceCollectionExtensions
         else
         {
             services.AddSingleton<IReferenceEventService, AzureQueueReferenceEventService>();
-        }
-
-        if (CoreHelpers.SettingHasValue(globalSettings.Captcha?.HCaptchaSecretKey) &&
-            CoreHelpers.SettingHasValue(globalSettings.Captcha?.HCaptchaSiteKey))
-        {
-            services.AddSingleton<ICaptchaValidationService, HCaptchaValidationService>();
-        }
-        else
-        {
-            services.AddSingleton<ICaptchaValidationService, NoopCaptchaValidationService>();
         }
     }
 

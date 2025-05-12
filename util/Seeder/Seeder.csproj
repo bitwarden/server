@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Bit.Seeder</RootNamespace>
+    <UserSecretsId>Bit.Seeder</UserSecretsId>
+    <Description>Core library for generating and managing test data for Bitwarden</Description>
+    <OutputType>library</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Settings\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Core\Core.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructure.EntityFramework\Infrastructure.EntityFramework.csproj" />
+    <ProjectReference Include="..\..\src\SharedWeb\SharedWeb.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="..\..\Program.cs" />
+  </ItemGroup>
+
+</Project>
