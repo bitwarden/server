@@ -255,14 +255,14 @@ public class UserServiceTests
     [Theory]
     // A user who has a password, and the password is valid should only check for that password
     [BitAutoData(true, "test_password", true, ShouldCheck.Password)]
-    // // A user who does not have a password, should only check if the OTP is valid
-    // [BitAutoData(false, "otp_token", true, ShouldCheck.OTP)]
-    // // A user who has a password but supplied a OTP, it will check password first and then try OTP
-    // [BitAutoData(true, "otp_token", true, ShouldCheck.Password | ShouldCheck.OTP)]
-    // // A user who does not have a password and supplied an invalid OTP token, should only check OTP and return invalid
-    // [BitAutoData(false, "bad_otp_token", false, ShouldCheck.OTP)]
-    // // A user who does have a password but they supply a bad one, we will check both but it will still be invalid
-    // [BitAutoData(true, "bad_test_password", false, ShouldCheck.Password | ShouldCheck.OTP)]
+    // A user who does not have a password, should only check if the OTP is valid
+    [BitAutoData(false, "otp_token", true, ShouldCheck.OTP)]
+    // A user who has a password but supplied a OTP, it will check password first and then try OTP
+    [BitAutoData(true, "otp_token", true, ShouldCheck.Password | ShouldCheck.OTP)]
+    // A user who does not have a password and supplied an invalid OTP token, should only check OTP and return invalid
+    [BitAutoData(false, "bad_otp_token", false, ShouldCheck.OTP)]
+    // A user who does have a password but they supply a bad one, we will check both but it will still be invalid
+    [BitAutoData(true, "bad_test_password", false, ShouldCheck.Password | ShouldCheck.OTP)]
     public async Task VerifySecretAsync_Works(
         bool shouldHavePassword, string secret, bool expectedIsVerified, ShouldCheck shouldCheck, // inline theory data
         User user) // AutoFixture injected data
@@ -289,13 +289,11 @@ public class UserServiceTests
         // HACK: reassign public property on base class after it's overwritten by autofixture
         sutProvider.Sut.PasswordHasher = sutProvider.GetDependency<IPasswordHasher<User>>();
 
+        // DEBUG: check the public property on the base class matches the mock in SutProvider.
+        // If you remove the HACK above, this will fail (and so will the rest of the test).
         Assert.Equal(sutProvider.Sut.PasswordHasher, sutProvider.GetDependency<IPasswordHasher<User>>());
 
         var actualIsVerified = await sutProvider.Sut.VerifySecretAsync(user, secret);
-
-        sutProvider.GetDependency<IPasswordHasher<User>>()
-            .Received(1)
-            .VerifyHashedPassword(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>());
 
         Assert.Equal(expectedIsVerified, actualIsVerified);
 
