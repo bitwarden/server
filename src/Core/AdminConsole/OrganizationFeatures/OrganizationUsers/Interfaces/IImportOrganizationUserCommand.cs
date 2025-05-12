@@ -2,7 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 public interface IImportOrganizationUserCommand
 {
