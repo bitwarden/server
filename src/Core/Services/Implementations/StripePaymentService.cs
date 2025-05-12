@@ -113,6 +113,8 @@ public class StripePaymentService : IPaymentService
             throw new BadRequestException("You do not have an active subscription. Reinstate your subscription to make changes.");
         }
 
+        var existingCoupon = sub.Customer.Discount?.Coupon?.Id;
+
         var collectionMethod = sub.CollectionMethod;
         var daysUntilDue = sub.DaysUntilDue;
         var chargeNow = collectionMethod == "charge_automatically";
@@ -215,6 +217,19 @@ public class StripePaymentService : IPaymentService
                 {
                     CollectionMethod = collectionMethod,
                     DaysUntilDue = daysUntilDue,
+                });
+            }
+
+            var customer = await _stripeAdapter.CustomerGetAsync(sub.CustomerId);
+
+            var newCoupon = customer.Discount?.Coupon?.Id;
+
+            if (!string.IsNullOrEmpty(existingCoupon) && string.IsNullOrEmpty(newCoupon))
+            {
+                // Re-add the lost coupon due to the update.
+                await _stripeAdapter.CustomerUpdateAsync(sub.CustomerId, new CustomerUpdateOptions
+                {
+                    Coupon = existingCoupon
                 });
             }
         }

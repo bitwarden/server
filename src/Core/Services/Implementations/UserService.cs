@@ -11,6 +11,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
@@ -78,6 +79,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IPremiumUserBillingService _premiumUserBillingService;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDistributedCache _distributedCache;
 
     public UserService(
@@ -116,6 +118,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IPremiumUserBillingService premiumUserBillingService,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDistributedCache distributedCache)
         : base(
               store,
@@ -159,6 +162,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _premiumUserBillingService = premiumUserBillingService;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _distributedCache = distributedCache;
     }
 
@@ -919,7 +923,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await SaveUserAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_Disabled2fa);
 
-        if (!await TwoFactorIsEnabledAsync(user))
+        if (!await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
         {
             await CheckPoliciesOnTwoFactorRemovalAsync(user);
         }
@@ -1281,48 +1285,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             orgAbility.UsersGetPremium &&
             orgAbility.Enabled);
     }
-
-    public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)
-    {
-        var providers = user.GetTwoFactorProviders();
-        if (providers == null)
-        {
-            return false;
-        }
-
-        foreach (var p in providers)
-        {
-            if (p.Value?.Enabled ?? false)
-            {
-                if (!TwoFactorProvider.RequiresPremium(p.Key))
-                {
-                    return true;
-                }
-                if (await CanAccessPremium(user))
-                {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    public async Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user)
-    {
-        var providers = user.GetTwoFactorProviders();
-        if (providers == null || !providers.ContainsKey(provider) || !providers[provider].Enabled)
-        {
-            return false;
-        }
-
-        if (!TwoFactorProvider.RequiresPremium(provider))
-        {
-            return true;
-        }
-
-        return await CanAccessPremium(user);
-    }
-
     public async Task<string> GenerateSignInTokenAsync(User user, string purpose)
     {
         var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,

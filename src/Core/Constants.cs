@@ -114,9 +114,7 @@ public static class FeatureFlagKeys
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
     public const string EmailVerification = "email-verification";
-    public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
-    public const string NewDeviceVerification = "new-device-verification";
     public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";

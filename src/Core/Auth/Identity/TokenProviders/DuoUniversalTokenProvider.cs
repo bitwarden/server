@@ -17,7 +17,7 @@ public class DuoUniversalTokenProvider(
 {
     /// <summary>
     /// We need the IServiceProvider to resolve the <see cref="IUserService"/>. There is a complex dependency dance
-    /// occurring between <see cref="IUserService"/>, which extends the <see cref="UserManager{User}"/>, and the usage 
+    /// occurring between <see cref="IUserService"/>, which extends the <see cref="UserManager{User}"/>, and the usage
     /// of the <see cref="UserManager{User}"/> within this class. Trying to resolve the <see cref="IUserService"/> using
     /// the DI pipeline will not allow the server to start and it will hang and give no helpful indication as to the
     /// problem.
@@ -29,12 +29,13 @@ public class DuoUniversalTokenProvider(
     public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
-        var provider = await GetDuoTwoFactorProvider(user, userService);
-        if (provider == null)
+        var duoUniversalTokenProvider = await GetDuoTwoFactorProvider(user, userService);
+        if (duoUniversalTokenProvider == null)
         {
             return false;
         }
-        return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Duo, user);
+
+        return duoUniversalTokenProvider.Enabled;
     }
 
     public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
@@ -58,7 +59,7 @@ public class DuoUniversalTokenProvider(
     }
 
     /// <summary>
-    /// Get the Duo Two Factor Provider for the user if they have access to Duo
+    /// Get the Duo Two Factor Provider for the user if they have premium access to Duo
     /// </summary>
     /// <param name="user">Active User</param>
     /// <returns>null or Duo TwoFactorProvider</returns>

@@ -60,7 +60,7 @@ public interface IProviderBillingService
         int seatAdjustment);
 
     /// <summary>
-    /// Determines whether the provided <paramref name="seatAdjustment"/> will result in a purchase for the <paramref name="provider"/>'s <see cref="planType"/>.
+    /// Determines whether the provided <paramref name="seatAdjustment"/> will result in a purchase for the <paramref name="provider"/>'s <see cref="PlanType"/>.
     /// Seat adjustments that result in purchases include:
     /// <list type="bullet">
     /// <item>The <paramref name="provider"/> going from below the seat minimum to above the seat minimum for the provided <paramref name="planType"/></item>
