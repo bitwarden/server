@@ -1,8 +1,9 @@
 CREATE PROCEDURE [dbo].[OrganizationSponsorship_ReadBySponsoringOrganizationUserId]
-    @SponsoringOrganizationUserId UNIQUEIDENTIFIER
+    @SponsoringOrganizationUserId UNIQUEIDENTIFIER,
+    @IsAdminInitiated BIT = 0
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
     SELECT
         *
@@ -10,5 +11,5 @@ BEGIN
         [dbo].[OrganizationSponsorshipView]
     WHERE
         [SponsoringOrganizationUserID] = @SponsoringOrganizationUserId
+    and [IsAdminInitiated] = @IsAdminInitiated
 END
-GO
