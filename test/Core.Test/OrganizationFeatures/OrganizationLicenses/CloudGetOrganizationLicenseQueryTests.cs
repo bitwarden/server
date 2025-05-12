@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -8,6 +9,7 @@ using Bit.Core.OrganizationFeatures.OrganizationLicenses;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -76,8 +78,10 @@ public class CloudGetOrganizationLicenseQueryTests
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
         sutProvider.GetDependency<IPaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
         sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
+        var plan = StaticStore.GetPlan(organization.PlanType);
+        sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType).Returns(plan);
         sutProvider.GetDependency<ILicensingService>()
-            .CreateOrganizationTokenAsync(organization, installationId, subInfo)
+            .CreateOrganizationTokenAsync(organization, installationId, subInfo, plan.SecretsManager.MaxProjects)
             .Returns(token);
 
         var result = await sutProvider.Sut.GetLicenseAsync(organization, installationId);
