@@ -58,7 +58,8 @@ public class ProfileOrganizationResponseModel : ResponseModel
         ProviderName = organization.ProviderName;
         ProviderType = organization.ProviderType;
         FamilySponsorshipFriendlyName = organization.FamilySponsorshipFriendlyName;
-        FamilySponsorshipAvailable = FamilySponsorshipFriendlyName == null &&
+        IsAdminInitiated = organization.IsAdminInitiated ?? false;
+        FamilySponsorshipAvailable = (FamilySponsorshipFriendlyName == null || IsAdminInitiated) &&
             StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
             .UsersCanSponsor(organization);
         ProductTierType = organization.PlanType.GetProductTier();
@@ -135,7 +136,6 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     /// <summary>
     /// Obsolete.
-    ///
     /// See <see cref="UserIsClaimedByOrganization"/>
     /// </summary>
     [Obsolete("Please use UserIsClaimedByOrganization instead. This property will be removed in a future version.")]
@@ -145,16 +145,14 @@ public class ProfileOrganizationResponseModel : ResponseModel
         set => UserIsClaimedByOrganization = value;
     }
     /// <summary>
-    /// Indicates if the organization claims the user.
+    /// Indicates if the user is claimed by the organization.
     /// </summary>
     /// <remarks>
-    /// An organization claims a user if the user's email domain is verified by the organization and the user is a member of it.
+    /// A user is claimed by an organization if the user's email domain is verified by the organization and the user is a member.
     /// The organization must be enabled and able to have verified domains.
     /// </remarks>
-    /// <returns>
-    /// False if the Account Deprovisioning feature flag is disabled.
-    /// </returns>
     public bool UserIsClaimedByOrganization { get; set; }
     public bool UseRiskInsights { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
+    public bool IsAdminInitiated { get; set; }
 }
