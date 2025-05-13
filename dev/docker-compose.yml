@@ -124,8 +124,20 @@ services:
     profiles:
       - servicebus
 
+  redis:
+    image: redis:alpine
+    container_name: bw-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    profiles:
+      - redis
+
 volumes:
   mssql_dev_data:
   postgres_dev_data:
   mysql_dev_data:
   rabbitmq_data:
+  redis_data:

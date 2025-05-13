@@ -379,7 +379,7 @@ public class CipherService : ICipherService
         if (!valid || realSize > MAX_FILE_SIZE)
         {
             // File reported differs in size from that promised. Must be a rogue client. Delete Send
-            await DeleteAttachmentAsync(cipher, attachmentData);
+            await DeleteAttachmentAsync(cipher, attachmentData, false);
             return false;
         }
         // Update Send data if necessary
@@ -483,7 +483,7 @@ public class CipherService : ICipherService
             throw new NotFoundException();
         }
 
-        return await DeleteAttachmentAsync(cipher, cipher.GetAttachments()[attachmentId]);
+        return await DeleteAttachmentAsync(cipher, cipher.GetAttachments()[attachmentId], orgAdmin);
     }
 
     public async Task PurgeAsync(Guid organizationId)
@@ -877,7 +877,7 @@ public class CipherService : ICipherService
         }
     }
 
-    private async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
+    private async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(Cipher cipher, CipherAttachment.MetaData attachmentData, bool orgAdmin)
     {
         if (attachmentData == null || string.IsNullOrWhiteSpace(attachmentData.AttachmentId))
         {
@@ -891,7 +891,14 @@ public class CipherService : ICipherService
 
         // Update the revision date when an attachment is deleted
         cipher.RevisionDate = DateTime.UtcNow;
-        await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
+        if (orgAdmin)
+        {
+            await _cipherRepository.ReplaceAsync(cipher);
+        }
+        else
+        {
+            await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
+        }
 
         // push
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);

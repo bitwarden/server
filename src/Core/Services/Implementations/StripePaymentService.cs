@@ -3,14 +3,15 @@ using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Models.Api.Requests.Accounts;
-using Bit.Core.Billing.Models.Api.Requests.Organizations;
-using Bit.Core.Billing.Models.Api.Responses;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
-using Bit.Core.Billing.Services.Implementations.AutomaticTax;
+using Bit.Core.Billing.Tax.Models;
+using Bit.Core.Billing.Tax.Requests;
+using Bit.Core.Billing.Tax.Responses;
+using Bit.Core.Billing.Tax.Services;
+using Bit.Core.Billing.Tax.Services.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -111,6 +112,8 @@ public class StripePaymentService : IPaymentService
         {
             throw new BadRequestException("You do not have an active subscription. Reinstate your subscription to make changes.");
         }
+
+        var existingCoupon = sub.Customer.Discount?.Coupon?.Id;
 
         var collectionMethod = sub.CollectionMethod;
         var daysUntilDue = sub.DaysUntilDue;
@@ -214,6 +217,19 @@ public class StripePaymentService : IPaymentService
                 {
                     CollectionMethod = collectionMethod,
                     DaysUntilDue = daysUntilDue,
+                });
+            }
+
+            var customer = await _stripeAdapter.CustomerGetAsync(sub.CustomerId);
+
+            var newCoupon = customer.Discount?.Coupon?.Id;
+
+            if (!string.IsNullOrEmpty(existingCoupon) && string.IsNullOrEmpty(newCoupon))
+            {
+                // Re-add the lost coupon due to the update.
+                await _stripeAdapter.CustomerUpdateAsync(sub.CustomerId, new CustomerUpdateOptions
+                {
+                    Coupon = existingCoupon
                 });
             }
         }

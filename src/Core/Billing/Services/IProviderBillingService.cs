@@ -4,6 +4,7 @@ using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services.Contracts;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Models.Business;
 using Stripe;
 
@@ -59,7 +60,7 @@ public interface IProviderBillingService
         int seatAdjustment);
 
     /// <summary>
-    /// Determines whether the provided <paramref name="seatAdjustment"/> will result in a purchase for the <paramref name="provider"/>'s <see cref="planType"/>.
+    /// Determines whether the provided <paramref name="seatAdjustment"/> will result in a purchase for the <paramref name="provider"/>'s <see cref="PlanType"/>.
     /// Seat adjustments that result in purchases include:
     /// <list type="bullet">
     /// <item>The <paramref name="provider"/> going from below the seat minimum to above the seat minimum for the provided <paramref name="planType"/></item>
@@ -79,10 +80,12 @@ public interface IProviderBillingService
     /// </summary>
     /// <param name="provider">The <see cref="Provider"/> to create a Stripe customer for.</param>
     /// <param name="taxInfo">The <see cref="TaxInfo"/> to use for calculating the customer's automatic tax.</param>
+    /// <param name="tokenizedPaymentSource">The <see cref="TokenizedPaymentSource"/> (ex. Credit Card) to attach to the customer.</param>
     /// <returns>The newly created <see cref="Stripe.Customer"/> for the <paramref name="provider"/>.</returns>
     Task<Customer> SetupCustomer(
         Provider provider,
-        TaxInfo taxInfo);
+        TaxInfo taxInfo,
+        TokenizedPaymentSource tokenizedPaymentSource = null);
 
     /// <summary>
     /// For use during the provider setup process, this method starts a Stripe <see cref="Stripe.Subscription"/> for the given <paramref name="provider"/>.
