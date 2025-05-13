@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Billing.Models.Api.Responses;
+﻿namespace Bit.Core.Billing.Tax.Responses;
 
 public record PreviewInvoiceResponseModel(
     decimal EffectiveTaxRate,

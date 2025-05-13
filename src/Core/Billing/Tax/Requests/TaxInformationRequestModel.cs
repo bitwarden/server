@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Core.Billing.Models.Api.Requests;
+namespace Bit.Core.Billing.Tax.Requests;
 
 public class TaxInformationRequestModel
 {

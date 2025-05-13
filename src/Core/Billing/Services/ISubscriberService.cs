@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Stripe;
