@@ -22,6 +22,7 @@ public class RabbitMqIntegrationListenerService : BackgroundService
     private readonly IIntegrationHandler _handler;
     private readonly ConnectionFactory _factory;
     private readonly ILogger<RabbitMqIntegrationListenerService> _logger;
+    private readonly int _retryTiming;
 
     public RabbitMqIntegrationListenerService(IIntegrationHandler handler,
         string routingKey,
@@ -40,6 +41,7 @@ public class RabbitMqIntegrationListenerService : BackgroundService
         _logger = logger;
         _exchangeName = globalSettings.EventLogging.RabbitMq.IntegrationExchangeName;
         _maxRetries = globalSettings.EventLogging.RabbitMq.MaxRetries;
+        _retryTiming = globalSettings.EventLogging.RabbitMq.RetryTiming;
 
         _factory = new ConnectionFactory
         {
@@ -71,7 +73,7 @@ public class RabbitMqIntegrationListenerService : BackgroundService
                                       routingKey: _routingKey,
                                       cancellationToken: cancellationToken);
 
-        // Declare retry queue (30s TTL, dead-letters back to main queue)
+        // Declare retry queue (Configurable TTL, dead-letters back to main queue)
         await _channel.QueueDeclareAsync(queue: _retryQueueName,
                                          durable: true,
                                          exclusive: false,
@@ -80,7 +82,7 @@ public class RabbitMqIntegrationListenerService : BackgroundService
                                          {
                                              { "x-dead-letter-exchange", _exchangeName },
                                              { "x-dead-letter-routing-key", _routingKey },
-                                             { "x-message-ttl", 30000 } // 30s
+                                             { "x-message-ttl", _retryTiming }
                                          },
                                          cancellationToken: cancellationToken);
         await _channel.QueueBindAsync(queue: _retryQueueName,
@@ -117,16 +119,19 @@ public class RabbitMqIntegrationListenerService : BackgroundService
 
                 if (result.Success)
                 {
+                    // Successful integration send. Acknowledge message delivery and return.
                     await _channel.BasicAckAsync(ea.DeliveryTag, false, cancellationToken);
                     return;
                 }
 
                 if (result.Retryable)
                 {
+                    // Integration failed, but is retryable - apply delay and check max retries
                     message.ApplyRetry(result.NotBeforeUtc);
 
                     if (message.RetryCount < _maxRetries)
                     {
+                        // Publish message to the retry queue. It will be re-published for retry after a delay
                         await _channel.BasicPublishAsync(
                             exchange: _exchangeName,
                             routingKey: _retryRoutingKey,
@@ -135,27 +140,33 @@ public class RabbitMqIntegrationListenerService : BackgroundService
                     }
                     else
                     {
+                        // Exceeded the max number of retries; fail and send to dead letter queue
                         await PublishToDeadLetterAsync(message.ToJson());
                         _logger.LogWarning("Max retry attempts reached. Sent to DLQ.");
                     }
                 }
                 else
                 {
+                    // Fatal error (i.e. not retryable) occurred. Send message to dead letter queue without any retries
                     await PublishToDeadLetterAsync(message.ToJson());
                     _logger.LogWarning("Non-retryable failure. Sent to DLQ.");
                 }
 
+                // Message has been sent to retry or dead letter queues.
+                // Acknowledge receipt so Rabbit knows it's been processed.
                 await _channel.BasicAckAsync(ea.DeliveryTag, false, cancellationToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled error processing integration message");
+                // Unknown error occurred. Acknowledge so Rabbit doesn't keep attempting. Log the error.
+                _logger.LogError(ex, "Unhandled error processing integration message.");
                 await _channel.BasicAckAsync(ea.DeliveryTag, false, cancellationToken);
             }
         };
 
         await _channel.BasicConsumeAsync(queue: _queueName, autoAck: false, consumer: consumer, cancellationToken: cancellationToken);
     }
+
     private async Task PublishToDeadLetterAsync(string json)
     {
         await _channel.BasicPublishAsync(

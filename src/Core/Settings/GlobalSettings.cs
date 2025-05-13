@@ -316,6 +316,7 @@ public class GlobalSettings : IGlobalSettings
             private string _integrationExchangeName;
 
             public int MaxRetries { get; set; } = 3;
+            public int RetryTiming { get; set; } = 30000; // 30s
             public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
             public virtual string IntegrationDeadLetterQueueName { get; set; } = "integration-dead-letter-queue";
             public virtual string SlackEventsQueueName { get; set; } = "events-slack-queue";

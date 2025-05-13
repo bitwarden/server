@@ -3,15 +3,6 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Data.Integrations;
 
-public interface IIntegrationMessage
-{
-    IntegrationType IntegrationType { get; }
-    int RetryCount { get; set; }
-    DateTime? NotBeforeUtc { get; set; }
-    void ApplyRetry(DateTime? handlerNotBeforeUtc);
-    string ToJson();
-}
-
 public class IntegrationMessage<T> : IIntegrationMessage
 {
     public IntegrationType IntegrationType { get; set; }
@@ -38,7 +29,6 @@ public class IntegrationMessage<T> : IIntegrationMessage
 
     public static IntegrationMessage<T> FromJson(string json)
     {
-        return JsonSerializer.Deserialize<IntegrationMessage<T>>(json)
-               ?? throw new InvalidOperationException("Invalid JSON payload.");
+        return JsonSerializer.Deserialize<IntegrationMessage<T>>(json);
     }
 }

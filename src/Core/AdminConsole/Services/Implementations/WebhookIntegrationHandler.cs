@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
 using System.Text;
 using Bit.Core.Models.Data.Integrations;
 
@@ -30,10 +31,23 @@ public class WebhookIntegrationHandler(IHttpClientFactory httpClientFactory)
                 result.Retryable = true;
                 result.FailureReason = response.ReasonPhrase;
 
-                if (response.Headers.TryGetValues("Retry-After", out var values) &&
-                    int.TryParse(values.FirstOrDefault(), out var seconds))
+                if (response.Headers.TryGetValues("Retry-After", out var values))
                 {
-                    result.NotBeforeUtc = DateTime.UtcNow.AddSeconds(seconds);
+                    var value = values.FirstOrDefault();
+                    if (int.TryParse(value, out var seconds))
+                    {
+                        // Retry-after was specified in seconds. Adjust NotBeforeUtc by the requested number of seconds.
+                        result.NotBeforeUtc = DateTime.UtcNow.AddSeconds(seconds);
+                    }
+                    else if (DateTimeOffset.TryParseExact(value,
+                                 "r", // "r" is the round-trip format: RFC1123
+                                 CultureInfo.InvariantCulture,
+                                 DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                                 out var retryDate))
+                    {
+                        // Retry-after was specified as a date. Adjust NotBeforeUtc to the specified date.
+                        result.NotBeforeUtc = retryDate.UtcDateTime;
+                    }
                 }
                 break;
             default:

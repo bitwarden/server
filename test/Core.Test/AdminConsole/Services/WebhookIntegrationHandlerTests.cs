@@ -82,6 +82,26 @@ public class WebhookIntegrationHandlerTests
     }
 
     [Theory, BitAutoData]
+    public async Task HandleAsync_TooManyRequestsWithDate_ReturnsFailureSetsNotBeforUtc(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
+    {
+        var sutProvider = GetSutProvider();
+        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl);
+
+        _handler.Fallback
+            .WithStatusCode(HttpStatusCode.TooManyRequests)
+            .WithHeader("Retry-After", DateTime.UtcNow.AddSeconds(60).ToString("r")) // "r" is the round-trip format: RFC1123
+            .WithContent(new StringContent("<html><head><title>test</title></head><body>test</body></html>"));
+
+        var result = await sutProvider.Sut.HandleAsync(message);
+
+        Assert.False(result.Success);
+        Assert.True(result.Retryable);
+        Assert.Equal(result.Message, message);
+        Assert.True(result.NotBeforeUtc.HasValue);
+        Assert.InRange(result.NotBeforeUtc.Value, DateTime.UtcNow.AddSeconds(59), DateTime.UtcNow.AddSeconds(61));
+    }
+
+    [Theory, BitAutoData]
     public async Task HandleAsync_InternalServerError_ReturnsFailureSetsRetryable(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();

@@ -670,7 +670,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddRabbitMqEventRepositoryListener(this IServiceCollection services, GlobalSettings globalSettings)
+    private static IServiceCollection AddRabbitMqEventRepositoryListener(this IServiceCollection services, GlobalSettings globalSettings)
     {
         services.AddSingleton<EventRepositoryHandler>();
         services.AddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
@@ -685,7 +685,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddRabbitMqIntegration<TConfig, THandler>(this IServiceCollection services,
+    private static IServiceCollection AddRabbitMqIntegration<TConfig, THandler>(this IServiceCollection services,
         string eventQueueName,
         string integrationQueueName,
         string integrationRetryQueueName,
@@ -727,7 +727,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static bool IsRabbitMqEnabled(GlobalSettings settings)
+    private static bool IsRabbitMqEnabled(GlobalSettings settings)
     {
         return CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.HostName) &&
                CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.Username) &&
