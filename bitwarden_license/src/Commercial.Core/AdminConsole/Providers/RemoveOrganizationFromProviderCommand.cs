@@ -93,7 +93,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     /// <summary>
     /// When a client organization is unlinked from a provider, we have to check if they're Stripe-enabled
     /// and, if they are, we remove their MSP discount and set their Subscription to `send_invoice`. This is because
-    /// the provider's payment method will be removed from their Stripe customer causing ensuing charges to fail. Lastly,
+    /// the provider's payment method will be removed from their Stripe customer, causing ensuing charges to fail. Lastly,
     /// we email the organization owners letting them know they need to add a new payment method.
     /// </summary>
     private async Task ResetOrganizationBillingAsync(

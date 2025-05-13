@@ -4,6 +4,7 @@ using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services.Implementations;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -191,7 +192,7 @@ public class SubscriberServiceTests
 
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
-            .SubscriptionCancelAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>()); ;
+            .SubscriptionCancelAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
     }
 
     #endregion
@@ -1025,7 +1026,7 @@ public class SubscriberServiceTests
 
         stripeAdapter
             .PaymentMethodListAutoPagingAsync(Arg.Any<PaymentMethodListOptions>())
-            .Returns(GetPaymentMethodsAsync(new List<Stripe.PaymentMethod>()));
+            .Returns(GetPaymentMethodsAsync(new List<PaymentMethod>()));
 
         await sutProvider.Sut.RemovePaymentSource(organization);
 
@@ -1057,7 +1058,7 @@ public class SubscriberServiceTests
 
         stripeAdapter
             .PaymentMethodListAutoPagingAsync(Arg.Any<PaymentMethodListOptions>())
-            .Returns(GetPaymentMethodsAsync(new List<Stripe.PaymentMethod>
+            .Returns(GetPaymentMethodsAsync(new List<PaymentMethod>
             {
                 new ()
                 {
@@ -1082,8 +1083,8 @@ public class SubscriberServiceTests
             .PaymentMethodDetachAsync(cardId);
     }
 
-    private static async IAsyncEnumerable<Stripe.PaymentMethod> GetPaymentMethodsAsync(
-        IEnumerable<Stripe.PaymentMethod> paymentMethods)
+    private static async IAsyncEnumerable<PaymentMethod> GetPaymentMethodsAsync(
+        IEnumerable<PaymentMethod> paymentMethods)
     {
         foreach (var paymentMethod in paymentMethods)
         {

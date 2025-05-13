@@ -16,6 +16,8 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
+using Bit.Core.Billing.Tax.Models;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -122,7 +124,7 @@ public class ProviderBillingService(
 
         /*
          * We have to scale the provider's seats before the ProviderOrganization
-         * row is inserted so the added organization's seats don't get double counted.
+         * row is inserted so the added organization's seats don't get double-counted.
          */
         await ScaleSeats(provider, organization.PlanType, organization.Seats!.Value);
 
