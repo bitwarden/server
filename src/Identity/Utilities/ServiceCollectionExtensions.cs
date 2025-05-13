@@ -69,7 +69,7 @@ public static class ServiceCollectionExtensions
 
         services.AddClientProvider<UserClientProvider>("user");
         services.AddClientProvider<OrganizationClientProvider>("organization");
-        services.AddClientProvider<SecretsManagerApiKeyProvider>("sm-apikey");
+        services.AddClientProvider<SecretsManagerApiKeyProvider>(SecretsManagerApiKeyProvider.ApiKeyPrefix);
 
         if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CosmosConnectionString))
         {

@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using Bit.Identity.IdentityServer.ClientProviders;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
 
@@ -18,7 +19,7 @@ internal class DynamicClientStore : IClientStore
 
     public DynamicClientStore(
       IServiceProvider serviceProvider,
-      [FromKeyedServices("sm-apikey")] IClientProvider apiKeyClientProvider,
+      [FromKeyedServices(SecretsManagerApiKeyProvider.ApiKeyPrefix)] IClientProvider apiKeyClientProvider,
       StaticClientStore staticClientStore
     )
     {
