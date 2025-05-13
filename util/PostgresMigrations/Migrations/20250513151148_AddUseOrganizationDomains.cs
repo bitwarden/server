@@ -13,7 +13,7 @@ public partial class AddUseOrganizationDomains : Migration
         migrationBuilder.AddColumn<bool>(
             name: "UseOrganizationDomains",
             table: "Organization",
-            type: "tinyint(1)",
+            type: "boolean",
             nullable: false,
             defaultValue: false);
     }
