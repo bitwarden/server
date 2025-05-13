@@ -61,4 +61,5 @@ public class OrganizationUserOrganizationDetails
     public bool UseRiskInsights { get; set; }
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
+    public bool? IsAdminInitiated { get; set; }
 }
