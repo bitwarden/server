@@ -207,7 +207,7 @@ public class OrganizationSponsorshipsController : Controller
     [HttpDelete("{sponsoringOrganizationId}")]
     [HttpPost("{sponsoringOrganizationId}/delete")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task RevokeSponsorship(Guid sponsoringOrganizationId)
+    public async Task RevokeSponsorship(Guid sponsoringOrganizationId, [FromQuery] bool isAdminInitiated = false)
     {
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrganizationId, _currentContext.UserId ?? default);
@@ -217,7 +217,7 @@ public class OrganizationSponsorshipsController : Controller
         }
 
         var existingOrgSponsorship = await _organizationSponsorshipRepository
-            .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
+            .GetBySponsoringOrganizationUserIdAsync(orgUser.Id, isAdminInitiated);
 
         await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
     }
