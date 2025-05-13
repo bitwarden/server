@@ -5,7 +5,7 @@ using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 
-namespace Bit.Core.Billing.Services.Implementations.AutomaticTax;
+namespace Bit.Core.Billing.Tax.Services.Implementations;
 
 public class AutomaticTaxFactory(
     IFeatureService featureService,
