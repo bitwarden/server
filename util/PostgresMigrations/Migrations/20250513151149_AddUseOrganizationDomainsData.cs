@@ -3,12 +3,14 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class AddUseOrganizationDomainsData : Migration
 {
-    private const string _addUseOrganizationDomainsMigrationScript = "MySqlMigrations.HelperScripts.2025-04-23_00_AddUseOrganizationDomains.sql";
+
+    private const string _addUseOrganizationDomainsMigrationScript = "PostgresMigrations.HelperScripts.2025-05-13_00_AddUseOrganizationDomains.psql";
+
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
@@ -18,6 +20,6 @@ public partial class AddUseOrganizationDomainsData : Migration
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        throw new Exception("Irreversible migration");
+        throw new Exception("Irreversible migration.");
     }
 }

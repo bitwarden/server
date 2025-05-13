@@ -21,6 +21,6 @@ public partial class AddUseOrganizationDomains : Migration
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        throw new Exception("Irreversible migration");
+        throw new Exception("Irreversible migration.");
     }
 }

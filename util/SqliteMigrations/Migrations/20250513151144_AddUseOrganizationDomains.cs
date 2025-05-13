@@ -13,7 +13,7 @@ public partial class AddUseOrganizationDomains : Migration
         migrationBuilder.AddColumn<bool>(
             name: "UseOrganizationDomains",
             table: "Organization",
-            type: "INTEGER",
+            type: "boolean",
             nullable: false,
             defaultValue: false);
     }
@@ -21,7 +21,6 @@ public partial class AddUseOrganizationDomains : Migration
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-
         throw new Exception("Irreversible migration.");
     }
 }

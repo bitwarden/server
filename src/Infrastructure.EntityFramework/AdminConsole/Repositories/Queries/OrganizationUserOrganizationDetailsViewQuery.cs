@@ -69,10 +69,10 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         LimitCollectionDeletion = o.LimitCollectionDeletion,
                         AllowAdminAccessToAllCollectionItems = o.AllowAdminAccessToAllCollectionItems,
                         UseRiskInsights = o.UseRiskInsights,
-                        UseOrganizationDomains = o.UseOrganizationDomains,
                         UseAdminSponsoredFamilies = o.UseAdminSponsoredFamilies,
                         LimitItemDeletion = o.LimitItemDeletion,
-                        IsAdminInitiated = os.IsAdminInitiated
+                        IsAdminInitiated = os.IsAdminInitiated,
+                        UseOrganizationDomains = o.UseOrganizationDomains
                     };
         return query;
     }

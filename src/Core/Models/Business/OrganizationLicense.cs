@@ -84,7 +84,6 @@ public class OrganizationLicense : ILicense
         SmSeats = org.SmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
         UseRiskInsights = org.UseRiskInsights;
-        UseOrganizationDomains = org.UseOrganizationDomains;
 
         // Deprecated. Left for backwards compatibility with old license versions.
         LimitCollectionCreationDeletion = org.LimitCollectionCreation || org.LimitCollectionDeletion;
@@ -175,7 +174,6 @@ public class OrganizationLicense : ILicense
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
     public bool UseRiskInsights { get; set; }
-    public bool UseOrganizationDomains { get; set; }
 
     // Deprecated. Left for backwards compatibility with old license versions.
     public bool LimitCollectionCreationDeletion { get; set; } = true;
@@ -184,6 +182,7 @@ public class OrganizationLicense : ILicense
 
     public bool Trial { get; set; }
     public LicenseType? LicenseType { get; set; }
+    public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
@@ -196,10 +195,10 @@ public class OrganizationLicense : ILicense
     /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
     /// getting out of date license errors
     /// </remarks>
-    public const int CurrentLicenseFileVersion = 15;
+    public const int CurrentLicenseFileVersion = 14;
     private bool ValidLicenseVersion
     {
-        get => Version is >= 1 and <= 16;
+        get => Version is >= 1 and <= 15;
     }
 
     public byte[] GetDataBytes(bool forHash = false)
@@ -245,8 +244,6 @@ public class OrganizationLicense : ILicense
                     (Version >= 14 || !p.Name.Equals(nameof(LimitCollectionCreationDeletion))) &&
                     // AllowAdminAccessToAllCollectionItems was added in Version 15
                     (Version >= 15 || !p.Name.Equals(nameof(AllowAdminAccessToAllCollectionItems))) &&
-                    // UseOrganizationDomains was added in version 16
-                    (Version >= 16 || !p.Name.Equals(nameof(UseOrganizationDomains))) &&
                     (
                         !forHash ||
                         (
@@ -449,6 +446,7 @@ public class OrganizationLicense : ILicense
         var smSeats = claimsPrincipal.GetValue<int?>(nameof(SmSeats));
         var smServiceAccounts = claimsPrincipal.GetValue<int?>(nameof(SmServiceAccounts));
         var useAdminSponsoredFamilies = claimsPrincipal.GetValue<bool>(nameof(UseAdminSponsoredFamilies));
+        var useOrganizationDomains = claimsPrincipal.GetValue<bool>(nameof(UseOrganizationDomains));
 
         return issued <= DateTime.UtcNow &&
                expires >= DateTime.UtcNow &&
@@ -477,7 +475,8 @@ public class OrganizationLicense : ILicense
                usePasswordManager == organization.UsePasswordManager &&
                smSeats == organization.SmSeats &&
                smServiceAccounts == organization.SmServiceAccounts &&
-               useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies;
+               useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies &&
+               useOrganizationDomains == organization.UseOrganizationDomains;
 
     }
 

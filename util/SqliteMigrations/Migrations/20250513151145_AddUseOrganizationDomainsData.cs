@@ -3,13 +3,12 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations;
+namespace Bit.SqliteMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class AddUseOrganizationDomainsData : Migration
 {
-
-    private const string _addUseOrganizationDomainsMigrationScript = "PostgresMigrations.HelperScripts.2025-04-23_00_AddUseOrganizationDomains.psql";
+    private const string _addUseOrganizationDomainsMigrationScript = "SqliteMigrations.HelperScripts.2025-05-13_00_AddUseOrganizationDomains.sql";
 
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
@@ -20,6 +19,7 @@ public partial class AddUseOrganizationDomainsData : Migration
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
+
         throw new Exception("Irreversible migration.");
     }
 }
