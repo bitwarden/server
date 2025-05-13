@@ -9,7 +9,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.Collectio
 public class CollectionRepositoryReplaceTests
 {
     [DatabaseTheory, DatabaseData]
-    public async Task ReplaceAsync_Works(
+    public async Task ReplaceAsync_WithAccess_Works(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -90,9 +90,57 @@ public class CollectionRepositoryReplaceTests
         // TODO: why doesn't delete many work?
         await userRepository.DeleteManyAsync([user1, user2, user3]);
         await organizationRepository.DeleteAsync(organization);
-        await groupRepository.DeleteManyAsync([group1.Id, group2.Id, group3.Id]);
-        await organizationUserRepository.DeleteManyAsync([orgUser1.Id, orgUser2.Id, orgUser3.Id]);
     }
 
-    // TODO: replacing with an empty list of access to make sure we handle empty sets
+    /// <remarks>
+    /// Makes sure that the sproc handles empty sets.
+    /// </remarks>
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_WithNoAccess_Works(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository,
+        ICollectionRepository collectionRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        var user = await userRepository.CreateTestUserAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        var group = await groupRepository.CreateTestGroupAsync(organization);
+
+        var collection = new Collection
+        {
+            Name = "Test Collection Name",
+            OrganizationId = organization.Id,
+        };
+
+        await collectionRepository.CreateAsync(collection,
+        [
+                new CollectionAccessSelection { Id = group.Id, Manage = true, HidePasswords = false, ReadOnly = true },
+        ],
+        [
+                new CollectionAccessSelection { Id = orgUser.Id, Manage = true, HidePasswords = false, ReadOnly = true },
+        ]);
+
+        // Act
+        collection.Name = "Updated Collection Name";
+
+        await collectionRepository.ReplaceAsync(collection, [], []);
+
+        // Assert
+        var (actualCollection, actualAccess) = await collectionRepository.GetByIdWithAccessAsync(collection.Id);
+
+        Assert.NotNull(actualCollection);
+        Assert.Equal("Updated Collection Name", actualCollection.Name);
+
+        Assert.Empty(actualAccess.Groups);
+        Assert.Empty(actualAccess.Users);
+
+        // Clean up
+        await userRepository.DeleteAsync(user);
+        await organizationRepository.DeleteAsync(organization);
+    }
 }

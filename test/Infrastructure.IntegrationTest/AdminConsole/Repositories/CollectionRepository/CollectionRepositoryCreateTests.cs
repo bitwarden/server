@@ -9,7 +9,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.Collectio
 public class CollectionRepositoryCreateTests
 {
     [DatabaseTheory, DatabaseData]
-    public async Task CreateAsync_Works(
+    public async Task CreateAsync_WithAccess_Works(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -70,5 +70,36 @@ public class CollectionRepositoryCreateTests
         await organizationUserRepository.DeleteManyAsync([orgUser1.Id, orgUser2.Id]);
     }
 
-    // TODO: creating with no access to make sure we handle empty sets
+    /// <remarks>
+    /// Makes sure that the sproc handles empty sets.
+    /// </remarks>
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateAsync_WithNoAccess_Works(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        var collection = new Collection
+        {
+            Name = "Test Collection Name",
+            OrganizationId = organization.Id,
+        };
+
+        // Act
+        await collectionRepository.CreateAsync(collection, [], []);
+
+        // Assert
+        var (actualCollection, actualAccess) = await collectionRepository.GetByIdWithAccessAsync(collection.Id);
+
+        Assert.NotNull(actualCollection);
+        Assert.Equal("Test Collection Name", actualCollection.Name);
+
+        Assert.Empty(actualAccess.Groups);
+        Assert.Empty(actualAccess.Users);
+
+        // Clean up
+        await organizationRepository.DeleteAsync(organization);
+    }
 }
