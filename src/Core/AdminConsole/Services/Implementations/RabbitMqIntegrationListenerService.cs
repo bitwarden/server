@@ -119,7 +119,7 @@ public class RabbitMqIntegrationListenerService : BackgroundService
 
                 if (result.Success)
                 {
-                    // Successful integration send. Acknowledge message delivery and return.
+                    // Successful integration send. Acknowledge message delivery and return
                     await _channel.BasicAckAsync(ea.DeliveryTag, false, cancellationToken);
                     return;
                 }
@@ -127,7 +127,7 @@ public class RabbitMqIntegrationListenerService : BackgroundService
                 if (result.Retryable)
                 {
                     // Integration failed, but is retryable - apply delay and check max retries
-                    message.ApplyRetry(result.NotBeforeUtc);
+                    message.ApplyRetry(result.DelayUntilDate);
 
                     if (message.RetryCount < _maxRetries)
                     {
@@ -153,12 +153,12 @@ public class RabbitMqIntegrationListenerService : BackgroundService
                 }
 
                 // Message has been sent to retry or dead letter queues.
-                // Acknowledge receipt so Rabbit knows it's been processed.
+                // Acknowledge receipt so Rabbit knows it's been processed
                 await _channel.BasicAckAsync(ea.DeliveryTag, false, cancellationToken);
             }
             catch (Exception ex)
             {
-                // Unknown error occurred. Acknowledge so Rabbit doesn't keep attempting. Log the error.
+                // Unknown error occurred. Acknowledge so Rabbit doesn't keep attempting. Log the error
                 _logger.LogError(ex, "Unhandled error processing integration message.");
                 await _channel.BasicAckAsync(ea.DeliveryTag, false, cancellationToken);
             }

@@ -36,8 +36,8 @@ public class WebhookIntegrationHandler(IHttpClientFactory httpClientFactory)
                     var value = values.FirstOrDefault();
                     if (int.TryParse(value, out var seconds))
                     {
-                        // Retry-after was specified in seconds. Adjust NotBeforeUtc by the requested number of seconds.
-                        result.NotBeforeUtc = DateTime.UtcNow.AddSeconds(seconds);
+                        // Retry-after was specified in seconds. Adjust DelayUntilDate by the requested number of seconds.
+                        result.DelayUntilDate = DateTime.UtcNow.AddSeconds(seconds);
                     }
                     else if (DateTimeOffset.TryParseExact(value,
                                  "r", // "r" is the round-trip format: RFC1123
@@ -45,8 +45,8 @@ public class WebhookIntegrationHandler(IHttpClientFactory httpClientFactory)
                                  DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
                                  out var retryDate))
                     {
-                        // Retry-after was specified as a date. Adjust NotBeforeUtc to the specified date.
-                        result.NotBeforeUtc = retryDate.UtcDateTime;
+                        // Retry-after was specified as a date. Adjust DelayUntilDate to the specified date.
+                        result.DelayUntilDate = retryDate.UtcDateTime;
                     }
                 }
                 break;

@@ -8,19 +8,19 @@ namespace Bit.Core.Test.Models.Data.Integrations;
 public class IntegrationMessageTests
 {
     [Fact]
-    public void ApplyRetry_IncrementsRetryCountAndSetsNotBeforeUtc()
+    public void ApplyRetry_IncrementsRetryCountAndSetsDelayUntilDate()
     {
         var message = new IntegrationMessage<WebhookIntegrationConfigurationDetails>
         {
             RetryCount = 2,
-            NotBeforeUtc = null
+            DelayUntilDate = null
         };
 
         var baseline = DateTime.UtcNow;
         message.ApplyRetry(baseline);
 
         Assert.Equal(3, message.RetryCount);
-        Assert.True(message.NotBeforeUtc > baseline);
+        Assert.True(message.DelayUntilDate > baseline);
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public class IntegrationMessageTests
             RenderedTemplate = "This is the message",
             IntegrationType = IntegrationType.Webhook,
             RetryCount = 2,
-            NotBeforeUtc = null
+            DelayUntilDate = null
         };
 
         var json = message.ToJson();

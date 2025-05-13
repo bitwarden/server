@@ -77,8 +77,8 @@ public class WebhookIntegrationHandlerTests
         Assert.False(result.Success);
         Assert.True(result.Retryable);
         Assert.Equal(result.Message, message);
-        Assert.True(result.NotBeforeUtc.HasValue);
-        Assert.InRange(result.NotBeforeUtc.Value, DateTime.UtcNow.AddSeconds(59), DateTime.UtcNow.AddSeconds(61));
+        Assert.True(result.DelayUntilDate.HasValue);
+        Assert.InRange(result.DelayUntilDate.Value, DateTime.UtcNow.AddSeconds(59), DateTime.UtcNow.AddSeconds(61));
     }
 
     [Theory, BitAutoData]
@@ -97,8 +97,8 @@ public class WebhookIntegrationHandlerTests
         Assert.False(result.Success);
         Assert.True(result.Retryable);
         Assert.Equal(result.Message, message);
-        Assert.True(result.NotBeforeUtc.HasValue);
-        Assert.InRange(result.NotBeforeUtc.Value, DateTime.UtcNow.AddSeconds(59), DateTime.UtcNow.AddSeconds(61));
+        Assert.True(result.DelayUntilDate.HasValue);
+        Assert.InRange(result.DelayUntilDate.Value, DateTime.UtcNow.AddSeconds(59), DateTime.UtcNow.AddSeconds(61));
     }
 
     [Theory, BitAutoData]
@@ -116,7 +116,7 @@ public class WebhookIntegrationHandlerTests
         Assert.False(result.Success);
         Assert.True(result.Retryable);
         Assert.Equal(result.Message, message);
-        Assert.False(result.NotBeforeUtc.HasValue);
+        Assert.False(result.DelayUntilDate.HasValue);
     }
 
     [Theory, BitAutoData]
@@ -134,6 +134,6 @@ public class WebhookIntegrationHandlerTests
         Assert.False(result.Success);
         Assert.False(result.Retryable);
         Assert.Equal(result.Message, message);
-        Assert.Null(result.NotBeforeUtc);
+        Assert.Null(result.DelayUntilDate);
     }
 }

@@ -37,7 +37,7 @@ public class EventIntegrationHandler<T>(
                 Configuration = config,
                 RenderedTemplate = renderedTemplate,
                 RetryCount = 0,
-                NotBeforeUtc = null
+                DelayUntilDate = null
             };
 
             await integrationPublisher.PublishAsync(message);

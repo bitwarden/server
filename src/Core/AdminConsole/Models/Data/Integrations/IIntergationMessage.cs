@@ -6,7 +6,7 @@ public interface IIntegrationMessage
 {
     IntegrationType IntegrationType { get; }
     int RetryCount { get; set; }
-    DateTime? NotBeforeUtc { get; set; }
-    void ApplyRetry(DateTime? handlerNotBeforeUtc);
+    DateTime? DelayUntilDate { get; set; }
+    void ApplyRetry(DateTime? handlerDelayUntilDate);
     string ToJson();
 }

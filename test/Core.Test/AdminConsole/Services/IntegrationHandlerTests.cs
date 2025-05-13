@@ -17,7 +17,7 @@ public class IntegrationHandlerTests
             Configuration = new WebhookIntegrationConfigurationDetails("https://localhost"),
             IntegrationType = IntegrationType.Webhook,
             RenderedTemplate = "Template",
-            NotBeforeUtc = null,
+            DelayUntilDate = null,
             RetryCount = 0
         };
 

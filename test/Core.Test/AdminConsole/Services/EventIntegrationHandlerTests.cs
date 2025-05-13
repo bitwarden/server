@@ -48,7 +48,7 @@ public class EventIntegrationHandlerTests
             Configuration = new WebhookIntegrationConfigurationDetails(_url),
             RenderedTemplate = template,
             RetryCount = 0,
-            NotBeforeUtc = null
+            DelayUntilDate = null
         };
     }
 
