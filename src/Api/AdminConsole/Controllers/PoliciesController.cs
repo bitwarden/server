@@ -2,7 +2,6 @@
 using Bit.Api.AdminConsole.Models.Response.Helpers;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
@@ -79,7 +78,7 @@ public class PoliciesController : Controller
             return new PolicyDetailResponseModel(new Policy { Type = (PolicyType)type });
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && policy.Type is PolicyType.SingleOrg)
+        if (policy.Type is PolicyType.SingleOrg)
         {
             return await policy.GetSingleOrgPolicyDetailResponseAsync(_organizationHasVerifiedDomainsQuery);
         }

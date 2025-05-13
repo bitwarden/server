@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using System.Diagnostics;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
@@ -8,6 +9,7 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -292,6 +294,7 @@ public class OrganizationBillingController(
         sale.SubscriptionSetup.SkipTrial = true;
         await organizationBillingService.Finalize(sale);
         var org = await organizationRepository.GetByIdAsync(organizationId);
+        Debug.Assert(org is not null, "This organization has already been found via this same ID, this should be fine.");
         if (organizationSignup.PaymentMethodType != null)
         {
             var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);

@@ -3,6 +3,7 @@ using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Queries;
 
 
 namespace Bit.Core.Vault.Repositories;
