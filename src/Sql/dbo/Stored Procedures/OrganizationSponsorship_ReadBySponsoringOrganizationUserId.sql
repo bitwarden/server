@@ -10,6 +10,6 @@ BEGIN
     FROM
         [dbo].[OrganizationSponsorshipView]
     WHERE
-        [SponsoringOrganizationUserId] = @SponsoringOrganizationUserId
+        [SponsoringOrganizationUserID] = @SponsoringOrganizationUserId
     and [IsAdminInitiated] = @IsAdminInitiated
-END 
+END

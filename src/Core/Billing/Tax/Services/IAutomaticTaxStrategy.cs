@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using Stripe;
 
-namespace Bit.Core.Billing.Services;
+namespace Bit.Core.Billing.Tax.Services;
 
 public interface IAutomaticTaxStrategy
 {
