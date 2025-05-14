@@ -1,6 +1,9 @@
 ﻿using Bit.Api.Models.Request.Organizations;
+using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Api.Response.OrganizationSponsorships;
+using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -70,7 +73,7 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
 
     [HttpDelete("{sponsoringOrgId}")]
     [HttpPost("{sponsoringOrgId}/delete")]
-    public async Task RevokeSponsorship(Guid sponsoringOrgId)
+    public async Task RevokeSponsorship(Guid sponsoringOrgId, [FromQuery] bool isAdminInitiated = false)
     {
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
 
@@ -80,8 +83,32 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
         }
 
         var existingOrgSponsorship = await _organizationSponsorshipRepository
-            .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
+            .GetBySponsoringOrganizationUserIdAsync(orgUser.Id, isAdminInitiated);
 
         await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
+    }
+
+    [Authorize("Application")]
+    [HttpGet("{sponsoringOrgId}/sponsored")]
+    public async Task<ListResponseModel<OrganizationSponsorshipInvitesResponseModel>> GetSponsoredOrganizations(Guid sponsoringOrgId)
+    {
+        var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
+        if (sponsoringOrg == null)
+        {
+            throw new NotFoundException();
+        }
+        var organization = _currentContext.Organizations.First(x => x.Id == sponsoringOrg.Id);
+        if (!await _currentContext.OrganizationOwner(sponsoringOrg.Id) && !await _currentContext.OrganizationAdmin(sponsoringOrg.Id) && !organization.Permissions.ManageUsers)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
+        return new ListResponseModel<OrganizationSponsorshipInvitesResponseModel>(
+            sponsorships
+                .Where(s => s.IsAdminInitiated)
+                .Select(s => new OrganizationSponsorshipInvitesResponseModel(new OrganizationSponsorshipData(s)))
+        );
+
     }
 }
