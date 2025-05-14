@@ -68,7 +68,9 @@ Foreach ($item in @(
     @($postgres, "PostgreSQL", "PostgresMigrations", "postgreSql", 0),
     @($sqlite, "SQLite", "SqliteMigrations", "sqlite", 1),
     @($mysql, "MySQL", "MySqlMigrations", "mySql", 2),
-    @($mariadb, "MariaDB", "MySqlMigrations", "mySql", 3)
+    # MariaDB shares the MySQL connection string in the server config so they are mutually exclusive in that context.
+    # However they can still be run independently for integration tests.
+    @($mariadb, "MariaDB", "MySqlMigrations", "mySql", 3) 
 )) {
   if (!$item[0] -and !$all) {
     continue
