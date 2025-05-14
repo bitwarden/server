@@ -49,7 +49,7 @@ public class ImportOrganizationUserCommandTests
             invites.Add(new OrganizationUserInviteCommandModel(u.Email + "@test.com", u.ExternalId));
         }
 
-        var inviteCommandModel = new InviteOrganizationUsersRequest(invites.ToArray(), new InviteOrganization(org, null), Guid.Empty, DateTimeOffset.UtcNow);
+        var inviteCommandModel = new InviteOrganizationUsersRequest(invites.ToArray(), new InviteOrganization(org, null), org.Id, DateTimeOffset.UtcNow);
 
         newUsers.Add(new ImportedOrganizationUser
         {
@@ -74,7 +74,7 @@ public class ImportOrganizationUserCommandTests
         await sutProvider.GetDependency<IInviteOrganizationUsersCommand>().Received(1)
             .InviteImportedOrganizationUsersAsync(Arg.Is<InviteOrganizationUsersRequest>(
                         // These are the invites that should get populated from the CommandResult response above
-                        request => request.Invites.Count() == 0
+                        request => request.Invites.Count() == expectedNewUsersCount
                         ), org.Id);
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .UpsertAsync(default);

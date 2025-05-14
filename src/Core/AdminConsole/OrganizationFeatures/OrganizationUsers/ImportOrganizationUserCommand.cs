@@ -234,7 +234,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
     {
         var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
         var inviteOrganization = new InviteOrganization(organization, plan);
-        var request = new InviteOrganizationUsersRequest(invites.ToArray(), inviteOrganization, Guid.Empty, DateTimeOffset.UtcNow);
+        var request = new InviteOrganizationUsersRequest(invites.ToArray(), inviteOrganization, organization.Id, DateTimeOffset.UtcNow);
 
         return await _inviteOrganizationUsersCommand.InviteImportedOrganizationUsersAsync(request, organization.Id);
     }
