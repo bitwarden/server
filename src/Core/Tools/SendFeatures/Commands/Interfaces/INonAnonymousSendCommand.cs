@@ -39,4 +39,11 @@ public interface INonAnonymousSendCommand
     /// <param name="send"><see cref="Send" /> is used to delete from database and file storage</param>
     /// <returns>Task completes once <see cref="Send" /> has been deleted from database and file storage.</returns>
     Task DeleteSendAsync(Send send);
+
+    /// <summary>
+    /// Validates the Send file, but will delete or update send based on validation.
+    /// </summary>
+    /// <param name="send"><see cref="Send" /> needed to validate file and update or delete <see cref="Send" /></param>
+    /// <returns>Boolean whether the file was valid or not</returns>
+    Task<bool> UpdateSendOnValidation(Send send);
 }

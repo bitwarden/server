@@ -18,31 +18,31 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
     private readonly ISendRepository _sendRepository;
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly IPushNotificationService _pushNotificationService;
-    private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendValidationService _sendValidationService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
     private readonly ISendCoreHelperService _sendCoreHelperService;
+    private readonly ISendFileSettingHelper _sendFileSettingHelper;
 
     public NonAnonymousSendCommand(
         ISendRepository sendRepository,
         ISendFileStorageService sendFileStorageService,
         IPushNotificationService pushNotificationService,
-        ISendAuthorizationService sendAuthorizationService,
         ISendValidationService sendValidationService,
         IReferenceEventService referenceEventService,
         ICurrentContext currentContext,
-        ISendCoreHelperService sendCoreHelperService
+        ISendCoreHelperService sendCoreHelperService,
+        ISendFileSettingHelper sendFileSettingHelper
         )
     {
         _sendRepository = sendRepository;
         _sendFileStorageService = sendFileStorageService;
         _pushNotificationService = pushNotificationService;
-        _sendAuthorizationService = sendAuthorizationService;
         _sendValidationService = sendValidationService;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
         _sendCoreHelperService = sendCoreHelperService;
+        _sendFileSettingHelper = sendFileSettingHelper;
     }
 
     public async Task SaveSendAsync(Send send)
@@ -140,7 +140,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
         await _sendFileStorageService.UploadNewFileAsync(stream, send, data.Id);
 
-        if (!await _sendValidationService.ValidateSendFile(send))
+        if (!await UpdateSendOnValidation(send))
         {
             throw new BadRequestException("File received does not match expected file length.");
         }
@@ -154,6 +154,32 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             await _sendFileStorageService.DeleteFileAsync(send, data.Id);
         }
         await _pushNotificationService.PushSyncSendDeleteAsync(send);
+    }
+
+    public async Task<bool> UpdateSendOnValidation(Send send)
+    {
+        var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data);
+
+        var (valid, realSize) = await _sendFileStorageService.ValidateFileAsync(send, fileData.Id, fileData.Size, _sendFileSettingHelper.GetFileSizeLeeway());
+
+        if (!valid || realSize > _sendFileSettingHelper.GetMaxFileSize())
+        {
+            // File reported differs in size from that promised. Must be a rogue client. Delete Send
+            await DeleteSendAsync(send);
+            return false;
+        }
+
+        // Update Send data if necessary
+        if (realSize != fileData.Size)
+        {
+            fileData.Size = realSize.Value;
+        }
+        fileData.Validated = true;
+        send.Data = JsonSerializer.Serialize(fileData,
+            JsonHelpers.IgnoreWritingNull);
+        await SaveSendAsync(send);
+
+        return valid;
     }
 
 }

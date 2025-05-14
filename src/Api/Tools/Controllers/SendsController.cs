@@ -26,7 +26,6 @@ public class SendsController : Controller
 {
     private readonly ISendRepository _sendRepository;
     private readonly IUserService _userService;
-    private readonly ISendValidationService _sendValidationService;
     private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly IAnonymousSendCommand _anonymousSendCommand;
@@ -38,7 +37,6 @@ public class SendsController : Controller
     public SendsController(
         ISendRepository sendRepository,
         IUserService userService,
-        ISendValidationService sendValidationService,
         ISendAuthorizationService sendAuthorizationService,
         IAnonymousSendCommand anonymousSendCommand,
         INonAnonymousSendCommand nonAnonymousSendCommand,
@@ -49,7 +47,6 @@ public class SendsController : Controller
     {
         _sendRepository = sendRepository;
         _userService = userService;
-        _sendValidationService = sendValidationService;
         _sendAuthorizationService = sendAuthorizationService;
         _anonymousSendCommand = anonymousSendCommand;
         _nonAnonymousSendCommand = nonAnonymousSendCommand;
@@ -88,8 +85,6 @@ public class SendsController : Controller
         {
             throw new NotFoundException();
         }
-
-
 
         var sendResponse = new SendAccessResponseModel(send, _globalSettings);
         if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
@@ -166,7 +161,7 @@ public class SendsController : Controller
                             }
                             return;
                         }
-                        await _sendValidationService.ValidateSendFile(send);
+                        await _nonAnonymousSendCommand.UpdateSendOnValidation(send);
                     }
                     catch (Exception e)
                     {
@@ -229,7 +224,7 @@ public class SendsController : Controller
 
         if (model.FileLength.Value > Constants.FileSize501mb)
         {
-            throw new BadRequestException($"Max file size is {_sendValidationService.GetMaxFileSizeReadable()}.");
+            throw new BadRequestException($"Max file size is 500 MB.");
         }
 
         model.ValidateCreation();
