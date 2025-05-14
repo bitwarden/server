@@ -108,6 +108,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
+            var sentWelcomeEmail = false;
             if (!string.IsNullOrEmpty(user.ReferenceData))
             {
                 var referenceData = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.ReferenceData);
@@ -115,6 +116,7 @@ public class RegisterUserCommand : IRegisterUserCommand
                 {
                     var initiationPath = value.ToString();
                     await SendAppropriateWelcomeEmailAsync(user, initiationPath);
+                    sentWelcomeEmail = true;
                     if (!string.IsNullOrEmpty(initiationPath))
                     {
                         await _referenceEventService.RaiseEventAsync(
@@ -126,6 +128,11 @@ public class RegisterUserCommand : IRegisterUserCommand
                         return result;
                     }
                 }
+            }
+
+            if (!sentWelcomeEmail)
+            {
+                await _mailService.SendWelcomeEmailAsync(user);
             }
 
             await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
