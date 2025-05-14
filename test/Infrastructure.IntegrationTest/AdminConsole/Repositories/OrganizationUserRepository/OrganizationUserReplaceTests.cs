@@ -31,10 +31,10 @@ public class OrganizationUserReplaceTests
         ]);
 
         // Assert
-        var (actualUser, actualCollections) = await organizationUserRepository.GetByIdWithCollectionsAsync(orgUser.Id);
-        Assert.NotNull(actualUser);
-        Assert.Equal(OrganizationUserType.Admin, actualUser.Type);
-        Assert.True(actualUser.AccessSecretsManager);
+        var (actualOrgUser, actualCollections) = await organizationUserRepository.GetByIdWithCollectionsAsync(orgUser.Id);
+        Assert.NotNull(actualOrgUser);
+        Assert.Equal(OrganizationUserType.Admin, actualOrgUser.Type);
+        Assert.True(actualOrgUser.AccessSecretsManager);
 
         var collectionAccess = Assert.Single(actualCollections);
         Assert.Equal(collection.Id, collectionAccess.Id);
@@ -71,13 +71,18 @@ public class OrganizationUserReplaceTests
         ]);
 
         // Assert
-        var (actualUser, actualCollections) = await organizationUserRepository.GetByIdWithCollectionsAsync(orgUser.Id);
-        Assert.NotNull(actualUser);
-        Assert.Equal(OrganizationUserType.Admin, actualUser.Type);
-        Assert.True(actualUser.AccessSecretsManager);
+        var (actualOrgUser, actualCollections) = await organizationUserRepository.GetByIdWithCollectionsAsync(orgUser.Id);
+        Assert.NotNull(actualOrgUser);
+        Assert.Equal(OrganizationUserType.Admin, actualOrgUser.Type);
+        Assert.True(actualOrgUser.AccessSecretsManager);
 
         var collectionAccess = Assert.Single(actualCollections);
         Assert.Equal(collection.Id, collectionAccess.Id);
         Assert.True(collectionAccess.Manage);
+
+        // Account revision date should be updated to a later date
+        var actualUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(actualUser);
+        Assert.True(actualUser.AccountRevisionDate.CompareTo(user.AccountRevisionDate) > 0);
     }
 }
