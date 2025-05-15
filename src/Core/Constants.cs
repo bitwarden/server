@@ -170,8 +170,6 @@ public static class FeatureFlagKeys
     public const string NativeCreateAccountFlow = "native-create-account-flow";
     public const string AndroidImportLoginsFlow = "import-logins-flow";
     public const string AppReviewPrompt = "app-review-prompt";
-    public const string EnablePasswordManagerSyncAndroid = "enable-password-manager-sync-android";
-    public const string EnablePasswordManagerSynciOS = "enable-password-manager-sync-ios";
     public const string AndroidMutualTls = "mutual-tls";
     public const string SingleTapPasskeyCreation = "single-tap-passkey-creation";
     public const string SingleTapPasskeyAuthentication = "single-tap-passkey-authentication";
