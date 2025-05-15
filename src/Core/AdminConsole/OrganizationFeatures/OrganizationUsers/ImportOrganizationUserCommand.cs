@@ -215,7 +215,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         var inviteOrganization = new InviteOrganization(organization, plan);
         var request = new InviteOrganizationUsersRequest(invites.ToArray(), inviteOrganization, organization.Id, DateTimeOffset.UtcNow);
 
-        return await _inviteOrganizationUsersCommand.InviteImportedOrganizationUsersAsync(request, organization.Id);
+        return await _inviteOrganizationUsersCommand.InviteImportedOrganizationUsersAsync(request);
     }
 
     private async Task OverwriteExisting(

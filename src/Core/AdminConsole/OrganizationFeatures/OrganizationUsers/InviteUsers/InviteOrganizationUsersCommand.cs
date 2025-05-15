@@ -77,7 +77,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         }
     }
 
-    public async Task<CommandResult<InviteOrganizationUsersResponse>> InviteImportedOrganizationUsersAsync(InviteOrganizationUsersRequest request, Guid organizationId)
+    public async Task<CommandResult<InviteOrganizationUsersResponse>> InviteImportedOrganizationUsersAsync(InviteOrganizationUsersRequest request)
     {
         var result = await InviteOrganizationUsersAsync(request);
 
@@ -87,7 +87,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 return new Failure<InviteOrganizationUsersResponse>(
                         new Error<InviteOrganizationUsersResponse>(
                             failure.Error.Message,
-                            new InviteOrganizationUsersResponse(failure.Error.ErroredValue.InvitedUsers, organizationId)
+                            new InviteOrganizationUsersResponse(failure.Error.ErroredValue.InvitedUsers, request.InviteOrganization.OrganizationId)
                             )
                         );
 
@@ -101,13 +101,13 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
                 await eventService.LogOrganizationUserEventsAsync(events);
 
-                return new Success<InviteOrganizationUsersResponse>(new InviteOrganizationUsersResponse(success.Value.InvitedUsers, organizationId)
+                return new Success<InviteOrganizationUsersResponse>(new InviteOrganizationUsersResponse(success.Value.InvitedUsers, request.InviteOrganization.OrganizationId)
                 );
 
             default:
                 return new Failure<InviteOrganizationUsersResponse>(
                     new InvalidResultTypeError<InviteOrganizationUsersResponse>(
-                        new InviteOrganizationUsersResponse(organizationId)));
+                        new InviteOrganizationUsersResponse(request.InviteOrganization.OrganizationId)));
         }
     }
 

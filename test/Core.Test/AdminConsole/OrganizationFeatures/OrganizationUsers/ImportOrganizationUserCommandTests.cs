@@ -57,13 +57,13 @@ public class ImportOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(existingUsers);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetCountByOrganizationIdAsync(org.Id).Returns(existingUsers.Count);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(org.Id).Returns(true);
-        sutProvider.GetDependency<IInviteOrganizationUsersCommand>().InviteImportedOrganizationUsersAsync(Arg.Any<InviteOrganizationUsersRequest>(), org.Id)
+        sutProvider.GetDependency<IInviteOrganizationUsersCommand>().InviteImportedOrganizationUsersAsync(Arg.Any<InviteOrganizationUsersRequest>())
             .Returns(new Success<InviteOrganizationUsersResponse>(new InviteOrganizationUsersResponse(org.Id)));
 
         await sutProvider.Sut.ImportAsync(org.Id, newGroups, newUsers, new List<string>(), false, EventSystemUser.PublicApi);
 
         await sutProvider.GetDependency<IInviteOrganizationUsersCommand>().Received(1)
-            .InviteImportedOrganizationUsersAsync(Arg.Any<InviteOrganizationUsersRequest>(), org.Id);
+            .InviteImportedOrganizationUsersAsync(Arg.Any<InviteOrganizationUsersRequest>());
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .UpsertAsync(default);
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
@@ -109,7 +109,7 @@ public class ImportOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(existingUsers);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetCountByOrganizationIdAsync(org.Id).Returns(existingUsers.Count);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(Arg.Any<IEnumerable<Guid>>()).Returns(new List<OrganizationUser> { new OrganizationUser { Id = reInvitedUser.Id } });
-        sutProvider.GetDependency<IInviteOrganizationUsersCommand>().InviteImportedOrganizationUsersAsync(Arg.Any<InviteOrganizationUsersRequest>(), org.Id)
+        sutProvider.GetDependency<IInviteOrganizationUsersCommand>().InviteImportedOrganizationUsersAsync(Arg.Any<InviteOrganizationUsersRequest>())
             .Returns(new Success<InviteOrganizationUsersResponse>(new InviteOrganizationUsersResponse(org.Id)));
 
         await sutProvider.Sut.ImportAsync(org.Id, newGroups, newUsers, new List<string>(), false, EventSystemUser.PublicApi);
@@ -126,7 +126,7 @@ public class ImportOrganizationUserCommandTests
             .UpsertManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == 1));
 
         await sutProvider.GetDependency<IInviteOrganizationUsersCommand>().Received(1)
-            .InviteImportedOrganizationUsersAsync(Arg.Any<InviteOrganizationUsersRequest>(), org.Id);
+            .InviteImportedOrganizationUsersAsync(Arg.Any<InviteOrganizationUsersRequest>());
 
         // Send events
         await sutProvider.GetDependency<IEventService>().Received(1)

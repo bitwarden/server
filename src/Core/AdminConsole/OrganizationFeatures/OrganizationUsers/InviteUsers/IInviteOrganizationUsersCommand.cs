@@ -28,5 +28,5 @@ public interface IInviteOrganizationUsersCommand
     /// Contains the details for inviting the imported organization users.
     /// </param>
     /// <returns>Response from InviteOrganiationUsersAsync<see cref="InviteOrganizationUsersResponse"/></returns>
-    Task<CommandResult<InviteOrganizationUsersResponse>> InviteImportedOrganizationUsersAsync(InviteOrganizationUsersRequest request, Guid organizationId);
+    Task<CommandResult<InviteOrganizationUsersResponse>> InviteImportedOrganizationUsersAsync(InviteOrganizationUsersRequest request);
 }
