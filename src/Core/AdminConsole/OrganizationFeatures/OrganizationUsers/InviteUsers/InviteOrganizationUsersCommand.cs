@@ -10,6 +10,7 @@ using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.AdminConsole.Utilities.Errors;
 using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
@@ -92,15 +93,13 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
             case Success<InviteOrganizationUsersResponse> success when success.Value.InvitedUsers.Any():
 
-                // add a bulk method?
+                List<(OrganizationUser, EventType, EventSystemUser, DateTime?)> events = new List<(OrganizationUser, EventType, EventSystemUser, DateTime?)>();
                 foreach (var user in success.Value.InvitedUsers)
                 {
-                    await eventService.LogOrganizationUserEventAsync<IOrganizationUser>(
-                        organizationUser: user,
-                        type: EventType.OrganizationUser_Invited,
-                        systemUser: EventSystemUser.PublicApi,
-                        date: request.PerformedAt.UtcDateTime);
+                    events.Add((user, EventType.OrganizationUser_Invited, EventSystemUser.PublicApi, request.PerformedAt.UtcDateTime));
                 }
+
+                await eventService.LogOrganizationUserEventsAsync(events);
 
                 return new Success<InviteOrganizationUsersResponse>(new InviteOrganizationUsersResponse(success.Value.InvitedUsers, organizationId)
                 );
