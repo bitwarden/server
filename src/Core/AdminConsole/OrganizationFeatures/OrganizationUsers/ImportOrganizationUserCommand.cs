@@ -88,19 +88,21 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
 
         var events = new List<(OrganizationUserUserDetails ou, EventType e, DateTime? d)>();
 
-        // Users
         await RemoveExistingExternalUsers(removeUserExternalIds, events, importUserData);
+
         if (overwriteExisting)
         {
             await OverwriteExisting(events, importUserData);
         }
+
         await RemoveExistingUsers(existingUsers, newUsers, organization, importUserData);
+
         await AddNewUsers(organization, newUsers, eventSystemUser, importUserData);
 
-        // Groups
         await ImportGroups(organization, groups, eventSystemUser, importUserData);
 
         await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.ou, e.e, eventSystemUser, e.d)));
+
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.DirectorySynced, organization, _currentContext));
     }
@@ -164,7 +166,6 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
 
         foreach (var user in usersToAttach)
         {
-            var orgUserDetails = existingUsersEmailsDict[user];
             var orgUser = orgUsers[existingUsersEmailsDict[user].Id];
             if (orgUser != null)
             {
