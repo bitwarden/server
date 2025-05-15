@@ -5,6 +5,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Identity.IdentityServer;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -17,6 +18,7 @@ public class UserDecryptionOptionsBuilderTests
     private readonly ICurrentContext _currentContext;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IFeatureService _featureService;
     private readonly UserDecryptionOptionsBuilder _builder;
 
     public UserDecryptionOptionsBuilderTests()
@@ -24,7 +26,8 @@ public class UserDecryptionOptionsBuilderTests
         _currentContext = Substitute.For<ICurrentContext>();
         _deviceRepository = Substitute.For<IDeviceRepository>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-        _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository);
+        _featureService = Substitute.For<IFeatureService>();
+        _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository, featureService: _featureService);
     }
 
     [Theory]
@@ -120,13 +123,6 @@ public class UserDecryptionOptionsBuilderTests
     [BitAutoData(DeviceType.SafariBrowser)]
     [BitAutoData(DeviceType.VivaldiBrowser)]
     [BitAutoData(DeviceType.UnknownBrowser)]
-    // Extension
-    [BitAutoData(DeviceType.ChromeExtension)]
-    [BitAutoData(DeviceType.FirefoxExtension)]
-    [BitAutoData(DeviceType.OperaExtension)]
-    [BitAutoData(DeviceType.EdgeExtension)]
-    [BitAutoData(DeviceType.VivaldiExtension)]
-    [BitAutoData(DeviceType.SafariExtension)]
     public async Task Build_WhenHasLoginApprovingDevice_ShouldApprovingDeviceTrue(
         DeviceType deviceType,
         SsoConfig ssoConfig, SsoConfigurationData configurationData, User user, Device device, Device approvingDevice)
@@ -142,9 +138,17 @@ public class UserDecryptionOptionsBuilderTests
     }
 
     [Theory]
+    // CLI
     [BitAutoData(DeviceType.WindowsCLI)]
     [BitAutoData(DeviceType.MacOsCLI)]
     [BitAutoData(DeviceType.LinuxCLI)]
+    // Extension
+    [BitAutoData(DeviceType.ChromeExtension)]
+    [BitAutoData(DeviceType.FirefoxExtension)]
+    [BitAutoData(DeviceType.OperaExtension)]
+    [BitAutoData(DeviceType.EdgeExtension)]
+    [BitAutoData(DeviceType.VivaldiExtension)]
+    [BitAutoData(DeviceType.SafariExtension)]
     public async Task Build_WhenHasLoginApprovingDevice_ShouldApprovingDeviceFalse(
         DeviceType deviceType,
         SsoConfig ssoConfig, SsoConfigurationData configurationData, User user, Device device, Device approvingDevice)
