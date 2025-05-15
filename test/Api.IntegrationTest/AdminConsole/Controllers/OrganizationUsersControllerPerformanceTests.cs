@@ -9,12 +9,12 @@ namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 
 public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOutputHelper)
 {
-    [Theory(Skip = "Performance test")]
+    [Theory]
     [InlineData(100)]
     [InlineData(60000)]
     public async Task GetAsync(int seats)
     {
-        await using var factory = new ApiApplicationFactory();
+        await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
