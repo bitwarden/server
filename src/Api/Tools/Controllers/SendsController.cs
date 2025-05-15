@@ -163,7 +163,7 @@ public class SendsController : Controller
                             return;
                         }
 
-                        await _nonAnonymousSendCommand.UpdateSendOnValidation(send);
+                        await _nonAnonymousSendCommand.ConfirmFileSize(send);
                     }
                     catch (Exception e)
                     {

@@ -1099,7 +1099,7 @@ public class NonAnonymousSendCommandTests
             .Returns(Task.CompletedTask);
 
         // Configure validation to fail due to file size mismatch
-        _nonAnonymousSendCommand.UpdateSendOnValidation(send)
+        _nonAnonymousSendCommand.ConfirmFileSize(send)
             .Returns(false);
 
         // Act & Assert

@@ -135,7 +135,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
         await _sendFileStorageService.UploadNewFileAsync(stream, send, data.Id);
 
-        if (!await UpdateSendOnValidation(send))
+        if (!await ConfirmFileSize(send))
         {
             throw new BadRequestException("File received does not match expected file length.");
         }
@@ -151,7 +151,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         await _pushNotificationService.PushSyncSendDeleteAsync(send);
     }
 
-    public async Task<bool> UpdateSendOnValidation(Send send)
+    public async Task<bool> ConfirmFileSize(Send send)
     {
         var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data);
 

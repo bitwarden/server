@@ -41,9 +41,13 @@ public interface INonAnonymousSendCommand
     Task DeleteSendAsync(Send send);
 
     /// <summary>
-    /// Validates the Send file, but will delete or update send based on validation.
+    /// Stores the confirmed file size of a send; when the file size cannot be confirmed, the send is deleted.
     /// </summary>
-    /// <param name="send"><see cref="Send" /> needed to validate file and update or delete <see cref="Send" /></param>
-    /// <returns>Boolean whether the file was valid or not</returns>
-    Task<bool> UpdateSendOnValidation(Send send);
+    /// <param name="send">The <see cref="Send" /> this command acts upon</param>
+    /// <returns><see langword="true" /> when the file is confirmed, otherwise <see langword="false" /></returns>
+    /// <remarks>
+    /// When a file size cannot be confirmed, we assume we're working with a rogue client. The send is deleted out of
+    ///  an abundance of caution.
+    /// </remarks>
+    Task<bool> ConfirmFileSize(Send send);
 }
