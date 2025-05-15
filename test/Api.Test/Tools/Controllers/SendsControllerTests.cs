@@ -31,7 +31,6 @@ public class SendsControllerTests : IDisposable
     private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
     private readonly IAnonymousSendCommand _anonymousSendCommand;
     private readonly ISendAuthorizationService _sendAuthorizationService;
-    private readonly ISendValidationService _sendValidationService;
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly ILogger<SendsController> _logger;
     private readonly ICurrentContext _currentContext;
@@ -43,7 +42,6 @@ public class SendsControllerTests : IDisposable
         _nonAnonymousSendCommand = Substitute.For<INonAnonymousSendCommand>();
         _anonymousSendCommand = Substitute.For<IAnonymousSendCommand>();
         _sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
-        _sendValidationService = Substitute.For<ISendValidationService>();
         _sendFileStorageService = Substitute.For<ISendFileStorageService>();
         _globalSettings = new GlobalSettings();
         _logger = Substitute.For<ILogger<SendsController>>();
@@ -52,7 +50,6 @@ public class SendsControllerTests : IDisposable
         _sut = new SendsController(
             _sendRepository,
             _userService,
-            _sendValidationService,
             _sendAuthorizationService,
             _anonymousSendCommand,
             _nonAnonymousSendCommand,

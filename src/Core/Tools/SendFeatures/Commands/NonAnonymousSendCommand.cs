@@ -22,18 +22,15 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
     private readonly ISendCoreHelperService _sendCoreHelperService;
-    private readonly ISendFileSettingHelper _sendFileSettingHelper;
 
-    public NonAnonymousSendCommand(
-        ISendRepository sendRepository,
+    public NonAnonymousSendCommand(ISendRepository sendRepository,
         ISendFileStorageService sendFileStorageService,
         IPushNotificationService pushNotificationService,
+        ISendAuthorizationService sendAuthorizationService,
         ISendValidationService sendValidationService,
         IReferenceEventService referenceEventService,
         ICurrentContext currentContext,
-        ISendCoreHelperService sendCoreHelperService,
-        ISendFileSettingHelper sendFileSettingHelper
-        )
+        ISendCoreHelperService sendCoreHelperService)
     {
         _sendRepository = sendRepository;
         _sendFileStorageService = sendFileStorageService;
@@ -42,7 +39,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
         _sendCoreHelperService = sendCoreHelperService;
-        _sendFileSettingHelper = sendFileSettingHelper;
     }
 
     public async Task SaveSendAsync(Send send)
@@ -113,7 +109,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             throw;
         }
     }
-
     public async Task UploadFileToExistingSendAsync(Stream stream, Send send)
     {
         if (stream.Position > 0)
@@ -160,9 +155,9 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
     {
         var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data);
 
-        var (valid, realSize) = await _sendFileStorageService.ValidateFileAsync(send, fileData.Id, fileData.Size, _sendFileSettingHelper.GetFileSizeLeeway());
+        var (valid, realSize) = await _sendFileStorageService.ValidateFileAsync(send, fileData.Id, fileData.Size, SendFileSettingHelper.FILE_SIZE_LEEWAY);
 
-        if (!valid || realSize > _sendFileSettingHelper.GetMaxFileSize())
+        if (!valid || realSize > SendFileSettingHelper.FILE_SIZE_LEEWAY)
         {
             // File reported differs in size from that promised. Must be a rogue client. Delete Send
             await DeleteSendAsync(send);

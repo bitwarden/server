@@ -14,6 +14,5 @@ public static class SendServiceCollectionExtension
         services.AddScoped<ISendAuthorizationService, SendAuthorizationService>();
         services.AddScoped<ISendValidationService, SendValidationService>();
         services.AddScoped<ISendCoreHelperService, SendCoreHelperService>();
-        services.AddScoped<ISendFileSettingHelper, SendFileSettingHelper>();
     }
 }

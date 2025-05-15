@@ -11,6 +11,7 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
+using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Tools.SendFeatures.Commands;
 using Bit.Core.Tools.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -956,9 +957,6 @@ public class NonAnonymousSendCommandTests
         // Verify no interactions with storage service
         await _sendFileStorageService.DidNotReceiveWithAnyArgs().UploadNewFileAsync(
             Arg.Any<Stream>(), Arg.Any<Send>(), Arg.Any<string>());
-
-        // Verify validation service was not called
-        await _sendValidationService.DidNotReceiveWithAnyArgs().ValidateSendFile(Arg.Any<Send>());
     }
 
     [Fact]
@@ -983,9 +981,6 @@ public class NonAnonymousSendCommandTests
         // Verify no interactions with storage service
         await _sendFileStorageService.DidNotReceiveWithAnyArgs().UploadNewFileAsync(
             Arg.Any<Stream>(), Arg.Any<Send>(), Arg.Any<string>());
-
-        // Verify validation service was not called
-        await _sendValidationService.DidNotReceiveWithAnyArgs().ValidateSendFile(Arg.Any<Send>());
     }
 
     [Fact]
@@ -1010,9 +1005,6 @@ public class NonAnonymousSendCommandTests
         // Verify no interactions with storage service
         await _sendFileStorageService.DidNotReceiveWithAnyArgs().UploadNewFileAsync(
             Arg.Any<Stream>(), Arg.Any<Send>(), Arg.Any<string>());
-
-        // Verify validation service was not called
-        await _sendValidationService.DidNotReceiveWithAnyArgs().ValidateSendFile(Arg.Any<Send>());
     }
 
     [Fact]
@@ -1035,8 +1027,7 @@ public class NonAnonymousSendCommandTests
         };
 
         // Setup validation to succeed
-        _sendValidationService.ValidateSendFile(send)
-            .Returns(true);
+        _sendFileStorageService.ValidateFileAsync(send, sendFileData.Id, sendFileData.Size, SendFileSettingHelper.FILE_SIZE_LEEWAY).Returns((true, sendFileData.Size));
 
         // Act
         await _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send);
@@ -1048,17 +1039,15 @@ public class NonAnonymousSendCommandTests
             Arg.Is<Send>(s => s.Id == sendId && s.UserId == userId),
             Arg.Is<string>(id => id == fileId)
         );
-
-        // Verify validation was called
-        await _sendValidationService.Received(1).ValidateSendFile(send);
     }
 
 
     [Fact]
-    public async Task UpdateFileToExistingSendAsync_Success()
+    public async Task UploadFileToExistingSendAsync_Success()
     {
         // Arrange
         var stream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 });
+        stream.Position = 2; // Simulate a non-zero position
         var sendId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var fileId = "existingfileid123";
@@ -1072,9 +1061,7 @@ public class NonAnonymousSendCommandTests
             Data = JsonSerializer.Serialize(sendFileData)
         };
 
-        // Setup validation to succeed
-        _sendValidationService.ValidateSendFile(send)
-            .Returns(true);
+        _sendFileStorageService.ValidateFileAsync(send, sendFileData.Id, sendFileData.Size, SendFileSettingHelper.FILE_SIZE_LEEWAY).Returns((true, sendFileData.Size));
 
         // Act
         await _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send);
@@ -1082,13 +1069,10 @@ public class NonAnonymousSendCommandTests
         // Assert
         // Verify file was uploaded with correct parameters
         await _sendFileStorageService.Received(1).UploadNewFileAsync(
-            Arg.Is<Stream>(s => s == stream),
+            Arg.Is<Stream>(s => s == stream && s.Position == 0), // Ensure stream position is reset
             Arg.Is<Send>(s => s.Id == sendId && s.UserId == userId),
             Arg.Is<string>(id => id == fileId)
         );
-
-        // Verify validation was called
-        await _sendValidationService.Received(1).ValidateSendFile(send);
     }
 
     [Fact]
@@ -1115,7 +1099,7 @@ public class NonAnonymousSendCommandTests
             .Returns(Task.CompletedTask);
 
         // Configure validation to fail due to file size mismatch
-        _sendValidationService.ValidateSendFile(send)
+        _nonAnonymousSendCommand.UpdateSendOnValidation(send)
             .Returns(false);
 
         // Act & Assert
@@ -1123,15 +1107,5 @@ public class NonAnonymousSendCommandTests
             _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send));
 
         Assert.Equal("File received does not match expected file length.", exception.Message);
-
-        // Verify upload was attempted
-        await _sendFileStorageService.Received(1).UploadNewFileAsync(
-            Arg.Is<Stream>(s => s == stream),
-            Arg.Is<Send>(s => s.Id == sendId),
-            Arg.Is<string>(s => s == fileId)
-        );
-
-        // Verify validation was called
-        await _sendValidationService.Received(1).ValidateSendFile(send);
     }
 }

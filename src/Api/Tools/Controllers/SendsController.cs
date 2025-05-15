@@ -12,6 +12,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
+using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
@@ -161,6 +162,7 @@ public class SendsController : Controller
                             }
                             return;
                         }
+
                         await _nonAnonymousSendCommand.UpdateSendOnValidation(send);
                     }
                     catch (Exception e)
@@ -224,7 +226,7 @@ public class SendsController : Controller
 
         if (model.FileLength.Value > Constants.FileSize501mb)
         {
-            throw new BadRequestException($"Max file size is 500 MB.");
+            throw new BadRequestException($"Max file size is {SendFileSettingHelper.MAX_FILE_SIZE_READABLE}.");
         }
 
         model.ValidateCreation();
