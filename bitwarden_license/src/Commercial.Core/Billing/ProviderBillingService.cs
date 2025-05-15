@@ -694,6 +694,13 @@ public class ProviderBillingService(
              customer.Metadata.ContainsKey(BraintreeCustomerIdKey) ||
              setupIntent.IsUnverifiedBankAccount());
 
+        int? trialPeriodDays = provider.Type switch
+        {
+            ProviderType.Msp when usePaymentMethod => 14,
+            ProviderType.BusinessUnit when usePaymentMethod => 4,
+            _ => null
+        };
+
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
             CollectionMethod = usePaymentMethod ?
@@ -707,7 +714,7 @@ public class ProviderBillingService(
             },
             OffSession = true,
             ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
-            TrialPeriodDays = usePaymentMethod ? 14 : null
+            TrialPeriodDays = trialPeriodDays
         };
 
         if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
