@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using System.Diagnostics;
+using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
@@ -445,11 +446,14 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     {
         await base.ReplaceAsync(organizationUser);
 
-        // If the OrganizationUser is not linked to a User yet, we can't update the account revision date.
-        if (!organizationUser.UserId.HasValue)
+        // Only bump account revision dates for confirmed OrgUsers,
+        // as this is the only status that receives sync data from the organization
+        if (organizationUser.Status is not OrganizationUserStatusType.Confirmed)
         {
             return;
         }
+
+        Debug.Assert(organizationUser.UserId is not null, "OrganizationUser is confirmed but does not have a UserId.");
 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
