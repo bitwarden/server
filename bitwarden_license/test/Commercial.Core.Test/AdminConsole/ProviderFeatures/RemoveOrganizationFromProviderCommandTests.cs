@@ -8,6 +8,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -227,6 +228,26 @@ public class RemoveOrganizationFromProviderCommandTests
         {
             Id = "subscription_id"
         });
+
+        sutProvider.GetDependency<IAutomaticTaxStrategy>()
+            .When(x => x.SetCreateOptions(
+                Arg.Is<SubscriptionCreateOptions>(options =>
+                    options.Customer == organization.GatewayCustomerId &&
+                    options.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&
+                    options.DaysUntilDue == 30 &&
+                    options.Metadata["organizationId"] == organization.Id.ToString() &&
+                    options.OffSession == true &&
+                    options.ProrationBehavior == StripeConstants.ProrationBehavior.CreateProrations &&
+                    options.Items.First().Price == teamsMonthlyPlan.PasswordManager.StripeSeatPlanId &&
+                    options.Items.First().Quantity == organization.Seats)
+                , Arg.Any<Customer>()))
+            .Do(x =>
+            {
+                x.Arg<SubscriptionCreateOptions>().AutomaticTax = new SubscriptionAutomaticTaxOptions
+                {
+                    Enabled = true
+                };
+            });
 
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 

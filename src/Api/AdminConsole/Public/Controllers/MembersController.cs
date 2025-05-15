@@ -76,7 +76,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        var response = new MemberResponseModel(orgUser, await _userService.TwoFactorIsEnabledAsync(orgUser),
+        var response = new MemberResponseModel(orgUser, await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUser),
             collections);
         return new JsonResult(response);
     }
@@ -185,7 +185,7 @@ public class MembersController : Controller
         {
             var existingUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
             response = new MemberResponseModel(existingUserDetails,
-                await _userService.TwoFactorIsEnabledAsync(existingUserDetails), associations);
+                await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(existingUserDetails), associations);
         }
         else
         {
@@ -221,8 +221,7 @@ public class MembersController : Controller
     /// Remove a member.
     /// </summary>
     /// <remarks>
-    /// Permanently removes a member from the organization. This cannot be undone.
-    /// The user account will still remain. The user is only removed from the organization.
+    /// Removes a member from the organization. This cannot be undone. The user account will still remain.
     /// </remarks>
     /// <param name="id">The identifier of the member to be removed.</param>
     [HttpDelete("{id}")]

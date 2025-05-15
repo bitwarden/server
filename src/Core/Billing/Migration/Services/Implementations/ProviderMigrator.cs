@@ -254,7 +254,7 @@ public class ProviderMigrator(
 
             await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
             {
-                Coupon = StripeConstants.CouponIDs.MSPDiscount35
+                Coupon = StripeConstants.CouponIDs.LegacyMSPDiscount
             });
 
             provider.GatewayCustomerId = customer.Id;
@@ -309,8 +309,7 @@ public class ProviderMigrator(
                 .SeatMinimum ?? 0;
 
             var updateSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
-                provider.Id,
-                provider.GatewaySubscriptionId,
+                provider,
                 [
                     (Plan: PlanType.EnterpriseMonthly, SeatsMinimum: enterpriseSeatMinimum),
                     (Plan: PlanType.TeamsMonthly, SeatsMinimum: teamsSeatMinimum)

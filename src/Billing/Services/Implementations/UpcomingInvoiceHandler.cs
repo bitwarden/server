@@ -1,8 +1,11 @@
-﻿using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services.Contracts;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -12,6 +15,7 @@ using Event = Stripe.Event;
 namespace Bit.Billing.Services.Implementations;
 
 public class UpcomingInvoiceHandler(
+    IFeatureService featureService,
     ILogger<StripeEventProcessor> logger,
     IMailService mailService,
     IOrganizationRepository organizationRepository,
@@ -21,7 +25,8 @@ public class UpcomingInvoiceHandler(
     IStripeEventService stripeEventService,
     IStripeEventUtilityService stripeEventUtilityService,
     IUserRepository userRepository,
-    IValidateSponsorshipCommand validateSponsorshipCommand)
+    IValidateSponsorshipCommand validateSponsorshipCommand,
+    IAutomaticTaxFactory automaticTaxFactory)
     : IUpcomingInvoiceHandler
 {
     public async Task HandleAsync(Event parsedEvent)
@@ -136,6 +141,21 @@ public class UpcomingInvoiceHandler(
 
     private async Task TryEnableAutomaticTaxAsync(Subscription subscription)
     {
+        if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+        {
+            var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscription.Items.Select(x => x.Price.Id));
+            var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
+            var updateOptions = automaticTaxStrategy.GetUpdateOptions(subscription);
+
+            if (updateOptions == null)
+            {
+                return;
+            }
+
+            await stripeFacade.UpdateSubscription(subscription.Id, updateOptions);
+            return;
+        }
+
         if (subscription.AutomaticTax.Enabled ||
             !subscription.Customer.HasBillingLocation() ||
             await IsNonTaxableNonUSBusinessUseSubscription(subscription))

@@ -106,7 +106,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 LimitCollectionDeletion = e.LimitCollectionDeletion,
                 LimitItemDeletion = e.LimitItemDeletion,
                 AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems,
-                UseRiskInsights = e.UseRiskInsights
+                UseRiskInsights = e.UseRiskInsights,
+                UseOrganizationDomains = e.UseOrganizationDomains,
+                UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies
             }).ToListAsync();
         }
     }
@@ -199,6 +201,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .ExecuteDeleteAsync();
             await dbContext.ProviderOrganizations.Where(po => po.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
+            await dbContext.OrganizationIntegrations.Where(oi => oi.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
 
             await dbContext.GroupServiceAccountAccessPolicy.Where(ap => ap.GrantedServiceAccount.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
@@ -290,21 +294,33 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetByVerifiedUserEmailDomainAsync(Guid userId)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
+        using var scope = ServiceScopeFactory.CreateScope();
 
-            var query = from u in dbContext.Users
-                        join ou in dbContext.OrganizationUsers on u.Id equals ou.UserId
-                        join o in dbContext.Organizations on ou.OrganizationId equals o.Id
-                        join od in dbContext.OrganizationDomains on ou.OrganizationId equals od.OrganizationId
+        var dbContext = GetDatabaseContext(scope);
+
+        var userQuery = from u in dbContext.Users
                         where u.Id == userId
-                              && od.VerifiedDate != null
-                              && u.Email.ToLower().EndsWith("@" + od.DomainName.ToLower())
-                        select o;
+                        select u;
 
-            return await query.ToArrayAsync();
+        var user = await userQuery.FirstOrDefaultAsync();
+
+        if (user is null)
+        {
+            return new List<Core.AdminConsole.Entities.Organization>();
         }
+
+        var userWithDomain = new { UserId = user.Id, EmailDomain = user.Email.Split('@').Last() };
+
+        var query = from o in dbContext.Organizations
+                    join ou in dbContext.OrganizationUsers on o.Id equals ou.OrganizationId
+                    join od in dbContext.OrganizationDomains on ou.OrganizationId equals od.OrganizationId
+                    where ou.UserId == userWithDomain.UserId &&
+                          od.DomainName == userWithDomain.EmailDomain &&
+                          od.VerifiedDate != null &&
+                          o.Enabled == true
+                    select o;
+
+        return await query.ToArrayAsync();
     }
 
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetAddableToProviderByUserIdAsync(
@@ -318,7 +334,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             var planTypes = providerType switch
             {
                 ProviderType.Msp => PlanConstants.EnterprisePlanTypes.Concat(PlanConstants.TeamsPlanTypes),
-                ProviderType.MultiOrganizationEnterprise => PlanConstants.EnterprisePlanTypes,
+                ProviderType.BusinessUnit => PlanConstants.EnterprisePlanTypes,
                 _ => []
             };
 
@@ -340,6 +356,19 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
             return await query.ToArrayAsync();
         }
+    }
+
+    public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetManyByIdsAsync(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        var query = from organization in dbContext.Organizations
+                    where ids.Contains(organization.Id)
+                    select organization;
+
+        return await query.ToArrayAsync();
     }
 
     public Task EnableCollectionEnhancements(Guid organizationId)

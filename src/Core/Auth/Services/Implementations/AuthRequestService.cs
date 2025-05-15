@@ -164,6 +164,7 @@ public class AuthRequestService : IAuthRequestService
             RequestDeviceIdentifier = model.DeviceIdentifier,
             RequestDeviceType = _currentContext.DeviceType.Value,
             RequestIpAddress = _currentContext.IpAddress,
+            RequestCountryName = _currentContext.CountryName,
             AccessCode = model.AccessCode,
             PublicKey = model.PublicKey,
             UserId = user.Id,
@@ -176,12 +177,7 @@ public class AuthRequestService : IAuthRequestService
 
     public async Task<AuthRequest> UpdateAuthRequestAsync(Guid authRequestId, Guid currentUserId, AuthRequestUpdateRequestModel model)
     {
-        var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId);
-
-        if (authRequest == null)
-        {
-            throw new NotFoundException();
-        }
+        var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId) ?? throw new NotFoundException();
 
         // Once Approval/Disapproval has been set, this AuthRequest should not be updated again.
         if (authRequest.Approved is not null)
@@ -291,13 +287,13 @@ public class AuthRequestService : IAuthRequestService
 
     private async Task NotifyAdminsOfDeviceApprovalRequestAsync(OrganizationUser organizationUser, User user)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.DeviceApprovalRequestAdminNotifications))
+        var adminEmails = await GetAdminAndAccountRecoveryEmailsAsync(organizationUser.OrganizationId);
+
+        if (adminEmails.Count == 0)
         {
-            _logger.LogWarning("Skipped sending device approval notification to admins - feature flag disabled");
+            _logger.LogWarning("There are no admin emails to send to.");
             return;
         }
-
-        var adminEmails = await GetAdminAndAccountRecoveryEmailsAsync(organizationUser.OrganizationId);
 
         await _mailService.SendDeviceApprovalRequestedNotificationEmailAsync(
             adminEmails,

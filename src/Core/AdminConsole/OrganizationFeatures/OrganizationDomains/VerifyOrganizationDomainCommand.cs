@@ -20,7 +20,6 @@ public class VerifyOrganizationDomainCommand(
     IDnsResolverService dnsResolverService,
     IEventService eventService,
     IGlobalSettings globalSettings,
-    IFeatureService featureService,
     ICurrentContext currentContext,
     ISavePolicyCommand savePolicyCommand,
     IMailService mailService,
@@ -125,11 +124,8 @@ public class VerifyOrganizationDomainCommand(
 
     private async Task DomainVerificationSideEffectsAsync(OrganizationDomain domain, IActingUser actingUser)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
-        {
-            await EnableSingleOrganizationPolicyAsync(domain.OrganizationId, actingUser);
-            await SendVerifiedDomainUserEmailAsync(domain);
-        }
+        await EnableSingleOrganizationPolicyAsync(domain.OrganizationId, actingUser);
+        await SendVerifiedDomainUserEmailAsync(domain);
     }
 
     private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser) =>
@@ -154,6 +150,6 @@ public class VerifyOrganizationDomainCommand(
 
         var organization = await organizationRepository.GetByIdAsync(domain.OrganizationId);
 
-        await mailService.SendClaimedDomainUserEmailAsync(new ManagedUserDomainClaimedEmails(domainUserEmails, organization));
+        await mailService.SendClaimedDomainUserEmailAsync(new ClaimedUserDomainClaimedEmails(domainUserEmails, organization));
     }
 }

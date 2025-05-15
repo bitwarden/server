@@ -45,7 +45,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual bool EnableCloudCommunication { get; set; } = false;
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
     public virtual string EventGridKey { get; set; }
-    public virtual CaptchaSettings Captcha { get; set; } = new CaptchaSettings();
     public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();
     public virtual IBaseServiceUriSettings BaseServiceUri { get; set; }
     public virtual string DatabaseProvider { get; set; }
@@ -53,6 +52,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
     public virtual SqlSettings MySql { get; set; } = new SqlSettings();
     public virtual SqlSettings Sqlite { get; set; } = new SqlSettings() { ConnectionString = "Data Source=:memory:" };
+    public virtual SlackSettings Slack { get; set; } = new SlackSettings();
     public virtual EventLoggingSettings EventLogging { get; set; } = new EventLoggingSettings();
     public virtual MailSettings Mail { get; set; } = new MailSettings();
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
@@ -84,6 +84,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
     public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
+    public virtual IPhishingDomainSettings PhishingDomain { get; set; } = new PhishingDomainSettings();
 
     public virtual bool EnableEmailVerification { get; set; }
     public virtual string KdfDefaultHashKey { get; set; }
@@ -271,10 +272,17 @@ public class GlobalSettings : IGlobalSettings
         }
     }
 
+    public class SlackSettings
+    {
+        public virtual string ApiBaseUrl { get; set; } = "https://slack.com/api";
+        public virtual string ClientId { get; set; }
+        public virtual string ClientSecret { get; set; }
+        public virtual string Scopes { get; set; }
+    }
+
     public class EventLoggingSettings
     {
         public AzureServiceBusSettings AzureServiceBus { get; set; } = new AzureServiceBusSettings();
-        public virtual string WebhookUrl { get; set; }
         public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
 
         public class AzureServiceBusSettings
@@ -283,6 +291,7 @@ public class GlobalSettings : IGlobalSettings
             private string _topicName;
 
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
+            public virtual string SlackSubscriptionName { get; set; } = "events-slack-subscription";
             public virtual string WebhookSubscriptionName { get; set; } = "events-webhook-subscription";
 
             public string ConnectionString
@@ -307,6 +316,7 @@ public class GlobalSettings : IGlobalSettings
 
             public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
             public virtual string WebhookQueueName { get; set; } = "events-webhook-queue";
+            public virtual string SlackQueueName { get; set; } = "events-slack-queue";
 
             public string HostName
             {
@@ -618,20 +628,16 @@ public class GlobalSettings : IGlobalSettings
         public bool EnforceSsoPolicyForAllUsers { get; set; }
     }
 
-    public class CaptchaSettings
-    {
-        public bool ForceCaptchaRequired { get; set; } = false;
-        public string HCaptchaSecretKey { get; set; }
-        public string HCaptchaSiteKey { get; set; }
-        public int MaximumFailedLoginAttempts { get; set; }
-        public double MaybeBotScoreThreshold { get; set; } = double.MaxValue;
-        public double IsBotScoreThreshold { get; set; } = double.MaxValue;
-    }
-
     public class StripeSettings
     {
         public string ApiKey { get; set; }
         public int MaxNetworkRetries { get; set; } = 2;
+    }
+
+    public class PhishingDomainSettings : IPhishingDomainSettings
+    {
+        public string UpdateUrl { get; set; }
+        public string ChecksumUrl { get; set; }
     }
 
     public class DistributedIpRateLimitingSettings

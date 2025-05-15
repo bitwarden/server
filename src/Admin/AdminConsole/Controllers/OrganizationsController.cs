@@ -462,6 +462,8 @@ public class OrganizationsController : Controller
             organization.UsersGetPremium = model.UsersGetPremium;
             organization.UseSecretsManager = model.UseSecretsManager;
             organization.UseRiskInsights = model.UseRiskInsights;
+            organization.UseOrganizationDomains = model.UseOrganizationDomains;
+            organization.UseAdminSponsoredFamilies = model.UseAdminSponsoredFamilies;
 
             //secrets
             organization.SmSeats = model.SmSeats;
