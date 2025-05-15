@@ -95,7 +95,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             await OverwriteExisting(events, importUserData);
         }
 
-        await RemoveExistingUsers(existingUsers, newUsers, organization, importUserData);
+        await UpsertExistingUsers(existingUsers, newUsers, organization, importUserData);
 
         await AddNewUsers(organization, newUsers, eventSystemUser, importUserData);
 
@@ -144,7 +144,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         );
     }
 
-    private async Task RemoveExistingUsers(IEnumerable<OrganizationUserUserDetails> existingUsers,
+    private async Task UpsertExistingUsers(IEnumerable<OrganizationUserUserDetails> existingUsers,
             IEnumerable<ImportedOrganizationUser> newUsers,
             Organization organization,
             OrganizationUserImportData importUserData)
@@ -159,19 +159,19 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             .Where(u => string.IsNullOrWhiteSpace(u.ExternalId))
             .ToDictionary(u => u.Email);
         var newUsersEmailsDict = newUsers.ToDictionary(u => u.Email);
-        var usersToAttach = existingUsersEmailsDict.Keys.Intersect(newUsersEmailsDict.Keys).ToList();
+        var newAndExistingUsersIntersection = existingUsersEmailsDict.Keys.Intersect(newUsersEmailsDict.Keys).ToList();
+        var organizationUsers = (await _organizationUserRepository.GetManyAsync(existingUsers.Select(u => u.Id).ToList())).ToDictionary(u => u.Id);
         var usersToUpsert = new List<OrganizationUser>();
 
-        var orgUsers = (await _organizationUserRepository.GetManyAsync(existingUsers.Select(u => u.Id).ToList())).ToDictionary(u => u.Id);
 
-        foreach (var user in usersToAttach)
+        foreach (var user in newAndExistingUsersIntersection)
         {
-            var orgUser = orgUsers[existingUsersEmailsDict[user].Id];
-            if (orgUser != null)
+            var organizationUser = organizationUsers[existingUsersEmailsDict[user].Id];
+            if (organizationUser != null)
             {
-                orgUser.ExternalId = newUsersEmailsDict[user].ExternalId;
-                usersToUpsert.Add(orgUser);
-                importUserData.ExistingExternalUsersIdDict.Add(orgUser.ExternalId, orgUser.Id);
+                organizationUser.ExternalId = newUsersEmailsDict[user].ExternalId;
+                usersToUpsert.Add(organizationUser);
+                importUserData.ExistingExternalUsersIdDict.Add(organizationUser.ExternalId, organizationUser.Id);
             }
         }
         await _organizationUserRepository.UpsertManyAsync(usersToUpsert);
