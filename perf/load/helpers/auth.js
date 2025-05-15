@@ -40,7 +40,6 @@ export function authenticate(
     payload["deviceName"] = "chrome";
     payload["username"] = username;
     payload["password"] = password;
-    // Auth-Email header is deprecated and no longer needed
   } else {
     payload["scope"] = "api.organization";
     payload["grant_type"] = "client_credentials";
