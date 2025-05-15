@@ -488,7 +488,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     private async Task<HttpContext> PostLoginAsync(
-        TestServer server, User user, string MasterPasswordHash, Action<HttpContext> extraConfiguration)
+        TestServer server, User user, string MasterPasswordHash)
     {
         return await server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
