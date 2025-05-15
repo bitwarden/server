@@ -138,6 +138,47 @@ public class UserDecryptionOptionsBuilderTests
     }
 
     [Theory]
+    // Desktop
+    [BitAutoData(DeviceType.LinuxDesktop)]
+    [BitAutoData(DeviceType.MacOsDesktop)]
+    [BitAutoData(DeviceType.WindowsDesktop)]
+    [BitAutoData(DeviceType.UWP)]
+    // Mobile
+    [BitAutoData(DeviceType.Android)]
+    [BitAutoData(DeviceType.iOS)]
+    [BitAutoData(DeviceType.AndroidAmazon)]
+    // Web
+    [BitAutoData(DeviceType.ChromeBrowser)]
+    [BitAutoData(DeviceType.FirefoxBrowser)]
+    [BitAutoData(DeviceType.OperaBrowser)]
+    [BitAutoData(DeviceType.EdgeBrowser)]
+    [BitAutoData(DeviceType.IEBrowser)]
+    [BitAutoData(DeviceType.SafariBrowser)]
+    [BitAutoData(DeviceType.VivaldiBrowser)]
+    [BitAutoData(DeviceType.UnknownBrowser)]
+    // Extension
+    [BitAutoData(DeviceType.ChromeExtension)]
+    [BitAutoData(DeviceType.FirefoxExtension)]
+    [BitAutoData(DeviceType.OperaExtension)]
+    [BitAutoData(DeviceType.EdgeExtension)]
+    [BitAutoData(DeviceType.VivaldiExtension)]
+    [BitAutoData(DeviceType.SafariExtension)]
+    public async Task Build_WhenHasLoginApprovingDeviceFeatureFlag_ShouldApprovingDeviceTrue(
+        DeviceType deviceType,
+        SsoConfig ssoConfig, SsoConfigurationData configurationData, User user, Device device, Device approvingDevice)
+    {
+        configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
+        _featureService.IsEnabled(Arg.Is(Core.FeatureFlagKeys.BrowserExtensionLoginApproval)).Returns(true);
+        ssoConfig.Data = configurationData.Serialize();
+        approvingDevice.Type = deviceType;
+        _deviceRepository.GetManyByUserIdAsync(user.Id).Returns(new Device[] { approvingDevice });
+
+        var result = await _builder.ForUser(user).WithSso(ssoConfig).WithDevice(device).BuildAsync();
+
+        Assert.True(result.TrustedDeviceOption?.HasLoginApprovingDevice);
+    }
+
+    [Theory]
     // CLI
     [BitAutoData(DeviceType.WindowsCLI)]
     [BitAutoData(DeviceType.MacOsCLI)]
