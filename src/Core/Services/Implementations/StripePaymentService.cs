@@ -112,6 +112,8 @@ public class StripePaymentService : IPaymentService
             throw new BadRequestException("You do not have an active subscription. Reinstate your subscription to make changes.");
         }
 
+        var existingCoupon = sub.Customer.Discount?.Coupon?.Id;
+
         var collectionMethod = sub.CollectionMethod;
         var daysUntilDue = sub.DaysUntilDue;
         var chargeNow = collectionMethod == "charge_automatically";
@@ -214,6 +216,19 @@ public class StripePaymentService : IPaymentService
                 {
                     CollectionMethod = collectionMethod,
                     DaysUntilDue = daysUntilDue,
+                });
+            }
+
+            var customer = await _stripeAdapter.CustomerGetAsync(sub.CustomerId);
+
+            var newCoupon = customer.Discount?.Coupon?.Id;
+
+            if (!string.IsNullOrEmpty(existingCoupon) && string.IsNullOrEmpty(newCoupon))
+            {
+                // Re-add the lost coupon due to the update.
+                await _stripeAdapter.CustomerUpdateAsync(sub.CustomerId, new CustomerUpdateOptions
+                {
+                    Coupon = existingCoupon
                 });
             }
         }
@@ -1265,7 +1280,7 @@ public class StripePaymentService : IPaymentService
         {
             var invoice = await _stripeAdapter.InvoiceCreatePreviewAsync(options);
 
-            var effectiveTaxRate = invoice.Tax != null && invoice.TotalExcludingTax != null
+            var effectiveTaxRate = invoice.Tax != null && invoice.TotalExcludingTax != null && invoice.TotalExcludingTax.Value != 0
                 ? invoice.Tax.Value.ToMajor() / invoice.TotalExcludingTax.Value.ToMajor()
                 : 0M;
 
@@ -1300,6 +1315,7 @@ public class StripePaymentService : IPaymentService
         string gatewaySubscriptionId)
     {
         var plan = await _pricingClient.GetPlanOrThrow(parameters.PasswordManager.Plan);
+        var isSponsored = parameters.PasswordManager.SponsoredPlan.HasValue;
 
         var options = new InvoiceCreatePreviewOptions
         {
@@ -1325,45 +1341,47 @@ public class StripePaymentService : IPaymentService
             },
         };
 
-        if (plan.PasswordManager.HasAdditionalSeatsOption)
+        if (isSponsored)
         {
+            var sponsoredPlan = Utilities.StaticStore.GetSponsoredPlan(parameters.PasswordManager.SponsoredPlan.Value);
             options.SubscriptionDetails.Items.Add(
-                new()
-                {
-                    Quantity = parameters.PasswordManager.Seats,
-                    Plan = plan.PasswordManager.StripeSeatPlanId
-                }
+                new() { Quantity = 1, Plan = sponsoredPlan.StripePlanId }
             );
         }
         else
         {
-            options.SubscriptionDetails.Items.Add(
-                new()
-                {
-                    Quantity = 1,
-                    Plan = plan.PasswordManager.StripePlanId
-                }
-            );
-        }
-
-        if (plan.SupportsSecretsManager)
-        {
-            if (plan.SecretsManager.HasAdditionalSeatsOption)
+            if (plan.PasswordManager.HasAdditionalSeatsOption)
             {
-                options.SubscriptionDetails.Items.Add(new()
-                {
-                    Quantity = parameters.SecretsManager?.Seats ?? 0,
-                    Plan = plan.SecretsManager.StripeSeatPlanId
-                });
+                options.SubscriptionDetails.Items.Add(
+                    new() { Quantity = parameters.PasswordManager.Seats, Plan = plan.PasswordManager.StripeSeatPlanId }
+                );
+            }
+            else
+            {
+                options.SubscriptionDetails.Items.Add(
+                    new() { Quantity = 1, Plan = plan.PasswordManager.StripePlanId }
+                );
             }
 
-            if (plan.SecretsManager.HasAdditionalServiceAccountOption)
+            if (plan.SupportsSecretsManager)
             {
-                options.SubscriptionDetails.Items.Add(new()
+                if (plan.SecretsManager.HasAdditionalSeatsOption)
                 {
-                    Quantity = parameters.SecretsManager?.AdditionalMachineAccounts ?? 0,
-                    Plan = plan.SecretsManager.StripeServiceAccountPlanId
-                });
+                    options.SubscriptionDetails.Items.Add(new()
+                    {
+                        Quantity = parameters.SecretsManager?.Seats ?? 0,
+                        Plan = plan.SecretsManager.StripeSeatPlanId
+                    });
+                }
+
+                if (plan.SecretsManager.HasAdditionalServiceAccountOption)
+                {
+                    options.SubscriptionDetails.Items.Add(new()
+                    {
+                        Quantity = parameters.SecretsManager?.AdditionalMachineAccounts ?? 0,
+                        Plan = plan.SecretsManager.StripeServiceAccountPlanId
+                    });
+                }
             }
         }
 
@@ -1420,7 +1438,7 @@ public class StripePaymentService : IPaymentService
         {
             var invoice = await _stripeAdapter.InvoiceCreatePreviewAsync(options);
 
-            var effectiveTaxRate = invoice.Tax != null && invoice.TotalExcludingTax != null
+            var effectiveTaxRate = invoice.Tax != null && invoice.TotalExcludingTax != null && invoice.TotalExcludingTax.Value != 0
                 ? invoice.Tax.Value.ToMajor() / invoice.TotalExcludingTax.Value.ToMajor()
                 : 0M;
 

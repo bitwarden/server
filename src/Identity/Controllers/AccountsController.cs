@@ -5,10 +5,8 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
-using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -38,7 +36,6 @@ public class AccountsController : Controller
     private readonly ILogger<AccountsController> _logger;
     private readonly IUserRepository _userRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
-    private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
@@ -86,7 +83,6 @@ public class AccountsController : Controller
         ILogger<AccountsController> logger,
         IUserRepository userRepository,
         IRegisterUserCommand registerUserCommand,
-        ICaptchaValidationService captchaValidationService,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
         ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
@@ -100,7 +96,6 @@ public class AccountsController : Controller
         _logger = logger;
         _userRepository = userRepository;
         _registerUserCommand = registerUserCommand;
-        _captchaValidationService = captchaValidationService;
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
         _sendVerificationEmailForRegistrationCommand = sendVerificationEmailForRegistrationCommand;
@@ -112,16 +107,6 @@ public class AccountsController : Controller
         {
             _defaultKdfHmacKey = Encoding.UTF8.GetBytes(globalSettings.KdfDefaultHashKey);
         }
-    }
-
-    [HttpPost("register")]
-    [CaptchaProtected]
-    public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
-    {
-        var user = model.ToUser();
-        var identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
-            model.Token, model.OrganizationUserId);
-        return ProcessRegistrationResult(identityResult, user);
     }
 
     [HttpPost("register/send-verification-email")]
@@ -175,17 +160,14 @@ public class AccountsController : Controller
         }
 
         return Ok();
-
-
     }
 
     [HttpPost("register/finish")]
-    public async Task<RegisterResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
+    public async Task<RegisterFinishResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
         var user = model.ToUser();
 
         // Users will either have an emailed token or an email verification token - not both.
-
         IdentityResult identityResult = null;
 
         switch (model.GetTokenType())
@@ -196,44 +178,37 @@ public class AccountsController : Controller
                         model.EmailVerificationToken);
 
                 return ProcessRegistrationResult(identityResult, user);
-                break;
             case RegisterFinishTokenType.OrganizationInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
                     model.OrgInviteToken, model.OrganizationUserId);
 
                 return ProcessRegistrationResult(identityResult, user);
-                break;
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, model.MasterPasswordHash, model.OrgSponsoredFreeFamilyPlanToken);
 
                 return ProcessRegistrationResult(identityResult, user);
-                break;
             case RegisterFinishTokenType.EmergencyAccessInvite:
                 Debug.Assert(model.AcceptEmergencyAccessId.HasValue);
                 identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(user, model.MasterPasswordHash,
                     model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
 
                 return ProcessRegistrationResult(identityResult, user);
-                break;
             case RegisterFinishTokenType.ProviderInvite:
                 Debug.Assert(model.ProviderUserId.HasValue);
                 identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(user, model.MasterPasswordHash,
                     model.ProviderInviteToken, model.ProviderUserId.Value);
 
                 return ProcessRegistrationResult(identityResult, user);
-                break;
-
             default:
                 throw new BadRequestException("Invalid registration finish request");
         }
     }
 
-    private RegisterResponseModel ProcessRegistrationResult(IdentityResult result, User user)
+    private RegisterFinishResponseModel ProcessRegistrationResult(IdentityResult result, User user)
     {
         if (result.Succeeded)
         {
-            var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
-            return new RegisterResponseModel(captchaBypassToken);
+            return new RegisterFinishResponseModel();
         }
 
         foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))

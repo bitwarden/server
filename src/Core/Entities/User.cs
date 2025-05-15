@@ -128,6 +128,10 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
 
     public bool IsExpired() => PremiumExpirationDate.HasValue && PremiumExpirationDate.Value <= DateTime.UtcNow;
 
+    /// <summary>
+    /// Deserializes the User.TwoFactorProviders property from JSON to the appropriate C# dictionary.
+    /// </summary>
+    /// <returns>Dictionary of TwoFactor providers</returns>
     public Dictionary<TwoFactorProviderType, TwoFactorProvider>? GetTwoFactorProviders()
     {
         if (string.IsNullOrWhiteSpace(TwoFactorProviders))
@@ -137,19 +141,17 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
 
         try
         {
-            if (_twoFactorProviders == null)
-            {
-                _twoFactorProviders =
-                    JsonHelpers.LegacyDeserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
-                        TwoFactorProviders);
-            }
+            _twoFactorProviders ??=
+                JsonHelpers.LegacyDeserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
+                    TwoFactorProviders);
 
-            // U2F is no longer supported, and all users keys should have been migrated to WebAuthn.
-            // To prevent issues with accounts being prompted for unsupported U2F we remove them
-            if (_twoFactorProviders.ContainsKey(TwoFactorProviderType.U2f))
-            {
-                _twoFactorProviders.Remove(TwoFactorProviderType.U2f);
-            }
+            /*
+                U2F is no longer supported, and all users keys should have been migrated to WebAuthn.
+                To prevent issues with accounts being prompted for unsupported U2F we remove them.
+                This will probably exist in perpetuity since there is no way to know for sure if any
+                given user does or doesn't have this enabled. It is a non-zero chance.
+            */
+            _twoFactorProviders?.Remove(TwoFactorProviderType.U2f);
 
             return _twoFactorProviders;
         }
@@ -169,6 +171,10 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return Premium;
     }
 
+    /// <summary>
+    /// Serializes the C# object to the User.TwoFactorProviders property in JSON format.
+    /// </summary>
+    /// <param name="providers">Dictionary of Two Factor providers</param>
     public void SetTwoFactorProviders(Dictionary<TwoFactorProviderType, TwoFactorProvider> providers)
     {
         // When replacing with system.text remember to remove the extra serialization in WebAuthnTokenProvider.
@@ -176,20 +182,21 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         _twoFactorProviders = providers;
     }
 
-    public void ClearTwoFactorProviders()
-    {
-        SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>());
-    }
-
+    /// <summary>
+    /// Checks if the user has a specific TwoFactorProvider configured. If a user has a premium TwoFactor
+    /// configured it will still be found, even if the user's premium subscription has ended.
+    /// </summary>
+    /// <param name="provider">TwoFactor provider being searched for</param>
+    /// <returns>TwoFactorProvider if found; null otherwise.</returns>
     public TwoFactorProvider? GetTwoFactorProvider(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.ContainsKey(provider))
+        if (providers == null || !providers.TryGetValue(provider, out var value))
         {
             return null;
         }
 
-        return providers[provider];
+        return value;
     }
 
     public long StorageBytesRemaining()
