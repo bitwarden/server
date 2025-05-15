@@ -164,6 +164,9 @@ public class Startup
         {
             client.BaseAddress = new Uri(globalSettings.BaseServiceUri.InternalSso);
         });
+
+        // This should be registered last because it customizes the primary http message handler and we want it to win.
+        services.AddX509ChainCustomization();
     }
 
     public void Configure(
