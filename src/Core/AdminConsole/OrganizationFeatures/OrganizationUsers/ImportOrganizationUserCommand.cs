@@ -159,10 +159,13 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         var newUsersEmailsDict = newUsers.ToDictionary(u => u.Email);
         var usersToAttach = existingUsersEmailsDict.Keys.Intersect(newUsersEmailsDict.Keys).ToList();
         var usersToUpsert = new List<OrganizationUser>();
+
+        var orgUsers = (await _organizationUserRepository.GetManyAsync(existingUsers.Select(u => u.Id).ToList())).ToDictionary(u => u.Id);
+
         foreach (var user in usersToAttach)
         {
             var orgUserDetails = existingUsersEmailsDict[user];
-            var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserDetails.Id);
+            var orgUser = orgUsers[existingUsersEmailsDict[user].Id];
             if (orgUser != null)
             {
                 orgUser.ExternalId = newUsersEmailsDict[user].ExternalId;
@@ -179,38 +182,13 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             OrganizationUserImportData importUserData)
     {
 
-        var existingUsersSet = new HashSet<string>(importUserData.ExistingExternalUsersIdDict.Keys);
-        var usersToAdd = importUserData.NewUsersSet.Except(existingUsersSet).ToList();
-
-        var seatsAvailable = int.MaxValue;
-        var enoughSeatsAvailable = true;
-        if (organization.Seats.HasValue)
-        {
-            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            seatsAvailable = organization.Seats.Value - occupiedSeats;
-            enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
-        }
-
         var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
-
         var userInvites = new List<OrganizationUserInviteCommandModel>();
+
         foreach (var user in newUsers)
         {
-            if (!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
-            {
-                continue;
-            }
-
-            try
-            {
-                var invite = new OrganizationUserInviteCommandModel(user.Email, user.ExternalId);
-                userInvites.Add(new OrganizationUserInviteCommandModel(invite, hasStandaloneSecretsManager));
-            }
-            catch (BadRequestException)
-            {
-                // Thrown when the user is already invited to the organization
-                continue;
-            }
+            var invite = new OrganizationUserInviteCommandModel(user.Email, user.ExternalId);
+            userInvites.Add(new OrganizationUserInviteCommandModel(invite, hasStandaloneSecretsManager));
         }
 
         var commandResult = await InviteUsersAsync(userInvites, organization);
