@@ -500,7 +500,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
             { "grant_type", "password" },
             { "username", user.Email },
             { "password", MasterPasswordHash },
-        }), extraConfiguration);
+        }));
     }
 
     private async Task CreateOrganizationWithSsoPolicyAsync(
