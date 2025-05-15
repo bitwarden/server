@@ -57,7 +57,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var localFactory = new IdentityApplicationFactory();
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
 
-        var context = await PostLoginAsync(localFactory.Server, user, requestModel.MasterPasswordHash,
+        var context = await PostLoginAsync(localFactory.Server, user, requestModel.MasterPasswordHash);
 
         using var body = await AssertDefaultTokenBodyAsync(context);
         var root = body.RootElement;
