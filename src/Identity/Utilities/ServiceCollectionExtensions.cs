@@ -54,7 +54,8 @@ public static class ServiceCollectionExtensions
             .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
             .AddClientStore<DynamicClientStore>()
             .AddIdentityServerCertificate(env, globalSettings)
-            .AddExtensionGrantValidator<WebAuthnGrantValidator>();
+            .AddExtensionGrantValidator<WebAuthnGrantValidator>()
+            .AddExtensionGrantValidator<SendAccessGrantValidator>();
 
         if (!globalSettings.SelfHosted)
         {

@@ -203,6 +203,8 @@ public class SendService : ISendService
         {
             return (false, false, false);
         }
+
+        // TODO: this is what we will be using to validate password in SendAccessGrantValidator
         if (!string.IsNullOrWhiteSpace(send.Password))
         {
             if (string.IsNullOrWhiteSpace(password))
