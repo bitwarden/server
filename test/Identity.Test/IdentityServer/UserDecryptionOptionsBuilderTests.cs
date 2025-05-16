@@ -6,6 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Identity.IdentityServer;
+using Bit.Identity.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
@@ -17,6 +18,7 @@ public class UserDecryptionOptionsBuilderTests
     private readonly ICurrentContext _currentContext;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly ILoginApprovingClientTypes _loginApprovingClientTypes;
     private readonly UserDecryptionOptionsBuilder _builder;
 
     public UserDecryptionOptionsBuilderTests()
@@ -24,7 +26,8 @@ public class UserDecryptionOptionsBuilderTests
         _currentContext = Substitute.For<ICurrentContext>();
         _deviceRepository = Substitute.For<IDeviceRepository>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-        _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository);
+        _loginApprovingClientTypes = Substitute.For<ILoginApprovingClientTypes>();
+        _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository, _loginApprovingClientTypes);
     }
 
     [Theory]
@@ -120,17 +123,17 @@ public class UserDecryptionOptionsBuilderTests
     [BitAutoData(DeviceType.SafariBrowser)]
     [BitAutoData(DeviceType.VivaldiBrowser)]
     [BitAutoData(DeviceType.UnknownBrowser)]
-    // Extension
-    [BitAutoData(DeviceType.ChromeExtension)]
-    [BitAutoData(DeviceType.FirefoxExtension)]
-    [BitAutoData(DeviceType.OperaExtension)]
-    [BitAutoData(DeviceType.EdgeExtension)]
-    [BitAutoData(DeviceType.VivaldiExtension)]
-    [BitAutoData(DeviceType.SafariExtension)]
     public async Task Build_WhenHasLoginApprovingDevice_ShouldApprovingDeviceTrue(
         DeviceType deviceType,
         SsoConfig ssoConfig, SsoConfigurationData configurationData, User user, Device device, Device approvingDevice)
     {
+        _loginApprovingClientTypes.TypesThatCanApprove.Returns(new List<ClientType>
+        {
+            ClientType.Desktop,
+            ClientType.Mobile,
+            ClientType.Web,
+        });
+
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
         ssoConfig.Data = configurationData.Serialize();
         approvingDevice.Type = deviceType;
@@ -142,9 +145,65 @@ public class UserDecryptionOptionsBuilderTests
     }
 
     [Theory]
+    // Desktop
+    [BitAutoData(DeviceType.LinuxDesktop)]
+    [BitAutoData(DeviceType.MacOsDesktop)]
+    [BitAutoData(DeviceType.WindowsDesktop)]
+    [BitAutoData(DeviceType.UWP)]
+    // Mobile
+    [BitAutoData(DeviceType.Android)]
+    [BitAutoData(DeviceType.iOS)]
+    [BitAutoData(DeviceType.AndroidAmazon)]
+    // Web
+    [BitAutoData(DeviceType.ChromeBrowser)]
+    [BitAutoData(DeviceType.FirefoxBrowser)]
+    [BitAutoData(DeviceType.OperaBrowser)]
+    [BitAutoData(DeviceType.EdgeBrowser)]
+    [BitAutoData(DeviceType.IEBrowser)]
+    [BitAutoData(DeviceType.SafariBrowser)]
+    [BitAutoData(DeviceType.VivaldiBrowser)]
+    [BitAutoData(DeviceType.UnknownBrowser)]
+    // Extension
+    [BitAutoData(DeviceType.ChromeExtension)]
+    [BitAutoData(DeviceType.FirefoxExtension)]
+    [BitAutoData(DeviceType.OperaExtension)]
+    [BitAutoData(DeviceType.EdgeExtension)]
+    [BitAutoData(DeviceType.VivaldiExtension)]
+    [BitAutoData(DeviceType.SafariExtension)]
+    public async Task Build_WhenHasLoginApprovingDeviceFeatureFlag_ShouldApprovingDeviceTrue(
+        DeviceType deviceType,
+        SsoConfig ssoConfig, SsoConfigurationData configurationData, User user, Device device, Device approvingDevice)
+    {
+        _loginApprovingClientTypes.TypesThatCanApprove.Returns(new List<ClientType>
+        {
+            ClientType.Desktop,
+            ClientType.Mobile,
+            ClientType.Web,
+            ClientType.Browser,
+        });
+
+        configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
+        ssoConfig.Data = configurationData.Serialize();
+        approvingDevice.Type = deviceType;
+        _deviceRepository.GetManyByUserIdAsync(user.Id).Returns(new Device[] { approvingDevice });
+
+        var result = await _builder.ForUser(user).WithSso(ssoConfig).WithDevice(device).BuildAsync();
+
+        Assert.True(result.TrustedDeviceOption?.HasLoginApprovingDevice);
+    }
+
+    [Theory]
+    // CLI
     [BitAutoData(DeviceType.WindowsCLI)]
     [BitAutoData(DeviceType.MacOsCLI)]
     [BitAutoData(DeviceType.LinuxCLI)]
+    // Extension
+    [BitAutoData(DeviceType.ChromeExtension)]
+    [BitAutoData(DeviceType.FirefoxExtension)]
+    [BitAutoData(DeviceType.OperaExtension)]
+    [BitAutoData(DeviceType.EdgeExtension)]
+    [BitAutoData(DeviceType.VivaldiExtension)]
+    [BitAutoData(DeviceType.SafariExtension)]
     public async Task Build_WhenHasLoginApprovingDevice_ShouldApprovingDeviceFalse(
         DeviceType deviceType,
         SsoConfig ssoConfig, SsoConfigurationData configurationData, User user, Device device, Device approvingDevice)

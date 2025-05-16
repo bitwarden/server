@@ -98,7 +98,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             { "grant_type", "password" },
             { "username", username },
             { "password", password },
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
+        }));
 
         return context;
     }
@@ -126,7 +126,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             { "TwoFactorToken", twoFactorToken },
             { "TwoFactorProvider", twoFactorProviderType },
             { "TwoFactorRemember", "1" },
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
+        }));
 
         return context;
     }
