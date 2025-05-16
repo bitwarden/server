@@ -5,8 +5,8 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Identity.IdentityServer;
+using Bit.Identity.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
@@ -18,7 +18,7 @@ public class UserDecryptionOptionsBuilderTests
     private readonly ICurrentContext _currentContext;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IFeatureService _featureService;
+    private readonly ILoginApprovingClientTypes _loginApprovingClientTypes;
     private readonly UserDecryptionOptionsBuilder _builder;
 
     public UserDecryptionOptionsBuilderTests()
@@ -26,8 +26,8 @@ public class UserDecryptionOptionsBuilderTests
         _currentContext = Substitute.For<ICurrentContext>();
         _deviceRepository = Substitute.For<IDeviceRepository>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-        _featureService = Substitute.For<IFeatureService>();
-        _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository, featureService: _featureService);
+        _loginApprovingClientTypes = Substitute.For<ILoginApprovingClientTypes>();
+        _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository, _loginApprovingClientTypes);
     }
 
     [Theory]
@@ -127,6 +127,13 @@ public class UserDecryptionOptionsBuilderTests
         DeviceType deviceType,
         SsoConfig ssoConfig, SsoConfigurationData configurationData, User user, Device device, Device approvingDevice)
     {
+        _loginApprovingClientTypes.TypesThatCanApprove.Returns(new List<ClientType>
+        {
+            ClientType.Desktop,
+            ClientType.Mobile,
+            ClientType.Web,
+        });
+
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
         ssoConfig.Data = configurationData.Serialize();
         approvingDevice.Type = deviceType;
@@ -167,8 +174,15 @@ public class UserDecryptionOptionsBuilderTests
         DeviceType deviceType,
         SsoConfig ssoConfig, SsoConfigurationData configurationData, User user, Device device, Device approvingDevice)
     {
+        _loginApprovingClientTypes.TypesThatCanApprove.Returns(new List<ClientType>
+        {
+            ClientType.Desktop,
+            ClientType.Mobile,
+            ClientType.Web,
+            ClientType.Browser,
+        });
+
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
-        _featureService.IsEnabled(Arg.Is(Core.FeatureFlagKeys.BrowserExtensionLoginApproval)).Returns(true);
         ssoConfig.Data = configurationData.Serialize();
         approvingDevice.Type = deviceType;
         _deviceRepository.GetManyByUserIdAsync(user.Id).Returns(new Device[] { approvingDevice });

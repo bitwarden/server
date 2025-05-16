@@ -1,32 +1,39 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core;
+using Bit.Core.Enums;
+using Bit.Core.Services;
 
 namespace Bit.Identity.Utilities;
 
-public static class LoginApprovingClientTypes
+public interface ILoginApprovingClientTypes
 {
-    private static readonly IReadOnlyCollection<ClientType> _clientTypesThatCanApprove;
-    private static readonly IReadOnlyCollection<ClientType> _featureFlaggedClientTypesThatCanApprove;
+    IReadOnlyCollection<ClientType> TypesThatCanApprove { get; }
+}
 
-    static LoginApprovingClientTypes()
+public class LoginApprovingClientTypes : ILoginApprovingClientTypes
+{
+    public LoginApprovingClientTypes(
+        IFeatureService featureService)
     {
-        var featureFlaggedClientTypes = new List<ClientType>
+        if (featureService.IsEnabled(FeatureFlagKeys.BrowserExtensionLoginApproval))
         {
-            ClientType.Desktop,
-            ClientType.Mobile,
-            ClientType.Web,
-            ClientType.Browser,
-        };
-        _featureFlaggedClientTypesThatCanApprove = featureFlaggedClientTypes.AsReadOnly();
-
-        var clientTypes = new List<ClientType>
+            TypesThatCanApprove = new List<ClientType>
+            {
+                ClientType.Desktop,
+                ClientType.Mobile,
+                ClientType.Web,
+                ClientType.Browser,
+            };
+        }
+        else
         {
-            ClientType.Desktop,
-            ClientType.Mobile,
-            ClientType.Web,
-        };
-        _clientTypesThatCanApprove = clientTypes.AsReadOnly();
+            TypesThatCanApprove = new List<ClientType>
+            {
+                ClientType.Desktop,
+                ClientType.Mobile,
+                ClientType.Web,
+            };
+        }
     }
 
-    public static IReadOnlyCollection<ClientType> FeatureFlaggedTypesThatCanApprove => _featureFlaggedClientTypesThatCanApprove;
-    public static IReadOnlyCollection<ClientType> TypesThatCanApprove => _clientTypesThatCanApprove;
+    public IReadOnlyCollection<ClientType> TypesThatCanApprove { get; }
 }
