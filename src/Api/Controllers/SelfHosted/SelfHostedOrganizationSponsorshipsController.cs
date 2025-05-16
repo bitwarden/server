@@ -1,4 +1,5 @@
-﻿using Bit.Api.Models.Request.Organizations;
+﻿using Bit.Api.AdminConsole.Authorization.Requirements;
+using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
@@ -25,6 +26,7 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
     private readonly IRevokeSponsorshipCommand _revokeSponsorshipCommand;
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
+    private readonly IAuthorizationService _authorizationService;
 
     public SelfHostedOrganizationSponsorshipsController(
         ICreateSponsorshipCommand offerSponsorshipCommand,
@@ -33,7 +35,8 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationUserRepository organizationUserRepository,
         ICurrentContext currentContext,
-        IFeatureService featureService
+        IFeatureService featureService,
+        IAuthorizationService authorizationService
     )
     {
         _offerSponsorshipCommand = offerSponsorshipCommand;
@@ -43,6 +46,7 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
         _organizationUserRepository = organizationUserRepository;
         _currentContext = currentContext;
         _featureService = featureService;
+        _authorizationService = authorizationService;
     }
 
     [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
@@ -89,21 +93,22 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
     }
 
     [Authorize("Application")]
-    [HttpGet("{sponsoringOrgId}/sponsored")]
-    public async Task<ListResponseModel<OrganizationSponsorshipInvitesResponseModel>> GetSponsoredOrganizations(Guid sponsoringOrgId)
+    [HttpGet("{orgId}/sponsored")]
+    public async Task<ListResponseModel<OrganizationSponsorshipInvitesResponseModel>> GetSponsoredOrganizations(Guid orgId)
     {
-        var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
+        var sponsoringOrg = await _organizationRepository.GetByIdAsync(orgId);
         if (sponsoringOrg == null)
         {
             throw new NotFoundException();
         }
-        var organization = _currentContext.Organizations.First(x => x.Id == sponsoringOrg.Id);
-        if (!await _currentContext.OrganizationOwner(sponsoringOrg.Id) && !await _currentContext.OrganizationAdmin(sponsoringOrg.Id) && !organization.Permissions.ManageUsers)
+
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, orgId, new ManageUsersRequirement());
+        if (!authorizationResult.Succeeded)
         {
             throw new UnauthorizedAccessException();
         }
 
-        var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
+        var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(orgId);
         return new ListResponseModel<OrganizationSponsorshipInvitesResponseModel>(
             sponsorships
                 .Where(s => s.IsAdminInitiated)
