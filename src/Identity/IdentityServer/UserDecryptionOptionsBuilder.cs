@@ -22,6 +22,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
     private readonly ICurrentContext _currentContext;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly ILoginApprovingClientTypes _loginApprovingClientTypes;
 
     private UserDecryptionOptions _options = new UserDecryptionOptions();
     private User? _user;
@@ -31,12 +32,14 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
     public UserDecryptionOptionsBuilder(
         ICurrentContext currentContext,
         IDeviceRepository deviceRepository,
-        IOrganizationUserRepository organizationUserRepository
+        IOrganizationUserRepository organizationUserRepository,
+        ILoginApprovingClientTypes loginApprovingClientTypes
     )
     {
         _currentContext = currentContext;
         _deviceRepository = deviceRepository;
         _organizationUserRepository = organizationUserRepository;
+        _loginApprovingClientTypes = loginApprovingClientTypes;
     }
 
     public IUserDecryptionOptionsBuilder ForUser(User user)
@@ -119,8 +122,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             // Checks if the current user has any devices that are capable of approving login with device requests except for
             // their current device.
             // NOTE: this doesn't check for if the users have configured the devices to be capable of approving requests as that is a client side setting.
-            hasLoginApprovingDevice = allDevices
-                .Any(d => d.Identifier != _device.Identifier && LoginApprovingClientTypes.TypesThatCanApprove.Contains(DeviceTypes.ToClientType(d.Type)));
+            hasLoginApprovingDevice = allDevices.Any(d => d.Identifier != _device.Identifier && _loginApprovingClientTypes.TypesThatCanApprove.Contains(DeviceTypes.ToClientType(d.Type)));
         }
 
         // Determine if user has manage reset password permission as post sso logic requires it for forcing users with this permission to set a MP
