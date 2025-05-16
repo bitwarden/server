@@ -207,7 +207,7 @@ public class OrganizationSponsorshipsController : Controller
     [HttpDelete("{sponsoringOrganizationId}")]
     [HttpPost("{sponsoringOrganizationId}/delete")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task RevokeSponsorship(Guid sponsoringOrganizationId, [FromQuery] bool isAdminInitiated = false)
+    public async Task RevokeSponsorship(Guid sponsoringOrganizationId)
     {
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrganizationId, _currentContext.UserId ?? default);
@@ -217,8 +217,22 @@ public class OrganizationSponsorshipsController : Controller
         }
 
         var existingOrgSponsorship = await _organizationSponsorshipRepository
-            .GetBySponsoringOrganizationUserIdAsync(orgUser.Id, isAdminInitiated);
+            .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
 
+        await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
+    }
+
+    [Authorize("Application")]
+    [HttpDelete("{sponsoringOrgId}/{sponsoredFriendlyName}/revoke")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task AdminInitiatedRevokeSponsorshipAsync(Guid sponsoringOrgId, string sponsoredFriendlyName)
+    {
+        var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
+        var existingOrgSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
+        if (existingOrgSponsorship == null)
+        {
+            throw new BadRequestException("The specified sponsored organization could not be found under the given sponsoring organization.");
+        }
         await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
     }
 
