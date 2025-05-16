@@ -145,6 +145,14 @@ public class Startup
                     (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
                 ));
             });
+
+            config.AddPolicy(Policies.Send, configurePolicy: policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Send);
+                // TODO: talk with Tools about potentially
+                // policy.AddRequirements(new SameSendIdRequirement());
+            });
         });
 
         services.AddScoped<AuthenticatorTokenProvider>();
