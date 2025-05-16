@@ -182,6 +182,7 @@ public class OrganizationLicense : ILicense
 
     public bool Trial { get; set; }
     public LicenseType? LicenseType { get; set; }
+    public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
@@ -445,6 +446,7 @@ public class OrganizationLicense : ILicense
         var smSeats = claimsPrincipal.GetValue<int?>(nameof(SmSeats));
         var smServiceAccounts = claimsPrincipal.GetValue<int?>(nameof(SmServiceAccounts));
         var useAdminSponsoredFamilies = claimsPrincipal.GetValue<bool>(nameof(UseAdminSponsoredFamilies));
+        var useOrganizationDomains = claimsPrincipal.GetValue<bool>(nameof(UseOrganizationDomains));
 
         return issued <= DateTime.UtcNow &&
                expires >= DateTime.UtcNow &&
@@ -473,7 +475,8 @@ public class OrganizationLicense : ILicense
                usePasswordManager == organization.UsePasswordManager &&
                smSeats == organization.SmSeats &&
                smServiceAccounts == organization.SmServiceAccounts &&
-               useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies;
+               useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies &&
+               useOrganizationDomains == organization.UseOrganizationDomains;
 
     }
 
