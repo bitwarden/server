@@ -62,12 +62,6 @@ public static class WebApplicationFactoryExtensions
         Action<HttpContext> extraConfiguration = null)
         => SendAsync(server, HttpMethod.Delete, requestUri, content: content, extraConfiguration);
 
-    public static HttpContext SetAuthEmail(this HttpContext context, string username)
-    {
-        context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(username));
-        return context;
-    }
-
     public static HttpContext SetIp(this HttpContext context, string ip)
     {
         context.Connection.RemoteIpAddress = IPAddress.Parse(ip);
