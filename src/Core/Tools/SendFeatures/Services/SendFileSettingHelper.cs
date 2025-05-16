@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Tools.SendFeatures;
+﻿using Bit.Core.Tools.Entities;
+
+namespace Bit.Core.Tools.SendFeatures;
 
 /// <summary>
 /// SendFileSettingHelper is a static class that provides constants and helper methods (if needed) for managing file
