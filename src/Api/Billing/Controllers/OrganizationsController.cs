@@ -109,28 +109,6 @@ public class OrganizationsController(
         return license;
     }
 
-    [HttpPost("{id:guid}/payment")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostPayment(Guid id, [FromBody] PaymentRequestModel model)
-    {
-        if (!await currentContext.EditPaymentMethods(id))
-        {
-            throw new NotFoundException();
-        }
-
-        await organizationService.ReplacePaymentMethodAsync(id, model.PaymentToken,
-            model.PaymentMethodType.Value, new TaxInfo
-            {
-                BillingAddressLine1 = model.Line1,
-                BillingAddressLine2 = model.Line2,
-                BillingAddressState = model.State,
-                BillingAddressCity = model.City,
-                BillingAddressPostalCode = model.PostalCode,
-                BillingAddressCountry = model.Country,
-                TaxIdNumber = model.TaxId,
-            });
-    }
-
     [HttpPost("{id:guid}/upgrade")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<PaymentResponseModel> PostUpgrade(Guid id, [FromBody] OrganizationUpgradeRequestModel model)

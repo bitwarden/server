@@ -2,10 +2,6 @@
 
 public static class StripeConstants
 {
-    public static class Prices
-    {
-        public const string StoragePlanPersonal = "personal-storage-gb-annually";
-    }
     public static class AutomaticTaxStatus
     {
         public const string Failed = "failed";
@@ -69,6 +65,11 @@ public static class StripeConstants
         public const string USBankAccount = "us_bank_account";
     }
 
+    public static class Prices
+    {
+        public const string StoragePlanPersonal = "personal-storage-gb-annually";
+    }
+
     public static class ProrationBehavior
     {
         public const string AlwaysInvoice = "always_invoice";
@@ -86,6 +87,13 @@ public static class StripeConstants
         public const string Canceled = "canceled";
         public const string Unpaid = "unpaid";
         public const string Paused = "paused";
+    }
+
+    public static class TaxExempt
+    {
+        public const string Exempt = "exempt";
+        public const string None = "none";
+        public const string Reverse = "reverse";
     }
 
     public static class ValidateTaxLocationTiming

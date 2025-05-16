@@ -59,6 +59,6 @@ public class PersonalUseAutomaticTaxStrategy(IFeatureService featureService) : I
 
     private static bool ShouldBeEnabled(Customer customer)
     {
-        return customer.HasTaxLocationVerified();
+        return customer.HasRecognizedTaxLocation();
     }
 }
