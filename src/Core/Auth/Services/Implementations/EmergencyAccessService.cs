@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
@@ -16,7 +15,6 @@ using Bit.Core.Tokens;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
-using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.Services;
 
@@ -31,8 +29,6 @@ public class EmergencyAccessService : IEmergencyAccessService
     private readonly IMailService _mailService;
     private readonly IUserService _userService;
     private readonly GlobalSettings _globalSettings;
-    private readonly IPasswordHasher<User> _passwordHasher;
-    private readonly IOrganizationService _organizationService;
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _dataProtectorTokenizer;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
 
@@ -45,9 +41,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         ICipherService cipherService,
         IMailService mailService,
         IUserService userService,
-        IPasswordHasher<User> passwordHasher,
         GlobalSettings globalSettings,
-        IOrganizationService organizationService,
         IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand)
     {
@@ -59,9 +53,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         _cipherService = cipherService;
         _mailService = mailService;
         _userService = userService;
-        _passwordHasher = passwordHasher;
         _globalSettings = globalSettings;
-        _organizationService = organizationService;
         _dataProtectorTokenizer = dataProtectorTokenizer;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
     }
@@ -126,7 +118,12 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Emergency Access not valid.");
         }
 
-        if (!_dataProtectorTokenizer.TryUnprotect(token, out var data) && data.IsValid(emergencyAccessId, user.Email))
+        if (!_dataProtectorTokenizer.TryUnprotect(token, out var data))
+        {
+            throw new BadRequestException("Invalid token.");
+        }
+
+        if (!data.IsValid(emergencyAccessId, user.Email))
         {
             throw new BadRequestException("Invalid token.");
         }
@@ -140,6 +137,8 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Invitation already accepted.");
         }
 
+        // TODO PM-21687
+        // Might not be reachable since the Tokenable.IsValid() does an email comparison
         if (string.IsNullOrWhiteSpace(emergencyAccess.Email) ||
             !emergencyAccess.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
         {
@@ -163,6 +162,8 @@ public class EmergencyAccessService : IEmergencyAccessService
     public async Task DeleteAsync(Guid emergencyAccessId, Guid grantorId)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
+        // TODO PM-19438/PM-21687
+        // Not sure why the GrantorId and the GranteeId are supposed to be the same?
         if (emergencyAccess == null || (emergencyAccess.GrantorId != grantorId && emergencyAccess.GranteeId != grantorId))
         {
             throw new BadRequestException("Emergency Access not valid.");
@@ -171,9 +172,9 @@ public class EmergencyAccessService : IEmergencyAccessService
         await _emergencyAccessRepository.DeleteAsync(emergencyAccess);
     }
 
-    public async Task<EmergencyAccess> ConfirmUserAsync(Guid emergencyAcccessId, string key, Guid confirmingUserId)
+    public async Task<EmergencyAccess> ConfirmUserAsync(Guid emergencyAccessId, string key, Guid confirmingUserId)
     {
-        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAcccessId);
+        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
         if (emergencyAccess == null || emergencyAccess.Status != EmergencyAccessStatusType.Accepted ||
             emergencyAccess.GrantorId != confirmingUserId)
         {
@@ -224,7 +225,6 @@ public class EmergencyAccessService : IEmergencyAccessService
     public async Task InitiateAsync(Guid id, User initiatingUser)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
-
         if (emergencyAccess == null || emergencyAccess.GranteeId != initiatingUser.Id ||
             emergencyAccess.Status != EmergencyAccessStatusType.Confirmed)
         {
@@ -285,6 +285,9 @@ public class EmergencyAccessService : IEmergencyAccessService
 
     public async Task<ICollection<Policy>> GetPoliciesAsync(Guid id, User requestingUser)
     {
+        // TODO PM-21687
+        // Should we look up policies here or just verify the EmergencyAccess is correct
+        // and handle policy logic else where? Should this be a query/Command?
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
 
         if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.Takeover))
@@ -295,7 +298,9 @@ public class EmergencyAccessService : IEmergencyAccessService
         var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
 
         var grantorOrganizations = await _organizationUserRepository.GetManyByUserAsync(grantor.Id);
-        var isOrganizationOwner = grantorOrganizations.Any<OrganizationUser>(organization => organization.Type == OrganizationUserType.Owner);
+        var isOrganizationOwner = grantorOrganizations
+            .Any(organization => organization.Type == OrganizationUserType.Owner);
+
         var policies = isOrganizationOwner ? await _policyRepository.GetManyByUserIdAsync(grantor.Id) : null;
 
         return policies;
@@ -311,7 +316,8 @@ public class EmergencyAccessService : IEmergencyAccessService
         }
 
         var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
-
+        // TODO PM-21687
+        // Redundant check of the EmergencyAccessType -> checked in IsValidRequest() ln 308
         if (emergencyAccess.Type == EmergencyAccessType.Takeover && grantor.UsesKeyConnector)
         {
             throw new BadRequestException("You cannot takeover an account that is using Key Connector.");
@@ -336,7 +342,9 @@ public class EmergencyAccessService : IEmergencyAccessService
         grantor.LastPasswordChangeDate = grantor.RevisionDate;
         grantor.Key = key;
         // Disable TwoFactor providers since they will otherwise block logins
-        grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>());
+        grantor.SetTwoFactorProviders([]);
+        // Disable New Device Verification since it will otherwise block logins
+        grantor.VerifyDevices = false;
         await _userRepository.ReplaceAsync(grantor);
 
         // Remove grantor from all organizations unless Owner
@@ -421,12 +429,22 @@ public class EmergencyAccessService : IEmergencyAccessService
         await _mailService.SendEmergencyAccessInviteEmailAsync(emergencyAccess, invitingUsersName, token);
     }
 
-    private string NameOrEmail(User user)
+    private static string NameOrEmail(User user)
     {
         return string.IsNullOrWhiteSpace(user.Name) ? user.Email : user.Name;
     }
 
-    private bool IsValidRequest(EmergencyAccess availableAccess, User requestingUser, EmergencyAccessType requestedAccessType)
+
+    /*
+     * Checks if EmergencyAccess Object is null
+     * Checks the requesting user is the same as the granteeUser (So we are checking for proper grantee action)
+     * Status _must_ equal RecoveryApproved (This means the grantor has invited, the grantee has accepted, and the grantor has approved so the shared key exists but hasn't been exercised yet)
+     * request type must equal the type of access requested (View or Takeover)
+     */
+    private static bool IsValidRequest(
+        EmergencyAccess availableAccess,
+        User requestingUser,
+        EmergencyAccessType requestedAccessType)
     {
         return availableAccess != null &&
            availableAccess.GranteeId == requestingUser.Id &&
