@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -39,9 +38,6 @@ public interface IOrganizationService
     Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
     Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId, bool initOrganization = false);
     Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId);
-    Task ImportAsync(Guid organizationId, IEnumerable<ImportedGroup> groups,
-        IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
-        bool overwriteExisting, EventSystemUser eventSystemUser);
     Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
     Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId);
     Task RevokeUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser);
