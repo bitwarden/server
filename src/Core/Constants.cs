@@ -200,6 +200,7 @@ public static class FeatureFlagKeys
     public const string EndUserNotifications = "pm-10609-end-user-notifications";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string PhishingDetection = "phishing-detection";
+    public const string RemoveCardItemTypePolicy = "pm-20650-remove-card-item-type-policy";
 
     public static List<string> GetAllKeys()
     {
