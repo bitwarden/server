@@ -34,6 +34,7 @@ using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Tools.ReportFeatures;
 using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Tools.SendFeatures;
+using Bit.Core.Identity;
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -150,8 +151,7 @@ public class Startup
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Send);
-                // TODO: talk with Tools about potentially
-                // policy.AddRequirements(new SameSendIdRequirement());
+                policy.RequireClaim(Claims.SendId);
             });
         });
 
