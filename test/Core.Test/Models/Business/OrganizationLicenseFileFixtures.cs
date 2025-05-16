@@ -35,7 +35,7 @@ public static class OrganizationLicenseFileFixtures
         if (!LicenseVersions.ContainsKey(licenseVersion))
         {
             throw new Exception(
-                $"Cannot find serialized license version {licenseVersion}. You must add this to OrganizationLicenseFileFixtures when adding a new license version.");
+                    $"Cannot find serialized license version {licenseVersion}. You must add this to OrganizationLicenseFileFixtures when adding a new license version.");
         }
 
         var json = LicenseVersions.GetValueOrDefault(licenseVersion).Replace("'", "\"");
@@ -76,6 +76,7 @@ public static class OrganizationLicenseFileFixtures
             MaxCollections = 2,
             UsePolicies = true,
             UseSso = true,
+            UseOrganizationDomains = true,
             UseKeyConnector = true,
             UseScim = true,
             UseGroups = true,

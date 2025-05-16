@@ -223,6 +223,20 @@ public class OrganizationSponsorshipsController : Controller
     }
 
     [Authorize("Application")]
+    [HttpDelete("{sponsoringOrgId}/{sponsoredFriendlyName}/revoke")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task AdminInitiatedRevokeSponsorshipAsync(Guid sponsoringOrgId, string sponsoredFriendlyName)
+    {
+        var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
+        var existingOrgSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
+        if (existingOrgSponsorship == null)
+        {
+            throw new BadRequestException("The specified sponsored organization could not be found under the given sponsoring organization.");
+        }
+        await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
+    }
+
+    [Authorize("Application")]
     [HttpDelete("sponsored/{sponsoredOrgId}")]
     [HttpPost("sponsored/{sponsoredOrgId}/remove")]
     [SelfHosted(NotSelfHostedOnly = true)]

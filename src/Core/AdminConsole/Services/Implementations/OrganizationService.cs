@@ -428,6 +428,7 @@ public class OrganizationService : IOrganizationService
             MaxStorageGb = 1,
             UsePolicies = plan.HasPolicies,
             UseSso = plan.HasSso,
+            UseOrganizationDomains = plan.HasOrganizationDomains,
             UseGroups = plan.HasGroups,
             UseEvents = plan.HasEvents,
             UseDirectory = plan.HasDirectory,
@@ -549,6 +550,8 @@ public class OrganizationService : IOrganizationService
             SmSeats = license.SmSeats,
             SmServiceAccounts = license.SmServiceAccounts,
             UseRiskInsights = license.UseRiskInsights,
+            UseOrganizationDomains = license.UseOrganizationDomains,
+            UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies,
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
