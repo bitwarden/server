@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Tools.Models.Data;
+﻿namespace Bit.Core.Dirt.Reports.Models.Data;
 
 public class MemberAccessDetails
 {
@@ -30,13 +30,13 @@ public class MemberAccessCipherDetails
     public bool UsesKeyConnector { get; set; }
 
     /// <summary>
-    /// The details for the member's collection access depending 
-    /// on the collections and groups they are assigned to 
+    /// The details for the member's collection access depending
+    /// on the collections and groups they are assigned to
     /// </summary>
     public IEnumerable<MemberAccessDetails> AccessDetails { get; set; }
 
     /// <summary>
-    /// A distinct list of the cipher ids associated with 
+    /// A distinct list of the cipher ids associated with
     /// the organization member
     /// </summary>
     public IEnumerable<string> CipherIds { get; set; }
