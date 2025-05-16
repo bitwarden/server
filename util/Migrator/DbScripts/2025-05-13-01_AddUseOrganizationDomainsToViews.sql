@@ -1,4 +1,4 @@
-CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+CREATE OR ALTER VIEW [dbo].[OrganizationUserOrganizationDetailsView]
 AS
 SELECT
     OU.[UserId],
@@ -68,3 +68,64 @@ LEFT JOIN
     [dbo].[SsoConfig] SS ON SS.[OrganizationId] = OU.[OrganizationId]
 LEFT JOIN
     [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserID] = OU.[Id]
+GO
+
+CREATE OR ALTER VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
+AS
+SELECT
+    PU.[UserId],
+    PO.[OrganizationId],
+    O.[Name],
+    O.[Enabled],
+    O.[UsePolicies],
+    O.[UseSso],
+    O.[UseKeyConnector],
+    O.[UseScim],
+    O.[UseGroups],
+    O.[UseDirectory],
+    O.[UseEvents],
+    O.[UseTotp],
+    O.[Use2fa],
+    O.[UseApi],
+    O.[UseResetPassword],
+    O.[SelfHost],
+    O.[UsersGetPremium],
+    O.[UseCustomPermissions],
+    O.[Seats],
+    O.[MaxCollections],
+    O.[MaxStorageGb],
+    O.[Identifier],
+    PO.[Key],
+    O.[PublicKey],
+    O.[PrivateKey],
+    PU.[Status],
+    PU.[Type],
+    PO.[ProviderId],
+    PU.[Id] ProviderUserId,
+    P.[Name] ProviderName,
+    O.[PlanType],
+    O.[LimitCollectionCreation],
+    O.[LimitCollectionDeletion],
+    O.[AllowAdminAccessToAllCollectionItems],
+    O.[UseRiskInsights],
+    O.[UseAdminSponsoredFamilies],
+    P.[Type] ProviderType,
+    O.[LimitItemDeletion],
+    O.[UseOrganizationDomains]
+FROM
+    [dbo].[ProviderUser] PU
+INNER JOIN
+    [dbo].[ProviderOrganization] PO ON PO.[ProviderId] = PU.[ProviderId]
+INNER JOIN
+    [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
+INNER JOIN
+    [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
+GO
+
+CREATE OR ALTER VIEW [dbo].[OrganizationView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[Organization]
+GO

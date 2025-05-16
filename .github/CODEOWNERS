@@ -90,6 +90,9 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 .github/workflows/test-database.yml @bitwarden/team-platform-dev
 .github/workflows/test.yml @bitwarden/team-platform-dev
 **/*Platform* @bitwarden/team-platform-dev
+**/.dockerignore @bitwarden/team-platform-dev
+**/Dockerfile @bitwarden/team-platform-dev
+**/entrypoint.sh @bitwarden/team-platform-dev
 
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json
