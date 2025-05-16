@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Repositories;

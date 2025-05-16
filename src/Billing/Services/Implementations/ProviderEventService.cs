@@ -1,8 +1,8 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Providers.Entities;
+using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Stripe;

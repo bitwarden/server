@@ -21,7 +21,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
