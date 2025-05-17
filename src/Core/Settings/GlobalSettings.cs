@@ -312,11 +312,19 @@ public class GlobalSettings : IGlobalSettings
             private string _hostName;
             private string _username;
             private string _password;
-            private string _exchangeName;
+            private string _eventExchangeName;
+            private string _integrationExchangeName;
 
+            public int MaxRetries { get; set; } = 3;
+            public int RetryTiming { get; set; } = 30000; // 30s
             public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
-            public virtual string WebhookQueueName { get; set; } = "events-webhook-queue";
-            public virtual string SlackQueueName { get; set; } = "events-slack-queue";
+            public virtual string IntegrationDeadLetterQueueName { get; set; } = "integration-dead-letter-queue";
+            public virtual string SlackEventsQueueName { get; set; } = "events-slack-queue";
+            public virtual string SlackIntegrationQueueName { get; set; } = "integration-slack-queue";
+            public virtual string SlackIntegrationRetryQueueName { get; set; } = "integration-slack-retry-queue";
+            public virtual string WebhookEventsQueueName { get; set; } = "events-webhook-queue";
+            public virtual string WebhookIntegrationQueueName { get; set; } = "integration-webhook-queue";
+            public virtual string WebhookIntegrationRetryQueueName { get; set; } = "integration-webhook-retry-queue";
 
             public string HostName
             {
@@ -333,10 +341,15 @@ public class GlobalSettings : IGlobalSettings
                 get => _password;
                 set => _password = value.Trim('"');
             }
-            public string ExchangeName
+            public string EventExchangeName
             {
-                get => _exchangeName;
-                set => _exchangeName = value.Trim('"');
+                get => _eventExchangeName;
+                set => _eventExchangeName = value.Trim('"');
+            }
+            public string IntegrationExchangeName
+            {
+                get => _integrationExchangeName;
+                set => _integrationExchangeName = value.Trim('"');
             }
         }
     }
