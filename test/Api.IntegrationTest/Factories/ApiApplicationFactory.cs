@@ -1,10 +1,10 @@
 ﻿using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
+using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.Sqlite;
 
 #nullable enable
 
@@ -12,16 +12,19 @@ namespace Bit.Api.IntegrationTest.Factories;
 
 public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
 {
-    private readonly IdentityApplicationFactory _identityApplicationFactory;
-    private const string _connectionString = "DataSource=:memory:";
+    protected IdentityApplicationFactory _identityApplicationFactory;
 
-    public ApiApplicationFactory()
+    public ApiApplicationFactory() : this(new SqlServerTestDatabase())
     {
-        SqliteConnection = new SqliteConnection(_connectionString);
-        SqliteConnection.Open();
+    }
+
+    public ApiApplicationFactory(ITestDatabase db)
+    {
+        TestDatabase = db;
+        _handleDbDisposal = true;
 
         _identityApplicationFactory = new IdentityApplicationFactory();
-        _identityApplicationFactory.SqliteConnection = SqliteConnection;
+        _identityApplicationFactory.TestDatabase = TestDatabase;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -71,12 +74,6 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
     public async Task<(string Token, string RefreshToken)> LoginAsync(string email = "integration-test@bitwarden.com", string masterPasswordHash = "master_password_hash")
     {
         return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        base.Dispose(disposing);
-        SqliteConnection!.Dispose();
     }
 
     /// <summary>
