@@ -2,7 +2,7 @@
     [Id]                BIGINT           IDENTITY (1, 1) NOT NULL,
     [UserId]            UNIQUEIDENTIFIER NOT NULL,
     [OrganizationId]    UNIQUEIDENTIFIER NULL,
-    [ExternalId]        NVARCHAR(50)     NOT NULL,
+    [ExternalId]        NVARCHAR(300)    NOT NULL,
     [CreationDate]      DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_SsoUser] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_SsoUser_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]) ON DELETE CASCADE,

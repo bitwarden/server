@@ -679,8 +679,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("ExternalId")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
 
                     b.Property<Guid?>("OrganizationId")
                         .HasColumnType("char(36)");
