@@ -342,11 +342,15 @@ public class OrganizationService : IOrganizationService
 
         if (!organization.Seats.HasValue || organization.Seats.Value > newSeatTotal)
         {
-            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            if (occupiedSeats > newSeatTotal)
+            var totalConsumedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            var organizationUsers = await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id, null);
+            var organizationUserOccupiedSeats = organizationUsers.Where(user => user.Status >= 0).Count();
+            var sponsoredFamiliesOccupiedSeats = totalConsumedSeats - organizationUserOccupiedSeats;
+
+            if (totalConsumedSeats > newSeatTotal)
             {
-                throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
-                    $"Your new plan only has ({newSeatTotal}) seats. Remove some users.");
+                throw new BadRequestException($"Your organization has {organizationUserOccupiedSeats} members and {sponsoredFamiliesOccupiedSeats} sponsored families. " +
+                    $"To decrease the seat count below {totalConsumedSeats}, you must remove members or sponsorships.");
             }
         }
 
