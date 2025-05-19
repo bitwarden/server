@@ -16,6 +16,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -1340,9 +1341,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var organizationsWithVerifiedUserEmailDomain = await _organizationRepository.GetByVerifiedUserEmailDomainAsync(userId);
 
         // Organizations must be enabled and able to have verified domains.
-        // TODO: Replace "UseSso" with a new organization ability like "UseOrganizationDomains" (PM-11622).
-        // Verified domains were tied to SSO, so we currently check the "UseSso" organization ability.
-        return organizationsWithVerifiedUserEmailDomain.Where(organization => organization is { Enabled: true, UseSso: true });
+        return organizationsWithVerifiedUserEmailDomain.Where(organization => organization is { Enabled: true, UseOrganizationDomains: true });
     }
 
     /// <inheritdoc cref="IsLegacyUser(string)"/>
