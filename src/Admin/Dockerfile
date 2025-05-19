@@ -36,6 +36,8 @@ RUN . /tmp/rid.txt && dotnet restore -r $RID
 # Build project
 RUN npm run build
 RUN . /tmp/rid.txt && dotnet publish \
+    -c release \
+    --no-restore \
     --self-contained \
     /p:PublishSingleFile=true \
     -r $RID \

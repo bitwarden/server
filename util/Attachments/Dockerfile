@@ -28,6 +28,8 @@ RUN . /tmp/rid.txt && dotnet restore -r $RID
 # Build project
 WORKDIR /source/util/Server
 RUN . /tmp/rid.txt && dotnet publish \
+    -c release \
+    --no-restore \
     --self-contained \
     /p:PublishSingleFile=true \
     -r $RID \

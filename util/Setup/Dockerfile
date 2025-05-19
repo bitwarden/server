@@ -31,6 +31,7 @@ RUN . /tmp/rid.txt && dotnet publish \
     -c release \
     --no-restore \
     --self-contained \
+    /p:PublishSingleFile=true \
     -r $RID \
     -o out
 

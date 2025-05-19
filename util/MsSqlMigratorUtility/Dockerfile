@@ -43,10 +43,12 @@ COPY .editorconfig /source
 # Build project
 WORKDIR /source/util/MsSqlMigratorUtility
 RUN . /tmp/rid.txt && dotnet publish \
-  --self-contained \
-  /p:PublishSingleFile=true \
-  -r $RID \
-  -o out
+    -c release \
+    --no-restore \
+    --self-contained \
+    /p:PublishSingleFile=true \
+    -r $RID \
+    -o out
 
 WORKDIR /app
 
