@@ -43,7 +43,7 @@ public class OrganizationBillingService(
 
         var customer = string.IsNullOrEmpty(organization.GatewayCustomerId) && customerSetup != null
             ? await CreateCustomerAsync(organization, customerSetup, subscriptionSetup.PlanType)
-            : await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
+            : await GetCustomerWhileEnsuringCorrectTaxExemptionAsync(organization, subscriptionSetup);
 
         var subscription = await CreateSubscriptionAsync(organization.Id, customer, subscriptionSetup);
 
@@ -120,7 +120,8 @@ public class OrganizationBillingService(
             subscription.CurrentPeriodEnd);
     }
 
-    public async Task UpdatePaymentMethod(
+    public async Task
+        UpdatePaymentMethod(
         Organization organization,
         TokenizedPaymentSource tokenizedPaymentSource,
         TaxInformation taxInformation)
@@ -151,8 +152,10 @@ public class OrganizationBillingService(
     private async Task<Customer> CreateCustomerAsync(
         Organization organization,
         CustomerSetup customerSetup,
-        PlanType? planType = null)
+        PlanType? updatedPlanType = null)
     {
+        var planType = updatedPlanType ?? organization.PlanType;
+
         var displayName = organization.DisplayName();
 
         var customerCreateOptions = new CustomerCreateOptions
@@ -224,7 +227,7 @@ public class OrganizationBillingService(
                 featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
 
             if (setNonUSBusinessUseToReverseCharge &&
-                planType.HasValue && planType.Value.GetProductTier() != ProductTierType.Families &&
+                planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
                 customerSetup.TaxInformation.Country != "US")
             {
                 customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
@@ -429,6 +432,45 @@ public class OrganizationBillingService(
         }
 
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+    }
+
+    private async Task<Customer> GetCustomerWhileEnsuringCorrectTaxExemptionAsync(
+        Organization organization,
+        SubscriptionSetup subscriptionSetup)
+    {
+        var customer = await subscriberService.GetCustomerOrThrow(organization,
+            new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
+
+        var setNonUSBusinessUseToReverseCharge = featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+        if (!setNonUSBusinessUseToReverseCharge || subscriptionSetup.PlanType.GetProductTier() is
+                not (ProductTierType.Teams or
+                ProductTierType.TeamsStarter or
+                ProductTierType.Enterprise))
+        {
+            return customer;
+        }
+
+        List<string> expansions = ["tax", "tax_ids"];
+
+        customer = customer switch
+        {
+            { Address.Country: not "US", TaxExempt: not StripeConstants.TaxExempt.Reverse } => await
+                stripeAdapter.CustomerUpdateAsync(customer.Id,
+                    new CustomerUpdateOptions
+                    {
+                        Expand = expansions, TaxExempt = StripeConstants.TaxExempt.Reverse
+                    }),
+            { Address.Country: "US", TaxExempt: StripeConstants.TaxExempt.Reverse } => await
+                stripeAdapter.CustomerUpdateAsync(customer.Id,
+                    new CustomerUpdateOptions
+                    {
+                        Expand = expansions, TaxExempt = StripeConstants.TaxExempt.None
+                    }),
+            _ => customer
+        };
+
+        return customer;
     }
 
     private async Task<bool> IsEligibleForSelfHostAsync(

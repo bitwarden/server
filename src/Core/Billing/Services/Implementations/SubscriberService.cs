@@ -677,7 +677,7 @@ public class SubscriberService(
 
         var isBusinessUseSubscriber = subscriber switch
         {
-            Organization organization => organization.PlanType.GetProductTier() != ProductTierType.Families,
+            Organization organization => organization.PlanType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families,
             Provider => true,
             _ => false
         };
