@@ -17,19 +17,13 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     fi \
     && echo "RID=$RID" > /tmp/rid.txt
 
-# Copy csproj files as distinct layers
+# Copy required project files
 WORKDIR /source
-COPY util/Server/*.csproj ./util/Server/
-COPY Directory.Build.props .
-COPY .editorconfig .
+COPY . ./
 
 # Restore project dependencies and tools
 WORKDIR /source/util/Server
 RUN . /tmp/rid.txt && dotnet restore -r $RID
-
-# Copy required project files
-WORKDIR /source
-COPY util/Server/. ./util/Server/
 
 # Build project
 WORKDIR /source/util/Server

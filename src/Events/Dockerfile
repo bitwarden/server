@@ -18,32 +18,18 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     fi \
     && echo "RID=$RID" > /tmp/rid.txt
 
-# Copy csproj files as distinct layers
+# Copy required project files
 WORKDIR /source
-COPY src/Events/*.csproj ./src/Events/
-COPY src/Core/*.csproj ./src/Core/
-COPY src/Infrastructure.Dapper/*.csproj ./src/Infrastructure.Dapper/
-COPY src/Infrastructure.EntityFramework/*.csproj ./src/Infrastructure.EntityFramework/
-COPY src/SharedWeb/*.csproj ./src/SharedWeb/
-COPY Directory.Build.props .
+COPY . ./
 
 # Restore project dependencies and tools
 WORKDIR /source/src/Events
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
-# Copy required project files
-WORKDIR /source
-COPY src/Events/. ./src/Events/
-COPY src/Core/. ./src/Core/
-COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
-COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
-COPY src/SharedWeb/. ./src/SharedWeb/
-COPY .git/. ./.git/
-COPY .editorconfig /source
-
 # Build project
-WORKDIR /source/src/Events
 RUN . /tmp/rid.txt && dotnet publish \
+    -c release \
+    --no-restore \
     --self-contained \
     /p:PublishSingleFile=true \
     /p:SourceRevisionId="$GIT_COMMIT" \

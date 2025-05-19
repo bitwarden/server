@@ -17,21 +17,6 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     fi \
     && echo "RID=$RID" > /tmp/rid.txt
 
-# Copy csproj files as distinct layers
-WORKDIR /source
-COPY src/Admin/*.csproj ./src/Admin/
-COPY src/Core/*.csproj ./src/Core/
-COPY src/Infrastructure.Dapper/*.csproj ./src/Infrastructure.Dapper/
-COPY src/Infrastructure.EntityFramework/*.csproj ./src/Infrastructure.EntityFramework/
-COPY src/SharedWeb/*.csproj ./src/SharedWeb/
-COPY util/Migrator/*.csproj ./util/Migrator/
-COPY util/MySqlMigrations/*.csproj ./util/MySqlMigrations/
-COPY util/PostgresMigrations/*.csproj ./util/PostgresMigrations/
-COPY util/SqliteMigrations/*.csproj ./util/SqliteMigrations/
-COPY bitwarden_license/src/Commercial.Core/*.csproj ./bitwarden_license/src/Commercial.Core/
-COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/*.csproj ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
-COPY Directory.Build.props .
-
 # Set up Node
 ARG NODE_VERSION=20
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
@@ -40,33 +25,16 @@ RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
     && npm install -g npm@latest && \
     rm -rf /var/lib/apt/lists/*
 
-# Copying package.json, package-lock.json, and packages.lock.json
-WORKDIR /source/src/Admin
-COPY src/Admin/package*.json .
-RUN npm ci
-
-# Restore project dependencies and tools
-RUN . /tmp/rid.txt && dotnet restore -r $RID
-
 # Copy required project files
 WORKDIR /source
-COPY src/Admin/. ./src/Admin/
-COPY src/Core/. ./src/Core/
-COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
-COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
-COPY src/SharedWeb/. ./src/SharedWeb/
-COPY util/Migrator/. ./util/Migrator/
-COPY util/MySqlMigrations/. ./util/MySqlMigrations/
-COPY util/PostgresMigrations/. ./util/PostgresMigrations/
-COPY util/SqliteMigrations/. ./util/SqliteMigrations/
-COPY util/EfShared/. ./util/EfShared/
-COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.Core/
-COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/. ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
-COPY .git/. ./.git/
-COPY .editorconfig /source
+COPY . ./
+
+# Restore project dependencies and tools
+WORKDIR /source/src/Admin
+RUN npm ci
+RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Build project
-WORKDIR /source/src/Admin
 RUN npm run build
 RUN . /tmp/rid.txt && dotnet publish \
     --self-contained \
@@ -79,11 +47,13 @@ RUN . /tmp/rid.txt && dotnet publish \
 #                  App stage                  #
 ###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
-LABEL com.bitwarden.product="bitwarden"
-EXPOSE 5000
 
+ARG TARGETPLATFORM
+LABEL com.bitwarden.product="bitwarden"
+ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:5000
 ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
+EXPOSE 5000
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

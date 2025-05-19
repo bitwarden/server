@@ -18,27 +18,19 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     fi \
     && echo "RID=$RID" > /tmp/rid.txt
 
-# Copy csproj files as distinct layers
+# Copy required project files
 WORKDIR /source
-COPY util/Setup/*.csproj ./util/Setup/
-COPY src/Core/*.csproj ./src/Core/
-COPY util/Migrator/*.csproj ./util/Migrator/
-COPY Directory.Build.props .
+COPY . ./
 
 # Restore project dependencies and tools
 WORKDIR /source/util/Setup
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
-# Copy required project files
-WORKDIR /source
-COPY util/Setup/. ./util/Setup/
-COPY src/Core/. ./src/Core/
-COPY util/Migrator/. ./util/Migrator/
-COPY .editorconfig /source
-
 # Build project
 WORKDIR /source/util/Setup
 RUN . /tmp/rid.txt && dotnet publish \
+    -c release \
+    --no-restore \
     --self-contained \
     /p:SourceRevisionId="$GIT_COMMIT" \
     -r $RID \
