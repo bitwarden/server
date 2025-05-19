@@ -151,14 +151,6 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<EmergencyAccessInviteTokenable>>>())
         );
 
-        services.AddSingleton<IDataProtectorTokenFactory<HCaptchaTokenable>>(serviceProvider =>
-            new DataProtectorTokenFactory<HCaptchaTokenable>(
-                HCaptchaTokenable.ClearTextPrefix,
-                HCaptchaTokenable.DataProtectorPurpose,
-                serviceProvider.GetDataProtectionProvider(),
-                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<HCaptchaTokenable>>>())
-        );
-
         services.AddSingleton<IDataProtectorTokenFactory<SsoTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<SsoTokenable>(
                 SsoTokenable.ClearTextPrefix,
@@ -400,16 +392,6 @@ public static class ServiceCollectionExtensions
         else
         {
             services.AddSingleton<IReferenceEventService, AzureQueueReferenceEventService>();
-        }
-
-        if (CoreHelpers.SettingHasValue(globalSettings.Captcha?.HCaptchaSecretKey) &&
-            CoreHelpers.SettingHasValue(globalSettings.Captcha?.HCaptchaSiteKey))
-        {
-            services.AddSingleton<ICaptchaValidationService, HCaptchaValidationService>();
-        }
-        else
-        {
-            services.AddSingleton<ICaptchaValidationService, NoopCaptchaValidationService>();
         }
     }
 

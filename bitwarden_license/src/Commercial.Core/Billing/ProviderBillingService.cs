@@ -16,7 +16,9 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
-using Bit.Core.Billing.Services.Implementations.AutomaticTax;
+using Bit.Core.Billing.Tax.Models;
+using Bit.Core.Billing.Tax.Services;
+using Bit.Core.Billing.Tax.Services.Implementations;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -97,6 +99,7 @@ public class ProviderBillingService(
         organization.MaxStorageGb = plan.PasswordManager.BaseStorageGb;
         organization.UsePolicies = plan.HasPolicies;
         organization.UseSso = plan.HasSso;
+        organization.UseOrganizationDomains = plan.HasOrganizationDomains;
         organization.UseGroups = plan.HasGroups;
         organization.UseEvents = plan.HasEvents;
         organization.UseDirectory = plan.HasDirectory;
@@ -692,6 +695,13 @@ public class ProviderBillingService(
              customer.Metadata.ContainsKey(BraintreeCustomerIdKey) ||
              setupIntent.IsUnverifiedBankAccount());
 
+        int? trialPeriodDays = provider.Type switch
+        {
+            ProviderType.Msp when usePaymentMethod => 14,
+            ProviderType.BusinessUnit when usePaymentMethod => 4,
+            _ => null
+        };
+
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
             CollectionMethod = usePaymentMethod ?
@@ -705,7 +715,7 @@ public class ProviderBillingService(
             },
             OffSession = true,
             ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
-            TrialPeriodDays = usePaymentMethod ? 14 : null
+            TrialPeriodDays = trialPeriodDays
         };
 
         if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
