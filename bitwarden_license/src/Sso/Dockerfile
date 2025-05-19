@@ -31,7 +31,6 @@ RUN . /tmp/rid.txt && dotnet publish \
     --no-restore \
     --self-contained \
     /p:PublishSingleFile=true \
-    /p:SourceRevisionId="$GIT_COMMIT" \
     -r $RID \
     -o out
 

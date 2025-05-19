@@ -30,7 +30,6 @@ WORKDIR /source/util/Server
 RUN . /tmp/rid.txt && dotnet publish \
     --self-contained \
     /p:PublishSingleFile=true \
-    /p:SourceRevisionId="$GIT_COMMIT" \
     -r $RID \
     -o out
 

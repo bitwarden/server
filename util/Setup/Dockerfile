@@ -2,7 +2,6 @@
 #                 Build stage                 #
 ###############################################
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG GIT_COMMIT
 
 # Docker buildx supplies the value for this arg
 ARG TARGETPLATFORM
@@ -32,7 +31,6 @@ RUN . /tmp/rid.txt && dotnet publish \
     -c release \
     --no-restore \
     --self-contained \
-    /p:SourceRevisionId="$GIT_COMMIT" \
     -r $RID \
     -o out
 

@@ -52,4 +52,21 @@
     <AutoFixtureAutoNSubstituteVersion>4.18.1</AutoFixtureAutoNSubstituteVersion>
   </PropertyGroup>
 
+  <!--
+    This section is for getting & setting the gitHash value, which can easily be accessed
+    via the Core.Utilities.AssemblyHelpers class.
+  -->
+  <Target Name="SetSourceRevisionId" BeforeTargets="CoreGenerateAssemblyInfo">
+    <Exec Command="git describe --long --always --dirty --exclude=* --abbrev=8" ConsoleToMSBuild="True" IgnoreExitCode="False">
+      <Output PropertyName="SourceRevisionId" TaskParameter="ConsoleOutput"/>
+    </Exec>
+  </Target>
+  <Target Name="WriteRevision" AfterTargets="SetSourceRevisionId">
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>GitHash</_Parameter1>
+        <_Parameter2>$(SourceRevisionId)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
 </Project>
