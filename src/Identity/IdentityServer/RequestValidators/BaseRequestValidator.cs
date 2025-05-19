@@ -230,6 +230,7 @@ public abstract class BaseRequestValidator<T> where T : class
         customResponse.Add("KdfMemory", user.KdfMemory);
         customResponse.Add("KdfParallelism", user.KdfParallelism);
         customResponse.Add("UserDecryptionOptions", await CreateUserDecryptionOptionsAsync(user, device, GetSubject(context)));
+        customResponse.Add("UserId", user.Id.ToString());
 
         if (sendRememberToken)
         {
