@@ -675,19 +675,36 @@ public class SubscriberService(
         var subscription =
             customer.Subscriptions.First(subscription => subscription.Id == subscriber.GatewaySubscriptionId);
 
+        var isBusinessUseSubscriber = subscriber switch
+        {
+            Organization organization => organization.PlanType.GetProductTier() != ProductTierType.Families,
+            Provider => true,
+            _ => false
+        };
+
         var setNonUSBusinessUseToReverseCharge =
             featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
 
-        if (setNonUSBusinessUseToReverseCharge)
+        if (setNonUSBusinessUseToReverseCharge && isBusinessUseSubscriber)
         {
-            if (customer is
+            switch (customer)
+            {
+                case
                 {
                     Address.Country: not "US",
                     TaxExempt: not StripeConstants.TaxExempt.Reverse
-                })
-            {
-                await stripeAdapter.CustomerUpdateAsync(customer.Id,
-                    new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
+                }:
+                    await stripeAdapter.CustomerUpdateAsync(customer.Id,
+                        new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
+                    break;
+                case
+                {
+                    Address.Country: "US",
+                    TaxExempt: StripeConstants.TaxExempt.Reverse
+                }:
+                    await stripeAdapter.CustomerUpdateAsync(customer.Id,
+                        new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.None });
+                    break;
             }
 
             if (!subscription.AutomaticTax.Enabled)
