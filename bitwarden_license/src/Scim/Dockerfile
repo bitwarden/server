@@ -27,13 +27,12 @@ RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Build project
 RUN . /tmp/rid.txt && dotnet publish \
-  -c release \
-  --no-restore \
-  --self-contained \
-  /p:PublishSingleFile=true \
-  /p:SourceRevisionId="$GIT_COMMIT" \
-  -r $RID \
-  -o out
+    -c release \
+    --no-restore \
+    --self-contained \
+    /p:PublishSingleFile=true \
+    -r $RID \
+    -o out
 
 WORKDIR /app
 
