@@ -180,6 +180,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseKeyConnector")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseOrganizationDomains")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("INTEGER");
 
