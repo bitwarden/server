@@ -48,6 +48,11 @@ public class PasswordManagerSubscriptionUpdate
     /// </summary>
     public bool MaxSeatsReached => UpdatedSeatTotal.HasValue && MaxAutoScaleSeats.HasValue && UpdatedSeatTotal.Value >= MaxAutoScaleSeats.Value;
 
+    /// <summary>
+    /// If the new seat total exceeds the organization's auto-scale seat limit
+    /// </summary>
+    public bool MaxSeatsExceeded => UpdatedSeatTotal.HasValue && MaxAutoScaleSeats.HasValue && UpdatedSeatTotal.Value > MaxAutoScaleSeats.Value;
+
     public Plan.PasswordManagerPlanFeatures PasswordManagerPlan { get; }
 
     public InviteOrganization InviteOrganization { get; }

@@ -6,6 +6,8 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services.Contracts;
+using Bit.Core.Billing.Tax.Models;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -91,9 +93,20 @@ public class OrganizationBillingService(
 
         var subscription = await subscriberService.GetSubscription(organization);
 
+        if (customer == null || subscription == null)
+        {
+            return OrganizationMetadata.Default with
+            {
+                IsEligibleForSelfHost = isEligibleForSelfHost,
+                IsManaged = isManaged
+            };
+        }
+
         var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
 
-        var invoice = await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions());
+        var invoice = !string.IsNullOrEmpty(subscription.LatestInvoiceId)
+            ? await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions())
+            : null;
 
         return new OrganizationMetadata(
             isEligibleForSelfHost,

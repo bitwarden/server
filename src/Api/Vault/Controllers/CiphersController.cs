@@ -177,12 +177,7 @@ public class CiphersController : Controller
         }
 
         await _cipherService.SaveDetailsAsync(cipher, user.Id, model.Cipher.LastKnownRevisionDate, model.CollectionIds, cipher.OrganizationId.HasValue);
-        var response = new CipherResponseModel(
-            cipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings);
-        return response;
+        return await Get(cipher.Id);
     }
 
     [HttpPost("admin")]
@@ -320,26 +315,10 @@ public class CiphersController : Controller
     {
         var org = _currentContext.GetOrganization(organizationId);
 
-        // If we're not an "admin", we don't need to check the ciphers
-        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }))
+        // If we're not an "admin" or if we're not a provider user we don't need to check the ciphers
+        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }) || await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            // Are we a provider user? If so, we need to be sure we're not restricted
-            // Once the feature flag is removed, this check can be combined with the above
-            if (await _currentContext.ProviderUserForOrgAsync(organizationId))
-            {
-                // Provider is restricted from editing ciphers, so we're not an "admin"
-                if (_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess))
-                {
-                    return false;
-                }
-
-                // Provider is unrestricted, so we're an "admin", don't return early
-            }
-            else
-            {
-                // Not a provider or admin
-                return false;
-            }
+            return false;
         }
 
         // We know we're an "admin", now check the ciphers explicitly (in case admins are restricted)
@@ -355,26 +334,10 @@ public class CiphersController : Controller
 
         var org = _currentContext.GetOrganization(organizationId);
 
-        // If we're not an "admin", we don't need to check the ciphers
-        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }))
+        // If we're not an "admin" or if we're a provider user we don't need to check the ciphers
+        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }) || await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            // Are we a provider user? If so, we need to be sure we're not restricted
-            // Once the feature flag is removed, this check can be combined with the above
-            if (await _currentContext.ProviderUserForOrgAsync(organizationId))
-            {
-                // Provider is restricted from editing ciphers, so we're not an "admin"
-                if (_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess))
-                {
-                    return false;
-                }
-
-                // Provider is unrestricted, so we're an "admin", don't return early
-            }
-            else
-            {
-                // Not a provider or admin
-                return false;
-            }
+            return false;
         }
 
         // If the user can edit all ciphers for the organization, just check they all belong to the org
@@ -467,10 +430,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can edit all ciphers if RestrictProviderAccess is disabled
+        // Provider users cannot edit ciphers
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
+            return false;
         }
 
         return false;
@@ -490,10 +453,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can only access organization ciphers if RestrictProviderAccess is disabled
+        // Provider users cannot access organization ciphers
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
+            return false;
         }
 
         return false;
@@ -513,10 +476,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can only access all ciphers if RestrictProviderAccess is disabled
+        // Provider users cannot access ciphers
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
+            return false;
         }
 
         return false;
@@ -1091,9 +1054,8 @@ public class CiphersController : Controller
             throw new BadRequestException(ModelState);
         }
 
-        // If Account Deprovisioning is enabled, we need to check if the user is claimed by any organization.
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
+        // Check if the user is claimed by any organization.
+        if (await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
         {
             throw new BadRequestException("Cannot purge accounts owned by an organization. Contact your organization administrator for additional details.");
         }
@@ -1246,6 +1208,20 @@ public class CiphersController : Controller
         return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
     }
 
+    [HttpGet("{id}/attachment/{attachmentId}/admin")]
+    public async Task<AttachmentResponseModel> GetAttachmentDataAdmin(Guid id, string attachmentId)
+    {
+        var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
+        if (cipher == null || !cipher.OrganizationId.HasValue ||
+            !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
+        {
+            throw new NotFoundException();
+        }
+
+        var result = await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
+        return new AttachmentResponseModel(result);
+    }
+
     [HttpGet("{id}/attachment/{attachmentId}")]
     public async Task<AttachmentResponseModel> GetAttachmentData(Guid id, string attachmentId)
     {
@@ -1292,18 +1268,17 @@ public class CiphersController : Controller
 
     [HttpDelete("{id}/attachment/{attachmentId}/admin")]
     [HttpPost("{id}/attachment/{attachmentId}/delete-admin")]
-    public async Task DeleteAttachmentAdmin(string id, string attachmentId)
+    public async Task<DeleteAttachmentResponseData> DeleteAttachmentAdmin(Guid id, string attachmentId)
     {
-        var idGuid = new Guid(id);
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(idGuid);
+        var cipher = await _cipherRepository.GetByIdAsync(id);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
 
-        await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, true);
+        return await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, true);
     }
 
     [AllowAnonymous]

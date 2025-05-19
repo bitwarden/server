@@ -107,7 +107,8 @@ public class OrganizationService : IOrganizationService
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         IPolicyRequirementQuery policyRequirementQuery,
-        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand)
+        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand
+        )
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -448,6 +449,7 @@ public class OrganizationService : IOrganizationService
             MaxStorageGb = 1,
             UsePolicies = plan.HasPolicies,
             UseSso = plan.HasSso,
+            UseOrganizationDomains = plan.HasOrganizationDomains,
             UseGroups = plan.HasGroups,
             UseEvents = plan.HasEvents,
             UseDirectory = plan.HasDirectory,
@@ -569,6 +571,8 @@ public class OrganizationService : IOrganizationService
             SmSeats = license.SmSeats,
             SmServiceAccounts = license.SmServiceAccounts,
             UseRiskInsights = license.UseRiskInsights,
+            UseOrganizationDomains = license.UseOrganizationDomains,
+            UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies,
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
@@ -1057,7 +1061,7 @@ public class OrganizationService : IOrganizationService
             organization: organization,
             initOrganization: initOrganization));
 
-    internal async Task<(bool canScale, string failureReason)> CanScaleAsync(
+    public async Task<(bool canScale, string failureReason)> CanScaleAsync(
         Organization organization,
         int seatsToAdd)
     {
@@ -1910,53 +1914,5 @@ public class OrganizationService : IOrganizationService
             EventRaisedByUser = userService.GetUserName(user),
             SalesAssistedTrialStarted = salesAssistedTrialStarted,
         });
-    }
-
-    public async Task InitPendingOrganization(Guid userId, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName)
-    {
-        await ValidateSignUpPoliciesAsync(userId);
-
-        var org = await GetOrgById(organizationId);
-
-        if (org.Enabled)
-        {
-            throw new BadRequestException("Organization is already enabled.");
-        }
-
-        if (org.Status != OrganizationStatusType.Pending)
-        {
-            throw new BadRequestException("Organization is not on a Pending status.");
-        }
-
-        if (!string.IsNullOrEmpty(org.PublicKey))
-        {
-            throw new BadRequestException("Organization already has a Public Key.");
-        }
-
-        if (!string.IsNullOrEmpty(org.PrivateKey))
-        {
-            throw new BadRequestException("Organization already has a Private Key.");
-        }
-
-        org.Enabled = true;
-        org.Status = OrganizationStatusType.Created;
-        org.PublicKey = publicKey;
-        org.PrivateKey = privateKey;
-
-        await UpdateAsync(org);
-
-        if (!string.IsNullOrWhiteSpace(collectionName))
-        {
-            // give the owner Can Manage access over the default collection
-            List<CollectionAccessSelection> defaultOwnerAccess =
-                [new CollectionAccessSelection { Id = organizationUserId, HidePasswords = false, ReadOnly = false, Manage = true }];
-
-            var defaultCollection = new Collection
-            {
-                Name = collectionName,
-                OrganizationId = org.Id
-            };
-            await _collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);
-        }
     }
 }

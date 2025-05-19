@@ -164,6 +164,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("Use2fa")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseAdminSponsoredFamilies")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UseApi")
                         .HasColumnType("tinyint(1)");
 
@@ -180,6 +183,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UsePasswordManager")
@@ -1311,8 +1317,14 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
 
+                    b.Property<bool>("IsAdminInitiated")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<DateTime?>("LastSyncDate")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("OfferedToEmail")
                         .HasMaxLength(256)
@@ -2728,7 +2740,8 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.Vault.Models.SecurityTask", "Task")
                         .WithMany()
-                        .HasForeignKey("TaskId");
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
@@ -2843,7 +2856,8 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", "Cipher")
                         .WithMany()
-                        .HasForeignKey("CipherId");
+                        .HasForeignKey("CipherId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
                         .WithMany()

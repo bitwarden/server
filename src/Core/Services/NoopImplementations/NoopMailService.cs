@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Billing.Enums;
@@ -31,7 +33,8 @@ public class NoopMailService : IMailService
         string email,
         string token,
         ProductTierType productTier,
-        IEnumerable<ProductType> products)
+        IEnumerable<ProductType> products,
+        int trailLength)
     {
         return Task.FromResult(0);
     }
@@ -73,11 +76,6 @@ public class NoopMailService : IMailService
     }
 
     public Task SendOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
     {
         return Task.FromResult(0);
     }
@@ -137,7 +135,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendLicenseExpiredAsync(IEnumerable<string> emails, string organizationName = null)
+    public Task SendLicenseExpiredAsync(IEnumerable<string> emails, string? organizationName = null)
     {
         return Task.FromResult(0);
     }
@@ -148,11 +146,6 @@ public class NoopMailService : IMailService
     }
 
     public Task SendRecoverTwoFactorEmail(string email, DateTime timestamp, string ip)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email)
     {
         return Task.FromResult(0);
     }
@@ -212,6 +205,11 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendBusinessUnitConversionInviteAsync(Organization organization, string token, string email)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email)
     {
         return Task.FromResult(0);
@@ -260,21 +258,6 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
-    {
-        return Task.FromResult(0);
-    }
-
     public Task SendUnclaimedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
     {
         return Task.FromResult(0);
@@ -319,7 +302,7 @@ public class NoopMailService : IMailService
     }
     public Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList) => Task.CompletedTask;
 
-    public Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName)
+    public Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string? userName)
     {
         return Task.FromResult(0);
     }

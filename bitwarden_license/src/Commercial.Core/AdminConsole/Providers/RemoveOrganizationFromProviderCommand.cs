@@ -8,7 +8,8 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Services.Implementations.AutomaticTax;
+using Bit.Core.Billing.Tax.Services;
+using Bit.Core.Billing.Tax.Services.Implementations;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -110,9 +111,14 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IEnumerable<string> organizationOwnerEmails)
     {
         if (provider.IsBillable() &&
-            organization.IsValidClient() &&
-            !string.IsNullOrEmpty(organization.GatewayCustomerId))
+            organization.IsValidClient())
         {
+            // An organization converted to a business unit will not have a Customer since it was given to the business unit.
+            if (string.IsNullOrEmpty(organization.GatewayCustomerId))
+            {
+                await _providerBillingService.CreateCustomerForClientOrganization(provider, organization);
+            }
+
             var customer = await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Description = string.Empty,

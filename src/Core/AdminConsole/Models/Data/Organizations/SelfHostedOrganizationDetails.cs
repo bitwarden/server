@@ -150,6 +150,7 @@ public class SelfHostedOrganizationDetails : Organization
             AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems,
             Status = Status,
             UseRiskInsights = UseRiskInsights,
+            UseAdminSponsoredFamilies = UseAdminSponsoredFamilies,
         };
     }
 }

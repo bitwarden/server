@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -28,7 +29,6 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IDeviceValidator _deviceValidator;
     private readonly ITwoFactorAuthenticationValidator _twoFactorAuthenticationValidator;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IMailService _mailService;
     private readonly ILogger _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
@@ -39,6 +39,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected ISsoConfigRepository SsoConfigRepository { get; }
     protected IUserService _userService { get; }
     protected IUserDecryptionOptionsBuilder UserDecryptionOptionsBuilder { get; }
+    protected IPolicyRequirementQuery PolicyRequirementQuery { get; }
 
     public BaseRequestValidator(
         UserManager<User> userManager,
@@ -47,7 +48,6 @@ public abstract class BaseRequestValidator<T> where T : class
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
         ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
@@ -55,7 +55,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _userManager = userManager;
         _userService = userService;
@@ -63,7 +64,6 @@ public abstract class BaseRequestValidator<T> where T : class
         _deviceValidator = deviceValidator;
         _twoFactorAuthenticationValidator = twoFactorAuthenticationValidator;
         _organizationUserRepository = organizationUserRepository;
-        _mailService = mailService;
         _logger = logger;
         CurrentContext = currentContext;
         _globalSettings = globalSettings;
@@ -72,28 +72,18 @@ public abstract class BaseRequestValidator<T> where T : class
         FeatureService = featureService;
         SsoConfigRepository = ssoConfigRepository;
         UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
+        PolicyRequirementQuery = policyRequirementQuery;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
-        // 1. We need to check if the user is a bot and if their master password hash is correct.
-        var isBot = validatorContext.CaptchaResponse?.IsBot ?? false;
+        // 1. We need to check if the user's master password hash is correct.
         var valid = await ValidateContextAsync(context, validatorContext);
         var user = validatorContext.User;
-        if (!valid || isBot)
+        if (!valid)
         {
-            if (isBot)
-            {
-                _logger.LogInformation(Constants.BypassFiltersEventId,
-                    "Login attempt for {UserName} detected as a captcha bot with score {CaptchaScore}.",
-                    request.UserName, validatorContext.CaptchaResponse.Score);
-            }
-
-            if (!valid)
-            {
-                await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
-            }
+            await UpdateFailedAuthDetailsAsync(user);
 
             await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
             return;
@@ -163,7 +153,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 else
                 {
-                    await UpdateFailedAuthDetailsAsync(user, true, !validatorContext.KnownDevice);
+                    await UpdateFailedAuthDetailsAsync(user);
                     await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                 }
                 return;
@@ -348,9 +338,12 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         // Check if user belongs to any organization with an active SSO policy
-        var anySsoPoliciesApplicableToUser = await PolicyService.AnyPoliciesApplicableToUserAsync(
-                                                user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
-        if (anySsoPoliciesApplicableToUser)
+        var ssoRequired = FeatureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            ? (await PolicyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(user.Id))
+                .SsoRequired
+            : await PolicyService.AnyPoliciesApplicableToUserAsync(
+                user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
+        if (ssoRequired)
         {
             return true;
         }
@@ -372,7 +365,7 @@ public abstract class BaseRequestValidator<T> where T : class
         await _userRepository.ReplaceAsync(user);
     }
 
-    private async Task UpdateFailedAuthDetailsAsync(User user, bool twoFactorInvalid, bool unknownDevice)
+    private async Task UpdateFailedAuthDetailsAsync(User user)
     {
         if (user == null)
         {
@@ -383,32 +376,6 @@ public abstract class BaseRequestValidator<T> where T : class
         user.FailedLoginCount = ++user.FailedLoginCount;
         user.LastFailedLoginDate = user.RevisionDate = utcNow;
         await _userRepository.ReplaceAsync(user);
-
-        if (ValidateFailedAuthEmailConditions(unknownDevice, user))
-        {
-            if (twoFactorInvalid)
-            {
-                await _mailService.SendFailedTwoFactorAttemptsEmailAsync(user.Email, utcNow, CurrentContext.IpAddress);
-            }
-            else
-            {
-                await _mailService.SendFailedLoginAttemptsEmailAsync(user.Email, utcNow, CurrentContext.IpAddress);
-            }
-        }
-    }
-
-    /// <summary>
-    /// checks to see if a user is trying to log into a new device
-    /// and has reached the maximum number of failed login attempts.
-    /// </summary>
-    /// <param name="unknownDevice">boolean</param>
-    /// <param name="user">current user</param>
-    /// <returns></returns>
-    private bool ValidateFailedAuthEmailConditions(bool unknownDevice, User user)
-    {
-        var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;
-        var failedLoginCount = user?.FailedLoginCount ?? 0;
-        return unknownDevice && failedLoginCeiling > 0 && failedLoginCount == failedLoginCeiling;
     }
 
     private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicyAsync(User user)

@@ -1,11 +1,11 @@
 ﻿using System.Text.Json;
+using Bit.Core;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -19,30 +19,17 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
     private const string DefaultPassword = "master_password_hash";
     private const string DefaultUsername = "test@email.qa";
     private const string DefaultDeviceIdentifier = "test_identifier";
-    private readonly IdentityApplicationFactory _factory;
-    private readonly UserManager<User> _userManager;
-    private readonly IAuthRequestRepository _authRequestRepository;
-    private readonly IDeviceService _deviceService;
-
-    public ResourceOwnerPasswordValidatorTests(IdentityApplicationFactory factory)
-    {
-        _factory = factory;
-
-        _userManager = _factory.GetService<UserManager<User>>();
-        _authRequestRepository = _factory.GetService<IAuthRequestRepository>();
-        _deviceService = _factory.GetService<IDeviceService>();
-    }
 
     [Fact]
     public async Task ValidateAsync_Success()
     {
         // Arrange
-        await EnsureUserCreatedAsync();
+        var localFactory = new IdentityApplicationFactory();
+        await EnsureUserCreatedAsync(localFactory);
 
         // Act
-        var context = await _factory.Server.PostAsync("/connect/token",
-            GetFormUrlEncodedContent(),
-            context => context.SetAuthEmail(DefaultUsername));
+        var context = await localFactory.Server.PostAsync("/connect/token",
+            GetFormUrlEncodedContent());
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -52,33 +39,14 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         Assert.NotNull(token);
     }
 
-    [Fact]
-    public async Task ValidateAsync_AuthEmailHeaderInvalid_InvalidGrantResponse()
-    {
-        // Arrange
-        await EnsureUserCreatedAsync();
-
-        // Act
-        var context = await _factory.Server.PostAsync(
-            "/connect/token",
-            GetFormUrlEncodedContent()
-        );
-
-        // Assert
-        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
-
-        var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
-        Assert.Equal("Auth-Email header invalid.", error);
-    }
-
     [Theory, BitAutoData]
     public async Task ValidateAsync_UserNull_Failure(string username)
     {
+        // Arrange
+        var localFactory = new IdentityApplicationFactory();
         // Act
-        var context = await _factory.Server.PostAsync("/connect/token",
-            GetFormUrlEncodedContent(username: username),
-            context => context.SetAuthEmail(username));
+        var context = await localFactory.Server.PostAsync("/connect/token",
+            GetFormUrlEncodedContent(username: username));
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -105,15 +73,17 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
     public async Task ValidateAsync_BadPassword_Failure(string badPassword)
     {
         // Arrange
-        await EnsureUserCreatedAsync();
+        var localFactory = new IdentityApplicationFactory();
+        await EnsureUserCreatedAsync(localFactory);
+
+        var userManager = localFactory.GetService<UserManager<User>>();
 
         // Verify the User is not null to ensure the failure is due to bad password
-        Assert.NotNull(await _userManager.FindByEmailAsync(DefaultUsername));
+        Assert.NotNull(await userManager.FindByEmailAsync(DefaultUsername));
 
         // Act
-        var context = await _factory.Server.PostAsync("/connect/token",
-            GetFormUrlEncodedContent(password: badPassword),
-            context => context.SetAuthEmail(DefaultUsername));
+        var context = await localFactory.Server.PostAsync("/connect/token",
+            GetFormUrlEncodedContent(password: badPassword));
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -128,9 +98,12 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
     public async Task ValidateAsync_ValidateContextAsync_AuthRequest_NotNull_AgeLessThanOneHour_Success()
     {
         // Arrange
+        var localFactory = new IdentityApplicationFactory();
+
         // Ensure User
-        await EnsureUserCreatedAsync();
-        var user = await _userManager.FindByEmailAsync(DefaultUsername);
+        await EnsureUserCreatedAsync(localFactory);
+        var userManager = localFactory.GetService<UserManager<User>>();
+        var user = await userManager.FindByEmailAsync(DefaultUsername);
         Assert.NotNull(user);
 
         // Connect Request to User and set CreationDate
@@ -139,13 +112,14 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
             AuthRequestType.AuthenticateAndUnlock,
             DateTime.UtcNow.AddMinutes(-30)
         );
-        await _authRequestRepository.CreateAsync(authRequest);
+        var authRequestRepository = localFactory.GetService<IAuthRequestRepository>();
+        await authRequestRepository.CreateAsync(authRequest);
 
-        var expectedAuthRequest = await _authRequestRepository.GetManyByUserIdAsync(user.Id);
+        var expectedAuthRequest = await authRequestRepository.GetManyByUserIdAsync(user.Id);
         Assert.NotEmpty(expectedAuthRequest);
 
         // Act
-        var context = await _factory.Server.PostAsync("/connect/token",
+        var context = await localFactory.Server.PostAsync("/connect/token",
             new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 { "scope", "api offline_access" },
@@ -157,7 +131,7 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
                 { "username", DefaultUsername },
                 { "password", DefaultPassword },
                 { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
-            }), context => context.SetAuthEmail(DefaultUsername));
+            }));
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -171,9 +145,12 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
     public async Task ValidateAsync_ValidateContextAsync_AuthRequest_NotNull_AgeGreaterThanOneHour_Failure()
     {
         // Arrange
+        var localFactory = new IdentityApplicationFactory();
         // Ensure User
-        await EnsureUserCreatedAsync(_factory);
-        var user = await _userManager.FindByEmailAsync(DefaultUsername);
+        await EnsureUserCreatedAsync(localFactory);
+        var userManager = localFactory.GetService<UserManager<User>>();
+
+        var user = await userManager.FindByEmailAsync(DefaultUsername);
         Assert.NotNull(user);
 
         // Create AuthRequest
@@ -184,7 +161,7 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         );
 
         // Act
-        var context = await _factory.Server.PostAsync("/connect/token",
+        var context = await localFactory.Server.PostAsync("/connect/token",
             new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 { "scope", "api offline_access" },
@@ -196,7 +173,7 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
                 { "username", DefaultUsername },
                 { "password", DefaultPassword },
                 { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
-            }), context => context.SetAuthEmail(DefaultUsername));
+            }));
 
         // Assert
 
@@ -214,19 +191,23 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         Assert.Equal("Username or password is incorrect. Try again.", errorMessage);
     }
 
-    private async Task EnsureUserCreatedAsync(IdentityApplicationFactory factory = null)
+    private async Task EnsureUserCreatedAsync(IdentityApplicationFactory factory)
     {
-        factory ??= _factory;
-        // No need to create more users than we need
-        if (await _userManager.FindByEmailAsync(DefaultUsername) == null)
-        {
-            // Register user
-            await factory.RegisterAsync(new RegisterRequestModel
+        // Register user
+        await factory.RegisterNewIdentityFactoryUserAsync(
+            new RegisterFinishRequestModel
             {
                 Email = DefaultUsername,
-                MasterPasswordHash = DefaultPassword
+                MasterPasswordHash = DefaultPassword,
+                Kdf = KdfType.PBKDF2_SHA256,
+                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                UserAsymmetricKeys = new KeysRequestModel()
+                {
+                    PublicKey = "public_key",
+                    EncryptedPrivateKey = "private_key"
+                },
+                UserSymmetricKey = "sym_key",
             });
-        }
     }
 
     private FormUrlEncodedContent GetFormUrlEncodedContent(
