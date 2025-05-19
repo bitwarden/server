@@ -5,10 +5,8 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Bit.Identity;
 using Bit.Test.Common.Helpers;
-using HandlebarsDotNet;
 using LinqToDB;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -98,7 +96,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             { "grant_type", "password" },
             { "username", username },
             { "password", password },
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
+        }));
 
         return context;
     }
@@ -126,7 +124,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             { "TwoFactorToken", twoFactorToken },
             { "TwoFactorProvider", twoFactorProviderType },
             { "TwoFactorRemember", "1" },
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(username)));
+        }));
 
         return context;
     }
