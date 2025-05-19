@@ -459,13 +459,15 @@ public class OrganizationBillingService(
                 stripeAdapter.CustomerUpdateAsync(customer.Id,
                     new CustomerUpdateOptions
                     {
-                        Expand = expansions, TaxExempt = StripeConstants.TaxExempt.Reverse
+                        Expand = expansions,
+                        TaxExempt = StripeConstants.TaxExempt.Reverse
                     }),
             { Address.Country: "US", TaxExempt: StripeConstants.TaxExempt.Reverse } => await
                 stripeAdapter.CustomerUpdateAsync(customer.Id,
                     new CustomerUpdateOptions
                     {
-                        Expand = expansions, TaxExempt = StripeConstants.TaxExempt.None
+                        Expand = expansions,
+                        TaxExempt = StripeConstants.TaxExempt.None
                     }),
             _ => customer
         };
