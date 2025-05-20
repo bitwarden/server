@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
 using System.Text;
+using Bit.Core.Billing.Licenses.Attributes;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.Services;
@@ -54,8 +55,13 @@ public class UserLicense : BaseLicense
         Signature = Convert.ToBase64String(licenseService.SignLicense(this));
     }
 
+    [LicenseVersion(1)]
     public string Email { get; set; }
+
+    [LicenseVersion(1)]
     public bool Premium { get; set; }
+
+    [LicenseVersion(1)]
     public short? MaxStorageGb { get; set; }
 
     public override byte[] GetDataBytes(bool forHash = false)
