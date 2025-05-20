@@ -152,7 +152,19 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         ICollection<OrganizationUser> userOrgs, bool userTwoFactorEnabled)
     {
         // Enforce Two Factor Authentication Policy for this organization
-        await CheckTwoFactorPolicyAsync(organizationId, user, userTwoFactorEnabled);
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            await ValidateTwoFactorAuthenticationPolicyAsync(user, organizationId, userTwoFactorEnabled);
+        }
+        else
+        {
+            var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication))
+                .Any(p => p.OrganizationId == organizationId);
+            if (orgRequiresTwoFactor && !userTwoFactorEnabled)
+            {
+                throw new BadRequestException("User does not have two-step login enabled.");
+            }
+        }
 
         var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
         var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
@@ -170,27 +182,25 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         }
     }
 
-    private async Task CheckTwoFactorPolicyAsync(Guid organizationId, User user, bool userTwoFactorEnabled)
+    /// <summary>
+    /// Validates the two-factor authentication policy for the organization user.
+    /// If the user has two-step login enabled, the policy is not enforced.
+    /// </summary>
+    /// <param name="user">The user to validate the policy for.</param>
+    /// <param name="organizationId">The ID of the organization to validate the policy for.</param>
+    /// <param name="userTwoFactorEnabled">Whether the user has two-step login enabled.</param>
+    private async Task ValidateTwoFactorAuthenticationPolicyAsync(User user, Guid organizationId, bool userTwoFactorEnabled)
     {
         if (userTwoFactorEnabled)
         {
+            // If the user has two-step login enabled, the policy is not enforced.
             return;
         }
 
-        bool requireTwoFactor;
+        var requirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
+        var canBeConfirmed = requirement.CanBeConfirmed(userTwoFactorEnabled, organizationId);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
-        {
-            var requirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
-            requireTwoFactor = requirement.RequireTwoFactor;
-        }
-        else
-        {
-            requireTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication))
-                .Any(p => p.OrganizationId == organizationId);
-        }
-
-        if (requireTwoFactor)
+        if (!canBeConfirmed)
         {
             throw new BadRequestException("User does not have two-step login enabled.");
         }

@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
@@ -344,7 +345,15 @@ public class ConfirmOrganizationUserCommandTests
         userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
         featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
         policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
-            .Returns(new RequireTwoFactorPolicyRequirement { RequireTwoFactor = true });
+            .Returns(new RequireTwoFactorPolicyRequirement(
+            [
+                new PolicyDetails
+                {
+                    OrganizationId = org.Id,
+                    OrganizationUserStatus = OrganizationUserStatusType.Accepted,
+                    PolicyType = PolicyType.TwoFactorAuthentication
+                }
+            ]));
         twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (user.Id, false) });
 
@@ -374,7 +383,15 @@ public class ConfirmOrganizationUserCommandTests
         userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
         featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
         policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
-            .Returns(new RequireTwoFactorPolicyRequirement { RequireTwoFactor = false });
+            .Returns(new RequireTwoFactorPolicyRequirement(
+            [
+                new PolicyDetails
+                {
+                    OrganizationId = Guid.NewGuid(),
+                    OrganizationUserStatus = OrganizationUserStatusType.Invited,
+                    PolicyType = PolicyType.TwoFactorAuthentication,
+                }
+            ]));
         twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (user.Id, false) });
 
@@ -406,7 +423,15 @@ public class ConfirmOrganizationUserCommandTests
         userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
         featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
         policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
-            .Returns(new RequireTwoFactorPolicyRequirement { RequireTwoFactor = true });
+            .Returns(new RequireTwoFactorPolicyRequirement(
+            [
+                new PolicyDetails
+                {
+                    OrganizationId = org.Id,
+                    OrganizationUserStatus = OrganizationUserStatusType.Accepted,
+                    PolicyType = PolicyType.TwoFactorAuthentication
+                }
+            ]));
         twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (user.Id, true) });
 
