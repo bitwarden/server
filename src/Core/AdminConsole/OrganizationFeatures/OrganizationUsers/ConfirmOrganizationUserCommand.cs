@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -24,6 +25,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private readonly IPushRegistrationService _pushRegistrationService;
     private readonly IPolicyService _policyService;
     private readonly IDeviceRepository _deviceRepository;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IFeatureService _featureService;
 
     public ConfirmOrganizationUserCommand(
         IOrganizationRepository organizationRepository,
@@ -35,7 +38,9 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         IPushNotificationService pushNotificationService,
         IPushRegistrationService pushRegistrationService,
         IPolicyService policyService,
-        IDeviceRepository deviceRepository)
+        IDeviceRepository deviceRepository,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -47,6 +52,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         _pushRegistrationService = pushRegistrationService;
         _policyService = policyService;
         _deviceRepository = deviceRepository;
+        _policyRequirementQuery = policyRequirementQuery;
+        _featureService = featureService;
     }
 
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
@@ -118,8 +125,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
                     }
                 }
 
-                var twoFactorEnabled = usersTwoFactorEnabled.FirstOrDefault(tuple => tuple.userId == user.Id).twoFactorIsEnabled;
-                await CheckPoliciesAsync(organizationId, user, orgUsers, twoFactorEnabled);
+                var userTwoFactorEnabled = usersTwoFactorEnabled.FirstOrDefault(tuple => tuple.userId == user.Id).twoFactorIsEnabled;
+                await CheckPoliciesAsync(organizationId, user, orgUsers, userTwoFactorEnabled);
                 orgUser.Status = OrganizationUserStatusType.Confirmed;
                 orgUser.Key = keys[orgUser.Id];
                 orgUser.Email = null;
@@ -142,15 +149,10 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     }
 
     private async Task CheckPoliciesAsync(Guid organizationId, User user,
-        ICollection<OrganizationUser> userOrgs, bool twoFactorEnabled)
+        ICollection<OrganizationUser> userOrgs, bool userTwoFactorEnabled)
     {
         // Enforce Two Factor Authentication Policy for this organization
-        var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication))
-            .Any(p => p.OrganizationId == organizationId);
-        if (orgRequiresTwoFactor && !twoFactorEnabled)
-        {
-            throw new BadRequestException("User does not have two-step login enabled.");
-        }
+        await CheckTwoFactorPolicyAsync(organizationId, user, userTwoFactorEnabled);
 
         var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
         var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
@@ -165,6 +167,32 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         if (otherSingleOrgPolicies.Any())
         {
             throw new BadRequestException("Cannot confirm this member to the organization because they are in another organization which forbids it.");
+        }
+    }
+
+    private async Task CheckTwoFactorPolicyAsync(Guid organizationId, User user, bool userTwoFactorEnabled)
+    {
+        if (userTwoFactorEnabled)
+        {
+            return;
+        }
+
+        bool requireTwoFactor;
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            var requirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
+            requireTwoFactor = requirement.RequireTwoFactor;
+        }
+        else
+        {
+            requireTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication))
+                .Any(p => p.OrganizationId == organizationId);
+        }
+
+        if (requireTwoFactor)
+        {
+            throw new BadRequestException("User does not have two-step login enabled.");
         }
     }
 
