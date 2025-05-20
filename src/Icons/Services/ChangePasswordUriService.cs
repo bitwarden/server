@@ -51,13 +51,7 @@ public class ChangePasswordUriService : IChangePasswordUriService
                 Path = "/.well-known/resource-that-should-not-exist-whose-status-code-should-not-be-200"
             };
 
-            var request = new HttpRequestMessage(HttpMethod.Get, url.ToString())
-            {
-                Headers =
-                {
-                    { "Cache-Control", "no-store" },
-                }
-            };
+            var request = new HttpRequestMessage(HttpMethod.Get, url.ToString());
 
             var response = await _httpClient.SendAsync(request);
             return !response.IsSuccessStatusCode;
@@ -84,13 +78,7 @@ public class ChangePasswordUriService : IChangePasswordUriService
                 Path = "/.well-known/change-password"
             };
 
-            var request = new HttpRequestMessage(HttpMethod.Get, url.ToString())
-            {
-                Headers =
-                {
-                    { "Cache-Control", "no-store" },
-                }
-            };
+            var request = new HttpRequestMessage(HttpMethod.Get, url.ToString());
 
             var response = await _httpClient.SendAsync(request);
             return response.IsSuccessStatusCode ? url.ToString() : null;
