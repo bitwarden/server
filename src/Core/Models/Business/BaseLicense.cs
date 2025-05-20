@@ -9,38 +9,41 @@ namespace Bit.Core.Models.Business;
 public abstract class BaseLicense : ILicense
 {
     [LicenseVersion(1)]
-    public string LicenseKey { get; set; }
-
-    [LicenseVersion(1)]
     public Guid Id { get; set; }
 
     [LicenseVersion(1)]
-    public string Name { get; set; }
-
-    [LicenseVersion(1)]
-    public int Version { get; set; }
-
     [LicenseIgnore(includeInHash: false)]
     public DateTime Issued { get; set; }
-
-    [LicenseIgnore(includeInHash: false)]
-    public DateTime? Refresh { get; set; }
 
     [LicenseVersion(1)]
     public DateTime? Expires { get; set; }
 
     [LicenseVersion(1)]
+    [LicenseIgnore(includeInHash: false)]
+    public DateTime? Refresh { get; set; }
+
+    [LicenseVersion(1)]
+    public int Version { get; set; }
+
+    [LicenseVersion(1)]
     public bool Trial { get; set; }
 
-    [LicenseIgnore]
-    public LicenseType? LicenseType { get; set; }
+    [LicenseVersion(1)]
+    public string LicenseKey { get; set; }
 
+    [LicenseVersion(1)]
+    public string Name { get; set; }
+
+    [LicenseVersion(1)]
     [LicenseIgnore(includeInHash: false)]
     public string Hash { get; set; }
 
     [LicenseVersion(1)]
     [LicenseIgnore]
     public string Signature { get; set; }
+
+    [LicenseIgnore]
+    public LicenseType? LicenseType { get; set; }
 
     [LicenseIgnore]
     public string Token { get; set; }
