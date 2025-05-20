@@ -82,6 +82,8 @@ public class DatabaseContext : DbContext
     public DbSet<PasswordHealthReportApplication> PasswordHealthReportApplications { get; set; }
     public DbSet<SecurityTask> SecurityTasks { get; set; }
     public DbSet<OrganizationInstallation> OrganizationInstallations { get; set; }
+    public DbSet<RiskInsightReport> RiskInsightReports { get; set; }
+    public DbSet<RiskInsightCriticalApplication> RiskInsightCriticalApplications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

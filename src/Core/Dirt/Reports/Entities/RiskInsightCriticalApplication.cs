@@ -1,4 +1,6 @@
-﻿using Bit.Core.Entities;
+﻿#nullable enable
+
+using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Dirt.Reports.Entities;
