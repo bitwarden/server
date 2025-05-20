@@ -88,48 +88,20 @@ public class OrganizationLicense : BaseLicense
         AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems;
         //
 
-        if (subscriptionInfo?.Subscription == null)
-        {
-            if (org.PlanType == PlanType.Custom && org.ExpirationDate.HasValue)
-            {
-                Expires = Refresh = org.ExpirationDate.Value;
-                Trial = false;
-            }
-            else
-            {
-                Expires = Refresh = Issued.AddDays(7);
-                Trial = true;
-            }
-        }
-        else if (subscriptionInfo.Subscription.TrialEndDate.HasValue &&
-                 subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow)
-        {
-            Expires = Refresh = subscriptionInfo.Subscription.TrialEndDate.Value;
-            Trial = true;
-        }
-        else
-        {
-            if (org.ExpirationDate.HasValue && org.ExpirationDate.Value < DateTime.UtcNow)
-            {
-                // expired
-                Expires = Refresh = org.ExpirationDate.Value;
-            }
-            else if (subscriptionInfo?.Subscription?.PeriodDuration != null &&
-                     subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
-            {
-                Refresh = DateTime.UtcNow.AddDays(30);
-                Expires = subscriptionInfo.Subscription.PeriodEndDate?.AddDays(Constants
-                    .OrganizationSelfHostSubscriptionGracePeriodDays);
-                ExpirationWithoutGracePeriod = subscriptionInfo.Subscription.PeriodEndDate;
-            }
-            else
-            {
-                Expires = org.ExpirationDate.HasValue ? org.ExpirationDate.Value.AddMonths(11) : Issued.AddYears(1);
-                Refresh = DateTime.UtcNow - Expires > TimeSpan.FromDays(30) ? DateTime.UtcNow.AddDays(30) : Expires;
-            }
+        // Calculate expiration dates using extension methods
+        Expires = org.CalculateFreshExpirationDate(subscriptionInfo);
 
-            Trial = false;
+        // Since Expires is now assigned, we can safely use it for the other calculations
+        if (Expires.HasValue)
+        {
+            Refresh = org.CalculateFreshRefreshDate(subscriptionInfo, Expires.Value);
+            ExpirationWithoutGracePeriod = org.CalculateFreshExpirationDateWithoutGracePeriod(subscriptionInfo, Expires.Value);
         }
+
+        // Determine if this is a trial license
+        Trial = subscriptionInfo?.Subscription == null
+            ? (org.PlanType != PlanType.Custom || !org.ExpirationDate.HasValue)
+            : subscriptionInfo.Subscription.TrialEndDate > DateTime.UtcNow;
 
         UseAdminSponsoredFamilies = org.UseAdminSponsoredFamilies;
         Hash = Convert.ToBase64String(ComputeHash());
