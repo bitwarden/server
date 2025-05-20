@@ -2,7 +2,7 @@
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
-using Bit.Core.AdminConsole.Shared.Validation;
+using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -156,6 +156,6 @@ public class InviteOrganizationUsersValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         Assert.IsType<Invalid<InviteOrganizationUsersValidationRequest>>(result);
-        Assert.Equal("Some Secrets Manager Failure", (result as Invalid<InviteOrganizationUsersValidationRequest>)!.ErrorMessageString);
+        Assert.Equal("Some Secrets Manager Failure", (result as Invalid<InviteOrganizationUsersValidationRequest>)!.Error.Message);
     }
 }

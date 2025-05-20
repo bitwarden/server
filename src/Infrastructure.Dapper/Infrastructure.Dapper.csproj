@@ -1,10 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-      <!-- Temp exclusions until warnings are fixed -->
-      <WarningsNotAsErrors>$(WarningsNotAsErrors);CS8618</WarningsNotAsErrors>
-    </PropertyGroup>
-
     <ItemGroup>
       <ProjectReference Include="..\Core\Core.csproj" />
     </ItemGroup>
