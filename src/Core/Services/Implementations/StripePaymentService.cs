@@ -842,7 +842,13 @@ public class StripePaymentService : IPaymentService
         try
         {
             await _stripeAdapter.TaxIdCreateAsync(customer.Id,
-                new TaxIdCreateOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber, });
+                new TaxIdCreateOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber });
+
+            if (taxInfo.TaxIdType == StripeConstants.TaxIdType.SpanishNIF)
+            {
+                await _stripeAdapter.TaxIdCreateAsync(customer.Id,
+                    new TaxIdCreateOptions { Type = StripeConstants.TaxIdType.EUVAT, Value = $"ES{taxInfo.TaxIdNumber}" });
+            }
         }
         catch (StripeException e)
         {
@@ -1000,6 +1006,15 @@ public class StripePaymentService : IPaymentService
                     Value = parameters.TaxInformation.TaxId
                 }
             ];
+
+            if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
+            {
+                options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
+                {
+                    Type = StripeConstants.TaxIdType.EUVAT,
+                    Value = $"ES{parameters.TaxInformation.TaxId}"
+                });
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(gatewayCustomerId))
@@ -1154,6 +1169,15 @@ public class StripePaymentService : IPaymentService
                     Value = parameters.TaxInformation.TaxId
                 }
             ];
+
+            if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
+            {
+                options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
+                {
+                    Type = StripeConstants.TaxIdType.EUVAT,
+                    Value = $"ES{parameters.TaxInformation.TaxId}"
+                });
+            }
         }
 
         Customer gatewayCustomer = null;
