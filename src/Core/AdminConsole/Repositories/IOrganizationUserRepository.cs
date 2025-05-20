@@ -27,7 +27,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// </summary>
     /// <param name="organizationId">The ID of the organization to get the occupied seat count for.</param>
     /// <returns>The number of occupied seats for the organization.</returns>
-    Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId);
+    Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers);
     Task<OrganizationUser?> GetByOrganizationAsync(Guid organizationId, Guid userId);
     Task<Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id);

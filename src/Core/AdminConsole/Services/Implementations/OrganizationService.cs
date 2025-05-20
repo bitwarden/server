@@ -342,15 +342,12 @@ public class OrganizationService : IOrganizationService
 
         if (!organization.Seats.HasValue || organization.Seats.Value > newSeatTotal)
         {
-            var totalConsumedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            var organizationUsers = await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id, null);
-            var organizationUserOccupiedSeats = organizationUsers.Where(user => user.Status >= 0).Count();
-            var sponsoredFamiliesOccupiedSeats = totalConsumedSeats - organizationUserOccupiedSeats;
+            var seatCounts = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
 
-            if (totalConsumedSeats > newSeatTotal)
+            if (seatCounts.Total > newSeatTotal)
             {
-                throw new BadRequestException($"Your organization has {organizationUserOccupiedSeats} members and {sponsoredFamiliesOccupiedSeats} sponsored families. " +
-                    $"To decrease the seat count below {totalConsumedSeats}, you must remove members or sponsorships.");
+                throw new BadRequestException($"Your organization has {seatCounts.Users} members and {seatCounts.Sponsored} sponsored families. " +
+                    $"To decrease the seat count below {seatCounts.Total}, you must remove members or sponsorships.");
             }
         }
 
@@ -846,8 +843,8 @@ public class OrganizationService : IOrganizationService
         var newSeatsRequired = 0;
         if (organization.Seats.HasValue)
         {
-            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            var availableSeats = organization.Seats.Value - occupiedSeats;
+            var seatCounts = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            var availableSeats = organization.Seats.Value - seatCounts.Total;
             newSeatsRequired = invites.Sum(i => i.invite.Emails.Count()) - existingEmails.Count() - availableSeats;
         }
 
@@ -1303,8 +1300,8 @@ public class OrganizationService : IOrganizationService
             var enoughSeatsAvailable = true;
             if (organization.Seats.HasValue)
             {
-                var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-                seatsAvailable = organization.Seats.Value - occupiedSeats;
+                var seatCounts = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+                seatsAvailable = organization.Seats.Value - seatCounts.Total;
                 enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
             }
 

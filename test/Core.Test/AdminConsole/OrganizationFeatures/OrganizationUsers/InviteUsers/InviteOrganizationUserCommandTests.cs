@@ -476,7 +476,11 @@ public class InviteOrganizationUserCommandTests
         orgUserRepository
             .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
             .Returns([ownerDetails]);
-        orgUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(1);
+        orgUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+        {
+            Sponsored = 0,
+            Users = 1
+        });
         orgUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id).Returns(1);
 
         var orgRepository = sutProvider.GetDependency<IOrganizationRepository>();

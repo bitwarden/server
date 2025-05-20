@@ -89,8 +89,8 @@ public class CreateSponsorshipCommand(
 
         if (isAdminInitiated && sponsoringOrganization.Seats.HasValue)
         {
-            var occupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrganization.Id);
-            var availableSeats = sponsoringOrganization.Seats.Value - occupiedSeats;
+            var seatCounts = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrganization.Id);
+            var availableSeats = sponsoringOrganization.Seats.Value - seatCounts.Total;
 
             if (availableSeats <= 0)
             {

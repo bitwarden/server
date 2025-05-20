@@ -87,13 +87,14 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 new InviteOrganizationUsersResponse(request.InviteOrganization.OrganizationId)));
         }
 
+        var seatCounts = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId);
         var validationResult = await inviteUsersValidator.ValidateAsync(new InviteOrganizationUsersValidationRequest
         {
             Invites = invitesToSend.ToArray(),
             InviteOrganization = request.InviteOrganization,
             PerformedBy = request.PerformedBy,
             PerformedAt = request.PerformedAt,
-            OccupiedPmSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId),
+            OccupiedPmSeats = seatCounts.Total,
             OccupiedSmSeats = await organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId)
         });
 
