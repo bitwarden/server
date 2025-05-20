@@ -71,7 +71,8 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         UseRiskInsights = o.UseRiskInsights,
                         UseAdminSponsoredFamilies = o.UseAdminSponsoredFamilies,
                         LimitItemDeletion = o.LimitItemDeletion,
-                        IsAdminInitiated = os.IsAdminInitiated
+                        IsAdminInitiated = os.IsAdminInitiated,
+                        UseOrganizationDomains = o.UseOrganizationDomains
                     };
         return query;
     }

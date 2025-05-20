@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
@@ -717,8 +718,8 @@ public class ProviderServiceTests
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        sutProvider.GetDependency<IOrganizationService>().SignupClientAsync(organizationSignup)
-            .Returns((organization, null as OrganizationUser, new Collection()));
+        sutProvider.GetDependency<IProviderClientOrganizationSignUpCommand>().SignUpClientOrganizationAsync(organizationSignup)
+            .Returns(new ProviderClientOrganizationSignUpResponse(organization, new Collection()));
 
         var providerOrganization =
             await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);
@@ -755,8 +756,8 @@ public class ProviderServiceTests
 
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
 
-        sutProvider.GetDependency<IOrganizationService>().SignupClientAsync(organizationSignup)
-            .Returns((organization, null as OrganizationUser, new Collection()));
+        sutProvider.GetDependency<IProviderClientOrganizationSignUpCommand>().SignUpClientOrganizationAsync(organizationSignup)
+            .Returns(new ProviderClientOrganizationSignUpResponse(organization, new Collection()));
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user));
@@ -782,8 +783,8 @@ public class ProviderServiceTests
 
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
 
-        sutProvider.GetDependency<IOrganizationService>().SignupClientAsync(organizationSignup)
-            .Returns((organization, null as OrganizationUser, new Collection()));
+        sutProvider.GetDependency<IProviderClientOrganizationSignUpCommand>().SignUpClientOrganizationAsync(organizationSignup)
+            .Returns(new ProviderClientOrganizationSignUpResponse(organization, new Collection()));
 
         var providerOrganization = await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);
 
@@ -821,8 +822,8 @@ public class ProviderServiceTests
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        sutProvider.GetDependency<IOrganizationService>().SignupClientAsync(organizationSignup)
-            .Returns((organization, null as OrganizationUser, defaultCollection));
+        sutProvider.GetDependency<IProviderClientOrganizationSignUpCommand>().SignUpClientOrganizationAsync(organizationSignup)
+            .Returns(new ProviderClientOrganizationSignUpResponse(organization, defaultCollection));
 
         var providerOrganization =
             await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);

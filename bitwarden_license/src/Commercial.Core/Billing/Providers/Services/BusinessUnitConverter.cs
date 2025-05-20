@@ -68,6 +68,7 @@ public class BusinessUnitConverter(
         organization.MaxStorageGb = updatedPlan.PasswordManager.BaseStorageGb;
         organization.UsePolicies = updatedPlan.HasPolicies;
         organization.UseSso = updatedPlan.HasSso;
+        organization.UseOrganizationDomains = updatedPlan.HasOrganizationDomains;
         organization.UseGroups = updatedPlan.HasGroups;
         organization.UseEvents = updatedPlan.HasEvents;
         organization.UseDirectory = updatedPlan.HasDirectory;
