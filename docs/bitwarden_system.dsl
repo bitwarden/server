@@ -41,6 +41,14 @@ workspace "Bitwarden" "General Bitwarden System" {
     !include "tools/views.dsl"
     !include "vault/views.dsl"
 
+    systemLandscape "Bitwarden" {
+      include *
+    }
+
+    container server "Bitwarden_Server" {
+      include *
+    }
+
     // This is last to override team styles with common styles
     !include "shared.views.dsl"
   }
