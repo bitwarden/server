@@ -74,3 +74,9 @@ bw_controlled = group "Bitwarden Controlled" {
   }
   key_connector = softwareSystem "Key Connector" 
 }
+
+self_hosted_instances = softwareSystem "Self-Hosted Instances" {
+  tags "Self-Hosted"
+  tags "External"
+  description "Self-hosted instances of Bitwarden servers"
+}
