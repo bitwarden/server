@@ -8,10 +8,40 @@ using Bit.Core.Enums;
 /// </summary>
 public class RequireTwoFactorPolicyRequirement : IPolicyRequirement
 {
+    private readonly IEnumerable<PolicyDetails> _policyDetails;
+
+    public RequireTwoFactorPolicyRequirement(IEnumerable<PolicyDetails> policyDetails)
+    {
+        _policyDetails = policyDetails;
+    }
+
     /// <summary>
-    /// Indicates whether two-factor authentication is required for the user.
+    /// Determines if the user can accept an invitation to an organization.
     /// </summary>
-    public bool RequireTwoFactor { get; init; }
+    /// <param name="twoFactorEnabled">Whether the user has two-step login enabled.</param>
+    /// <param name="organizationId">The ID of the organization.</param>
+    /// <returns>True if the user can accept the invitation, false otherwise.</returns>
+    public bool CanAcceptInvitation(bool twoFactorEnabled, Guid organizationId) =>
+        twoFactorEnabled ||
+        !_policyDetails.Any(p => p.OrganizationId == organizationId &&
+            (p.OrganizationUserStatus is
+                OrganizationUserStatusType.Invited or
+                OrganizationUserStatusType.Accepted or
+                OrganizationUserStatusType.Confirmed));
+
+
+    /// <summary>
+    /// Determines if the user can be confirmed in an organization.
+    /// </summary>
+    /// <param name="twoFactorEnabled">Whether the user has two-step login enabled.</param>
+    /// <param name="organizationId">The ID of the organization.</param>
+    /// <returns>True if the user can be confirmed, false otherwise.</returns>
+    public bool CanBeConfirmed(bool twoFactorEnabled, Guid organizationId) =>
+        twoFactorEnabled ||
+        !_policyDetails.Any(p => p.OrganizationId == organizationId &&
+            (p.OrganizationUserStatus is
+                OrganizationUserStatusType.Accepted or
+                OrganizationUserStatusType.Confirmed));
 }
 
 public class RequireTwoFactorPolicyRequirementFactory : BasePolicyRequirementFactory<RequireTwoFactorPolicyRequirement>
@@ -21,9 +51,6 @@ public class RequireTwoFactorPolicyRequirementFactory : BasePolicyRequirementFac
 
     public override RequireTwoFactorPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
-        return new RequireTwoFactorPolicyRequirement
-        {
-            RequireTwoFactor = policyDetails.Any(p => p.PolicyType == PolicyType.TwoFactorAuthentication)
-        };
+        return new RequireTwoFactorPolicyRequirement(policyDetails);
     }
 }
