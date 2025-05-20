@@ -8,22 +8,24 @@ namespace Bit.Icons.Controllers;
 [Route("change-password-uri")]
 public class ChangePasswordUriController : Controller
 {
-
     private readonly IMemoryCache _memoryCache;
     private readonly IDomainMappingService _domainMappingService;
     private readonly IChangePasswordUriService _changePasswordService;
     private readonly ChangePasswordUriSettings _changePasswordSettings;
+    private readonly ILogger<ChangePasswordUriController> _logger;
 
     public ChangePasswordUriController(
         IMemoryCache memoryCache,
         IDomainMappingService domainMappingService,
         IChangePasswordUriService changePasswordService,
-        ChangePasswordUriSettings iconsSettings)
+        ChangePasswordUriSettings iconsSettings,
+        ILogger<ChangePasswordUriController> logger)
     {
         _memoryCache = memoryCache;
         _domainMappingService = domainMappingService;
         _changePasswordService = changePasswordService;
         _changePasswordSettings = iconsSettings;
+        _logger = logger;
     }
 
     [HttpGet("config")]
@@ -62,6 +64,7 @@ public class ChangePasswordUriController : Controller
             var result = await _changePasswordService.GetChangePasswordUri(domain);
             if (result == null)
             {
+                _logger.LogWarning("Null result returned for {0}.", domain);
                 changePasswordUri = null;
             }
             else
@@ -71,6 +74,7 @@ public class ChangePasswordUriController : Controller
 
             if (_changePasswordSettings.CacheEnabled)
             {
+                _logger.LogInformation("Cache uri for {0}.", domain);
                 _memoryCache.Set(mappedDomain, changePasswordUri, new MemoryCacheEntryOptions
                 {
                     AbsoluteExpirationRelativeToNow = new TimeSpan(_changePasswordSettings.CacheHours, 0, 0),
