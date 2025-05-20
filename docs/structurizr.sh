@@ -3,7 +3,7 @@
 ## start Structurizr Lite with the given workspace file, relative to the current working directory. Omit the file extension.
 ## Optional second argument of a port number to use. Default is 8085.
 
-echo "hosting on ${PORT:=${2:-8085}}"
+echo "hosting on http://localhost:${PORT:=${2:-8085}}"
 # Check if the workspace file exists
 if [ ! -f "$1.dsl" ]; then
   echo "Workspace file $1 does not exist."
