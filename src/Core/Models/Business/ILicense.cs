@@ -1,9 +1,11 @@
 ﻿using System.Security.Cryptography.X509Certificates;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Business;
 
 public interface ILicense
 {
+    LicenseType LicenseType { get; set; }
     string LicenseKey { get; set; }
     int Version { get; set; }
     DateTime Issued { get; set; }

@@ -1,7 +1,11 @@
-﻿using System.Security.Claims;
+﻿using System.Reflection;
+using System.Security.Claims;
+using System.Text;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Licenses.Attributes;
 using Bit.Core.Models.Business;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Billing.Licenses.Extensions;
 
@@ -74,6 +78,34 @@ public static class LicenseExtensions
         }
 
         return expirationDate;
+    }
+
+    public static byte[] GetDataBytesWithAttributes(this ILicense license, bool forHash = false)
+    {
+        var props = license.GetType()
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p =>
+            {
+                var versionAttr = p.GetCustomAttribute<LicenseVersionAttribute>();
+                if (versionAttr is null || versionAttr.Version > license.Version)
+                {
+                    return false;
+                }
+
+                var ignoreAttr = p.GetCustomAttribute<LicenseIgnoreAttribute>();
+                if (ignoreAttr is null)
+                {
+                    return true;
+                }
+
+                return forHash && ignoreAttr.IncludeInHash;
+            })
+            .OrderBy(p => p.Name)
+            .Select(p => $"{p.Name}:{CoreHelpers.FormatLicenseSignatureValue(p.GetValue(license, null))}")
+            .Aggregate((c, n) => $"{c}|{n}");
+
+        var data = $"license:{license.LicenseType.ToString().ToLowerInvariant()}|{props}";
+        return Encoding.UTF8.GetBytes(data);
     }
 
     public static T GetValue<T>(this ClaimsPrincipal principal, string claimType)

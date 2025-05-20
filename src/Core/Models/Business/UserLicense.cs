@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text;
 using Bit.Core.Billing.Licenses.Attributes;
 using Bit.Core.Billing.Licenses.Extensions;
@@ -71,30 +70,7 @@ public class UserLicense : BaseLicense
             throw new NotSupportedException($"Version {Version} is not supported.");
         }
 
-        var props = GetType()
-            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p =>
-            {
-                var versionAttr = p.GetCustomAttribute<LicenseVersionAttribute>();
-                if (versionAttr is null || versionAttr.Version > Version)
-                {
-                    return false;
-                }
-
-                var ignoreAttr = p.GetCustomAttribute<LicenseIgnoreAttribute>();
-                if (ignoreAttr is null)
-                {
-                    return true;
-                }
-
-                return forHash && ignoreAttr.IncludeInHash;
-            })
-            .OrderBy(p => p.Name)
-            .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
-            .Aggregate((c, n) => $"{c}|{n}");
-
-        var data = $"license:user|{props}";
-        return Encoding.UTF8.GetBytes(data);
+        return this.GetDataBytesWithAttributes(forHash);
     }
 
     public bool CanUse(User user, ClaimsPrincipal claimsPrincipal, out string exception)
