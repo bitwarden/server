@@ -1,4 +1,4 @@
-namespace Bit.Icons.Models;
+﻿namespace Bit.Icons.Models;
 
 public class ChangePasswordUriSettings
 {

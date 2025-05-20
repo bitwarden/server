@@ -1,4 +1,4 @@
-using Bit.Icons.Models;
+﻿using Bit.Icons.Models;
 using Bit.Icons.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
@@ -17,11 +17,24 @@ public class ChangePasswordUriController : Controller
     public ChangePasswordUriController(
         IMemoryCache memoryCache,
         IDomainMappingService domainMappingService,
-        IChangePasswordUriService changePasswordService)
+        IChangePasswordUriService changePasswordService,
+        ChangePasswordUriSettings iconsSettings)
     {
         _memoryCache = memoryCache;
         _domainMappingService = domainMappingService;
         _changePasswordService = changePasswordService;
+        _changePasswordSettings = iconsSettings;
+    }
+
+    [HttpGet("config")]
+    public IActionResult GetConfig()
+    {
+        return new JsonResult(new
+        {
+            _changePasswordSettings.CacheEnabled,
+            _changePasswordSettings.CacheHours,
+            _changePasswordSettings.CacheSizeLimit
+        });
     }
 
     [HttpGet]
