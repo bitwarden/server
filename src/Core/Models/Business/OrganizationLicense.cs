@@ -253,71 +253,34 @@ public class OrganizationLicense : BaseLicense
 
     public override byte[] GetDataBytes(bool forHash = false)
     {
-        string data = null;
-        if (ValidLicenseVersion)
-        {
-            var props = typeof(OrganizationLicense)
-                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(p =>
-                    !p.Name.Equals(nameof(Signature)) &&
-                    !p.Name.Equals(nameof(SignatureBytes)) &&
-                    !p.Name.Equals(nameof(LicenseType)) &&
-                    !p.Name.Equals(nameof(Token)) &&
-                    // UsersGetPremium was added in Version 2
-                    (Version >= 2 || !p.Name.Equals(nameof(UsersGetPremium))) &&
-                    // UseEvents was added in Version 3
-                    (Version >= 3 || !p.Name.Equals(nameof(UseEvents))) &&
-                    // Use2fa was added in Version 4
-                    (Version >= 4 || !p.Name.Equals(nameof(Use2fa))) &&
-                    // UseApi was added in Version 5
-                    (Version >= 5 || !p.Name.Equals(nameof(UseApi))) &&
-                    // UsePolicies was added in Version 6
-                    (Version >= 6 || !p.Name.Equals(nameof(UsePolicies))) &&
-                    // UseSso was added in Version 7
-                    (Version >= 7 || !p.Name.Equals(nameof(UseSso))) &&
-                    // UseResetPassword was added in Version 8
-                    (Version >= 8 || !p.Name.Equals(nameof(UseResetPassword))) &&
-                    // UseKeyConnector was added in Version 9
-                    (Version >= 9 || !p.Name.Equals(nameof(UseKeyConnector))) &&
-                    // UseScim was added in Version 10
-                    (Version >= 10 || !p.Name.Equals(nameof(UseScim))) &&
-                    // UseCustomPermissions was added in Version 11
-                    (Version >= 11 || !p.Name.Equals(nameof(UseCustomPermissions))) &&
-                    // ExpirationWithoutGracePeriod was added in Version 12
-                    (Version >= 12 || !p.Name.Equals(nameof(ExpirationWithoutGracePeriod))) &&
-                    // UseSecretsManager, UsePasswordManager, SmSeats, and SmServiceAccounts were added in Version 13
-                    (Version >= 13 || !p.Name.Equals(nameof(UseSecretsManager))) &&
-                    (Version >= 13 || !p.Name.Equals(nameof(UsePasswordManager))) &&
-                    (Version >= 13 || !p.Name.Equals(nameof(SmSeats))) &&
-                    (Version >= 13 || !p.Name.Equals(nameof(SmServiceAccounts))) &&
-                    // LimitCollectionCreationDeletion was added in Version 14
-                    (Version >= 14 || !p.Name.Equals(nameof(LimitCollectionCreationDeletion))) &&
-                    // AllowAdminAccessToAllCollectionItems was added in Version 15
-                    (Version >= 15 || !p.Name.Equals(nameof(AllowAdminAccessToAllCollectionItems))) &&
-                    // UseOrganizationDomains was added in Version 16
-                    (Version >= 16 || !p.Name.Equals(nameof(UseOrganizationDomains))) &&
-                    (
-                        !forHash ||
-                        (
-                            !p.Name.Equals(nameof(Hash)) &&
-                            !p.Name.Equals(nameof(Issued)) &&
-                            !p.Name.Equals(nameof(Refresh))
-                        )
-                    ) &&
-                    // any new fields added need to be added here so that they're ignored
-                    !p.Name.Equals(nameof(UseRiskInsights)) &&
-                    !p.Name.Equals(nameof(UseAdminSponsoredFamilies)) &&
-                    !p.Name.Equals(nameof(UseOrganizationDomains)))
-                .OrderBy(p => p.Name)
-                .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
-                .Aggregate((c, n) => $"{c}|{n}");
-            data = $"license:organization|{props}";
-        }
-        else
+        if (!ValidLicenseVersion)
         {
             throw new NotSupportedException($"Version {Version} is not supported.");
         }
 
+        var props = GetType()
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p =>
+            {
+                var versionAttr = p.GetCustomAttribute<LicenseVersionAttribute>();
+                if (versionAttr is null || versionAttr.Version > Version)
+                {
+                    return false;
+                }
+
+                var ignoreAttr = p.GetCustomAttribute<LicenseIgnoreAttribute>();
+                if (ignoreAttr is null)
+                {
+                    return true;
+                }
+
+                return forHash && ignoreAttr.IncludeInHash;
+            })
+            .OrderBy(p => p.Name)
+            .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
+            .Aggregate((c, n) => $"{c}|{n}");
+
+        var data = $"license:organization|{props}";
         return Encoding.UTF8.GetBytes(data);
     }
 
