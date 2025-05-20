@@ -255,7 +255,10 @@ public class OrganizationLicense : ILicense
                             !p.Name.Equals(nameof(Refresh))
                         )
                     ) &&
-                    !p.Name.Equals(nameof(UseRiskInsights)))
+                    // any new fields added need to be added here so that they're ignored
+                    !p.Name.Equals(nameof(UseRiskInsights)) &&
+                    !p.Name.Equals(nameof(UseAdminSponsoredFamilies)) &&
+                    !p.Name.Equals(nameof(UseOrganizationDomains)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");
