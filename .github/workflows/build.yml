@@ -636,7 +636,9 @@ jobs:
 
   setup-ephemeral-environment:
     name: Setup Ephemeral Environment
-    needs: build-docker
+    needs:
+      - build-artifacts
+      - build-docker
     if: |
       needs.build-artifacts.outputs.has_secrets == 'true'
       && github.event_name == 'pull_request'
