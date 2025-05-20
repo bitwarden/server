@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
@@ -258,30 +257,7 @@ public class OrganizationLicense : BaseLicense
             throw new NotSupportedException($"Version {Version} is not supported.");
         }
 
-        var props = GetType()
-            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p =>
-            {
-                var versionAttr = p.GetCustomAttribute<LicenseVersionAttribute>();
-                if (versionAttr is null || versionAttr.Version > Version)
-                {
-                    return false;
-                }
-
-                var ignoreAttr = p.GetCustomAttribute<LicenseIgnoreAttribute>();
-                if (ignoreAttr is null)
-                {
-                    return true;
-                }
-
-                return forHash && ignoreAttr.IncludeInHash;
-            })
-            .OrderBy(p => p.Name)
-            .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
-            .Aggregate((c, n) => $"{c}|{n}");
-
-        var data = $"license:organization|{props}";
-        return Encoding.UTF8.GetBytes(data);
+        return this.GetDataBytesWithAttributes(forHash);
     }
 
     public bool CanUse(
@@ -397,7 +373,7 @@ public class OrganizationLicense : BaseLicense
             errorMessages.AppendLine("The license does not allow for on-premise hosting of organizations.");
         }
 
-        if (LicenseType != null && LicenseType != Enums.LicenseType.Organization)
+        if (LicenseType != LicenseType.Organization)
         {
             errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
                                      "Upload this license from your personal account settings page.");
