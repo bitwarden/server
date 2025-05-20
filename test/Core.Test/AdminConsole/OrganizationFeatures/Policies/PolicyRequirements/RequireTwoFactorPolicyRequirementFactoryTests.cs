@@ -155,4 +155,60 @@ public class RequireTwoFactorPolicyRequirementFactoryTests
 
         Assert.False(actual.CanBeConfirmed(false, organizationId));
     }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public void CanBeRestored_WithNoPolicies_ReturnsTrue(
+        bool twoFactorEnabled, Guid organizationId,
+        SutProvider<RequireTwoFactorPolicyRequirementFactory> sutProvider)
+    {
+        var actual = sutProvider.Sut.Create([]);
+
+        Assert.True(actual.CanBeRestored(twoFactorEnabled, organizationId));
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Revoked)]
+    [BitAutoData(OrganizationUserStatusType.Invited)]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed)]
+    public void CanBeRestored_WithTwoFactorEnabled_ReturnsTrue(
+        OrganizationUserStatusType userStatus, Guid organizationId,
+        SutProvider<RequireTwoFactorPolicyRequirementFactory> sutProvider)
+    {
+        var actual = sutProvider.Sut.Create(
+        [
+            new PolicyDetails
+            {
+                OrganizationId = organizationId,
+                PolicyType = PolicyType.TwoFactorAuthentication,
+                OrganizationUserStatus = userStatus
+            }
+        ]);
+
+        Assert.True(actual.CanBeRestored(true, organizationId));
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Revoked)]
+    [BitAutoData(OrganizationUserStatusType.Invited)]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed)]
+    public void CanBeRestored_WithAnyStatus_ReturnsFalse(
+        OrganizationUserStatusType userStatus, Guid organizationId,
+        SutProvider<RequireTwoFactorPolicyRequirementFactory> sutProvider)
+    {
+        var actual = sutProvider.Sut.Create(
+        [
+            new PolicyDetails
+            {
+                OrganizationId = organizationId,
+                PolicyType = PolicyType.TwoFactorAuthentication,
+                OrganizationUserStatus = userStatus
+            }
+        ]);
+
+        Assert.False(actual.CanBeRestored(false, organizationId));
+    }
 }

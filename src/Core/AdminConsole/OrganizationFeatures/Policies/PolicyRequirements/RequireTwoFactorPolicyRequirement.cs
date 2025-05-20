@@ -42,12 +42,28 @@ public class RequireTwoFactorPolicyRequirement : IPolicyRequirement
             (p.OrganizationUserStatus is
                 OrganizationUserStatusType.Accepted or
                 OrganizationUserStatusType.Confirmed));
+
+
+    /// <summary>
+    /// Determines if the user can be restored in an organization.
+    /// </summary>
+    /// <param name="twoFactorEnabled">Whether the user has two-step login enabled.</param>
+    /// <param name="organizationId">The ID of the organization.</param>
+    /// <returns>True if the user can be restored, false otherwise.</returns>
+    public bool CanBeRestored(bool twoFactorEnabled, Guid organizationId) =>
+        twoFactorEnabled ||
+        !_policyDetails.Any(p => p.OrganizationId == organizationId &&
+            (p.OrganizationUserStatus is
+                OrganizationUserStatusType.Revoked or
+                OrganizationUserStatusType.Invited or
+                OrganizationUserStatusType.Accepted or
+                OrganizationUserStatusType.Confirmed));
 }
 
 public class RequireTwoFactorPolicyRequirementFactory : BasePolicyRequirementFactory<RequireTwoFactorPolicyRequirement>
 {
     public override PolicyType PolicyType => PolicyType.TwoFactorAuthentication;
-    protected override IEnumerable<OrganizationUserStatusType> ExemptStatuses => [OrganizationUserStatusType.Revoked];
+    protected override IEnumerable<OrganizationUserStatusType> ExemptStatuses => [];
 
     public override RequireTwoFactorPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
