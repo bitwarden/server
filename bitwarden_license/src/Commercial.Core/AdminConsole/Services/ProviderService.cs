@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
@@ -53,6 +54,7 @@ public class ProviderService : IProviderService
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IPricingClient _pricingClient;
+    private readonly IProviderClientOrganizationSignUpCommand _providerClientOrganizationSignUpCommand;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
@@ -61,7 +63,8 @@ public class ProviderService : IProviderService
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
         ICurrentContext currentContext, IStripeAdapter stripeAdapter, IFeatureService featureService,
         IDataProtectorTokenFactory<ProviderDeleteTokenable> providerDeleteTokenDataFactory,
-        IApplicationCacheService applicationCacheService, IProviderBillingService providerBillingService, IPricingClient pricingClient)
+        IApplicationCacheService applicationCacheService, IProviderBillingService providerBillingService, IPricingClient pricingClient,
+        IProviderClientOrganizationSignUpCommand providerClientOrganizationSignUpCommand)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -81,6 +84,7 @@ public class ProviderService : IProviderService
         _applicationCacheService = applicationCacheService;
         _providerBillingService = providerBillingService;
         _pricingClient = pricingClient;
+        _providerClientOrganizationSignUpCommand = providerClientOrganizationSignUpCommand;
     }
 
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo, TokenizedPaymentSource tokenizedPaymentSource = null)
@@ -560,12 +564,12 @@ public class ProviderService : IProviderService
 
         ThrowOnInvalidPlanType(provider.Type, organizationSignup.Plan);
 
-        var (organization, _, defaultCollection) = await _organizationService.SignupClientAsync(organizationSignup);
+        var signUpResponse = await _providerClientOrganizationSignUpCommand.SignUpClientOrganizationAsync(organizationSignup);
 
         var providerOrganization = new ProviderOrganization
         {
             ProviderId = providerId,
-            OrganizationId = organization.Id,
+            OrganizationId = signUpResponse.Organization.Id,
             Key = organizationSignup.OwnerKey,
         };
 
@@ -574,12 +578,12 @@ public class ProviderService : IProviderService
 
         // Give the owner Can Manage access over the default collection
         // The orgUser is not available when the org is created so we have to do it here as part of the invite
-        var defaultOwnerAccess = defaultCollection != null
+        var defaultOwnerAccess = signUpResponse.DefaultCollection != null
             ?
             [
                 new CollectionAccessSelection
                 {
-                    Id = defaultCollection.Id,
+                    Id = signUpResponse.DefaultCollection.Id,
                     HidePasswords = false,
                     ReadOnly = false,
                     Manage = true
@@ -587,7 +591,7 @@ public class ProviderService : IProviderService
             ]
             : Array.Empty<CollectionAccessSelection>();
 
-        await _organizationService.InviteUsersAsync(organization.Id, user.Id, systemUser: null,
+        await _organizationService.InviteUsersAsync(signUpResponse.Organization.Id, user.Id, systemUser: null,
             new (OrganizationUserInvite, string)[]
             {
                 (
