@@ -43,7 +43,7 @@ public abstract class BaseLicense : ILicense
     public string Signature { get; set; }
 
     [LicenseIgnore]
-    public LicenseType? LicenseType { get; set; }
+    public LicenseType LicenseType { get; set; }
 
     [LicenseIgnore]
     public string Token { get; set; }
