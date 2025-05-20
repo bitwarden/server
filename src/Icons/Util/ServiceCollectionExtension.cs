@@ -40,5 +40,6 @@ public static class ServiceCollectionExtension
         services.AddSingleton<IUriService, UriService>();
         services.AddSingleton<IDomainMappingService, DomainMappingService>();
         services.AddSingleton<IIconFetchingService, IconFetchingService>();
+        services.AddSingleton<IChangePasswordUriService, ChangePasswordUriService>();
     }
 }
