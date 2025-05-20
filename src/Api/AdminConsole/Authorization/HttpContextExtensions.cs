@@ -9,7 +9,7 @@ namespace Bit.Api.AdminConsole.Authorization;
 public static class HttpContextExtensions
 {
     public const string NoOrgIdError =
-        "A route decorated with with '[Authorize<Requirement>]' must include a route value named 'orgId' either through the [Controller] attribute or through a '[Http*]' attribute.";
+        "A route decorated with with '[Authorize<Requirement>]' must include a route value named 'orgId' or 'organizationId' either through the [Controller] attribute or through a '[Http*]' attribute.";
 
     /// <summary>
     /// Returns the result of the callback, caching it in HttpContext.Features for the lifetime of the request.
@@ -61,19 +61,27 @@ public static class HttpContextExtensions
 
 
     /// <summary>
-    /// Parses the {orgId} route parameter into a Guid, or throws if the {orgId} is not present or not a valid guid.
+    /// Parses the {orgId} or {organizationId} route parameter into a Guid, or throws if neither are present or are not valid guids.
     /// </summary>
     /// <param name="httpContext"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
     public static Guid GetOrganizationId(this HttpContext httpContext)
     {
-        httpContext.GetRouteData().Values.TryGetValue("orgId", out var orgIdParam);
-        if (orgIdParam == null || !Guid.TryParse(orgIdParam.ToString(), out var orgId))
+        var routeValues = httpContext.GetRouteData().Values;
+
+        routeValues.TryGetValue("orgId", out var orgIdParam);
+        if (orgIdParam != null && Guid.TryParse(orgIdParam.ToString(), out var orgId))
         {
-            throw new InvalidOperationException(NoOrgIdError);
+            return orgId;
         }
 
-        return orgId;
+        routeValues.TryGetValue("organizationId", out var organizationIdParam);
+        if (organizationIdParam != null && Guid.TryParse(organizationIdParam.ToString(), out var organizationId))
+        {
+            return organizationId;
+        }
+
+        throw new InvalidOperationException(NoOrgIdError);
     }
 }

@@ -6,30 +6,37 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing;
+using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
-using Bit.Core.Billing.Services.Implementations.AutomaticTax;
+using Bit.Core.Billing.Tax.Models;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
+using Braintree;
 using CsvHelper;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stripe;
+
+using static Bit.Core.Billing.Utilities;
+using Customer = Stripe.Customer;
+using Subscription = Stripe.Subscription;
 
 namespace Bit.Commercial.Core.Billing;
 
 public class ProviderBillingService(
+    IBraintreeGateway braintreeGateway,
     IEventService eventService,
     IFeatureService featureService,
     IGlobalSettings globalSettings,
@@ -40,13 +47,12 @@ public class ProviderBillingService(
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
     IProviderUserRepository providerUserRepository,
+    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
-    ITaxService taxService,
-    [FromKeyedServices(AutomaticTaxFactory.BusinessUse)] IAutomaticTaxStrategy automaticTaxStrategy)
+    ITaxService taxService)
     : IProviderBillingService
 {
-    [RequireFeature(FeatureFlagKeys.P15179_AddExistingOrgsFromProviderPortal)]
     public async Task AddExistingOrganization(
         Provider provider,
         Organization organization,
@@ -90,6 +96,7 @@ public class ProviderBillingService(
         organization.MaxStorageGb = plan.PasswordManager.BaseStorageGb;
         organization.UsePolicies = plan.HasPolicies;
         organization.UseSso = plan.HasSso;
+        organization.UseOrganizationDomains = plan.HasOrganizationDomains;
         organization.UseGroups = plan.HasGroups;
         organization.UseEvents = plan.HasEvents;
         organization.UseDirectory = plan.HasDirectory;
@@ -118,7 +125,7 @@ public class ProviderBillingService(
 
         /*
          * We have to scale the provider's seats before the ProviderOrganization
-         * row is inserted so the added organization's seats don't get double counted.
+         * row is inserted so the added organization's seats don't get double-counted.
          */
         await ScaleSeats(provider, organization.PlanType, organization.Seats!.Value);
 
@@ -226,7 +233,7 @@ public class ProviderBillingService(
 
         var providerCustomer = await subscriberService.GetCustomerOrThrow(provider, new CustomerGetOptions
         {
-            Expand = ["tax_ids"]
+            Expand = ["tax", "tax_ids"]
         });
 
         var providerTaxId = providerCustomer.TaxIds.FirstOrDefault();
@@ -274,6 +281,13 @@ public class ProviderBillingService(
             ]
         };
 
+        var setNonUSBusinessUseToReverseCharge = featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+        if (setNonUSBusinessUseToReverseCharge && providerCustomer.Address is not { Country: "US" })
+        {
+            customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
+        }
+
         var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
 
         organization.GatewayCustomerId = customer.Id;
@@ -312,7 +326,6 @@ public class ProviderBillingService(
         return memoryStream.ToArray();
     }
 
-    [RequireFeature(FeatureFlagKeys.P15179_AddExistingOrgsFromProviderPortal)]
     public async Task<IEnumerable<AddableOrganization>> GetAddableOrganizations(
         Provider provider,
         Guid userId)
@@ -466,7 +479,8 @@ public class ProviderBillingService(
 
     public async Task<Customer> SetupCustomer(
         Provider provider,
-        TaxInfo taxInfo)
+        TaxInfo taxInfo,
+        TokenizedPaymentSource tokenizedPaymentSource = null)
     {
         if (taxInfo is not
             {
@@ -510,6 +524,13 @@ public class ProviderBillingService(
             }
         };
 
+        var setNonUSBusinessUseToReverseCharge = featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+        if (setNonUSBusinessUseToReverseCharge && taxInfo.BillingAddressCountry != "US")
+        {
+            options.TaxExempt = StripeConstants.TaxExempt.Reverse;
+        }
+
         if (!string.IsNullOrEmpty(taxInfo.TaxIdNumber))
         {
             var taxIdType = taxService.GetStripeTaxCode(
@@ -521,6 +542,7 @@ public class ProviderBillingService(
                 logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
                     taxInfo.BillingAddressCountry,
                     taxInfo.TaxIdNumber);
+
                 throw new BadRequestException("billingTaxIdTypeInferenceError");
             }
 
@@ -535,13 +557,97 @@ public class ProviderBillingService(
             options.Coupon = provider.DiscountId;
         }
 
+        var requireProviderPaymentMethodDuringSetup =
+            featureService.IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup);
+
+        var braintreeCustomerId = "";
+
+        if (requireProviderPaymentMethodDuringSetup)
+        {
+            if (tokenizedPaymentSource is not
+                {
+                    Type: PaymentMethodType.BankAccount or PaymentMethodType.Card or PaymentMethodType.PayPal,
+                    Token: not null and not ""
+                })
+            {
+                logger.LogError("Cannot create customer for provider ({ProviderID}) without a payment method", provider.Id);
+                throw new BillingException();
+            }
+
+            var (type, token) = tokenizedPaymentSource;
+
+            // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
+            switch (type)
+            {
+                case PaymentMethodType.BankAccount:
+                    {
+                        var setupIntent =
+                            (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = token }))
+                            .FirstOrDefault();
+
+                        if (setupIntent == null)
+                        {
+                            logger.LogError("Cannot create customer for provider ({ProviderID}) without a setup intent for their bank account", provider.Id);
+                            throw new BillingException();
+                        }
+
+                        await setupIntentCache.Set(provider.Id, setupIntent.Id);
+                        break;
+                    }
+                case PaymentMethodType.Card:
+                    {
+                        options.PaymentMethod = token;
+                        options.InvoiceSettings.DefaultPaymentMethod = token;
+                        break;
+                    }
+                case PaymentMethodType.PayPal:
+                    {
+                        braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(provider, token);
+                        options.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
+                        break;
+                    }
+            }
+        }
+
         try
         {
             return await stripeAdapter.CustomerCreateAsync(options);
         }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.TaxIdInvalid)
+        catch (StripeException stripeException) when (stripeException.StripeError?.Code ==
+                                                      StripeConstants.ErrorCodes.TaxIdInvalid)
         {
-            throw new BadRequestException("Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.");
+            await Revert();
+            throw new BadRequestException(
+                "Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.");
+        }
+        catch
+        {
+            await Revert();
+            throw;
+        }
+
+        async Task Revert()
+        {
+            if (requireProviderPaymentMethodDuringSetup && tokenizedPaymentSource != null)
+            {
+                // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
+                switch (tokenizedPaymentSource.Type)
+                {
+                    case PaymentMethodType.BankAccount:
+                        {
+                            var setupIntentId = await setupIntentCache.Get(provider.Id);
+                            await stripeAdapter.SetupIntentCancel(setupIntentId,
+                                new SetupIntentCancelOptions { CancellationReason = "abandoned" });
+                            await setupIntentCache.Remove(provider.Id);
+                            break;
+                        }
+                    case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
+                        {
+                            await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
+                            break;
+                        }
+                }
+            }
         }
     }
 
@@ -583,34 +689,71 @@ public class ProviderBillingService(
             });
         }
 
+        var requireProviderPaymentMethodDuringSetup =
+            featureService.IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup);
+
+        var setupIntentId = await setupIntentCache.Get(provider.Id);
+
+        var setupIntent = !string.IsNullOrEmpty(setupIntentId)
+            ? await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions
+            {
+                Expand = ["payment_method"]
+            })
+            : null;
+
+        var usePaymentMethod =
+            requireProviderPaymentMethodDuringSetup &&
+            (!string.IsNullOrEmpty(customer.InvoiceSettings.DefaultPaymentMethodId) ||
+             customer.Metadata.ContainsKey(BraintreeCustomerIdKey) ||
+             setupIntent.IsUnverifiedBankAccount());
+
+        int? trialPeriodDays = provider.Type switch
+        {
+            ProviderType.Msp when usePaymentMethod => 14,
+            ProviderType.BusinessUnit when usePaymentMethod => 4,
+            _ => null
+        };
+
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
-            CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
+            CollectionMethod = usePaymentMethod ?
+                StripeConstants.CollectionMethod.ChargeAutomatically : StripeConstants.CollectionMethod.SendInvoice,
             Customer = customer.Id,
-            DaysUntilDue = 30,
+            DaysUntilDue = usePaymentMethod ? null : 30,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
                 { "providerId", provider.Id.ToString() }
             },
             OffSession = true,
-            ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations
+            ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
+            TrialPeriodDays = trialPeriodDays
         };
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
-        {
-            automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
-        }
-        else
+        var setNonUSBusinessUseToReverseCharge =
+            featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+        if (setNonUSBusinessUseToReverseCharge)
         {
             subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+        }
+        else if (customer.HasRecognizedTaxLocation())
+        {
+            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
+            {
+                Enabled = customer.Address.Country == "US" ||
+                          customer.TaxIds.Any()
+            };
         }
 
         try
         {
             var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 
-            if (subscription.Status == StripeConstants.SubscriptionStatus.Active)
+            if (subscription is
+                {
+                    Status: StripeConstants.SubscriptionStatus.Active or StripeConstants.SubscriptionStatus.Trialing
+                })
             {
                 return subscription;
             }

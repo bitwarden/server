@@ -62,33 +62,39 @@ public class Startup
         {
             services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
         }
-        services.AddScoped<IEventService, EventService>();
+
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
         {
+            services.AddKeyedSingleton<IEventWriteService, AzureQueueEventWriteService>("storage");
+
             if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.TopicName))
             {
-                services.AddSingleton<IEventWriteService, AzureServiceBusEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, AzureServiceBusEventWriteService>("broadcast");
             }
             else
             {
-                services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
             }
         }
         else
         {
+            services.AddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("storage");
+
             if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HostName) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Username) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Password) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.ExchangeName))
             {
-                services.AddSingleton<IEventWriteService, RabbitMqEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, RabbitMqEventWriteService>("broadcast");
             }
             else
             {
-                services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
             }
         }
+        services.AddScoped<IEventWriteService, EventRouteService>();
+        services.AddScoped<IEventService, EventService>();
 
         services.AddOptionality();
 

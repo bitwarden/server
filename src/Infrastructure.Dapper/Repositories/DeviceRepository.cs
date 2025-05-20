@@ -17,14 +17,10 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
     private readonly IGlobalSettings _globalSettings;
 
     public DeviceRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+        : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
         _globalSettings = globalSettings;
     }
-
-    public DeviceRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
 
     public async Task<Device?> GetByIdAsync(Guid id, Guid userId)
     {

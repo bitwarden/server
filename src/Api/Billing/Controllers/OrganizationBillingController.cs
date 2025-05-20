@@ -1,13 +1,16 @@
 ﻿#nullable enable
+using System.Diagnostics;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
+using Bit.Api.Billing.Queries.Organizations;
 using Bit.Core;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -25,6 +28,7 @@ public class OrganizationBillingController(
     IFeatureService featureService,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
+    IOrganizationWarningsQuery organizationWarningsQuery,
     IPaymentService paymentService,
     IPricingClient pricingClient,
     ISubscriberService subscriberService,
@@ -306,14 +310,17 @@ public class OrganizationBillingController(
             sale.Organization.UseScim = plan.HasScim;
             sale.Organization.UseCustomPermissions = plan.HasCustomPermissions;
         }
-        await organizationBillingService.Finalize(sale);
-        var org = await organizationRepository.GetByIdAsync(organizationId);
-        if (organizationSignup.PaymentMethodType != null)
+
+        if (organizationSignup.PaymentMethodType == null || string.IsNullOrEmpty(organizationSignup.PaymentToken))
         {
-            var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
-            var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
-            await organizationBillingService.UpdatePaymentMethod(org, paymentSource, taxInformation);
+            return Error.BadRequest("A payment method is required to restart the subscription.");
         }
+        var org = await organizationRepository.GetByIdAsync(organizationId);
+        Debug.Assert(org is not null, "This organization has already been found via this same ID, this should be fine.");
+        var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
+        var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
+        await organizationBillingService.UpdatePaymentMethod(org, paymentSource, taxInformation);
+        await organizationBillingService.Finalize(sale);
 
         return TypedResults.Ok();
     }
@@ -352,5 +359,29 @@ public class OrganizationBillingController(
             requestBody.OrganizationKey);
 
         return TypedResults.Ok(providerId);
+    }
+
+    [HttpGet("warnings")]
+    public async Task<IResult> GetWarningsAsync([FromRoute] Guid organizationId)
+    {
+        /*
+         * We'll keep these available at the User level, because we're hiding any pertinent information and
+         * we want to throw as few errors as possible since these are not core features.
+         */
+        if (!await currentContext.OrganizationUser(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        var response = await organizationWarningsQuery.Run(organization);
+
+        return TypedResults.Ok(response);
     }
 }

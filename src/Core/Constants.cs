@@ -108,15 +108,14 @@ public static class FeatureFlagKeys
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string SsoExternalIdVisibility = "pm-18630-sso-external-id-visibility";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
+    public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
     public const string EmailVerification = "email-verification";
-    public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
-    public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
-    public const string NewDeviceVerification = "new-device-verification";
+    public const string BrowserExtensionLoginApproval = "pm-14938-browser-extension-login-approvals";
     public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
@@ -142,13 +141,19 @@ public static class FeatureFlagKeys
     public const string TrialPayment = "PM-8163-trial-payment";
     public const string PM17772_AdminInitiatedSponsorships = "pm-17772-admin-initiated-sponsorships";
     public const string UsePricingService = "use-pricing-service";
-    public const string P15179_AddExistingOrgsFromProviderPortal = "pm-15179-add-existing-orgs-from-provider-portal";
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
     public const string PM18794_ProviderPaymentMethod = "pm-18794-provider-payment-method";
-    public const string PM19147_AutomaticTaxImprovements = "pm-19147-automatic-tax-improvements";
     public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
     public const string PM18770_EnableOrganizationBusinessUnitConversion = "pm-18770-enable-organization-business-unit-conversion";
     public const string PM199566_UpdateMSPToChargeAutomatically = "pm-199566-update-msp-to-charge-automatically";
+    public const string PM19956_RequireProviderPaymentMethodDuringSetup = "pm-19956-require-provider-payment-method-during-setup";
+    public const string UseOrganizationWarningsService = "use-organization-warnings-service";
+    public const string PM20322_AllowTrialLength0 = "pm-20322-allow-trial-length-0";
+    public const string PM21092_SetNonUSBusinessUseToReverseCharge = "pm-21092-set-non-us-business-use-to-reverse-charge";
+
+    /* Data Insights and Reporting Team */
+    public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
+    public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -165,8 +170,6 @@ public static class FeatureFlagKeys
     public const string NativeCreateAccountFlow = "native-create-account-flow";
     public const string AndroidImportLoginsFlow = "import-logins-flow";
     public const string AppReviewPrompt = "app-review-prompt";
-    public const string EnablePasswordManagerSyncAndroid = "enable-password-manager-sync-android";
-    public const string EnablePasswordManagerSynciOS = "enable-password-manager-sync-ios";
     public const string AndroidMutualTls = "mutual-tls";
     public const string SingleTapPasskeyCreation = "single-tap-passkey-creation";
     public const string SingleTapPasskeyAuthentication = "single-tap-passkey-authentication";
@@ -186,21 +189,18 @@ public static class FeatureFlagKeys
 
     /* Tools Team */
     public const string ItemShare = "item-share";
-    public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
-    public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
 
     /* Vault Team */
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
-    public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
-    public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
-    public const string RestrictProviderAccess = "restrict-provider-access";
     public const string SecurityTasks = "security-tasks";
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string DesktopCipherForms = "pm-18520-desktop-cipher-forms";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
     public const string EndUserNotifications = "pm-10609-end-user-notifications";
+    public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
+    public const string PhishingDetection = "phishing-detection";
 
     public static List<string> GetAllKeys()
     {
