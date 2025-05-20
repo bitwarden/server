@@ -1,9 +1,6 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses.Extensions;
@@ -13,7 +10,7 @@ using Bit.Core.Settings;
 
 namespace Bit.Core.Models.Business;
 
-public class OrganizationLicense : ILicense
+public class OrganizationLicense : BaseLicense
 {
     public OrganizationLicense()
     {
@@ -139,10 +136,7 @@ public class OrganizationLicense : ILicense
         Signature = Convert.ToBase64String(licenseService.SignLicense(this));
     }
 
-    public string LicenseKey { get; set; }
     public Guid InstallationId { get; set; }
-    public Guid Id { get; set; }
-    public string Name { get; set; }
     public string BillingEmail { get; set; }
     public string BusinessName { get; set; }
     public bool Enabled { get; set; }
@@ -165,10 +159,6 @@ public class OrganizationLicense : ILicense
     public bool SelfHost { get; set; }
     public bool UsersGetPremium { get; set; }
     public bool UseCustomPermissions { get; set; }
-    public int Version { get; set; }
-    public DateTime Issued { get; set; }
-    public DateTime? Refresh { get; set; }
-    public DateTime? Expires { get; set; }
     public DateTime? ExpirationWithoutGracePeriod { get; set; }
     public bool UsePasswordManager { get; set; }
     public bool UseSecretsManager { get; set; }
@@ -181,14 +171,8 @@ public class OrganizationLicense : ILicense
     public bool AllowAdminAccessToAllCollectionItems { get; set; } = true;
     //
 
-    public bool Trial { get; set; }
-    public LicenseType? LicenseType { get; set; }
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
-    public string Hash { get; set; }
-    public string Signature { get; set; }
-    public string Token { get; set; }
-    [JsonIgnore] public byte[] SignatureBytes => Convert.FromBase64String(Signature);
 
     /// <summary>
     /// Represents the current version of the license format. Should be updated whenever new fields are added.
@@ -202,7 +186,7 @@ public class OrganizationLicense : ILicense
         get => Version is >= 1 and <= 16;
     }
 
-    public byte[] GetDataBytes(bool forHash = false)
+    public override byte[] GetDataBytes(bool forHash = false)
     {
         string data = null;
         if (ValidLicenseVersion)
@@ -270,14 +254,6 @@ public class OrganizationLicense : ILicense
         }
 
         return Encoding.UTF8.GetBytes(data);
-    }
-
-    public byte[] ComputeHash()
-    {
-        using (var alg = SHA256.Create())
-        {
-            return alg.ComputeHash(GetDataBytes(true));
-        }
     }
 
     public bool CanUse(
@@ -595,26 +571,5 @@ public class OrganizationLicense : ILicense
         }
 
         return valid;
-    }
-
-    public bool VerifySignature(X509Certificate2 certificate)
-    {
-        using (var rsa = certificate.GetRSAPublicKey())
-        {
-            return rsa.VerifyData(GetDataBytes(), SignatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        }
-    }
-
-    public byte[] Sign(X509Certificate2 certificate)
-    {
-        if (!certificate.HasPrivateKey)
-        {
-            throw new InvalidOperationException("You don't have the private key!");
-        }
-
-        using (var rsa = certificate.GetRSAPrivateKey())
-        {
-            return rsa.SignData(GetDataBytes(), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        }
     }
 }
