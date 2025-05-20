@@ -1,17 +1,13 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Text.Json.Serialization;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Services;
 
 namespace Bit.Core.Models.Business;
 
-public class UserLicense : ILicense
+public class UserLicense : BaseLicense
 {
     public UserLicense()
     { }
@@ -58,25 +54,11 @@ public class UserLicense : ILicense
         Signature = Convert.ToBase64String(licenseService.SignLicense(this));
     }
 
-    public string LicenseKey { get; set; }
-    public Guid Id { get; set; }
-    public string Name { get; set; }
     public string Email { get; set; }
     public bool Premium { get; set; }
     public short? MaxStorageGb { get; set; }
-    public int Version { get; set; }
-    public DateTime Issued { get; set; }
-    public DateTime? Refresh { get; set; }
-    public DateTime? Expires { get; set; }
-    public bool Trial { get; set; }
-    public LicenseType? LicenseType { get; set; }
-    public string Hash { get; set; }
-    public string Signature { get; set; }
-    public string Token { get; set; }
-    [JsonIgnore]
-    public byte[] SignatureBytes => Convert.FromBase64String(Signature);
 
-    public byte[] GetDataBytes(bool forHash = false)
+    public override byte[] GetDataBytes(bool forHash = false)
     {
         string data = null;
         if (Version == 1)
@@ -107,14 +89,6 @@ public class UserLicense : ILicense
         }
 
         return Encoding.UTF8.GetBytes(data);
-    }
-
-    public byte[] ComputeHash()
-    {
-        using (var alg = SHA256.Create())
-        {
-            return alg.ComputeHash(GetDataBytes(true));
-        }
     }
 
     public bool CanUse(User user, ClaimsPrincipal claimsPrincipal, out string exception)
@@ -235,26 +209,5 @@ public class UserLicense : ILicense
             user.LicenseKey != null && user.LicenseKey.Equals(LicenseKey) &&
             user.Premium == Premium &&
             user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    public bool VerifySignature(X509Certificate2 certificate)
-    {
-        using (var rsa = certificate.GetRSAPublicKey())
-        {
-            return rsa.VerifyData(GetDataBytes(), SignatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        }
-    }
-
-    public byte[] Sign(X509Certificate2 certificate)
-    {
-        if (!certificate.HasPrivateKey)
-        {
-            throw new InvalidOperationException("You don't have the private key!");
-        }
-
-        using (var rsa = certificate.GetRSAPrivateKey())
-        {
-            return rsa.SignData(GetDataBytes(), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        }
     }
 }
