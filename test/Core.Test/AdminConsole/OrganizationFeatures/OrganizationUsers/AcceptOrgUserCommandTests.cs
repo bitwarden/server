@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -30,7 +31,6 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationUsers;
 public class AcceptOrgUserCommandTests
 {
     private readonly IUserService _userService = Substitute.For<IUserService>();
-    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory = Substitute.For<IOrgUserInviteTokenableFactory>();
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>();
 
@@ -168,7 +168,7 @@ public class AcceptOrgUserCommandTests
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
         // User doesn't have 2FA enabled
-        _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>().TwoFactorIsEnabledAsync(user).Returns(false);
 
         // Organization they are trying to join requires 2FA
         var twoFactorPolicy = new OrganizationUserPolicyDetails { OrganizationId = orgUser.OrganizationId };
@@ -192,7 +192,6 @@ public class AcceptOrgUserCommandTests
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
-        // Arrange
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
         sutProvider.GetDependency<IFeatureService>()
@@ -200,14 +199,23 @@ public class AcceptOrgUserCommandTests
             .Returns(true);
 
         // User doesn't have 2FA enabled
-        _userService.TwoFactorIsEnabledAsync(user).Returns(false);
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user)
+            .Returns(false);
 
         // Organization they are trying to join requires 2FA
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
-            .Returns(new RequireTwoFactorPolicyRequirement { RequireTwoFactor = true });
+            .Returns(new RequireTwoFactorPolicyRequirement(
+            [
+                new PolicyDetails
+                {
+                    OrganizationId = orgUser.OrganizationId,
+                    OrganizationUserStatus = OrganizationUserStatusType.Invited,
+                    PolicyType = PolicyType.TwoFactorAuthentication,
+                }
+            ]));
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
@@ -228,12 +236,20 @@ public class AcceptOrgUserCommandTests
             .Returns(true);
 
         // User has 2FA enabled
-        _userService.TwoFactorIsEnabledAsync(user).Returns(true);
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>().TwoFactorIsEnabledAsync(Arg.Any<User>()).Returns(true);
 
         // Organization they are trying to join requires 2FA
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
-            .Returns(new RequireTwoFactorPolicyRequirement { RequireTwoFactor = true });
+            .Returns(new RequireTwoFactorPolicyRequirement(
+            [
+                new PolicyDetails
+                {
+                    OrganizationId = orgUser.OrganizationId,
+                    OrganizationUserStatus = OrganizationUserStatusType.Invited,
+                    PolicyType = PolicyType.TwoFactorAuthentication,
+                }
+            ]));
 
         await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
 
@@ -253,26 +269,34 @@ public class AcceptOrgUserCommandTests
         bool userTwoFactorEnabled, SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
-        // Arrange
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PolicyRequirements)
             .Returns(true);
 
-        // User doesn't have 2FA enabled
-        _userService.TwoFactorIsEnabledAsync(user).Returns(userTwoFactorEnabled);
+        // User 2FA status
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user)
+            .Returns(userTwoFactorEnabled);
 
         // Organization they are trying to join doesn't require 2FA
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
-            .Returns(new RequireTwoFactorPolicyRequirement { RequireTwoFactor = false });
+            .Returns(new RequireTwoFactorPolicyRequirement(
+            [
+                new PolicyDetails
+                {
+                    OrganizationId = Guid.NewGuid(),
+                    OrganizationUserStatus = OrganizationUserStatusType.Invited,
+                    PolicyType = PolicyType.TwoFactorAuthentication,
+                }
+            ]));
 
-        // Act
         await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
 
-        // Assert
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
             .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.Status == OrganizationUserStatusType.Accepted));
     }
 
@@ -739,7 +763,9 @@ public class AcceptOrgUserCommandTests
             .Returns(false);
 
         // User doesn't have 2FA enabled
-        _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user)
+            .Returns(false);
 
         // Org does not require 2FA
         sutProvider.GetDependency<IPolicyService>().GetPoliciesApplicableToUserAsync(user.Id,

@@ -202,9 +202,21 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         }
 
         // Enforce Two Factor Authentication Policy of organization user is trying to join
-        if (!await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
-            await ValidateTwoFactorAuthenticationPolicy(user, orgUser.OrganizationId);
+            await ValidateTwoFactorAuthenticationPolicyAsync(user, orgUser.OrganizationId);
+        }
+        else
+        {
+            if (!await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
+            {
+                var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
+                    PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
+                if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
+                {
+                    throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
+                }
+            }
         }
 
         orgUser.Status = OrganizationUserStatusType.Accepted;
@@ -225,24 +237,28 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         return orgUser;
     }
 
-    private async Task ValidateTwoFactorAuthenticationPolicy(User user, Guid organizationId)
+    /// <summary>
+    /// Validates the two-factor authentication policy for the organization user.
+    /// If the user has two-step login enabled, the policy is not enforced.
+    /// </summary>
+    /// <param name="user">The user to validate the policy for.</param>
+    /// <param name="organizationId">The ID of the organization to validate the policy for.</param>
+    /// <exception cref="BadRequestException">Thrown if the user does not have two-step login enabled.</exception>
+    private async Task ValidateTwoFactorAuthenticationPolicyAsync(User user, Guid organizationId)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        var userTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
+        if (userTwoFactorEnabled)
         {
-            var requireTwoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
-            if (requireTwoFactorPolicyRequirement.RequireTwoFactor)
-            {
-                throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
-            }
+            // If the user has two-step login enabled, the policy is not enforced.
+            return;
         }
-        else
+
+        var requirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
+        var canAcceptInvitation = requirement.CanAcceptInvitation(userTwoFactorEnabled, organizationId);
+
+        if (!canAcceptInvitation)
         {
-            var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
-                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
-            if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == organizationId))
-            {
-                throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
-            }
+            throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
         }
     }
 }
