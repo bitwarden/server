@@ -144,27 +144,6 @@ public class OrganizationService : IOrganizationService
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
     }
 
-    public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
-        PaymentMethodType paymentMethodType, TaxInfo taxInfo)
-    {
-        var organization = await GetOrgById(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
-        var updated = await _paymentService.UpdatePaymentMethodAsync(
-            organization,
-            paymentMethodType,
-            paymentToken,
-            taxInfo);
-        if (updated)
-        {
-            await ReplaceAndUpdateCacheAsync(organization);
-        }
-    }
-
     public async Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null)
     {
         var organization = await GetOrgById(organizationId);
@@ -449,6 +428,7 @@ public class OrganizationService : IOrganizationService
             MaxStorageGb = 1,
             UsePolicies = plan.HasPolicies,
             UseSso = plan.HasSso,
+            UseOrganizationDomains = plan.HasOrganizationDomains,
             UseGroups = plan.HasGroups,
             UseEvents = plan.HasEvents,
             UseDirectory = plan.HasDirectory,
@@ -570,6 +550,8 @@ public class OrganizationService : IOrganizationService
             SmSeats = license.SmSeats,
             SmServiceAccounts = license.SmServiceAccounts,
             UseRiskInsights = license.UseRiskInsights,
+            UseOrganizationDomains = license.UseOrganizationDomains,
+            UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies,
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);

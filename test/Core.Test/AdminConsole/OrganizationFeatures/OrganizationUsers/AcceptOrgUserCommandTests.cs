@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -29,6 +30,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationUsers;
 public class AcceptOrgUserCommandTests
 {
     private readonly IUserService _userService = Substitute.For<IUserService>();
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory = Substitute.For<IOrgUserInviteTokenableFactory>();
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>();
 
@@ -166,7 +168,7 @@ public class AcceptOrgUserCommandTests
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
         // User doesn't have 2FA enabled
-        _userService.TwoFactorIsEnabledAsync(user).Returns(false);
+        _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
 
         // Organization they are trying to join requires 2FA
         var twoFactorPolicy = new OrganizationUserPolicyDetails { OrganizationId = orgUser.OrganizationId };
@@ -737,7 +739,7 @@ public class AcceptOrgUserCommandTests
             .Returns(false);
 
         // User doesn't have 2FA enabled
-        _userService.TwoFactorIsEnabledAsync(user).Returns(false);
+        _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
 
         // Org does not require 2FA
         sutProvider.GetDependency<IPolicyService>().GetPoliciesApplicableToUserAsync(user.Id,

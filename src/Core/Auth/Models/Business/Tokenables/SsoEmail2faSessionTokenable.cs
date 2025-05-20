@@ -4,9 +4,10 @@ using Bit.Core.Tokens;
 
 namespace Bit.Core.Auth.Models.Business.Tokenables;
 
-// This token just provides a verifiable authN mechanism for the API service
-// TwoFactorController.cs SendEmailLogin anonymous endpoint so it cannot be
-// used maliciously.
+/// <summary>
+/// This token provides a verifiable authN mechanism for the TwoFactorController.SendEmailLoginAsync
+/// anonymous endpoint so it cannot used maliciously.
+/// </summary>
 public class SsoEmail2faSessionTokenable : ExpiringTokenable
 {
     // Just over 2 min expiration (client expires session after 2 min)

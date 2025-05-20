@@ -17,6 +17,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -261,7 +262,7 @@ public class ProviderBillingServiceTests
         };
 
         sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider, Arg.Is<CustomerGetOptions>(
-                options => options.Expand.FirstOrDefault() == "tax_ids"))
+                options => options.Expand.Contains("tax") && options.Expand.Contains("tax_ids")))
             .Returns(providerCustomer);
 
         sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
@@ -286,6 +287,91 @@ public class ProviderBillingServiceTests
                     options.Metadata["region"] == "US" &&
                     options.TaxIdData.FirstOrDefault().Type == providerCustomer.TaxIds.FirstOrDefault().Type &&
                     options.TaxIdData.FirstOrDefault().Value == providerCustomer.TaxIds.FirstOrDefault().Value))
+            .Returns(new Customer { Id = "customer_id" });
+
+        await sutProvider.Sut.CreateCustomerForClientOrganization(provider, organization);
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(
+            options =>
+                options.Address.Country == providerCustomer.Address.Country &&
+                options.Address.PostalCode == providerCustomer.Address.PostalCode &&
+                options.Address.Line1 == providerCustomer.Address.Line1 &&
+                options.Address.Line2 == providerCustomer.Address.Line2 &&
+                options.Address.City == providerCustomer.Address.City &&
+                options.Address.State == providerCustomer.Address.State &&
+                options.Name == organization.DisplayName() &&
+                options.Description == $"{provider.Name} Client Organization" &&
+                options.Email == provider.BillingEmail &&
+                options.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Organization" &&
+                options.InvoiceSettings.CustomFields.FirstOrDefault().Value == "Name" &&
+                options.Metadata["region"] == "US" &&
+                options.TaxIdData.FirstOrDefault().Type == providerCustomer.TaxIds.FirstOrDefault().Type &&
+                options.TaxIdData.FirstOrDefault().Value == providerCustomer.TaxIds.FirstOrDefault().Value));
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(Arg.Is<Organization>(
+            org => org.GatewayCustomerId == "customer_id"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateCustomer_ForClientOrg_ReverseCharge_Succeeds(
+        Provider provider,
+        Organization organization,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        organization.GatewayCustomerId = null;
+        organization.Name = "Name";
+        organization.BusinessName = "BusinessName";
+
+        var providerCustomer = new Customer
+        {
+            Address = new Address
+            {
+                Country = "CA",
+                PostalCode = "12345",
+                Line1 = "123 Main St.",
+                Line2 = "Unit 4",
+                City = "Fake Town",
+                State = "Fake State"
+            },
+            TaxIds = new StripeList<TaxId>
+            {
+                Data =
+                [
+                    new TaxId { Type = "TYPE", Value = "VALUE" }
+                ]
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider, Arg.Is<CustomerGetOptions>(
+                options => options.Expand.Contains("tax") && options.Expand.Contains("tax_ids")))
+            .Returns(providerCustomer);
+
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
+            .Returns(new Bit.Core.Settings.GlobalSettings.BaseServiceUriSettings(new Bit.Core.Settings.GlobalSettings())
+            {
+                CloudRegion = "US"
+            });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge).Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>().CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(
+                options =>
+                    options.Address.Country == providerCustomer.Address.Country &&
+                    options.Address.PostalCode == providerCustomer.Address.PostalCode &&
+                    options.Address.Line1 == providerCustomer.Address.Line1 &&
+                    options.Address.Line2 == providerCustomer.Address.Line2 &&
+                    options.Address.City == providerCustomer.Address.City &&
+                    options.Address.State == providerCustomer.Address.State &&
+                    options.Name == organization.DisplayName() &&
+                    options.Description == $"{provider.Name} Client Organization" &&
+                    options.Email == provider.BillingEmail &&
+                    options.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Organization" &&
+                    options.InvoiceSettings.CustomFields.FirstOrDefault().Value == "Name" &&
+                    options.Metadata["region"] == "US" &&
+                    options.TaxIdData.FirstOrDefault().Type == providerCustomer.TaxIds.FirstOrDefault().Type &&
+                    options.TaxIdData.FirstOrDefault().Value == providerCustomer.TaxIds.FirstOrDefault().Value &&
+                    options.TaxExempt == StripeConstants.TaxExempt.Reverse))
             .Returns(new Customer { Id = "customer_id" });
 
         await sutProvider.Sut.CreateCustomerForClientOrganization(provider, organization);
@@ -1182,6 +1268,62 @@ public class ProviderBillingServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task SetupCustomer_WithCard_ReverseCharge_Success(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        TaxInfo taxInfo)
+    {
+        provider.Name = "MSP";
+
+        sutProvider.GetDependency<ITaxService>()
+            .GetStripeTaxCode(Arg.Is<string>(
+                    p => p == taxInfo.BillingAddressCountry),
+                Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
+            .Returns(taxInfo.TaxIdType);
+
+        taxInfo.BillingAddressCountry = "AD";
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        var expected = new Customer
+        {
+            Id = "customer_id",
+            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+        };
+
+        var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.Card, "token");
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge).Returns(true);
+
+        stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
+                o.Address.Country == taxInfo.BillingAddressCountry &&
+                o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
+                o.Address.Line1 == taxInfo.BillingAddressLine1 &&
+                o.Address.Line2 == taxInfo.BillingAddressLine2 &&
+                o.Address.City == taxInfo.BillingAddressCity &&
+                o.Address.State == taxInfo.BillingAddressState &&
+                o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
+                o.Email == provider.BillingEmail &&
+                o.PaymentMethod == tokenizedPaymentSource.Token &&
+                o.InvoiceSettings.DefaultPaymentMethod == tokenizedPaymentSource.Token &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
+                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == "MSP" &&
+                o.Metadata["region"] == "" &&
+                o.TaxIdData.FirstOrDefault().Type == taxInfo.TaxIdType &&
+                o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber &&
+                o.TaxExempt == StripeConstants.TaxExempt.Reverse))
+            .Returns(expected);
+
+        var actual = await sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource);
+
+        Assert.Equivalent(expected, actual);
+    }
+
+    [Theory, BitAutoData]
     public async Task SetupCustomer_Throws_BadRequestException_WhenTaxIdIsInvalid(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider,
@@ -1306,7 +1448,7 @@ public class ProviderBillingServiceTests
             .Returns(new Customer
             {
                 Id = "customer_id",
-                Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+                Address = new Address { Country = "US" }
             });
 
         var providerPlans = new List<ProviderPlan>
@@ -1358,7 +1500,7 @@ public class ProviderBillingServiceTests
         var customer = new Customer
         {
             Id = "customer_id",
-            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+            Address = new Address { Country = "US" }
         };
         sutProvider.GetDependency<ISubscriberService>()
             .GetCustomerOrThrow(
@@ -1397,19 +1539,6 @@ public class ProviderBillingServiceTests
             .Returns(providerPlans);
 
         var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
-
-        sutProvider.GetDependency<IAutomaticTaxStrategy>()
-            .When(x => x.SetCreateOptions(
-                Arg.Is<SubscriptionCreateOptions>(options =>
-                    options.Customer == "customer_id")
-                , Arg.Is<Customer>(p => p == customer)))
-            .Do(x =>
-            {
-                x.Arg<SubscriptionCreateOptions>().AutomaticTax = new SubscriptionAutomaticTaxOptions
-                {
-                    Enabled = true
-                };
-            });
 
         sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(
             sub =>
@@ -1442,11 +1571,11 @@ public class ProviderBillingServiceTests
         var customer = new Customer
         {
             Id = "customer_id",
+            Address = new Address { Country = "US" },
             InvoiceSettings = new CustomerInvoiceSettings
             {
                 DefaultPaymentMethodId = "pm_123"
-            },
-            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+            }
         };
 
         sutProvider.GetDependency<ISubscriberService>()
@@ -1486,19 +1615,6 @@ public class ProviderBillingServiceTests
             .Returns(providerPlans);
 
         var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
-
-        sutProvider.GetDependency<IAutomaticTaxStrategy>()
-            .When(x => x.SetCreateOptions(
-                Arg.Is<SubscriptionCreateOptions>(options =>
-                    options.Customer == "customer_id")
-                , Arg.Is<Customer>(p => p == customer)))
-            .Do(x =>
-            {
-                x.Arg<SubscriptionCreateOptions>().AutomaticTax = new SubscriptionAutomaticTaxOptions
-                {
-                    Enabled = true
-                };
-            });
 
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
@@ -1535,9 +1651,9 @@ public class ProviderBillingServiceTests
         var customer = new Customer
         {
             Id = "customer_id",
+            Address = new Address { Country = "US" },
             InvoiceSettings = new CustomerInvoiceSettings(),
-            Metadata = new Dictionary<string, string>(),
-            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+            Metadata = new Dictionary<string, string>()
         };
 
         sutProvider.GetDependency<ISubscriberService>()
@@ -1577,19 +1693,6 @@ public class ProviderBillingServiceTests
             .Returns(providerPlans);
 
         var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
-
-        sutProvider.GetDependency<IAutomaticTaxStrategy>()
-            .When(x => x.SetCreateOptions(
-                Arg.Is<SubscriptionCreateOptions>(options =>
-                    options.Customer == "customer_id")
-                , Arg.Is<Customer>(p => p == customer)))
-            .Do(x =>
-            {
-                x.Arg<SubscriptionCreateOptions>().AutomaticTax = new SubscriptionAutomaticTaxOptions
-                {
-                    Enabled = true
-                };
-            });
 
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
@@ -1645,12 +1748,15 @@ public class ProviderBillingServiceTests
         var customer = new Customer
         {
             Id = "customer_id",
+            Address = new Address
+            {
+                Country = "US"
+            },
             InvoiceSettings = new CustomerInvoiceSettings(),
             Metadata = new Dictionary<string, string>
             {
                 ["btCustomerId"] = "braintree_customer_id"
-            },
-            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+            }
         };
 
         sutProvider.GetDependency<ISubscriberService>()
@@ -1691,21 +1797,91 @@ public class ProviderBillingServiceTests
 
         var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
 
-        sutProvider.GetDependency<IAutomaticTaxStrategy>()
-            .When(x => x.SetCreateOptions(
-                Arg.Is<SubscriptionCreateOptions>(options =>
-                    options.Customer == "customer_id")
-                , Arg.Is<Customer>(p => p == customer)))
-            .Do(x =>
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(
+            sub =>
+                sub.AutomaticTax.Enabled == true &&
+                sub.CollectionMethod == StripeConstants.CollectionMethod.ChargeAutomatically &&
+                sub.Customer == "customer_id" &&
+                sub.DaysUntilDue == null &&
+                sub.Items.Count == 2 &&
+                sub.Items.ElementAt(0).Price == ProviderPriceAdapter.MSP.Active.Teams &&
+                sub.Items.ElementAt(0).Quantity == 100 &&
+                sub.Items.ElementAt(1).Price == ProviderPriceAdapter.MSP.Active.Enterprise &&
+                sub.Items.ElementAt(1).Quantity == 100 &&
+                sub.Metadata["providerId"] == provider.Id.ToString() &&
+                sub.OffSession == true &&
+                sub.ProrationBehavior == StripeConstants.ProrationBehavior.CreateProrations &&
+                sub.TrialPeriodDays == 14)).Returns(expected);
+
+        var actual = await sutProvider.Sut.SetupSubscription(provider);
+
+        Assert.Equivalent(expected, actual);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetupSubscription_ReverseCharge_Succeeds(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider)
+    {
+        provider.Type = ProviderType.Msp;
+        provider.GatewaySubscriptionId = null;
+
+        var customer = new Customer
+        {
+            Id = "customer_id",
+            Address = new Address { Country = "CA" },
+            InvoiceSettings = new CustomerInvoiceSettings
             {
-                x.Arg<SubscriptionCreateOptions>().AutomaticTax = new SubscriptionAutomaticTaxOptions
-                {
-                    Enabled = true
-                };
-            });
+                DefaultPaymentMethodId = "pm_123"
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomerOrThrow(
+                provider,
+                Arg.Is<CustomerGetOptions>(p => p.Expand.Contains("tax") || p.Expand.Contains("tax_ids"))).Returns(customer);
+
+        var providerPlans = new List<ProviderPlan>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                PlanType = PlanType.TeamsMonthly,
+                SeatMinimum = 100,
+                PurchasedSeats = 0,
+                AllocatedSeats = 0
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                PlanType = PlanType.EnterpriseMonthly,
+                SeatMinimum = 100,
+                PurchasedSeats = 0,
+                AllocatedSeats = 0
+            }
+        };
+
+        foreach (var plan in providerPlans)
+        {
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
+                .Returns(StaticStore.GetPlan(plan.PlanType));
+        }
+
+        sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
+            .Returns(providerPlans);
+
+        var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
 
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge).Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(
             sub =>

@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -25,6 +26,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private readonly IPolicyService _policyService;
     private readonly IMailService _mailService;
     private readonly IUserRepository _userRepository;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
@@ -37,6 +39,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         IPolicyService policyService,
         IMailService mailService,
         IUserRepository userRepository,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IFeatureService featureService,
         IPolicyRequirementQuery policyRequirementQuery)
@@ -49,6 +52,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _policyService = policyService;
         _mailService = mailService;
         _userRepository = userRepository;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _policyRequirementQuery = policyRequirementQuery;
@@ -198,7 +202,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         }
 
         // Enforce Two Factor Authentication Policy of organization user is trying to join
-        if (!await userService.TwoFactorIsEnabledAsync(user))
+        if (!await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
         {
             await ValidateTwoFactorAuthenticationPolicy(user, orgUser.OrganizationId);
         }
