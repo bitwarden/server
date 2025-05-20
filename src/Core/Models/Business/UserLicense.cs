@@ -66,34 +66,34 @@ public class UserLicense : BaseLicense
 
     public override byte[] GetDataBytes(bool forHash = false)
     {
-        string data = null;
-        if (Version == 1)
-        {
-            var props = typeof(UserLicense)
-                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(p =>
-                    !p.Name.Equals(nameof(Signature)) &&
-                    !p.Name.Equals(nameof(SignatureBytes)) &&
-                    !p.Name.Equals(nameof(LicenseType)) &&
-                    !p.Name.Equals(nameof(Token)) &&
-                    (
-                        !forHash ||
-                        (
-                            !p.Name.Equals(nameof(Hash)) &&
-                            !p.Name.Equals(nameof(Issued)) &&
-                            !p.Name.Equals(nameof(Refresh))
-                        )
-                    ))
-                .OrderBy(p => p.Name)
-                .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
-                .Aggregate((c, n) => $"{c}|{n}");
-            data = $"license:user|{props}";
-        }
-        else
+        if (Version != 1)
         {
             throw new NotSupportedException($"Version {Version} is not supported.");
         }
 
+        var props = GetType()
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p =>
+            {
+                var versionAttr = p.GetCustomAttribute<LicenseVersionAttribute>();
+                if (versionAttr is null || versionAttr.Version > Version)
+                {
+                    return false;
+                }
+
+                var ignoreAttr = p.GetCustomAttribute<LicenseIgnoreAttribute>();
+                if (ignoreAttr is null)
+                {
+                    return true;
+                }
+
+                return forHash && ignoreAttr.IncludeInHash;
+            })
+            .OrderBy(p => p.Name)
+            .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
+            .Aggregate((c, n) => $"{c}|{n}");
+
+        var data = $"license:user|{props}";
         return Encoding.UTF8.GetBytes(data);
     }
 
