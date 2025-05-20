@@ -144,27 +144,6 @@ public class OrganizationService : IOrganizationService
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
     }
 
-    public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
-        PaymentMethodType paymentMethodType, TaxInfo taxInfo)
-    {
-        var organization = await GetOrgById(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
-        var updated = await _paymentService.UpdatePaymentMethodAsync(
-            organization,
-            paymentMethodType,
-            paymentToken,
-            taxInfo);
-        if (updated)
-        {
-            await ReplaceAndUpdateCacheAsync(organization);
-        }
-    }
-
     public async Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null)
     {
         var organization = await GetOrgById(organizationId);
