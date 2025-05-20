@@ -43,6 +43,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.ImportFeatures;
+using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault;
@@ -123,7 +124,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<IAuthRequestService, AuthRequestService>();
         services.AddScoped<IDuoUniversalTokenService, DuoUniversalTokenService>();
-        services.AddScoped<ISendService, SendService>();
+        services.AddScoped<ISendAuthorizationService, SendAuthorizationService>();
         services.AddLoginServices();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
@@ -132,6 +133,7 @@ public static class ServiceCollectionExtensions
         services.AddNotificationCenterServices();
         services.AddPlatformServices();
         services.AddImportServices();
+        services.AddSendServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
