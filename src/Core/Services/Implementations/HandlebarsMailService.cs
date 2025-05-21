@@ -84,7 +84,8 @@ public class HandlebarsMailService : IMailService
         string email,
         string token,
         ProductTierType productTier,
-        IEnumerable<ProductType> products)
+        IEnumerable<ProductType> products,
+        int trialLength)
     {
         var message = CreateDefaultMessage("Verify your email", email);
         var model = new TrialInitiationVerifyEmail
@@ -95,7 +96,8 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
             ProductTier = productTier,
-            Product = products
+            Product = products,
+            TrialLength = trialLength
         };
         await AddMessageContentAsync(message, "Billing.TrialInitiationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
@@ -297,20 +299,6 @@ public class HandlebarsMailService : IMailService
         });
 
         await EnqueueMailAsync(messageModels);
-    }
-
-    public async Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
-    {
-        var message = CreateDefaultMessage($"You have been removed from {organizationName}", email);
-        var model = new OrganizationUserRemovedForPolicyTwoStepViewModel
-        {
-            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
-            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-            SiteName = _globalSettings.SiteName
-        };
-        await AddMessageContentAsync(message, "OrganizationUserRemovedForPolicyTwoStep", model);
-        message.Category = "OrganizationUserRemovedForPolicyTwoStep";
-        await _mailDeliveryService.SendEmailAsync(message);
     }
 
     public async Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email)
@@ -527,20 +515,6 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "Auth.RecoverTwoFactor", model);
         message.Category = "RecoverTwoFactor";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
-    public async Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email)
-    {
-        var message = CreateDefaultMessage($"You have been removed from {organizationName}", email);
-        var model = new OrganizationUserRemovedForPolicySingleOrgViewModel
-        {
-            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
-            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-            SiteName = _globalSettings.SiteName
-        };
-        await AddMessageContentAsync(message, "OrganizationUserRemovedForPolicySingleOrg", model);
-        message.Category = "OrganizationUserRemovedForPolicySingleOrg";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
@@ -1132,53 +1106,6 @@ public class HandlebarsMailService : IMailService
         await AddMessageContentAsync(message, "Auth.OTPEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         message.Category = "OTP";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
-    public async Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        var message = CreateDefaultMessage("Failed login attempts detected", email);
-        var model = new FailedAuthAttemptsModel()
-        {
-            TheDate = utcNow.ToLongDateString(),
-            TheTime = utcNow.ToShortTimeString(),
-            TimeZone = _utcTimeZoneDisplay,
-            IpAddress = ip,
-            AffectedEmail = email
-
-        };
-        await AddMessageContentAsync(message, "Auth.FailedLoginAttempts", model);
-        message.Category = "FailedLoginAttempts";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
-    public async Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        var message = CreateDefaultMessage("Failed login attempts detected", email);
-        var model = new FailedAuthAttemptsModel()
-        {
-            TheDate = utcNow.ToLongDateString(),
-            TheTime = utcNow.ToShortTimeString(),
-            TimeZone = _utcTimeZoneDisplay,
-            IpAddress = ip,
-            AffectedEmail = email
-
-        };
-        await AddMessageContentAsync(message, "Auth.FailedTwoFactorAttempts", model);
-        message.Category = "FailedTwoFactorAttempts";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
-    public async Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
-    {
-        var message = CreateDefaultMessage("Domain not verified", adminEmails);
-        var model = new OrganizationDomainUnverifiedViewModel
-        {
-            Url = $"{_globalSettings.BaseServiceUri.VaultWithHash}/organizations/{organizationId}/settings/domain-verification",
-            DomainName = domainName
-        };
-        await AddMessageContentAsync(message, "OrganizationDomainUnverified", model);
-        message.Category = "UnverifiedOrganizationDomain";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 

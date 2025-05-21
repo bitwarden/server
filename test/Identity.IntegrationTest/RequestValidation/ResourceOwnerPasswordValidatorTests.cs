@@ -29,8 +29,7 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
 
         // Act
         var context = await localFactory.Server.PostAsync("/connect/token",
-            GetFormUrlEncodedContent(),
-            context => context.SetAuthEmail(DefaultUsername));
+            GetFormUrlEncodedContent());
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -40,27 +39,6 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         Assert.NotNull(token);
     }
 
-    [Fact]
-    public async Task ValidateAsync_AuthEmailHeaderInvalid_InvalidGrantResponse()
-    {
-        // Arrange
-        var localFactory = new IdentityApplicationFactory();
-        await EnsureUserCreatedAsync(localFactory);
-
-        // Act
-        var context = await localFactory.Server.PostAsync(
-            "/connect/token",
-            GetFormUrlEncodedContent()
-        );
-
-        // Assert
-        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
-
-        var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
-        Assert.Equal("Auth-Email header invalid.", error);
-    }
-
     [Theory, BitAutoData]
     public async Task ValidateAsync_UserNull_Failure(string username)
     {
@@ -68,8 +46,7 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         var localFactory = new IdentityApplicationFactory();
         // Act
         var context = await localFactory.Server.PostAsync("/connect/token",
-            GetFormUrlEncodedContent(username: username),
-            context => context.SetAuthEmail(username));
+            GetFormUrlEncodedContent(username: username));
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -106,8 +83,7 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
 
         // Act
         var context = await localFactory.Server.PostAsync("/connect/token",
-            GetFormUrlEncodedContent(password: badPassword),
-            context => context.SetAuthEmail(DefaultUsername));
+            GetFormUrlEncodedContent(password: badPassword));
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -155,7 +131,7 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
                 { "username", DefaultUsername },
                 { "password", DefaultPassword },
                 { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
-            }), context => context.SetAuthEmail(DefaultUsername));
+            }));
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -197,7 +173,7 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
                 { "username", DefaultUsername },
                 { "password", DefaultPassword },
                 { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
-            }), context => context.SetAuthEmail(DefaultUsername));
+            }));
 
         // Assert
 

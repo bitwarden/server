@@ -6,10 +6,10 @@ using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Commands;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -76,9 +76,8 @@ public class PostUserCommand(
         var invitedOrganizationUserId = result switch
         {
             Success<ScimInviteOrganizationUsersResponse> success => success.Value.InvitedUser.Id,
-            Failure<ScimInviteOrganizationUsersResponse> failure when failure.Errors
-                    .Any(x => x.Message == NoUsersToInviteError.Code) => (Guid?)null,
-            Failure<ScimInviteOrganizationUsersResponse> failure when failure.Errors.Length != 0 => throw MapToBitException(failure.Errors),
+            Failure<ScimInviteOrganizationUsersResponse> { Error.Message: NoUsersToInviteError.Code } => (Guid?)null,
+            Failure<ScimInviteOrganizationUsersResponse> failure => throw MapToBitException(failure.Error),
             _ => throw new InvalidOperationException()
         };
 

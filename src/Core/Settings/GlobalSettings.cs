@@ -45,7 +45,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual bool EnableCloudCommunication { get; set; } = false;
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
     public virtual string EventGridKey { get; set; }
-    public virtual CaptchaSettings Captcha { get; set; } = new CaptchaSettings();
     public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();
     public virtual IBaseServiceUriSettings BaseServiceUri { get; set; }
     public virtual string DatabaseProvider { get; set; }
@@ -628,16 +627,6 @@ public class GlobalSettings : IGlobalSettings
         public int CacheLifetimeInSeconds { get; set; } = 60;
         public double SsoTokenLifetimeInSeconds { get; set; } = 5;
         public bool EnforceSsoPolicyForAllUsers { get; set; }
-    }
-
-    public class CaptchaSettings
-    {
-        public bool ForceCaptchaRequired { get; set; } = false;
-        public string HCaptchaSecretKey { get; set; }
-        public string HCaptchaSiteKey { get; set; }
-        public int MaximumFailedLoginAttempts { get; set; }
-        public double MaybeBotScoreThreshold { get; set; } = double.MaxValue;
-        public double IsBotScoreThreshold { get; set; } = double.MaxValue;
     }
 
     public class StripeSettings
