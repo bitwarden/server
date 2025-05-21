@@ -195,6 +195,13 @@ public static class LicenseExtensions
                 : default;
         }
 
+        if (underlyingType == typeof(DateTime))
+        {
+            return DateTime.TryParse(claim.Value, out var dateTimeValue)
+                ? (T)(object)dateTimeValue
+                : default;
+        }
+
         if (underlyingType == typeof(DateTimeOffset))
         {
             return DateTimeOffset.TryParse(claim.Value, out var dateTimeOffsetValue)
