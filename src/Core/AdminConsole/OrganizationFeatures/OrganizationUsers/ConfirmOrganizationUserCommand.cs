@@ -194,7 +194,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     {
         if (userTwoFactorEnabled)
         {
-            // If the user has two-step login enabled, the policy is not enforced.
+            // If the user has two-step login enabled, we skip checking the 2FA policies
             return;
         }
 
