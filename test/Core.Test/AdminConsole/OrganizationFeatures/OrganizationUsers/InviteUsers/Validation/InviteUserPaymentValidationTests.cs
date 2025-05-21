@@ -3,7 +3,7 @@ using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Payments;
-using Bit.Core.AdminConsole.Shared.Validation;
+using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.StaticStore.Plans;
@@ -39,7 +39,7 @@ public class InviteUserPaymentValidationTests
         });
 
         Assert.IsType<Invalid<PaymentsSubscription>>(result);
-        Assert.Equal(PaymentCancelledSubscriptionError.Code, (result as Invalid<PaymentsSubscription>)!.ErrorMessageString);
+        Assert.Equal(PaymentCancelledSubscriptionError.Code, (result as Invalid<PaymentsSubscription>)!.Error.Message);
     }
 
     [Fact]
