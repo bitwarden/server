@@ -255,16 +255,16 @@ public class OrganizationsController : Controller
             Seats = organization.Seats
         };
 
-        var plan = await _pricingClient.GetPlanOrThrow(model.PlanType.Value);
-        if (organization.PlanType != PlanType.Free && model.PlanType == PlanType.Free && model.Seats > plan.PasswordManager.MaxSeats)
+        var freePlan = await _pricingClient.GetPlanOrThrow(model.PlanType.Value);
+        if (organization.PlanType != PlanType.Free && model.PlanType == PlanType.Free && model.Seats > freePlan.PasswordManager.MaxSeats)
         {
-            TempData["Error"] = $"Organizations with more than {plan.PasswordManager.MaxSeats} seats cannot be downgraded to the Free plan";
+            TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxSeats} seats cannot be downgraded to the Free plan";
             return RedirectToAction("Edit", new { id });
         }
 
-        if (organization.PlanType != PlanType.Free && model.PlanType == PlanType.Free && model.MaxCollections > plan.PasswordManager.MaxCollections)
+        if (organization.PlanType != PlanType.Free && model.PlanType == PlanType.Free && model.MaxCollections > freePlan.PasswordManager.MaxCollections)
         {
-            TempData["Error"] = $"Organizations with more than {plan.PasswordManager.MaxCollections} collections cannot be downgraded to the Free plan. Your organization currently has {organization.MaxCollections} collections.";
+            TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxCollections} collections cannot be downgraded to the Free plan. Your organization currently has {organization.MaxCollections} collections.";
             return RedirectToAction("Edit", new { id });
         }
 
@@ -276,7 +276,7 @@ public class OrganizationsController : Controller
         }
 
         UpdateOrganization(organization, model);
-
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
         if (organization.UseSecretsManager && !plan.SupportsSecretsManager)
         {
             TempData["Error"] = "Plan does not support Secrets Manager";
