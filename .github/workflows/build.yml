@@ -67,6 +67,9 @@ jobs:
           - project_name: Icons
             base_path: ./src
             dotnet: true
+          - project_name: Server
+            base_path: ./util
+            dotnet: true
           - project_name: Identity
             base_path: ./src
             dotnet: true
