@@ -189,6 +189,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     /// <param name="user">The user to validate the policy for.</param>
     /// <param name="organizationId">The ID of the organization to validate the policy for.</param>
     /// <param name="userTwoFactorEnabled">Whether the user has two-step login enabled.</param>
+    /// <exception cref="BadRequestException">Thrown if the user does not have two-step login enabled.</exception>
     private async Task ValidateTwoFactorAuthenticationPolicyAsync(User user, Guid organizationId, bool userTwoFactorEnabled)
     {
         if (userTwoFactorEnabled)
