@@ -18,13 +18,13 @@ public class ChangePasswordUriController : Controller
         IMemoryCache memoryCache,
         IDomainMappingService domainMappingService,
         IChangePasswordUriService changePasswordService,
-        ChangePasswordUriSettings iconsSettings,
+        ChangePasswordUriSettings changePasswordUriSettings,
         ILogger<ChangePasswordUriController> logger)
     {
         _memoryCache = memoryCache;
         _domainMappingService = domainMappingService;
         _changePasswordService = changePasswordService;
-        _changePasswordSettings = iconsSettings;
+        _changePasswordSettings = changePasswordUriSettings;
         _logger = logger;
     }
 
