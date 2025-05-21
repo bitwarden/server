@@ -28,7 +28,12 @@ public class RestoreOrganizationUserCommandTests
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser, SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -46,7 +51,12 @@ public class RestoreOrganizationUserCommandTests
     public async Task RestoreUser_WithEventSystemUser_Success(Organization organization, [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser, EventSystemUser eventSystemUser, SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         RestoreUser_Setup(organization, null, organizationUser, sutProvider);
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         await sutProvider.Sut.RestoreUserAsync(organizationUser, eventSystemUser);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -148,7 +158,12 @@ public class RestoreOrganizationUserCommandTests
         sutProvider.GetDependency<IPolicyService>()
             .AnyPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.SingleOrg, Arg.Any<OrganizationUserStatusType>())
             .Returns(true);
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         var user = new User();
         user.Email = "test@bitwarden.com";
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
@@ -181,7 +196,12 @@ public class RestoreOrganizationUserCommandTests
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.UserId.Value)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (organizationUser.UserId.Value, false) });
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
 
         sutProvider.GetDependency<IPolicyService>()
@@ -224,7 +244,12 @@ public class RestoreOrganizationUserCommandTests
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.UserId.Value)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (organizationUser.UserId.Value, true) });
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -256,7 +281,12 @@ public class RestoreOrganizationUserCommandTests
             {
                 new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.SingleOrg, OrganizationUserStatus = OrganizationUserStatusType.Revoked }
             });
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         var user = new User();
         user.Email = "test@bitwarden.com";
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
@@ -292,7 +322,12 @@ public class RestoreOrganizationUserCommandTests
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.UserId.Value)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (organizationUser.UserId.Value, true) });
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         sutProvider.GetDependency<IPolicyService>()
             .AnyPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.SingleOrg, Arg.Any<OrganizationUserStatusType>())
             .Returns(true);
@@ -337,7 +372,12 @@ public class RestoreOrganizationUserCommandTests
             {
                 new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.SingleOrg, OrganizationUserStatus = OrganizationUserStatusType.Revoked }
             });
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         sutProvider.GetDependency<IPolicyService>()
             .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
             .Returns([
@@ -378,7 +418,12 @@ public class RestoreOrganizationUserCommandTests
             .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
             .Returns([new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication }
             ]);
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         var user = new User { Email = "test@bitwarden.com" };
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
 
@@ -407,7 +452,12 @@ public class RestoreOrganizationUserCommandTests
     {
         organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         sutProvider.GetDependency<IPolicyService>()
             .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
             .Returns([new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication }
@@ -444,7 +494,12 @@ public class RestoreOrganizationUserCommandTests
         otherOrganization.PlanType = PlanType.Free;
 
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByUserAsync(organizationUser.UserId.Value)
             .Returns([orgUserOwnerFromDifferentOrg]);
@@ -485,7 +540,12 @@ public class RestoreOrganizationUserCommandTests
         otherOrganization.PlanType = PlanType.Free;
 
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         organizationUserRepository
             .GetManyByUserAsync(organizationUser.UserId.Value)
@@ -536,7 +596,12 @@ public class RestoreOrganizationUserCommandTests
         otherOrganization.PlanType = PlanType.Free;
 
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         organizationUserRepository
             .GetManyByUserAsync(organizationUser.UserId.Value)
@@ -588,7 +653,12 @@ public class RestoreOrganizationUserCommandTests
         organizationUserRepository
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)))
             .Returns([orgUser1, orgUser2]);
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         twoFactorIsEnabledQuery
             .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.UserId!.Value) && ids.Contains(orgUser2.UserId!.Value)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>
@@ -637,7 +707,12 @@ public class RestoreOrganizationUserCommandTests
         organizationUserRepository
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id) && ids.Contains(orgUser3.Id)))
             .Returns(new[] { orgUser1, orgUser2, orgUser3 });
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         userRepository.GetByIdAsync(orgUser2.UserId!.Value).Returns(new User { Email = "test@example.com" });
 
         // Setup 2FA policy
@@ -701,7 +776,12 @@ public class RestoreOrganizationUserCommandTests
         organizationUserRepository
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id) && ids.Contains(orgUser3.Id)))
             .Returns([orgUser1, orgUser2, orgUser3]);
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         userRepository.GetByIdAsync(orgUser2.UserId!.Value).Returns(new User { Email = "test@example.com" });
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -763,7 +843,12 @@ public class RestoreOrganizationUserCommandTests
         organizationUserRepository
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id)))
             .Returns([orgUser1]);
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         organizationUserRepository
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([orgUserFromOtherOrg]);
@@ -823,7 +908,12 @@ public class RestoreOrganizationUserCommandTests
         organizationUserRepository
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id)))
             .Returns([orgUser1]);
-
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         organizationUserRepository
             .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns([orgUserFromOtherOrg]);
