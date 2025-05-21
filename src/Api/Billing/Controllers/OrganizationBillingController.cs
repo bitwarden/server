@@ -302,8 +302,12 @@ public class OrganizationBillingController(
         Debug.Assert(org is not null, "This organization has already been found via this same ID, this should be fine.");
         var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
         var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
-        await organizationBillingService.UpdatePaymentMethod(org, paymentSource, taxInformation);
         await organizationBillingService.Finalize(sale);
+        var updateOrg = await organizationRepository.GetByIdAsync(organizationId);
+        if (updateOrg != null)
+        {
+            await organizationBillingService.UpdatePaymentMethod(updateOrg, paymentSource, taxInformation);
+        }
 
         return TypedResults.Ok();
     }
