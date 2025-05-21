@@ -145,6 +145,7 @@ jobs:
 
       - name: Upload project artifact
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        if: ${{ matrix.dotnet }}
         with:
           name: ${{ matrix.project_name }}.zip
           path: ${{ matrix.base_path }}/${{ matrix.project_name }}/${{ matrix.project_name }}.zip
