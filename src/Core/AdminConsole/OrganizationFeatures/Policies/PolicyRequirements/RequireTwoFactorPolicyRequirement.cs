@@ -59,6 +59,10 @@ public class RequireTwoFactorPolicyRequirement : IPolicyRequirement
                 OrganizationUserStatusType.Accepted or
                 OrganizationUserStatusType.Confirmed));
 
+    /// <summary>
+    /// Gets the two-factor policies for active memberships.
+    /// </summary>
+    /// <returns>The two-factor policies for active memberships.</returns>
     public IEnumerable<PolicyDetails> TwoFactorPoliciesForActiveMemberships =>
         _policyDetails.Where(p => p.OrganizationUserStatus is
                 OrganizationUserStatusType.Accepted or
