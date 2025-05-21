@@ -6,6 +6,7 @@ public record ConfiguredProviderPlan(
     Guid Id,
     Guid ProviderId,
     Plan Plan,
+    decimal Price,
     int SeatMinimum,
     int PurchasedSeats,
     int AssignedSeats);
