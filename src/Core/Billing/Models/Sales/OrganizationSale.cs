@@ -27,12 +27,21 @@ public class OrganizationSale
 
     public static OrganizationSale From(
         Organization organization,
-        OrganizationSignup signup) => new()
+        OrganizationSignup signup)
+    {
+        var customerSetup = string.IsNullOrEmpty(organization.GatewayCustomerId) ? GetCustomerSetup(signup) : null;
+
+        var subscriptionSetup = GetSubscriptionSetup(signup);
+
+        subscriptionSetup.SkipTrial = signup.SkipTrial;
+
+        return new OrganizationSale
         {
             Organization = organization,
-            CustomerSetup = string.IsNullOrEmpty(organization.GatewayCustomerId) ? GetCustomerSetup(signup) : null,
-            SubscriptionSetup = GetSubscriptionSetup(signup)
+            CustomerSetup = customerSetup,
+            SubscriptionSetup = subscriptionSetup
         };
+    }
 
     public static OrganizationSale From(
         Organization organization,

@@ -8,6 +8,7 @@ using Bit.Core;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
@@ -292,14 +293,20 @@ public class OrganizationBillingController(
         sale.Organization.PlanType = plan.Type;
         sale.Organization.Plan = plan.Name;
         sale.SubscriptionSetup.SkipTrial = true;
-        await organizationBillingService.Finalize(sale);
+
+        if (organizationSignup.PaymentMethodType == null || string.IsNullOrEmpty(organizationSignup.PaymentToken))
+        {
+            return Error.BadRequest("A payment method is required to restart the subscription.");
+        }
         var org = await organizationRepository.GetByIdAsync(organizationId);
         Debug.Assert(org is not null, "This organization has already been found via this same ID, this should be fine.");
-        if (organizationSignup.PaymentMethodType != null)
+        var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
+        var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
+        await organizationBillingService.Finalize(sale);
+        var updatedOrg = await organizationRepository.GetByIdAsync(organizationId);
+        if (updatedOrg != null)
         {
-            var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
-            var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
-            await organizationBillingService.UpdatePaymentMethod(org, paymentSource, taxInformation);
+            await organizationBillingService.UpdatePaymentMethod(updatedOrg, paymentSource, taxInformation);
         }
 
         return TypedResults.Ok();

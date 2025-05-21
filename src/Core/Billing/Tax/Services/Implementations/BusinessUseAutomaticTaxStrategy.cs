@@ -76,7 +76,7 @@ public class BusinessUseAutomaticTaxStrategy(IFeatureService featureService) : I
 
     private bool ShouldBeEnabled(Customer customer)
     {
-        if (!customer.HasTaxLocationVerified())
+        if (!customer.HasRecognizedTaxLocation())
         {
             return false;
         }

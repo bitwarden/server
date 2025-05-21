@@ -89,7 +89,7 @@ public class OrganizationSponsorshipRepository : Repository<OrganizationSponsors
         }
     }
 
-    public async Task<OrganizationSponsorship?> GetBySponsoringOrganizationUserIdAsync(Guid sponsoringOrganizationUserId)
+    public async Task<OrganizationSponsorship?> GetBySponsoringOrganizationUserIdAsync(Guid sponsoringOrganizationUserId, bool isAdminInitiated)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -97,7 +97,8 @@ public class OrganizationSponsorshipRepository : Repository<OrganizationSponsors
                 "[dbo].[OrganizationSponsorship_ReadBySponsoringOrganizationUserId]",
                 new
                 {
-                    SponsoringOrganizationUserId = sponsoringOrganizationUserId
+                    SponsoringOrganizationUserId = sponsoringOrganizationUserId,
+                    isAdminInitiated = isAdminInitiated
                 },
                 commandType: CommandType.StoredProcedure);
 

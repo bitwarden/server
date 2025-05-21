@@ -63,6 +63,12 @@ public class FreshdeskController : Controller
             note += $"<li>Region: {_billingSettings.FreshDesk.Region}</li>";
             var customFields = new Dictionary<string, object>();
             var user = await _userRepository.GetByEmailAsync(ticketContactEmail);
+            if (user == null)
+            {
+                note += $"<li>No user found: {ticketContactEmail}</li>";
+                await CreateNote(ticketId, note);
+            }
+
             if (user != null)
             {
                 var userLink = $"{_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}";
@@ -121,18 +127,7 @@ public class FreshdeskController : Controller
                     Content = JsonContent.Create(updateBody),
                 };
                 await CallFreshdeskApiAsync(updateRequest);
-
-                var noteBody = new Dictionary<string, object>
-                {
-                    { "body", $"<ul>{note}</ul>" },
-                    { "private", true }
-                };
-                var noteRequest = new HttpRequestMessage(HttpMethod.Post,
-                    string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/notes", ticketId))
-                {
-                    Content = JsonContent.Create(noteBody),
-                };
-                await CallFreshdeskApiAsync(noteRequest);
+                await CreateNote(ticketId, note);
             }
 
             return new OkResult();
@@ -206,6 +201,21 @@ public class FreshdeskController : Controller
         }
 
         return true;
+    }
+
+    private async Task CreateNote(string ticketId, string note)
+    {
+        var noteBody = new Dictionary<string, object>
+                {
+                    { "body", $"<ul>{note}</ul>" },
+                    { "private", true }
+                };
+        var noteRequest = new HttpRequestMessage(HttpMethod.Post,
+            string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/notes", ticketId))
+        {
+            Content = JsonContent.Create(noteBody),
+        };
+        await CallFreshdeskApiAsync(noteRequest);
     }
 
     private async Task AddAnswerNoteToTicketAsync(string note, string ticketId)
