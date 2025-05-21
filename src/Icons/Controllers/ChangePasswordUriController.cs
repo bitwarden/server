@@ -84,11 +84,6 @@ public class ChangePasswordUriController : Controller
             }
         }
 
-        if (changePasswordUri == null)
-        {
-            return Ok(new ChangePasswordUriResponse(changePasswordUri));
-        }
-
         return Ok(new ChangePasswordUriResponse(changePasswordUri));
     }
 }
