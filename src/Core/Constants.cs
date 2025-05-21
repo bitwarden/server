@@ -115,6 +115,7 @@ public static class FeatureFlagKeys
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
     public const string EmailVerification = "email-verification";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
+    public const string BrowserExtensionLoginApproval = "pm-14938-browser-extension-login-approvals";
     public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
@@ -142,13 +143,13 @@ public static class FeatureFlagKeys
     public const string UsePricingService = "use-pricing-service";
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
     public const string PM18794_ProviderPaymentMethod = "pm-18794-provider-payment-method";
-    public const string PM19147_AutomaticTaxImprovements = "pm-19147-automatic-tax-improvements";
     public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
     public const string PM18770_EnableOrganizationBusinessUnitConversion = "pm-18770-enable-organization-business-unit-conversion";
     public const string PM199566_UpdateMSPToChargeAutomatically = "pm-199566-update-msp-to-charge-automatically";
     public const string PM19956_RequireProviderPaymentMethodDuringSetup = "pm-19956-require-provider-payment-method-during-setup";
     public const string UseOrganizationWarningsService = "use-organization-warnings-service";
     public const string PM20322_AllowTrialLength0 = "pm-20322-allow-trial-length-0";
+    public const string PM21092_SetNonUSBusinessUseToReverseCharge = "pm-21092-set-non-us-business-use-to-reverse-charge";
 
     /* Data Insights and Reporting Team */
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";

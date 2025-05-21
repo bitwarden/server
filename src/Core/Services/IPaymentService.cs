@@ -4,7 +4,6 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Tax.Requests;
 using Bit.Core.Billing.Tax.Responses;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 
@@ -30,8 +29,6 @@ public interface IPaymentService
     Task<string> AdjustServiceAccountsAsync(Organization organization, Plan plan, int additionalServiceAccounts);
     Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false);
     Task ReinstateSubscriptionAsync(ISubscriber subscriber);
-    Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
-        string paymentToken, TaxInfo taxInfo = null);
     Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount);
     Task<BillingInfo> GetBillingAsync(ISubscriber subscriber);
     Task<BillingHistoryInfo> GetBillingHistoryAsync(ISubscriber subscriber);
