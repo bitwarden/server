@@ -303,10 +303,10 @@ public class OrganizationBillingController(
         var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
         var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
         await organizationBillingService.Finalize(sale);
-        var updateOrg = await organizationRepository.GetByIdAsync(organizationId);
-        if (updateOrg != null)
+        var updatedOrg = await organizationRepository.GetByIdAsync(organizationId);
+        if (updatedOrg != null)
         {
-            await organizationBillingService.UpdatePaymentMethod(updateOrg, paymentSource, taxInformation);
+            await organizationBillingService.UpdatePaymentMethod(updatedOrg, paymentSource, taxInformation);
         }
 
         return TypedResults.Ok();
