@@ -48,6 +48,8 @@ jobs:
             node: true
           - project_name: Api
             base_path: ./src
+          - project_name: Attachments
+            base_path: ./util
           - project_name: Billing
             base_path: ./src
           - project_name: Events
@@ -58,21 +60,20 @@ jobs:
             base_path: ./src
           - project_name: Identity
             base_path: ./src
+          - project_name: MsSql
+            base_path: ./util
           - project_name: MsSqlMigratorUtility
             base_path: ./util
-            dotnet: true
+          - project_name: Nginx
+            base_path: ./util
           - project_name: Notifications
             base_path: ./src
           - project_name: Scim
             base_path: ./bitwarden_license/src
-            dotnet: true
-          - project_name: Server
-            base_path: ./util
           - project_name: Setup
             base_path: ./util
           - project_name: Sso
             base_path: ./bitwarden_license/src
-            node: true
     steps:
       - name: Check secrets
         id: check-secrets
@@ -294,9 +295,14 @@ jobs:
         id: build-docker
         uses: docker/build-push-action@67a2d409c0a876cbe6b11854e3e25193efe4e62d # v6.12.0
         with:
-          context: ${{ matrix.base_path }}/${{ matrix.project_name }}
+          cache-from: type=registry,ref=${{ steps.cache-name.outputs.name }}
+          cache-to: type=registry,ref=${{ steps.cache-name.outputs.name}},mode=max
+          context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
-          platforms: linux/amd64
+          platforms: |
+            linux/amd64,
+            linux/arm/v7,
+            linux/arm64
           push: true
           tags: ${{ steps.image-tags.outputs.tags }}
           secrets: |
