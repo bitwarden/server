@@ -131,6 +131,7 @@ jobs:
 
       - name: Publish project
         working-directory: ${{ matrix.base_path }}/${{ matrix.project_name }}
+        if: ${{ matrix.dotnet }}
         run: |
           echo "Publish"
           dotnet publish -c "Release" -o obj/build-output/publish
