@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -22,7 +23,9 @@ public class RestoreOrganizationUserCommand(
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     IPolicyService policyService,
     IUserRepository userRepository,
-    IOrganizationService organizationService) : IRestoreOrganizationUserCommand
+    IOrganizationService organizationService,
+    IFeatureService featureService,
+    IPolicyRequirementQuery policyRequirementQuery) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId)
     {
@@ -270,11 +273,19 @@ public class RestoreOrganizationUserCommand(
         // Enforce 2FA Policy of organization user is trying to join
         if (!userHasTwoFactorEnabled)
         {
-            var invitedTwoFactorPolicies = await policyService.GetPoliciesApplicableToUserAsync(userId,
-                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Revoked);
-            if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
+            if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
             {
-                twoFactorCompliant = false;
+                var requirement = await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(userId);
+                twoFactorCompliant = requirement.CanBeRestored(userHasTwoFactorEnabled, orgUser.OrganizationId);
+            }
+            else
+            {
+                var invitedTwoFactorPolicies = await policyService.GetPoliciesApplicableToUserAsync(userId,
+                    PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Revoked);
+                if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
+                {
+                    twoFactorCompliant = false;
+                }
             }
         }
 
