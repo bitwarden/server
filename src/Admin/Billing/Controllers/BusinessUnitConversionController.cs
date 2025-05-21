@@ -18,7 +18,6 @@ namespace Bit.Admin.Billing.Controllers;
 
 [Authorize]
 [Route("organizations/billing/{organizationId:guid}/business-unit")]
-[RequireFeature(FeatureFlagKeys.PM18770_EnableOrganizationBusinessUnitConversion)]
 public class BusinessUnitConversionController(
     IBusinessUnitConverter businessUnitConverter,
     IOrganizationRepository organizationRepository,

@@ -27,7 +27,6 @@ using Stripe;
 
 namespace Bit.Commercial.Core.Billing.Providers.Services;
 
-[RequireFeature(FeatureFlagKeys.PM18770_EnableOrganizationBusinessUnitConversion)]
 public class BusinessUnitConverter(
     IDataProtectionProvider dataProtectionProvider,
     GlobalSettings globalSettings,

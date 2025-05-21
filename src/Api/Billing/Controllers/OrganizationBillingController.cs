@@ -25,7 +25,6 @@ namespace Bit.Api.Billing.Controllers;
 public class OrganizationBillingController(
     IBusinessUnitConverter businessUnitConverter,
     ICurrentContext currentContext,
-    IFeatureService featureService,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
     IOrganizationWarningsQuery organizationWarningsQuery,
@@ -314,14 +313,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] SetupBusinessUnitRequestBody requestBody)
     {
-        var enableOrganizationBusinessUnitConversion =
-            featureService.IsEnabled(FeatureFlagKeys.PM18770_EnableOrganizationBusinessUnitConversion);
-
-        if (!enableOrganizationBusinessUnitConversion)
-        {
-            return Error.NotFound();
-        }
-
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 
         if (organization == null)
