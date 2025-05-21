@@ -80,7 +80,7 @@ public static class LicenseExtensions
     {
         var claim = principal.FindFirst(claimType);
 
-        if (claim is null)
+        if (claim is null || (string.IsNullOrWhiteSpace(claim.Value) && typeof(T).IsValueType))
         {
             return default;
         }
@@ -98,6 +98,14 @@ public static class LicenseExtensions
         {
             return DateTime.TryParse(claim.Value, out var dateTime)
                 ? (T)(object)dateTime
+                : default;
+        }
+
+        // Handle DateTimeOffset
+        if (typeof(T) == typeof(DateTimeOffset))
+        {
+            return DateTimeOffset.TryParse(claim.Value, out var dateTimeOffset)
+                ? (T)(object)dateTimeOffset
                 : default;
         }
 
@@ -138,6 +146,13 @@ public static class LicenseExtensions
                 : default;
         }
 
+        if (underlyingType == typeof(char))
+        {
+            return char.TryParse(claim.Value, out var charValue)
+                ? (T)(object)charValue
+                : default;
+        }
+
         if (underlyingType == typeof(double))
         {
             return double.TryParse(claim.Value, out var doubleValue)
@@ -145,7 +160,105 @@ public static class LicenseExtensions
                 : default;
         }
 
+        if (underlyingType == typeof(short))
+        {
+            return short.TryParse(claim.Value, out var shortValue)
+                ? (T)(object)shortValue
+                : default;
+        }
+
+        if (underlyingType == typeof(long))
+        {
+            return long.TryParse(claim.Value, out var longValue)
+                ? (T)(object)longValue
+                : default;
+        }
+
+        if (underlyingType == typeof(decimal))
+        {
+            return decimal.TryParse(claim.Value, out var decimalValue)
+                ? (T)(object)decimalValue
+                : default;
+        }
+
+        if (underlyingType == typeof(float))
+        {
+            return float.TryParse(claim.Value, out var floatValue)
+                ? (T)(object)floatValue
+                : default;
+        }
+
+        if (underlyingType == typeof(byte))
+        {
+            return byte.TryParse(claim.Value, out var byteValue)
+                ? (T)(object)byteValue
+                : default;
+        }
+
+        if (underlyingType == typeof(DateTimeOffset))
+        {
+            return DateTimeOffset.TryParse(claim.Value, out var dateTimeOffsetValue)
+                ? (T)(object)dateTimeOffsetValue
+                : default;
+        }
+
+        if (underlyingType == typeof(Guid))
+        {
+            return Guid.TryParse(claim.Value, out var guidValue)
+                ? (T)(object)guidValue
+                : default;
+        }
+
+        if (underlyingType == typeof(TimeSpan))
+        {
+            return TimeSpan.TryParse(claim.Value, out var timeSpanValue)
+                ? (T)(object)timeSpanValue
+                : default;
+        }
+
+        if (underlyingType == typeof(uint))
+        {
+            return uint.TryParse(claim.Value, out var uintValue)
+                ? (T)(object)uintValue
+                : default;
+        }
+
+        if (underlyingType == typeof(ushort))
+        {
+            return ushort.TryParse(claim.Value, out var ushortValue)
+                ? (T)(object)ushortValue
+                : default;
+        }
+
+        if (underlyingType == typeof(ulong))
+        {
+            return ulong.TryParse(claim.Value, out var ulongValue)
+                ? (T)(object)ulongValue
+                : default;
+        }
+
+        if (underlyingType == typeof(sbyte))
+        {
+            return sbyte.TryParse(claim.Value, out var sbyteValue)
+                ? (T)(object)sbyteValue
+                : default;
+        }
+
         // Fallback to Convert.ChangeType for other types including strings
-        return (T)Convert.ChangeType(claim.Value, underlyingType);
+        try
+        {
+            // If the value is empty and we're not converting to string, return default
+            if (string.IsNullOrWhiteSpace(claim.Value) && underlyingType != typeof(string))
+            {
+                return default;
+            }
+
+            return (T)Convert.ChangeType(claim.Value, underlyingType);
+        }
+        catch
+        {
+            // If conversion fails for any reason, return default value
+            return default;
+        }
     }
 }
