@@ -58,6 +58,11 @@ public class RequireTwoFactorPolicyRequirement : IPolicyRequirement
                 OrganizationUserStatusType.Invited or
                 OrganizationUserStatusType.Accepted or
                 OrganizationUserStatusType.Confirmed));
+
+    public IEnumerable<PolicyDetails> TwoFactorPoliciesForActiveMemberships =>
+        _policyDetails.Where(p => p.OrganizationUserStatus is
+                OrganizationUserStatusType.Accepted or
+                OrganizationUserStatusType.Confirmed);
 }
 
 public class RequireTwoFactorPolicyRequirementFactory : BasePolicyRequirementFactory<RequireTwoFactorPolicyRequirement>
