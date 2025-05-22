@@ -8,6 +8,7 @@ using Bit.Core;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
@@ -301,8 +302,12 @@ public class OrganizationBillingController(
         Debug.Assert(org is not null, "This organization has already been found via this same ID, this should be fine.");
         var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
         var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
-        await organizationBillingService.UpdatePaymentMethod(org, paymentSource, taxInformation);
         await organizationBillingService.Finalize(sale);
+        var updatedOrg = await organizationRepository.GetByIdAsync(organizationId);
+        if (updatedOrg != null)
+        {
+            await organizationBillingService.UpdatePaymentMethod(updatedOrg, paymentSource, taxInformation);
+        }
 
         return TypedResults.Ok();
     }
