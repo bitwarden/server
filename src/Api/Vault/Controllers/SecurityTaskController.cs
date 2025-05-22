@@ -15,7 +15,6 @@ namespace Bit.Api.Vault.Controllers;
 
 [Route("tasks")]
 [Authorize("Application")]
-[RequireFeature(FeatureFlagKeys.SecurityTasks)]
 public class SecurityTaskController : Controller
 {
     private readonly IUserService _userService;
