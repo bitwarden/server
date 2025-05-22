@@ -150,6 +150,7 @@ public static class FeatureFlagKeys
     public const string UseOrganizationWarningsService = "use-organization-warnings-service";
     public const string PM20322_AllowTrialLength0 = "pm-20322-allow-trial-length-0";
     public const string PM21092_SetNonUSBusinessUseToReverseCharge = "pm-21092-set-non-us-business-use-to-reverse-charge";
+    public const string PM21383_GetProviderPriceFromStripe = "pm-21383-get-provider-price-from-stripe";
 
     /* Data Insights and Reporting Team */
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
