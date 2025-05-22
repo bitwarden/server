@@ -18,9 +18,6 @@ public interface IOrganizationService
     Task AutoAddSeatsAsync(Organization organization, int seatsToAdd);
     Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
     Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
-#nullable enable
-    Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup);
-#nullable disable
     /// <summary>
     /// Create a new organization on a self-hosted instance
     /// </summary>
