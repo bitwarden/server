@@ -44,7 +44,6 @@ jobs:
 
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
 
-
   cut_branch:
     name: Cut branch
     if: ${{ needs.setup.outputs.branch != 'none' }}
@@ -79,7 +78,6 @@ jobs:
         run: |
           git switch --quiet --create $BRANCH_NAME
           git push --quiet --set-upstream origin $BRANCH_NAME
-
 
   bump_version:
     name: Bump Version
@@ -187,7 +185,6 @@ jobs:
       - name: Push changes
         run: git push
 
-
   cherry_pick:
     name: Cherry-Pick Commit(s)
     if: ${{ needs.setup.outputs.branch != 'none' }}
@@ -272,9 +269,8 @@ jobs:
 
           fi
 
-
-  move_future_db_scripts:
-    name: Move finalization database scripts
+  move_edd_db_scripts:
+    name: Move EDD database scripts
     needs: cherry_pick
-    uses: ./.github/workflows/_move_finalization_db_scripts.yml
+    uses: ./.github/workflows/_move_edd_db_scripts.yml
     secrets: inherit
