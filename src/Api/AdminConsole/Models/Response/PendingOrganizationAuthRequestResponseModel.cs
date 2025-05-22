@@ -23,6 +23,7 @@ public class PendingOrganizationAuthRequestResponseModel : ResponseModel
         RequestDeviceType = authRequest.RequestDeviceType.GetType().GetMember(authRequest.RequestDeviceType.ToString())
             .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
         RequestIpAddress = authRequest.RequestIpAddress;
+        RequestCountryName = authRequest.RequestCountryName;
         CreationDate = authRequest.CreationDate;
     }
 
@@ -34,5 +35,6 @@ public class PendingOrganizationAuthRequestResponseModel : ResponseModel
     public string RequestDeviceIdentifier { get; set; }
     public string RequestDeviceType { get; set; }
     public string RequestIpAddress { get; set; }
+    public string RequestCountryName { get; set; }
     public DateTime CreationDate { get; set; }
 }

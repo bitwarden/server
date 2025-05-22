@@ -18,8 +18,15 @@ public static class StripeConstants
 
     public static class CouponIDs
     {
-        public const string MSPDiscount35 = "msp-discount-35";
+        public const string LegacyMSPDiscount = "msp-discount-35";
         public const string SecretsManagerStandalone = "sm-standalone";
+
+        public static class MSPDiscounts
+        {
+            public const string Open = "msp-open-discount";
+            public const string Silver = "msp-silver-discount";
+            public const string Gold = "msp-gold-discount";
+        }
     }
 
     public static class ErrorCodes
@@ -35,11 +42,16 @@ public static class StripeConstants
     {
         public const string Draft = "draft";
         public const string Open = "open";
+        public const string Paid = "paid";
     }
 
     public static class MetadataKeys
     {
+        public const string BraintreeCustomerId = "btCustomerId";
+        public const string InvoiceApproved = "invoice_approved";
         public const string OrganizationId = "organizationId";
+        public const string ProviderId = "providerId";
+        public const string UserId = "userId";
     }
 
     public static class PaymentBehavior
@@ -51,6 +63,11 @@ public static class StripeConstants
     {
         public const string Card = "card";
         public const string USBankAccount = "us_bank_account";
+    }
+
+    public static class Prices
+    {
+        public const string StoragePlanPersonal = "personal-storage-gb-annually";
     }
 
     public static class ProrationBehavior
@@ -70,6 +87,13 @@ public static class StripeConstants
         public const string Canceled = "canceled";
         public const string Unpaid = "unpaid";
         public const string Paused = "paused";
+    }
+
+    public static class TaxExempt
+    {
+        public const string Exempt = "exempt";
+        public const string None = "none";
+        public const string Reverse = "reverse";
     }
 
     public static class ValidateTaxLocationTiming

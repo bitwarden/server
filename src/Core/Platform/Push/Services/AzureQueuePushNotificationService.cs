@@ -22,17 +22,19 @@ public class AzureQueuePushNotificationService : IPushNotificationService
     private readonly QueueClient _queueClient;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IGlobalSettings _globalSettings;
+    private readonly TimeProvider _timeProvider;
 
     public AzureQueuePushNotificationService(
         [FromKeyedServices("notifications")] QueueClient queueClient,
         IHttpContextAccessor httpContextAccessor,
         IGlobalSettings globalSettings,
-        ILogger<AzureQueuePushNotificationService> logger)
+        ILogger<AzureQueuePushNotificationService> logger,
+        TimeProvider timeProvider)
     {
         _queueClient = queueClient;
         _httpContextAccessor = httpContextAccessor;
         _globalSettings = globalSettings;
-
+        _timeProvider = timeProvider;
         if (globalSettings.Installation.Id == Guid.Empty)
         {
             logger.LogWarning("Installation ID is not set. Push notifications for installations will not work.");
@@ -140,7 +142,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
 
     private async Task PushUserAsync(Guid userId, PushType type, bool excludeCurrentContext = false)
     {
-        var message = new UserPushNotification { UserId = userId, Date = DateTime.UtcNow };
+        var message = new UserPushNotification { UserId = userId, Date = _timeProvider.GetUtcNow().UtcDateTime };
 
         await SendMessageAsync(type, message, excludeCurrentContext);
     }
@@ -188,6 +190,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
+            TaskId = notification.TaskId,
             Title = notification.Title,
             Body = notification.Body,
             CreationDate = notification.CreationDate,
@@ -208,6 +211,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
+            TaskId = notification.TaskId,
             Title = notification.Title,
             Body = notification.Body,
             CreationDate = notification.CreationDate,

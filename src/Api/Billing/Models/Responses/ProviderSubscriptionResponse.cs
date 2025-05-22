@@ -2,6 +2,8 @@
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Providers.Models;
+using Bit.Core.Billing.Tax.Models;
 using Stripe;
 
 namespace Bit.Api.Billing.Models.Responses;
@@ -16,7 +18,8 @@ public record ProviderSubscriptionResponse(
     TaxInformation TaxInformation,
     DateTime? CancelAt,
     SubscriptionSuspension Suspension,
-    ProviderType ProviderType)
+    ProviderType ProviderType,
+    PaymentSource PaymentSource)
 {
     private const string _annualCadence = "Annual";
     private const string _monthlyCadence = "Monthly";
@@ -26,13 +29,14 @@ public record ProviderSubscriptionResponse(
         ICollection<ConfiguredProviderPlan> providerPlans,
         TaxInformation taxInformation,
         SubscriptionSuspension subscriptionSuspension,
-        Provider provider)
+        Provider provider,
+        PaymentSource paymentSource)
     {
         var providerPlanResponses = providerPlans
             .Select(providerPlan =>
             {
                 var plan = providerPlan.Plan;
-                var cost = (providerPlan.SeatMinimum + providerPlan.PurchasedSeats) * plan.PasswordManager.ProviderPortalSeatPrice;
+                var cost = (providerPlan.SeatMinimum + providerPlan.PurchasedSeats) * providerPlan.Price;
                 var cadence = plan.IsAnnual ? _annualCadence : _monthlyCadence;
                 return new ProviderPlanResponse(
                     plan.Name,
@@ -57,7 +61,8 @@ public record ProviderSubscriptionResponse(
             taxInformation,
             subscription.CancelAt,
             subscriptionSuspension,
-            provider.Type);
+            provider.Type,
+            paymentSource);
     }
 }
 

@@ -112,6 +112,13 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
             return false;
         }
 
+        if (existingSponsorship.IsAdminInitiated && !sponsoringOrganization.UseAdminSponsoredFamilies)
+        {
+            _logger.LogWarning("Admin initiated sponsorship for sponsored Organization {SponsoredOrganizationId} is not allowed because sponsoring organization does not have UseAdminSponsoredFamilies enabled", sponsoredOrganizationId);
+            await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);
+            return false;
+        }
+
         var sponsoringOrgProductTier = sponsoringOrganization.PlanType.GetProductTier();
 
         if (sponsoredPlan.SponsoringProductTierType != sponsoringOrgProductTier)

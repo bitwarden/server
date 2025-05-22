@@ -43,6 +43,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Tools.ReportFeatures;
+using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault;
@@ -50,7 +51,7 @@ using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
 using DnsClient;
-using Duende.IdentityModel;
+using IdentityModel;
 using LaunchDarkly.Sdk.Server;
 using LaunchDarkly.Sdk.Server.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -67,6 +68,7 @@ using Microsoft.Extensions.Caching.Cosmos;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -122,7 +124,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<IAuthRequestService, AuthRequestService>();
         services.AddScoped<IDuoUniversalTokenService, DuoUniversalTokenService>();
-        services.AddScoped<ISendService, SendService>();
+        services.AddScoped<ISendAuthorizationService, SendAuthorizationService>();
         services.AddLoginServices();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
@@ -131,6 +133,7 @@ public static class ServiceCollectionExtensions
         services.AddNotificationCenterServices();
         services.AddPlatformServices();
         services.AddImportServices();
+        services.AddSendServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
@@ -148,14 +151,6 @@ public static class ServiceCollectionExtensions
                 EmergencyAccessInviteTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<EmergencyAccessInviteTokenable>>>())
-        );
-
-        services.AddSingleton<IDataProtectorTokenFactory<HCaptchaTokenable>>(serviceProvider =>
-            new DataProtectorTokenFactory<HCaptchaTokenable>(
-                HCaptchaTokenable.ClearTextPrefix,
-                HCaptchaTokenable.DataProtectorPurpose,
-                serviceProvider.GetDataProtectionProvider(),
-                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<HCaptchaTokenable>>>())
         );
 
         services.AddSingleton<IDataProtectorTokenFactory<SsoTokenable>>(serviceProvider =>
@@ -279,6 +274,8 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
         }
 
+        services.TryAddSingleton(TimeProvider.System);
+
         services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
         if (globalSettings.SelfHosted)
         {
@@ -329,34 +326,40 @@ public static class ServiceCollectionExtensions
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
         {
+            services.AddKeyedSingleton<IEventWriteService, AzureQueueEventWriteService>("storage");
+
             if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.TopicName))
             {
-                services.AddSingleton<IEventWriteService, AzureServiceBusEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, AzureServiceBusEventWriteService>("broadcast");
             }
             else
             {
-                services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
             }
         }
         else if (globalSettings.SelfHosted)
         {
+            services.AddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("storage");
+
             if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HostName) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Username) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Password) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.ExchangeName))
             {
-                services.AddSingleton<IEventWriteService, RabbitMqEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, RabbitMqEventWriteService>("broadcast");
             }
             else
             {
-                services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+                services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
             }
         }
         else
         {
-            services.AddSingleton<IEventWriteService, NoopEventWriteService>();
+            services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("storage");
+            services.AddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
         }
+        services.AddScoped<IEventWriteService, EventRouteService>();
 
         if (CoreHelpers.SettingHasValue(globalSettings.Attachment.ConnectionString))
         {
@@ -391,16 +394,6 @@ public static class ServiceCollectionExtensions
         else
         {
             services.AddSingleton<IReferenceEventService, AzureQueueReferenceEventService>();
-        }
-
-        if (CoreHelpers.SettingHasValue(globalSettings.Captcha?.HCaptchaSecretKey) &&
-            CoreHelpers.SettingHasValue(globalSettings.Captcha?.HCaptchaSiteKey))
-        {
-            services.AddSingleton<ICaptchaValidationService, HCaptchaValidationService>();
-        }
-        else
-        {
-            services.AddSingleton<ICaptchaValidationService, NoopCaptchaValidationService>();
         }
     }
 
