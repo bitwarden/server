@@ -13,7 +13,7 @@ public static class SendClientBuilder
         {
             ClientId = BitwardenClient.Send,
             AllowedGrantTypes = new[] { SendAccessGrantValidator.GrantType },
-            AccessTokenLifetime = 60 * 5, // 5 minutes
+            AccessTokenLifetime = 60 * 5, // 5 minutes // TODO: convert this to a global setting
 
             // Do not allow refresh tokens to be issued.
             AllowOfflineAccess = false,
