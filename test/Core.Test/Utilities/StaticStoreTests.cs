@@ -48,7 +48,6 @@ public class StaticStoreTests
         // only if the domain strictly equals (do NOT use InvariantCulture comparison) the one added to our allow list.
         foreach (var domain in StaticStore.GlobalDomains.SelectMany(p => p.Value))
         {
-            // Every domain should equal it's non-ascii characters
             for (var i = 0; i < domain.Length; i++)
             {
                 var character = domain[i];
