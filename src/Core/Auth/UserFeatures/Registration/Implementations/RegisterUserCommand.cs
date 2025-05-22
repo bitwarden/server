@@ -1,4 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
@@ -42,6 +44,9 @@ public class RegisterUserCommand : IRegisterUserCommand
 
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _emergencyAccessInviteTokenDataFactory;
 
+    private readonly IOrganizationPolicyRequirementQuery _organizationPolicyRequirementQuery;
+    private readonly IFeatureService _featureService;
+
     private readonly string _disabledUserRegistrationExceptionMsg = "Open registration has been disabled by the system administrator.";
 
     public RegisterUserCommand(
@@ -56,7 +61,9 @@ public class RegisterUserCommand : IRegisterUserCommand
         IUserService userService,
         IMailService mailService,
         IValidateRedemptionTokenCommand validateRedemptionTokenCommand,
-        IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> emergencyAccessInviteTokenDataFactory
+        IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> emergencyAccessInviteTokenDataFactory,
+        IOrganizationPolicyRequirementQuery organizationPolicyRequirementQuery,
+        IFeatureService featureService
         )
     {
         _globalSettings = globalSettings;
@@ -75,6 +82,9 @@ public class RegisterUserCommand : IRegisterUserCommand
 
         _validateRedemptionTokenCommand = validateRedemptionTokenCommand;
         _emergencyAccessInviteTokenDataFactory = emergencyAccessInviteTokenDataFactory;
+
+        _organizationPolicyRequirementQuery = organizationPolicyRequirementQuery;
+        _featureService = featureService;
 
         _providerServiceDataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
     }
@@ -214,22 +224,39 @@ public class RegisterUserCommand : IRegisterUserCommand
         var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
         if (orgUser != null)
         {
-            var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId,
-                PolicyType.TwoFactorAuthentication);
-            if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
+            if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
             {
-                user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-                {
+                var twoFactorPolicyRequirement = await _organizationPolicyRequirementQuery
+                    .GetAsync<OrganizationTwoFactorPolicyRequirement>(orgUser.OrganizationId);
 
-                    [TwoFactorProviderType.Email] = new TwoFactorProvider
-                    {
-                        MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
-                        Enabled = true
-                    }
-                });
-                _userService.SetTwoFactorProvider(user, TwoFactorProviderType.Email);
+                if (twoFactorPolicyRequirement.IsRequired)
+                {
+                    EnableEmailTwoFactorForUser(user);
+                }
+            }
+            else
+            {
+                var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId,
+                    PolicyType.TwoFactorAuthentication);
+                if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
+                {
+                    EnableEmailTwoFactorForUser(user);
+                }
             }
         }
+    }
+
+    private void EnableEmailTwoFactorForUser(User user)
+    {
+        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new TwoFactorProvider
+            {
+                MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                Enabled = true
+            }
+        });
+        _userService.SetTwoFactorProvider(user, TwoFactorProviderType.Email);
     }
 
 
