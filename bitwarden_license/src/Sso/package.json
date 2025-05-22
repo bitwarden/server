@@ -8,7 +8,7 @@
     "build": "webpack"
   },
   "dependencies": {
-    "bootstrap": "5.3.3",
+    "bootstrap": "5.3.6",
     "font-awesome": "4.7.0",
     "jquery": "3.7.1"
   },
@@ -18,7 +18,7 @@
     "mini-css-extract-plugin": "2.9.2",
     "sass": "1.88.0",
     "sass-loader": "16.0.5",
-    "webpack": "5.97.1",
+    "webpack": "5.99.8",
     "webpack-cli": "5.1.4"
   }
 }
