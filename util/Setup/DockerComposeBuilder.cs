@@ -43,6 +43,7 @@ public class DockerComposeBuilder
         public TemplateModel(Context context)
         {
             MssqlDataDockerVolume = context.Config.DatabaseDockerVolume;
+            MssqlEnabled = context.Config.MssqlEnabled;
             EnableKeyConnector = context.Config.EnableKeyConnector;
             EnableScim = context.Config.EnableScim;
             HttpPort = context.Config.HttpPort;
@@ -62,6 +63,7 @@ public class DockerComposeBuilder
         }
 
         public bool MssqlDataDockerVolume { get; set; }
+        public bool MssqlEnabled { get; set; }
         public bool EnableKeyConnector { get; set; }
         public bool EnableScim { get; set; }
         public string HttpPort { get; set; }
