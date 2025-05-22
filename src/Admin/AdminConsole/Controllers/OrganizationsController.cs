@@ -258,27 +258,20 @@ public class OrganizationsController : Controller
         if (model.PlanType.HasValue)
         {
             var freePlan = await _pricingClient.GetPlanOrThrow(model.PlanType.Value);
-
-            if (organization.PlanType != PlanType.Free &&
-                model.PlanType.Value == PlanType.Free &&
-                model.Seats.HasValue &&
-                model.Seats.Value > freePlan.PasswordManager.MaxSeats)
+            var isDowngradingToFree = organization.PlanType != PlanType.Free && model.PlanType.Value == PlanType.Free;
+            switch (isDowngradingToFree)
             {
-                TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxSeats} seats cannot be downgraded to the Free plan";
-                return RedirectToAction("Edit", new { id });
-            }
-
-            if (organization.PlanType != PlanType.Free && model.PlanType.Value == PlanType.Free && model.MaxCollections > freePlan.PasswordManager.MaxCollections)
-            {
-                TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxCollections} collections cannot be downgraded to the Free plan. Your organization currently has {organization.MaxCollections} collections.";
-                return RedirectToAction("Edit", new { id });
-            }
-
-            if (organization.PlanType != PlanType.Free && model.PlanType.Value == PlanType.Free)
-            {
-                model.MaxStorageGb = null;
-                model.ExpirationDate = null;
-                model.Enabled = true;
+                case true when model.Seats.HasValue && model.Seats.Value > freePlan.PasswordManager.MaxSeats:
+                    TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxSeats} seats cannot be downgraded to the Free plan";
+                    return RedirectToAction("Edit", new { id });
+                case true when model.MaxCollections > freePlan.PasswordManager.MaxCollections:
+                    TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxCollections} collections cannot be downgraded to the Free plan. Your organization currently has {organization.MaxCollections} collections.";
+                    return RedirectToAction("Edit", new { id });
+                case true:
+                    model.MaxStorageGb = null;
+                    model.ExpirationDate = null;
+                    model.Enabled = true;
+                    break;
             }
         }
 
