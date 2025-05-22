@@ -14,9 +14,11 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyService, PolicyService>();
         services.AddScoped<ISavePolicyCommand, SavePolicyCommand>();
         services.AddScoped<IPolicyRequirementQuery, PolicyRequirementQuery>();
+        services.AddScoped<IOrganizationPolicyRequirementQuery, OrganizationPolicyRequirementQuery>();
 
         services.AddPolicyValidators();
         services.AddPolicyRequirements();
+        services.AddOrganizationPolicyRequirements();
     }
 
     private static void AddPolicyValidators(this IServiceCollection services)
@@ -37,5 +39,10 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, PersonalOwnershipPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, RequireSsoPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, RequireTwoFactorPolicyRequirementFactory>();
+    }
+
+    private static void AddOrganizationPolicyRequirements(this IServiceCollection services)
+    {
+        services.AddScoped<IOrganizationPolicyRequirementFactory<IPolicyRequirement>, OrganizationRequireTwoFactorPolicyRequirementFactory>();
     }
 }
