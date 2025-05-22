@@ -43,6 +43,6 @@ public static class PolicyServiceCollectionExtensions
 
     private static void AddOrganizationPolicyRequirements(this IServiceCollection services)
     {
-        services.AddScoped<IOrganizationPolicyRequirementFactory<IPolicyRequirement>, OrganizationRequireTwoFactorPolicyRequirementFactory>();
+        services.AddScoped<IOrganizationPolicyRequirementFactory<IPolicyRequirement>, OrganizationTwoFactorPolicyRequirementFactory>();
     }
 }
