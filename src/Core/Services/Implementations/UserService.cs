@@ -1403,13 +1403,13 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         {
             var requirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
 
-            var removeOrgUserTasks = requirement.TwoFactorPoliciesForActiveMemberships.Select(async p =>
+            var removeOrgUserTasks = requirement.OrganizationsRequiringTwoFactor.Select(async o =>
             {
-                var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
+                var organization = await _organizationRepository.GetByIdAsync(o.OrganizationId);
                 await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
                     new RevokeOrganizationUsersRequest(
-                        p.OrganizationId,
-                        [new OrganizationUserUserDetails { Id = p.OrganizationUserId, OrganizationId = p.OrganizationId }],
+                        o.OrganizationId,
+                        [new OrganizationUserUserDetails { Id = o.OrganizationUserId, OrganizationId = o.OrganizationId }],
                         new SystemUser(EventSystemUser.TwoFactorDisabled)));
                 await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
             }).ToArray();

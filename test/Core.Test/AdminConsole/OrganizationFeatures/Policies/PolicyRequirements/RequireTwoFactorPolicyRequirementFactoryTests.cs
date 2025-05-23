@@ -59,17 +59,18 @@ public class RequireTwoFactorPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void TwoFactorPoliciesForActiveMemberships_WithNoPolicies_ReturnsEmptyCollection(
+    public void OrganizationsRequiringTwoFactor_WithNoPolicies_ReturnsEmptyCollection(
         SutProvider<RequireTwoFactorPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create([]);
 
-        Assert.Empty(actual.TwoFactorPoliciesForActiveMemberships);
+        Assert.Empty(actual.OrganizationsRequiringTwoFactor);
     }
 
     [Theory, BitAutoData]
-    public void TwoFactorPoliciesForActiveMemberships_WithMultiplePolicies_ReturnsActiveMemberships(
-        Guid orgId1, Guid orgId2, Guid orgId3, Guid orgId4,
+    public void OrganizationsRequiringTwoFactor_WithMultiplePolicies_ReturnsActiveMemberships(
+        Guid orgId1, Guid orgUserId1, Guid orgId2, Guid orgUserId2,
+        Guid orgId3, Guid orgUserId3, Guid orgId4, Guid orgUserId4,
         SutProvider<RequireTwoFactorPolicyRequirementFactory> sutProvider)
     {
         var policies = new[]
@@ -77,24 +78,28 @@ public class RequireTwoFactorPolicyRequirementFactoryTests
             new PolicyDetails
             {
                 OrganizationId = orgId1,
+                OrganizationUserId = orgUserId1,
                 PolicyType = PolicyType.TwoFactorAuthentication,
                 OrganizationUserStatus = OrganizationUserStatusType.Accepted
             },
             new PolicyDetails
             {
                 OrganizationId = orgId2,
+                OrganizationUserId = orgUserId2,
                 PolicyType = PolicyType.TwoFactorAuthentication,
                 OrganizationUserStatus = OrganizationUserStatusType.Confirmed
             },
             new PolicyDetails
             {
                 OrganizationId = orgId3,
+                OrganizationUserId = orgUserId3,
                 PolicyType = PolicyType.TwoFactorAuthentication,
                 OrganizationUserStatus = OrganizationUserStatusType.Invited
             },
             new PolicyDetails
             {
                 OrganizationId = orgId4,
+                OrganizationUserId = orgUserId4,
                 PolicyType = PolicyType.TwoFactorAuthentication,
                 OrganizationUserStatus = OrganizationUserStatusType.Revoked
             }
@@ -102,11 +107,11 @@ public class RequireTwoFactorPolicyRequirementFactoryTests
 
         var actual = sutProvider.Sut.Create(policies);
 
-        var result = actual.TwoFactorPoliciesForActiveMemberships.ToList();
+        var result = actual.OrganizationsRequiringTwoFactor.ToList();
         Assert.Equal(2, result.Count);
-        Assert.Contains(result, p => p.OrganizationId == orgId1);
-        Assert.Contains(result, p => p.OrganizationId == orgId2);
-        Assert.DoesNotContain(result, p => p.OrganizationId == orgId3);
-        Assert.DoesNotContain(result, p => p.OrganizationId == orgId4);
+        Assert.Contains(result, p => p.OrganizationId == orgId1 && p.OrganizationUserId == orgUserId1);
+        Assert.Contains(result, p => p.OrganizationId == orgId2 && p.OrganizationUserId == orgUserId2);
+        Assert.DoesNotContain(result, p => p.OrganizationId == orgId3 && p.OrganizationUserId == orgUserId3);
+        Assert.DoesNotContain(result, p => p.OrganizationId == orgId4 && p.OrganizationUserId == orgUserId4);
     }
 }

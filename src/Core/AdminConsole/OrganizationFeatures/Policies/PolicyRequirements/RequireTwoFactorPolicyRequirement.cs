@@ -28,13 +28,15 @@ public class RequireTwoFactorPolicyRequirement : IPolicyRequirement
         _policyDetails.Any(p => p.OrganizationId == organizationId);
 
     /// <summary>
-    /// Gets the active two-factor authentication policies for active memberships.
+    /// Returns tuples of (OrganizationId, OrganizationUserId) for active memberships where two-factor authentication is required.
+    /// Users should be revoked from these organizations if they disable all 2FA methods.
     /// </summary>
-    /// <returns>The active two-factor authentication policies for active memberships.</returns>
-    public IEnumerable<PolicyDetails> TwoFactorPoliciesForActiveMemberships =>
-        _policyDetails.Where(p => p.OrganizationUserStatus is
+    public IEnumerable<(Guid OrganizationId, Guid OrganizationUserId)> OrganizationsRequiringTwoFactor =>
+        _policyDetails
+            .Where(p => p.OrganizationUserStatus is
                 OrganizationUserStatusType.Accepted or
-                OrganizationUserStatusType.Confirmed);
+                OrganizationUserStatusType.Confirmed)
+            .Select(p => (p.OrganizationId, p.OrganizationUserId));
 }
 
 public class RequireTwoFactorPolicyRequirementFactory : BasePolicyRequirementFactory<RequireTwoFactorPolicyRequirement>
