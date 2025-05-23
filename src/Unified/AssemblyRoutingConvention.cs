@@ -1,6 +1,5 @@
 using System.Collections.Frozen;
 using System.Reflection;
-using Bit.Core.Arch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 
@@ -10,9 +9,9 @@ public class AssemblyRoutingConvention : IControllerModelConvention
 {
     private readonly FrozenDictionary<Assembly, string> _services;
 
-    public AssemblyRoutingConvention(IEnumerable<BitService> services)
+    public AssemblyRoutingConvention(IEnumerable<IApplicationConfigurator> services)
     {
-        _services = services.ToFrozenDictionary(s => s.GetType().Assembly, s => s.RoutePrefix);
+        _services = services.ToFrozenDictionary(s => s.AppAssembly, s => s.RoutePrefix);
     }
 
     public void Apply(ControllerModel controller)
