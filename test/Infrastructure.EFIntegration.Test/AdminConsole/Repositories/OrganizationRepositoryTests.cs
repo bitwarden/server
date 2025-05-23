@@ -7,6 +7,7 @@ using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using Organization = Bit.Core.AdminConsole.Entities.Organization;
@@ -161,7 +162,7 @@ public class OrganizationRepositoryTests
 
     [CiSkippedTheory, EfOrganizationUserAutoData]
     public async Task SearchUnassignedAsync_Works(OrganizationUser orgUser, User user, Organization org,
-        List<EfRepo.OrganizationUserRepository> efOrgUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
+        List<OrganizationUserRepository> efOrgUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
         SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo, SqlRepo.UserRepository sqlUserRepo)
     {
         orgUser.Type = OrganizationUserType.Owner;
