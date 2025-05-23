@@ -1426,6 +1426,10 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("Disabled")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Emails")
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("TEXT");
 
