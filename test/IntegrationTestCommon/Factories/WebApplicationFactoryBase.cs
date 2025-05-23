@@ -9,7 +9,6 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,12 +36,12 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     /// <remarks>
     /// This will need to be set BEFORE using the <c>Server</c> property
     /// </remarks>
-    public SqliteConnection? SqliteConnection { get; set; }
+    public ITestDatabase? TestDatabase { get; set; }
 
     private readonly List<Action<IServiceCollection>> _configureTestServices = new();
     private readonly List<Action<IConfigurationBuilder>> _configureAppConfiguration = new();
 
-    private bool _handleSqliteDisposal { get; set; }
+    private bool _handleDbDisposal { get; set; }
 
 
     public void SubstituteService<TService>(Action<TService> mockService)
@@ -119,12 +118,47 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     /// </summary>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        if (SqliteConnection == null)
+        if (TestDatabase == null)
         {
-            SqliteConnection = new SqliteConnection("DataSource=:memory:");
-            SqliteConnection.Open();
-            _handleSqliteDisposal = true;
+            TestDatabase = new SqliteTestDatabase();
+            _handleDbDisposal = true;
         }
+
+        var config = new Dictionary<string, string?>
+        {
+            // Manually insert a EF provider so that ConfigureServices will add EF repositories but we will override
+            // DbContextOptions to use an in memory database
+            { "globalSettings:databaseProvider", "postgres" },
+            { "globalSettings:postgreSql:connectionString", "Host=localhost;Username=test;Password=test;Database=test" },
+
+            // Clear the redis connection string for distributed caching, forcing an in-memory implementation
+            { "globalSettings:redis:connectionString", "" },
+
+            // Clear Storage
+            { "globalSettings:attachment:connectionString", null },
+            { "globalSettings:events:connectionString", null },
+            { "globalSettings:send:connectionString", null },
+            { "globalSettings:notifications:connectionString", null },
+            { "globalSettings:storage:connectionString", null },
+
+            // This will force it to use an ephemeral key for IdentityServer
+            { "globalSettings:developmentDirectory", null },
+
+            // Email Verification
+            { "globalSettings:enableEmailVerification", "true" },
+            { "globalSettings:disableUserRegistration", "false" },
+            { "globalSettings:launchDarkly:flagValues:email-verification", "true" },
+
+            // New Device Verification
+            { "globalSettings:disableEmailNewDevice", "false" },
+
+            // Web push notifications
+            { "globalSettings:webPush:vapidPublicKey", "BGBtAM0bU3b5jsB14IjBYarvJZ6rWHilASLudTTYDDBi7a-3kebo24Yus_xYeOMZ863flAXhFAbkL6GVSrxgErg" },
+            { "globalSettings:launchDarkly:flagValues:web-push", "true" },
+        };
+
+        // Some database drivers modify the connection string
+        TestDatabase.ModifyGlobalSettings(config);
 
         builder.ConfigureAppConfiguration(c =>
         {
@@ -134,39 +168,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
             c.AddUserSecrets(typeof(Identity.Startup).Assembly, optional: true);
 
-            c.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                // Manually insert a EF provider so that ConfigureServices will add EF repositories but we will override
-                // DbContextOptions to use an in memory database
-                { "globalSettings:databaseProvider", "postgres" },
-                { "globalSettings:postgreSql:connectionString", "Host=localhost;Username=test;Password=test;Database=test" },
-
-                // Clear the redis connection string for distributed caching, forcing an in-memory implementation
-                { "globalSettings:redis:connectionString", ""},
-
-                // Clear Storage
-                { "globalSettings:attachment:connectionString", null},
-                { "globalSettings:events:connectionString", null},
-                { "globalSettings:send:connectionString", null},
-                { "globalSettings:notifications:connectionString", null},
-                { "globalSettings:storage:connectionString", null},
-
-                // This will force it to use an ephemeral key for IdentityServer
-                { "globalSettings:developmentDirectory", null },
-
-
-                // Email Verification
-                { "globalSettings:enableEmailVerification", "true" },
-                { "globalSettings:disableUserRegistration", "false" },
-                { "globalSettings:launchDarkly:flagValues:email-verification", "true" },
-
-                // New Device Verification
-                { "globalSettings:disableEmailNewDevice", "false" },
-
-                // Web push notifications
-                { "globalSettings:webPush:vapidPublicKey", "BGBtAM0bU3b5jsB14IjBYarvJZ6rWHilASLudTTYDDBi7a-3kebo24Yus_xYeOMZ863flAXhFAbkL6GVSrxgErg" },
-                { "globalSettings:launchDarkly:flagValues:web-push", "true" },
-            });
+            c.AddInMemoryCollection(config);
         });
 
         // Run configured actions after defaults to allow them to take precedence
@@ -177,17 +179,16 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
         builder.ConfigureTestServices(services =>
         {
-            var dbContextOptions = services.First(sd => sd.ServiceType == typeof(DbContextOptions<DatabaseContext>));
+            var dbContextOptions =
+                services.First(sd => sd.ServiceType == typeof(DbContextOptions<DatabaseContext>));
             services.Remove(dbContextOptions);
-            services.AddScoped(services =>
-            {
-                return new DbContextOptionsBuilder<DatabaseContext>()
-                    .UseSqlite(SqliteConnection)
-                    .UseApplicationServiceProvider(services)
-                    .Options;
-            });
 
-            MigrateDbContext<DatabaseContext>(services);
+            // Add database to the service collection
+            TestDatabase.AddDatabase(services);
+            if (_handleDbDisposal)
+            {
+                TestDatabase.Migrate(services);
+            }
 
             // QUESTION: The normal licensing service should run fine on developer machines but not in CI
             // should we have a fork here to leave the normal service for developers?
@@ -286,22 +287,14 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        if (_handleSqliteDisposal)
+        if (_handleDbDisposal)
         {
-            SqliteConnection!.Dispose();
-        }
-    }
+            _handleDbDisposal = false;
 
-    private void MigrateDbContext<TContext>(IServiceCollection serviceCollection) where TContext : DbContext
-    {
-        var serviceProvider = serviceCollection.BuildServiceProvider();
-        using var scope = serviceProvider.CreateScope();
-        var services = scope.ServiceProvider;
-        var context = services.GetRequiredService<TContext>();
-        if (_handleSqliteDisposal)
-        {
-            context.Database.EnsureDeleted();
+            if (TestDatabase != null)
+            {
+                TestDatabase!.Dispose();
+            }
         }
-        context.Database.EnsureCreated();
     }
 }
