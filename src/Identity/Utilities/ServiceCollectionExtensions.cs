@@ -1,4 +1,6 @@
-﻿using Bit.Core.Auth.Repositories;
+﻿using Bit.Core.Auth.PasswordValidation;
+using Bit.Core.Auth.Repositories;
+using Bit.Core.Entities;
 using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -9,6 +11,8 @@ using Bit.SharedWeb.Utilities;
 using Duende.IdentityServer.ResponseHandling;
 using Duende.IdentityServer.Services;
 using Duende.IdentityServer.Stores;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Identity.Utilities;
 
@@ -57,6 +61,10 @@ public static class ServiceCollectionExtensions
             .AddIdentityServerCertificate(env, globalSettings)
             .AddExtensionGrantValidator<WebAuthnGrantValidator>()
             .AddExtensionGrantValidator<SendAccessGrantValidator>();
+
+        // ExtensionGrantValidator Dependencies
+        services.TryAddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+        services.Configure<PasswordHasherOptions>(options => options.IterationCount = PasswordValidationConstants.PasswordHasherKdfIterations);
 
         if (!globalSettings.SelfHosted)
         {

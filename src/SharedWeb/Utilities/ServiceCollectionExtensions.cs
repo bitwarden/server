@@ -16,6 +16,7 @@ using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.LoginFeatures;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.PasswordValidation;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
@@ -377,7 +378,7 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services, GlobalSettings globalSettings)
     {
         services.AddScoped<IOrganizationDuoUniversalTokenProvider, OrganizationDuoUniversalTokenProvider>();
-        services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
+        services.Configure<PasswordHasherOptions>(options => options.IterationCount = PasswordValidationConstants.PasswordHasherKdfIterations);
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
         {
             options.TokenLifespan = TimeSpan.FromDays(30);
