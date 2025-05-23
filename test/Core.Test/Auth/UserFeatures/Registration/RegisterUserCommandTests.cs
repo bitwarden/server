@@ -1,6 +1,8 @@
 ﻿using System.Text;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -686,5 +688,339 @@ public class RegisterUserCommandTests
         Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaOrgInvite_TwoFactorPolicyEnabled_EnablesTwoFactor(
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
+        OrganizationUser orgUser, string orgInviteToken, Guid orgUserId, Policy twoFactorPolicy)
+    {
+        // Arrange
+        user.ReferenceData = null;
+        user.TwoFactorProviders = null;
+        orgUser.Email = user.Email;
+        orgUser.Id = orgUserId;
 
+        var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+            .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = orgInviteTokenable;
+                return true;
+            });
+
+        // Setup FeatureFlag to be disabled
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PolicyRequirements)
+            .Returns(false);
+
+        // Mock OrganizationUserRepository to return the orgUser
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUserId)
+            .Returns(orgUser);
+
+        // Mock Policy to be enabled
+        twoFactorPolicy.Enabled = true;
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(twoFactorPolicy);
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, masterPasswordHash)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        // Verify OrganizationUserRepository was called
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .GetByIdAsync(orgUserId);
+
+        // Verify FeatureService was called with the correct flag
+        sutProvider.GetDependency<IFeatureService>()
+            .Received(1)
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PolicyRequirements);
+
+        // Verify that the legacy policy repository was called
+        await sutProvider.GetDependency<IPolicyRepository>()
+            .Received(1)
+            .GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication);
+
+        // Verify that two-factor authentication was enabled for the user
+        sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .SetTwoFactorProvider(user, TwoFactorProviderType.Email);
+
+        // Verify the two-factor providers were set correctly
+        var twoFactorProviders = new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new TwoFactorProvider
+            {
+                MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                Enabled = true
+            }
+        };
+
+        var serializedTwoFactorProviders =
+            JsonHelpers.LegacySerialize(twoFactorProviders, JsonHelpers.LegacyEnumKeyResolver);
+
+        Assert.Equal(user.TwoFactorProviders, serializedTwoFactorProviders);
+
+        // Verify that OrganizationPolicyRequirementQuery was NOT called
+        await sutProvider.GetDependency<IOrganizationPolicyRequirementQuery>()
+            .DidNotReceive()
+            .GetAsync<OrganizationTwoFactorPolicyRequirement>(Arg.Any<Guid>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaOrgInvite_TwoFactorPolicyDisabled_DoesNotEnableTwoFactor(
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
+        OrganizationUser orgUser, string orgInviteToken, Guid orgUserId, Policy twoFactorPolicy)
+    {
+        // Arrange
+        user.ReferenceData = null;
+        user.TwoFactorProviders = null;
+        orgUser.Email = user.Email;
+        orgUser.Id = orgUserId;
+
+        var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+            .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = orgInviteTokenable;
+                return true;
+            });
+
+        // Setup FeatureFlag to be disabled
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PolicyRequirements)
+            .Returns(false);
+
+        // Mock OrganizationUserRepository to return the orgUser
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUserId)
+            .Returns(orgUser);
+
+        // Mock Policy to be disabled
+        twoFactorPolicy.Enabled = false;
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(twoFactorPolicy);
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, masterPasswordHash)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        // Verify OrganizationUserRepository was called
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .GetByIdAsync(orgUserId);
+
+        // Verify FeatureService was called with the correct flag
+        sutProvider.GetDependency<IFeatureService>()
+            .Received(1)
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PolicyRequirements);
+
+        // Verify that the legacy policy repository was called
+        await sutProvider.GetDependency<IPolicyRepository>()
+            .Received(1)
+            .GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication);
+
+        // Verify that two-factor authentication was NOT enabled for the user
+        sutProvider.GetDependency<IUserService>()
+            .DidNotReceive()
+            .SetTwoFactorProvider(Arg.Any<User>(), Arg.Any<TwoFactorProviderType>());
+
+        // Verify the two-factor providers were not set
+        Assert.Null(user.TwoFactorProviders);
+
+        // Verify that OrganizationPolicyRequirementQuery was NOT called
+        await sutProvider.GetDependency<IOrganizationPolicyRequirementQuery>()
+            .DidNotReceive()
+            .GetAsync<OrganizationTwoFactorPolicyRequirement>(Arg.Any<Guid>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaOrgInvite_WithPolicyRequirements_TwoFactorPolicyRequired_EnablesTwoFactor(
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
+        OrganizationUser orgUser, string orgInviteToken, Guid orgUserId)
+    {
+        // Arrange
+        user.ReferenceData = null;
+        user.TwoFactorProviders = null;
+        orgUser.Email = user.Email;
+        orgUser.Id = orgUserId;
+
+        var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+            .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = orgInviteTokenable;
+                return true;
+            });
+
+        // Setup FeatureFlag and OrganizationPolicyRequirementQuery
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PolicyRequirements)
+            .Returns(true);
+
+        // Mock OrganizationUserRepository to return the orgUser
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUserId)
+            .Returns(orgUser);
+
+        // Mock OrganizationTwoFactorPolicyRequirement to return IsRequired = true
+        var twoFactorPolicy = new Policy { Type = PolicyType.TwoFactorAuthentication, Enabled = true };
+        var twoFactorPolicyRequirement = new OrganizationTwoFactorPolicyRequirement(twoFactorPolicy);
+
+        sutProvider.GetDependency<IOrganizationPolicyRequirementQuery>()
+            .GetAsync<OrganizationTwoFactorPolicyRequirement>(orgUser.OrganizationId)
+            .Returns(twoFactorPolicyRequirement);
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, masterPasswordHash)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        // Verify OrganizationUserRepository was called
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .GetByIdAsync(orgUserId);
+
+        // Verify FeatureService was called with the correct flag
+        sutProvider.GetDependency<IFeatureService>()
+            .Received(1)
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PolicyRequirements);
+
+        // Verify that OrganizationPolicyRequirementQuery was called with the correct organization ID
+        await sutProvider.GetDependency<IOrganizationPolicyRequirementQuery>()
+            .Received(1)
+            .GetAsync<OrganizationTwoFactorPolicyRequirement>(orgUser.OrganizationId);
+
+        // Verify that two-factor authentication was enabled for the user
+        sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .SetTwoFactorProvider(user, TwoFactorProviderType.Email);
+
+        // Verify the two-factor providers were set correctly
+        var twoFactorProviders = new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new TwoFactorProvider
+            {
+                MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                Enabled = true
+            }
+        };
+
+        var serializedTwoFactorProviders =
+            JsonHelpers.LegacySerialize(twoFactorProviders, JsonHelpers.LegacyEnumKeyResolver);
+
+        Assert.Equal(user.TwoFactorProviders, serializedTwoFactorProviders);
+
+        // Verify that the legacy policy repository was not called
+        await sutProvider.GetDependency<IPolicyRepository>()
+            .DidNotReceive()
+            .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaOrgInvite_WithPolicyRequirements_TwoFactorPolicyNotRequired_DoesNotEnableTwoFactor(
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
+        OrganizationUser orgUser, string orgInviteToken, Guid orgUserId)
+    {
+        // Arrange
+        user.ReferenceData = null;
+        user.TwoFactorProviders = null;
+        orgUser.Email = user.Email;
+        orgUser.Id = orgUserId;
+
+        var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+            .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = orgInviteTokenable;
+                return true;
+            });
+
+        // Setup FeatureFlag and OrganizationPolicyRequirementQuery
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PolicyRequirements)
+            .Returns(true);
+
+        // Mock OrganizationUserRepository to return the orgUser
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUserId)
+            .Returns(orgUser);
+
+        // Mock OrganizationTwoFactorPolicyRequirement to return IsRequired = false
+        var twoFactorPolicy = new Policy { Type = PolicyType.TwoFactorAuthentication, Enabled = false };
+        var twoFactorPolicyRequirement = new OrganizationTwoFactorPolicyRequirement(twoFactorPolicy);
+
+        sutProvider.GetDependency<IOrganizationPolicyRequirementQuery>()
+            .GetAsync<OrganizationTwoFactorPolicyRequirement>(orgUser.OrganizationId)
+            .Returns(twoFactorPolicyRequirement);
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, masterPasswordHash)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        // Verify OrganizationUserRepository was called
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .GetByIdAsync(orgUserId);
+
+        // Verify FeatureService was called with the correct flag
+        sutProvider.GetDependency<IFeatureService>()
+            .Received(1)
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PolicyRequirements);
+
+        // Verify that OrganizationPolicyRequirementQuery was called with the correct organization ID
+        await sutProvider.GetDependency<IOrganizationPolicyRequirementQuery>()
+            .Received(1)
+            .GetAsync<OrganizationTwoFactorPolicyRequirement>(orgUser.OrganizationId);
+
+        // Verify that two-factor authentication was NOT enabled for the user
+        sutProvider.GetDependency<IUserService>()
+            .DidNotReceive()
+            .SetTwoFactorProvider(Arg.Any<User>(), Arg.Any<TwoFactorProviderType>());
+
+        // Verify the two-factor providers were not set
+        Assert.Null(user.TwoFactorProviders);
+
+        // Verify that the legacy policy repository was not called
+        await sutProvider.GetDependency<IPolicyRepository>()
+            .DidNotReceive()
+            .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>());
+    }
 }
