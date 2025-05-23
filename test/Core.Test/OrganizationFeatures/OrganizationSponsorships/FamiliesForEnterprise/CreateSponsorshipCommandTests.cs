@@ -5,6 +5,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -171,7 +172,11 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         // Setup for checking available seats
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrg.Id)
-            .Returns(0);
+            .Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 0
+            });
 
 
         await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
@@ -320,7 +325,11 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         // Setup for checking available seats - organization has plenty of seats
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrg.Id)
-            .Returns(5);
+            .Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 5
+            });
 
         var actual = await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
             PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, true, notes);
@@ -380,7 +389,11 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         // Setup for checking available seats - organization has no available seats
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrg.Id)
-            .Returns(10);
+            .Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 10
+            });
 
         // Setup for checking if can scale
         sutProvider.GetDependency<IOrganizationService>()
@@ -445,7 +458,11 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         // Setup for checking available seats - organization has no available seats
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrg.Id)
-            .Returns(10);
+            .Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 10
+            });
 
         // Setup for checking if can scale - cannot scale
         var failureReason = "Seat limit has been reached.";

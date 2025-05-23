@@ -501,7 +501,7 @@ public class AccountController : Controller
         {
             var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
             var initialSeatCount = organization.Seats.Value;
-            var availableSeats = initialSeatCount - occupiedSeats;
+            var availableSeats = initialSeatCount - occupiedSeats.Total;
             if (availableSeats < 1)
             {
                 try

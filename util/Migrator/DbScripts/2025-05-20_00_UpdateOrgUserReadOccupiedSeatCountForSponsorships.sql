@@ -1,3 +1,9 @@
+IF OBJECT_ID('[dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]
+END
+GO
+
 CREATE PROCEDURE [dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
@@ -63,3 +69,4 @@ BEGIN
             )
         ) as Total
 END
+GO
