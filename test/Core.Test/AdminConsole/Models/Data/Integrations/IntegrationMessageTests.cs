@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Models.Data.Integrations;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data.Integrations;
 using Xunit;
 
 namespace Bit.Core.Test.Models.Data.Integrations;

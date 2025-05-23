@@ -1,5 +1,5 @@
-﻿using Bit.Core.Enums;
-using Bit.Core.Models.Data.Integrations;
+﻿using Bit.Core.AdminConsole.Models.Data.Integrations;
+using Bit.Core.Enums;
 using Bit.Core.Services;
 using Xunit;
 

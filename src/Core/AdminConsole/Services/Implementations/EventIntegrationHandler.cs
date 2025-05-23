@@ -1,11 +1,13 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Models.Data.Integrations;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Integrations;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services;
+
+#nullable enable
 
 public class EventIntegrationHandler<T>(
     IntegrationType integrationType,
@@ -17,7 +19,11 @@ public class EventIntegrationHandler<T>(
 {
     public async Task HandleEventAsync(EventMessage eventMessage)
     {
-        var organizationId = eventMessage.OrganizationId ?? Guid.Empty;
+        if (eventMessage.OrganizationId is not Guid organizationId)
+        {
+            return;
+        }
+
         var configurations = await configurationRepository.GetConfigurationDetailsAsync(
             organizationId,
             integrationType,
@@ -25,8 +31,9 @@ public class EventIntegrationHandler<T>(
 
         foreach (var configuration in configurations)
         {
-            var context = await BuildContextAsync(eventMessage, configuration.Template);
-            var renderedTemplate = IntegrationTemplateProcessor.ReplaceTokens(configuration.Template, context);
+            var template = configuration.Template ?? string.Empty;
+            var context = await BuildContextAsync(eventMessage, template);
+            var renderedTemplate = IntegrationTemplateProcessor.ReplaceTokens(template, context);
 
             var config = configuration.MergedConfiguration.Deserialize<T>()
                          ?? throw new InvalidOperationException($"Failed to deserialize to {typeof(T).Name}");

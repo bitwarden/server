@@ -1,4 +1,4 @@
-﻿using Bit.Core.Models.Data.Integrations;
+﻿using Bit.Core.AdminConsole.Models.Data.Integrations;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

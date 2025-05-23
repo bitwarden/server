@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.Enums;
 
-namespace Bit.Core.Models.Data.Integrations;
+namespace Bit.Core.AdminConsole.Models.Data.Integrations;
 
 public class IntegrationMessage<T> : IIntegrationMessage
 {
