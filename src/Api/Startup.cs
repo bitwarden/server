@@ -5,7 +5,7 @@ using Bit.Core.Settings;
 using AspNetCoreRateLimit;
 using Stripe;
 using Bit.Core.Utilities;
-using Duende.IdentityModel;
+using IdentityModel;
 using System.Globalization;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
@@ -27,11 +27,15 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Api.Auth.Models.Request.WebAuthn;
+using Bit.Api.Billing;
+using Bit.Core.AdminConsole.Services.NoopImplementations;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Identity.TokenProviders;
+using Bit.Core.Services;
 using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Tools.ReportFeatures;
-
+using Bit.Core.Auth.Models.Api.Request;
+using Bit.Core.Tools.SendFeatures;
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -168,6 +172,9 @@ public class Startup
         services
             .AddScoped<IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>,
                 WebAuthnLoginKeyRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>>,
+                DeviceRotationValidator>();
 
         // Services
         services.AddBaseServices(globalSettings);
@@ -177,6 +184,10 @@ public class Startup
         services.AddBillingOperations();
         services.AddReportingServices();
         services.AddImportServices();
+        services.AddPhishingDomainServices(globalSettings);
+
+        services.AddBillingQueries();
+        services.AddSendServices();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();
@@ -211,6 +222,19 @@ public class Startup
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
         {
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
+        }
+
+        // Slack
+        if (CoreHelpers.SettingHasValue(globalSettings.Slack.ClientId) &&
+            CoreHelpers.SettingHasValue(globalSettings.Slack.ClientSecret) &&
+            CoreHelpers.SettingHasValue(globalSettings.Slack.Scopes))
+        {
+            services.AddHttpClient(SlackService.HttpClientName);
+            services.AddSingleton<ISlackService, SlackService>();
+        }
+        else
+        {
+            services.AddSingleton<ISlackService, NoopSlackService>();
         }
     }
 

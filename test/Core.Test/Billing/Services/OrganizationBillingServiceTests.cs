@@ -73,4 +73,44 @@ public class OrganizationBillingServiceTests
     }
 
     #endregion
+
+    #region GetMetadata - Null Customer or Subscription
+
+    [Theory, BitAutoData]
+    public async Task GetMetadata_WhenCustomerOrSubscriptionIsNull_ReturnsDefaultMetadata(
+        Guid organizationId,
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
+
+        sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(StaticStore.Plans.ToList());
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
+            .Returns(StaticStore.GetPlan(organization.PlanType));
+
+        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
+
+        // Set up subscriber service to return null for customer
+        subscriberService
+            .GetCustomer(organization, Arg.Is<CustomerGetOptions>(options => options.Expand.FirstOrDefault() == "discount.coupon.applies_to"))
+            .Returns((Customer)null);
+
+        // Set up subscriber service to return null for subscription
+        subscriberService.GetSubscription(organization).Returns((Subscription)null);
+
+        var metadata = await sutProvider.Sut.GetMetadata(organizationId);
+
+        Assert.NotNull(metadata);
+        Assert.False(metadata!.IsOnSecretsManagerStandalone);
+        Assert.False(metadata.HasSubscription);
+        Assert.False(metadata.IsSubscriptionUnpaid);
+        Assert.False(metadata.HasOpenInvoice);
+        Assert.False(metadata.IsSubscriptionCanceled);
+        Assert.Null(metadata.InvoiceDueDate);
+        Assert.Null(metadata.InvoiceCreatedDate);
+        Assert.Null(metadata.SubPeriodEndDate);
+    }
+
+    #endregion
 }

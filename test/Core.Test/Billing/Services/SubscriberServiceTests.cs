@@ -4,6 +4,7 @@ using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services.Implementations;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -191,7 +192,7 @@ public class SubscriberServiceTests
 
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
-            .SubscriptionCancelAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>()); ;
+            .SubscriptionCancelAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
     }
 
     #endregion
@@ -1025,7 +1026,7 @@ public class SubscriberServiceTests
 
         stripeAdapter
             .PaymentMethodListAutoPagingAsync(Arg.Any<PaymentMethodListOptions>())
-            .Returns(GetPaymentMethodsAsync(new List<Stripe.PaymentMethod>()));
+            .Returns(GetPaymentMethodsAsync(new List<PaymentMethod>()));
 
         await sutProvider.Sut.RemovePaymentSource(organization);
 
@@ -1057,7 +1058,7 @@ public class SubscriberServiceTests
 
         stripeAdapter
             .PaymentMethodListAutoPagingAsync(Arg.Any<PaymentMethodListOptions>())
-            .Returns(GetPaymentMethodsAsync(new List<Stripe.PaymentMethod>
+            .Returns(GetPaymentMethodsAsync(new List<PaymentMethod>
             {
                 new ()
                 {
@@ -1082,8 +1083,8 @@ public class SubscriberServiceTests
             .PaymentMethodDetachAsync(cardId);
     }
 
-    private static async IAsyncEnumerable<Stripe.PaymentMethod> GetPaymentMethodsAsync(
-        IEnumerable<Stripe.PaymentMethod> paymentMethods)
+    private static async IAsyncEnumerable<PaymentMethod> GetPaymentMethodsAsync(
+        IEnumerable<PaymentMethod> paymentMethods)
     {
         foreach (var paymentMethod in paymentMethods)
         {
@@ -1167,7 +1168,9 @@ public class SubscriberServiceTests
     {
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)
+        stripeAdapter.CustomerGetAsync(
+                provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(p => p.Expand.Contains("tax") || p.Expand.Contains("tax_ids")))
             .Returns(new Customer
             {
                 Id = provider.GatewayCustomerId,
@@ -1213,7 +1216,10 @@ public class SubscriberServiceTests
     {
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)
+        stripeAdapter.CustomerGetAsync(
+                provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(p => p.Expand.Contains("tax") || p.Expand.Contains("tax_ids"))
+                )
             .Returns(new Customer
             {
                 Id = provider.GatewayCustomerId,
@@ -1321,7 +1327,9 @@ public class SubscriberServiceTests
     {
         const string braintreeCustomerId = "braintree_customer_id";
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(
+                provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(p => p.Expand.Contains("tax") || p.Expand.Contains("tax_ids")))
             .Returns(new Customer
             {
                 Id = provider.GatewayCustomerId,
@@ -1373,7 +1381,9 @@ public class SubscriberServiceTests
     {
         const string braintreeCustomerId = "braintree_customer_id";
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(
+                provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(p => p.Expand.Contains("tax") || p.Expand.Contains("tax_ids")))
             .Returns(new Customer
             {
                 Id = provider.GatewayCustomerId,
@@ -1482,7 +1492,9 @@ public class SubscriberServiceTests
     {
         const string braintreeCustomerId = "braintree_customer_id";
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(
+                provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(p => p.Expand.Contains("tax") || p.Expand.Contains("tax_ids")))
             .Returns(new Customer
             {
                 Id = provider.GatewayCustomerId
@@ -1561,6 +1573,45 @@ public class SubscriberServiceTests
             "Example Town",
             "NY");
 
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerUpdateAsync(
+                Arg.Is<string>(p => p == provider.GatewayCustomerId),
+                Arg.Is<CustomerUpdateOptions>(options =>
+                    options.Address.Country == "US" &&
+                    options.Address.PostalCode == "12345" &&
+                    options.Address.Line1 == "123 Example St." &&
+                    options.Address.Line2 == null &&
+                    options.Address.City == "Example Town" &&
+                    options.Address.State == "NY"))
+            .Returns(new Customer
+            {
+                Id = provider.GatewayCustomerId,
+                Address = new Address
+                {
+                    Country = "US",
+                    PostalCode = "12345",
+                    Line1 = "123 Example St.",
+                    Line2 = null,
+                    City = "Example Town",
+                    State = "NY"
+                },
+                TaxIds = new StripeList<TaxId> { Data = [new TaxId { Id = "tax_id_1", Type = "us_ein" }] },
+                Subscriptions = new StripeList<Subscription>
+                {
+                    Data = [
+                        new Subscription
+                        {
+                            Id = provider.GatewaySubscriptionId,
+                            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                        }
+                    ]
+                }
+            });
+
+        var subscription = new Subscription { Items = new StripeList<SubscriptionItem>() };
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(Arg.Any<string>())
+            .Returns(subscription);
+
         await sutProvider.Sut.UpdateTaxInformation(provider, taxInformation);
 
         await stripeAdapter.Received(1).CustomerUpdateAsync(provider.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
@@ -1577,6 +1628,98 @@ public class SubscriberServiceTests
         await stripeAdapter.Received(1).TaxIdCreateAsync(provider.GatewayCustomerId, Arg.Is<TaxIdCreateOptions>(
             options => options.Type == "us_ein" &&
                        options.Value == taxInformation.TaxId));
+
+        await stripeAdapter.Received(1).SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateTaxInformation_NonUser_ReverseCharge_MakesCorrectInvocations(
+        Provider provider,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        var customer = new Customer { Id = provider.GatewayCustomerId, TaxIds = new StripeList<TaxId> { Data = [new TaxId { Id = "tax_id_1", Type = "us_ein" }] } };
+
+        stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId, Arg.Is<CustomerGetOptions>(
+            options => options.Expand.Contains("tax_ids"))).Returns(customer);
+
+        var taxInformation = new TaxInformation(
+            "CA",
+            "12345",
+            "123456789",
+            "us_ein",
+            "123 Example St.",
+            null,
+            "Example Town",
+            "NY");
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerUpdateAsync(
+                Arg.Is<string>(p => p == provider.GatewayCustomerId),
+                Arg.Is<CustomerUpdateOptions>(options =>
+                    options.Address.Country == "CA" &&
+                    options.Address.PostalCode == "12345" &&
+                    options.Address.Line1 == "123 Example St." &&
+                    options.Address.Line2 == null &&
+                    options.Address.City == "Example Town" &&
+                    options.Address.State == "NY"))
+            .Returns(new Customer
+            {
+                Id = provider.GatewayCustomerId,
+                Address = new Address
+                {
+                    Country = "CA",
+                    PostalCode = "12345",
+                    Line1 = "123 Example St.",
+                    Line2 = null,
+                    City = "Example Town",
+                    State = "NY"
+                },
+                TaxIds = new StripeList<TaxId> { Data = [new TaxId { Id = "tax_id_1", Type = "us_ein" }] },
+                Subscriptions = new StripeList<Subscription>
+                {
+                    Data = [
+                        new Subscription
+                        {
+                            Id = provider.GatewaySubscriptionId,
+                            CustomerId = provider.GatewayCustomerId,
+                            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                        }
+                    ]
+                }
+            });
+
+        var subscription = new Subscription { Items = new StripeList<SubscriptionItem>() };
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(Arg.Any<string>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge).Returns(true);
+
+        await sutProvider.Sut.UpdateTaxInformation(provider, taxInformation);
+
+        await stripeAdapter.Received(1).CustomerUpdateAsync(provider.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
+            options =>
+                options.Address.Country == taxInformation.Country &&
+                options.Address.PostalCode == taxInformation.PostalCode &&
+                options.Address.Line1 == taxInformation.Line1 &&
+                options.Address.Line2 == taxInformation.Line2 &&
+                options.Address.City == taxInformation.City &&
+                options.Address.State == taxInformation.State));
+
+        await stripeAdapter.Received(1).TaxIdDeleteAsync(provider.GatewayCustomerId, "tax_id_1");
+
+        await stripeAdapter.Received(1).TaxIdCreateAsync(provider.GatewayCustomerId, Arg.Is<TaxIdCreateOptions>(
+            options => options.Type == "us_ein" &&
+                       options.Value == taxInformation.TaxId));
+
+        await stripeAdapter.Received(1).CustomerUpdateAsync(provider.GatewayCustomerId,
+            Arg.Is<CustomerUpdateOptions>(options => options.TaxExempt == StripeConstants.TaxExempt.Reverse));
+
+        await stripeAdapter.Received(1).SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
     }
 
     #endregion

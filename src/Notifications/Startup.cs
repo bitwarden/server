@@ -3,7 +3,7 @@ using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
-using Duende.IdentityModel;
+using IdentityModel;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Logging;
 

@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -31,7 +32,7 @@ public class PremiumUserBillingService(
     {
         var customer = await subscriberService.GetCustomer(user);
 
-        // Negative credit represents a balance and all Stripe denomination is in cents.
+        // Negative credit represents a balance, and all Stripe denomination is in cents.
         var credit = (long)(amount * -100);
 
         if (customer == null)
@@ -178,7 +179,7 @@ public class PremiumUserBillingService(
                 City = customerSetup.TaxInformation.City,
                 PostalCode = customerSetup.TaxInformation.PostalCode,
                 State = customerSetup.TaxInformation.State,
-                Country = customerSetup.TaxInformation.Country,
+                Country = customerSetup.TaxInformation.Country
             },
             Description = user.Name,
             Email = user.Email,
@@ -309,7 +310,7 @@ public class PremiumUserBillingService(
         {
             subscriptionItemOptionsList.Add(new SubscriptionItemOptions
             {
-                Price = "storage-gb-annually",
+                Price = StripeConstants.Prices.StoragePlanPersonal,
                 Quantity = storage
             });
         }
@@ -320,7 +321,7 @@ public class PremiumUserBillingService(
         {
             AutomaticTax = new SubscriptionAutomaticTaxOptions
             {
-                Enabled = customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported,
+                Enabled = true
             },
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
@@ -366,7 +367,7 @@ public class PremiumUserBillingService(
                 City = taxInformation.City,
                 PostalCode = taxInformation.PostalCode,
                 State = taxInformation.State,
-                Country = taxInformation.Country,
+                Country = taxInformation.Country
             },
             Expand = ["tax"],
             Tax = new CustomerTaxOptions

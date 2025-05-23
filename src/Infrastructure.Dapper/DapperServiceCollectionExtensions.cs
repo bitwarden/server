@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.NotificationCenter.Repositories;
@@ -41,6 +42,8 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IMaintenanceRepository, MaintenanceRepository>();
         services.AddSingleton<IOrganizationApiKeyRepository, OrganizationApiKeyRepository>();
         services.AddSingleton<IOrganizationConnectionRepository, OrganizationConnectionRepository>();
+        services.AddSingleton<IOrganizationIntegrationConfigurationRepository, OrganizationIntegrationConfigurationRepository>();
+        services.AddSingleton<IOrganizationIntegrationRepository, OrganizationIntegrationRepository>();
         services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
         services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();

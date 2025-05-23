@@ -9,8 +9,14 @@ public class OrganizationIntegrationConfigurationEntityTypeConfiguration : IEnti
     public void Configure(EntityTypeBuilder<OrganizationIntegrationConfiguration> builder)
     {
         builder
-            .Property(p => p.Id)
+            .Property(oic => oic.Id)
             .ValueGeneratedNever();
+
+        builder
+            .HasOne(oic => oic.OrganizationIntegration)
+            .WithMany()
+            .HasForeignKey(oic => oic.OrganizationIntegrationId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.ToTable(nameof(OrganizationIntegrationConfiguration));
     }

@@ -71,11 +71,13 @@ public interface IUserService
     Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null,
         int? version = null);
     Task<bool> CheckPasswordAsync(User user, string password);
+    /// <summary>
+    /// Checks if the user has access to premium features, either through a personal subscription or through an organization.
+    /// </summary>
+    /// <param name="user">user being acted on</param>
+    /// <returns>true if they can access premium; false otherwise.</returns>
     Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
     Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user);
-    [Obsolete("Use ITwoFactorIsEnabledQuery instead.")]
-    Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user);
-    Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
 
     Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
@@ -131,27 +133,19 @@ public interface IUserService
     /// verified domains of that organization, and the user is a member of it.
     /// The organization must be enabled and able to have verified domains.
     /// </remarks>
-    /// <returns>
-    /// False if the Account Deprovisioning feature flag is disabled.
-    /// </returns>
-    Task<bool> IsManagedByAnyOrganizationAsync(Guid userId);
+    Task<bool> IsClaimedByAnyOrganizationAsync(Guid userId);
 
     /// <summary>
     /// Verify whether the new email domain meets the requirements for managed users.
     /// </summary>
-    /// <remarks>
-    /// </remarks>
     /// <returns>
-    /// IdentityResult 
+    /// IdentityResult
     /// </returns>
-    Task<IdentityResult> ValidateManagedUserDomainAsync(User user, string newEmail);
+    Task<IdentityResult> ValidateClaimedUserDomainAsync(User user, string newEmail);
 
     /// <summary>
     /// Gets the organizations that manage the user.
     /// </summary>
-    /// <returns>
-    /// An empty collection if the Account Deprovisioning feature flag is disabled.
-    /// </returns>
-    /// <inheritdoc cref="IsManagedByAnyOrganizationAsync(Guid)"/>
-    Task<IEnumerable<Organization>> GetOrganizationsManagingUserAsync(Guid userId);
+    /// <inheritdoc cref="IsClaimedByAnyOrganizationAsync"/>
+    Task<IEnumerable<Organization>> GetOrganizationsClaimingUserAsync(Guid userId);
 }

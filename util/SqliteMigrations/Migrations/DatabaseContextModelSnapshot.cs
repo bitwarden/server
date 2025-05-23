@@ -159,6 +159,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("Use2fa")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseAdminSponsoredFamilies")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseApi")
                         .HasColumnType("INTEGER");
 
@@ -175,6 +178,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UsePasswordManager")
@@ -1300,7 +1306,13 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsAdminInitiated")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime?>("LastSyncDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("OfferedToEmail")
@@ -2717,7 +2729,8 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.Vault.Models.SecurityTask", "Task")
                         .WithMany()
-                        .HasForeignKey("TaskId");
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
@@ -2832,7 +2845,8 @@ namespace Bit.SqliteMigrations.Migrations
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", "Cipher")
                         .WithMany()
-                        .HasForeignKey("CipherId");
+                        .HasForeignKey("CipherId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
                         .WithMany()

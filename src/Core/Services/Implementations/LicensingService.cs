@@ -12,7 +12,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Duende.IdentityModel;
+using IdentityModel;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

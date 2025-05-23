@@ -106,7 +106,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 LimitCollectionDeletion = e.LimitCollectionDeletion,
                 LimitItemDeletion = e.LimitItemDeletion,
                 AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems,
-                UseRiskInsights = e.UseRiskInsights
+                UseRiskInsights = e.UseRiskInsights,
+                UseOrganizationDomains = e.UseOrganizationDomains,
+                UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies
             }).ToListAsync();
         }
     }
@@ -198,6 +200,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.OrganizationUsers.Where(ou => ou.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.ProviderOrganizations.Where(po => po.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.OrganizationIntegrations.Where(oi => oi.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 
             await dbContext.GroupServiceAccountAccessPolicy.Where(ap => ap.GrantedServiceAccount.OrganizationId == organization.Id)
@@ -330,7 +334,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             var planTypes = providerType switch
             {
                 ProviderType.Msp => PlanConstants.EnterprisePlanTypes.Concat(PlanConstants.TeamsPlanTypes),
-                ProviderType.MultiOrganizationEnterprise => PlanConstants.EnterprisePlanTypes,
+                ProviderType.BusinessUnit => PlanConstants.EnterprisePlanTypes,
                 _ => []
             };
 

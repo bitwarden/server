@@ -6,8 +6,6 @@ public class SecurityTaskNotificationViewModel : BaseMailModel
 
     public int TaskCount { get; set; }
 
-    public bool TaskCountPlural => TaskCount != 1;
-
     public List<string> AdminOwnerEmails { get; set; }
 
     public string ReviewPasswordsUrl => $"{WebVaultUrl}/browser-extension-prompt";

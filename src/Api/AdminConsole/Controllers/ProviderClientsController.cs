@@ -1,9 +1,8 @@
 ﻿using Bit.Api.Billing.Controllers;
 using Bit.Api.Billing.Models.Requests;
-using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -17,7 +16,6 @@ namespace Bit.Api.AdminConsole.Controllers;
 [Route("providers/{providerId:guid}/clients")]
 public class ProviderClientsController(
     ICurrentContext currentContext,
-    IFeatureService featureService,
     ILogger<BaseProviderController> logger,
     IOrganizationRepository organizationRepository,
     IProviderBillingService providerBillingService,
@@ -140,11 +138,6 @@ public class ProviderClientsController(
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IResult> GetAddableOrganizationsAsync([FromRoute] Guid providerId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.P15179_AddExistingOrgsFromProviderPortal))
-        {
-            return Error.NotFound();
-        }
-
         var (provider, result) = await TryGetBillableProviderForServiceUserOperation(providerId);
 
         if (provider == null)

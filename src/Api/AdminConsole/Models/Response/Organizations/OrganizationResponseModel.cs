@@ -64,6 +64,8 @@ public class OrganizationResponseModel : ResponseModel
         LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         UseRiskInsights = organization.UseRiskInsights;
+        UseOrganizationDomains = organization.UseOrganizationDomains;
+        UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
     }
 
     public Guid Id { get; set; }
@@ -110,6 +112,8 @@ public class OrganizationResponseModel : ResponseModel
     public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     public bool UseRiskInsights { get; set; }
+    public bool UseOrganizationDomains { get; set; }
+    public bool UseAdminSponsoredFamilies { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
