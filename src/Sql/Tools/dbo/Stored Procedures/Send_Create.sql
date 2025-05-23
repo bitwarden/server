@@ -39,7 +39,8 @@ BEGIN
         [DeletionDate],
         [Disabled],
         [HideEmail],
-        [CipherId]
+        [CipherId],
+        [Emails]
     )
     VALUES
     (
@@ -58,7 +59,8 @@ BEGIN
         @DeletionDate,
         @Disabled,
         @HideEmail,
-        @CipherId
+        @CipherId,
+        @Emails
     )
 
     IF @UserId IS NOT NULL

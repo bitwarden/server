@@ -42,7 +42,6 @@ BEGIN
         [Data] = @Data,
         [Key] = @Key,
         [Password] = @Password,
-        [Emails] = @Emails,
         [MaxAccessCount] = @MaxAccessCount,
         [AccessCount] = @AccessCount,
         [CreationDate] = @CreationDate,
@@ -51,7 +50,8 @@ BEGIN
         [DeletionDate] = @DeletionDate,
         [Disabled] = @Disabled,
         [HideEmail] = @HideEmail,
-        [CipherId] = @CipherId
+        [CipherId] = @CipherId,
+        [Emails] = @Emails
     WHERE
         [Id] = @Id
 
@@ -102,7 +102,8 @@ BEGIN
         [DeletionDate],
         [Disabled],
         [HideEmail],
-        [CipherId]
+        [CipherId],
+        [Emails]
     )
     VALUES
     (
@@ -121,7 +122,8 @@ BEGIN
         @DeletionDate,
         @Disabled,
         @HideEmail,
-        @CipherId
+        @CipherId,
+        @Emails
     )
 
     IF @UserId IS NOT NULL
