@@ -2,7 +2,7 @@
     @Id BIGINT OUTPUT,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
-    @ExternalId NVARCHAR(50),
+    @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7)
 AS
 BEGIN
