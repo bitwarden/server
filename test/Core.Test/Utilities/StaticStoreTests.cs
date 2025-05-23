@@ -51,7 +51,7 @@ public class StaticStoreTests
             for (var i = 0; i < domain.Length; i++)
             {
                 var character = domain[i];
-                Assert.True(char.IsAscii(character), $"Domain: {domain} contains non-ASCII character: '{character}' at index {i}");
+                Assert.True(char.IsAscii(character), $"Domain: {domain} contains non-ASCII character: '{character}' at index: {i}");
             }
         }
     }
