@@ -19,7 +19,6 @@ CREATE OR ALTER PROCEDURE [dbo].[Send_Update]
     @Data VARCHAR(MAX),
     @Key VARCHAR(MAX),
     @Password NVARCHAR(300),
-    @Emails NVARCHAR(1024),
     @MaxAccessCount INT,
     @AccessCount INT,
     @CreationDate DATETIME2(7),
@@ -28,7 +27,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Send_Update]
     @DeletionDate DATETIME2(7),
     @Disabled BIT,
     @HideEmail BIT,
-    @CipherId UNIQUEIDENTIFIER = NULL
+    @CipherId UNIQUEIDENTIFIER = NULL,
+    @Emails NVARCHAR(1024) = NULL,
 AS
 BEGIN
     SET NOCOUNT ON
@@ -71,7 +71,6 @@ CREATE OR ALTER PROCEDURE [dbo].[Send_Create]
     @Data VARCHAR(MAX),
     @Key VARCHAR(MAX),
     @Password NVARCHAR(300),
-    @Emails NVARCHAR(1024),
     @MaxAccessCount INT,
     @AccessCount INT,
     @CreationDate DATETIME2(7),
@@ -80,7 +79,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Send_Create]
     @DeletionDate DATETIME2(7),
     @Disabled BIT,
     @HideEmail BIT,
-    @CipherId UNIQUEIDENTIFIER = NULL
+    @CipherId UNIQUEIDENTIFIER = NULL,
+    @Emails NVARCHAR(1024) = NULL,
 AS
 BEGIN
     SET NOCOUNT ON
