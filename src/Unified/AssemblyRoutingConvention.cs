@@ -59,7 +59,7 @@ public class AssemblyRoutingConvention : IControllerModelConvention
             }
             else if (template.StartsWith('/'))
             {
-                // Add back the override pattern at the begginging
+                // Add back the override pattern at the beginning
                 actionSelector.AttributeRouteModel.Template = $"/{prefix}/{template[1..]}";
             }
             else if (template.StartsWith("~/", StringComparison.Ordinal))
