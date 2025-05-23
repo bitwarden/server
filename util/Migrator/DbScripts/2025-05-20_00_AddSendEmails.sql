@@ -1,11 +1,11 @@
 -- Add `Emails` field that stores a comma-separated list of email addresses for
 -- email/OTP authentication to table and write methods. The read methods
 -- don't need to be updated because they all use `*`.
-
-IF (EXISTS (SELECT *
-            FROM  INFORMATION_SCHEMA.TABLES
-            WHERE TABLE_SCHEMA = 'dbo'
-            AND   TABLE_NAME = 'Send'))
+IF NOT EXISTS(
+    SELECT *
+    FROM [sys].[columns]
+    WHERE [object_id] = OBJECT_ID(N'[dbo].[Send]')
+    AND [name] = 'Emails')
 BEGIN
     ALTER TABLE [dbo].[Send] ADD [Emails] NVARCHAR(1024) NULL;
 END
