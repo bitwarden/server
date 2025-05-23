@@ -1,4 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -27,6 +29,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private readonly IUserRepository _userRepository;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
+    private readonly IFeatureService _featureService;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public AcceptOrgUserCommand(
         IDataProtectionProvider dataProtectionProvider,
@@ -37,9 +41,10 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         IMailService mailService,
         IUserRepository userRepository,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
+        IFeatureService featureService,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
-
         // TODO: remove data protector when old token validation removed
         _dataProtector = dataProtectionProvider.CreateProtector(OrgUserInviteTokenable.DataProtectorPurpose);
         _globalSettings = globalSettings;
@@ -50,6 +55,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _userRepository = userRepository;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
+        _featureService = featureService;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
     public async Task<OrganizationUser> AcceptOrgUserByEmailTokenAsync(Guid organizationUserId, User user, string emailToken,
@@ -196,13 +203,20 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         }
 
         // Enforce Two Factor Authentication Policy of organization user is trying to join
-        if (!await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
-            var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
-                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
-            if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
+            await ValidateTwoFactorAuthenticationPolicyAsync(user, orgUser.OrganizationId);
+        }
+        else
+        {
+            if (!await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
             {
-                throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
+                var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
+                    PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
+                if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
+                {
+                    throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
+                }
             }
         }
 
@@ -224,4 +238,22 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         return orgUser;
     }
 
+    /// <summary>
+    /// Validates the two-factor authentication policy for the organization user.
+    /// If the policy applies to the organization, the user must have two-step login enabled.
+    /// </summary>
+    /// <param name="user">The user to validate the policy for.</param>
+    /// <param name="organizationId">The ID of the organization to validate the policy for.</param>
+    /// <exception cref="BadRequestException">Thrown if the policy applies to the organization and 
+    /// the user does not have two-step login enabled.</exception>
+    private async Task ValidateTwoFactorAuthenticationPolicyAsync(User user, Guid organizationId)
+    {
+        var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
+        var twoFactorRequiredForOrganization = twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId);
+
+        if (twoFactorRequiredForOrganization && !await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
+        {
+            throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
+        }
+    }
 }
