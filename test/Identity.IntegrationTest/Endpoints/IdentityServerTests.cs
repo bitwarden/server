@@ -352,6 +352,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     }
 
 
+    // TODO: use this as example to call send token endpoint
     [Theory, BitAutoData]
     public async Task TokenEndpoint_GrantTypeClientCredentials_AsOrganization_Success(Organization organization, Bit.Core.Entities.OrganizationApiKey organizationApiKey)
     {

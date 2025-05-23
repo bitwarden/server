@@ -174,6 +174,9 @@ public class CurrentContext : ICurrentContext
             ServiceAccountOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
         }
 
+        // TODO: IdentityClientType.Send should maybe be wired up here. Have further discussion with Justin
+        // Create an ExtensionMethod on HttpContext to get the send id from the subject claim
+
         DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
 
         if (Enum.TryParse(GetClaimValue(claimsDict, Claims.DeviceType), out DeviceType deviceType))
