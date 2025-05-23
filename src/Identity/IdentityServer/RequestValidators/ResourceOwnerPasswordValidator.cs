@@ -64,12 +64,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
 
     public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
     {
-        if (!AuthEmailHeaderIsValid(context))
-        {
-            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
-                "Auth-Email header invalid.");
-            return;
-        }
 
         var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
         // We want to keep this device around incase the device is new for the user
@@ -168,29 +162,4 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         return context.Result.Subject;
     }
 
-    private bool AuthEmailHeaderIsValid(ResourceOwnerPasswordValidationContext context)
-    {
-        if (_currentContext.HttpContext.Request.Headers.TryGetValue("Auth-Email", out var authEmailHeader))
-        {
-            try
-            {
-                var authEmailDecoded = CoreHelpers.Base64UrlDecodeString(authEmailHeader);
-                if (authEmailDecoded != context.UserName)
-                {
-                    return false;
-                }
-            }
-            catch (Exception e) when (e is InvalidOperationException || e is FormatException)
-            {
-                // Invalid B64 encoding
-                return false;
-            }
-        }
-        else
-        {
-            return false;
-        }
-
-        return true;
-    }
 }

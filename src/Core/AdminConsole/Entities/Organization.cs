@@ -325,5 +325,6 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         SmServiceAccounts = license.SmServiceAccounts;
         UseRiskInsights = license.UseRiskInsights;
         UseOrganizationDomains = license.UseOrganizationDomains;
+        UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies;
     }
 }
