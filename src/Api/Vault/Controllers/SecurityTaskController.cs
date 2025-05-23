@@ -1,9 +1,7 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
-using Bit.Core;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
