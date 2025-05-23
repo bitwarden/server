@@ -221,6 +221,19 @@
             }
         },
         {
+          "label": "buildUnified",
+          "hide": false,
+          "command": "dotnet",
+          "type": "process",
+          "args": [
+            "build",
+            "${workspaceFolder}/src/Unified/Unified.csproj",
+            "/property:GenerateFullPaths=true",
+            "/consoleloggerparameters:NoSummary"
+          ],
+          "problemMatcher": "$msCompile",
+        },
+        {
             "label": "test",
             "type": "shell",
             "command": "dotnet test",
