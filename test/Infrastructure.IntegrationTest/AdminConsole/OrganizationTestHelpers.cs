@@ -56,6 +56,17 @@ public static class OrganizationTestHelpers
             Type = OrganizationUserType.Owner
         });
 
+    public static Task<OrganizationUser> CreateTestOrganizationUserInviteAsync(
+        this IOrganizationUserRepository organizationUserRepository,
+        Organization organization)
+        => organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = null, // Invites are not linked to a UserId
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.Owner
+        });
+
     public static Task<Group> CreateTestGroupAsync(
         this IGroupRepository groupRepository,
         Organization organization,
@@ -63,4 +74,14 @@ public static class OrganizationTestHelpers
         => groupRepository.CreateAsync(
             new Group { OrganizationId = organization.Id, Name = $"{identifier} {Guid.NewGuid()}" }
         );
+
+    public static Task<Collection> CreateTestCollectionAsync(
+        this ICollectionRepository collectionRepository,
+        Organization organization,
+        string identifier = "test")
+    => collectionRepository.CreateAsync(new Collection
+    {
+        OrganizationId = organization.Id,
+        Name = $"{identifier} {Guid.NewGuid()}"
+    });
 }
