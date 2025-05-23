@@ -276,7 +276,7 @@ public class RestoreOrganizationUserCommand(
             if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
             {
                 var requirement = await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(userId);
-                twoFactorCompliant = requirement.CanBeRestored(userHasTwoFactorEnabled, orgUser.OrganizationId);
+                twoFactorCompliant = !requirement.IsTwoFactorRequiredForOrganization(orgUser.OrganizationId);
             }
             else
             {

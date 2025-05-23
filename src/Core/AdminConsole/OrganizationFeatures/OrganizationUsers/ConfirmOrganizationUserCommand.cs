@@ -194,14 +194,14 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     {
         if (userTwoFactorEnabled)
         {
-            // If the user has two-step login enabled, we skip checking the 2FA policies
+            // If the user has two-step login enabled, we skip checking the 2FA policy
             return;
         }
 
-        var requirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
-        var canBeConfirmed = requirement.CanBeConfirmed(userTwoFactorEnabled, organizationId);
+        var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
+        var twoFactorRequired = twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId);
 
-        if (!canBeConfirmed)
+        if (twoFactorRequired)
         {
             throw new BadRequestException("User does not have two-step login enabled.");
         }

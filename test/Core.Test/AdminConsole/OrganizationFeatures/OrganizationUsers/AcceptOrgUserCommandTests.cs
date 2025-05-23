@@ -253,10 +253,6 @@ public class AcceptOrgUserCommandTests
 
         await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
 
-        await sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .DidNotReceiveWithAnyArgs()
-            .GetAsync<RequireTwoFactorPolicyRequirement>(default);
-
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.Status == OrganizationUserStatusType.Accepted));

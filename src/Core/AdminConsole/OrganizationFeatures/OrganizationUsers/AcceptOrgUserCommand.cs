@@ -246,17 +246,10 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     /// <exception cref="BadRequestException">Thrown if the user does not have two-step login enabled.</exception>
     private async Task ValidateTwoFactorAuthenticationPolicyAsync(User user, Guid organizationId)
     {
-        var userTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
-        if (userTwoFactorEnabled)
-        {
-            // If the user has two-step login enabled, we skip checking the 2FA policies
-            return;
-        }
+        var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
+        var twoFactorRequiredForOrganization = twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId);
 
-        var requirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
-        var canAcceptInvitation = requirement.CanAcceptInvitation(userTwoFactorEnabled, organizationId);
-
-        if (!canAcceptInvitation)
+        if (twoFactorRequiredForOrganization && !await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
         {
             throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
         }

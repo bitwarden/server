@@ -16,53 +16,20 @@ public class RequireTwoFactorPolicyRequirement : IPolicyRequirement
     }
 
     /// <summary>
-    /// Determines if the user can accept an invitation to an organization.
+    /// Checks if two-factor authentication is required for the organization due to an active policy.
     /// </summary>
-    /// <param name="twoFactorEnabled">Whether the user has two-step login enabled.</param>
-    /// <param name="organizationId">The ID of the organization.</param>
-    /// <returns>True if the user can accept the invitation, false otherwise.</returns>
-    public bool CanAcceptInvitation(bool twoFactorEnabled, Guid organizationId) =>
-        twoFactorEnabled ||
-        !_policyDetails.Any(p => p.OrganizationId == organizationId &&
-            (p.OrganizationUserStatus is
-                OrganizationUserStatusType.Invited or
-                OrganizationUserStatusType.Accepted or
-                OrganizationUserStatusType.Confirmed));
-
+    /// <param name="organizationId">The ID of the organization to check.</param>
+    /// <returns>True if two-factor authentication is required for the organization, false otherwise.</returns>
+    /// <remarks>
+    /// This does not check the user's membership status.
+    /// </remarks>
+    public bool IsTwoFactorRequiredForOrganization(Guid organizationId) =>
+        _policyDetails.Any(p => p.OrganizationId == organizationId);
 
     /// <summary>
-    /// Determines if the user can be confirmed in an organization.
+    /// Gets the active two-factor authentication policies for active memberships.
     /// </summary>
-    /// <param name="twoFactorEnabled">Whether the user has two-step login enabled.</param>
-    /// <param name="organizationId">The ID of the organization.</param>
-    /// <returns>True if the user can be confirmed, false otherwise.</returns>
-    public bool CanBeConfirmed(bool twoFactorEnabled, Guid organizationId) =>
-        twoFactorEnabled ||
-        !_policyDetails.Any(p => p.OrganizationId == organizationId &&
-            (p.OrganizationUserStatus is
-                OrganizationUserStatusType.Accepted or
-                OrganizationUserStatusType.Confirmed));
-
-
-    /// <summary>
-    /// Determines if the user can be restored in an organization.
-    /// </summary>
-    /// <param name="twoFactorEnabled">Whether the user has two-step login enabled.</param>
-    /// <param name="organizationId">The ID of the organization.</param>
-    /// <returns>True if the user can be restored, false otherwise.</returns>
-    public bool CanBeRestored(bool twoFactorEnabled, Guid organizationId) =>
-        twoFactorEnabled ||
-        !_policyDetails.Any(p => p.OrganizationId == organizationId &&
-            (p.OrganizationUserStatus is
-                OrganizationUserStatusType.Revoked or
-                OrganizationUserStatusType.Invited or
-                OrganizationUserStatusType.Accepted or
-                OrganizationUserStatusType.Confirmed));
-
-    /// <summary>
-    /// Gets the two-factor policies for active memberships.
-    /// </summary>
-    /// <returns>The two-factor policies for active memberships.</returns>
+    /// <returns>The active two-factor authentication policies for active memberships.</returns>
     public IEnumerable<PolicyDetails> TwoFactorPoliciesForActiveMemberships =>
         _policyDetails.Where(p => p.OrganizationUserStatus is
                 OrganizationUserStatusType.Accepted or
