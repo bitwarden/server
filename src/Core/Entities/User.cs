@@ -36,6 +36,11 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public string? TwoFactorRecoveryCode { get; set; }
     public string? EquivalentDomains { get; set; }
     public string? ExcludedGlobalEquivalentDomains { get; set; }
+    /// <summary>
+    /// The Account Revision Date is used to check if new sync needs to occur. It should be updated
+    /// whenever a change is made that affects a client's sync data; for example, updating their vault or
+    /// organization membership.
+    /// </summary>
     public DateTime AccountRevisionDate { get; set; } = DateTime.UtcNow;
     public string? Key { get; set; }
     public string? PublicKey { get; set; }
