@@ -1,9 +1,9 @@
 ﻿using AutoFixture;
+using Bit.Core.Dirt.Reports.Entities;
+using Bit.Core.Dirt.Reports.ReportFeatures;
+using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
+using Bit.Core.Dirt.Reports.Repositories;
 using Bit.Core.Exceptions;
-using Bit.Core.Tools.Entities;
-using Bit.Core.Tools.ReportFeatures;
-using Bit.Core.Tools.ReportFeatures.Requests;
-using Bit.Core.Tools.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

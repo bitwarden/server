@@ -1,4 +1,4 @@
-﻿namespace Bit.Api.Tools.Models;
+﻿namespace Bit.Api.Dirt.Models;
 
 public class PasswordHealthReportApplicationModel
 {

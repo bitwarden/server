@@ -1,6 +1,6 @@
-﻿using Bit.Core.Tools.Models.Data;
+﻿using Bit.Core.Dirt.Reports.Models.Data;
 
-namespace Bit.Api.Tools.Models.Response;
+namespace Bit.Api.Dirt.Models.Response;
 
 public class MemberCipherDetailsResponseModel
 {
