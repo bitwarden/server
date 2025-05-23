@@ -28,7 +28,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Send_Update]
     @Disabled BIT,
     @HideEmail BIT,
     @CipherId UNIQUEIDENTIFIER = NULL,
-    @Emails NVARCHAR(1024) = NULL,
+    @Emails NVARCHAR(1024) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -80,7 +80,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Send_Create]
     @Disabled BIT,
     @HideEmail BIT,
     @CipherId UNIQUEIDENTIFIER = NULL,
-    @Emails NVARCHAR(1024) = NULL,
+    @Emails NVARCHAR(1024) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
