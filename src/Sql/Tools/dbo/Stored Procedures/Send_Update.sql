@@ -6,7 +6,6 @@
     @Data VARCHAR(MAX),
     @Key VARCHAR(MAX),
     @Password NVARCHAR(300),
-    @Emails NVARCHAR(1024) = NULL,
     @MaxAccessCount INT,
     @AccessCount INT,
     @CreationDate DATETIME2(7),
@@ -15,7 +14,8 @@
     @DeletionDate DATETIME2(7),
     @Disabled BIT,
     @HideEmail BIT,
-    @CipherId UNIQUEIDENTIFIER = NULL
+    @CipherId UNIQUEIDENTIFIER = NULL,
+    @Emails NVARCHAR(1024) = NULL
 AS
 BEGIN
     SET NOCOUNT ON

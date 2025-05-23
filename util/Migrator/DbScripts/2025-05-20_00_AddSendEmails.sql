@@ -1,10 +1,17 @@
 -- Add `Emails` field that stores a comma-separated list of email addresses for
 -- email/OTP authentication to table and write methods. The read methods
 -- don't need to be updated because they all use `*`.
-ALTER TABLE [dbo].[Organization] ADD [Emails] NVARCHAR(1024) NULL;
+
+IF (EXISTS (SELECT *
+            FROM  INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_SCHEMA = 'dbo'
+            AND   TABLE_NAME = 'Send'))
+BEGIN
+    ALTER TABLE [dbo].[Send] ADD [Emails] NVARCHAR(1024) NULL;
+END
 GO
 
-CREATE OR ALTER  PROCEDURE [dbo].[Send_Update]
+CREATE OR ALTER PROCEDURE [dbo].[Send_Update]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -54,8 +61,9 @@ BEGIN
     END
     -- TODO: OrganizationId bump?
 END
+GO
 
-CREATE OR ALTER  PROCEDURE [dbo].[Send_Create]
+CREATE OR ALTER PROCEDURE [dbo].[Send_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -126,3 +134,4 @@ BEGIN
     END
     -- TODO: OrganizationId bump?
 END
+GO

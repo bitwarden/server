@@ -6,9 +6,6 @@
     @Data VARCHAR(MAX),
     @Key VARCHAR(MAX),
     @Password NVARCHAR(300),
---  FIXME: remove null default value once this argument has been
---         in 2 server releases
-    @Emails NVARCHAR(1024) = NULL,
     @MaxAccessCount INT,
     @AccessCount INT,
     @CreationDate DATETIME2(7),
@@ -17,7 +14,10 @@
     @DeletionDate DATETIME2(7),
     @Disabled BIT,
     @HideEmail BIT,
-    @CipherId UNIQUEIDENTIFIER = NULL
+    @CipherId UNIQUEIDENTIFIER = NULL,
+--  FIXME: remove null default value once this argument has been
+--         in 2 server releases
+    @Emails NVARCHAR(1024) = NULL,
 AS
 BEGIN
     SET NOCOUNT ON
