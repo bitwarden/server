@@ -347,7 +347,7 @@ public class UserServiceTests
         SutProvider<UserService> sutProvider, Guid userId, Organization organization)
     {
         organization.Enabled = true;
-        organization.UseSso = true;
+        organization.UseOrganizationDomains = true;
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByVerifiedUserEmailDomainAsync(userId)
@@ -362,7 +362,7 @@ public class UserServiceTests
         SutProvider<UserService> sutProvider, Guid userId, Organization organization)
     {
         organization.Enabled = false;
-        organization.UseSso = true;
+        organization.UseOrganizationDomains = true;
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByVerifiedUserEmailDomainAsync(userId)
@@ -373,11 +373,11 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task IsClaimedByAnyOrganizationAsync_WithOrganizationUseSsoFalse_ReturnsFalse(
+    public async Task IsClaimedByAnyOrganizationAsync_WithOrganizationUseOrganizationDomaisFalse_ReturnsFalse(
         SutProvider<UserService> sutProvider, Guid userId, Organization organization)
     {
         organization.Enabled = true;
-        organization.UseSso = false;
+        organization.UseOrganizationDomains = false;
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByVerifiedUserEmailDomainAsync(userId)

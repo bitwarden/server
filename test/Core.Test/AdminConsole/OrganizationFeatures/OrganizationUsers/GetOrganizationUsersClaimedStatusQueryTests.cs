@@ -25,13 +25,13 @@ public class GetOrganizationUsersClaimedStatusQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetUsersOrganizationManagementStatusAsync_WithUseSsoEnabled_Success(
+    public async Task GetUsersOrganizationManagementStatusAsync_WithUseOrganizationDomainsEnabled_Success(
         Organization organization,
         ICollection<OrganizationUser> usersWithClaimedDomain,
         SutProvider<GetOrganizationUsersClaimedStatusQuery> sutProvider)
     {
         organization.Enabled = true;
-        organization.UseSso = true;
+        organization.UseOrganizationDomains = true;
 
         var userIdWithoutClaimedDomain = Guid.NewGuid();
         var userIdsToCheck = usersWithClaimedDomain.Select(u => u.Id).Concat(new List<Guid> { userIdWithoutClaimedDomain }).ToList();
@@ -51,13 +51,13 @@ public class GetOrganizationUsersClaimedStatusQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetUsersOrganizationManagementStatusAsync_WithUseSsoDisabled_ReturnsAllFalse(
+    public async Task GetUsersOrganizationManagementStatusAsync_WithUseOrganizationDomainsDisabled_ReturnsAllFalse(
         Organization organization,
         ICollection<OrganizationUser> usersWithClaimedDomain,
         SutProvider<GetOrganizationUsersClaimedStatusQuery> sutProvider)
     {
         organization.Enabled = true;
-        organization.UseSso = false;
+        organization.UseOrganizationDomains = false;
 
         var userIdWithoutClaimedDomain = Guid.NewGuid();
         var userIdsToCheck = usersWithClaimedDomain.Select(u => u.Id).Concat(new List<Guid> { userIdWithoutClaimedDomain }).ToList();

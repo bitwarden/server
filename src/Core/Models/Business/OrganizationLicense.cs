@@ -84,6 +84,7 @@ public class OrganizationLicense : ILicense
         SmSeats = org.SmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
         UseRiskInsights = org.UseRiskInsights;
+        UseOrganizationDomains = org.UseOrganizationDomains;
 
         // Deprecated. Left for backwards compatibility with old license versions.
         LimitCollectionCreationDeletion = org.LimitCollectionCreation || org.LimitCollectionDeletion;
@@ -195,10 +196,10 @@ public class OrganizationLicense : ILicense
     /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
     /// getting out of date license errors
     /// </remarks>
-    public const int CurrentLicenseFileVersion = 14;
+    public const int CurrentLicenseFileVersion = 15;
     private bool ValidLicenseVersion
     {
-        get => Version is >= 1 and <= 15;
+        get => Version is >= 1 and <= 16;
     }
 
     public byte[] GetDataBytes(bool forHash = false)
@@ -244,6 +245,8 @@ public class OrganizationLicense : ILicense
                     (Version >= 14 || !p.Name.Equals(nameof(LimitCollectionCreationDeletion))) &&
                     // AllowAdminAccessToAllCollectionItems was added in Version 15
                     (Version >= 15 || !p.Name.Equals(nameof(AllowAdminAccessToAllCollectionItems))) &&
+                    // UseOrganizationDomains was added in Version 16
+                    (Version >= 16 || !p.Name.Equals(nameof(UseOrganizationDomains))) &&
                     (
                         !forHash ||
                         (
@@ -252,7 +255,10 @@ public class OrganizationLicense : ILicense
                             !p.Name.Equals(nameof(Refresh))
                         )
                     ) &&
-                    !p.Name.Equals(nameof(UseRiskInsights)))
+                    // any new fields added need to be added here so that they're ignored
+                    !p.Name.Equals(nameof(UseRiskInsights)) &&
+                    !p.Name.Equals(nameof(UseAdminSponsoredFamilies)) &&
+                    !p.Name.Equals(nameof(UseOrganizationDomains)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");
@@ -582,6 +588,11 @@ public class OrganizationLicense : ILicense
             * are no longer used and are intentionally excluded from
             * validation.
             */
+
+        if (valid && Version >= 16)
+        {
+            valid = organization.UseOrganizationDomains;
+        }
 
         return valid;
     }
