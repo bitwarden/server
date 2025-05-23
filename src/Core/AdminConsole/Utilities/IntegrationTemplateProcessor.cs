@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿#nullable enable
+
+using System.Text.RegularExpressions;
 
 namespace Bit.Core.AdminConsole.Utilities;
 
@@ -9,7 +11,7 @@ public static partial class IntegrationTemplateProcessor
 
     public static string ReplaceTokens(string template, object values)
     {
-        if (string.IsNullOrEmpty(template) || values == null)
+        if (string.IsNullOrEmpty(template))
         {
             return template;
         }

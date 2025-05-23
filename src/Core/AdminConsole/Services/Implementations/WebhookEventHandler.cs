@@ -1,8 +1,8 @@
 ﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Bit.Core.AdminConsole.Models.Data.Integrations;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data.Integrations;
 using Bit.Core.Repositories;
 
 #nullable enable
@@ -25,7 +25,7 @@ public class WebhookEventHandler(
     protected override async Task ProcessEventIntegrationAsync(JsonObject mergedConfiguration,
         string renderedTemplate)
     {
-        var config = mergedConfiguration.Deserialize<WebhookIntegrationConfigurationDetils>();
+        var config = mergedConfiguration.Deserialize<WebhookIntegrationConfigurationDetails>();
         if (config is null || string.IsNullOrEmpty(config.url))
         {
             return;

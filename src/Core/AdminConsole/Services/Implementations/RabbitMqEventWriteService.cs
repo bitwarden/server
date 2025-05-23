@@ -18,7 +18,7 @@ public class RabbitMqEventWriteService : IEventWriteService, IAsyncDisposable
             UserName = globalSettings.EventLogging.RabbitMq.Username,
             Password = globalSettings.EventLogging.RabbitMq.Password
         };
-        _exchangeName = globalSettings.EventLogging.RabbitMq.ExchangeName;
+        _exchangeName = globalSettings.EventLogging.RabbitMq.EventExchangeName;
 
         _lazyConnection = new Lazy<Task<IConnection>>(CreateConnectionAsync);
     }
