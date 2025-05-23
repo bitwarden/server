@@ -151,6 +151,16 @@ public class CiphersController : Controller
     public async Task<CipherResponseModel> Post([FromBody] CipherRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
+
+        // Validate the model was encrypted for the posting user
+        if (model.EncryptedFor != null)
+        {
+            if (model.EncryptedFor != user.Id)
+            {
+                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+            }
+        }
+
         var cipher = model.ToCipherDetails(user.Id);
         if (cipher.OrganizationId.HasValue && !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
         {
@@ -170,6 +180,16 @@ public class CiphersController : Controller
     public async Task<CipherResponseModel> PostCreate([FromBody] CipherCreateRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
+
+        // Validate the model was encrypted for the posting user
+        if (model.Cipher.EncryptedFor != null)
+        {
+            if (model.Cipher.EncryptedFor != user.Id)
+            {
+                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+            }
+        }
+
         var cipher = model.Cipher.ToCipherDetails(user.Id);
         if (cipher.OrganizationId.HasValue && !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
         {
@@ -192,6 +212,16 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
+
+        // Validate the model was encrypted for the posting user
+        if (model.Cipher.EncryptedFor != null)
+        {
+            if (model.Cipher.EncryptedFor != userId)
+            {
+                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+            }
+        }
+
         await _cipherService.SaveAsync(cipher, userId, model.Cipher.LastKnownRevisionDate, model.CollectionIds, true, false);
 
         var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
@@ -207,6 +237,15 @@ public class CiphersController : Controller
         if (cipher == null)
         {
             throw new NotFoundException();
+        }
+
+        // Validate the model was encrypted for the posting user
+        if (model.EncryptedFor != null)
+        {
+            if (model.EncryptedFor != user.Id)
+            {
+                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+            }
         }
 
         ValidateClientVersionForFido2CredentialSupport(cipher);
@@ -236,6 +275,15 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
+
+        // Validate the model was encrypted for the posting user
+        if (model.EncryptedFor != null)
+        {
+            if (model.EncryptedFor != userId)
+            {
+                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+            }
+        }
 
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
@@ -658,6 +706,15 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        // Validate the model was encrypted for the posting user
+        if (model.Cipher.EncryptedFor != null)
+        {
+            if (model.Cipher.EncryptedFor != user.Id)
+            {
+                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+            }
+        }
+
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
         var original = cipher.Clone();
@@ -1018,6 +1075,18 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: false);
         var ciphersDict = ciphers.ToDictionary(c => c.Id);
+
+        // Validate the model was encrypted for the posting user
+        foreach (var cipher in model.Ciphers)
+        {
+            if (cipher.EncryptedFor != null)
+            {
+                if (cipher.EncryptedFor != userId)
+                {
+                    throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+                }
+            }
+        }
 
         var shareCiphers = new List<(Cipher, DateTime?)>();
         foreach (var cipher in model.Ciphers)
