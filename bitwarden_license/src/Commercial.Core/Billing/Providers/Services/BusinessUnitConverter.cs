@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using System.Diagnostics.CodeAnalysis;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -27,7 +26,6 @@ using Stripe;
 
 namespace Bit.Commercial.Core.Billing.Providers.Services;
 
-[RequireFeature(FeatureFlagKeys.PM18770_EnableOrganizationBusinessUnitConversion)]
 public class BusinessUnitConverter(
     IDataProtectionProvider dataProtectionProvider,
     GlobalSettings globalSettings,
