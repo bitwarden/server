@@ -85,7 +85,7 @@ services:
       - mariadb
 
   idp:
-    image: kenchan0130/simplesamlphp:1.19.8
+    image: kenchan0130/simplesamlphp:1.19.9
     container_name: idp
     ports:
       - "8090:8080"
