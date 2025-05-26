@@ -16,6 +16,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -1336,18 +1337,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<IEnumerable<Organization>> GetOrganizationsClaimingUserAsync(Guid userId)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
-        {
-            return Enumerable.Empty<Organization>();
-        }
-
         // Get all organizations that have verified the user's email domain.
         var organizationsWithVerifiedUserEmailDomain = await _organizationRepository.GetByVerifiedUserEmailDomainAsync(userId);
 
         // Organizations must be enabled and able to have verified domains.
-        // TODO: Replace "UseSso" with a new organization ability like "UseOrganizationDomains" (PM-11622).
-        // Verified domains were tied to SSO, so we currently check the "UseSso" organization ability.
-        return organizationsWithVerifiedUserEmailDomain.Where(organization => organization is { Enabled: true, UseSso: true });
+        return organizationsWithVerifiedUserEmailDomain.Where(organization => organization is { Enabled: true, UseOrganizationDomains: true });
     }
 
     /// <inheritdoc cref="IsLegacyUser(string)"/>
@@ -1405,22 +1399,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
         {
             var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
-            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
-            {
-                await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-                    new RevokeOrganizationUsersRequest(
-                        p.OrganizationId,
-                        [new OrganizationUserUserDetails { Id = p.OrganizationUserId, OrganizationId = p.OrganizationId }],
-                        new SystemUser(EventSystemUser.TwoFactorDisabled)));
-                await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
-            }
-            else
-            {
-                await _removeOrganizationUserCommand.RemoveUserAsync(p.OrganizationId, user.Id);
-                await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                    organization.DisplayName(), user.Email);
-            }
-
+            await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+                new RevokeOrganizationUsersRequest(
+                    p.OrganizationId,
+                    [new OrganizationUserUserDetails { Id = p.OrganizationUserId, OrganizationId = p.OrganizationId }],
+                    new SystemUser(EventSystemUser.TwoFactorDisabled)));
+            await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
         }).ToArray();
 
         await Task.WhenAll(removeOrgUserTasks);

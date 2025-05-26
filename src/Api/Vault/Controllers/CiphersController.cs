@@ -151,6 +151,16 @@ public class CiphersController : Controller
     public async Task<CipherResponseModel> Post([FromBody] CipherRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
+
+        // Validate the model was encrypted for the posting user
+        if (model.EncryptedFor != null)
+        {
+            if (model.EncryptedFor != user.Id)
+            {
+                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+            }
+        }
+
         var cipher = model.ToCipherDetails(user.Id);
         if (cipher.OrganizationId.HasValue && !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
         {
@@ -170,6 +180,16 @@ public class CiphersController : Controller
     public async Task<CipherResponseModel> PostCreate([FromBody] CipherCreateRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
+
+        // Validate the model was encrypted for the posting user
+        if (model.Cipher.EncryptedFor != null)
+        {
+            if (model.Cipher.EncryptedFor != user.Id)
+            {
+                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+            }
+        }
+
         var cipher = model.Cipher.ToCipherDetails(user.Id);
         if (cipher.OrganizationId.HasValue && !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
         {
@@ -192,6 +212,16 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
+
+        // Validate the model was encrypted for the posting user
+        if (model.Cipher.EncryptedFor != null)
+        {
+            if (model.Cipher.EncryptedFor != userId)
+            {
+                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+            }
+        }
+
         await _cipherService.SaveAsync(cipher, userId, model.Cipher.LastKnownRevisionDate, model.CollectionIds, true, false);
 
         var response = new CipherMiniResponseModel(cipher, _globalSettings, false);
@@ -207,6 +237,15 @@ public class CiphersController : Controller
         if (cipher == null)
         {
             throw new NotFoundException();
+        }
+
+        // Validate the model was encrypted for the posting user
+        if (model.EncryptedFor != null)
+        {
+            if (model.EncryptedFor != user.Id)
+            {
+                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+            }
         }
 
         ValidateClientVersionForFido2CredentialSupport(cipher);
@@ -236,6 +275,15 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
+
+        // Validate the model was encrypted for the posting user
+        if (model.EncryptedFor != null)
+        {
+            if (model.EncryptedFor != userId)
+            {
+                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+            }
+        }
 
         ValidateClientVersionForFido2CredentialSupport(cipher);
 
@@ -315,26 +363,10 @@ public class CiphersController : Controller
     {
         var org = _currentContext.GetOrganization(organizationId);
 
-        // If we're not an "admin", we don't need to check the ciphers
-        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }))
+        // If we're not an "admin" or if we're not a provider user we don't need to check the ciphers
+        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }) || await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            // Are we a provider user? If so, we need to be sure we're not restricted
-            // Once the feature flag is removed, this check can be combined with the above
-            if (await _currentContext.ProviderUserForOrgAsync(organizationId))
-            {
-                // Provider is restricted from editing ciphers, so we're not an "admin"
-                if (_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess))
-                {
-                    return false;
-                }
-
-                // Provider is unrestricted, so we're an "admin", don't return early
-            }
-            else
-            {
-                // Not a provider or admin
-                return false;
-            }
+            return false;
         }
 
         // We know we're an "admin", now check the ciphers explicitly (in case admins are restricted)
@@ -350,26 +382,10 @@ public class CiphersController : Controller
 
         var org = _currentContext.GetOrganization(organizationId);
 
-        // If we're not an "admin", we don't need to check the ciphers
-        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }))
+        // If we're not an "admin" or if we're a provider user we don't need to check the ciphers
+        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }) || await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            // Are we a provider user? If so, we need to be sure we're not restricted
-            // Once the feature flag is removed, this check can be combined with the above
-            if (await _currentContext.ProviderUserForOrgAsync(organizationId))
-            {
-                // Provider is restricted from editing ciphers, so we're not an "admin"
-                if (_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess))
-                {
-                    return false;
-                }
-
-                // Provider is unrestricted, so we're an "admin", don't return early
-            }
-            else
-            {
-                // Not a provider or admin
-                return false;
-            }
+            return false;
         }
 
         // If the user can edit all ciphers for the organization, just check they all belong to the org
@@ -462,10 +478,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can edit all ciphers if RestrictProviderAccess is disabled
+        // Provider users cannot edit ciphers
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
+            return false;
         }
 
         return false;
@@ -485,10 +501,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can only access organization ciphers if RestrictProviderAccess is disabled
+        // Provider users cannot access organization ciphers
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
+            return false;
         }
 
         return false;
@@ -508,10 +524,10 @@ public class CiphersController : Controller
             return true;
         }
 
-        // Provider users can only access all ciphers if RestrictProviderAccess is disabled
+        // Provider users cannot access ciphers
         if (await _currentContext.ProviderUserForOrgAsync(organizationId))
         {
-            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
+            return false;
         }
 
         return false;
@@ -688,6 +704,15 @@ public class CiphersController : Controller
             !await _currentContext.OrganizationUser(new Guid(model.Cipher.OrganizationId)))
         {
             throw new NotFoundException();
+        }
+
+        // Validate the model was encrypted for the posting user
+        if (model.Cipher.EncryptedFor != null)
+        {
+            if (model.Cipher.EncryptedFor != user.Id)
+            {
+                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+            }
         }
 
         ValidateClientVersionForFido2CredentialSupport(cipher);
@@ -1051,6 +1076,18 @@ public class CiphersController : Controller
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: false);
         var ciphersDict = ciphers.ToDictionary(c => c.Id);
 
+        // Validate the model was encrypted for the posting user
+        foreach (var cipher in model.Ciphers)
+        {
+            if (cipher.EncryptedFor != null)
+            {
+                if (cipher.EncryptedFor != userId)
+                {
+                    throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+                }
+            }
+        }
+
         var shareCiphers = new List<(Cipher, DateTime?)>();
         foreach (var cipher in model.Ciphers)
         {
@@ -1086,9 +1123,8 @@ public class CiphersController : Controller
             throw new BadRequestException(ModelState);
         }
 
-        // If Account Deprovisioning is enabled, we need to check if the user is claimed by any organization.
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
+        // Check if the user is claimed by any organization.
+        if (await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
         {
             throw new BadRequestException("Cannot purge accounts owned by an organization. Contact your organization administrator for additional details.");
         }
