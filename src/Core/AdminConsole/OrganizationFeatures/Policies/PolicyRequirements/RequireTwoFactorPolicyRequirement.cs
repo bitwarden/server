@@ -22,7 +22,8 @@ public class RequireTwoFactorPolicyRequirement : IPolicyRequirement
     /// <param name="organizationId">The ID of the organization to check.</param>
     /// <returns>True if two-factor authentication is required for the organization, false otherwise.</returns>
     /// <remarks>
-    /// This does not check the user's membership status.
+    /// This should be used to check whether the member needs to have 2FA enabled before being
+    /// accepted, confirmed, or restored to the organization.
     /// </remarks>
     public bool IsTwoFactorRequiredForOrganization(Guid organizationId) =>
         _policyDetails.Any(p => p.OrganizationId == organizationId);
