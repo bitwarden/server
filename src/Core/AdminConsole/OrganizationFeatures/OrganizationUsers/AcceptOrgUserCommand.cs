@@ -246,17 +246,17 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             {
                 throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
             }
+
+            return;
         }
-        else
+
+        if (!await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
         {
-            if (!await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
+            var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
+                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
+            if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == organizationId))
             {
-                var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
-                    PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
-                if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == organizationId))
-                {
-                    throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
-                }
+                throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
             }
         }
     }

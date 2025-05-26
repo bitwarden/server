@@ -186,15 +186,15 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             {
                 throw new BadRequestException("User does not have two-step login enabled.");
             }
+
+            return;
         }
-        else
+
+        var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication))
+            .Any(p => p.OrganizationId == organizationId);
+        if (orgRequiresTwoFactor && !userTwoFactorEnabled)
         {
-            var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication))
-                .Any(p => p.OrganizationId == organizationId);
-            if (orgRequiresTwoFactor && !userTwoFactorEnabled)
-            {
-                throw new BadRequestException("User does not have two-step login enabled.");
-            }
+            throw new BadRequestException("User does not have two-step login enabled.");
         }
     }
 
