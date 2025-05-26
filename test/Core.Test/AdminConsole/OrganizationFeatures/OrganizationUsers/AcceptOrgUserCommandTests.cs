@@ -168,9 +168,6 @@ public class AcceptOrgUserCommandTests
         // Arrange
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
-        // User doesn't have 2FA enabled
-        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>().TwoFactorIsEnabledAsync(user).Returns(false);
-
         // Organization they are trying to join requires 2FA
         var twoFactorPolicy = new OrganizationUserPolicyDetails { OrganizationId = orgUser.OrganizationId };
         sutProvider.GetDependency<IPolicyService>()
@@ -198,11 +195,6 @@ public class AcceptOrgUserCommandTests
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PolicyRequirements)
             .Returns(true);
-
-        // User doesn't have 2FA enabled
-        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
-            .TwoFactorIsEnabledAsync(user)
-            .Returns(false);
 
         // Organization they are trying to join requires 2FA
         sutProvider.GetDependency<IPolicyRequirementQuery>()
@@ -237,7 +229,9 @@ public class AcceptOrgUserCommandTests
             .Returns(true);
 
         // User has 2FA enabled
-        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>().TwoFactorIsEnabledAsync(Arg.Any<User>()).Returns(true);
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user)
+            .Returns(true);
 
         // Organization they are trying to join requires 2FA
         sutProvider.GetDependency<IPolicyRequirementQuery>()
@@ -260,10 +254,9 @@ public class AcceptOrgUserCommandTests
     }
 
     [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
+    [BitAutoData]
     public async Task AcceptOrgUserAsync_WithPolicyRequirementsEnabled_UserJoiningOrgWithout2FARequirement_Succeeds(
-        bool userTwoFactorEnabled, SutProvider<AcceptOrgUserCommand> sutProvider,
+        SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
@@ -271,11 +264,6 @@ public class AcceptOrgUserCommandTests
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PolicyRequirements)
             .Returns(true);
-
-        // User 2FA status
-        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
-            .TwoFactorIsEnabledAsync(user)
-            .Returns(userTwoFactorEnabled);
 
         // Organization they are trying to join doesn't require 2FA
         sutProvider.GetDependency<IPolicyRequirementQuery>()
@@ -757,11 +745,6 @@ public class AcceptOrgUserCommandTests
         // User is not part of any organization that applies the single org policy
         sutProvider.GetDependency<IPolicyService>()
             .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
-            .Returns(false);
-
-        // User doesn't have 2FA enabled
-        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
-            .TwoFactorIsEnabledAsync(user)
             .Returns(false);
 
         // Org does not require 2FA
