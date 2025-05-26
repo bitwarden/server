@@ -227,27 +227,14 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         return await GetCountFromQuery(query);
     }
 
-    public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
+    public async Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var users = await dbContext.OrganizationUsers
+            return await dbContext.OrganizationUsers
                 .Where(ou => ou.OrganizationId == organizationId && ou.Status >= 0)
                 .CountAsync();
-
-            var sponsored = await dbContext.OrganizationSponsorships
-                .Where(os => os.SponsoringOrganizationId == organizationId &&
-                    os.IsAdminInitiated &&
-                    (os.ToDelete == false || (os.ToDelete == true && os.ValidUntil != null && os.ValidUntil > DateTime.UtcNow)) &&
-                    (os.SponsoredOrganizationId == null || (os.SponsoredOrganizationId != null && (os.ValidUntil == null || os.ValidUntil > DateTime.UtcNow))))
-                .CountAsync();
-
-            return new OrganizationSeatCounts
-            {
-                Users = users,
-                Sponsored = sponsored
-            };
         }
     }
 

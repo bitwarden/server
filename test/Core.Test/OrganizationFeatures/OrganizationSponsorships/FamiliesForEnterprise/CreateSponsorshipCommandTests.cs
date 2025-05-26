@@ -170,7 +170,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(sponsoringOrgUser.UserId.Value);
 
         // Setup for checking available seats
-        sutProvider.GetDependency<IOrganizationUserRepository>()
+        sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrg.Id)
             .Returns(new OrganizationSeatCounts
             {
@@ -323,7 +323,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         ]);
 
         // Setup for checking available seats - organization has plenty of seats
-        sutProvider.GetDependency<IOrganizationUserRepository>()
+        sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrg.Id)
             .Returns(new OrganizationSeatCounts
             {
@@ -387,7 +387,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         ]);
 
         // Setup for checking available seats - organization has no available seats
-        sutProvider.GetDependency<IOrganizationUserRepository>()
+        sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrg.Id)
             .Returns(new OrganizationSeatCounts
             {
@@ -456,7 +456,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         ]);
 
         // Setup for checking available seats - organization has no available seats
-        sutProvider.GetDependency<IOrganizationUserRepository>()
+        sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrg.Id)
             .Returns(new OrganizationSeatCounts
             {

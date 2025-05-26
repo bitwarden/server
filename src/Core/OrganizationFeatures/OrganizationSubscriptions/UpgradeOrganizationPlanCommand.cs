@@ -118,7 +118,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         if (!organization.Seats.HasValue || organization.Seats.Value > updatedPasswordManagerSeats)
         {
             var seatCounts =
-                await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+                await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
             if (seatCounts.Total > updatedPasswordManagerSeats)
             {
                 throw new BadRequestException($"Your organization has {seatCounts.Users} members and {seatCounts.Sponsored} sponsored families. " +

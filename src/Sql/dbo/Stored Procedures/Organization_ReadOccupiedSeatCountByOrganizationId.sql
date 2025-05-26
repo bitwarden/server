@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]
+CREATE PROCEDURE [dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -6,12 +6,15 @@ BEGIN
     
     SELECT
         (
+            -- Count organization users
             SELECT COUNT(1)
             FROM [dbo].[OrganizationUserView]
             WHERE OrganizationId = @OrganizationId
             AND Status >= 0 --Invited
-        ) + 
+        ) as Users,
         (
+            -- Count admin-initiated sponsorships towards the seat count
+            -- Introduced in https://bitwarden.atlassian.net/browse/PM-17772
             SELECT COUNT(1)
             FROM [dbo].[OrganizationSponsorship]
             WHERE SponsoringOrganizationId = @OrganizationId
@@ -30,6 +33,6 @@ BEGIN
                 -- ACCEPTED status: When SponsoredOrganizationId is not null and ValidUntil is null or in the future
                 (SponsoredOrganizationId IS NOT NULL AND (ValidUntil IS NULL OR ValidUntil > GETUTCDATE()))
             )
-        )
+        ) as Sponsored
 END
-GO
+GO 

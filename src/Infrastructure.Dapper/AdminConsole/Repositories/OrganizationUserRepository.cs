@@ -88,16 +88,16 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
+    public async Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var result = await connection.QueryAsync<OrganizationSeatCounts>(
+            var result = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
-            return result.SingleOrDefault() ?? new OrganizationSeatCounts();
+            return result;
         }
     }
 
