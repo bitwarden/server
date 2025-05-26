@@ -235,10 +235,16 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
+            if (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
+            {
+                // If the user has two-step login enabled, we skip checking the 2FA policy
+                return;
+            }
+
             var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
             var twoFactorRequiredForOrganization = twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId);
 
-            if (twoFactorRequiredForOrganization && !await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
+            if (twoFactorRequiredForOrganization)
             {
                 throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
             }
