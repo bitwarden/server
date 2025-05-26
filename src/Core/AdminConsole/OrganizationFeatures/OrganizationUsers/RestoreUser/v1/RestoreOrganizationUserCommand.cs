@@ -274,7 +274,7 @@ public class RestoreOrganizationUserCommand(
         // Enforce 2FA Policy of organization user is trying to join
         if (!userHasTwoFactorEnabled)
         {
-            twoFactorCompliant = await IsTwoFactorRequiredForOrganizationAsync(userId, orgUser.OrganizationId);
+            twoFactorCompliant = !await IsTwoFactorRequiredForOrganizationAsync(userId, orgUser.OrganizationId);
         }
 
         var user = await userRepository.GetByIdAsync(userId);
