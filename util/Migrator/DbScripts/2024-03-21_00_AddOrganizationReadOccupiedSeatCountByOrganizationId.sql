@@ -1,4 +1,18 @@
+-- Add IsAdminInitiated column to OrganizationSponsorship table
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationSponsorship]') AND name = 'IsAdminInitiated')
+BEGIN
+    ALTER TABLE [dbo].[OrganizationSponsorship]
+    ADD [IsAdminInitiated] BIT NOT NULL DEFAULT(0)
+END
+GO
+
 -- Add new stored procedure for organization seat counts
+IF OBJECT_ID('[dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]
+END
+GO
+
 CREATE PROCEDURE [dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
