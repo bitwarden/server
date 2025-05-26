@@ -1,11 +1,17 @@
 ALTER TABLE [dbo].[Organization] ADD [UseAdminSponsoredFamilies] bit NOT NULL CONSTRAINT [DF_Organization_UseAdminSponsoredFamilies] default (0)
     GO;
 
-ALTER TABLE [dbo].[OrganizationSponsorship] ADD [IsAdminInitiated] BIT CONSTRAINT [DF_OrganizationSponsorship_IsAdminInitiated] DEFAULT (0) NOT NULL
-    GO;
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationSponsorship]') AND name = 'IsAdminInitiated')
+BEGIN
+    ALTER TABLE [dbo].[OrganizationSponsorship] ADD [IsAdminInitiated] BIT CONSTRAINT [DF_OrganizationSponsorship_IsAdminInitiated] DEFAULT (0) NOT NULL
+END
+GO;
 
-ALTER TABLE [dbo].[OrganizationSponsorship] ADD [Notes] NVARCHAR(512) NULL
-    GO;
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationSponsorship]') AND name = 'Notes')
+BEGIN
+    ALTER TABLE [dbo].[OrganizationSponsorship] ADD [Notes] NVARCHAR(512) NULL
+END
+GO;
 
 CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
