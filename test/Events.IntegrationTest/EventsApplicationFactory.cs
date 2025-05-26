@@ -1,6 +1,7 @@
 ﻿using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
+using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
@@ -13,15 +14,18 @@ namespace Bit.Events.IntegrationTest;
 public class EventsApplicationFactory : WebApplicationFactoryBase<Startup>
 {
     private readonly IdentityApplicationFactory _identityApplicationFactory;
-    private const string _connectionString = "DataSource=:memory:";
 
-    public EventsApplicationFactory()
+    public EventsApplicationFactory() : this(new SqlServerTestDatabase())
     {
-        SqliteConnection = new SqliteConnection(_connectionString);
-        SqliteConnection.Open();
+    }
+
+    public EventsApplicationFactory(ITestDatabase db)
+    {
+        TestDatabase = db;
+        HandleDbDisposal = true;
 
         _identityApplicationFactory = new IdentityApplicationFactory();
-        _identityApplicationFactory.SqliteConnection = SqliteConnection;
+        _identityApplicationFactory.TestDatabase = TestDatabase;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
