@@ -6,7 +6,6 @@ using Bit.IntegrationTestCommon.Factories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Events.IntegrationTest;
@@ -62,11 +61,5 @@ public class EventsApplicationFactory : WebApplicationFactoryBase<Startup>
             });
 
         return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        base.Dispose(disposing);
-        SqliteConnection!.Dispose();
     }
 }
