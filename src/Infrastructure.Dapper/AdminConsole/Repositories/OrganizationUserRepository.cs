@@ -92,12 +92,12 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var result = await connection.QueryFirstOrDefaultAsync<OrganizationSeatCounts>(
+            var result = await connection.QueryAsync<OrganizationSeatCounts>(
                 "[dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
-            return result ?? new OrganizationSeatCounts();
+            return result.SingleOrDefault() ?? new OrganizationSeatCounts();
         }
     }
 
