@@ -170,8 +170,7 @@ public class UserServiceTests
         User user)
     {
         var sutProvider = new SutProvider<UserService>()
-            .WithFakeTokenProvider(user)
-            .Create();
+            .CreateWithUserServiceCustomizations(user);
 
         var context = sutProvider.GetDependency<ICurrentContext>();
         context.DeviceType = deviceType;
@@ -188,8 +187,7 @@ public class UserServiceTests
     public async Task SendNewDeviceVerificationEmailAsync_NullDeviceTypeShouldSendUnkownBrowserType(User user)
     {
         var sutProvider = new SutProvider<UserService>()
-            .WithFakeTokenProvider(user)
-            .Create();
+            .CreateWithUserServiceCustomizations(user);
 
         var context = sutProvider.GetDependency<ICurrentContext>();
         context.DeviceType = null;
@@ -266,10 +264,7 @@ public class UserServiceTests
         SetupUserAndDevice(user, shouldHavePassword);
 
         var sutProvider = new SutProvider<UserService>()
-            .WithUserPasswordStore()
-            .WithFakeTokenProvider(user)
-            .Create()
-            .FixPasswordHasherBug();
+            .CreateWithUserServiceCustomizations(user);
 
         // Setup the fake password verification
         sutProvider.GetDependency<IUserPasswordStore<User>>()
@@ -498,10 +493,7 @@ public class UserServiceTests
         SetupUserAndDevice(user, true);
 
         var sutProvider = new SutProvider<UserService>()
-            .WithUserPasswordStore()
-            .WithFakeTokenProvider(user)
-            .Create()
-            .FixPasswordHasherBug();
+            .CreateWithUserServiceCustomizations(user);
 
         // Setup the fake password verification
         sutProvider
@@ -679,7 +671,7 @@ public static class UserServiceSutProviderExtensions
     /// Arranges a fake token provider. Must call as part of a builder pattern that ends in Create(), as it modifies
     /// the SutProvider build chain.
     /// </summary>
-    public static SutProvider<UserService> WithFakeTokenProvider(this SutProvider<UserService> sutProvider, User user)
+    private static SutProvider<UserService> SetFakeTokenProvider(this SutProvider<UserService> sutProvider, User user)
     {
         var fakeUserTwoFactorProvider = Substitute.For<IUserTwoFactorTokenProvider<User>>();
 
@@ -720,14 +712,20 @@ public static class UserServiceSutProviderExtensions
         return sutProvider;
     }
 
-    public static SutProvider<UserService> WithUserPasswordStore(this SutProvider<UserService> sutProvider)
+    /// <summary>
+    /// Properly registers IUserPasswordStore as IUserStore so it's injected when the sut is initialized.
+    /// </summary>
+    /// <param name="sutProvider"></param>
+    /// <returns></returns>
+    private static SutProvider<UserService> SetUserPasswordStore(this SutProvider<UserService> sutProvider)
     {
         var substitutedUserPasswordStore = Substitute.For<IUserPasswordStore<User>>();
 
         // IUserPasswordStore must be registered under the IUserStore parameter to be properly injected
+        // because this is what the constructor expects
         sutProvider.SetDependency<IUserStore<User>>(substitutedUserPasswordStore);
 
-        // also store it under its own type for retrieval and configuration
+        // Also store it under its own type for retrieval and configuration
         sutProvider.SetDependency(substitutedUserPasswordStore);
 
         return sutProvider;
@@ -739,10 +737,22 @@ public static class UserServiceSutProviderExtensions
     /// This doesn't usually happen because our dependencies are not usually public.
     /// Call this AFTER SutProvider.Create().
     /// </summary>
-    public static SutProvider<UserService> FixPasswordHasherBug(this SutProvider<UserService> sutProvider)
+    private static SutProvider<UserService> FixPasswordHasherBug(this SutProvider<UserService> sutProvider)
     {
         // Get the configured sutProvider mock and assign it back to the public property in the base class
         sutProvider.Sut.PasswordHasher = sutProvider.GetDependency<IPasswordHasher<User>>();
         return sutProvider;
     }
+
+    /// <summary>
+    /// A helper that combines all SutProvider configuration usually required for UserService.
+    /// Call this instead of SutProvider.Create, after any additional configuration your test needs.
+    /// </summary>
+    public static SutProvider<UserService> CreateWithUserServiceCustomizations(this SutProvider<UserService> sutProvider, User user)
+        => sutProvider
+            .SetUserPasswordStore()
+            .SetFakeTokenProvider(user)
+            .Create()
+            .FixPasswordHasherBug();
+
 }
