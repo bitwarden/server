@@ -4,13 +4,10 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
-using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -18,23 +15,15 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
-using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Bit.Test.Common.Fakes;
 using Bit.Test.Common.Helpers;
-using Fido2NetLib;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
@@ -683,49 +672,6 @@ public class UserServiceTests
         {
             user.MasterPassword = null;
         }
-    }
-
-    private IUserService RebuildSut(SutProvider<UserService> sutProvider)
-    {
-        return new UserService(
-            sutProvider.GetDependency<IUserRepository>(),
-            sutProvider.GetDependency<ICipherRepository>(),
-            sutProvider.GetDependency<IOrganizationUserRepository>(),
-            sutProvider.GetDependency<IOrganizationRepository>(),
-            sutProvider.GetDependency<IOrganizationDomainRepository>(),
-            sutProvider.GetDependency<IMailService>(),
-            sutProvider.GetDependency<IPushNotificationService>(),
-            sutProvider.GetDependency<IUserStore<User>>(),
-            sutProvider.GetDependency<IOptions<IdentityOptions>>(),
-            sutProvider.GetDependency<IPasswordHasher<User>>(),
-            sutProvider.GetDependency<IEnumerable<IUserValidator<User>>>(),
-            sutProvider.GetDependency<IEnumerable<IPasswordValidator<User>>>(),
-            sutProvider.GetDependency<ILookupNormalizer>(),
-            sutProvider.GetDependency<IdentityErrorDescriber>(),
-            sutProvider.GetDependency<IServiceProvider>(),
-            sutProvider.GetDependency<ILogger<UserManager<User>>>(),
-            sutProvider.GetDependency<ILicensingService>(),
-            sutProvider.GetDependency<IEventService>(),
-            sutProvider.GetDependency<IApplicationCacheService>(),
-            sutProvider.GetDependency<IDataProtectionProvider>(),
-            sutProvider.GetDependency<IPaymentService>(),
-            sutProvider.GetDependency<IPolicyRepository>(),
-            sutProvider.GetDependency<IPolicyService>(),
-            sutProvider.GetDependency<IReferenceEventService>(),
-            sutProvider.GetDependency<IFido2>(),
-            sutProvider.GetDependency<ICurrentContext>(),
-            sutProvider.GetDependency<IGlobalSettings>(),
-            sutProvider.GetDependency<IAcceptOrgUserCommand>(),
-            sutProvider.GetDependency<IProviderUserRepository>(),
-            sutProvider.GetDependency<IStripeSyncService>(),
-            new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>(),
-            sutProvider.GetDependency<IFeatureService>(),
-            sutProvider.GetDependency<IPremiumUserBillingService>(),
-            sutProvider.GetDependency<IRemoveOrganizationUserCommand>(),
-            sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>(),
-            sutProvider.GetDependency<ITwoFactorIsEnabledQuery>(),
-            sutProvider.GetDependency<IDistributedCache>()
-            );
     }
 }
 
