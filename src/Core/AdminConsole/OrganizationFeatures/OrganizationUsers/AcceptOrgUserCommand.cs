@@ -242,9 +242,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             }
 
             var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
-            var twoFactorRequiredForOrganization = twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId);
-
-            if (twoFactorRequiredForOrganization)
+            if (twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId))
             {
                 throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
             }
