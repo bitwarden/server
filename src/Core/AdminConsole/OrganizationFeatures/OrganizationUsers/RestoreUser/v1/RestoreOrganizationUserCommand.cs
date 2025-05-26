@@ -274,20 +274,7 @@ public class RestoreOrganizationUserCommand(
         // Enforce 2FA Policy of organization user is trying to join
         if (!userHasTwoFactorEnabled)
         {
-            if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
-            {
-                var requirement = await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(userId);
-                twoFactorCompliant = !requirement.IsTwoFactorRequiredForOrganization(orgUser.OrganizationId);
-            }
-            else
-            {
-                var invitedTwoFactorPolicies = await policyService.GetPoliciesApplicableToUserAsync(userId,
-                    PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Revoked);
-                if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
-                {
-                    twoFactorCompliant = false;
-                }
-            }
+            twoFactorCompliant = await IsTwoFactorRequiredForOrganizationAsync(userId, orgUser.OrganizationId);
         }
 
         var user = await userRepository.GetByIdAsync(userId);
@@ -310,5 +297,18 @@ public class RestoreOrganizationUserCommand(
         {
             throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
         }
+    }
+
+    private async Task<bool> IsTwoFactorRequiredForOrganizationAsync(Guid userId, Guid organizationId)
+    {
+        if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            var requirement = await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(userId);
+            return requirement.IsTwoFactorRequiredForOrganization(organizationId);
+        }
+
+        var invitedTwoFactorPolicies = await policyService.GetPoliciesApplicableToUserAsync(userId,
+            PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Revoked);
+        return invitedTwoFactorPolicies.Any(p => p.OrganizationId == organizationId);
     }
 }
