@@ -1403,7 +1403,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         {
             var requirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
 
-            var removeOrgUserTasks = requirement.OrganizationsRequiringTwoFactor.Select(async o =>
+            var revokeOrgUserTasks = requirement.OrganizationsRequiringTwoFactor.Select(async o =>
             {
                 var organization = await _organizationRepository.GetByIdAsync(o.OrganizationId);
                 await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
@@ -1414,25 +1414,25 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
             }).ToArray();
 
-            await Task.WhenAll(removeOrgUserTasks);
+            await Task.WhenAll(revokeOrgUserTasks);
+
+            return;
         }
-        else
+
+        var twoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
+
+        var legacyRevokeOrgUserTasks = twoFactorPolicies.Select(async p =>
         {
-            var twoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
+            var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
+            await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+                new RevokeOrganizationUsersRequest(
+                    p.OrganizationId,
+                    [new OrganizationUserUserDetails { Id = p.OrganizationUserId, OrganizationId = p.OrganizationId }],
+                    new SystemUser(EventSystemUser.TwoFactorDisabled)));
+            await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
+        }).ToArray();
 
-            var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
-            {
-                var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
-                await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-                    new RevokeOrganizationUsersRequest(
-                        p.OrganizationId,
-                        [new OrganizationUserUserDetails { Id = p.OrganizationUserId, OrganizationId = p.OrganizationId }],
-                        new SystemUser(EventSystemUser.TwoFactorDisabled)));
-                await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
-            }).ToArray();
-
-            await Task.WhenAll(removeOrgUserTasks);
-        }
+        await Task.WhenAll(legacyRevokeOrgUserTasks);
     }
 
     public override async Task<IdentityResult> ConfirmEmailAsync(User user, string token)
