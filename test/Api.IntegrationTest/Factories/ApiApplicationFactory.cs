@@ -21,7 +21,7 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
     public ApiApplicationFactory(ITestDatabase db)
     {
         TestDatabase = db;
-        _handleDbDisposal = true;
+        HandleDbDisposal = true;
 
         _identityApplicationFactory = new IdentityApplicationFactory();
         _identityApplicationFactory.TestDatabase = TestDatabase;

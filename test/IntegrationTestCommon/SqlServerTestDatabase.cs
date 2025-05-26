@@ -3,6 +3,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Migrator;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -10,23 +11,35 @@ namespace Bit.IntegrationTestCommon;
 
 public class SqlServerTestDatabase : ITestDatabase
 {
-    public string SqlServerConnection { get; set; }
+    private string _sqlServerConnection { get; set; }
 
     public SqlServerTestDatabase()
     {
-        SqlServerConnection = "Server=localhost;Database=vault_test;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;";
+        // Grab the connection string from the Identity project user secrets
+        var identityBuilder = new ConfigurationBuilder();
+        identityBuilder.AddUserSecrets(typeof(Identity.Startup).Assembly, optional: true);
+        var identityConfig = identityBuilder.Build();
+        var identityConnectionString = identityConfig.GetSection("globalSettings:sqlServer:connectionString").Value;
+
+        // Replace the database name in the connection string to use a test database
+        var testConnectionString = new SqlConnectionStringBuilder(identityConnectionString)
+        {
+            InitialCatalog = "vault_test"
+        }.ConnectionString;
+
+        _sqlServerConnection = testConnectionString;
     }
 
     public void ModifyGlobalSettings(Dictionary<string, string> config)
     {
         config["globalSettings:databaseProvider"] = "sqlserver";
-        config["globalSettings:sqlServer:connectionString"] = SqlServerConnection;
+        config["globalSettings:sqlServer:connectionString"] = _sqlServerConnection;
     }
 
     public void AddDatabase(IServiceCollection serviceCollection)
     {
         serviceCollection.AddScoped(s => new DbContextOptionsBuilder<DatabaseContext>()
-            .UseSqlServer(SqlServerConnection)
+            .UseSqlServer(_sqlServerConnection)
             .UseApplicationServiceProvider(s)
             .Options);
     }
@@ -45,13 +58,13 @@ public class SqlServerTestDatabase : ITestDatabase
 
     public void Dispose()
     {
-        var masterConnectionString = new SqlConnectionStringBuilder(SqlServerConnection)
+        var masterConnectionString = new SqlConnectionStringBuilder(_sqlServerConnection)
         {
             InitialCatalog = "master"
         }.ConnectionString;
 
         using var connection = new SqlConnection(masterConnectionString);
-        var databaseName = new SqlConnectionStringBuilder(SqlServerConnection).InitialCatalog;
+        var databaseName = new SqlConnectionStringBuilder(_sqlServerConnection).InitialCatalog;
 
         connection.Open();
 

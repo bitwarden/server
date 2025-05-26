@@ -41,7 +41,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     private readonly List<Action<IServiceCollection>> _configureTestServices = new();
     private readonly List<Action<IConfigurationBuilder>> _configureAppConfiguration = new();
 
-    private bool _handleDbDisposal { get; set; }
+    public bool HandleDbDisposal { get; set; }
 
 
     public void SubstituteService<TService>(Action<TService> mockService)
@@ -121,7 +121,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
         if (TestDatabase == null)
         {
             TestDatabase = new SqliteTestDatabase();
-            _handleDbDisposal = true;
+            HandleDbDisposal = true;
         }
 
         var config = new Dictionary<string, string?>
@@ -185,7 +185,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
             // Add database to the service collection
             TestDatabase.AddDatabase(services);
-            if (_handleDbDisposal)
+            if (HandleDbDisposal)
             {
                 TestDatabase.Migrate(services);
             }
@@ -287,9 +287,9 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        if (_handleDbDisposal)
+        if (HandleDbDisposal)
         {
-            _handleDbDisposal = false;
+            HandleDbDisposal = false;
 
             if (TestDatabase != null)
             {
