@@ -223,14 +223,6 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         return orgUser;
     }
 
-    /// <summary>
-    /// Validates the two-factor authentication policy for the organization user.
-    /// If the policy applies to the organization, the user must have two-step login enabled.
-    /// </summary>
-    /// <param name="user">The user to validate the policy for.</param>
-    /// <param name="organizationId">The ID of the organization to validate the policy for.</param>
-    /// <exception cref="BadRequestException">Thrown if the policy applies to the organization and 
-    /// the user does not have two-step login enabled.</exception>
     private async Task ValidateTwoFactorAuthenticationPolicyAsync(User user, Guid organizationId)
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
