@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using System.Diagnostics;
+using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
@@ -7,11 +8,12 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 
 public class OrganizationUserRepository : Repository<Core.Entities.OrganizationUser, OrganizationUser, Guid>, IOrganizationUserRepository
 {
@@ -445,15 +447,23 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async override Task ReplaceAsync(Core.Entities.OrganizationUser organizationUser)
+    public override async Task ReplaceAsync(Core.Entities.OrganizationUser organizationUser)
     {
         await base.ReplaceAsync(organizationUser);
-        using (var scope = ServiceScopeFactory.CreateScope())
+
+        // Only bump account revision dates for confirmed OrgUsers,
+        // as this is the only status that receives sync data from the organization
+        if (organizationUser.Status is not OrganizationUserStatusType.Confirmed)
         {
-            var dbContext = GetDatabaseContext(scope);
-            await dbContext.UserBumpAccountRevisionDateAsync(organizationUser.UserId.GetValueOrDefault());
-            await dbContext.SaveChangesAsync();
+            return;
         }
+
+        Debug.Assert(organizationUser.UserId is not null, "OrganizationUser is confirmed but does not have a UserId.");
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        await dbContext.UserBumpAccountRevisionDateAsync(organizationUser.UserId.Value);
+        await dbContext.SaveChangesAsync();
     }
 
     public async Task ReplaceAsync(Core.Entities.OrganizationUser obj, IEnumerable<CollectionAccessSelection> requestedCollections)
