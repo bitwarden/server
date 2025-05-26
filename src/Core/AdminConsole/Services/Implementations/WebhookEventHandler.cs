@@ -1,8 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json;
-using Bit.Core.AdminConsole.Utilities;
+using System.Text.Json.Nodes;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Integrations;
 using Bit.Core.Repositories;
 
@@ -12,46 +11,28 @@ namespace Bit.Core.Services;
 
 public class WebhookEventHandler(
     IHttpClientFactory httpClientFactory,
+    IUserRepository userRepository,
+    IOrganizationRepository organizationRepository,
     IOrganizationIntegrationConfigurationRepository configurationRepository)
-    : IEventMessageHandler
+    : IntegrationEventHandlerBase(userRepository, organizationRepository, configurationRepository)
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(HttpClientName);
 
     public const string HttpClientName = "WebhookEventHandlerHttpClient";
 
-    public async Task HandleEventAsync(EventMessage eventMessage)
+    protected override IntegrationType GetIntegrationType() => IntegrationType.Webhook;
+
+    protected override async Task ProcessEventIntegrationAsync(JsonObject mergedConfiguration,
+        string renderedTemplate)
     {
-        var organizationId = eventMessage.OrganizationId ?? Guid.Empty;
-        var configurations = await configurationRepository.GetConfigurationDetailsAsync(
-            organizationId,
-            IntegrationType.Webhook,
-            eventMessage.Type);
-
-        foreach (var configuration in configurations)
+        var config = mergedConfiguration.Deserialize<WebhookIntegrationConfigurationDetils>();
+        if (config is null || string.IsNullOrEmpty(config.url))
         {
-            var config = configuration.MergedConfiguration.Deserialize<WebhookIntegrationConfigurationDetils>();
-            if (config is null || string.IsNullOrEmpty(config.url))
-            {
-                continue;
-            }
-
-            var content = new StringContent(
-                IntegrationTemplateProcessor.ReplaceTokens(configuration.Template, eventMessage),
-                Encoding.UTF8,
-                "application/json"
-            );
-            var response = await _httpClient.PostAsync(
-                config.url,
-                content);
-            response.EnsureSuccessStatusCode();
+            return;
         }
-    }
 
-    public async Task HandleManyEventsAsync(IEnumerable<EventMessage> eventMessages)
-    {
-        foreach (var eventMessage in eventMessages)
-        {
-            await HandleEventAsync(eventMessage);
-        }
+        var content = new StringContent(renderedTemplate, Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync(config.url, content);
+        response.EnsureSuccessStatusCode();
     }
 }

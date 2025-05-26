@@ -11,6 +11,10 @@ namespace Bit.Api.Vault.Models.Request;
 
 public class CipherRequestModel
 {
+    /// <summary>
+    /// The Id of the user that encrypted the cipher. It should always represent a UserId.
+    /// </summary>
+    public Guid? EncryptedFor { get; set; }
     public CipherType Type { get; set; }
 
     [StringLength(36)]

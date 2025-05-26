@@ -25,17 +25,16 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
         _globalSettings = globalSettings;
     }
 
-    public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
+    public Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
-        var userService = _serviceProvider.GetRequiredService<IUserService>();
-
         var webAuthnProvider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
+        // null check happens in this method
         if (!HasProperMetaData(webAuthnProvider))
         {
-            return false;
+            return Task.FromResult(false);
         }
 
-        return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.WebAuthn, user);
+        return Task.FromResult(webAuthnProvider.Enabled);
     }
 
     public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
@@ -126,6 +125,12 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
 
     }
 
+    /// <summary>
+    /// Checks if the provider has proper metadata.
+    /// This is used to determine if the provider has been properly configured.
+    /// </summary>
+    /// <param name="provider"></param>
+    /// <returns>true if metadata is present; false if empty or null</returns>
     private bool HasProperMetaData(TwoFactorProvider provider)
     {
         return provider?.MetaData?.Any() ?? false;
