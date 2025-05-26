@@ -26,7 +26,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.Services;
@@ -167,9 +166,13 @@ public class UserServiceTests
     [Theory]
     [BitAutoData(DeviceType.UnknownBrowser, "Unknown Browser")]
     [BitAutoData(DeviceType.Android, "Android")]
-    public async Task SendNewDeviceVerificationEmailAsync_DeviceMatches(DeviceType deviceType, string deviceTypeName, SutProvider<UserService> sutProvider, User user)
+    public async Task SendNewDeviceVerificationEmailAsync_DeviceMatches(DeviceType deviceType, string deviceTypeName,
+        User user)
     {
-        // WithFakeTokenProvider(sutProvider, user);
+        var sutProvider = new SutProvider<UserService>()
+            .WithFakeTokenProvider(user)
+            .Create();
+
         var context = sutProvider.GetDependency<ICurrentContext>();
         context.DeviceType = deviceType;
         context.IpAddress = "1.1.1.1";
@@ -182,9 +185,12 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendNewDeviceVerificationEmailAsync_NullDeviceTypeShouldSendUnkownBrowserType(SutProvider<UserService> sutProvider, User user)
+    public async Task SendNewDeviceVerificationEmailAsync_NullDeviceTypeShouldSendUnkownBrowserType(User user)
     {
-        // WithFakeTokenProvider(sutProvider, user);
+        var sutProvider = new SutProvider<UserService>()
+            .WithFakeTokenProvider(user)
+            .Create();
+
         var context = sutProvider.GetDependency<ICurrentContext>();
         context.DeviceType = null;
         context.IpAddress = "1.1.1.1";
@@ -259,28 +265,20 @@ public class UserServiceTests
         // Arrange
         SetupUserAndDevice(user, shouldHavePassword);
 
+        var sutProvider = new SutProvider<UserService>()
+            .WithUserPasswordStore()
+            .WithFakeTokenProvider(user)
+            .Create()
+            .FixPasswordHasherBug();
+
         // Setup the fake password verification
-        var substitutedUserPasswordStore = Substitute.For<IUserPasswordStore<User>>();
-        substitutedUserPasswordStore
+        sutProvider.GetDependency<IUserPasswordStore<User>>()
             .GetPasswordHashAsync(user, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult("hashed_test_password"));
-
-        var sutProvider = new SutProvider<UserService>()
-            // IUserPasswordStore must be registered under the IUserStore parameter
-            .SetDependency<IUserStore<User>>(substitutedUserPasswordStore)
-            .WithFakeTokenProvider(user)
-            .Create();
 
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .VerifyHashedPassword(user, "hashed_test_password", "test_password")
             .Returns(PasswordVerificationResult.Success);
-
-        // HACK: reassign public property on base class after it's overwritten by autofixture
-        sutProvider.Sut.PasswordHasher = sutProvider.GetDependency<IPasswordHasher<User>>();
-
-        // DEBUG: check the public property on the base class matches the mock in SutProvider.
-        // If you remove the HACK above, this will fail (and so will the rest of the test).
-        Assert.Equal(sutProvider.Sut.PasswordHasher, sutProvider.GetDependency<IPasswordHasher<User>>());
 
         var actualIsVerified = await sutProvider.Sut.VerifySecretAsync(user, secret);
 
@@ -493,25 +491,28 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_SendsToken_Success(
-        SutProvider<UserService> sutProvider, User user)
+    public async Task ResendNewDeviceVerificationEmail_SendsToken_Success(User user)
     {
         // Arrange
         var testPassword = "test_password";
         SetupUserAndDevice(user, true);
 
+        var sutProvider = new SutProvider<UserService>()
+            .WithUserPasswordStore()
+            .WithFakeTokenProvider(user)
+            .Create()
+            .FixPasswordHasherBug();
+
         // Setup the fake password verification
-        var substitutedUserPasswordStore = Substitute.For<IUserPasswordStore<User>>();
-        substitutedUserPasswordStore
+        sutProvider
+            .GetDependency<IUserPasswordStore<User>>()
             .GetPasswordHashAsync(user, Arg.Any<CancellationToken>())
             .Returns((ci) =>
             {
                 return Task.FromResult("hashed_test_password");
             });
 
-        sutProvider.SetDependency<IUserStore<User>>(substitutedUserPasswordStore, "store");
-
-        sutProvider.GetDependency<IPasswordHasher<User>>("passwordHasher")
+        sutProvider.GetDependency<IPasswordHasher<User>>()
             .VerifyHashedPassword(user, "hashed_test_password", testPassword)
             .Returns((ci) =>
             {
@@ -526,10 +527,7 @@ public class UserServiceTests
         context.DeviceType = DeviceType.Android;
         context.IpAddress = "1.1.1.1";
 
-        // HACK: SutProvider is being weird about not injecting the IPasswordHasher that I configured
-        var sut = sutProvider.Sut;
-
-        await sut.ResendNewDeviceVerificationEmail(user.Email, testPassword);
+        await sutProvider.Sut.ResendNewDeviceVerificationEmail(user.Email, testPassword);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
@@ -719,6 +717,32 @@ public static class UserServiceSutProviderExtensions
         // Also set the fake provider dependency so that we can retrieve it easily via GetDependency
         sutProvider.SetDependency(fakeUserTwoFactorProvider);
 
+        return sutProvider;
+    }
+
+    public static SutProvider<UserService> WithUserPasswordStore(this SutProvider<UserService> sutProvider)
+    {
+        var substitutedUserPasswordStore = Substitute.For<IUserPasswordStore<User>>();
+
+        // IUserPasswordStore must be registered under the IUserStore parameter to be properly injected
+        sutProvider.SetDependency<IUserStore<User>>(substitutedUserPasswordStore);
+
+        // also store it under its own type for retrieval and configuration
+        sutProvider.SetDependency(substitutedUserPasswordStore);
+
+        return sutProvider;
+    }
+
+    /// <summary>
+    /// This is a hack: when autofixture initializes the sut in sutProvider, it overwrites the public
+    /// PasswordHasher property with a new substitute, so it loses the configured sutProvider mock.
+    /// This doesn't usually happen because our dependencies are not usually public.
+    /// Call this AFTER SutProvider.Create().
+    /// </summary>
+    public static SutProvider<UserService> FixPasswordHasherBug(this SutProvider<UserService> sutProvider)
+    {
+        // Get the configured sutProvider mock and assign it back to the public property in the base class
+        sutProvider.Sut.PasswordHasher = sutProvider.GetDependency<IPasswordHasher<User>>();
         return sutProvider;
     }
 }
