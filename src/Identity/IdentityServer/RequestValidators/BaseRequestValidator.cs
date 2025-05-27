@@ -202,9 +202,6 @@ public abstract class BaseRequestValidator<T> where T : class
 
     /// <summary>
     /// Responsible for building the response to the client when the user has successfully authenticated.
-    /// At a high level, the building the response currently includes the following:
-    /// - Claims we'll add to the refresh token (e.g. security stamp, device identifier). Claims for the access token are built in the ProfileService.
-    /// - Custom response data, which the client will receive and use to build the account.
     /// </summary>
     /// <param name="user">The authenticated user.</param>
     /// <param name="context">The current request context.</param>
@@ -375,6 +372,15 @@ public abstract class BaseRequestValidator<T> where T : class
         return new MasterPasswordPolicyResponseModel(await PolicyService.GetMasterPasswordPolicyForUserAsync(user));
     }
 
+    /// <summary>
+    /// Builds the claims that will be added to the refresh token that will be issued to the user.
+    /// This includes the security stamp and device information if available.
+    /// The claims for the access token are added in the ProfileService, so this method is only responsible
+    /// for the refresh token claims.
+    /// </summary>
+    /// <param name="user">The authenticated user.</param>
+    /// <param name="context">The current request context.</param>
+    /// <param name="device">The device used for authentication.</param>
     private List<Claim> BuildRefreshTokenClaims(User user, T context, Device device)
     {
         var claims = new List<Claim>
@@ -390,6 +396,14 @@ public abstract class BaseRequestValidator<T> where T : class
         return claims;
     }
 
+    /// <summary>
+    /// Builds the custom response that will be sent to the client upon successful authentication, which
+    /// includes the information needed for the client to initialize the user's account in state.
+    /// </summary> 
+    /// <param name="user">The authenticated user.</param> 
+    /// <param name="context">The current request context.</param>
+    /// <param name="device">The device used for authentication.</param>
+    /// <param name="sendRememberToken">Whether to send a 2FA remember token.</param>
     private async Task<Dictionary<string, object>> BuildCustomResponse(User user, T context, Device device, bool sendRememberToken)
     {
         var customResponse = new Dictionary<string, object>();
