@@ -199,46 +199,29 @@ public abstract class BaseRequestValidator<T> where T : class
 
     protected abstract Task<bool> ValidateContextAsync(T context, CustomValidatorRequestContext validatorContext);
 
+
+    /// <summary>
+    /// Responsible for building the response to the client when the user has successfully authenticated.
+    /// At a high level, the building the response currently includes the following:
+    /// - Claims we'll add to the refresh token (e.g. security stamp, device identifier). Claims for the access token are built in the ProfileService.
+    /// - Custom response data, which the client will receive and use to build the account.
+    /// </summary>
+    /// <param name="user">The authenticated user.</param>
+    /// <param name="context">The current request context.</param>
+    /// <param name="device">The device used for authentication.</param>
+    /// <param name="sendRememberToken">Whether to send a 2FA remember token.</param>
     protected async Task BuildSuccessResultAsync(User user, T context, Device device, bool sendRememberToken)
     {
         await _eventService.LogUserEventAsync(user.Id, EventType.User_LoggedIn);
 
-        var claims = new List<Claim>();
+        var claims = this.BuildRefreshTokenClaims(user, context, device);
 
-        if (device != null)
-        {
-            claims.Add(new Claim(Claims.Device, device.Identifier));
-            claims.Add(new Claim(Claims.DeviceType, device.Type.ToString()));
-        }
-
-        var customResponse = new Dictionary<string, object>();
-        if (!string.IsNullOrWhiteSpace(user.PrivateKey))
-        {
-            customResponse.Add("PrivateKey", user.PrivateKey);
-        }
-
-        if (!string.IsNullOrWhiteSpace(user.Key))
-        {
-            customResponse.Add("Key", user.Key);
-        }
-
-        customResponse.Add("MasterPasswordPolicy", await GetMasterPasswordPolicyAsync(user));
-        customResponse.Add("ForcePasswordReset", user.ForcePasswordReset);
-        customResponse.Add("ResetMasterPassword", string.IsNullOrWhiteSpace(user.MasterPassword));
-        customResponse.Add("Kdf", (byte)user.Kdf);
-        customResponse.Add("KdfIterations", user.KdfIterations);
-        customResponse.Add("KdfMemory", user.KdfMemory);
-        customResponse.Add("KdfParallelism", user.KdfParallelism);
-        customResponse.Add("UserDecryptionOptions", await CreateUserDecryptionOptionsAsync(user, device, GetSubject(context)));
-
-        if (sendRememberToken)
-        {
-            var token = await _userManager.GenerateTwoFactorTokenAsync(user,
-                CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember));
-            customResponse.Add("TwoFactorToken", token);
-        }
+        var customResponse = await BuildCustomResponse(user, context, device, sendRememberToken);
 
         await ResetFailedAuthDetailsAsync(user);
+
+        // Once we've built the claims and custom response, we can set the success result.
+        // We delegate this to the derived classes, as the implementation varies based on the grant type.
         await SetSuccessResult(context, user, claims, customResponse);
     }
 
@@ -390,6 +373,52 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         return new MasterPasswordPolicyResponseModel(await PolicyService.GetMasterPasswordPolicyForUserAsync(user));
+    }
+
+        private List<Claim> BuildRefreshTokenClaims(User user, T context, Device device)
+    {
+          var claims = new List<Claim>
+        {
+            new Claim(Claims.SecurityStamp, user.SecurityStamp)
+        };
+        
+        if (device != null)
+        {
+            claims.Add(new Claim(Claims.Device, device.Identifier));
+            claims.Add(new Claim(Claims.DeviceType, device.Type.ToString()));
+        }
+        return claims;
+    }
+
+    private async Task<Dictionary<string, object>> BuildCustomResponse(User user,T context, Device device, bool sendRememberToken)
+    {
+        var customResponse = new Dictionary<string, object>();
+        if (!string.IsNullOrWhiteSpace(user.PrivateKey))
+        {
+            customResponse.Add("PrivateKey", user.PrivateKey);
+        }
+
+        if (!string.IsNullOrWhiteSpace(user.Key))
+        {
+            customResponse.Add("Key", user.Key);
+        }
+
+        customResponse.Add("MasterPasswordPolicy", await GetMasterPasswordPolicyAsync(user));
+        customResponse.Add("ForcePasswordReset", user.ForcePasswordReset);
+        customResponse.Add("ResetMasterPassword", string.IsNullOrWhiteSpace(user.MasterPassword));
+        customResponse.Add("Kdf", (byte)user.Kdf);
+        customResponse.Add("KdfIterations", user.KdfIterations);
+        customResponse.Add("KdfMemory", user.KdfMemory);
+        customResponse.Add("KdfParallelism", user.KdfParallelism);
+        customResponse.Add("UserDecryptionOptions", await CreateUserDecryptionOptionsAsync(user, device, GetSubject(context)));
+
+        if (sendRememberToken)
+        {
+            var token = await _userManager.GenerateTwoFactorTokenAsync(user,
+                CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember));
+            customResponse.Add("TwoFactorToken", token);
+        }
+        return customResponse;
     }
 
 #nullable enable
