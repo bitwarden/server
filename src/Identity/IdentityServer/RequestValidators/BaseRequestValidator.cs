@@ -375,13 +375,13 @@ public abstract class BaseRequestValidator<T> where T : class
         return new MasterPasswordPolicyResponseModel(await PolicyService.GetMasterPasswordPolicyForUserAsync(user));
     }
 
-        private List<Claim> BuildRefreshTokenClaims(User user, T context, Device device)
+    private List<Claim> BuildRefreshTokenClaims(User user, T context, Device device)
     {
-          var claims = new List<Claim>
+        var claims = new List<Claim>
         {
             new Claim(Claims.SecurityStamp, user.SecurityStamp)
         };
-        
+
         if (device != null)
         {
             claims.Add(new Claim(Claims.Device, device.Identifier));
@@ -390,7 +390,7 @@ public abstract class BaseRequestValidator<T> where T : class
         return claims;
     }
 
-    private async Task<Dictionary<string, object>> BuildCustomResponse(User user,T context, Device device, bool sendRememberToken)
+    private async Task<Dictionary<string, object>> BuildCustomResponse(User user, T context, Device device, bool sendRememberToken)
     {
         var customResponse = new Dictionary<string, object>();
         if (!string.IsNullOrWhiteSpace(user.PrivateKey))
