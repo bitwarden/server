@@ -1,4 +1,6 @@
-﻿using Azure.Messaging.ServiceBus;
+﻿#nullable enable
+
+using Azure.Messaging.ServiceBus;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -7,14 +9,14 @@ namespace Bit.Core.Services;
 
 public class AzureServiceBusIntegrationListenerService : BackgroundService
 {
-    private readonly ServiceBusClient _client;
+    private readonly int _maxRetries;
     private readonly string _subscriptionName;
     private readonly string _topicName;
-    private readonly int _maxRetries;
     private readonly IIntegrationHandler _handler;
+    private readonly ServiceBusClient _client;
+    private readonly ServiceBusProcessor _processor;
     private readonly ServiceBusSender _sender;
     private readonly ILogger<AzureServiceBusIntegrationListenerService> _logger;
-    private ServiceBusProcessor _processor;
 
     public AzureServiceBusIntegrationListenerService(
         IIntegrationHandler handler,
@@ -29,17 +31,12 @@ public class AzureServiceBusIntegrationListenerService : BackgroundService
         _subscriptionName = subscriptionName;
 
         _client = new ServiceBusClient(globalSettings.EventLogging.AzureServiceBus.ConnectionString);
+        _processor = _client.CreateProcessor(_topicName, _subscriptionName, new ServiceBusProcessorOptions());
         _sender = _client.CreateSender(_topicName);
     }
 
-    public override async Task StartAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        _processor = _client.CreateProcessor(_topicName, _subscriptionName, new ServiceBusProcessorOptions
-        {
-            MaxConcurrentCalls = 1,
-            AutoCompleteMessages = false
-        });
-
         _processor.ProcessMessageAsync += HandleMessageAsync;
         _processor.ProcessErrorAsync += args =>
         {
@@ -48,22 +45,12 @@ public class AzureServiceBusIntegrationListenerService : BackgroundService
         };
 
         await _processor.StartProcessingAsync(cancellationToken);
-        await base.StartAsync(cancellationToken);
-    }
-
-    protected override Task ExecuteAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        if (_processor is not null)
-        {
-            await _processor.StopProcessingAsync(cancellationToken);
-            await _processor.DisposeAsync();
-        }
-
+        await _processor.StopProcessingAsync(cancellationToken);
+        await _processor.DisposeAsync();
         await _sender.DisposeAsync();
         await _client.DisposeAsync();
         await base.StopAsync(cancellationToken);
