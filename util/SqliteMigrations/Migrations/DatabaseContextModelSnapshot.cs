@@ -668,7 +668,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ExternalId")
-                        .HasMaxLength(50)
+                        .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("OrganizationId")
