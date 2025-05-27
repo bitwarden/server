@@ -1442,6 +1442,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("Disabled")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Emails")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("timestamp with time zone");
 

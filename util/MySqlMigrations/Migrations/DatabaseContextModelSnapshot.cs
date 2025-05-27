@@ -1437,6 +1437,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("Disabled")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<string>("Emails")
+                        .HasMaxLength(1024)
+                        .HasColumnType("varchar(1024)");
+
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("datetime(6)");
 
