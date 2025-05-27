@@ -1,10 +1,11 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 
-#nullable enable
-
-namespace Bit.Core.Models.Data.Integrations;
+namespace Bit.Core.AdminConsole.Models.Data.Integrations;
 
 public class IntegrationTemplateContext(EventMessage eventMessage)
 {
