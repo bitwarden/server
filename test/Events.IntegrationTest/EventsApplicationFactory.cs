@@ -18,7 +18,7 @@ public class EventsApplicationFactory : WebApplicationFactoryBase<Startup>
     {
     }
 
-    public EventsApplicationFactory(ITestDatabase db)
+    protected EventsApplicationFactory(ITestDatabase db)
     {
         TestDatabase = db;
         HandleDbDisposal = true;

@@ -18,7 +18,7 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
     {
     }
 
-    public ApiApplicationFactory(ITestDatabase db)
+    protected ApiApplicationFactory(ITestDatabase db)
     {
         TestDatabase = db;
         HandleDbDisposal = true;
