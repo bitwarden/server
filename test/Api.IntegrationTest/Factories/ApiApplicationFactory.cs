@@ -14,7 +14,7 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
 {
     protected IdentityApplicationFactory _identityApplicationFactory;
 
-    public ApiApplicationFactory() : this(new SqlServerTestDatabase())
+    public ApiApplicationFactory() : this(new SqliteTestDatabase())
     {
     }
 
