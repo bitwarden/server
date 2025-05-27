@@ -45,6 +45,10 @@ public class EventsApplicationFactory : WebApplicationFactoryBase<Startup>
     /// </summary>
     public async Task<(string Token, string RefreshToken)> LoginWithNewAccount(string email = "integration-test@bitwarden.com", string masterPasswordHash = "master_password_hash")
     {
+        // This might be the first action in a test and since it forwards to the Identity server, we need to ensure that
+        // this server is initialized since it's responsible for seeding the database.
+        Assert.NotNull(Services);
+
         await _identityApplicationFactory.RegisterNewIdentityFactoryUserAsync(
             new RegisterFinishRequestModel
             {
