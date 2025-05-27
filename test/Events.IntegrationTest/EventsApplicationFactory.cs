@@ -14,7 +14,7 @@ public class EventsApplicationFactory : WebApplicationFactoryBase<Startup>
 {
     private readonly IdentityApplicationFactory _identityApplicationFactory;
 
-    public EventsApplicationFactory() : this(new SqlServerTestDatabase())
+    public EventsApplicationFactory() : this(new SqliteTestDatabase())
     {
     }
 
