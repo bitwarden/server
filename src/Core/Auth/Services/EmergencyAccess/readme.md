@@ -8,7 +8,7 @@ This system is affected by the Key Rotation feature. The `EmergencyAccess.KeyEnc
 ## Special Cases
 Users who use `KeyConnector` are not able to allow `Takeover` of their accounts. However, they can allow `View`.
 
-A user who is not the `OrganizationUserType.Owner` will be removed from the organization.
+When a grantee user _takes over_ a grantor user's account, the grantor user will be removed from all organizations where the grantor user is not the `OrganizationUserType.Owner`. A grantor user will not be removed from organizations if the `EmergencyAccessType` is `View`. The grantee user will only be able to `View` the grantor user's ciphers, and not any of the organization ciphers, if any exist.
 
 ## Step 1. Invitation
 

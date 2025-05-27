@@ -95,7 +95,7 @@ public class EmergencyAccessTakeoverResponseModel : ResponseModel
     /// </summary>
     /// <param name="emergencyAccess">Consumed for the Encrypted Key value</param>
     /// <param name="grantor">consumed for the KDF configuration</param>
-    /// <param name="obj">name of the objet</param>
+    /// <param name="obj">name of the object</param>
     /// <exception cref="ArgumentNullException">emergencyAccess cannot be null</exception>
     public EmergencyAccessTakeoverResponseModel(EmergencyAccess emergencyAccess, User grantor, string obj = "emergencyAccessTakeover") : base(obj)
     {

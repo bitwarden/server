@@ -76,14 +76,14 @@ public interface IEmergencyAccessService
     /// <returns>void</returns>
     Task InitiateAsync(Guid emergencyAccessId, User granteeUser);
     /// <summary>
-    /// Approves a recovery request. Set's the EmergencyAccess.Status to RecoveryApproved.
+    /// Approves a recovery request. Sets the EmergencyAccess.Status to RecoveryApproved.
     /// </summary>
     /// <param name="emergencyAccessId">emergency access id</param>
     /// <param name="grantorUser">grantor user</param>
     /// <returns>void</returns>
     Task ApproveAsync(Guid emergencyAccessId, User grantorUser);
     /// <summary>
-    /// Rejects a recovery request. Set's the EmergencyAccess.Status to Confirmed. This does not remove the emergency access entity. The
+    /// Rejects a recovery request. Sets the EmergencyAccess.Status to Confirmed. This does not remove the emergency access entity. The
     /// Grantee user can still initiate another recovery request.
     /// </summary>
     /// <param name="emergencyAccessId">emergency access id</param>
