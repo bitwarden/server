@@ -203,8 +203,8 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<Organization>(
-                "[dbo].[Organization_ReadByIds]",
-                new { Ids = ids.ToGuidIdArrayTVP() },
+                "[dbo].[Organization_ReadManyByIds]",
+                new { OrganizationIds = ids.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
