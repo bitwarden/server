@@ -29,7 +29,7 @@ jobs:
     name: Code reference collection
     runs-on: ubuntu-22.04
     needs: check-ld-secret
-    if: ${{ needs.check-ld-secret.outputs.available == 'true' }}
+    if: ${{ needs.check-ld-secret.outputs.available == 'true' && startsWith(github.ref, 'refs/heads/') }}
     permissions:
       contents: read
       pull-requests: write
@@ -44,6 +44,7 @@ jobs:
         with:
           accessToken: ${{ secrets.LD_ACCESS_TOKEN }}
           projKey: default
+          allowTags: true
 
       - name: Add label
         if: steps.collect.outputs.any-changed == 'true'
