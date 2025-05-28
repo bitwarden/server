@@ -200,15 +200,12 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
 
     public async Task<ICollection<Organization>> GetManyByIdsAsync(IEnumerable<Guid> ids)
     {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<Organization>(
-                "[dbo].[Organization_ReadManyByIds]",
-                new { OrganizationIds = ids.ToGuidIdArrayTVP() },
-                commandType: CommandType.StoredProcedure);
-
-            return results.ToList();
-        }
+        await using var connection = new SqlConnection(ConnectionString);
+        return (await connection.QueryAsync<Organization>(
+            $"[{Schema}].[{Table}_ReadManyByIds]",
+            new { OrganizationIds = ids.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure))
+            .ToList();
     }
 
     public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
