@@ -58,6 +58,11 @@ jobs:
         run: |
           docker run --detach --name mariadb --env MARIADB_ROOT_PASSWORD=mariadb-password -p 4306:3306 mariadb:10
 
+      - name: Add SQL Server 2017
+        # Use a different port than normal SQL Server
+        run: |
+          docker run --detach --name mssql-2017 --env ACCEPT_EULA=Y --env MSSQL_SA_PASSWORD=sqlserver2017-password --env MSSQL_PID=Developer -p 2433:1433 mcr.microsoft.com/mssql/server:2017-latest
+
       # I've seen the SQL Server container not be ready for commands right after starting up and just needing a bit longer to be ready
       - name: Sleep
         run: sleep 15s
@@ -84,6 +89,11 @@ jobs:
         run: 'dotnet run --project util/MsSqlMigratorUtility/ "$CONN_STR"'
         env:
           CONN_STR: "Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
+
+      - name: Migrate SQL Server 2017
+        run: 'dotnet run --project util/MsSqlMigratorUtility/ "$CONN_STR"'
+        env:
+          CONN_STR: "Server=localhost:2433;Database=vault_dev;User Id=SA;Password=sqlserver2017-password;Encrypt=True;TrustServerCertificate=True;"
 
       - name: Migrate MySQL
         working-directory: "util/MySqlMigrations"
@@ -127,6 +137,9 @@ jobs:
           # Unified MariaDB
           BW_TEST_DATABASES__4__TYPE: "MySql"
           BW_TEST_DATABASES__4__CONNECTIONSTRING: "server=localhost;port=4306;uid=root;pwd=mariadb-password;database=vault_dev;Allow User Variables=true"
+          # SQL Server 2017
+          BW_TEST_DATABASES__5__TYPE: "SqlServer"
+          BW_TEST_DATABASES__5__CONNECTIONSTRING: "Server=localhost:2433;Database=vault_dev;User Id=SA;Password=sqlserver2017-password;Encrypt=True;TrustServerCertificate=True;"
         run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
         shell: pwsh
 
@@ -145,6 +158,10 @@ jobs:
       - name: Print MSSQL Logs
         if: failure()
         run: 'docker logs $(docker ps --quiet --filter "name=mssql")'
+    
+      - name: Print MSSQL 2017 Logs
+        if: failure()
+        run: 'docker logs $(docker ps --quiet --filter "name=mssql-2017")'
 
       - name: Report test results
         uses: dorny/test-reporter@6e6a65b7a0bd2c9197df7d0ae36ac5cee784230c # v2.0.0
