@@ -93,7 +93,7 @@ jobs:
       - name: Migrate SQL Server 2017
         run: 'dotnet run --project util/MsSqlMigratorUtility/ "$CONN_STR"'
         env:
-          CONN_STR: "Server=localhost:2433;Database=vault_dev;User Id=SA;Password=sqlserver2017-password;Encrypt=True;TrustServerCertificate=True;"
+          CONN_STR: "Server=localhost,2433;Database=vault_dev;User Id=SA;Password=sqlserver2017-password;Encrypt=True;TrustServerCertificate=True;"
 
       - name: Migrate MySQL
         working-directory: "util/MySqlMigrations"
@@ -139,7 +139,7 @@ jobs:
           BW_TEST_DATABASES__4__CONNECTIONSTRING: "server=localhost;port=4306;uid=root;pwd=mariadb-password;database=vault_dev;Allow User Variables=true"
           # SQL Server 2017
           BW_TEST_DATABASES__5__TYPE: "SqlServer"
-          BW_TEST_DATABASES__5__CONNECTIONSTRING: "Server=localhost:2433;Database=vault_dev;User Id=SA;Password=sqlserver2017-password;Encrypt=True;TrustServerCertificate=True;"
+          BW_TEST_DATABASES__5__CONNECTIONSTRING: "Server=localhost,2433;Database=vault_dev;User Id=SA;Password=sqlserver2017-password;Encrypt=True;TrustServerCertificate=True;"
         run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
         shell: pwsh
 
