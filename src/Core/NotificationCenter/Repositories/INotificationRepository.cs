@@ -32,4 +32,13 @@ public interface INotificationRepository : IRepository<Notification, Guid>
     /// </returns>
     Task<PagedResult<NotificationStatusDetails>> GetByUserIdAndStatusAsync(Guid userId, ClientType clientType,
         NotificationStatusFilter? statusFilter, PageOptions pageOptions);
+
+    /// <summary>
+    /// Get non-deleted notifications by a task Id.
+    /// </summary>
+    /// <param name="taskId">The unique identifier of the task.</param>
+    /// <returns>
+    /// A collection of notifications associated with the task that are not marked as deleted.
+    /// </returns>
+    Task<IEnumerable<Notification>> GetActiveByTaskIdAsync(Guid taskId);
 }

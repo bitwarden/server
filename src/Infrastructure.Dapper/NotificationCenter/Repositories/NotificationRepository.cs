@@ -56,4 +56,21 @@ public class NotificationRepository : Repository<Notification, Guid>, INotificat
             ContinuationToken = data.Count < pageOptions.PageSize ? null : (pageNumber + 1).ToString()
         };
     }
+
+    public async Task<IEnumerable<Notification>> GetActiveByTaskIdAsync(Guid taskId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var results = await connection.QueryAsync<Notification>(
+            "[dbo].[Notification_ReadActiveByTaskId]",
+            new
+            {
+                TaskId = taskId,
+            },
+            commandType: CommandType.StoredProcedure);
+
+        var data = results.ToList();
+
+        return data;
+    }
 }

@@ -74,4 +74,20 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
             ContinuationToken = results.Count < pageOptions.PageSize ? null : (pageNumber + 1).ToString()
         };
     }
+
+    public async Task<IEnumerable<Core.NotificationCenter.Entities.Notification>> GetActiveByTaskIdAsync(Guid taskId)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        var query = from n in dbContext.Notifications
+                    join ns in dbContext.Set<NotificationStatus>()
+                        on n.Id equals ns.NotificationId
+                    where n.TaskId == taskId
+                          && ns.DeletedDate == null
+                    select n;
+
+        return await query.ToListAsync();
+    }
 }
