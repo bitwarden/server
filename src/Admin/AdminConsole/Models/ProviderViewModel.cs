@@ -19,7 +19,7 @@ public class ProviderViewModel
     {
         Provider = provider;
         UserCount = providerUsers.Count();
-        ProviderAdmins = providerUsers.Where(u => u.Type == ProviderUserType.ProviderAdmin);
+        ProviderUsers = providerUsers;
         ProviderOrganizations = organizations.Where(o => o.ProviderId == provider.Id);
 
         if (Provider.Type == ProviderType.Msp)
@@ -61,7 +61,7 @@ public class ProviderViewModel
 
     public int UserCount { get; set; }
     public Provider Provider { get; set; }
-    public IEnumerable<ProviderUserUserDetails> ProviderAdmins { get; set; }
+    public IEnumerable<ProviderUserUserDetails> ProviderUsers { get; set; }
     public IEnumerable<ProviderOrganizationOrganizationDetails> ProviderOrganizations { get; set; }
     public List<ProviderPlanViewModel> ProviderPlanViewModels { get; set; } = [];
 }
