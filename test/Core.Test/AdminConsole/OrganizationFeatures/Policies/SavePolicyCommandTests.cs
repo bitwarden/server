@@ -288,7 +288,7 @@ public class SavePolicyCommandTests
     {
         return new SutProvider<SavePolicyCommand>()
             .WithFakeTimeProvider()
-            .SetDependency(typeof(IEnumerable<IPolicyValidator>), policyValidators ?? [])
+            .SetDependency(policyValidators ?? [])
             .Create();
     }
 
