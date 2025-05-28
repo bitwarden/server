@@ -1,4 +1,4 @@
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Platform.Push;
