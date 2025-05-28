@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
+using Bit.Core.AdminConsole.Models.Data.Integrations;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data.Integrations;
 using Bit.Core.Repositories;
 
 #nullable enable
