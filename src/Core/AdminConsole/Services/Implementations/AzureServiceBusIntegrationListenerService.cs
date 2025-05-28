@@ -75,7 +75,7 @@ public class AzureServiceBusIntegrationListenerService : BackgroundService
 
             if (result.Retryable && message.RetryCount < _maxRetries)
             {
-                var scheduledTime = message.DelayUntilDate ?? DateTime.UtcNow.AddSeconds(10);
+                var scheduledTime = (DateTime)message.DelayUntilDate!;
                 var retryMsg = new ServiceBusMessage(message.ToJson())
                 {
                     Subject = args.Message.Subject,
