@@ -229,17 +229,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         return await GetCountFromQuery(query);
     }
 
-    public async Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            return await dbContext.OrganizationUsers
-                .Where(ou => ou.OrganizationId == organizationId && ou.Status >= 0)
-                .CountAsync();
-        }
-    }
-
     public async Task<int> GetCountByOrganizationIdAsync(Guid organizationId)
     {
         var query = new OrganizationUserReadCountByOrganizationIdQuery(organizationId);
