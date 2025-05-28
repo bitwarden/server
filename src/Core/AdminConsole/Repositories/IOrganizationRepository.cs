@@ -29,7 +29,7 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
 
     /// <summary>
     /// Returns the number of occupied seats for an organization.
-    /// Occupied seats are OrganizationUsers that have at least been invited.
+    /// OrganizationUsers occupy a seat, unless they are revoked.
     /// As of https://bitwarden.atlassian.net/browse/PM-17772, a seat is also occupied by a Families for Enterprise sponsorship sent by an
     /// organization admin, even if the user sent the invitation doesn't have a corresponding OrganizationUser in the Enterprise organization.
     /// </summary>
