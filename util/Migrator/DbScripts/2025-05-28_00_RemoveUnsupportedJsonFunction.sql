@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Cipher_DeleteAttachment]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_DeleteAttachment]
     @Id UNIQUEIDENTIFIER,
     @AttachmentId VARCHAR(50)
 AS
@@ -75,3 +75,4 @@ BEGIN
         EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
     END
 END
+GO
