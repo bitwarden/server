@@ -211,7 +211,7 @@ public abstract class BaseRequestValidator<T> where T : class
     {
         await _eventService.LogUserEventAsync(user.Id, EventType.User_LoggedIn);
 
-        var claims = this.BuildRefreshTokenClaims(user, context, device);
+        var claims = this.BuildSubjectClaims(user, context, device);
 
         var customResponse = await BuildCustomResponse(user, context, device, sendRememberToken);
 
@@ -373,15 +373,13 @@ public abstract class BaseRequestValidator<T> where T : class
     }
 
     /// <summary>
-    /// Builds the claims that will be added to the refresh token that will be issued to the user.
-    /// This includes the security stamp and device information if available.
-    /// The claims for the access token are added in the ProfileService, so this method is only responsible
-    /// for the refresh token claims.
+    /// Builds the claims that will be added to the Subject (also called the Principal) and available for interrogating during token validation.
+    /// This is distinct from adding claims to the access token - these claims are the responsibility of the ProfileService.
     /// </summary>
     /// <param name="user">The authenticated user.</param>
     /// <param name="context">The current request context.</param>
     /// <param name="device">The device used for authentication.</param>
-    private List<Claim> BuildRefreshTokenClaims(User user, T context, Device device)
+    private List<Claim> BuildSubjectClaims(User user, T context, Device device)
     {
         var claims = new List<Claim>
         {
