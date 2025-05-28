@@ -7,6 +7,7 @@ on:
       - "main"
       - "rc"
       - "hotfix-rc"
+      - "test-change"
   pull_request:
     types: [opened, synchronize]
   workflow_call:
