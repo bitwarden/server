@@ -374,7 +374,7 @@ public abstract class BaseRequestValidator<T> where T : class
 
     /// <summary>
     /// Builds the claims that will be added to the Subject (also called the Principal) and available for interrogating during token validation.
-    /// This is distinct from adding claims to the access token - these claims are the responsibility of the ProfileService.
+    /// These claims are supplemented by the claims in the ProfileService when the access token is returned to the client.
     /// </summary>
     /// <param name="user">The authenticated user.</param>
     /// <param name="context">The current request context.</param>
