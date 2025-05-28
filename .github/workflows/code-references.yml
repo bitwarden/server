@@ -29,7 +29,7 @@ jobs:
     name: Code reference collection
     runs-on: ubuntu-22.04
     needs: check-ld-secret
-    if: ${{ needs.check-ld-secret.outputs.available == 'true' && startsWith(github.ref, 'refs/heads/') }}
+    if: ${{ needs.check-ld-secret.outputs.available == 'true' }}
     permissions:
       contents: read
       pull-requests: write
