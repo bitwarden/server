@@ -502,11 +502,8 @@ public class UserServiceTests
                 }
             ]));
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization1.Id)
-            .Returns(organization1);
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization2.Id)
-            .Returns(organization2);
+            .GetManyByIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organization1.Id) && ids.Contains(organization2.Id)))
+            .Returns(new[] { organization1, organization2 });
         var expectedSavedProviders = JsonHelpers.LegacySerialize(new Dictionary<TwoFactorProviderType, TwoFactorProvider>(), JsonHelpers.LegacyEnumKeyResolver);
 
         await sutProvider.Sut.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
