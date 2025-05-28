@@ -373,7 +373,7 @@ public abstract class BaseRequestValidator<T> where T : class
     }
 
     /// <summary>
-    /// Builds the claims that will be added to the Subject (also called the Principal) and available for interrogating during token validation.
+    /// Builds the claims that will be stored on the persisted grant.
     /// These claims are supplemented by the claims in the ProfileService when the access token is returned to the client.
     /// </summary>
     /// <param name="user">The authenticated user.</param>
@@ -381,6 +381,10 @@ public abstract class BaseRequestValidator<T> where T : class
     /// <param name="device">The device used for authentication.</param>
     private List<Claim> BuildSubjectClaims(User user, T context, Device device)
     {
+        // We are adding the security stamp claim to the list of claims that will be stored in the persisted grant.
+        // We need this because we check for changes in the stamp to determine if we need to invalidate token refresh requests,
+        // in the `ProfileService.IsActiveAsync` method.
+        // If we don't store the security stamp in the persistend grant, we won't have the previous value to compare against.
         var claims = new List<Claim>
         {
             new Claim(Claims.SecurityStamp, user.SecurityStamp)
