@@ -61,7 +61,7 @@ jobs:
       - name: Add SQL Server 2017
         # Use a different port than normal SQL Server
         run: |
-          docker run --detach --name mssql-2017 --env ACCEPT_EULA=Y --env MSSQL_SA_PASSWORD=sqlserver2017-password --env MSSQL_PID=Developer -p 2433:1433 mcr.microsoft.com/mssql/server:2017-latest
+          docker run --detach --name sqlserver-2017 --env ACCEPT_EULA=Y --env MSSQL_SA_PASSWORD=sqlserver2017-password --env MSSQL_PID=Developer -p 2433:1433 mcr.microsoft.com/mssql/server:2017-latest
 
       # I've seen the SQL Server container not be ready for commands right after starting up and just needing a bit longer to be ready
       - name: Sleep
@@ -161,7 +161,7 @@ jobs:
     
       - name: Print MSSQL 2017 Logs
         if: failure()
-        run: 'docker logs $(docker ps --quiet --filter "name=mssql-2017")'
+        run: 'docker logs $(docker ps --quiet --filter "name=sqlserver-2017")'
 
       - name: Report test results
         uses: dorny/test-reporter@6e6a65b7a0bd2c9197df7d0ae36ac5cee784230c # v2.0.0
