@@ -60,7 +60,7 @@ public class MemberAccessCipherDetailsQuery : IMemberAccessCipherDetailsQuery
         var orgItems = await _organizationCiphersQuery.GetAllOrganizationCiphers(request.OrganizationId);
         var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUsers);
 
-        var memberAccessCipherDetails = GenerateAccessData(
+        var memberAccessCipherDetails = GenerateAccessDataParallelV2(
             orgGroups,
             orgCollectionsWithAccess,
             orgItems,
