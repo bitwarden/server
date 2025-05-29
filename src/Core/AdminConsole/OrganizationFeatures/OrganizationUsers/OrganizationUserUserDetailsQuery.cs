@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -59,12 +60,33 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     /// <returns>List of OrganizationUserUserDetails</returns>
     public async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> Get(OrganizationUserUserDetailsQueryRequest request)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.MembersGetEndpointOptimization))
+        {
+            return await Get_vNext(request);
+        }
+
         var organizationUsers = await GetOrganizationUserUserDetails(request);
 
         var organizationUsersTwoFactorEnabled = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers)).ToDictionary(u => u.user.Id);
         var organizationUsersClaimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(request.OrganizationId, organizationUsers.Select(o => o.Id));
         var responses = organizationUsers.Select(o => (o, organizationUsersTwoFactorEnabled[o.Id].twoFactorIsEnabled, organizationUsersClaimedStatus[o.Id]));
 
+
+        return responses;
+    }
+
+    private async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> Get_vNext(OrganizationUserUserDetailsQueryRequest request)
+    {
+        var organizationUsers = await GetOrganizationUserUserDetails(request);
+
+        var twoFactorTask = _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
+        var claimedStatusTask = _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(request.OrganizationId, organizationUsers.Select(o => o.Id));
+
+        await Task.WhenAll(twoFactorTask, claimedStatusTask);
+
+        var organizationUsersTwoFactorEnabled = twoFactorTask.Result.ToDictionary(u => u.user.Id);
+        var organizationUsersClaimedStatus = claimedStatusTask.Result;
+        var responses = organizationUsers.Select(o => (o, organizationUsersTwoFactorEnabled[o.Id].twoFactorIsEnabled, organizationUsersClaimedStatus[o.Id]));
 
         return responses;
     }
@@ -77,6 +99,11 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     /// <returns>List of OrganizationUserUserDetails</returns>
     public async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> GetAccountRecoveryEnrolledUsers(OrganizationUserUserDetailsQueryRequest request)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.MembersGetEndpointOptimization))
+        {
+            return await GetAccountRecoveryEnrolledUsers_vNext(request);
+        }
+
         var organizationUsers = (await GetOrganizationUserUserDetails(request))
             .Where(o => o.Status.Equals(OrganizationUserStatusType.Confirmed) && o.UsesKeyConnector == false && !String.IsNullOrEmpty(o.ResetPasswordKey));
 
@@ -88,4 +115,22 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
         return responses;
     }
 
+    private async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> GetAccountRecoveryEnrolledUsers_vNext(OrganizationUserUserDetailsQueryRequest request)
+    {
+        var organizationUsers = (await GetOrganizationUserUserDetails(request))
+            .Where(o => o.Status.Equals(OrganizationUserStatusType.Confirmed) && o.UsesKeyConnector == false && !String.IsNullOrEmpty(o.ResetPasswordKey))
+            .ToArray();
+
+        var twoFactorTask = _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
+        var claimedStatusTask = _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(request.OrganizationId, organizationUsers.Select(o => o.Id));
+
+        await Task.WhenAll(twoFactorTask, claimedStatusTask);
+
+        var organizationUsersTwoFactorEnabled = twoFactorTask.Result.ToDictionary(u => u.user.Id);
+        var organizationUsersClaimedStatus = claimedStatusTask.Result;
+        var responses = organizationUsers
+            .Select(o => (o, organizationUsersTwoFactorEnabled[o.Id].twoFactorIsEnabled, organizationUsersClaimedStatus[o.Id]));
+
+        return responses;
+    }
 }
