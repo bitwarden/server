@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using Bit.Identity.IdentityServer.ClientProviders;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
 
@@ -18,7 +19,7 @@ internal class DynamicClientStore : IClientStore
 
     public DynamicClientStore(
       IServiceProvider serviceProvider,
-      [FromKeyedServices("sm-apikey")] IClientProvider apiKeyClientProvider,
+      [FromKeyedServices(SecretsManagerApiKeyProvider.ApiKeyPrefix)] IClientProvider apiKeyClientProvider,
       StaticClientStore staticClientStore
     )
     {
@@ -46,8 +47,6 @@ internal class DynamicClientStore : IClientStore
             // Increment past the period
             var identifierName = clientIdSpan[..firstPeriod++];
 
-            // TODO: Validate some rules about the identifierName?
-
             var identifier = clientIdSpan[firstPeriod..];
 
             // The identifier is required to be non-empty
@@ -56,6 +55,7 @@ internal class DynamicClientStore : IClientStore
                 return Task.FromResult<Client?>(null);
             }
 
+            // Once identifierName is proven valid, materialize the string
             var clientBuilder = _serviceProvider.GetKeyedService<IClientProvider>(identifierName.ToString());
 
             if (clientBuilder == null)
