@@ -43,19 +43,22 @@ public class MarkNotificationsForTaskAsDeletedCommand : IMarkNotificationsForTas
                     DeletedDate = DateTime.UtcNow
                 };
 
-                var newNotificationStatus = await _notificationStatusRepository.CreateAsync(notificationStatus);
+                await _notificationStatusRepository.CreateAsync(notificationStatus);
 
-                await _pushNotificationService.PushNotificationStatusAsync(notification, newNotificationStatus);
             }
             else
             {
                 notificationStatus.DeletedDate = DateTime.UtcNow;
 
                 await _notificationStatusRepository.UpdateAsync(notificationStatus);
-
-                await _pushNotificationService.PushNotificationStatusAsync(notification, notificationStatus);
             }
+        }
 
+        // For each user, send a push notification so they can update their local tasks
+        var uniqueUserIds = notifications.Select(n => n.UserId).Where(u => u.HasValue).Distinct();
+        foreach (var userId in uniqueUserIds)
+        {
+            await _pushNotificationService.PushPendingSecurityTasksAsync((Guid)userId);
         }
     }
 }
