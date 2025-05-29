@@ -379,7 +379,7 @@ public class CipherService : ICipherService
         if (!valid || realSize > MAX_FILE_SIZE)
         {
             // File reported differs in size from that promised. Must be a rogue client. Delete Send
-            await DeleteAttachmentAsync(cipher, attachmentData);
+            await DeleteAttachmentAsync(cipher, attachmentData, false);
             return false;
         }
         // Update Send data if necessary
@@ -483,7 +483,7 @@ public class CipherService : ICipherService
             throw new NotFoundException();
         }
 
-        return await DeleteAttachmentAsync(cipher, cipher.GetAttachments()[attachmentId]);
+        return await DeleteAttachmentAsync(cipher, cipher.GetAttachments()[attachmentId], orgAdmin);
     }
 
     public async Task PurgeAsync(Guid organizationId)
@@ -877,7 +877,7 @@ public class CipherService : ICipherService
         }
     }
 
-    private async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
+    private async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(Cipher cipher, CipherAttachment.MetaData attachmentData, bool orgAdmin)
     {
         if (attachmentData == null || string.IsNullOrWhiteSpace(attachmentData.AttachmentId))
         {
@@ -891,7 +891,14 @@ public class CipherService : ICipherService
 
         // Update the revision date when an attachment is deleted
         cipher.RevisionDate = DateTime.UtcNow;
-        await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
+        if (orgAdmin)
+        {
+            await _cipherRepository.ReplaceAsync(cipher);
+        }
+        else
+        {
+            await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
+        }
 
         // push
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
@@ -1003,7 +1010,7 @@ public class CipherService : ICipherService
 
     private async Task ValidateViewPasswordUserAsync(Cipher cipher)
     {
-        if (cipher.Type != CipherType.Login || cipher.Data == null || !cipher.OrganizationId.HasValue)
+        if (cipher.Data == null || !cipher.OrganizationId.HasValue)
         {
             return;
         }
@@ -1014,19 +1021,56 @@ public class CipherService : ICipherService
         // Check if user is a "hidden password" user
         if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !(permission.ViewPassword && permission.Edit))
         {
+            var existingCipherData = DeserializeCipherData(existingCipher);
+            var newCipherData = DeserializeCipherData(cipher);
+
             // "hidden password" users may not add cipher key encryption
             if (existingCipher.Key == null && cipher.Key != null)
             {
                 throw new BadRequestException("You do not have permission to add cipher key encryption.");
             }
-            // "hidden password" users may not change passwords, TOTP codes, or passkeys, so we need to set them back to the original values
-            var existingCipherData = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data);
-            var newCipherData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
-            newCipherData.Fido2Credentials = existingCipherData.Fido2Credentials;
-            newCipherData.Totp = existingCipherData.Totp;
-            newCipherData.Password = existingCipherData.Password;
-            cipher.Data = JsonSerializer.Serialize(newCipherData);
+            // Keep only non-hidden fileds from the new cipher
+            var nonHiddenFields = newCipherData.Fields?.Where(f => f.Type != FieldType.Hidden) ?? [];
+            // Get hidden fields from the existing cipher
+            var hiddenFields = existingCipherData.Fields?.Where(f => f.Type == FieldType.Hidden) ?? [];
+            // Replace the hidden fields in new cipher data with the existing ones
+            newCipherData.Fields = nonHiddenFields.Concat(hiddenFields);
+            cipher.Data = SerializeCipherData(newCipherData);
+            if (existingCipherData is CipherLoginData existingLoginData && newCipherData is CipherLoginData newLoginCipherData)
+            {
+                // "hidden password" users may not change passwords, TOTP codes, or passkeys, so we need to set them back to the original values
+                newLoginCipherData.Fido2Credentials = existingLoginData.Fido2Credentials;
+                newLoginCipherData.Totp = existingLoginData.Totp;
+                newLoginCipherData.Password = existingLoginData.Password;
+                cipher.Data = SerializeCipherData(newLoginCipherData);
+            }
         }
+    }
+
+    private string SerializeCipherData(CipherData data)
+    {
+        return data switch
+        {
+            CipherLoginData loginData => JsonSerializer.Serialize(loginData),
+            CipherIdentityData identityData => JsonSerializer.Serialize(identityData),
+            CipherCardData cardData => JsonSerializer.Serialize(cardData),
+            CipherSecureNoteData noteData => JsonSerializer.Serialize(noteData),
+            CipherSSHKeyData sshKeyData => JsonSerializer.Serialize(sshKeyData),
+            _ => throw new ArgumentException("Unsupported cipher data type.", nameof(data))
+        };
+    }
+
+    private CipherData DeserializeCipherData(Cipher cipher)
+    {
+        return cipher.Type switch
+        {
+            CipherType.Login => JsonSerializer.Deserialize<CipherLoginData>(cipher.Data),
+            CipherType.Identity => JsonSerializer.Deserialize<CipherIdentityData>(cipher.Data),
+            CipherType.Card => JsonSerializer.Deserialize<CipherCardData>(cipher.Data),
+            CipherType.SecureNote => JsonSerializer.Deserialize<CipherSecureNoteData>(cipher.Data),
+            CipherType.SSHKey => JsonSerializer.Deserialize<CipherSSHKeyData>(cipher.Data),
+            _ => throw new ArgumentException("Unsupported cipher type.", nameof(cipher))
+        };
     }
 
     // This method is used to filter ciphers based on the user's permissions to delete them.

@@ -7,13 +7,12 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Services.Implementations.AutomaticTax;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
 using Stripe;
 
 namespace Bit.Commercial.Core.AdminConsole.Providers;
@@ -23,7 +22,6 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IEventService _eventService;
     private readonly IMailService _mailService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationService _organizationService;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IFeatureService _featureService;
@@ -31,26 +29,22 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly ISubscriberService _subscriberService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
-    private readonly IAutomaticTaxStrategy _automaticTaxStrategy;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService,
         IProviderOrganizationRepository providerOrganizationRepository,
         IStripeAdapter stripeAdapter,
         IFeatureService featureService,
         IProviderBillingService providerBillingService,
         ISubscriberService subscriberService,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-        IPricingClient pricingClient,
-        [FromKeyedServices(AutomaticTaxFactory.BusinessUse)] IAutomaticTaxStrategy automaticTaxStrategy)
+        IPricingClient pricingClient)
     {
         _eventService = eventService;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
-        _organizationService = organizationService;
         _providerOrganizationRepository = providerOrganizationRepository;
         _stripeAdapter = stripeAdapter;
         _featureService = featureService;
@@ -58,7 +52,6 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         _subscriberService = subscriberService;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
-        _automaticTaxStrategy = automaticTaxStrategy;
     }
 
     public async Task RemoveOrganizationFromProvider(
@@ -76,7 +69,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
         if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
-                Array.Empty<Guid>(),
+                [],
                 includeProvider: false))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
@@ -101,7 +94,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     /// <summary>
     /// When a client organization is unlinked from a provider, we have to check if they're Stripe-enabled
     /// and, if they are, we remove their MSP discount and set their Subscription to `send_invoice`. This is because
-    /// the provider's payment method will be removed from their Stripe customer causing ensuing charges to fail. Lastly,
+    /// the provider's payment method will be removed from their Stripe customer, causing ensuing charges to fail. Lastly,
     /// we email the organization owners letting them know they need to add a new payment method.
     /// </summary>
     private async Task ResetOrganizationBillingAsync(
@@ -110,9 +103,14 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IEnumerable<string> organizationOwnerEmails)
     {
         if (provider.IsBillable() &&
-            organization.IsValidClient() &&
-            !string.IsNullOrEmpty(organization.GatewayCustomerId))
+            organization.IsValidClient())
         {
+            // An organization converted to a business unit will not have a Customer since it was given to the business unit.
+            if (string.IsNullOrEmpty(organization.GatewayCustomerId))
+            {
+                await _providerBillingService.CreateCustomerForClientOrganization(provider, organization);
+            }
+
             var customer = await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Description = string.Empty,
@@ -136,15 +134,18 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 Items = [new SubscriptionItemOptions { Price = plan.PasswordManager.StripeSeatPlanId, Quantity = organization.Seats }]
             };
 
-            if (_featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+            var setNonUSBusinessUseToReverseCharge = _featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+            if (setNonUSBusinessUseToReverseCharge)
             {
-                _automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
+                subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
             }
-            else
+            else if (customer.HasRecognizedTaxLocation())
             {
-                subscriptionCreateOptions.AutomaticTax ??= new SubscriptionAutomaticTaxOptions
+                subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
                 {
-                    Enabled = true
+                    Enabled = customer.Address.Country == "US" ||
+                              customer.TaxIds.Any()
                 };
             }
 
@@ -181,7 +182,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         await _mailService.SendProviderUpdatePaymentMethod(
             organization.Id,
             organization.Name,
-            provider.Name,
+            provider.Name!,
             organizationOwnerEmails);
     }
 }

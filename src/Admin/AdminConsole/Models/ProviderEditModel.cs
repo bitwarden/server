@@ -2,8 +2,8 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
-using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Enums;
 using Bit.SharedWeb.Utilities;
 
@@ -18,6 +18,7 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         IEnumerable<ProviderUserUserDetails> providerUsers,
         IEnumerable<ProviderOrganizationOrganizationDetails> organizations,
         IReadOnlyCollection<ProviderPlan> providerPlans,
+        bool payByInvoice,
         string gatewayCustomerUrl = null,
         string gatewaySubscriptionUrl = null) : base(provider, providerUsers, organizations, providerPlans)
     {
@@ -33,6 +34,7 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         GatewayCustomerUrl = gatewayCustomerUrl;
         GatewaySubscriptionUrl = gatewaySubscriptionUrl;
         Type = provider.Type;
+        PayByInvoice = payByInvoice;
 
         if (Type == ProviderType.BusinessUnit)
         {
@@ -62,6 +64,8 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
     public string GatewaySubscriptionId { get; set; }
     public string GatewayCustomerUrl { get; }
     public string GatewaySubscriptionUrl { get; }
+    [Display(Name = "Pay By Invoice")]
+    public bool PayByInvoice { get; set; }
     [Display(Name = "Provider Type")]
     public ProviderType Type { get; set; }
 

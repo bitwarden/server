@@ -69,8 +69,11 @@ public static class OrganizationServiceCollectionExtensions
         services.AddBaseOrganizationSubscriptionCommandsQueries();
     }
 
-    private static IServiceCollection AddOrganizationSignUpCommands(this IServiceCollection services) =>
+    private static void AddOrganizationSignUpCommands(this IServiceCollection services)
+    {
         services.AddScoped<ICloudOrganizationSignUpCommand, CloudOrganizationSignUpCommand>();
+        services.AddScoped<IProviderClientOrganizationSignUpCommand, ProviderClientOrganizationSignUpCommand>();
+    }
 
     private static void AddOrganizationDeleteCommands(this IServiceCollection services)
     {
@@ -193,6 +196,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IInviteUsersOrganizationValidator, InviteUsersOrganizationValidator>();
         services.AddScoped<IInviteUsersPasswordManagerValidator, InviteUsersPasswordManagerValidator>();
         services.AddScoped<IInviteUsersEnvironmentValidator, InviteUsersEnvironmentValidator>();
+        services.AddScoped<IInitPendingOrganizationCommand, InitPendingOrganizationCommand>();
     }
 
     // TODO: move to OrganizationSubscriptionServiceCollectionExtensions when OrganizationUser methods are moved out of

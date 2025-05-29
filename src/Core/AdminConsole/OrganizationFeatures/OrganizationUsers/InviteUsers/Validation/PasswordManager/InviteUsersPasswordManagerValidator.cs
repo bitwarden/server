@@ -4,7 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.V
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Shared.Validation;
+using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -44,7 +44,7 @@ public class InviteUsersPasswordManagerValidator(
             return new Invalid<PasswordManagerSubscriptionUpdate>(new PasswordManagerMustHaveSeatsError(subscriptionUpdate));
         }
 
-        if (subscriptionUpdate.MaxSeatsReached)
+        if (subscriptionUpdate.MaxSeatsExceeded)
         {
             return new Invalid<PasswordManagerSubscriptionUpdate>(
                 new PasswordManagerSeatLimitHasBeenReachedError(subscriptionUpdate));

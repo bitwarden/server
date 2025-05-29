@@ -24,12 +24,14 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
 {
     private readonly IGlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly TimeProvider _timeProvider;
 
     public NotificationsApiPushNotificationService(
         IHttpClientFactory httpFactory,
         GlobalSettings globalSettings,
         IHttpContextAccessor httpContextAccessor,
-        ILogger<NotificationsApiPushNotificationService> logger)
+        ILogger<NotificationsApiPushNotificationService> logger,
+        TimeProvider timeProvider)
         : base(
             httpFactory,
             globalSettings.BaseServiceUri.InternalNotifications,
@@ -41,6 +43,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
     {
         _globalSettings = globalSettings;
         _httpContextAccessor = httpContextAccessor;
+        _timeProvider = timeProvider;
     }
 
     public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
@@ -148,7 +151,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         var message = new UserPushNotification
         {
             UserId = userId,
-            Date = DateTime.UtcNow
+            Date = _timeProvider.GetUtcNow().UtcDateTime,
         };
 
         await SendMessageAsync(type, message, excludeCurrentContext);

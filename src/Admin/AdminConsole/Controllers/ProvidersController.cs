@@ -3,18 +3,20 @@ using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Billing.Entities;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Repositories;
-using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Services.Contracts;
+using Bit.Core.Billing.Providers.Entities;
+using Bit.Core.Billing.Providers.Models;
+using Bit.Core.Billing.Providers.Repositories;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -23,6 +25,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Stripe;
 
 namespace Bit.Admin.AdminConsole.Controllers;
 
@@ -44,6 +47,7 @@ public class ProvidersController : Controller
     private readonly IProviderPlanRepository _providerPlanRepository;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IPricingClient _pricingClient;
+    private readonly IStripeAdapter _stripeAdapter;
     private readonly string _stripeUrl;
     private readonly string _braintreeMerchantUrl;
     private readonly string _braintreeMerchantId;
@@ -63,7 +67,8 @@ public class ProvidersController : Controller
         IProviderPlanRepository providerPlanRepository,
         IProviderBillingService providerBillingService,
         IWebHostEnvironment webHostEnvironment,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IStripeAdapter stripeAdapter)
     {
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
@@ -79,6 +84,7 @@ public class ProvidersController : Controller
         _providerPlanRepository = providerPlanRepository;
         _providerBillingService = providerBillingService;
         _pricingClient = pricingClient;
+        _stripeAdapter = stripeAdapter;
         _stripeUrl = webHostEnvironment.GetStripeUrl();
         _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
         _braintreeMerchantId = globalSettings.Braintree.MerchantId;
@@ -306,6 +312,23 @@ public class ProvidersController : Controller
                         (Plan: PlanType.EnterpriseMonthly, SeatsMinimum: model.EnterpriseMonthlySeatMinimum)
                     ]);
                 await _providerBillingService.UpdateSeatMinimums(updateMspSeatMinimumsCommand);
+
+                if (_featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically))
+                {
+                    var customer = await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId);
+
+                    if (model.PayByInvoice != customer.ApprovedToPayByInvoice())
+                    {
+                        var approvedToPayByInvoice = model.PayByInvoice ? "1" : "0";
+                        await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+                        {
+                            Metadata = new Dictionary<string, string>
+                            {
+                                [StripeConstants.MetadataKeys.InvoiceApproved] = approvedToPayByInvoice
+                            }
+                        });
+                    }
+                }
                 break;
             case ProviderType.BusinessUnit:
                 {
@@ -345,14 +368,18 @@ public class ProvidersController : Controller
 
         if (!provider.IsBillable())
         {
-            return new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>());
+            return new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>(), false);
         }
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
 
+        var payByInvoice =
+            _featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) &&
+            (await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)).ApprovedToPayByInvoice();
+
         return new ProviderEditModel(
             provider, users, providerOrganizations,
-            providerPlans.ToList(), GetGatewayCustomerUrl(provider), GetGatewaySubscriptionUrl(provider));
+            providerPlans.ToList(), payByInvoice, GetGatewayCustomerUrl(provider), GetGatewaySubscriptionUrl(provider));
     }
 
     [RequirePermission(Permission.Provider_ResendEmailInvite)]
@@ -443,6 +470,19 @@ public class ProvidersController : Controller
     [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> Delete(Guid id, string providerName)
     {
+        var provider = await _providerRepository.GetByIdAsync(id);
+
+        if (provider is null)
+        {
+            return BadRequest("Provider does not exist");
+        }
+
+        if (provider.Status == ProviderStatusType.Pending)
+        {
+            await _providerService.DeleteAsync(provider);
+            return NoContent();
+        }
+
         if (string.IsNullOrWhiteSpace(providerName))
         {
             return BadRequest("Invalid provider name");
@@ -453,13 +493,6 @@ public class ProvidersController : Controller
         if (providerOrganizations.Count > 0)
         {
             return BadRequest("You must unlink all clients before you can delete a provider");
-        }
-
-        var provider = await _providerRepository.GetByIdAsync(id);
-
-        if (provider is null)
-        {
-            return BadRequest("Provider does not exist");
         }
 
         if (!string.Equals(providerName.Trim(), provider.DisplayName(), StringComparison.OrdinalIgnoreCase))
