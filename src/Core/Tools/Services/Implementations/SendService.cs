@@ -203,7 +203,6 @@ public class SendService : ISendService
         {
             return (false, false, false);
         }
-
         if (!string.IsNullOrWhiteSpace(send.Password))
         {
             if (string.IsNullOrWhiteSpace(password))
