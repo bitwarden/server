@@ -1,6 +1,4 @@
-﻿using Bit.Core.Context;
-using Bit.Core.NotificationCenter.Entities;
-using Bit.Core.NotificationCenter.Repositories;
+﻿using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Platform.Push;
 using Bit.Core.Vault.Commands.Interfaces;
 
@@ -9,56 +7,26 @@ namespace Bit.Core.Vault.Commands;
 public class MarkNotificationsForTaskAsDeletedCommand : IMarkNotificationsForTaskAsDeletedCommand
 {
     private readonly INotificationRepository _notificationRepository;
-    private readonly INotificationStatusRepository _notificationStatusRepository;
-    private readonly ICurrentContext _currentContext;
     private readonly IPushNotificationService _pushNotificationService;
 
     public MarkNotificationsForTaskAsDeletedCommand(
         INotificationRepository notificationRepository,
-        INotificationStatusRepository notificationStatusRepository,
-        ICurrentContext currentContext,
         IPushNotificationService pushNotificationService)
     {
         _notificationRepository = notificationRepository;
-        _notificationStatusRepository = notificationStatusRepository;
-        _currentContext = currentContext;
         _pushNotificationService = pushNotificationService;
 
     }
 
-    public async Task MarkAsDeletedAsync(Guid taskId)
+    public async Task MarkAsDeletedAsync(Guid taskId, Guid userId)
     {
-        var notifications = await _notificationRepository.GetNonDeletedByTaskIdAsync(taskId);
+        var notifications = await _notificationRepository.MarkNotificationsAsDeletedByTask(taskId, userId);
 
-        foreach (var notification in notifications)
-        {
-            var notificationStatus = await _notificationStatusRepository.GetByNotificationIdAndUserIdAsync(notification.Id, _currentContext.UserId.Value);
-
-            if (notificationStatus == null)
-            {
-                notificationStatus = new NotificationStatus
-                {
-                    NotificationId = notification.Id,
-                    UserId = _currentContext.UserId.Value,
-                    DeletedDate = DateTime.UtcNow
-                };
-
-                await _notificationStatusRepository.CreateAsync(notificationStatus);
-
-            }
-            else
-            {
-                notificationStatus.DeletedDate = DateTime.UtcNow;
-
-                await _notificationStatusRepository.UpdateAsync(notificationStatus);
-            }
-        }
-
-        // For each user, send a push notification so they can update their local tasks
+        // For each user associated with the notifications, send a push notification so local tasks can be updated.
         var uniqueUserIds = notifications.Select(n => n.UserId).Where(u => u.HasValue).Distinct();
-        foreach (var userId in uniqueUserIds)
+        foreach (var id in uniqueUserIds)
         {
-            await _pushNotificationService.PushPendingSecurityTasksAsync((Guid)userId);
+            await _pushNotificationService.PushPendingSecurityTasksAsync((Guid)id);
         }
     }
 }

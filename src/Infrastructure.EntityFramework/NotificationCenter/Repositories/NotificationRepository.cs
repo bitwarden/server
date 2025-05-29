@@ -75,19 +75,47 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
         };
     }
 
-    public async Task<IEnumerable<Core.NotificationCenter.Entities.Notification>> GetNonDeletedByTaskIdAsync(Guid taskId)
+    public async Task<IEnumerable<Core.NotificationCenter.Entities.Notification>> MarkNotificationsAsDeletedByTask(Guid taskId, Guid userId)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
-
         var dbContext = GetDatabaseContext(scope);
 
-        var query = from n in dbContext.Notifications
-                    join ns in dbContext.Set<NotificationStatus>()
-                        on n.Id equals ns.NotificationId
-                    where n.TaskId == taskId
-                          && ns.DeletedDate == null
-                    select n;
+        var notifications = await dbContext.Notifications
+            .Where(n => n.TaskId == taskId)
+            .ToListAsync();
 
-        return await query.ToListAsync();
+        var notificationIds = notifications.Select(n => n.Id).ToList();
+
+        var statuses = await dbContext.Set<NotificationStatus>()
+            .Where(ns => notificationIds.Contains(ns.NotificationId) && ns.UserId == userId)
+            .ToListAsync();
+
+        var now = DateTime.UtcNow;
+
+        // Update existing statuses and add missing ones
+        foreach (var notification in notifications)
+        {
+            var status = statuses.FirstOrDefault(s => s.NotificationId == notification.Id);
+            if (status != null)
+            {
+                if (status.DeletedDate == null)
+                {
+                    status.DeletedDate = now;
+                }
+            }
+            else
+            {
+                dbContext.Set<NotificationStatus>().Add(new NotificationStatus
+                {
+                    NotificationId = notification.Id,
+                    UserId = userId,
+                    DeletedDate = now
+                });
+            }
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        return notifications;
     }
 }

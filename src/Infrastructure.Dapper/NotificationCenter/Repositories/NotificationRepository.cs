@@ -57,15 +57,16 @@ public class NotificationRepository : Repository<Notification, Guid>, INotificat
         };
     }
 
-    public async Task<IEnumerable<Notification>> GetNonDeletedByTaskIdAsync(Guid taskId)
+    public async Task<IEnumerable<Notification>> MarkNotificationsAsDeletedByTask(Guid taskId, Guid userId)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
         var results = await connection.QueryAsync<Notification>(
-            "[dbo].[Notification_ReadNonDeletedByTaskId]",
+            "[dbo].[Notification_MarkAsDeletedByTask]",
             new
             {
                 TaskId = taskId,
+                UserId = userId,
             },
             commandType: CommandType.StoredProcedure);
 

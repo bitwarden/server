@@ -52,6 +52,6 @@ public class MarkTaskAsCompletedCommand : IMarkTaskAsCompleteCommand
         await _securityTaskRepository.ReplaceAsync(task);
 
         // Mark all notifications related to this task as deleted
-        await _markNotificationsForTaskAsDeletedAsync.MarkAsDeletedAsync(taskId);
+        await _markNotificationsForTaskAsDeletedAsync.MarkAsDeletedAsync(taskId, _currentContext.UserId.Value);
     }
 }
