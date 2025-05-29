@@ -109,6 +109,8 @@ public static class FeatureFlagKeys
     public const string SsoExternalIdVisibility = "pm-18630-sso-external-id-visibility";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
+    public const string OptimizeNestedTraverseTypescript = "pm-21695-optimize-nested-traverse-typescript";
+    public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
@@ -200,7 +202,6 @@ public static class FeatureFlagKeys
     public const string DesktopCipherForms = "pm-18520-desktop-cipher-forms";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
     public const string EndUserNotifications = "pm-10609-end-user-notifications";
-    public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string PhishingDetection = "phishing-detection";
     public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
 
