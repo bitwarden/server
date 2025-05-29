@@ -23,7 +23,7 @@ public static class Constants
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
     public const string SSHKeyCipherMinimumVersion = "2024.12.0";
-    public const string DenyLegacyUserMinimumVersion = "2025.5.0";
+    public const string DenyLegacyUserMinimumVersion = "2025.6.0";
 
     /// <summary>
     /// Used by IdentityServer to identify our own provider.
