@@ -109,6 +109,7 @@ public static class FeatureFlagKeys
     public const string SsoExternalIdVisibility = "pm-18630-sso-external-id-visibility";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
+    public const string MembersGetEndpointOptimization = "pm-21031-members-get-endpoint-optimization";
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
