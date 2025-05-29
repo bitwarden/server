@@ -5,9 +5,6 @@
   <a href="https://github.com/bitwarden/server/actions/workflows/build.yml?query=branch:main" target="_blank">
     <img src="https://github.com/bitwarden/server/actions/workflows/build.yml/badge.svg?branch=main" alt="Github Workflow build on main" />
   </a>
-  <a href="https://github.com/orgs/bitwarden/packages" target="_blank">
-    <img src="https://img.shields.io/docker/pulls/bitwarden/api.svg" alt="DockerHub" />
-  </a>
   <a href="https://gitter.im/bitwarden/Lobby" target="_blank">
     <img src="https://badges.gitter.im/bitwarden/Lobby.svg" alt="gitter chat" />
   </a>
