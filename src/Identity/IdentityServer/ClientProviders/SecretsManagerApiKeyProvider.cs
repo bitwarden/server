@@ -9,6 +9,8 @@ namespace Bit.Identity.IdentityServer.ClientProviders;
 
 internal class SecretsManagerApiKeyProvider : IClientProvider
 {
+    public const string ApiKeyPrefix = "apikey";
+
     private readonly IApiKeyRepository _apiKeyRepository;
     private readonly IOrganizationRepository _organizationRepository;
 
