@@ -168,6 +168,11 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         });
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(sponsoringOrgUser.UserId.Value);
 
+        // Setup for checking available seats
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrg.Id)
+            .Returns(0);
+
 
         await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
             PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, false, null);
@@ -293,6 +298,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
     {
         sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
         sponsoringOrg.UseAdminSponsoredFamilies = true;
+        sponsoringOrg.Seats = 10;
         sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
 
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId!.Value).Returns(user);
@@ -310,6 +316,11 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
                 Type = organizationUserType
             }
         ]);
+
+        // Setup for checking available seats - organization has plenty of seats
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrg.Id)
+            .Returns(5);
 
         var actual = await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
             PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, true, notes);
@@ -331,5 +342,121 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
 
         await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
             .CreateAsync(Arg.Is<OrganizationSponsorship>(s => SponsorshipValidator(s, expectedSponsorship)));
+
+        // Verify we didn't need to add seats
+        await sutProvider.GetDependency<IOrganizationService>().DidNotReceive()
+            .AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>());
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CreateSponsorship_CreatesAdminInitiatedSponsorship_AutoscalesWhenNeeded(
+        OrganizationUserType organizationUserType,
+        Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, User user, string sponsoredEmail,
+        string friendlyName, Guid sponsorshipId, Guid currentUserId, string notes, SutProvider<CreateSponsorshipCommand> sutProvider)
+    {
+        sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
+        sponsoringOrg.UseAdminSponsoredFamilies = true;
+        sponsoringOrg.Seats = 10;
+        sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
+
+        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId!.Value).Returns(user);
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>().WhenForAnyArgs(x => x.UpsertAsync(null!)).Do(callInfo =>
+        {
+            var sponsorship = callInfo.Arg<OrganizationSponsorship>();
+            sponsorship.Id = sponsorshipId;
+        });
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(currentUserId);
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns([
+            new()
+            {
+                Id = sponsoringOrg.Id,
+                Permissions = new Permissions { ManageUsers = true },
+                Type = organizationUserType
+            }
+        ]);
+
+        // Setup for checking available seats - organization has no available seats
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrg.Id)
+            .Returns(10);
+
+        // Setup for checking if can scale
+        sutProvider.GetDependency<IOrganizationService>()
+            .CanScaleAsync(sponsoringOrg, 1)
+            .Returns((true, ""));
+
+        var actual = await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
+            PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, true, notes);
+
+
+        var expectedSponsorship = new OrganizationSponsorship
+        {
+            Id = sponsorshipId,
+            SponsoringOrganizationId = sponsoringOrg.Id,
+            SponsoringOrganizationUserId = sponsoringOrgUser.Id,
+            FriendlyName = friendlyName,
+            OfferedToEmail = sponsoredEmail,
+            PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
+            IsAdminInitiated = true,
+            Notes = notes
+        };
+
+        Assert.True(SponsorshipValidator(expectedSponsorship, actual));
+
+        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
+            .CreateAsync(Arg.Is<OrganizationSponsorship>(s => SponsorshipValidator(s, expectedSponsorship)));
+
+        // Verify we needed to add seats
+        await sutProvider.GetDependency<IOrganizationService>().Received(1)
+            .AutoAddSeatsAsync(sponsoringOrg, 1);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CreateSponsorship_CreatesAdminInitiatedSponsorship_ThrowsWhenCannotAutoscale(
+        OrganizationUserType organizationUserType,
+        Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, User user, string sponsoredEmail,
+        string friendlyName, Guid sponsorshipId, Guid currentUserId, string notes, SutProvider<CreateSponsorshipCommand> sutProvider)
+    {
+        sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
+        sponsoringOrg.UseAdminSponsoredFamilies = true;
+        sponsoringOrg.Seats = 10;
+        sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
+
+        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId!.Value).Returns(user);
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>().WhenForAnyArgs(x => x.UpsertAsync(null!)).Do(callInfo =>
+        {
+            var sponsorship = callInfo.Arg<OrganizationSponsorship>();
+            sponsorship.Id = sponsorshipId;
+        });
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(currentUserId);
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns([
+            new()
+            {
+                Id = sponsoringOrg.Id,
+                Permissions = new Permissions { ManageUsers = true },
+                Type = organizationUserType
+            }
+        ]);
+
+        // Setup for checking available seats - organization has no available seats
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrg.Id)
+            .Returns(10);
+
+        // Setup for checking if can scale - cannot scale
+        var failureReason = "Seat limit has been reached.";
+        sutProvider.GetDependency<IOrganizationService>()
+            .CanScaleAsync(sponsoringOrg, 1)
+            .Returns((false, failureReason));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
+                PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName, true, notes));
+
+        Assert.Equal(failureReason, exception.Message);
     }
 }

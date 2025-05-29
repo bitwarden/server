@@ -75,6 +75,8 @@ public class OrganizationCreateRequestModel : IValidatableObject
 
     public string InitiationPath { get; set; }
 
+    public bool SkipTrial { get; set; }
+
     public virtual OrganizationSignup ToOrganizationSignup(User user)
     {
         var orgSignup = new OrganizationSignup
@@ -107,6 +109,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
                 BillingAddressCountry = BillingAddressCountry,
             },
             InitiationPath = InitiationPath,
+            SkipTrial = SkipTrial
         };
 
         Keys?.ToOrganizationSignup(orgSignup);

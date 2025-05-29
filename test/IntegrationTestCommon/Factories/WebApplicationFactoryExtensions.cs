@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Primitives;
@@ -61,12 +60,6 @@ public static class WebApplicationFactoryExtensions
         HttpContent content,
         Action<HttpContext> extraConfiguration = null)
         => SendAsync(server, HttpMethod.Delete, requestUri, content: content, extraConfiguration);
-
-    public static HttpContext SetAuthEmail(this HttpContext context, string username)
-    {
-        context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(username));
-        return context;
-    }
 
     public static HttpContext SetIp(this HttpContext context, string ip)
     {

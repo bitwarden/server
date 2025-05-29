@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using NSubstitute;
+using NSubstitute.ReceivedExtensions;
 using Xunit;
 
 namespace Bit.Billing.Test.Controllers;
@@ -70,6 +71,41 @@ public class FreshdeskControllerTests
         _ = mockHttpMessageHandler.Received(1).Send(Arg.Is<HttpRequestMessage>(m => m.Method == HttpMethod.Put && m.RequestUri.ToString().EndsWith(model.TicketId)), Arg.Any<CancellationToken>());
         _ = mockHttpMessageHandler.Received(1).Send(Arg.Is<HttpRequestMessage>(m => m.Method == HttpMethod.Post && m.RequestUri.ToString().EndsWith($"{model.TicketId}/notes")), Arg.Any<CancellationToken>());
     }
+
+    [Theory]
+    [BitAutoData(WebhookKey)]
+    public async Task PostWebhook_add_note_when_user_is_invalid(
+        string freshdeskWebhookKey, FreshdeskWebhookModel model,
+        SutProvider<FreshdeskController> sutProvider)
+    {
+        // Arrange - for an invalid user
+        model.TicketContactEmail = "invalid@user";
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(model.TicketContactEmail).Returns((User)null);
+        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.WebhookKey.Returns(WebhookKey);
+
+        var mockHttpMessageHandler = Substitute.ForPartsOf<MockHttpMessageHandler>();
+        var mockResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK);
+        mockHttpMessageHandler.Send(Arg.Any<HttpRequestMessage>(), Arg.Any<CancellationToken>())
+           .Returns(mockResponse);
+        var httpClient = new HttpClient(mockHttpMessageHandler);
+        sutProvider.GetDependency<IHttpClientFactory>().CreateClient("FreshdeskApi").Returns(httpClient);
+
+        // Act
+        var response = await sutProvider.Sut.PostWebhook(freshdeskWebhookKey, model);
+
+        // Assert
+        var statusCodeResult = Assert.IsAssignableFrom<StatusCodeResult>(response);
+        Assert.Equal(StatusCodes.Status200OK, statusCodeResult.StatusCode);
+
+        await mockHttpMessageHandler
+            .Received(1).Send(
+                Arg.Is<HttpRequestMessage>(
+                    m => m.Method == HttpMethod.Post
+                        && m.RequestUri.ToString().EndsWith($"{model.TicketId}/notes")
+                        && m.Content.ReadAsStringAsync().Result.Contains("No user found")),
+                Arg.Any<CancellationToken>());
+    }
+
 
     [Theory]
     [BitAutoData((string)null, null)]

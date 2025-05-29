@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
-using Bit.Core.AdminConsole.Shared.Validation;
+using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -36,7 +36,7 @@ public class InviteUserOrganizationValidationTests
         var result = await sutProvider.Sut.ValidateAsync(inviteOrganization);
 
         Assert.IsType<Invalid<InviteOrganization>>(result);
-        Assert.Equal(OrganizationNoPaymentMethodFoundError.Code, (result as Invalid<InviteOrganization>)!.ErrorMessageString);
+        Assert.Equal(OrganizationNoPaymentMethodFoundError.Code, (result as Invalid<InviteOrganization>)!.Error.Message);
     }
 
     [Theory]
@@ -53,6 +53,6 @@ public class InviteUserOrganizationValidationTests
         var result = await sutProvider.Sut.ValidateAsync(inviteOrganization);
 
         Assert.IsType<Invalid<InviteOrganization>>(result);
-        Assert.Equal(OrganizationNoSubscriptionFoundError.Code, (result as Invalid<InviteOrganization>)!.ErrorMessageString);
+        Assert.Equal(OrganizationNoSubscriptionFoundError.Code, (result as Invalid<InviteOrganization>)!.Error.Message);
     }
 }

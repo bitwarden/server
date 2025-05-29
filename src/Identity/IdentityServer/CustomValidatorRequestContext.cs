@@ -1,5 +1,4 @@
-﻿using Bit.Core.Auth.Models.Business;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Duende.IdentityServer.Validation;
 
 namespace Bit.Identity.IdentityServer;
@@ -9,7 +8,7 @@ public class CustomValidatorRequestContext
     public User User { get; set; }
     /// <summary>
     /// This is the device that the user is using to authenticate. It can be either known or unknown.
-    /// We set it here since the ResourceOwnerPasswordValidator needs the device to know if CAPTCHA is required.
+    /// We set it here since the ResourceOwnerPasswordValidator needs the device to do device validation.
     /// The option to set it here saves a trip to the database.
     /// </summary>
     public Device Device { get; set; }
@@ -39,5 +38,4 @@ public class CustomValidatorRequestContext
     /// This will be null if the authentication request is successful.
     /// </summary>
     public Dictionary<string, object> CustomResponse { get; set; }
-    public CaptchaResponse CaptchaResponse { get; set; }
 }

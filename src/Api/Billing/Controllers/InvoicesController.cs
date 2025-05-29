@@ -1,5 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Models.Api.Requests.Organizations;
+using Bit.Core.Billing.Tax.Requests;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

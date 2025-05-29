@@ -26,6 +26,7 @@ public record PlanAdapter : Plan
         Has2fa = HasFeature("2fa");
         HasApi = HasFeature("api");
         HasSso = HasFeature("sso");
+        HasOrganizationDomains = HasFeature("organizationDomains");
         HasKeyConnector = HasFeature("keyConnector");
         HasScim = HasFeature("scim");
         HasResetPassword = HasFeature("resetPassword");

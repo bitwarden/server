@@ -33,7 +33,8 @@ public class NoopMailService : IMailService
         string email,
         string token,
         ProductTierType productTier,
-        IEnumerable<ProductType> products)
+        IEnumerable<ProductType> products,
+        int trailLength)
     {
         return Task.FromResult(0);
     }
@@ -75,11 +76,6 @@ public class NoopMailService : IMailService
     }
 
     public Task SendOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
     {
         return Task.FromResult(0);
     }
@@ -150,11 +146,6 @@ public class NoopMailService : IMailService
     }
 
     public Task SendRecoverTwoFactorEmail(string email, DateTime timestamp, string ip)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email)
     {
         return Task.FromResult(0);
     }
@@ -263,21 +254,6 @@ public class NoopMailService : IMailService
     }
 
     public Task SendOTPEmailAsync(string email, string token)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
     {
         return Task.FromResult(0);
     }

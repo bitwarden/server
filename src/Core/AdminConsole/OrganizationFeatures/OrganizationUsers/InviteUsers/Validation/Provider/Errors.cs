@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Errors;
+﻿using Bit.Core.AdminConsole.Utilities.Errors;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Provider;
 

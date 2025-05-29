@@ -76,7 +76,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        var response = new MemberResponseModel(orgUser, await _userService.TwoFactorIsEnabledAsync(orgUser),
+        var response = new MemberResponseModel(orgUser, await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUser),
             collections);
         return new JsonResult(response);
     }
@@ -185,7 +185,7 @@ public class MembersController : Controller
         {
             var existingUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
             response = new MemberResponseModel(existingUserDetails,
-                await _userService.TwoFactorIsEnabledAsync(existingUserDetails), associations);
+                await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(existingUserDetails), associations);
         }
         else
         {

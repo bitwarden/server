@@ -22,8 +22,7 @@ public class DeviceValidator(
     ICurrentContext currentContext,
     IUserService userService,
     IDistributedCache distributedCache,
-    ILogger<DeviceValidator> logger,
-    IFeatureService featureService) : IDeviceValidator
+    ILogger<DeviceValidator> logger) : IDeviceValidator
 {
     private readonly IDeviceService _deviceService = deviceService;
     private readonly IDeviceRepository _deviceRepository = deviceRepository;
@@ -33,7 +32,6 @@ public class DeviceValidator(
     private readonly IUserService _userService = userService;
     private readonly IDistributedCache distributedCache = distributedCache;
     private readonly ILogger<DeviceValidator> _logger = logger;
-    private readonly IFeatureService _featureService = featureService;
 
     public async Task<bool> ValidateRequestDeviceAsync(ValidatedTokenRequest request, CustomValidatorRequestContext context)
     {
@@ -64,9 +62,7 @@ public class DeviceValidator(
         }
 
         // We have established that the device is unknown at this point; begin new device verification
-        // PM-13340: remove feature flag
-        if (_featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification) &&
-            request.GrantType == "password" &&
+        if (request.GrantType == "password" &&
             request.Raw["AuthRequest"] == null &&
             !context.TwoFactorRequired &&
             !context.SsoRequired &&

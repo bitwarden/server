@@ -142,8 +142,10 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Vault.Entities.Folder> folders)
+    public async Task CreateAsync(Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers,
+        IEnumerable<Core.Vault.Entities.Folder> folders)
     {
+        ciphers = ciphers.ToList();
         if (!ciphers.Any())
         {
             return;
@@ -156,7 +158,8 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
             var cipherEntities = Mapper.Map<List<Cipher>>(ciphers);
             await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
-            await dbContext.UserBumpAccountRevisionDateAsync(ciphers.First().UserId.GetValueOrDefault());
+            await dbContext.UserBumpAccountRevisionDateAsync(userId);
+
             await dbContext.SaveChangesAsync();
         }
     }

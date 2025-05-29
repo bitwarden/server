@@ -2,8 +2,6 @@
 
   <PropertyGroup>
     <IsPackable>false</IsPackable>
-    <!-- Temp exclusions until warnings are fixed -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS0672;CS1998</WarningsNotAsErrors>
   </PropertyGroup>
 
   <ItemGroup>

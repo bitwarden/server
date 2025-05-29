@@ -49,7 +49,7 @@ public class ImportCiphersAsyncCommandTests
         await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, importingUserId);
 
         // Assert
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(ciphers, Arg.Any<List<Folder>>());
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 
@@ -77,7 +77,7 @@ public class ImportCiphersAsyncCommandTests
 
         await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, importingUserId);
 
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(ciphers, Arg.Any<List<Folder>>());
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 

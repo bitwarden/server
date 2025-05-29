@@ -9,6 +9,7 @@ using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Bit.Test.Common.AutoFixture.Attributes;
 using LinqToDB;
 using Xunit;
+using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using EfVaultRepo = Bit.Infrastructure.EntityFramework.Vault.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
@@ -112,7 +113,7 @@ public class CipherRepositoryTests
     [CiSkippedTheory, EfOrganizationCipherCustomize, BitAutoData]
     public async Task CreateAsync_BumpsOrgUserAccountRevisionDates(Cipher cipher, List<User> users,
         List<OrganizationUser> orgUsers, Collection collection, Organization org, List<EfVaultRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
-        List<EfRepo.OrganizationUserRepository> efOrgUserRepos, List<EfRepo.CollectionRepository> efCollectionRepos)
+        List<EfAdminConsoleRepo.OrganizationUserRepository> efOrgUserRepos, List<EfRepo.CollectionRepository> efCollectionRepos)
     {
         var savedCiphers = new List<Cipher>();
         foreach (var sut in suts)

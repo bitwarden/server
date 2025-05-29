@@ -1,5 +1,4 @@
 ﻿using AspNetCoreRateLimit;
-using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Platform.Push;
 using Bit.Core.Platform.Push.Internal;
@@ -206,8 +205,6 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             Replace<IEventRepository, EventRepository>(services);
 
             Replace<IMailDeliveryService, NoopMailDeliveryService>(services);
-
-            Replace<ICaptchaValidationService, NoopCaptchaValidationService>(services);
 
             // TODO: Install and use azurite in CI pipeline
             Replace<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>(services);

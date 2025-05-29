@@ -20,7 +20,7 @@ public class AzureServiceBusEventListenerService : EventLoggingListenerService
         string subscriptionName) : base(handler)
     {
         _client = new ServiceBusClient(globalSettings.EventLogging.AzureServiceBus.ConnectionString);
-        _processor = _client.CreateProcessor(globalSettings.EventLogging.AzureServiceBus.TopicName, subscriptionName, new ServiceBusProcessorOptions());
+        _processor = _client.CreateProcessor(globalSettings.EventLogging.AzureServiceBus.EventTopicName, subscriptionName, new ServiceBusProcessorOptions());
         _logger = logger;
     }
 

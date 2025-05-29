@@ -6,6 +6,7 @@
     [Data]           VARCHAR(MAX)     NOT NULL,
     [Key]            VARCHAR (MAX)    NOT NULL,
     [Password]       NVARCHAR (300)   NULL,
+    [Emails]         NVARCHAR (1024)  NULL,
     [MaxAccessCount] INT              NULL,
     [AccessCount]    INT              NOT NULL,
     [CreationDate]   DATETIME2 (7)    NOT NULL,

@@ -2,6 +2,8 @@
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Providers.Models;
+using Bit.Core.Billing.Tax.Models;
 using Stripe;
 
 namespace Bit.Api.Billing.Models.Responses;
@@ -34,7 +36,7 @@ public record ProviderSubscriptionResponse(
             .Select(providerPlan =>
             {
                 var plan = providerPlan.Plan;
-                var cost = (providerPlan.SeatMinimum + providerPlan.PurchasedSeats) * plan.PasswordManager.ProviderPortalSeatPrice;
+                var cost = (providerPlan.SeatMinimum + providerPlan.PurchasedSeats) * providerPlan.Price;
                 var cadence = plan.IsAnnual ? _annualCadence : _monthlyCadence;
                 return new ProviderPlanResponse(
                     plan.Name,

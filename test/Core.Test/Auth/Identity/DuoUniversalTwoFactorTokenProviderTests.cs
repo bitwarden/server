@@ -83,6 +83,7 @@ public class DuoUniversalTwoFactorTokenProviderTests : BaseTokenProviderTests<Du
         User user, SutProvider<DuoUniversalTokenProvider> sutProvider)
     {
         // Arrange
+        AdditionalSetup(sutProvider, user);
         user.Premium = true;
         user.PremiumExpirationDate = DateTime.UtcNow.AddDays(1);
 
@@ -100,6 +101,8 @@ public class DuoUniversalTwoFactorTokenProviderTests : BaseTokenProviderTests<Du
     User user, SutProvider<DuoUniversalTokenProvider> sutProvider)
     {
         // Arrange
+        AdditionalSetup(sutProvider, user);
+
         user.Premium = false;
 
         sutProvider.GetDependency<IDuoUniversalTokenService>()

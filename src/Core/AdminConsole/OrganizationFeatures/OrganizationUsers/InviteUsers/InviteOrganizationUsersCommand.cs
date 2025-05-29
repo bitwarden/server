@@ -1,17 +1,17 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Errors;
 using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Shared.Validation;
+using Bit.Core.AdminConsole.Utilities.Commands;
+using Bit.Core.AdminConsole.Utilities.Errors;
+using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Commands;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -50,11 +50,11 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         {
             case Failure<InviteOrganizationUsersResponse> failure:
                 return new Failure<ScimInviteOrganizationUsersResponse>(
-                    failure.Errors.Select(error => new Error<ScimInviteOrganizationUsersResponse>(error.Message,
+                    new Error<ScimInviteOrganizationUsersResponse>(failure.Error.Message,
                         new ScimInviteOrganizationUsersResponse
                         {
-                            InvitedUser = error.ErroredValue.InvitedUsers.FirstOrDefault()
-                        })));
+                            InvitedUser = failure.Error.ErroredValue.InvitedUsers.FirstOrDefault()
+                        }));
 
             case Success<InviteOrganizationUsersResponse> success when success.Value.InvitedUsers.Any():
                 var user = success.Value.InvitedUsers.First();

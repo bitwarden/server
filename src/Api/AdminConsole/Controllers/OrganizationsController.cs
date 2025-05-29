@@ -25,7 +25,7 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -279,8 +279,7 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && (await _userService.GetOrganizationsClaimingUserAsync(user.Id)).Any(x => x.Id == id))
+        if ((await _userService.GetOrganizationsClaimingUserAsync(user.Id)).Any(x => x.Id == id))
         {
             throw new BadRequestException("Claimed user account cannot leave claiming organization. Contact your organization administrator for additional details.");
         }

@@ -10,7 +10,8 @@ public record OrganizationMetadata(
     bool IsSubscriptionCanceled,
     DateTime? InvoiceDueDate,
     DateTime? InvoiceCreatedDate,
-    DateTime? SubPeriodEndDate)
+    DateTime? SubPeriodEndDate,
+    int OrganizationOccupiedSeats)
 {
     public static OrganizationMetadata Default => new OrganizationMetadata(
         false,
@@ -22,5 +23,6 @@ public record OrganizationMetadata(
         false,
         null,
         null,
-        null);
+        null,
+        0);
 }

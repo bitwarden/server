@@ -14,7 +14,7 @@ public class AzureServiceBusEventWriteService : IEventWriteService, IAsyncDispos
     public AzureServiceBusEventWriteService(GlobalSettings globalSettings)
     {
         _client = new ServiceBusClient(globalSettings.EventLogging.AzureServiceBus.ConnectionString);
-        _sender = _client.CreateSender(globalSettings.EventLogging.AzureServiceBus.TopicName);
+        _sender = _client.CreateSender(globalSettings.EventLogging.AzureServiceBus.EventTopicName);
     }
 
     public async Task CreateAsync(IEvent e)

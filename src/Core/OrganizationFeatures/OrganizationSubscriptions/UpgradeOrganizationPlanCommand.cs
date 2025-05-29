@@ -263,6 +263,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         organization.Use2fa = newPlan.Has2fa;
         organization.UseApi = newPlan.HasApi;
         organization.UseSso = newPlan.HasSso;
+        organization.UseOrganizationDomains = newPlan.HasOrganizationDomains;
         organization.UseKeyConnector = newPlan.HasKeyConnector;
         organization.UseScim = newPlan.HasScim;
         organization.UseResetPassword = newPlan.HasResetPassword;

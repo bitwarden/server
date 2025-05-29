@@ -115,7 +115,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
         }
 
         // Create it all
-        await _cipherRepository.CreateAsync(ciphers, newFolders);
+        await _cipherRepository.CreateAsync(importingUserId, ciphers, newFolders);
 
         // push
         await _pushService.PushSyncVaultAsync(importingUserId);

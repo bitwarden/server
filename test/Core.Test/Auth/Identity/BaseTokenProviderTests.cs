@@ -45,9 +45,6 @@ public abstract class BaseTokenProviderTests<T>
     protected virtual void SetupUserService(IUserService userService, User user)
     {
         userService
-            .TwoFactorProviderIsEnabledAsync(TwoFactorProviderType, user)
-            .Returns(true);
-        userService
             .CanAccessPremium(user)
             .Returns(true);
     }
@@ -84,8 +81,6 @@ public abstract class BaseTokenProviderTests<T>
     {
         var userManager = SubstituteUserManager();
         MockDatabase(user, metaData);
-
-        AdditionalSetup(sutProvider, user);
 
         var response = await sutProvider.Sut.CanGenerateTwoFactorTokenAsync(userManager, user);
         Assert.Equal(expectedResponse, response);

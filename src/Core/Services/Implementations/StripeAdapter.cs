@@ -283,4 +283,7 @@ public class StripeAdapter : IStripeAdapter
         }
         return items;
     }
+
+    public Task<Price> PriceGetAsync(string id, PriceGetOptions options = null)
+        => _priceService.GetAsync(id, options);
 }

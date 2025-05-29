@@ -159,7 +159,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             throw new BadRequestException(RemoveAdminByCustomUserErrorMessage);
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && deletingUserId.HasValue && eventSystemUser == null)
+        if (deletingUserId.HasValue && eventSystemUser == null)
         {
             var claimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, new[] { orgUser.Id });
             if (claimedStatus.TryGetValue(orgUser.Id, out var isClaimed) && isClaimed)
@@ -214,7 +214,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
         }
 
-        var claimedStatus = _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && deletingUserId.HasValue && eventSystemUser == null
+        var claimedStatus = deletingUserId.HasValue && eventSystemUser == null
             ? await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, filteredUsers.Select(u => u.Id))
             : filteredUsers.ToDictionary(u => u.Id, u => false);
         var result = new List<(OrganizationUser OrganizationUser, string ErrorMessage)>();

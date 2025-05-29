@@ -2,7 +2,9 @@ name: Build on PR Target
 
 on:
   pull_request_target:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
+    branches:
+      - "main"
 
 defaults:
   run:

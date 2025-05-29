@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿#nullable enable
+
+using System.Diagnostics;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Enums;
@@ -11,8 +13,18 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public static class DatabaseContextExtensions
 {
+    /// <summary>
+    /// Bump the account revision date for the user.
+    /// The caller is responsible for providing a valid UserId (not a null or default Guid) for a user that exists
+    /// in the database.
+    /// </summary>
     public static async Task UserBumpAccountRevisionDateAsync(this DatabaseContext context, Guid userId)
     {
+        if (userId == Guid.Empty)
+        {
+            throw new ArgumentException("Invalid UserId.");
+        }
+
         var user = await context.Users.FindAsync(userId);
         Debug.Assert(user is not null, "The user id is expected to be validated as a true-in database user before making this call.");
         user.AccountRevisionDate = DateTime.UtcNow;

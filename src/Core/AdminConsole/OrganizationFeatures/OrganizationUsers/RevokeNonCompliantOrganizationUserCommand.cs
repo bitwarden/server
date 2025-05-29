@@ -1,8 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
+using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.Enums;
-using Bit.Core.Models.Commands;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

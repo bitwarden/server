@@ -54,7 +54,6 @@ IBaseRequestValidatorTestWrapper
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
         ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
@@ -71,7 +70,6 @@ IBaseRequestValidatorTestWrapper
             deviceValidator,
             twoFactorAuthenticationValidator,
             organizationUserRepository,
-            mailService,
             logger,
             currentContext,
             globalSettings,
@@ -96,6 +94,7 @@ IBaseRequestValidatorTestWrapper
         return context.ValidatedTokenRequest.Subject ?? new ClaimsPrincipal();
     }
 
+    [Obsolete]
     protected override void SetErrorResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
@@ -103,6 +102,7 @@ IBaseRequestValidatorTestWrapper
         context.GrantResult = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
     }
 
+    [Obsolete]
     protected override void SetSsoResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
@@ -121,6 +121,7 @@ IBaseRequestValidatorTestWrapper
         return Task.CompletedTask;
     }
 
+    [Obsolete]
     protected override void SetTwoFactorResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)

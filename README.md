@@ -5,9 +5,6 @@
   <a href="https://github.com/bitwarden/server/actions/workflows/build.yml?query=branch:main" target="_blank">
     <img src="https://github.com/bitwarden/server/actions/workflows/build.yml/badge.svg?branch=main" alt="Github Workflow build on main" />
   </a>
-  <a href="https://hub.docker.com/u/bitwarden/" target="_blank">
-    <img src="https://img.shields.io/docker/pulls/bitwarden/api.svg" alt="DockerHub" />
-  </a>
   <a href="https://gitter.im/bitwarden/Lobby" target="_blank">
     <img src="https://badges.gitter.im/bitwarden/Lobby.svg" alt="gitter chat" />
   </a>
@@ -26,12 +23,12 @@ Please refer to the [Server Setup Guide](https://contributing.bitwarden.com/gett
 ## Deploy
 
 <p align="center">
-  <a href="https://hub.docker.com/u/bitwarden/" target="_blank">
+  <a href="https://github.com/orgs/bitwarden/packages" target="_blank">
     <img src="https://i.imgur.com/SZc8JnH.png" alt="docker" />
   </a>
 </p>
 
-You can deploy Bitwarden using Docker containers on Windows, macOS, and Linux distributions. Use the provided PowerShell and Bash scripts to get started quickly. Find all of the Bitwarden images on [Docker Hub](https://hub.docker.com/u/bitwarden/).
+You can deploy Bitwarden using Docker containers on Windows, macOS, and Linux distributions. Use the provided PowerShell and Bash scripts to get started quickly. Find all of the Bitwarden images on [GitHub Container Registry](https://github.com/orgs/bitwarden/packages).
 
 Full documentation for deploying Bitwarden with Docker can be found in our help center at: https://help.bitwarden.com/article/install-on-premise/
 
