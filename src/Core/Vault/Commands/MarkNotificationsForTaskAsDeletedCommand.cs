@@ -28,7 +28,7 @@ public class MarkNotificationsForTaskAsDeletedCommand : IMarkNotificationsForTas
 
     public async Task MarkAsDeletedAsync(Guid taskId)
     {
-        var notifications = await _notificationRepository.GetActiveByTaskIdAsync(taskId);
+        var notifications = await _notificationRepository.GetNonDeletedByTaskIdAsync(taskId);
 
         foreach (var notification in notifications)
         {

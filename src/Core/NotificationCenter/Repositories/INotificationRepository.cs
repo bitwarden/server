@@ -40,5 +40,5 @@ public interface INotificationRepository : IRepository<Notification, Guid>
     /// <returns>
     /// A collection of notifications associated with the task that are not marked as deleted.
     /// </returns>
-    Task<IEnumerable<Notification>> GetActiveByTaskIdAsync(Guid taskId);
+    Task<IEnumerable<Notification>> GetNonDeletedByTaskIdAsync(Guid taskId);
 }

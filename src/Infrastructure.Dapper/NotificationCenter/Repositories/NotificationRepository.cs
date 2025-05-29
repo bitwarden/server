@@ -57,7 +57,7 @@ public class NotificationRepository : Repository<Notification, Guid>, INotificat
         };
     }
 
-    public async Task<IEnumerable<Notification>> GetActiveByTaskIdAsync(Guid taskId)
+    public async Task<IEnumerable<Notification>> GetNonDeletedByTaskIdAsync(Guid taskId)
     {
         await using var connection = new SqlConnection(ConnectionString);
 

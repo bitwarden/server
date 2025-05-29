@@ -75,7 +75,7 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
         };
     }
 
-    public async Task<IEnumerable<Core.NotificationCenter.Entities.Notification>> GetActiveByTaskIdAsync(Guid taskId)
+    public async Task<IEnumerable<Core.NotificationCenter.Entities.Notification>> GetNonDeletedByTaskIdAsync(Guid taskId)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
 
