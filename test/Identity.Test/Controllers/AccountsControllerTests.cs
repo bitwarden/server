@@ -3,7 +3,6 @@ using System.Text;
 using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Context;
@@ -38,7 +37,6 @@ public class AccountsControllerTests : IDisposable
     private readonly ILogger<AccountsController> _logger;
     private readonly IUserRepository _userRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
-    private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
@@ -54,7 +52,6 @@ public class AccountsControllerTests : IDisposable
         _logger = Substitute.For<ILogger<AccountsController>>();
         _userRepository = Substitute.For<IUserRepository>();
         _registerUserCommand = Substitute.For<IRegisterUserCommand>();
-        _captchaValidationService = Substitute.For<ICaptchaValidationService>();
         _assertionOptionsDataProtector = Substitute.For<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>();
         _getWebAuthnLoginCredentialAssertionOptionsCommand = Substitute.For<IGetWebAuthnLoginCredentialAssertionOptionsCommand>();
         _sendVerificationEmailForRegistrationCommand = Substitute.For<ISendVerificationEmailForRegistrationCommand>();
@@ -68,7 +65,6 @@ public class AccountsControllerTests : IDisposable
             _logger,
             _userRepository,
             _registerUserCommand,
-            _captchaValidationService,
             _assertionOptionsDataProtector,
             _getWebAuthnLoginCredentialAssertionOptionsCommand,
             _sendVerificationEmailForRegistrationCommand,
