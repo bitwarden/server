@@ -58,38 +58,38 @@ public class EmergencyAccessService : IEmergencyAccessService
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
     }
 
-    public async Task<EmergencyAccess> InviteAsync(User invitingUser, string email, EmergencyAccessType type, int waitTime)
+    public async Task<EmergencyAccess> InviteAsync(User grantorUser, string emergencyContactEmail, EmergencyAccessType accessType, int waitTime)
     {
-        if (!await _userService.CanAccessPremium(invitingUser))
+        if (!await _userService.CanAccessPremium(grantorUser))
         {
             throw new BadRequestException("Not a premium user.");
         }
 
-        if (type == EmergencyAccessType.Takeover && invitingUser.UsesKeyConnector)
+        if (accessType == EmergencyAccessType.Takeover && grantorUser.UsesKeyConnector)
         {
             throw new BadRequestException("You cannot use Emergency Access Takeover because you are using Key Connector.");
         }
 
         var emergencyAccess = new EmergencyAccess
         {
-            GrantorId = invitingUser.Id,
-            Email = email.ToLowerInvariant(),
+            GrantorId = grantorUser.Id,
+            Email = emergencyContactEmail.ToLowerInvariant(),
             Status = EmergencyAccessStatusType.Invited,
-            Type = type,
+            Type = accessType,
             WaitTimeDays = waitTime,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
         };
 
         await _emergencyAccessRepository.CreateAsync(emergencyAccess);
-        await SendInviteAsync(emergencyAccess, NameOrEmail(invitingUser));
+        await SendInviteAsync(emergencyAccess, NameOrEmail(grantorUser));
 
         return emergencyAccess;
     }
 
-    public async Task<EmergencyAccessDetails> GetAsync(Guid emergencyAccessId, Guid userId)
+    public async Task<EmergencyAccessDetails> GetAsync(Guid emergencyAccessId, Guid grantorId)
     {
-        var emergencyAccess = await _emergencyAccessRepository.GetDetailsByIdGrantorIdAsync(emergencyAccessId, userId);
+        var emergencyAccess = await _emergencyAccessRepository.GetDetailsByIdGrantorIdAsync(emergencyAccessId, grantorId);
         if (emergencyAccess == null)
         {
             throw new BadRequestException("Emergency Access not valid.");
@@ -98,19 +98,19 @@ public class EmergencyAccessService : IEmergencyAccessService
         return emergencyAccess;
     }
 
-    public async Task ResendInviteAsync(User invitingUser, Guid emergencyAccessId)
+    public async Task ResendInviteAsync(User grantorUser, Guid emergencyAccessId)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
-        if (emergencyAccess == null || emergencyAccess.GrantorId != invitingUser.Id ||
+        if (emergencyAccess == null || emergencyAccess.GrantorId != grantorUser.Id ||
             emergencyAccess.Status != EmergencyAccessStatusType.Invited)
         {
             throw new BadRequestException("Emergency Access not valid.");
         }
 
-        await SendInviteAsync(emergencyAccess, NameOrEmail(invitingUser));
+        await SendInviteAsync(emergencyAccess, NameOrEmail(grantorUser));
     }
 
-    public async Task<EmergencyAccess> AcceptUserAsync(Guid emergencyAccessId, User user, string token, IUserService userService)
+    public async Task<EmergencyAccess> AcceptUserAsync(Guid emergencyAccessId, User granteeUser, string token, IUserService userService)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
         if (emergencyAccess == null)
@@ -123,7 +123,7 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Invalid token.");
         }
 
-        if (!data.IsValid(emergencyAccessId, user.Email))
+        if (!data.IsValid(emergencyAccessId, granteeUser.Email))
         {
             throw new BadRequestException("Invalid token.");
         }
@@ -140,7 +140,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         // TODO PM-21687
         // Might not be reachable since the Tokenable.IsValid() does an email comparison
         if (string.IsNullOrWhiteSpace(emergencyAccess.Email) ||
-            !emergencyAccess.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
+            !emergencyAccess.Email.Equals(granteeUser.Email, StringComparison.InvariantCultureIgnoreCase))
         {
             throw new BadRequestException("User email does not match invite.");
         }
@@ -148,7 +148,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         var granteeEmail = emergencyAccess.Email;
 
         emergencyAccess.Status = EmergencyAccessStatusType.Accepted;
-        emergencyAccess.GranteeId = user.Id;
+        emergencyAccess.GranteeId = granteeUser.Id;
         emergencyAccess.Email = null;
 
         var grantor = await userService.GetUserByIdAsync(emergencyAccess.GrantorId);
@@ -172,16 +172,16 @@ public class EmergencyAccessService : IEmergencyAccessService
         await _emergencyAccessRepository.DeleteAsync(emergencyAccess);
     }
 
-    public async Task<EmergencyAccess> ConfirmUserAsync(Guid emergencyAccessId, string key, Guid confirmingUserId)
+    public async Task<EmergencyAccess> ConfirmUserAsync(Guid emergencyAccessId, string key, Guid grantorId)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
         if (emergencyAccess == null || emergencyAccess.Status != EmergencyAccessStatusType.Accepted ||
-            emergencyAccess.GrantorId != confirmingUserId)
+            emergencyAccess.GrantorId != grantorId)
         {
             throw new BadRequestException("Emergency Access not valid.");
         }
 
-        var grantor = await _userRepository.GetByIdAsync(confirmingUserId);
+        var grantor = await _userRepository.GetByIdAsync(grantorId);
         if (emergencyAccess.Type == EmergencyAccessType.Takeover && grantor.UsesKeyConnector)
         {
             throw new BadRequestException("You cannot use Emergency Access Takeover because you are using Key Connector.");
@@ -198,14 +198,14 @@ public class EmergencyAccessService : IEmergencyAccessService
         return emergencyAccess;
     }
 
-    public async Task SaveAsync(EmergencyAccess emergencyAccess, User savingUser)
+    public async Task SaveAsync(EmergencyAccess emergencyAccess, User grantorUser)
     {
-        if (!await _userService.CanAccessPremium(savingUser))
+        if (!await _userService.CanAccessPremium(grantorUser))
         {
             throw new BadRequestException("Not a premium user.");
         }
 
-        if (emergencyAccess.GrantorId != savingUser.Id)
+        if (emergencyAccess.GrantorId != grantorUser.Id)
         {
             throw new BadRequestException("Emergency Access not valid.");
         }
@@ -222,10 +222,11 @@ public class EmergencyAccessService : IEmergencyAccessService
         await _emergencyAccessRepository.ReplaceAsync(emergencyAccess);
     }
 
-    public async Task InitiateAsync(Guid id, User initiatingUser)
+    // TODO PM-21687: rename this to something like InitiateRecoveryAsync, and something similar for Approve and Reject
+    public async Task InitiateAsync(Guid emergencyAccessId, User granteeUser)
     {
-        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
-        if (emergencyAccess == null || emergencyAccess.GranteeId != initiatingUser.Id ||
+        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
+        if (emergencyAccess == null || emergencyAccess.GranteeId != granteeUser.Id ||
             emergencyAccess.Status != EmergencyAccessStatusType.Confirmed)
         {
             throw new BadRequestException("Emergency Access not valid.");
@@ -245,14 +246,14 @@ public class EmergencyAccessService : IEmergencyAccessService
         emergencyAccess.LastNotificationDate = now;
         await _emergencyAccessRepository.ReplaceAsync(emergencyAccess);
 
-        await _mailService.SendEmergencyAccessRecoveryInitiated(emergencyAccess, NameOrEmail(initiatingUser), grantor.Email);
+        await _mailService.SendEmergencyAccessRecoveryInitiated(emergencyAccess, NameOrEmail(granteeUser), grantor.Email);
     }
 
-    public async Task ApproveAsync(Guid id, User approvingUser)
+    public async Task ApproveAsync(Guid emergencyAccessId, User grantorUser)
     {
-        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
+        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
 
-        if (emergencyAccess == null || emergencyAccess.GrantorId != approvingUser.Id ||
+        if (emergencyAccess == null || emergencyAccess.GrantorId != grantorUser.Id ||
             emergencyAccess.Status != EmergencyAccessStatusType.RecoveryInitiated)
         {
             throw new BadRequestException("Emergency Access not valid.");
@@ -262,14 +263,14 @@ public class EmergencyAccessService : IEmergencyAccessService
         await _emergencyAccessRepository.ReplaceAsync(emergencyAccess);
 
         var grantee = await _userRepository.GetByIdAsync(emergencyAccess.GranteeId.Value);
-        await _mailService.SendEmergencyAccessRecoveryApproved(emergencyAccess, NameOrEmail(approvingUser), grantee.Email);
+        await _mailService.SendEmergencyAccessRecoveryApproved(emergencyAccess, NameOrEmail(grantorUser), grantee.Email);
     }
 
-    public async Task RejectAsync(Guid id, User rejectingUser)
+    public async Task RejectAsync(Guid emergencyAccessId, User grantorUser)
     {
-        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
+        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
 
-        if (emergencyAccess == null || emergencyAccess.GrantorId != rejectingUser.Id ||
+        if (emergencyAccess == null || emergencyAccess.GrantorId != grantorUser.Id ||
             (emergencyAccess.Status != EmergencyAccessStatusType.RecoveryInitiated &&
              emergencyAccess.Status != EmergencyAccessStatusType.RecoveryApproved))
         {
@@ -280,17 +281,17 @@ public class EmergencyAccessService : IEmergencyAccessService
         await _emergencyAccessRepository.ReplaceAsync(emergencyAccess);
 
         var grantee = await _userRepository.GetByIdAsync(emergencyAccess.GranteeId.Value);
-        await _mailService.SendEmergencyAccessRecoveryRejected(emergencyAccess, NameOrEmail(rejectingUser), grantee.Email);
+        await _mailService.SendEmergencyAccessRecoveryRejected(emergencyAccess, NameOrEmail(grantorUser), grantee.Email);
     }
 
-    public async Task<ICollection<Policy>> GetPoliciesAsync(Guid id, User requestingUser)
+    public async Task<ICollection<Policy>> GetPoliciesAsync(Guid emergencyAccessId, User granteeUser)
     {
         // TODO PM-21687
         // Should we look up policies here or just verify the EmergencyAccess is correct
         // and handle policy logic else where? Should this be a query/Command?
-        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
+        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
 
-        if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.Takeover))
+        if (!IsValidRequest(emergencyAccess, granteeUser, EmergencyAccessType.Takeover))
         {
             throw new BadRequestException("Emergency Access not valid.");
         }
@@ -306,11 +307,12 @@ public class EmergencyAccessService : IEmergencyAccessService
         return policies;
     }
 
-    public async Task<(EmergencyAccess, User)> TakeoverAsync(Guid id, User requestingUser)
+    // TODO PM-21687: rename this to something like InitiateRecoveryTakeoverAsync
+    public async Task<(EmergencyAccess, User)> TakeoverAsync(Guid emergencyAccessId, User granteeUser)
     {
-        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
+        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
 
-        if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.Takeover))
+        if (!IsValidRequest(emergencyAccess, granteeUser, EmergencyAccessType.Takeover))
         {
             throw new BadRequestException("Emergency Access not valid.");
         }
@@ -326,11 +328,12 @@ public class EmergencyAccessService : IEmergencyAccessService
         return (emergencyAccess, grantor);
     }
 
-    public async Task PasswordAsync(Guid id, User requestingUser, string newMasterPasswordHash, string key)
+    // TODO PM-21687: rename this to something like FinishRecoveryTakeoverAsync
+    public async Task PasswordAsync(Guid emergencyAccessId, User granteeUser, string newMasterPasswordHash, string key)
     {
-        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
+        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
 
-        if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.Takeover))
+        if (!IsValidRequest(emergencyAccess, granteeUser, EmergencyAccessType.Takeover))
         {
             throw new BadRequestException("Emergency Access not valid.");
         }
@@ -392,11 +395,11 @@ public class EmergencyAccessService : IEmergencyAccessService
         }
     }
 
-    public async Task<EmergencyAccessViewData> ViewAsync(Guid id, User requestingUser)
+    public async Task<EmergencyAccessViewData> ViewAsync(Guid emergencyAccessId, User granteeUser)
     {
-        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
+        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
 
-        if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.View))
+        if (!IsValidRequest(emergencyAccess, granteeUser, EmergencyAccessType.View))
         {
             throw new BadRequestException("Emergency Access not valid.");
         }
@@ -410,11 +413,11 @@ public class EmergencyAccessService : IEmergencyAccessService
         };
     }
 
-    public async Task<AttachmentResponseData> GetAttachmentDownloadAsync(Guid id, Guid cipherId, string attachmentId, User requestingUser)
+    public async Task<AttachmentResponseData> GetAttachmentDownloadAsync(Guid emergencyAccessId, Guid cipherId, string attachmentId, User granteeUser)
     {
-        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
+        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
 
-        if (!IsValidRequest(emergencyAccess, requestingUser, EmergencyAccessType.View))
+        if (!IsValidRequest(emergencyAccess, granteeUser, EmergencyAccessType.View))
         {
             throw new BadRequestException("Emergency Access not valid.");
         }
@@ -429,11 +432,11 @@ public class EmergencyAccessService : IEmergencyAccessService
         await _mailService.SendEmergencyAccessInviteEmailAsync(emergencyAccess, invitingUsersName, token);
     }
 
+    // TODO PM-21687: move this to the user entity -> User.GetNameOrEmail()?
     private static string NameOrEmail(User user)
     {
         return string.IsNullOrWhiteSpace(user.Name) ? user.Email : user.Name;
     }
-
 
     /*
      * Checks if EmergencyAccess Object is null
@@ -441,6 +444,7 @@ public class EmergencyAccessService : IEmergencyAccessService
      * Status _must_ equal RecoveryApproved (This means the grantor has invited, the grantee has accepted, and the grantor has approved so the shared key exists but hasn't been exercised yet)
      * request type must equal the type of access requested (View or Takeover)
      */
+    //TODO PM-21687: this IsValidRequest() checks the validity based on the granteeUser. There should be a complementary method for the grantorUser
     private static bool IsValidRequest(
         EmergencyAccess availableAccess,
         User requestingUser,
