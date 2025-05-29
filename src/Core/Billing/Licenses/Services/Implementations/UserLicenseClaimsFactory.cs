@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Security.Claims;
+using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Licenses.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -12,10 +13,9 @@ public class UserLicenseClaimsFactory : ILicenseClaimsFactory<User>
     {
         var subscriptionInfo = licenseContext.SubscriptionInfo;
 
-        var expires = subscriptionInfo?.UpcomingInvoice?.Date?.AddDays(7) ?? entity.PremiumExpirationDate?.AddDays(7);
-        var refresh = subscriptionInfo?.UpcomingInvoice?.Date ?? entity.PremiumExpirationDate;
-        var trial = (subscriptionInfo?.Subscription?.TrialEndDate.HasValue ?? false) &&
-                    subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow;
+        var expires = entity.CalculateFreshExpirationDate(subscriptionInfo);
+        var refresh = entity.CalculateFreshRefreshDate(subscriptionInfo);
+        var trial = entity.IsTrialing(subscriptionInfo);
 
         var claims = new List<Claim>
         {

@@ -1,11 +1,9 @@
 ﻿using System.Globalization;
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Licenses.Models;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 
 namespace Bit.Core.Billing.Licenses.Services.Implementations;
 
@@ -17,7 +15,7 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
         var expires = entity.CalculateFreshExpirationDate(subscriptionInfo);
         var refresh = entity.CalculateFreshRefreshDate(subscriptionInfo, expires);
         var expirationWithoutGracePeriod = entity.CalculateFreshExpirationDateWithoutGracePeriod(subscriptionInfo, expires);
-        var trial = IsTrialing(entity, subscriptionInfo);
+        var trial = entity.IsTrialing(subscriptionInfo);
 
         var claims = new List<Claim>
         {
@@ -115,9 +113,4 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
 
         return Task.FromResult(claims);
     }
-
-    private static bool IsTrialing(Organization org, SubscriptionInfo subscriptionInfo) =>
-        subscriptionInfo?.Subscription is null
-            ? org.PlanType != PlanType.Custom || !org.ExpirationDate.HasValue
-            : subscriptionInfo.Subscription.TrialEndDate > DateTime.UtcNow;
 }
