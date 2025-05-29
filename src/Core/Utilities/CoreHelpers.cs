@@ -712,6 +712,7 @@ public static class CoreHelpers
             new(Claims.Premium, isPremium ? "true" : "false"),
             new(JwtClaimTypes.Email, user.Email),
             new(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false"),
+            // TODO: [https://bitwarden.atlassian.net/browse/PM-22171] Remove this since it is already added from the persisted grant
             new(Claims.SecurityStamp, user.SecurityStamp),
         };
 
