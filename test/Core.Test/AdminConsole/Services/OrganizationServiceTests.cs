@@ -22,15 +22,11 @@ using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Core.Tokens;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Fakes;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 using Organization = Bit.Core.AdminConsole.Entities.Organization;
@@ -100,10 +96,6 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>(events =>
             events.Count() == expectedNewUsersCount));
-        await sutProvider.GetDependency<IReferenceEventService>().Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
-            referenceEvent.Type == ReferenceEventType.InvitedUsers && referenceEvent.Id == org.Id &&
-            referenceEvent.Users == expectedNewUsersCount));
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
@@ -170,10 +162,6 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>(events =>
             events.Count(e => e.Item2 == EventType.OrganizationUser_Invited) == expectedNewUsersCount));
-        await sutProvider.GetDependency<IReferenceEventService>().Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
-            referenceEvent.Type == ReferenceEventType.InvitedUsers && referenceEvent.Id == org.Id &&
-            referenceEvent.Users == expectedNewUsersCount));
     }
 
     [Theory]
@@ -727,10 +715,6 @@ public class OrganizationServiceTests
         sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
             .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>())
             .ReturnsForAnyArgs(Task.FromResult(0)).AndDoes(x => organization.SmSeats += invitedSmUsers);
-
-        // Throw error at the end of the try block
-        sutProvider.GetDependency<IReferenceEventService>().RaiseEventAsync(default)
-            .ThrowsForAnyArgs<BadRequestException>();
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
             .Returns(StaticStore.GetPlan(organization.PlanType));
