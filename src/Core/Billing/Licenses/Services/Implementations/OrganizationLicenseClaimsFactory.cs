@@ -53,6 +53,8 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
             new(nameof(OrganizationLicenseConstants.Refresh), refresh.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.ExpirationWithoutGracePeriod), expirationWithoutGracePeriod.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.Trial), trial.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseAdminSponsoredFamilies), entity.UseAdminSponsoredFamilies.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseOrganizationDomains), entity.UseOrganizationDomains.ToString()),
         };
 
         if (entity.Name is not null)
@@ -109,6 +111,7 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
         {
             claims.Add(new Claim(nameof(OrganizationLicenseConstants.SmServiceAccounts), entity.SmServiceAccounts.ToString()));
         }
+        claims.Add(new Claim(nameof(OrganizationLicenseConstants.UseAdminSponsoredFamilies), entity.UseAdminSponsoredFamilies.ToString()));
 
         return Task.FromResult(claims);
     }

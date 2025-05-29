@@ -166,6 +166,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("Use2fa")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UseAdminSponsoredFamilies")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UseApi")
                         .HasColumnType("boolean");
 
@@ -182,6 +185,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UsePasswordManager")
@@ -676,8 +682,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ExternalId")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
                         .UseCollation("postgresIndetermanisticCollation");
 
                     b.Property<Guid?>("OrganizationId")
@@ -1316,8 +1322,14 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<bool>("IsAdminInitiated")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime?>("LastSyncDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
 
                     b.Property<string>("OfferedToEmail")
                         .HasMaxLength(256)
@@ -1429,6 +1441,10 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<bool>("Disabled")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("Emails")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
 
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("timestamp with time zone");
@@ -2734,7 +2750,8 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.Vault.Models.SecurityTask", "Task")
                         .WithMany()
-                        .HasForeignKey("TaskId");
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
@@ -2849,7 +2866,8 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", "Cipher")
                         .WithMany()
-                        .HasForeignKey("CipherId");
+                        .HasForeignKey("CipherId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
                         .WithMany()
