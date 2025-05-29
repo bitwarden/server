@@ -36,13 +36,18 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     /// <remarks>
     /// This will need to be set BEFORE using the <c>Server</c> property
     /// </remarks>
-    public ITestDatabase? TestDatabase { get; set; }
+    public ITestDatabase TestDatabase { get; set; } = new SqliteTestDatabase();
+
+    /// <summary>
+    /// If set to <c>true</c> the factory will manage the database lifecycle, including migrations.
+    /// </summary>
+    /// <remarks>
+    /// This will need to be set BEFORE using the <c>Server</c> property
+    /// </remarks>
+    public bool ManagesDatabase { get; set; } = true;
 
     private readonly List<Action<IServiceCollection>> _configureTestServices = new();
     private readonly List<Action<IConfigurationBuilder>> _configureAppConfiguration = new();
-
-    public bool HandleDbDisposal { get; set; }
-
 
     public void SubstituteService<TService>(Action<TService> mockService)
         where TService : class
@@ -118,12 +123,6 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     /// </summary>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        if (TestDatabase == null)
-        {
-            TestDatabase = new SqliteTestDatabase();
-            HandleDbDisposal = true;
-        }
-
         var config = new Dictionary<string, string?>
         {
             // Manually insert a EF provider so that ConfigureServices will add EF repositories but we will override
@@ -185,7 +184,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
             // Add database to the service collection
             TestDatabase.AddDatabase(services);
-            if (HandleDbDisposal)
+            if (ManagesDatabase)
             {
                 TestDatabase.Migrate(services);
             }
@@ -287,14 +286,11 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        if (HandleDbDisposal)
+        if (ManagesDatabase)
         {
-            HandleDbDisposal = false;
-
-            if (TestDatabase != null)
-            {
-                TestDatabase!.Dispose();
-            }
+            // Avoid calling Dispose twice
+            ManagesDatabase = false;
+            TestDatabase.Dispose();
         }
     }
 }

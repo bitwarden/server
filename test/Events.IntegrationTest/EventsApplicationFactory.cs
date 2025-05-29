@@ -21,10 +21,10 @@ public class EventsApplicationFactory : WebApplicationFactoryBase<Startup>
     protected EventsApplicationFactory(ITestDatabase db)
     {
         TestDatabase = db;
-        HandleDbDisposal = true;
 
         _identityApplicationFactory = new IdentityApplicationFactory();
         _identityApplicationFactory.TestDatabase = TestDatabase;
+        _identityApplicationFactory.ManagesDatabase = false;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

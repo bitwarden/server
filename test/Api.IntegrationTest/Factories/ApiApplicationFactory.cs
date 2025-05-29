@@ -22,10 +22,10 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
     protected ApiApplicationFactory(ITestDatabase db)
     {
         TestDatabase = db;
-        HandleDbDisposal = true;
 
         _identityApplicationFactory = new IdentityApplicationFactory();
         _identityApplicationFactory.TestDatabase = TestDatabase;
+        _identityApplicationFactory.ManagesDatabase = false;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
