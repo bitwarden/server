@@ -35,6 +35,7 @@ public class ProfileService : IProfileService
         _currentContext = currentContext;
     }
 
+    // TODO: this will be called for the SendAccessGrantValidator
     public async Task GetProfileDataAsync(ProfileDataRequestContext context)
     {
         var existingClaims = context.Subject.Claims;
@@ -69,6 +70,8 @@ public class ProfileService : IProfileService
             context.IssuedClaims.AddRange(newClaims);
         }
     }
+
+    // TODO: this will be called for the SendAccessGrantValidator and no security token stamp will exist.
 
     public async Task IsActiveAsync(IsActiveContext context)
     {
