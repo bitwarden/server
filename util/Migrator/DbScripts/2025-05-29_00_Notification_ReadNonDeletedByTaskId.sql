@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[Notification_ReadActiveByTaskId]
+CREATE OR ALTER PROCEDURE [dbo].[Notification_ReadNonDeletedByTaskId]
     @TaskId UNIQUEIDENTIFIER
 AS
 BEGIN

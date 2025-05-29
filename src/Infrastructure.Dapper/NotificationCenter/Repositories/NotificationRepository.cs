@@ -62,7 +62,7 @@ public class NotificationRepository : Repository<Notification, Guid>, INotificat
         await using var connection = new SqlConnection(ConnectionString);
 
         var results = await connection.QueryAsync<Notification>(
-            "[dbo].[Notification_ReadActiveByTaskId]",
+            "[dbo].[Notification_ReadNonDeletedByTaskId]",
             new
             {
                 TaskId = taskId,
