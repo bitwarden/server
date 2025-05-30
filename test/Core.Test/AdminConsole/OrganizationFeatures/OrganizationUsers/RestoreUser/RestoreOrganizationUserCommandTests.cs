@@ -350,29 +350,6 @@ public class RestoreOrganizationUserCommandTests
             ]));
 
         await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id);
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(organizationUser.UserId.Value)
-            .Returns(new[] { organizationUser });
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.SingleOrg, Arg.Any<OrganizationUserStatusType>())
-            .Returns(new[]
-            {
-                new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.SingleOrg, OrganizationUserStatus = OrganizationUserStatusType.Revoked }
-            });
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
-            {
-                Sponsored = 0,
-                Users = 1
-            });
-        var user = new User();
-        user.Email = "test@bitwarden.com";
-        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
-
-        Assert.Contains("test@bitwarden.com is not compliant with the single organization policy", exception.Message.ToLowerInvariant());
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
