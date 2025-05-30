@@ -40,7 +40,8 @@ public class ProfileService : IProfileService
     {
         var existingClaims = context.Subject.Claims;
 
-        // TODO: add comment for why we can exempt send client logic from other logic below
+        // Send client issues sendId scoped access tokens that don't require any claims updates. The send client
+        // also doesn't issue a refresh token so we don't have access token refresh scenarios to worry about.
         if (context.Client.ClientId == BitwardenClient.Send)
         {
             // preserve all claims that were already on context.Subject
