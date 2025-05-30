@@ -335,9 +335,9 @@ jobs:
 
           # Run setup
           docker run -i --rm --name setup -v $STUB_OUTPUT/US:/bitwarden $SETUP_IMAGE \
-            dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin -cloud-region US
+            /app/Setup -stub 1 -install 1 -domain bitwarden.example.com -os lin -cloud-region US
           docker run -i --rm --name setup -v $STUB_OUTPUT/EU:/bitwarden $SETUP_IMAGE \
-            dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin -cloud-region EU
+            /app/Setup -stub 1 -install 1 -domain bitwarden.example.com -os lin -cloud-region EU
 
           sudo chown -R $(whoami):$(whoami) $STUB_OUTPUT
 
