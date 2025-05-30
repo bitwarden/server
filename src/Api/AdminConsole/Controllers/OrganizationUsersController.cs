@@ -161,12 +161,12 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
+    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false, bool queryOptimization = false)
     {
 
         if (_featureService.IsEnabled(FeatureFlagKeys.SeparateCustomRolePermissions))
         {
-            return await GetvNextAsync(orgId, includeGroups, includeCollections);
+            return await GetvNextAsync(orgId, includeGroups, includeCollections, queryOptimization);
         }
 
         var authorized = (await _authorizationService.AuthorizeAsync(
@@ -198,7 +198,7 @@ public class OrganizationUsersController : Controller
         return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
     }
 
-    private async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> GetvNextAsync(Guid orgId, bool includeGroups = false, bool includeCollections = false)
+    private async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> GetvNextAsync(Guid orgId, bool includeGroups = false, bool includeCollections = false, bool queryOptimization = false)
     {
         var request = new OrganizationUserUserDetailsQueryRequest
         {
@@ -209,12 +209,14 @@ public class OrganizationUsersController : Controller
 
         if ((await _authorizationService.AuthorizeAsync(User, new ManageUsersRequirement())).Succeeded)
         {
-            return GetResultListResponseModel(await _organizationUserUserDetailsQuery.Get(request));
+            var results = await _organizationUserUserDetailsQuery.Get(request, queryOptimization);
+            return GetResultListResponseModel(results);
         }
 
         if ((await _authorizationService.AuthorizeAsync(User, new ManageAccountRecoveryRequirement())).Succeeded)
         {
-            return GetResultListResponseModel(await _organizationUserUserDetailsQuery.GetAccountRecoveryEnrolledUsers(request));
+            var results = await _organizationUserUserDetailsQuery.GetAccountRecoveryEnrolledUsers(request);
+            return GetResultListResponseModel(results);
         }
 
         throw new NotFoundException();
