@@ -1073,7 +1073,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
 
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: false);
-        var ciphersDict = ciphers.ToDictionary(d => d.Id);
+        var ciphersDict = ciphers.ToDictionary(c => c.Id);
 
         // Validate the model was encrypted for the posting user
         foreach (var cipher in model.Ciphers)
@@ -1082,7 +1082,7 @@ public class CiphersController : Controller
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
         }
 
-        var shareInfos = new List<(Cipher cipher, DateTime? lastKnownRevisionDate)>();
+        var shareCiphers = new List<(Cipher, DateTime?)>();
         foreach (var cipher in model.Ciphers)
         {
             if (!ciphersDict.TryGetValue(cipher.Id.Value, out var existingCipher))
@@ -1090,11 +1090,11 @@ public class CiphersController : Controller
 
             ValidateClientVersionForFido2CredentialSupport(existingCipher);
 
-            shareInfos.Add(((Cipher)existingCipher, cipher.LastKnownRevisionDate));
+            shareCiphers.Add(((Cipher)existingCipher, cipher.LastKnownRevisionDate));
         }
 
         var updated = await _cipherService.ShareManyAsync(
-            shareInfos,
+            shareCiphers,
             organizationId,
             model.CollectionIds.Select(Guid.Parse),
             userId
