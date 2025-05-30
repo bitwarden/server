@@ -1066,36 +1066,36 @@ public class CiphersController : Controller
     [HttpPost("share")]
     public async Task<Dictionary<Guid, DateTime>> PutShareMany([FromBody] CipherBulkShareRequestModel model)
     {
-        var orgId = new Guid(model.Ciphers.First().OrganizationId);
-        if (!await _currentContext.OrganizationUser(orgId))
+        var organizationId = new Guid(model.Ciphers.First().OrganizationId);
+        if (!await _currentContext.OrganizationUser(organizationId))
             throw new NotFoundException();
 
         var userId = _userService.GetProperUserId(User).Value;
 
-        var allDetails = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: false);
-        var detailById = allDetails.ToDictionary(d => d.Id);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: false);
+        var ciphersDict = ciphers.ToDictionary(d => d.Id);
 
         // Validate the model was encrypted for the posting user
-        foreach (var req in model.Ciphers)
+        foreach (var cipher in model.Ciphers)
         {
-            if (req.EncryptedFor.HasValue && req.EncryptedFor.Value != userId)
+            if (cipher.EncryptedFor.HasValue && cipher.EncryptedFor.Value != userId)
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
         }
 
         var shareInfos = new List<(Cipher cipher, DateTime? lastKnownRevisionDate)>();
-        foreach (var req in model.Ciphers)
+        foreach (var cipher in model.Ciphers)
         {
-            if (!detailById.TryGetValue(req.Id.Value, out var detail))
+            if (!ciphersDict.TryGetValue(cipher.Id.Value, out var detail))
                 throw new BadRequestException("Trying to share ciphers that you do not own.");
 
             ValidateClientVersionForFido2CredentialSupport(detail);
 
-            shareInfos.Add(((Cipher)detail, req.LastKnownRevisionDate));
+            shareInfos.Add(((Cipher)detail, cipher.LastKnownRevisionDate));
         }
 
         var updated = await _cipherService.ShareManyAsync(
             shareInfos,
-            orgId,
+            organizationId,
             model.CollectionIds.Select(Guid.Parse),
             userId
         );
