@@ -1068,7 +1068,9 @@ public class CiphersController : Controller
     {
         var organizationId = new Guid(model.Ciphers.First().OrganizationId);
         if (!await _currentContext.OrganizationUser(organizationId))
+        {
             throw new NotFoundException();
+        }
 
         var userId = _userService.GetProperUserId(User).Value;
 
@@ -1079,14 +1081,18 @@ public class CiphersController : Controller
         foreach (var cipher in model.Ciphers)
         {
             if (cipher.EncryptedFor.HasValue && cipher.EncryptedFor.Value != userId)
+            {
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
+            }
         }
 
         var shareCiphers = new List<(Cipher, DateTime?)>();
         foreach (var cipher in model.Ciphers)
         {
             if (!ciphersDict.TryGetValue(cipher.Id.Value, out var existingCipher))
+            {
                 throw new BadRequestException("Trying to share ciphers that you do not own.");
+            }
 
             ValidateClientVersionForFido2CredentialSupport(existingCipher);
 
