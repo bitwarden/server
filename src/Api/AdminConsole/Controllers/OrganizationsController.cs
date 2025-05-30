@@ -25,7 +25,7 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -65,6 +65,7 @@ public class OrganizationsController : Controller
     private readonly IOrganizationDeleteCommand _organizationDeleteCommand;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
+    private readonly IOrganizationUpdateKeysCommand _organizationUpdateKeysCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -88,7 +89,8 @@ public class OrganizationsController : Controller
         ICloudOrganizationSignUpCommand cloudOrganizationSignUpCommand,
         IOrganizationDeleteCommand organizationDeleteCommand,
         IPolicyRequirementQuery policyRequirementQuery,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IOrganizationUpdateKeysCommand organizationUpdateKeysCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -112,6 +114,7 @@ public class OrganizationsController : Controller
         _organizationDeleteCommand = organizationDeleteCommand;
         _policyRequirementQuery = policyRequirementQuery;
         _pricingClient = pricingClient;
+        _organizationUpdateKeysCommand = organizationUpdateKeysCommand;
     }
 
     [HttpGet("{id}")]
@@ -140,10 +143,10 @@ public class OrganizationsController : Controller
         var organizations = await _organizationUserRepository.GetManyDetailsByUserAsync(userId,
             OrganizationUserStatusType.Confirmed);
 
-        var organizationManagingActiveUser = await _userService.GetOrganizationsManagingUserAsync(userId);
-        var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
+        var organizationsClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(userId);
+        var organizationIdsClaimingActiveUser = organizationsClaimingActiveUser.Select(o => o.Id);
 
-        var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsManagingActiveUser));
+        var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingActiveUser));
         return new ListResponseModel<ProfileOrganizationResponseModel>(responses);
     }
 
@@ -276,10 +279,9 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && (await _userService.GetOrganizationsManagingUserAsync(user.Id)).Any(x => x.Id == id))
+        if ((await _userService.GetOrganizationsClaimingUserAsync(user.Id)).Any(x => x.Id == id))
         {
-            throw new BadRequestException("Managed user account cannot leave managing organization. Contact your organization administrator for additional details.");
+            throw new BadRequestException("Claimed user account cannot leave claiming organization. Contact your organization administrator for additional details.");
         }
 
         await _removeOrganizationUserCommand.UserLeaveAsync(id, user.Id);
@@ -490,7 +492,7 @@ public class OrganizationsController : Controller
     }
 
     [HttpPost("{id}/keys")]
-    public async Task<OrganizationKeysResponseModel> PostKeys(string id, [FromBody] OrganizationKeysRequestModel model)
+    public async Task<OrganizationKeysResponseModel> PostKeys(Guid id, [FromBody] OrganizationKeysRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -498,7 +500,7 @@ public class OrganizationsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var org = await _organizationService.UpdateOrganizationKeysAsync(new Guid(id), model.PublicKey,
+        var org = await _organizationUpdateKeysCommand.UpdateOrganizationKeysAsync(id, model.PublicKey,
             model.EncryptedPrivateKey);
         return new OrganizationKeysResponseModel(org);
     }

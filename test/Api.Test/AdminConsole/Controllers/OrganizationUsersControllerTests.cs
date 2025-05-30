@@ -238,19 +238,12 @@ public class OrganizationUsersControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Invite(organizationAbility.Id, model));
     }
 
-    [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
+    [Theory, BitAutoData]
     public async Task Get_ReturnsUser(
-        bool accountDeprovisioningEnabled,
         OrganizationUserUserDetails organizationUser, ICollection<CollectionAccessSelection> collections,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         organizationUser.Permissions = null;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            .Returns(accountDeprovisioningEnabled);
 
         sutProvider.GetDependency<ICurrentContext>()
             .ManageUsers(organizationUser.OrganizationId)
@@ -260,14 +253,15 @@ public class OrganizationUsersControllerTests
             .GetDetailsByIdWithCollectionsAsync(organizationUser.Id)
             .Returns((organizationUser, collections));
 
-        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-            .GetUsersOrganizationManagementStatusAsync(organizationUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)))
+        sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
+            .GetUsersOrganizationClaimedStatusAsync(organizationUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)))
             .Returns(new Dictionary<Guid, bool> { { organizationUser.Id, true } });
 
         var response = await sutProvider.Sut.Get(organizationUser.Id, false);
 
         Assert.Equal(organizationUser.Id, response.Id);
-        Assert.Equal(accountDeprovisioningEnabled, response.ManagedByOrganization);
+        Assert.True(response.ManagedByOrganization);
+        Assert.True(response.ClaimedByOrganization);
     }
 
     [Theory]
@@ -331,7 +325,7 @@ public class OrganizationUsersControllerTests
 
         await sutProvider.Sut.DeleteAccount(orgId, id);
 
-        await sutProvider.GetDependency<IDeleteManagedOrganizationUserAccountCommand>()
+        await sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountCommand>()
             .Received(1)
             .DeleteUserAsync(orgId, id, currentUser.Id);
     }
@@ -367,7 +361,7 @@ public class OrganizationUsersControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(currentUser);
-        sutProvider.GetDependency<IDeleteManagedOrganizationUserAccountCommand>()
+        sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountCommand>()
             .DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id)
             .Returns(deleteResults);
 
@@ -375,7 +369,7 @@ public class OrganizationUsersControllerTests
 
         Assert.Equal(deleteResults.Count, response.Data.Count());
         Assert.True(response.Data.All(r => deleteResults.Any(res => res.Item1 == r.Id && res.Item2 == r.Error)));
-        await sutProvider.GetDependency<IDeleteManagedOrganizationUserAccountCommand>()
+        await sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountCommand>()
             .Received(1)
             .DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
     }

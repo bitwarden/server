@@ -497,7 +497,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
+    public async Task CreateAsync(Guid userId, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
     {
         if (!ciphers.Any())
         {
@@ -531,7 +531,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
                     await connection.ExecuteAsync(
                             $"[{Schema}].[User_BumpAccountRevisionDate]",
-                            new { Id = ciphers.First().UserId },
+                            new { Id = userId },
                             commandType: CommandType.StoredProcedure, transaction: transaction);
 
                     transaction.Commit();
@@ -737,7 +737,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             row[creationDateColumn] = cipher.CreationDate;
             row[revisionDateColumn] = cipher.RevisionDate;
             row[deletedDateColumn] = cipher.DeletedDate.HasValue ? (object)cipher.DeletedDate : DBNull.Value;
-            row[repromptColumn] = cipher.Reprompt;
+            row[repromptColumn] = cipher.Reprompt.HasValue ? cipher.Reprompt.Value : DBNull.Value;
             row[keyColummn] = cipher.Key;
 
             ciphersTable.Rows.Add(row);

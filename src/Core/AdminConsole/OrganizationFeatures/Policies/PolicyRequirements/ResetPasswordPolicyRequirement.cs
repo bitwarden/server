@@ -34,6 +34,8 @@ public class ResetPasswordPolicyRequirementFactory : BasePolicyRequirementFactor
 
     protected override IEnumerable<OrganizationUserType> ExemptRoles => [];
 
+    protected override IEnumerable<OrganizationUserStatusType> ExemptStatuses => [OrganizationUserStatusType.Revoked];
+
     public override ResetPasswordPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
         var result = policyDetails

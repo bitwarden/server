@@ -1,8 +1,11 @@
 ﻿using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
@@ -11,14 +14,14 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
-using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
+using IdentityModel;
 using LinqToDB;
+using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
 using Xunit;
 
@@ -61,19 +64,14 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
     public async Task TokenEndpoint_GrantTypePassword_UserTwoFactorRequired_TwoFactorProvided_Success()
     {
         // Arrange
-        // we can't use the class factory here.
         var factory = new IdentityApplicationFactory();
 
-        string emailToken = null;
-        factory.SubstituteService<IMailService>(mailService =>
+        // return specified email token from cache
+        var emailToken = "12345678";
+        factory.SubstituteService<IDistributedCache>(distCache =>
         {
-            mailService.SendTwoFactorEmailAsync(
-                    Arg.Any<string>(),
-                    Arg.Any<string>(),
-                    Arg.Do<string>(t => emailToken = t),
-                    Arg.Any<string>(),
-                    Arg.Any<string>())
-                .Returns(Task.CompletedTask);
+            distCache.GetAsync(Arg.Is<string>(s => s.StartsWith("EmailToken_")))
+                .Returns(Task.FromResult(Encoding.UTF8.GetBytes(emailToken)));
         });
 
         // Create Test User
@@ -102,10 +100,11 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
     public async Task TokenEndpoint_GrantTypePassword_InvalidTwoFactorToken_Fails()
     {
         // Arrange
-        await CreateUserAsync(_factory, _testEmail, _userEmailTwoFactor);
+        var localFactory = new IdentityApplicationFactory();
+        await CreateUserAsync(localFactory, _testEmail, _userEmailTwoFactor);
 
         // Act
-        var context = await _factory.ContextFromPasswordWithTwoFactorAsync(
+        var context = await localFactory.ContextFromPasswordWithTwoFactorAsync(
                                 _testEmail, _testPassword, twoFactorProviderType: "Email");
 
         // Assert
@@ -124,16 +123,17 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
     public async Task TokenEndpoint_GrantTypePassword_OrgDuoTwoFactorRequired_NoTwoFactorProvided_Fails(string deviceId)
     {
         // Arrange
+        var localFactory = new IdentityApplicationFactory();
         var challenge = new string('c', 50);
         var ssoConfigData = new SsoConfigurationData
         {
             MemberDecryptionType = MemberDecryptionType.MasterPassword,
         };
         await CreateSsoOrganizationAndUserAsync(
-            _factory, ssoConfigData, challenge, _testEmail, orgTwoFactor: _organizationTwoFactor);
+            localFactory, ssoConfigData, challenge, _testEmail, orgTwoFactor: _organizationTwoFactor);
 
         // Act
-        var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        var context = await localFactory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
             { "client_id", "web" },
@@ -143,7 +143,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "grant_type", "password" },
             { "username", _testEmail },
             { "password", _testPassword },
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
+        }));
 
         // Assert
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -156,10 +156,11 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
     public async Task TokenEndpoint_GrantTypePassword_RememberTwoFactorType_InvalidTwoFactorToken_Fails()
     {
         // Arrange
-        await CreateUserAsync(_factory, _testEmail, _userEmailTwoFactor);
+        var localFactory = new IdentityApplicationFactory();
+        await CreateUserAsync(localFactory, _testEmail, _userEmailTwoFactor);
 
         // Act
-        var context = await _factory.ContextFromPasswordWithTwoFactorAsync(
+        var context = await localFactory.ContextFromPasswordWithTwoFactorAsync(
                                 _testEmail, _testPassword, twoFactorProviderType: "Remember");
 
         // Assert
@@ -210,13 +211,14 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
     public async Task TokenEndpoint_GrantTypeClientCredential_IndvTwoFactorRequired_Success(string deviceId)
     {
         // Arrange
-        await CreateUserAsync(_factory, _testEmail, _userEmailTwoFactor);
+        var localFactory = new IdentityApplicationFactory();
+        await CreateUserAsync(localFactory, _testEmail, _userEmailTwoFactor);
 
-        var database = _factory.GetDatabaseContext();
+        var database = localFactory.GetDatabaseContext();
         var user = await database.Users.FirstAsync(u => u.Email == _testEmail);
 
         // Act
-        var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        var context = await localFactory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "grant_type", "client_credentials" },
             { "client_id", $"user.{user.Id}" },
@@ -261,7 +263,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
+        }));
 
         // Assert
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -275,16 +277,13 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
     {
         // Arrange
         var localFactory = new IdentityApplicationFactory();
-        string emailToken = null;
-        localFactory.SubstituteService<IMailService>(mailService =>
+
+        // return specified email token from cache
+        var emailToken = "12345678";
+        localFactory.SubstituteService<IDistributedCache>(distCache =>
         {
-            mailService.SendTwoFactorEmailAsync(
-                    Arg.Any<string>(),
-                    Arg.Any<string>(),
-                    Arg.Do<string>(t => emailToken = t),
-                    Arg.Any<string>(),
-                    Arg.Any<string>())
-                .Returns(Task.CompletedTask);
+            distCache.GetAsync(Arg.Is<string>(s => s.StartsWith("EmailToken_")))
+                .Returns(Task.FromResult(Encoding.UTF8.GetBytes(emailToken)));
         });
 
         // Create Test User
@@ -308,7 +307,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
+        }));
 
         Assert.Equal(StatusCodes.Status400BadRequest, failedTokenContext.Response.StatusCode);
         Assert.NotNull(emailToken);
@@ -327,7 +326,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
+        }));
 
 
         // Assert
@@ -364,7 +363,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
+        }));
 
         // Assert
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -379,17 +378,24 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         string userTwoFactor = null)
     {
         // Create Test User
-        await factory.RegisterAsync(new RegisterRequestModel
-        {
-            Email = testEmail,
-            MasterPasswordHash = _testPassword,
-        });
-
-        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
-        var user = await userRepository.GetByEmailAsync(testEmail);
+        var user = await factory.RegisterNewIdentityFactoryUserAsync(
+            new RegisterFinishRequestModel
+            {
+                Email = testEmail,
+                MasterPasswordHash = _testPassword,
+                Kdf = KdfType.PBKDF2_SHA256,
+                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                UserAsymmetricKeys = new KeysRequestModel()
+                {
+                    PublicKey = "public_key",
+                    EncryptedPrivateKey = "private_key"
+                },
+                UserSymmetricKey = "sym_key",
+            });
         Assert.NotNull(user);
 
         var userService = factory.GetService<IUserService>();
+        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
         if (userTwoFactor != null)
         {
             user.TwoFactorProviders = userTwoFactor;
@@ -426,16 +432,20 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
                 .Returns(authorizationCode);
         });
 
-        // Create Test User
-        var registerResponse = await factory.RegisterAsync(new RegisterRequestModel
-        {
-            Email = testEmail,
-            MasterPasswordHash = _testPassword,
-        });
-
-        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
-        var user = await userRepository.GetByEmailAsync(testEmail);
-        Assert.NotNull(user);
+        var user = await factory.RegisterNewIdentityFactoryUserAsync(
+            new RegisterFinishRequestModel
+            {
+                Email = testEmail,
+                MasterPasswordHash = _testPassword,
+                Kdf = KdfType.PBKDF2_SHA256,
+                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                UserAsymmetricKeys = new KeysRequestModel()
+                {
+                    PublicKey = "public_key",
+                    EncryptedPrivateKey = "private_key"
+                },
+                UserSymmetricKey = "sym_key",
+            });
 
         var userService = factory.GetService<IUserService>();
         if (userTwoFactor != null)

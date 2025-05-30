@@ -114,6 +114,16 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// </summary>
     public bool UseRiskInsights { get; set; }
 
+    /// <summary>
+    /// If true, the organization can claim domains, which unlocks additional enterprise features
+    /// </summary>
+    public bool UseOrganizationDomains { get; set; }
+
+    /// <summary>
+    /// If set to true, admins can initiate organization-issued sponsorships.
+    /// </summary>
+    public bool UseAdminSponsoredFamilies { get; set; }
+
     public void SetNewId()
     {
         if (Id == default(Guid))
@@ -313,5 +323,8 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
+        UseRiskInsights = license.UseRiskInsights;
+        UseOrganizationDomains = license.UseOrganizationDomains;
+        UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies;
     }
 }

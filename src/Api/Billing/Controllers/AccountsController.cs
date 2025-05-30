@@ -3,6 +3,7 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -22,7 +23,8 @@ namespace Bit.Api.Billing.Controllers;
 [Route("accounts")]
 [Authorize("Application")]
 public class AccountsController(
-    IUserService userService) : Controller
+    IUserService userService,
+    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery) : Controller
 {
     [HttpPost("premium")]
     public async Task<PaymentResponseModel> PostPremiumAsync(
@@ -56,12 +58,12 @@ public class AccountsController(
             model.PaymentMethodType!.Value, model.AdditionalStorageGb.GetValueOrDefault(0), license,
             new TaxInfo { BillingAddressCountry = model.Country, BillingAddressPostalCode = model.PostalCode });
 
-        var userTwoFactorEnabled = await userService.TwoFactorIsEnabledAsync(user);
+        var userTwoFactorEnabled = await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await userService.HasPremiumFromOrganization(user);
-        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
+        var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
         var profile = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled,
-            userHasPremiumFromOrganization, organizationIdsManagingActiveUser);
+            userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);
         return new PaymentResponseModel
         {
             UserProfile = profile,
@@ -229,9 +231,9 @@ public class AccountsController(
         await paymentService.SaveTaxInfoAsync(user, taxInfo);
     }
 
-    private async Task<IEnumerable<Guid>> GetOrganizationIdsManagingUserAsync(Guid userId)
+    private async Task<IEnumerable<Guid>> GetOrganizationIdsClaimingUserAsync(Guid userId)
     {
-        var organizationManagingUser = await userService.GetOrganizationsManagingUserAsync(userId);
-        return organizationManagingUser.Select(o => o.Id);
+        var organizationsClaimingUser = await userService.GetOrganizationsClaimingUserAsync(userId);
+        return organizationsClaimingUser.Select(o => o.Id);
     }
 }
