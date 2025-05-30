@@ -60,13 +60,137 @@ public class MemberAccessCipherDetailsQuery : IMemberAccessCipherDetailsQuery
         var orgItems = await _organizationCiphersQuery.GetAllOrganizationCiphers(request.OrganizationId);
         var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUsers);
 
-        var memberAccessCipherDetails = GenerateAccessDataParallel(
+        var memberAccessCipherDetails = GenerateAccessDataParallelV2(
             orgGroups,
             orgCollectionsWithAccess,
             orgItems,
             organizationUsersTwoFactorEnabled,
             orgAbility);
 
+        return memberAccessCipherDetails;
+    }
+
+    private IEnumerable<MemberAccessCipherDetails> GenerateAccessData(
+    ICollection<Group> orgGroups,
+    ICollection<Tuple<Collection, CollectionAccessDetails>> orgCollectionsWithAccess,
+    IEnumerable<CipherOrganizationDetailsWithCollections> orgItems,
+    IEnumerable<(OrganizationUserUserDetails user, bool twoFactorIsEnabled)> organizationUsersTwoFactorEnabled,
+    OrganizationAbility orgAbility)
+    {
+        var orgUsers = organizationUsersTwoFactorEnabled.Select(x => x.user);
+        // Create a dictionary to lookup the group names later.
+        var groupNameDictionary = orgGroups.ToDictionary(x => x.Id, x => x.Name);
+
+        // Get collections grouped and into a dictionary for counts
+        var collectionItems = orgItems
+            .SelectMany(x => x.CollectionIds,
+                (cipher, collectionId) => new { Cipher = cipher, CollectionId = collectionId })
+            .GroupBy(y => y.CollectionId,
+                (key, ciphers) => new { CollectionId = key, Ciphers = ciphers });
+        var itemLookup = collectionItems.ToDictionary(x => x.CollectionId.ToString(), x => x.Ciphers.Select(c => c.Cipher.Id.ToString()));
+
+        // Loop through the org users and populate report and access data
+        var memberAccessCipherDetails = new List<MemberAccessCipherDetails>();
+        foreach (var user in orgUsers)
+        {
+            var groupAccessDetails = new List<MemberAccessDetails>();
+            var userCollectionAccessDetails = new List<MemberAccessDetails>();
+            foreach (var tCollect in orgCollectionsWithAccess)
+            {
+                var hasItems = itemLookup.TryGetValue(tCollect.Item1.Id.ToString(), out var items);
+                var collectionCiphers = hasItems ? items.Select(x => x) : null;
+
+                var itemCounts = hasItems ? collectionCiphers.Count() : 0;
+                if (tCollect.Item2.Groups.Count() > 0)
+                {
+
+                    var groupDetails = tCollect.Item2.Groups.Where((tCollectGroups) => user.Groups.Contains(tCollectGroups.Id)).Select(x =>
+                        new MemberAccessDetails
+                        {
+                            CollectionId = tCollect.Item1.Id,
+                            CollectionName = tCollect.Item1.Name,
+                            GroupId = x.Id,
+                            GroupName = groupNameDictionary[x.Id],
+                            ReadOnly = x.ReadOnly,
+                            HidePasswords = x.HidePasswords,
+                            Manage = x.Manage,
+                            ItemCount = itemCounts,
+                            CollectionCipherIds = items
+                        });
+
+                    groupAccessDetails.AddRange(groupDetails);
+                }
+
+                // All collections assigned to users and their permissions
+                if (tCollect.Item2.Users.Count() > 0)
+                {
+                    var userCollectionDetails = tCollect.Item2.Users.Where((tCollectUser) => tCollectUser.Id == user.Id).Select(x =>
+                        new MemberAccessDetails
+                        {
+                            CollectionId = tCollect.Item1.Id,
+                            CollectionName = tCollect.Item1.Name,
+                            ReadOnly = x.ReadOnly,
+                            HidePasswords = x.HidePasswords,
+                            Manage = x.Manage,
+                            ItemCount = itemCounts,
+                            CollectionCipherIds = items
+                        });
+                    userCollectionAccessDetails.AddRange(userCollectionDetails);
+                }
+            }
+
+            var report = new MemberAccessCipherDetails
+            {
+                UserName = user.Name,
+                Email = user.Email,
+                TwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == user.Id).twoFactorIsEnabled,
+                // Both the user's ResetPasswordKey must be set and the organization can UseResetPassword
+                AccountRecoveryEnabled = !string.IsNullOrEmpty(user.ResetPasswordKey) && orgAbility.UseResetPassword,
+                UserGuid = user.Id,
+                UsesKeyConnector = user.UsesKeyConnector
+            };
+
+            var userAccessDetails = new List<MemberAccessDetails>();
+            if (user.Groups.Any())
+            {
+                var userGroups = groupAccessDetails.Where(x => user.Groups.Contains(x.GroupId.GetValueOrDefault()));
+                userAccessDetails.AddRange(userGroups);
+            }
+
+            // There can be edge cases where groups don't have a collection
+            var groupsWithoutCollections = user.Groups.Where(x => !userAccessDetails.Any(y => x == y.GroupId));
+            if (groupsWithoutCollections.Count() > 0)
+            {
+                var emptyGroups = groupsWithoutCollections.Select(x => new MemberAccessDetails
+                {
+                    GroupId = x,
+                    GroupName = groupNameDictionary[x],
+                    ItemCount = 0
+                });
+                userAccessDetails.AddRange(emptyGroups);
+            }
+
+            if (user.Collections.Any())
+            {
+                var userCollections = userCollectionAccessDetails.Where(x => user.Collections.Any(y => x.CollectionId == y.Id));
+                userAccessDetails.AddRange(userCollections);
+            }
+            report.AccessDetails = userAccessDetails;
+
+            var userCiphers =
+                report.AccessDetails
+                    .Where(x => x.ItemCount > 0)
+                    .SelectMany(y => y.CollectionCipherIds)
+                    .Distinct();
+            report.CipherIds = userCiphers;
+            report.TotalItemCount = userCiphers.Count();
+
+            // Distinct items only
+            var distinctItems = report.AccessDetails.Where(x => x.CollectionId.HasValue).Select(x => x.CollectionId).Distinct();
+            report.CollectionsCount = distinctItems.Count();
+            report.GroupsCount = report.AccessDetails.Select(x => x.GroupId).Where(y => y.HasValue).Distinct().Count();
+            memberAccessCipherDetails.Add(report);
+        }
         return memberAccessCipherDetails;
     }
 
@@ -197,6 +321,123 @@ public class MemberAccessCipherDetailsQuery : IMemberAccessCipherDetailsQuery
             var distinctItems = report.AccessDetails.Where(x => x.CollectionId.HasValue).Select(x => x.CollectionId).Distinct();
             report.CollectionsCount = distinctItems.Count();
             report.GroupsCount = report.AccessDetails.Select(x => x.GroupId).Where(y => y.HasValue).Distinct().Count();
+
+            memberAccessCipherDetails.Add(report);
+        });
+
+        return memberAccessCipherDetails;
+    }
+
+    private IEnumerable<MemberAccessCipherDetails> GenerateAccessDataParallelV2(
+    ICollection<Group> orgGroups,
+    ICollection<Tuple<Collection, CollectionAccessDetails>> orgCollectionsWithAccess,
+    IEnumerable<CipherOrganizationDetailsWithCollections> orgItems,
+    IEnumerable<(OrganizationUserUserDetails user, bool twoFactorIsEnabled)> organizationUsersTwoFactorEnabled,
+    OrganizationAbility orgAbility)
+    {
+        var orgUsers = organizationUsersTwoFactorEnabled.Select(x => x.user).ToList();
+        var groupNameDictionary = orgGroups.ToDictionary(x => x.Id, x => x.Name);
+
+        // Pre-compute and materialize this collection to avoid repeated work in parallel loop
+        var itemLookup = orgItems
+            .SelectMany(x => x.CollectionIds,
+                (cipher, collectionId) => new { Cipher = cipher, CollectionId = collectionId })
+            .GroupBy(y => y.CollectionId,
+                (key, ciphers) => new { CollectionId = key, Ciphers = ciphers })
+            .ToDictionary(x => x.CollectionId.ToString(), x => x.Ciphers.Select(c => c.Cipher.Id.ToString()).ToList());
+
+        var memberAccessCipherDetails = new ConcurrentBag<MemberAccessCipherDetails>();
+
+        // Add parallelism control to prevent thread exhaustion
+        var parallelOptions = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2)
+        };
+
+        Parallel.ForEach(orgUsers, parallelOptions, user =>
+        {
+            // Each thread gets its own lists - no need for thread-safe collections here
+            var userAccessDetails = new List<MemberAccessDetails>();
+
+            // Process group access details
+            var userGroupIds = new HashSet<Guid>(user.Groups);
+            foreach (var tCollect in orgCollectionsWithAccess)
+            {
+                if (!itemLookup.TryGetValue(tCollect.Item1.Id.ToString(), out var items))
+                {
+                    continue;
+                }
+
+                // Process group-based access
+                foreach (var groupAccess in tCollect.Item2.Groups.Where(g => userGroupIds.Contains(g.Id)))
+                {
+                    userAccessDetails.Add(new MemberAccessDetails
+                    {
+                        CollectionId = tCollect.Item1.Id,
+                        CollectionName = tCollect.Item1.Name,
+                        GroupId = groupAccess.Id,
+                        GroupName = groupNameDictionary[groupAccess.Id],
+                        ReadOnly = groupAccess.ReadOnly,
+                        HidePasswords = groupAccess.HidePasswords,
+                        Manage = groupAccess.Manage,
+                        ItemCount = items.Count,
+                        CollectionCipherIds = items
+                    });
+                }
+
+                // Process direct user access
+                var userAccess = tCollect.Item2.Users.FirstOrDefault(u => u.Id == user.Id);
+                if (userAccess != null)
+                {
+                    userAccessDetails.Add(new MemberAccessDetails
+                    {
+                        CollectionId = tCollect.Item1.Id,
+                        CollectionName = tCollect.Item1.Name,
+                        ReadOnly = userAccess.ReadOnly,
+                        HidePasswords = userAccess.HidePasswords,
+                        Manage = userAccess.Manage,
+                        ItemCount = items.Count,
+                        CollectionCipherIds = items
+                    });
+                }
+            }
+
+            // Add empty groups
+            var groupsWithCollections = new HashSet<Guid>(userAccessDetails
+                .Where(x => x.GroupId.HasValue)
+                .Select(x => x.GroupId.Value));
+
+            foreach (var groupId in user.Groups.Where(g => !groupsWithCollections.Contains(g)))
+            {
+                userAccessDetails.Add(new MemberAccessDetails
+                {
+                    GroupId = groupId,
+                    GroupName = groupNameDictionary[groupId],
+                    ItemCount = 0
+                });
+            }
+
+            // Calculate user ciphers efficiently
+            var userCipherIds = userAccessDetails
+                .Where(x => x.ItemCount > 0)
+                .SelectMany(y => y.CollectionCipherIds ?? Enumerable.Empty<string>())
+                .Distinct()
+                .ToList();
+
+            var report = new MemberAccessCipherDetails
+            {
+                UserName = user.Name,
+                Email = user.Email,
+                TwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == user.Id).twoFactorIsEnabled,
+                AccountRecoveryEnabled = !string.IsNullOrEmpty(user.ResetPasswordKey) && orgAbility.UseResetPassword,
+                UserGuid = user.Id,
+                UsesKeyConnector = user.UsesKeyConnector,
+                AccessDetails = userAccessDetails,
+                CipherIds = userCipherIds,
+                TotalItemCount = userCipherIds.Count,
+                CollectionsCount = userAccessDetails.Where(x => x.CollectionId.HasValue).Select(x => x.CollectionId).Distinct().Count(),
+                GroupsCount = userAccessDetails.Select(x => x.GroupId).Where(y => y.HasValue).Distinct().Count()
+            };
 
             memberAccessCipherDetails.Add(report);
         });
