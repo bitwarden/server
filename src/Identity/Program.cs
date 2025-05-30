@@ -1,4 +1,5 @@
 ﻿using AspNetCoreRateLimit;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
 namespace Bit.Identity;
@@ -7,9 +8,28 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        CreateHostBuilder(args)
-            .Build()
-            .Run();
+        var builder = WebApplication.CreateBuilder(args);
+
+        builder.AddServiceDefaults();
+
+        var startup = new Startup(builder.Environment, builder.Configuration);
+
+        startup.ConfigureServices(builder.Services);
+
+        var app = builder.Build();
+
+        app.MapDefaultEndpoints();
+
+        var settings = app.Services.GetRequiredService<GlobalSettings>();
+        var logger = app.Services.GetRequiredService<ILogger<Startup>>();
+
+        startup.Configure(app, app.Environment, app.Lifetime, settings, logger);
+
+        app.Run();
+
+        // CreateHostBuilder(args)
+        //     .Build()
+        //     .Run();
     }
 
     public static IHostBuilder CreateHostBuilder(string[] args)

@@ -1,4 +1,4 @@
-﻿using Bit.Core.Utilities;
+﻿using Bit.Core.Settings;
 
 namespace Bit.Icons;
 
@@ -6,15 +6,22 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        Host
-            .CreateDefaultBuilder(args)
-            .ConfigureWebHostDefaults(webBuilder =>
-            {
-                webBuilder.UseStartup<Startup>();
-                webBuilder.ConfigureLogging((hostingContext, logging) =>
-                    logging.AddSerilog(hostingContext, (e, globalSettings) => e.Level >= globalSettings.MinLogLevel.IconsSettings.Default));
-            })
-            .Build()
-            .Run();
+        var builder = WebApplication.CreateBuilder(args);
+
+        builder.AddServiceDefaults();
+
+        var startup = new Startup(builder.Environment, builder.Configuration);
+
+        startup.ConfigureServices(builder.Services);
+
+        var app = builder.Build();
+
+        app.MapDefaultEndpoints();
+
+        var settings = app.Services.GetRequiredService<GlobalSettings>();
+
+        startup.Configure(app, app.Environment, app.Lifetime, settings);
+
+        app.Run();
     }
 }
