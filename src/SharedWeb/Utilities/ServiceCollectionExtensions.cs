@@ -461,6 +461,12 @@ public static class ServiceCollectionExtensions
                 };
             });
 
+        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+            .Configure<IHttpMessageHandlerFactory>((options, factory) =>
+            {
+                options.BackchannelHttpHandler = factory.CreateHandler("identity");
+            });
+
         if (addAuthorization != null)
         {
             services.AddAuthorization(config =>
