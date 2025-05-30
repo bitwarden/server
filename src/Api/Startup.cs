@@ -33,6 +33,7 @@ using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Tools.ReportFeatures;
 using Bit.Core.Auth.Models.Api.Request;
+using Bit.Core.Identity;
 using Bit.Core.Tools.SendFeatures;
 
 #if !OSS
@@ -144,6 +145,13 @@ public class Startup
                     c.Type == JwtClaimTypes.Scope &&
                     (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
                 ));
+            });
+
+            config.AddPolicy(Policies.Send, configurePolicy: policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Send);
+                policy.RequireClaim(Claims.SendId);
             });
         });
 

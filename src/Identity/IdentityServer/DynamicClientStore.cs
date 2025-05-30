@@ -37,7 +37,7 @@ internal class DynamicClientStore : IClientStore
         if (firstPeriod == -1)
         {
             // No splitter, attempt but don't fail for a static client
-            if (_staticClientStore.ApiClients.TryGetValue(clientId, out var client))
+            if (_staticClientStore.Clients.TryGetValue(clientId, out var client))
             {
                 return Task.FromResult<Client?>(client);
             }
