@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿#nullable enable
+
+using System.Text.Json;
 using Bit.Core.AdminConsole.Models.Data.Integrations;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Enums;
@@ -7,11 +9,9 @@ using Bit.Core.Repositories;
 
 namespace Bit.Core.Services;
 
-#nullable enable
-
 public class EventIntegrationHandler<T>(
     IntegrationType integrationType,
-    IIntegrationPublisher integrationPublisher,
+    IEventIntegrationPublisher eventIntegrationPublisher,
     IOrganizationIntegrationConfigurationRepository configurationRepository,
     IUserRepository userRepository,
     IOrganizationRepository organizationRepository)
@@ -47,7 +47,7 @@ public class EventIntegrationHandler<T>(
                 DelayUntilDate = null
             };
 
-            await integrationPublisher.PublishAsync(message);
+            await eventIntegrationPublisher.PublishAsync(message);
         }
     }
 

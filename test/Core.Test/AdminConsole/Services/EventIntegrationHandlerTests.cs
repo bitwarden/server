@@ -24,7 +24,7 @@ public class EventIntegrationHandlerTests
     private const string _templateWithActingUser = "#ActingUserName#, #ActingUserEmail#";
     private const string _url = "https://localhost";
     private const string _url2 = "https://example.com";
-    private readonly IIntegrationPublisher _integrationPublisher = Substitute.For<IIntegrationPublisher>();
+    private readonly IEventIntegrationPublisher _eventIntegrationPublisher = Substitute.For<IEventIntegrationPublisher>();
 
     private SutProvider<EventIntegrationHandler<WebhookIntegrationConfigurationDetails>> GetSutProvider(
         List<OrganizationIntegrationConfigurationDetails> configurations)
@@ -35,7 +35,7 @@ public class EventIntegrationHandlerTests
 
         return new SutProvider<EventIntegrationHandler<WebhookIntegrationConfigurationDetails>>()
             .SetDependency(configurationRepository)
-            .SetDependency(_integrationPublisher)
+            .SetDependency(_eventIntegrationPublisher)
             .SetDependency(IntegrationType.Webhook)
             .Create();
     }
@@ -87,7 +87,7 @@ public class EventIntegrationHandlerTests
         var sutProvider = GetSutProvider(NoConfigurations());
 
         await sutProvider.Sut.HandleEventAsync(eventMessage);
-        Assert.Empty(_integrationPublisher.ReceivedCalls());
+        Assert.Empty(_eventIntegrationPublisher.ReceivedCalls());
     }
 
     [Theory, BitAutoData]
@@ -101,8 +101,8 @@ public class EventIntegrationHandlerTests
             $"Date: {eventMessage.Date}, Type: {eventMessage.Type}, UserId: {eventMessage.UserId}"
         );
 
-        Assert.Single(_integrationPublisher.ReceivedCalls());
-        await _integrationPublisher.Received(1).PublishAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedMessage)));
+        Assert.Single(_eventIntegrationPublisher.ReceivedCalls());
+        await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedMessage)));
         await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
         await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
     }
@@ -120,8 +120,8 @@ public class EventIntegrationHandlerTests
 
         var expectedMessage = EventIntegrationHandlerTests.expectedMessage($"{user.Name}, {user.Email}");
 
-        Assert.Single(_integrationPublisher.ReceivedCalls());
-        await _integrationPublisher.Received(1).PublishAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedMessage)));
+        Assert.Single(_eventIntegrationPublisher.ReceivedCalls());
+        await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedMessage)));
         await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
         await sutProvider.GetDependency<IUserRepository>().Received(1).GetByIdAsync(eventMessage.ActingUserId ?? Guid.Empty);
     }
@@ -136,12 +136,12 @@ public class EventIntegrationHandlerTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(Arg.Any<Guid>()).Returns(organization);
         await sutProvider.Sut.HandleEventAsync(eventMessage);
 
-        Assert.Single(_integrationPublisher.ReceivedCalls());
+        Assert.Single(_eventIntegrationPublisher.ReceivedCalls());
 
         var expectedMessage = EventIntegrationHandlerTests.expectedMessage($"Org: {organization.Name}");
 
-        Assert.Single(_integrationPublisher.ReceivedCalls());
-        await _integrationPublisher.Received(1).PublishAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedMessage)));
+        Assert.Single(_eventIntegrationPublisher.ReceivedCalls());
+        await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedMessage)));
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).GetByIdAsync(eventMessage.OrganizationId ?? Guid.Empty);
         await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
     }
@@ -159,8 +159,8 @@ public class EventIntegrationHandlerTests
 
         var expectedMessage = EventIntegrationHandlerTests.expectedMessage($"{user.Name}, {user.Email}");
 
-        Assert.Single(_integrationPublisher.ReceivedCalls());
-        await _integrationPublisher.Received(1).PublishAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedMessage)));
+        Assert.Single(_eventIntegrationPublisher.ReceivedCalls());
+        await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedMessage)));
         await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
         await sutProvider.GetDependency<IUserRepository>().Received(1).GetByIdAsync(eventMessage.UserId ?? Guid.Empty);
     }
@@ -171,7 +171,7 @@ public class EventIntegrationHandlerTests
         var sutProvider = GetSutProvider(NoConfigurations());
 
         await sutProvider.Sut.HandleManyEventsAsync(eventMessages);
-        Assert.Empty(_integrationPublisher.ReceivedCalls());
+        Assert.Empty(_eventIntegrationPublisher.ReceivedCalls());
     }
 
     [Theory, BitAutoData]
@@ -186,7 +186,7 @@ public class EventIntegrationHandlerTests
             var expectedMessage = EventIntegrationHandlerTests.expectedMessage(
                 $"Date: {eventMessage.Date}, Type: {eventMessage.Type}, UserId: {eventMessage.UserId}"
             );
-            await _integrationPublisher.Received(1).PublishAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedMessage)));
+            await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedMessage)));
         }
     }
 
@@ -203,10 +203,10 @@ public class EventIntegrationHandlerTests
             var expectedMessage = EventIntegrationHandlerTests.expectedMessage(
                 $"Date: {eventMessage.Date}, Type: {eventMessage.Type}, UserId: {eventMessage.UserId}"
             );
-            await _integrationPublisher.Received(1).PublishAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedMessage)));
+            await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedMessage)));
 
             expectedMessage.Configuration = new WebhookIntegrationConfigurationDetails(_url2);
-            await _integrationPublisher.Received(1).PublishAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedMessage)));
+            await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedMessage)));
         }
     }
 }

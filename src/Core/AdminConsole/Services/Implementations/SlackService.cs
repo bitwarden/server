@@ -1,4 +1,6 @@
-﻿using System.Net.Http.Headers;
+﻿#nullable enable
+
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Web;
 using Bit.Core.Models.Slack;
@@ -22,7 +24,7 @@ public class SlackService(
 
     public async Task<string> GetChannelIdAsync(string token, string channelName)
     {
-        return (await GetChannelIdsAsync(token, [channelName])).FirstOrDefault();
+        return (await GetChannelIdsAsync(token, [channelName])).FirstOrDefault() ?? string.Empty;
     }
 
     public async Task<List<string>> GetChannelIdsAsync(string token, List<string> channelNames)
@@ -58,7 +60,7 @@ public class SlackService(
             }
             else
             {
-                logger.LogError("Error getting Channel Ids: {Error}", result.Error);
+                logger.LogError("Error getting Channel Ids: {Error}", result?.Error ?? "Unknown Error");
                 nextCursor = string.Empty;
             }
 
@@ -89,7 +91,7 @@ public class SlackService(
                 new KeyValuePair<string, string>("redirect_uri", redirectUrl)
             }));
 
-        SlackOAuthResponse result;
+        SlackOAuthResponse? result;
         try
         {
             result = await tokenResponse.Content.ReadFromJsonAsync<SlackOAuthResponse>();
@@ -99,7 +101,7 @@ public class SlackService(
             result = null;
         }
 
-        if (result == null)
+        if (result is null)
         {
             logger.LogError("Error obtaining token via OAuth: Unknown error");
             return string.Empty;
@@ -130,6 +132,11 @@ public class SlackService(
         var response = await _httpClient.SendAsync(request);
         var result = await response.Content.ReadFromJsonAsync<SlackUserResponse>();
 
+        if (result is null)
+        {
+            logger.LogError("Error retrieving Slack user ID: Unknown error");
+            return string.Empty;
+        }
         if (!result.Ok)
         {
             logger.LogError("Error retrieving Slack user ID: {Error}", result.Error);
@@ -151,6 +158,11 @@ public class SlackService(
         var response = await _httpClient.SendAsync(request);
         var result = await response.Content.ReadFromJsonAsync<SlackDmResponse>();
 
+        if (result is null)
+        {
+            logger.LogError("Error opening DM channel: Unknown error");
+            return string.Empty;
+        }
         if (!result.Ok)
         {
             logger.LogError("Error opening DM channel: {Error}", result.Error);

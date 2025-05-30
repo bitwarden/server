@@ -1,4 +1,6 @@
-﻿using System.Net;
+﻿#nullable enable
+
+using System.Net;
 using System.Text.Json;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -257,10 +259,10 @@ public class SlackServiceTests
     public void GetRedirectUrl_ReturnsCorrectUrl()
     {
         var sutProvider = GetSutProvider();
-        var ClientId = sutProvider.GetDependency<GlobalSettings>().Slack.ClientId;
-        var Scopes = sutProvider.GetDependency<GlobalSettings>().Slack.Scopes;
+        var clientId = sutProvider.GetDependency<GlobalSettings>().Slack.ClientId;
+        var scopes = sutProvider.GetDependency<GlobalSettings>().Slack.Scopes;
         var redirectUrl = "https://example.com/callback";
-        var expectedUrl = $"https://slack.com/oauth/v2/authorize?client_id={ClientId}&scope={Scopes}&redirect_uri={redirectUrl}";
+        var expectedUrl = $"https://slack.com/oauth/v2/authorize?client_id={clientId}&scope={scopes}&redirect_uri={redirectUrl}";
         var result = sutProvider.Sut.GetRedirectUrl(redirectUrl);
         Assert.Equal(expectedUrl, result);
     }

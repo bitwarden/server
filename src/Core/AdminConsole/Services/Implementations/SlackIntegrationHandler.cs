@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.Models.Data.Integrations;
+﻿#nullable enable
+
+using Bit.Core.AdminConsole.Models.Data.Integrations;
 
 namespace Bit.Core.Services;
 
