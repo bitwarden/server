@@ -117,12 +117,12 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
                                                   (newPlan.PasswordManager.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
         if (!organization.Seats.HasValue || organization.Seats.Value > updatedPasswordManagerSeats)
         {
-            var occupiedSeats =
-                await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            if (occupiedSeats > updatedPasswordManagerSeats)
+            var seatCounts =
+                await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            if (seatCounts.Total > updatedPasswordManagerSeats)
             {
-                throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
-                                              $"Your new plan only has ({updatedPasswordManagerSeats}) seats. Remove some users.");
+                throw new BadRequestException($"Your organization has {seatCounts.Users} members and {seatCounts.Sponsored} sponsored families. " +
+                    $"To decrease the seat count below {seatCounts.Total}, you must remove members or sponsorships.");
             }
         }
 
