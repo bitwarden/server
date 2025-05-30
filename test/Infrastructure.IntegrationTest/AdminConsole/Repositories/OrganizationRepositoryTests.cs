@@ -295,54 +295,18 @@ public class OrganizationRepositoryTests
         IOrganizationSponsorshipRepository organizationSponsorshipRepository)
     {
         // Arrange
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = "Test Org",
-            BillingEmail = "billing@example.com",
-            Plan = "Test",
-            PrivateKey = "privatekey",
-        });
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
 
         // Create users in different states
-        var user1 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 1",
-            Email = "test1@example.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
-
-        var user2 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 2",
-            Email = "test2@example.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
-
-        var user3 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 3",
-            Email = "test3@example.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
+        var user1 = await userRepository.CreateTestUserAsync("test1");
+        var user2 = await userRepository.CreateTestUserAsync("test2");
+        var user3 = await userRepository.CreateTestUserAsync("test3");
 
         // Create organization users in different states
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user1.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-        });
+        await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user1); // Confirmed state
+        await organizationUserRepository.CreateTestOrganizationUserInviteAsync(organization); // Invited state
 
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user2.Id,
-            Status = OrganizationUserStatusType.Invited,
-        });
-
+        // Create a revoked user manually since there's no helper for it
         await organizationUserRepository.CreateAsync(new OrganizationUser
         {
             OrganizationId = organization.Id,
@@ -397,13 +361,7 @@ public class OrganizationRepositoryTests
         IOrganizationRepository organizationRepository)
     {
         // Arrange
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = "Test Org",
-            BillingEmail = "billing@example.com",
-            Plan = "Test",
-            PrivateKey = "privatekey",
-        });
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
 
         // Act
         var result = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
@@ -421,21 +379,9 @@ public class OrganizationRepositoryTests
         IOrganizationUserRepository organizationUserRepository)
     {
         // Arrange
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = "Test Org",
-            BillingEmail = "billing@example.com",
-            Plan = "Test",
-            PrivateKey = "privatekey",
-        });
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
 
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = "test@example.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
+        var user = await userRepository.CreateTestUserAsync("test1");
 
         await organizationUserRepository.CreateAsync(new OrganizationUser
         {
@@ -459,13 +405,7 @@ public class OrganizationRepositoryTests
         IOrganizationSponsorshipRepository organizationSponsorshipRepository)
     {
         // Arrange
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = "Test Org",
-            BillingEmail = "billing@example.com",
-            Plan = "Test",
-            PrivateKey = "privatekey",
-        });
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
 
         await organizationSponsorshipRepository.CreateAsync(new OrganizationSponsorship
         {
