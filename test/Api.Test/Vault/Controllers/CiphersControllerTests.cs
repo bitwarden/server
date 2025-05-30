@@ -1782,8 +1782,8 @@ public class CiphersControllerTests
 
         var newDate1 = oldDate1.AddMinutes(5);
         var newDate2 = oldDate2.AddMinutes(5);
-        var updatedCipher1 = new Cipher { Id = detail1.Id, RevisionDate = newDate1 };
-        var updatedCipher2 = new Cipher { Id = detail2.Id, RevisionDate = newDate2 };
+        var updatedCipher1 = new Cipher { Id = detail1.Id, RevisionDate = newDate1, Type = detail1.Type, Data = detail1.Data };
+        var updatedCipher2 = new Cipher { Id = detail2.Id, RevisionDate = newDate2, Type = detail2.Type, Data = detail2.Data };
 
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationUser(organizationId)
@@ -1824,9 +1824,10 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutShareMany(model);
 
-        Assert.Equal(2, result.Count);
-        Assert.Equal(newDate1, result[detail1.Id]);
-        Assert.Equal(newDate2, result[detail2.Id]);
+        Assert.Equal(2, result.Length);
+        var revisionDates = result.Select(r => r.RevisionDate).ToList();
+        Assert.Contains(newDate1, revisionDates);
+        Assert.Contains(newDate2, revisionDates);
 
         await sutProvider.GetDependency<ICipherService>()
             .Received(1)
