@@ -1,4 +1,6 @@
-﻿using Bit.Core.Enums;
+﻿#nullable enable
+
+using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.Models.Data.Integrations;
 
