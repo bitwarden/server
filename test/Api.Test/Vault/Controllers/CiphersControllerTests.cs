@@ -1741,19 +1741,25 @@ public class CiphersControllerTests
     {
         model.OrganizationId = Guid.NewGuid();
 
-        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(model.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderUserForOrgAsync(new Guid(model.OrganizationId.ToString()))
+            .Returns(Task.FromResult(true));
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PutRestoreManyAdmin(model));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.PutRestoreManyAdmin(model)
+        );
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PutShareMany_ShouldShareCiphersAndReturnResponseModels(
+    public async Task PutShareMany_ShouldShareCiphersAndReturnRevisionDateMap(
         User user,
         Guid organizationId,
         Guid userId,
         SutProvider<CiphersController> sutProvider)
     {
+        var oldDate1 = DateTime.UtcNow.AddDays(-1);
+        var oldDate2 = DateTime.UtcNow.AddDays(-2);
         var detail1 = new CipherDetails
         {
             Id = Guid.NewGuid(),
@@ -1761,7 +1767,7 @@ public class CiphersControllerTests
             OrganizationId = organizationId,
             Type = CipherType.Login,
             Data = JsonSerializer.Serialize(new CipherLoginData()),
-            RevisionDate = DateTime.UtcNow
+            RevisionDate = oldDate1
         };
         var detail2 = new CipherDetails
         {
@@ -1770,36 +1776,42 @@ public class CiphersControllerTests
             OrganizationId = organizationId,
             Type = CipherType.SecureNote,
             Data = JsonSerializer.Serialize(new CipherSecureNoteData()),
-            RevisionDate = DateTime.UtcNow
+            RevisionDate = oldDate2
         };
-        var preloaded = new List<CipherDetails> { detail1, detail2 };
+        var preloadedDetails = new List<CipherDetails> { detail1, detail2 };
+
+        var newDate1 = oldDate1.AddMinutes(5);
+        var newDate2 = oldDate2.AddMinutes(5);
+        var updatedCipher1 = new Cipher { Id = detail1.Id, RevisionDate = newDate1 };
+        var updatedCipher2 = new Cipher { Id = detail2.Id, RevisionDate = newDate2 };
 
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationUser(organizationId)
             .Returns(Task.FromResult(true));
         sutProvider.GetDependency<IUserService>()
             .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
-            .Returns(user);
+            .Returns(Task.FromResult(user));
         sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(default)
+            .GetProperUserId(default!)
             .ReturnsForAnyArgs(userId);
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilitiesAsync()
-            .Returns(new Dictionary<Guid, OrganizationAbility>
-            {
-                { organizationId, new OrganizationAbility { Id = organizationId } }
-            });
-
 
         sutProvider.GetDependency<ICipherRepository>()
-            .GetManyByUserIdAsync(userId, withOrganizations: true)
-            .Returns(Task.FromResult((ICollection<CipherDetails>)preloaded));
+            .GetManyByUserIdAsync(userId, withOrganizations: false)
+            .Returns(Task.FromResult((ICollection<CipherDetails>)preloadedDetails));
 
+        sutProvider.GetDependency<ICipherService>()
+            .ShareManyAsync(
+                Arg.Any<IEnumerable<(Cipher, DateTime?)>>(),
+                organizationId,
+                Arg.Any<IEnumerable<Guid>>(),
+                userId
+            )
+            .Returns(Task.FromResult<IEnumerable<Cipher>>(new[] { updatedCipher1, updatedCipher2 }));
 
-        var cipherRequests = preloaded.Select(d => new CipherWithIdRequestModel
+        var cipherRequests = preloadedDetails.Select(d => new CipherWithIdRequestModel
         {
             Id = d.Id,
-            OrganizationId = d.OrganizationId.Value.ToString(),
+            OrganizationId = d.OrganizationId!.Value.ToString(),
             LastKnownRevisionDate = d.RevisionDate,
             Type = d.Type
         }).ToList();
@@ -1812,6 +1824,10 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutShareMany(model);
 
+        Assert.Equal(2, result.Count);
+        Assert.Equal(newDate1, result[detail1.Id]);
+        Assert.Equal(newDate2, result[detail2.Id]);
+
         await sutProvider.GetDependency<ICipherService>()
             .Received(1)
             .ShareManyAsync(
@@ -1821,10 +1837,7 @@ public class CiphersControllerTests
                 ),
                 organizationId,
                 Arg.Any<IEnumerable<Guid>>(),
-                userId);
-
-        Assert.Equal(2, result.Length);
-        Assert.Contains(result, r => r.Id == detail1.Id);
-        Assert.Contains(result, r => r.Id == detail2.Id);
+                userId
+            );
     }
 }

@@ -1064,57 +1064,43 @@ public class CiphersController : Controller
 
     [HttpPut("share")]
     [HttpPost("share")]
-    public async Task<CipherResponseModel[]> PutShareMany([FromBody] CipherBulkShareRequestModel model)
+    public async Task<Dictionary<Guid, DateTime>> PutShareMany([FromBody] CipherBulkShareRequestModel model)
     {
-        var organizationId = new Guid(model.Ciphers.First().OrganizationId);
-        if (!await _currentContext.OrganizationUser(organizationId))
-        {
+        var orgId = new Guid(model.Ciphers.First().OrganizationId);
+        if (!await _currentContext.OrganizationUser(orgId))
             throw new NotFoundException();
-        }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var requestedIds = model.Ciphers.Select(c => c.Id.Value).ToArray();
-        var allDetails = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: true);
-        var preloaded = allDetails.Where(c => requestedIds.Contains(c.Id)).ToList();
+
+        var allDetails = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: false);
+        var detailById = allDetails.ToDictionary(d => d.Id);
 
         // Validate the model was encrypted for the posting user
-        foreach (var cipher in model.Ciphers)
+        foreach (var req in model.Ciphers)
         {
-            if (cipher.EncryptedFor != null)
-            {
-                if (cipher.EncryptedFor != userId)
-                {
-                    throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
-                }
-            }
+            if (req.EncryptedFor.HasValue && req.EncryptedFor.Value != userId)
+                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
         }
 
-        var shareCiphers = new List<(Cipher, DateTime?)>();
-        foreach (var cipher in model.Ciphers)
-            if (preloaded.Count != requestedIds.Length)
-            {
-                throw new BadRequestException("Trying to share ciphers that you do not own.");
-            }
-
-        var shareList = preloaded.Select(detail =>
+        var shareInfos = new List<(Cipher cipher, DateTime? lastKnownRevisionDate)>();
+        foreach (var req in model.Ciphers)
         {
-            var client = model.Ciphers.First(c => c.Id.Value == detail.Id);
-            ValidateClientVersionForFido2CredentialSupport(detail);
-            var entity = (Cipher)detail;
-            return (entity, client.LastKnownRevisionDate);
-        }).ToList();
+            if (!detailById.TryGetValue(req.Id.Value, out var detail))
+                throw new BadRequestException("Trying to share ciphers that you do not own.");
 
-        await _cipherService.ShareManyAsync(
-            shareList,
-            organizationId,
+            ValidateClientVersionForFido2CredentialSupport(detail);
+
+            shareInfos.Add(((Cipher)detail, req.LastKnownRevisionDate));
+        }
+
+        var updated = await _cipherService.ShareManyAsync(
+            shareInfos,
+            orgId,
             model.CollectionIds.Select(Guid.Parse),
             userId
         );
 
-        var currentUser = await _userService.GetUserByPrincipalAsync(User);
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-
-        return preloaded.Select(cd => new CipherResponseModel(cd, currentUser, orgAbilities, _globalSettings)).ToArray();
+        return updated.ToDictionary(c => c.Id, c => c.RevisionDate);
     }
 
     [HttpPost("purge")]
