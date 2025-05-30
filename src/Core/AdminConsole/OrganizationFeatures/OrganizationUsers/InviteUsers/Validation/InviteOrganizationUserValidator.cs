@@ -6,7 +6,6 @@ using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using OrganizationUserInvite = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 
@@ -38,7 +37,7 @@ public class InviteOrganizationUsersValidator(
             request = new InviteOrganizationUsersValidationRequest(request)
             {
                 Invites = request.Invites
-                    .Select(x => new OrganizationUserInvite(x, accessSecretsManager: true))
+                    .Select(x => new OrganizationUserInviteCommandModel(x, accessSecretsManager: true))
                     .ToArray()
             };
         }
