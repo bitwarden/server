@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Services;
 
-public interface IEventIntegrationPublisher: IAsyncDisposable
+public interface IEventIntegrationPublisher : IAsyncDisposable
 {
     Task PublishAsync(IIntegrationMessage message);
     Task PublishEventAsync(string body);
