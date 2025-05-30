@@ -13,9 +13,11 @@
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" Version="9.3.0" />
     <PackageReference Include="Aspire.Hosting.SqlServer" Version="9.3.0" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.MailPit" Version="9.5.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Admin\Admin.csproj" />
     <ProjectReference Include="..\Api\Api.csproj" />
     <ProjectReference Include="..\Billing\Billing.csproj" />
     <ProjectReference Include="..\Icons\Icons.csproj" />
