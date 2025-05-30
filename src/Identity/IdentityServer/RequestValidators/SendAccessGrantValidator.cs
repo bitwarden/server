@@ -1,16 +1,15 @@
 ﻿using System.Security.Claims;
-using Bit.Core.Entities;
 using Bit.Core.Identity;
+using Bit.Core.KeyManagement.Sends;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Core.Utilities;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
-using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
-public class SendAccessGrantValidator(ISendAuthenticationQuery sendAuthenticationQuery, IPasswordHasher<User> passwordHasher) : IExtensionGrantValidator
+public class SendAccessGrantValidator(ISendAuthenticationQuery sendAuthenticationQuery, ISendPasswordHasher sendPasswordHasher) : IExtensionGrantValidator
 {
     public const string GrantType = "send_access";
 
@@ -58,7 +57,7 @@ public class SendAccessGrantValidator(ISendAuthenticationQuery sendAuthenticatio
 
             case NotAuthenticated:
                 // automatically issue access token
-                context.Result = BuildBaseSuccessResult(sendId);
+                context.Result = BuildBaseSuccessResult(sendIdGuid);
                 return;
 
             case ResourcePassword rp:
@@ -70,7 +69,7 @@ public class SendAccessGrantValidator(ISendAuthenticationQuery sendAuthenticatio
                     return;
                 }
 
-                var passwordValid = ValidateSendPassword(rp.Hash, password);
+                var passwordValid = sendPasswordHasher.VerifyPasswordHash(rp.Hash, password);
 
                 if (!passwordValid)
                 {
@@ -79,7 +78,7 @@ public class SendAccessGrantValidator(ISendAuthenticationQuery sendAuthenticatio
                 }
 
                 // password is valid, so we can issue an access token.
-                context.Result = BuildBaseSuccessResult(sendId);
+                context.Result = BuildBaseSuccessResult(sendIdGuid);
                 return;
 
             case EmailOtp eo:
@@ -93,29 +92,20 @@ public class SendAccessGrantValidator(ISendAuthenticationQuery sendAuthenticatio
         }
     }
 
-    private GrantValidationResult BuildBaseSuccessResult(string sendId)
+    private GrantValidationResult BuildBaseSuccessResult(Guid sendId)
     {
         var claims = new List<Claim>
         {
             // TODO: Add email claim when issuing access token for email + OTP send
-            new Claim(Claims.SendId, sendId),
+            new Claim(Claims.SendId, sendId.ToString()),
             new Claim(Claims.Type, IdentityClientType.Send.ToString())
         };
 
         return new GrantValidationResult(
-            subject: sendId,
+            subject: sendId.ToString(),
             authenticationMethod: GrantType,
             claims: claims);
     }
 
-    private bool ValidateSendPassword(string sendPassword, string userSubmittedPassword)
-    {
-        if (string.IsNullOrWhiteSpace(sendPassword) || string.IsNullOrWhiteSpace(userSubmittedPassword))
-        {
-            return false;
-        }
-        var passwordResult = passwordHasher.VerifyHashedPassword(new User(), sendPassword, userSubmittedPassword);
 
-        return passwordResult is PasswordVerificationResult.Success or PasswordVerificationResult.SuccessRehashNeeded;
-    }
 }
