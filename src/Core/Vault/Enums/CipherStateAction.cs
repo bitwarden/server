@@ -3,6 +3,8 @@
 public enum CipherStateAction
 {
     Restore,
+    Unarchive,
+    Archive,
     SoftDelete,
     HardDelete,
 }
