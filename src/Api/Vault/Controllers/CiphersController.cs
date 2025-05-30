@@ -1085,12 +1085,12 @@ public class CiphersController : Controller
         var shareInfos = new List<(Cipher cipher, DateTime? lastKnownRevisionDate)>();
         foreach (var cipher in model.Ciphers)
         {
-            if (!ciphersDict.TryGetValue(cipher.Id.Value, out var detail))
+            if (!ciphersDict.TryGetValue(cipher.Id.Value, out var existingCipher))
                 throw new BadRequestException("Trying to share ciphers that you do not own.");
 
-            ValidateClientVersionForFido2CredentialSupport(detail);
+            ValidateClientVersionForFido2CredentialSupport(existingCipher);
 
-            shareInfos.Add(((Cipher)detail, cipher.LastKnownRevisionDate));
+            shareInfos.Add(((Cipher)existingCipher, cipher.LastKnownRevisionDate));
         }
 
         var updated = await _cipherService.ShareManyAsync(
