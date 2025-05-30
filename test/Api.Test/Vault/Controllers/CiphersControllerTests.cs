@@ -1840,4 +1840,80 @@ public class CiphersControllerTests
                 userId
             );
     }
+
+    [Theory, BitAutoData]
+    public async Task PutShareMany_OrganizationUserFalse_ThrowsNotFound(
+        CipherBulkShareRequestModel model,
+        SutProvider<CiphersController> sut)
+    {
+        model.Ciphers = new[] {
+          new CipherWithIdRequestModel { Id = Guid.NewGuid(), OrganizationId = Guid.NewGuid().ToString() }
+        };
+        sut.GetDependency<ICurrentContext>()
+            .OrganizationUser(Arg.Any<Guid>())
+            .Returns(Task.FromResult(false));
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sut.Sut.PutShareMany(model));
+    }
+    [Theory, BitAutoData]
+    public async Task PutShareMany_CipherNotOwned_ThrowsNotFoundException(
+        Guid organizationId,
+        Guid userId,
+        CipherWithIdRequestModel request,
+        SutProvider<CiphersController> sutProvider)
+    {
+        request.EncryptedFor = userId;
+        var model = new CipherBulkShareRequestModel
+        {
+            Ciphers = new[] { request },
+            CollectionIds = new[] { Guid.NewGuid().ToString() }
+        };
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(Task.FromResult(true));
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(default)
+            .ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(userId, withOrganizations: false)
+            .Returns(Task.FromResult((ICollection<CipherDetails>)new List<CipherDetails>()));
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.PutShareMany(model)
+        );
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutShareMany_EncryptedForWrongUser_ThrowsNotFoundException(
+        Guid organizationId,
+        Guid userId,
+        CipherWithIdRequestModel request,
+        SutProvider<CiphersController> sutProvider)
+    {
+        request.EncryptedFor = Guid.NewGuid(); // not equal to userId
+        var model = new CipherBulkShareRequestModel
+        {
+            Ciphers = new[] { request },
+            CollectionIds = new[] { Guid.NewGuid().ToString() }
+        };
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(Task.FromResult(true));
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(default)
+            .ReturnsForAnyArgs(userId);
+
+        var existing = new CipherDetails { Id = request.Id.Value };
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(userId, withOrganizations: false)
+            .Returns(Task.FromResult((ICollection<CipherDetails>)(new[] { existing })));
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.PutShareMany(model)
+        );
+    }
+
 }
+
