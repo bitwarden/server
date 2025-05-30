@@ -30,9 +30,6 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 using Fido2NetLib;
@@ -69,7 +66,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
     private readonly IDataProtector _organizationServiceDataProtector;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IFido2 _fido2;
     private readonly ICurrentContext _currentContext;
     private readonly IGlobalSettings _globalSettings;
@@ -109,7 +105,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IPaymentService paymentService,
         IPolicyRepository policyRepository,
         IPolicyService policyService,
-        IReferenceEventService referenceEventService,
         IFido2 fido2,
         ICurrentContext currentContext,
         IGlobalSettings globalSettings,
@@ -154,7 +149,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _policyService = policyService;
         _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
             "OrganizationServiceDataProtector");
-        _referenceEventService = referenceEventService;
         _fido2 = fido2;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
@@ -299,8 +293,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         await _userRepository.DeleteAsync(user);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.DeleteAccount, user, _currentContext));
         await _pushService.PushLogOutAsync(user.Id);
         return IdentityResult.Success;
     }
@@ -1046,12 +1038,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         {
             await SaveUserAsync(user);
             await _pushService.PushSyncVaultAsync(user.Id);
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.UpgradePlan, user, _currentContext)
-                {
-                    Storage = user.MaxStorageGb,
-                    PlanName = PremiumPlanId,
-                });
         }
         catch when (!_globalSettings.SelfHosted)
         {
@@ -1117,12 +1103,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb,
             StripeConstants.Prices.StoragePlanPersonal);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustStorage, user, _currentContext)
-            {
-                Storage = storageAdjustmentGb,
-                PlanName = StripeConstants.Prices.StoragePlanPersonal,
-            });
         await SaveUserAsync(user);
         return secret;
     }
@@ -1150,18 +1130,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             eop = false;
         }
         await _paymentService.CancelSubscriptionAsync(user, eop);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.CancelSubscription, user, _currentContext)
-            {
-                EndOfPeriod = eop
-            });
     }
 
     public async Task ReinstatePremiumAsync(User user)
     {
         await _paymentService.ReinstateSubscriptionAsync(user);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.ReinstateSubscription, user, _currentContext));
     }
 
     public async Task EnablePremiumAsync(Guid userId, DateTime? expirationDate)
@@ -1444,17 +1417,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }).ToArray();
 
         await Task.WhenAll(legacyRevokeOrgUserTasks);
-    }
-
-    public override async Task<IdentityResult> ConfirmEmailAsync(User user, string token)
-    {
-        var result = await base.ConfirmEmailAsync(user, token);
-        if (result.Succeeded)
-        {
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.ConfirmEmailAddress, user, _currentContext));
-        }
-        return result;
     }
 
     public async Task RotateApiKeyAsync(User user)

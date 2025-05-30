@@ -352,15 +352,6 @@ public static class ServiceCollectionExtensions
         {
             services.AddSingleton<ISendFileStorageService, NoopSendFileStorageService>();
         }
-
-        if (globalSettings.SelfHosted)
-        {
-            services.AddSingleton<IReferenceEventService, NoopReferenceEventService>();
-        }
-        else
-        {
-            services.AddSingleton<IReferenceEventService, AzureQueueReferenceEventService>();
-        }
     }
 
     public static void AddOosServices(this IServiceCollection services)

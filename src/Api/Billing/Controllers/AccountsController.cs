@@ -6,14 +6,10 @@ using Bit.Api.Utilities;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
-using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -161,8 +157,6 @@ public class AccountsController(
     [HttpPost("cancel")]
     public async Task PostCancelAsync(
         [FromBody] SubscriptionCancellationRequestModel request,
-        [FromServices] ICurrentContext currentContext,
-        [FromServices] IReferenceEventService referenceEventService,
         [FromServices] ISubscriberService subscriberService)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
@@ -175,12 +169,6 @@ public class AccountsController(
         await subscriberService.CancelSubscription(user,
             new OffboardingSurveyResponse { UserId = user.Id, Reason = request.Reason, Feedback = request.Feedback },
             user.IsExpired());
-
-        await referenceEventService.RaiseEventAsync(new ReferenceEvent(
-            ReferenceEventType.CancelSubscription,
-            user,
-            currentContext)
-        { EndOfPeriod = user.IsExpired() });
     }
 
     [HttpPost("reinstate-premium")]

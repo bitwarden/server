@@ -8,7 +8,6 @@ using Bit.Core.Test.AutoFixture.CurrentContextFixtures;
 using Bit.Core.Test.Tools.AutoFixture.SendFixtures;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures;
@@ -32,7 +31,6 @@ public class NonAnonymousSendCommandTests
     private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendValidationService _sendValidationService;
     private readonly IFeatureService _featureService;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
     private readonly ISendCoreHelperService _sendCoreHelperService;
     private readonly NonAnonymousSendCommand _nonAnonymousSendCommand;
@@ -45,7 +43,6 @@ public class NonAnonymousSendCommandTests
         _sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
         _featureService = Substitute.For<IFeatureService>();
         _sendValidationService = Substitute.For<ISendValidationService>();
-        _referenceEventService = Substitute.For<IReferenceEventService>();
         _currentContext = Substitute.For<ICurrentContext>();
         _sendCoreHelperService = Substitute.For<ISendCoreHelperService>();
 
@@ -55,8 +52,6 @@ public class NonAnonymousSendCommandTests
             _pushNotificationService,
             _sendAuthorizationService,
             _sendValidationService,
-            _referenceEventService,
-            _currentContext,
             _sendCoreHelperService
         );
     }
@@ -135,14 +130,6 @@ public class NonAnonymousSendCommandTests
             // For new Sends
             await _sendRepository.Received(1).CreateAsync(send);
             await _pushNotificationService.Received(1).PushSyncSendCreateAsync(send);
-            await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
-                e.Id == userId &&
-                e.Type == ReferenceEventType.SendCreated &&
-                e.Source == ReferenceEventSource.User &&
-                e.SendType == send.Type &&
-                e.SendHasNotes == true &&
-                e.ClientId == "test-client" &&
-                e.ClientVersion == Version.Parse("1.0.0")));
         }
         else
         {
@@ -150,7 +137,6 @@ public class NonAnonymousSendCommandTests
             await _sendRepository.Received(1).UpsertAsync(send);
             Assert.NotEqual(initialDate, send.RevisionDate);
             await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
-            await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         }
     }
 
@@ -234,14 +220,6 @@ public class NonAnonymousSendCommandTests
             // For new Sends
             await _sendRepository.Received(1).CreateAsync(send);
             await _pushNotificationService.Received(1).PushSyncSendCreateAsync(send);
-            await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
-                e.Id == userId &&
-                e.Type == ReferenceEventType.SendCreated &&
-                e.Source == ReferenceEventSource.User &&
-                e.SendType == send.Type &&
-                e.HasPassword == false &&
-                e.ClientId == "test-client" &&
-                e.ClientVersion == Version.Parse("1.0.0")));
         }
         else
         {
@@ -249,7 +227,6 @@ public class NonAnonymousSendCommandTests
             await _sendRepository.Received(1).UpsertAsync(send);
             Assert.NotEqual(initialDate, send.RevisionDate);
             await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
-            await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         }
     }
 
@@ -285,7 +262,6 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
         await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
         await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
-        await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
     }
 
     [Theory]
@@ -328,14 +304,6 @@ public class NonAnonymousSendCommandTests
             // For new Sends
             await _sendRepository.Received(1).CreateAsync(send);
             await _pushNotificationService.Received(1).PushSyncSendCreateAsync(send);
-            await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
-                e.Id == userId &&
-                e.Type == ReferenceEventType.SendCreated &&
-                e.Source == ReferenceEventSource.User &&
-                e.SendType == send.Type &&
-                e.SendHasNotes == true &&
-                e.ClientId == "test-client" &&
-                e.ClientVersion == Version.Parse("1.0.0")));
         }
         else
         {
@@ -343,7 +311,6 @@ public class NonAnonymousSendCommandTests
             await _sendRepository.Received(1).UpsertAsync(send);
             Assert.NotEqual(initialDate, send.RevisionDate);
             await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
-            await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         }
     }
 
@@ -386,9 +353,6 @@ public class NonAnonymousSendCommandTests
         // Verify push notification wasn't sent
         await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
         await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
-
-        // Verify reference event service wasn't called
-        await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
     }
 
     [Theory]
@@ -431,13 +395,6 @@ public class NonAnonymousSendCommandTests
             // For new Sends
             await _sendRepository.Received(1).CreateAsync(send);
             await _pushNotificationService.Received(1).PushSyncSendCreateAsync(send);
-            await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
-                e.Id == userId &&
-                e.Type == ReferenceEventType.SendCreated &&
-                e.Source == ReferenceEventSource.User &&
-                e.SendType == send.Type &&
-                e.ClientId == "test-client" &&
-                e.ClientVersion == Version.Parse("1.0.0")));
         }
         else
         {
@@ -445,7 +402,6 @@ public class NonAnonymousSendCommandTests
             await _sendRepository.Received(1).UpsertAsync(send);
             Assert.NotEqual(initialDate, send.RevisionDate);
             await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
-            await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         }
     }
 
@@ -481,9 +437,6 @@ public class NonAnonymousSendCommandTests
 
         // Verify push notification was sent for the update
         await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
-
-        // Verify no reference event was raised (only happens for new sends)
-        await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
     }
 
     [Fact]

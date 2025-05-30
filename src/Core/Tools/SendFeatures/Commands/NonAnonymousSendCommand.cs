@@ -1,10 +1,8 @@
 ﻿using System.Text.Json;
-using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
@@ -19,8 +17,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly ISendValidationService _sendValidationService;
-    private readonly IReferenceEventService _referenceEventService;
-    private readonly ICurrentContext _currentContext;
     private readonly ISendCoreHelperService _sendCoreHelperService;
 
     public NonAnonymousSendCommand(ISendRepository sendRepository,
@@ -28,16 +24,12 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         IPushNotificationService pushNotificationService,
         ISendAuthorizationService sendAuthorizationService,
         ISendValidationService sendValidationService,
-        IReferenceEventService referenceEventService,
-        ICurrentContext currentContext,
         ISendCoreHelperService sendCoreHelperService)
     {
         _sendRepository = sendRepository;
         _sendFileStorageService = sendFileStorageService;
         _pushNotificationService = pushNotificationService;
         _sendValidationService = sendValidationService;
-        _referenceEventService = referenceEventService;
-        _currentContext = currentContext;
         _sendCoreHelperService = sendCoreHelperService;
     }
 
@@ -50,18 +42,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         {
             await _sendRepository.CreateAsync(send);
             await _pushNotificationService.PushSyncSendCreateAsync(send);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent
-            {
-                Id = send.UserId ?? default,
-                Type = ReferenceEventType.SendCreated,
-                Source = ReferenceEventSource.User,
-                SendType = send.Type,
-                MaxAccessCount = send.MaxAccessCount,
-                HasPassword = !string.IsNullOrWhiteSpace(send.Password),
-                SendHasNotes = send.Data?.Contains("Notes"),
-                ClientId = _currentContext.ClientId,
-                ClientVersion = _currentContext.ClientVersion
-            });
         }
         else
         {

@@ -1,13 +1,9 @@
 ﻿#nullable enable
 
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 
 namespace Bit.Core.Services;
 
@@ -17,23 +13,17 @@ public class CollectionService : ICollectionService
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IReferenceEventService _referenceEventService;
-    private readonly ICurrentContext _currentContext;
 
     public CollectionService(
         IEventService eventService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        ICollectionRepository collectionRepository,
-        IReferenceEventService referenceEventService,
-        ICurrentContext currentContext)
+        ICollectionRepository collectionRepository)
     {
         _eventService = eventService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
-        _referenceEventService = referenceEventService;
-        _currentContext = currentContext;
     }
 
     public async Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection>? groups = null,
@@ -78,7 +68,6 @@ public class CollectionService : ICollectionService
 
             await _collectionRepository.CreateAsync(collection, org.UseGroups ? groupsList : null, usersList);
             await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Created);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.CollectionCreated, org, _currentContext));
         }
         else
         {

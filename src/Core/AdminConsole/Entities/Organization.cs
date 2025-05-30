@@ -8,14 +8,13 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Services;
-using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 
 #nullable enable
 
 namespace Bit.Core.AdminConsole.Entities;
 
-public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable, IReferenceable
+public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
 {
     private Dictionary<TwoFactorProviderType, TwoFactorProvider>? _twoFactorProviders;
 

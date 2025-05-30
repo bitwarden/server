@@ -1,11 +1,7 @@
 ﻿using Bit.Core;
 using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.TrialInitiation.Registration;
-using Bit.Core.Context;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Mvc;
@@ -15,9 +11,7 @@ namespace Bit.Identity.Billing.Controller;
 [Route("accounts")]
 [ExceptionHandlerFilter]
 public class AccountsController(
-    ICurrentContext currentContext,
     ISendTrialInitiationEmailForRegistrationCommand sendTrialInitiationEmailForRegistrationCommand,
-    IReferenceEventService referenceEventService,
     IFeatureService featureService) : Microsoft.AspNetCore.Mvc.Controller
 {
     [HttpPost("trial/send-verification-email")]
@@ -35,15 +29,6 @@ public class AccountsController(
             model.ProductTier,
             model.Products,
             trialLength);
-
-        var refEvent = new ReferenceEvent
-        {
-            Type = ReferenceEventType.SignupEmailSubmit,
-            ClientId = currentContext.ClientId,
-            ClientVersion = currentContext.ClientVersion,
-            Source = ReferenceEventSource.Registration
-        };
-        await referenceEventService.RaiseEventAsync(refEvent);
 
         if (token != null)
         {

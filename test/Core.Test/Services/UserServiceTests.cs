@@ -26,7 +26,6 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -316,7 +315,6 @@ public class UserServiceTests
             sutProvider.GetDependency<IPaymentService>(),
             sutProvider.GetDependency<IPolicyRepository>(),
             sutProvider.GetDependency<IPolicyService>(),
-            sutProvider.GetDependency<IReferenceEventService>(),
             sutProvider.GetDependency<IFido2>(),
             sutProvider.GetDependency<ICurrentContext>(),
             sutProvider.GetDependency<IGlobalSettings>(),
@@ -910,7 +908,6 @@ public class UserServiceTests
             sutProvider.GetDependency<IPaymentService>(),
             sutProvider.GetDependency<IPolicyRepository>(),
             sutProvider.GetDependency<IPolicyService>(),
-            sutProvider.GetDependency<IReferenceEventService>(),
             sutProvider.GetDependency<IFido2>(),
             sutProvider.GetDependency<ICurrentContext>(),
             sutProvider.GetDependency<IGlobalSettings>(),
