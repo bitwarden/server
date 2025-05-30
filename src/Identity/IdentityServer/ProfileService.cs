@@ -40,12 +40,16 @@ public class ProfileService : IProfileService
     {
         var existingClaims = context.Subject.Claims;
 
+        // TODO: add comment for why we can exempt send client logic from other logic below
         if (context.Client.ClientId == BitwardenClient.Send)
         {
             // preserve all claims that were already on context.Subject
             // which includes the ones added by the SendAccessGrantValidator
             context.IssuedClaims.AddRange(existingClaims);
             return;
+
+            // If we ever get more clients that need to skip the logic below, consider a configuration
+            // based approach like context.Client.Properties.TryGetValue("skipProfileService");
         }
 
         // Whenever IdentityServer issues a new access token or services a UserInfo request, it calls
@@ -87,8 +91,6 @@ public class ProfileService : IProfileService
             context.IssuedClaims.AddRange(newClaims);
         }
     }
-
-    // TODO: this will be called for the SendAccessGrantValidator and no security token stamp will exist.
 
     public async Task IsActiveAsync(IsActiveContext context)
     {
