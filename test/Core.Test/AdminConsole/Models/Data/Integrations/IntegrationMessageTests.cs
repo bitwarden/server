@@ -20,6 +20,7 @@ public class IntegrationMessageTests
         message.ApplyRetry(baseline);
 
         Assert.Equal(3, message.RetryCount);
+        Assert.NotNull(message.DelayUntilDate);
         Assert.True(message.DelayUntilDate > baseline);
     }
 

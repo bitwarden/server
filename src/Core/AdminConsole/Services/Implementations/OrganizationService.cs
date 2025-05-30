@@ -14,7 +14,6 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
@@ -45,7 +44,6 @@ public class OrganizationService : IOrganizationService
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IUserRepository _userRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IMailService _mailService;
     private readonly IPushNotificationService _pushNotificationService;
@@ -69,7 +67,6 @@ public class OrganizationService : IOrganizationService
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IProviderRepository _providerRepository;
     private readonly IFeatureService _featureService;
-    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
@@ -79,7 +76,6 @@ public class OrganizationService : IOrganizationService
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository,
-        IUserRepository userRepository,
         IGroupRepository groupRepository,
         IMailService mailService,
         IPushNotificationService pushNotificationService,
@@ -103,7 +99,6 @@ public class OrganizationService : IOrganizationService
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IProviderRepository providerRepository,
         IFeatureService featureService,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         IPolicyRequirementQuery policyRequirementQuery,
@@ -113,7 +108,6 @@ public class OrganizationService : IOrganizationService
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
-        _userRepository = userRepository;
         _groupRepository = groupRepository;
         _mailService = mailService;
         _pushNotificationService = pushNotificationService;
@@ -137,7 +131,6 @@ public class OrganizationService : IOrganizationService
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _providerRepository = providerRepository;
         _featureService = featureService;
-        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
         _policyRequirementQuery = policyRequirementQuery;
@@ -1721,72 +1714,6 @@ public class OrganizationService : IOrganizationService
         }
 
         return result;
-    }
-
-    private async Task CheckPoliciesBeforeRestoreAsync(OrganizationUser orgUser, bool userHasTwoFactorEnabled)
-    {
-        // An invited OrganizationUser isn't linked with a user account yet, so these checks are irrelevant
-        // The user will be subject to the same checks when they try to accept the invite
-        if (GetPriorActiveOrganizationUserStatusType(orgUser) == OrganizationUserStatusType.Invited)
-        {
-            return;
-        }
-
-        var userId = orgUser.UserId.Value;
-
-        // Enforce Single Organization Policy of organization user is being restored to
-        var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
-        var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
-        var singleOrgPoliciesApplyingToRevokedUsers = await _policyService.GetPoliciesApplicableToUserAsync(userId,
-            PolicyType.SingleOrg, OrganizationUserStatusType.Revoked);
-        var singleOrgPolicyApplies = singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
-
-        var singleOrgCompliant = true;
-        var belongsToOtherOrgCompliant = true;
-        var twoFactorCompliant = true;
-
-        if (hasOtherOrgs && singleOrgPolicyApplies)
-        {
-            singleOrgCompliant = false;
-        }
-
-        // Enforce Single Organization Policy of other organizations user is a member of
-        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(userId,
-            PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
-        {
-            belongsToOtherOrgCompliant = false;
-        }
-
-        // Enforce Two Factor Authentication Policy of organization user is trying to join
-        if (!userHasTwoFactorEnabled)
-        {
-            var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId,
-                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Revoked);
-            if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
-            {
-                twoFactorCompliant = false;
-            }
-        }
-
-        var user = await _userRepository.GetByIdAsync(userId);
-
-        if (!singleOrgCompliant && !twoFactorCompliant)
-        {
-            throw new BadRequestException(user.Email + " is not compliant with the single organization and two-step login polciy");
-        }
-        else if (!singleOrgCompliant)
-        {
-            throw new BadRequestException(user.Email + " is not compliant with the single organization policy");
-        }
-        else if (!belongsToOtherOrgCompliant)
-        {
-            throw new BadRequestException(user.Email + " belongs to an organization that doesn't allow them to join multiple organizations");
-        }
-        else if (!twoFactorCompliant)
-        {
-            throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
-        }
     }
 
     public static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)

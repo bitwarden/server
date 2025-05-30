@@ -45,9 +45,6 @@ public class OrganizationUserReplaceTests
     /// Tests OrganizationUsers in the Confirmed status, which is a stand-in for all other
     /// non-Invited statuses (which are all linked to a UserId).
     /// </summary>
-    /// <param name="organizationRepository"></param>
-    /// <param name="organizationUserRepository"></param>
-    /// <param name="collectionRepository"></param>
     [DatabaseTheory, DatabaseData]
     public async Task ReplaceAsync_WithCollectionAccess_WhenUserIsConfirmed_Success(
         IUserRepository userRepository,
