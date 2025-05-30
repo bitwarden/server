@@ -34,6 +34,14 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<OrganizationUserUserDetails?> GetDetailsByIdAsync(Guid id);
     Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id);
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
+
+    /// <summary>
+    /// Optimized version using projection with conditional loading.
+    /// Best for: Most scenarios - optimal balance of performance and functionality.
+    /// Performance: Excellent - Single query with selective projection
+    /// </summary>
+    Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationOptimized_Projection(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
+
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null);
     Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId, Guid organizationId,

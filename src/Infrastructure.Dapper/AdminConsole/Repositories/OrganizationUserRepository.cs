@@ -277,6 +277,17 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
+    /// <summary>
+    /// Optimized version using projection with conditional loading.
+    /// Best for: Most scenarios - optimal balance of performance and functionality.
+    /// Performance: Excellent - Single query with selective projection
+    /// Note: This is an EF-specific optimization - not implemented in Dapper version
+    /// </summary>
+    public Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationOptimized_Projection(Guid organizationId, bool includeGroups, bool includeCollections)
+    {
+        throw new NotImplementedException("EF-specific optimization not available in Dapper implementation");
+    }
+
     public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null)
     {
