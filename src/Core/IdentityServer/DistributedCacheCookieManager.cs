@@ -63,6 +63,6 @@ public class DistributedCacheCookieManager : ICookieManager
     private string GetKey(string key, string id) => $"{CacheKeyPrefix}-{key}-{id}";
 
     private string GetId(HttpContext context, string key) =>
-        context.Request.Cookies.ContainsKey(key) ?
-        context.Request.Cookies[key] : null;
+        context.Request.Cookies.TryGetValue(key, out var cookie) ?
+        cookie : null;
 }
