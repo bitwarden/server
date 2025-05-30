@@ -34,6 +34,8 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
     private readonly IInviteOrganizationUsersCommand _inviteOrganizationUsersCommand;
     private readonly IPricingClient _pricingClient;
 
+    private readonly EventSystemUser _EventSystemUser = EventSystemUser.PublicApi;
+
     public ImportOrganizationUserCommand(IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IPaymentService paymentService,
@@ -62,8 +64,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         IEnumerable<ImportedGroup> groups,
         IEnumerable<ImportedOrganizationUser> newUsers,
         IEnumerable<string> removeUserExternalIds,
-        bool overwriteExisting,
-        EventSystemUser eventSystemUser)
+        bool overwriteExisting)
     {
         var organization = await GetOrgById(organizationId);
         if (organization == null)
@@ -95,13 +96,13 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             await OverwriteExisting(events, importUserData);
         }
 
-        await UpsertExistingUsers(existingUsers, newUsers, organization, importUserData);
+        await UpsertExistingUsers(organization, newUsers, importUserData);
 
-        await AddNewUsers(organization, newUsers, eventSystemUser, importUserData);
+        await AddNewUsers(organization, newUsers, importUserData);
 
-        await ImportGroups(organization, groups, eventSystemUser, importUserData);
+        await ImportGroups(organization, groups, importUserData);
 
-        await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.ou, e.e, eventSystemUser, e.d)));
+        await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.ou, e.e, _EventSystemUser, e.d)));
 
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.DirectorySynced, organization, _currentContext));
@@ -144,10 +145,10 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         );
     }
 
-    private async Task UpsertExistingUsers(IEnumerable<OrganizationUserUserDetails> existingUsers,
+    private async Task UpsertExistingUsers(Organization organization,
             IEnumerable<ImportedOrganizationUser> newUsers,
-            Organization organization,
-            OrganizationUserImportData importUserData)
+            OrganizationUserImportData importUserData
+            )
     {
         if (!newUsers.Any())
         {
@@ -155,14 +156,13 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         }
 
         // Marry existing users
-        var existingUsersEmailsDict = existingUsers
+        var existingUsersEmailsDict = importUserData.ExistingUsers
             .Where(u => string.IsNullOrWhiteSpace(u.ExternalId))
             .ToDictionary(u => u.Email);
         var newUsersEmailsDict = newUsers.ToDictionary(u => u.Email);
         var newAndExistingUsersIntersection = existingUsersEmailsDict.Keys.Intersect(newUsersEmailsDict.Keys).ToList();
-        var organizationUsers = (await _organizationUserRepository.GetManyAsync(existingUsers.Select(u => u.Id).ToList())).ToDictionary(u => u.Id);
+        var organizationUsers = (await _organizationUserRepository.GetManyAsync(importUserData.ExistingUsers.Select(u => u.Id).ToList())).ToDictionary(u => u.Id);
         var usersToUpsert = new List<OrganizationUser>();
-
 
         foreach (var user in newAndExistingUsersIntersection)
         {
@@ -179,7 +179,6 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
 
     private async Task AddNewUsers(Organization organization,
             IEnumerable<ImportedOrganizationUser> newUsers,
-            EventSystemUser eventSystemUser,
             OrganizationUserImportData importUserData)
     {
 
@@ -242,7 +241,6 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
 
     private async Task ImportGroups(Organization organization,
             IEnumerable<ImportedGroup> groups,
-            EventSystemUser eventSystemUser,
             OrganizationUserImportData importUserData)
     {
 
@@ -265,13 +263,11 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             ExistingExternalGroups = GetExistingExternalGroups(existingGroups)
         };
 
-        await SaveNewGroups(importGroupData, importUserData, eventSystemUser);
-        await UpdateExistingGroups(importGroupData, importUserData, organization, eventSystemUser);
+        await SaveNewGroups(importGroupData, importUserData);
+        await UpdateExistingGroups(importGroupData, importUserData, organization);
     }
 
-    private async Task SaveNewGroups(OrganizationGroupImportData importGroupData,
-            OrganizationUserImportData importUserData,
-            EventSystemUser eventSystemUser)
+    private async Task SaveNewGroups(OrganizationGroupImportData importGroupData, OrganizationUserImportData importUserData)
     {
         var newGroups = importGroupData.Groups
             .Where(g => !importGroupData.ExistingExternalGroups.ToDictionary(g => g.ExternalId).ContainsKey(g.Group.ExternalId))
@@ -288,13 +284,12 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         }
 
         await _eventService.LogGroupEventsAsync(
-            savedGroups.Select(g => (g, EventType.Group_Created, (EventSystemUser?)eventSystemUser, (DateTime?)DateTime.UtcNow)));
+            savedGroups.Select(g => (g, EventType.Group_Created, (EventSystemUser?)_EventSystemUser, (DateTime?)DateTime.UtcNow)));
     }
 
     private async Task UpdateExistingGroups(OrganizationGroupImportData importGroupData,
             OrganizationUserImportData importUserData,
-            Organization organization,
-            EventSystemUser eventSystemUser)
+            Organization organization)
     {
         var updateGroups = importGroupData.ExistingExternalGroups
             .Where(g => importGroupData.GroupsDict.ContainsKey(g.ExternalId))
@@ -325,7 +320,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             }
 
             await _eventService.LogGroupEventsAsync(
-                updateGroups.Select(g => (g, EventType.Group_Updated, (EventSystemUser?)eventSystemUser, (DateTime?)DateTime.UtcNow)));
+                updateGroups.Select(g => (g, EventType.Group_Updated, (EventSystemUser?)_EventSystemUser, (DateTime?)DateTime.UtcNow)));
         }
 
     }

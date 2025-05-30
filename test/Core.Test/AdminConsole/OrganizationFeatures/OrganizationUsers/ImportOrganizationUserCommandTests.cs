@@ -60,7 +60,7 @@ public class ImportOrganizationUserCommandTests
         sutProvider.GetDependency<IInviteOrganizationUsersCommand>().InviteImportedOrganizationUsersAsync(Arg.Any<InviteOrganizationUsersRequest>())
             .Returns(new Success<InviteOrganizationUsersResponse>(new InviteOrganizationUsersResponse(org.Id)));
 
-        await sutProvider.Sut.ImportAsync(org.Id, newGroups, newUsers, new List<string>(), false, EventSystemUser.PublicApi);
+        await sutProvider.Sut.ImportAsync(org.Id, newGroups, newUsers, new List<string>(), false);
 
         await sutProvider.GetDependency<IInviteOrganizationUsersCommand>().Received(1)
             .InviteImportedOrganizationUsersAsync(Arg.Any<InviteOrganizationUsersRequest>());
@@ -112,7 +112,7 @@ public class ImportOrganizationUserCommandTests
         sutProvider.GetDependency<IInviteOrganizationUsersCommand>().InviteImportedOrganizationUsersAsync(Arg.Any<InviteOrganizationUsersRequest>())
             .Returns(new Success<InviteOrganizationUsersResponse>(new InviteOrganizationUsersResponse(org.Id)));
 
-        await sutProvider.Sut.ImportAsync(org.Id, newGroups, newUsers, new List<string>(), false, EventSystemUser.PublicApi);
+        await sutProvider.Sut.ImportAsync(org.Id, newGroups, newUsers, new List<string>(), false);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .UpsertAsync(default);
