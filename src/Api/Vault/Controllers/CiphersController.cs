@@ -1064,7 +1064,7 @@ public class CiphersController : Controller
 
     [HttpPut("share")]
     [HttpPost("share")]
-    public async Task PutShareMany([FromBody] CipherBulkShareRequestModel model)
+    public async Task<CipherResponseModel[]> PutShareMany([FromBody] CipherBulkShareRequestModel model)
     {
         var organizationId = new Guid(model.Ciphers.First().OrganizationId);
         if (!await _currentContext.OrganizationUser(organizationId))
@@ -1073,8 +1073,9 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: false);
-        var ciphersDict = ciphers.ToDictionary(c => c.Id);
+        var requestedIds = model.Ciphers.Select(c => c.Id.Value).ToArray();
+        var allDetails = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: true);
+        var preloaded = allDetails.Where(c => requestedIds.Contains(c.Id)).ToList();
 
         // Validate the model was encrypted for the posting user
         foreach (var cipher in model.Ciphers)
@@ -1090,21 +1091,30 @@ public class CiphersController : Controller
 
         var shareCiphers = new List<(Cipher, DateTime?)>();
         foreach (var cipher in model.Ciphers)
-        {
-            if (!ciphersDict.ContainsKey(cipher.Id.Value))
+            if (preloaded.Count != requestedIds.Length)
             {
-                throw new BadRequestException("Trying to move ciphers that you do not own.");
+                throw new BadRequestException("Trying to share ciphers that you do not own.");
             }
 
-            var existingCipher = ciphersDict[cipher.Id.Value];
+        var shareList = preloaded.Select(detail =>
+        {
+            var client = model.Ciphers.First(c => c.Id.Value == detail.Id);
+            ValidateClientVersionForFido2CredentialSupport(detail);
+            var entity = (Cipher)detail;
+            return (entity, client.LastKnownRevisionDate);
+        }).ToList();
 
-            ValidateClientVersionForFido2CredentialSupport(existingCipher);
+        await _cipherService.ShareManyAsync(
+            shareList,
+            organizationId,
+            model.CollectionIds.Select(Guid.Parse),
+            userId
+        );
 
-            shareCiphers.Add((cipher.ToCipher(existingCipher), cipher.LastKnownRevisionDate));
-        }
+        var currentUser = await _userService.GetUserByPrincipalAsync(User);
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
 
-        await _cipherService.ShareManyAsync(shareCiphers, organizationId,
-            model.CollectionIds.Select(c => new Guid(c)), userId);
+        return preloaded.Select(cd => new CipherResponseModel(cd, currentUser, orgAbilities, _globalSettings)).ToArray();
     }
 
     [HttpPost("purge")]

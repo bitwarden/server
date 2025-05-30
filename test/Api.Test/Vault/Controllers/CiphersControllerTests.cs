@@ -1745,4 +1745,86 @@ public class CiphersControllerTests
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PutRestoreManyAdmin(model));
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutShareMany_ShouldShareCiphersAndReturnResponseModels(
+        User user,
+        Guid organizationId,
+        Guid userId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var detail1 = new CipherDetails
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            OrganizationId = organizationId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new CipherLoginData()),
+            RevisionDate = DateTime.UtcNow
+        };
+        var detail2 = new CipherDetails
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            OrganizationId = organizationId,
+            Type = CipherType.SecureNote,
+            Data = JsonSerializer.Serialize(new CipherSecureNoteData()),
+            RevisionDate = DateTime.UtcNow
+        };
+        var preloaded = new List<CipherDetails> { detail1, detail2 };
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(Task.FromResult(true));
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(default)
+            .ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { organizationId, new OrganizationAbility { Id = organizationId } }
+            });
+
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(userId, withOrganizations: true)
+            .Returns(Task.FromResult((ICollection<CipherDetails>)preloaded));
+
+
+        var cipherRequests = preloaded.Select(d => new CipherWithIdRequestModel
+        {
+            Id = d.Id,
+            OrganizationId = d.OrganizationId.Value.ToString(),
+            LastKnownRevisionDate = d.RevisionDate,
+            Type = d.Type
+        }).ToList();
+
+        var model = new CipherBulkShareRequestModel
+        {
+            Ciphers = cipherRequests,
+            CollectionIds = new[] { Guid.NewGuid().ToString() }
+        };
+
+        var result = await sutProvider.Sut.PutShareMany(model);
+
+        await sutProvider.GetDependency<ICipherService>()
+            .Received(1)
+            .ShareManyAsync(
+                Arg.Is<IEnumerable<(Cipher, DateTime?)>>(list =>
+                    list.Select(x => x.Item1.Id).OrderBy(id => id)
+                        .SequenceEqual(new[] { detail1.Id, detail2.Id }.OrderBy(id => id))
+                ),
+                organizationId,
+                Arg.Any<IEnumerable<Guid>>(),
+                userId);
+
+        Assert.Equal(2, result.Length);
+        Assert.Contains(result, r => r.Id == detail1.Id);
+        Assert.Contains(result, r => r.Id == detail2.Id);
+    }
 }
