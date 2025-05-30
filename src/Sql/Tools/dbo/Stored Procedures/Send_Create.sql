@@ -14,7 +14,10 @@
     @DeletionDate DATETIME2(7),
     @Disabled BIT,
     @HideEmail BIT,
-    @CipherId UNIQUEIDENTIFIER = NULL
+    @CipherId UNIQUEIDENTIFIER = NULL,
+--  FIXME: remove null default value once this argument has been
+--         in 2 server releases
+    @Emails NVARCHAR(1024) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -36,7 +39,8 @@ BEGIN
         [DeletionDate],
         [Disabled],
         [HideEmail],
-        [CipherId]
+        [CipherId],
+        [Emails]
     )
     VALUES
     (
@@ -55,7 +59,8 @@ BEGIN
         @DeletionDate,
         @Disabled,
         @HideEmail,
-        @CipherId
+        @CipherId,
+        @Emails
     )
 
     IF @UserId IS NOT NULL

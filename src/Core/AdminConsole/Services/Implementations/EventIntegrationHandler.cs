@@ -1,32 +1,53 @@
-﻿using System.Text.Json.Nodes;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Models.Data.Integrations;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Integrations;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services;
 
-public abstract class IntegrationEventHandlerBase(
+#nullable enable
+
+public class EventIntegrationHandler<T>(
+    IntegrationType integrationType,
+    IIntegrationPublisher integrationPublisher,
+    IOrganizationIntegrationConfigurationRepository configurationRepository,
     IUserRepository userRepository,
-    IOrganizationRepository organizationRepository,
-    IOrganizationIntegrationConfigurationRepository configurationRepository)
+    IOrganizationRepository organizationRepository)
     : IEventMessageHandler
 {
     public async Task HandleEventAsync(EventMessage eventMessage)
     {
-        var organizationId = eventMessage.OrganizationId ?? Guid.Empty;
+        if (eventMessage.OrganizationId is not Guid organizationId)
+        {
+            return;
+        }
+
         var configurations = await configurationRepository.GetConfigurationDetailsAsync(
             organizationId,
-            GetIntegrationType(),
+            integrationType,
             eventMessage.Type);
 
         foreach (var configuration in configurations)
         {
-            var context = await BuildContextAsync(eventMessage, configuration.Template);
-            var renderedTemplate = IntegrationTemplateProcessor.ReplaceTokens(configuration.Template, context);
+            var template = configuration.Template ?? string.Empty;
+            var context = await BuildContextAsync(eventMessage, template);
+            var renderedTemplate = IntegrationTemplateProcessor.ReplaceTokens(template, context);
 
-            await ProcessEventIntegrationAsync(configuration.MergedConfiguration, renderedTemplate);
+            var config = configuration.MergedConfiguration.Deserialize<T>()
+                         ?? throw new InvalidOperationException($"Failed to deserialize to {typeof(T).Name}");
+
+            var message = new IntegrationMessage<T>
+            {
+                IntegrationType = integrationType,
+                Configuration = config,
+                RenderedTemplate = renderedTemplate,
+                RetryCount = 0,
+                DelayUntilDate = null
+            };
+
+            await integrationPublisher.PublishAsync(message);
         }
     }
 
@@ -59,8 +80,4 @@ public abstract class IntegrationEventHandlerBase(
 
         return context;
     }
-
-    protected abstract IntegrationType GetIntegrationType();
-
-    protected abstract Task ProcessEventIntegrationAsync(JsonObject mergedConfiguration, string renderedTemplate);
 }
