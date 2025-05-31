@@ -288,12 +288,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         throw new NotImplementedException("EF-specific optimization not available in Dapper implementation");
     }
 
-    /// <summary>
-    /// Optimized version using a single database call with multiple result sets.
-    /// Best for: All scenarios - eliminates multiple round trips to database.
-    /// Performance: Excellent - Single database call instead of 3 separate queries
-    /// </summary>
-    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationOptimized_SingleCall(Guid organizationId, bool includeGroups, bool includeCollections)
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups, bool includeCollections)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {

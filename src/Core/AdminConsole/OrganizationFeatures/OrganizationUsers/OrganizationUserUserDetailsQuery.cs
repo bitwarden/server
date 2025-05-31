@@ -79,7 +79,7 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     {
         var organizationUsers = queryOptimization
             ? await _organizationUserRepository
-                .GetManyDetailsByOrganizationOptimized_Projection(request.OrganizationId, request.IncludeGroups, request.IncludeCollections)
+                .GetManyDetailsByOrganizationAsync_vNext(request.OrganizationId, request.IncludeGroups, request.IncludeCollections)
             : await _organizationUserRepository
                 .GetManyDetailsByOrganizationAsync(request.OrganizationId, request.IncludeGroups, request.IncludeCollections);
 

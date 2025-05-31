@@ -759,7 +759,7 @@ public class OrganizationUserRepositoryTests(ITestOutputHelper testOutputHelper)
 
         // Test optimized version
         var stopwatch2 = Stopwatch.StartNew();
-        var optimizedResult = await organizationUserRepository.GetManyDetailsByOrganizationOptimized_SingleCall(organization.Id, includeGroups: true, includeCollections: true);
+        var optimizedResult = await organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id, includeGroups: true, includeCollections: true);
         stopwatch2.Stop();
         var optimizedQueryTime = stopwatch2.ElapsedMilliseconds;
 
