@@ -11,16 +11,14 @@ namespace Bit.Core.Test.Models.Api.Request;
 
 public class PushSendRequestModelTests
 {
-    [Theory]
-    [RepeatingPatternBitAutoData([null, "", " "], [null, "", " "], [null, "", " "])]
-    public void Validate_UserIdOrganizationIdInstallationIdNullOrEmpty_Invalid(string? userId, string? organizationId,
-        string? installationId)
+    [Fact]
+    public void Validate_UserIdOrganizationIdInstallationIdNull_Invalid()
     {
-        var model = new PushSendRequestModel
+        var model = new PushSendRequestModel<string>
         {
-            UserId = userId,
-            OrganizationId = organizationId,
-            InstallationId = installationId,
+            UserId = null,
+            OrganizationId = null,
+            InstallationId = null,
             Type = PushType.SyncCiphers,
             Payload = "test"
         };
@@ -32,16 +30,14 @@ public class PushSendRequestModelTests
             result => result.ErrorMessage == "UserId or OrganizationId or InstallationId is required.");
     }
 
-    [Theory]
-    [RepeatingPatternBitAutoData([null, "", " "], [null, "", " "])]
-    public void Validate_UserIdProvidedOrganizationIdInstallationIdNullOrEmpty_Valid(string? organizationId,
-        string? installationId)
+    [Fact]
+    public void Validate_UserIdProvidedOrganizationIdInstallationIdNull_Valid()
     {
-        var model = new PushSendRequestModel
+        var model = new PushSendRequestModel<string>
         {
-            UserId = Guid.NewGuid().ToString(),
-            OrganizationId = organizationId,
-            InstallationId = installationId,
+            UserId = Guid.NewGuid(),
+            OrganizationId = null,
+            InstallationId = null,
             Type = PushType.SyncCiphers,
             Payload = "test"
         };
@@ -51,16 +47,14 @@ public class PushSendRequestModelTests
         Assert.Empty(results);
     }
 
-    [Theory]
-    [RepeatingPatternBitAutoData([null, "", " "], [null, "", " "])]
-    public void Validate_OrganizationIdProvidedUserIdInstallationIdNullOrEmpty_Valid(string? userId,
-        string? installationId)
+    [Fact]
+    public void Validate_OrganizationIdProvidedUserIdInstallationIdNull_Valid()
     {
-        var model = new PushSendRequestModel
+        var model = new PushSendRequestModel<string>
         {
-            UserId = userId,
-            OrganizationId = Guid.NewGuid().ToString(),
-            InstallationId = installationId,
+            UserId = null,
+            OrganizationId = Guid.NewGuid(),
+            InstallationId = null,
             Type = PushType.SyncCiphers,
             Payload = "test"
         };
@@ -70,16 +64,14 @@ public class PushSendRequestModelTests
         Assert.Empty(results);
     }
 
-    [Theory]
-    [RepeatingPatternBitAutoData([null, "", " "], [null, "", " "])]
-    public void Validate_InstallationIdProvidedUserIdOrganizationIdNullOrEmpty_Valid(string? userId,
-        string? organizationId)
+    [Fact]
+    public void Validate_InstallationIdProvidedUserIdOrganizationIdNull_Valid()
     {
-        var model = new PushSendRequestModel
+        var model = new PushSendRequestModel<string>
         {
-            UserId = userId,
-            OrganizationId = organizationId,
-            InstallationId = Guid.NewGuid().ToString(),
+            UserId = null,
+            OrganizationId = null,
+            InstallationId = Guid.NewGuid(),
             Type = PushType.SyncCiphers,
             Payload = "test"
         };
@@ -94,10 +86,10 @@ public class PushSendRequestModelTests
     [BitAutoData("Type")]
     public void Validate_RequiredFieldNotProvided_Invalid(string requiredField)
     {
-        var model = new PushSendRequestModel
+        var model = new PushSendRequestModel<string>
         {
-            UserId = Guid.NewGuid().ToString(),
-            OrganizationId = Guid.NewGuid().ToString(),
+            UserId = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
             Type = PushType.SyncCiphers,
             Payload = "test"
         };
@@ -115,7 +107,7 @@ public class PushSendRequestModelTests
 
         var serialized = JsonSerializer.Serialize(dictionary, JsonHelpers.IgnoreWritingNull);
         var jsonException =
-            Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PushSendRequestModel>(serialized));
+            Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PushSendRequestModel<string>>(serialized));
         Assert.Contains($"missing required properties, including the following: {requiredField}",
             jsonException.Message);
     }
@@ -123,15 +115,15 @@ public class PushSendRequestModelTests
     [Fact]
     public void Validate_AllFieldsPresent_Valid()
     {
-        var model = new PushSendRequestModel
+        var model = new PushSendRequestModel<string>
         {
-            UserId = Guid.NewGuid().ToString(),
-            OrganizationId = Guid.NewGuid().ToString(),
+            UserId = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
             Type = PushType.SyncCiphers,
             Payload = "test payload",
             Identifier = Guid.NewGuid().ToString(),
             ClientType = ClientType.All,
-            DeviceId = Guid.NewGuid().ToString()
+            DeviceId = Guid.NewGuid()
         };
 
         var results = Validate(model);
@@ -139,7 +131,7 @@ public class PushSendRequestModelTests
         Assert.Empty(results);
     }
 
-    private static List<ValidationResult> Validate(PushSendRequestModel model)
+    private static List<ValidationResult> Validate<T>(PushSendRequestModel<T> model)
     {
         var results = new List<ValidationResult>();
         Validator.TryValidateObject(model, new ValidationContext(model), results, true);
