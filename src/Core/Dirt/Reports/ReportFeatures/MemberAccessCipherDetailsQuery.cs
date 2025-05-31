@@ -2,21 +2,21 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Dirt.Reports.Models.Data;
+using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
+using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Models.Data;
-using Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
-using Bit.Core.Tools.ReportFeatures.Requests;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 
-namespace Bit.Core.Tools.ReportFeatures;
+namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
 public class MemberAccessCipherDetailsQuery : IMemberAccessCipherDetailsQuery
 {

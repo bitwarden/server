@@ -1,6 +1,6 @@
-﻿using Bit.Core.Tools.ReportFeatures.Requests;
+﻿using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 
-namespace Bit.Core.Tools.ReportFeatures.Interfaces;
+namespace Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 
 public interface IDropPasswordHealthReportApplicationCommand
 {

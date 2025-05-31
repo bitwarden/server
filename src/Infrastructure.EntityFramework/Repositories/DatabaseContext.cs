@@ -4,11 +4,11 @@ using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Billing.Models;
 using Bit.Infrastructure.EntityFramework.Converters;
+using Bit.Infrastructure.EntityFramework.Dirt.Models;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
 using Bit.Infrastructure.EntityFramework.Platform;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
-using Bit.Infrastructure.EntityFramework.Tools.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -82,6 +82,8 @@ public class DatabaseContext : DbContext
     public DbSet<PasswordHealthReportApplication> PasswordHealthReportApplications { get; set; }
     public DbSet<SecurityTask> SecurityTasks { get; set; }
     public DbSet<OrganizationInstallation> OrganizationInstallations { get; set; }
+    public DbSet<RiskInsightReport> RiskInsightReports { get; set; }
+    public DbSet<RiskInsightCriticalApplication> RiskInsightCriticalApplications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -1,8 +1,8 @@
-﻿using Bit.Infrastructure.EntityFramework.Tools.Models;
+﻿using Bit.Infrastructure.EntityFramework.Dirt.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Bit.Infrastructure.EntityFramework.Tools.Configurations;
+namespace Bit.Infrastructure.EntityFramework.Dirt.Configurations;
 
 public class PasswordHealthReportApplicationEntityTypeConfiguration : IEntityTypeConfiguration<PasswordHealthReportApplication>
 {
