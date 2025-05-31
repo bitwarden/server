@@ -1,16 +1,17 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUserUserDetails_ReadByOrganizationIdOptimized]
+﻿CREATE PROCEDURE [dbo].[OrganizationUserUserDetails_WithGroupsCollections_ReadByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER,
-    @IncludeGroups BIT,
-    @IncludeCollections BIT
+    @IncludeGroups BIT = 0,
+    @IncludeCollections BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
 
-    -- First result set: User details
-    SELECT * FROM [dbo].[OrganizationUserUserDetailsView]
-    WHERE [OrganizationId] = @OrganizationId
+    -- Result Set 1: User Details (always returned)
+    SELECT * 
+    FROM [dbo].[OrganizationUserUserDetailsView] 
+    WHERE OrganizationId = @OrganizationId
 
-    -- Second result set: Group associations (if requested)
+    -- Result Set 2: Group associations (if requested)
     IF @IncludeGroups = 1
     BEGIN
         SELECT gu.*
@@ -19,7 +20,7 @@ BEGIN
         WHERE ou.OrganizationId = @OrganizationId
     END
 
-    -- Third result set: Collection associations (if requested)  
+    -- Result Set 3: Collection associations (if requested)  
     IF @IncludeCollections = 1
     BEGIN
         SELECT cu.*

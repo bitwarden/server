@@ -299,7 +299,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         {
             // Use a single call that returns multiple result sets
             var results = await connection.QueryMultipleAsync(
-                "[dbo].[OrganizationUserUserDetails_ReadByOrganizationIdOptimized]",
+                "[dbo].[OrganizationUserUserDetails_WithGroupsCollections_ReadByOrganizationId]",
                 new
                 {
                     OrganizationId = organizationId,
