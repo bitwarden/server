@@ -648,6 +648,12 @@ public class SubscriberService(
             {
                 await stripeAdapter.TaxIdCreateAsync(customer.Id,
                     new TaxIdCreateOptions { Type = taxIdType, Value = taxInformation.TaxId });
+
+                if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
+                {
+                    await stripeAdapter.TaxIdCreateAsync(customer.Id,
+                        new TaxIdCreateOptions { Type = StripeConstants.TaxIdType.EUVAT, Value = $"ES{taxInformation.TaxId}" });
+                }
             }
             catch (StripeException e)
             {

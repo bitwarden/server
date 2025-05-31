@@ -550,6 +550,15 @@ public class ProviderBillingService(
             [
                 new CustomerTaxIdDataOptions { Type = taxIdType, Value = taxInfo.TaxIdNumber }
             ];
+
+            if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
+            {
+                options.TaxIdData.Add(new CustomerTaxIdDataOptions
+                {
+                    Type = StripeConstants.TaxIdType.EUVAT,
+                    Value = $"ES{taxInfo.TaxIdNumber}"
+                });
+            }
         }
 
         if (!string.IsNullOrEmpty(provider.DiscountId))
