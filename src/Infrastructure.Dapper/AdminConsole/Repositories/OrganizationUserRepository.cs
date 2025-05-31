@@ -288,6 +288,73 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         throw new NotImplementedException("EF-specific optimization not available in Dapper implementation");
     }
 
+    /// <summary>
+    /// Optimized version using a single database call with multiple result sets.
+    /// Best for: All scenarios - eliminates multiple round trips to database.
+    /// Performance: Excellent - Single database call instead of 3 separate queries
+    /// </summary>
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationOptimized_SingleCall(Guid organizationId, bool includeGroups, bool includeCollections)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            // Use a single call that returns multiple result sets
+            var results = await connection.QueryMultipleAsync(
+                "[dbo].[OrganizationUserUserDetails_ReadByOrganizationIdOptimized]",
+                new
+                {
+                    OrganizationId = organizationId,
+                    IncludeGroups = includeGroups,
+                    IncludeCollections = includeCollections
+                },
+                commandType: CommandType.StoredProcedure);
+
+            // Read the user details (first result set)
+            var users = (await results.ReadAsync<OrganizationUserUserDetails>()).ToList();
+
+            // Read group associations (second result set, if requested)
+            Dictionary<Guid, List<Guid>>? userGroupMap = null;
+            if (includeGroups)
+            {
+                var groupUsers = await results.ReadAsync<GroupUser>();
+                userGroupMap = groupUsers
+                    .GroupBy(gu => gu.OrganizationUserId)
+                    .ToDictionary(g => g.Key, g => g.Select(gu => gu.GroupId).ToList());
+            }
+
+            // Read collection associations (third result set, if requested)
+            Dictionary<Guid, List<CollectionAccessSelection>>? userCollectionMap = null;
+            if (includeCollections)
+            {
+                var collectionUsers = await results.ReadAsync<CollectionUser>();
+                userCollectionMap = collectionUsers
+                    .GroupBy(cu => cu.OrganizationUserId)
+                    .ToDictionary(g => g.Key, g => g.Select(cu => new CollectionAccessSelection
+                    {
+                        Id = cu.CollectionId,
+                        ReadOnly = cu.ReadOnly,
+                        HidePasswords = cu.HidePasswords,
+                        Manage = cu.Manage
+                    }).ToList());
+            }
+
+            // Map the associations to users
+            foreach (var user in users)
+            {
+                if (userGroupMap != null)
+                {
+                    user.Groups = userGroupMap.GetValueOrDefault(user.Id, new List<Guid>());
+                }
+
+                if (userCollectionMap != null)
+                {
+                    user.Collections = userCollectionMap.GetValueOrDefault(user.Id, new List<CollectionAccessSelection>());
+                }
+            }
+
+            return users;
+        }
+    }
+
     public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null)
     {

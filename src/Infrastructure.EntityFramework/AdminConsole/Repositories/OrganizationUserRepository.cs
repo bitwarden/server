@@ -459,6 +459,19 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         return await query.ToListAsync();
     }
 
+    /// <summary>
+    /// Optimized version using a single database call with multiple result sets.
+    /// Best for: All scenarios - eliminates multiple round trips to database.
+    /// Performance: Excellent - Single database call instead of 3 separate queries
+    /// Note: For EF, this delegates to the projection method as EF already optimizes this
+    /// </summary>
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationOptimized_SingleCall(
+        Guid organizationId, bool includeGroups, bool includeCollections)
+    {
+        // EF already does single-call optimization, so delegate to projection method
+        return await GetManyDetailsByOrganizationOptimized_Projection(organizationId, includeGroups, includeCollections);
+    }
+
     public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
             OrganizationUserStatusType? status = null)
     {

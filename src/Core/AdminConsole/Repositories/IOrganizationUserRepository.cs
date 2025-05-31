@@ -42,6 +42,13 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// </summary>
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationOptimized_Projection(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
 
+    /// <summary>
+    /// Optimized version using a single database call with multiple result sets.
+    /// Best for: All scenarios - eliminates multiple round trips to database.
+    /// Performance: Excellent - Single database call instead of 3 separate queries
+    /// </summary>
+    Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationOptimized_SingleCall(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
+
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null);
     Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId, Guid organizationId,
