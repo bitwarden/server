@@ -20,13 +20,13 @@ public class MarkNotificationsForTaskAsDeletedCommand : IMarkNotificationsForTas
 
     public async Task MarkAsDeletedAsync(Guid taskId, Guid userId)
     {
-        var notifications = await _notificationRepository.MarkNotificationsAsDeletedByTask(taskId, userId);
+        var userIds = await _notificationRepository.MarkNotificationsAsDeletedByTask(taskId, userId);
 
         // For each user associated with the notifications, send a push notification so local tasks can be updated.
-        var uniqueUserIds = notifications.Select(n => n.UserId).Where(u => u.HasValue).Distinct();
+        var uniqueUserIds = userIds.Distinct();
         foreach (var id in uniqueUserIds)
         {
-            await _pushNotificationService.PushPendingSecurityTasksAsync((Guid)id);
+            await _pushNotificationService.PushPendingSecurityTasksAsync(id);
         }
     }
 }

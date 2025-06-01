@@ -6,14 +6,14 @@ BEGIN
     SET NOCOUNT ON;
 
     -- Collect NotificationIds as they are altered
-    DECLARE @AlteredNotifications TABLE (
-        NotificationId UNIQUEIDENTIFIER
+    DECLARE @UserIdsForAlteredNotifications TABLE (
+        UserId UNIQUEIDENTIFIER
     );
 
     -- Update existing NotificationStatus as deleted
     UPDATE ns
     SET ns.DeletedDate = GETUTCDATE()
-    OUTPUT inserted.NotificationId INTO @AlteredNotifications
+    OUTPUT inserted.UserId INTO @UserIdsForAlteredNotifications
     FROM NotificationStatus ns
     INNER JOIN Notification n ON ns.NotificationId = n.Id
     WHERE n.TaskId = @TaskId
@@ -22,7 +22,7 @@ BEGIN
 
     -- Insert NotificationStatus records for notifications that don't have one yet
     INSERT INTO NotificationStatus (NotificationId, UserId, DeletedDate)
-    OUTPUT inserted.NotificationId INTO @AlteredNotifications
+    OUTPUT inserted.UserId INTO @UserIdsForAlteredNotifications
     SELECT n.Id, @UserId, GETUTCDATE()
     FROM Notification n
     LEFT JOIN NotificationStatus ns
@@ -30,9 +30,8 @@ BEGIN
     WHERE n.TaskId = @TaskId
       AND ns.NotificationId IS NULL;
 
-    -- Return all notifications that have been altered
-    SELECT n.*
-    FROM Notification n
-    INNER JOIN @AlteredNotifications a ON n.Id = a.NotificationId;
+    -- Return the user ids associated with the altered notifications
+    SELECT u.UserId
+    FROM @UserIdsForAlteredNotifications u;
 END
 GO

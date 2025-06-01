@@ -75,7 +75,7 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
         };
     }
 
-    public async Task<IEnumerable<Core.NotificationCenter.Entities.Notification>> MarkNotificationsAsDeletedByTask(Guid taskId, Guid userId)
+    public async Task<IEnumerable<Guid>> MarkNotificationsAsDeletedByTask(Guid taskId, Guid userId)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -116,6 +116,11 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
 
         await dbContext.SaveChangesAsync();
 
-        return notifications;
+        var userIds = notifications
+            .Select(n => n.UserId)
+            .Where(u => u.HasValue)
+            .ToList();
+
+        return (IEnumerable<Guid>)userIds;
     }
 }
