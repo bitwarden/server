@@ -209,14 +209,12 @@ public class OrganizationUsersController : Controller
 
         if ((await _authorizationService.AuthorizeAsync(User, new ManageUsersRequirement())).Succeeded)
         {
-            var results = await _organizationUserUserDetailsQuery.Get(request);
-            return GetResultListResponseModel(results);
+            return GetResultListResponseModel(await _organizationUserUserDetailsQuery.Get(request));
         }
 
         if ((await _authorizationService.AuthorizeAsync(User, new ManageAccountRecoveryRequirement())).Succeeded)
         {
-            var results = await _organizationUserUserDetailsQuery.GetAccountRecoveryEnrolledUsers(request);
-            return GetResultListResponseModel(results);
+            return GetResultListResponseModel(await _organizationUserUserDetailsQuery.GetAccountRecoveryEnrolledUsers(request));
         }
 
         throw new NotFoundException();
