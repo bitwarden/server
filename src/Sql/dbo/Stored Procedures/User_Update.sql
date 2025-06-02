@@ -42,7 +42,7 @@
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
-    @SignedPublicKey NVARCHAR(MAX)
+    @SignedPublicKey NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
