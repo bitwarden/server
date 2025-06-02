@@ -2,15 +2,15 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models;
 
-public class UserSigningKeys : Core.Entities.UserSignatureKeyPair
+public class UserSignatureKeyPair : Core.Entities.UserSignatureKeyPair
 {
     public virtual User User { get; set; }
 }
 
-public class UserSigningKeysMapperProfile : Profile
+public class UserSignatureKeyPairMapperProfile : Profile
 {
-    public UserSigningKeysMapperProfile()
+    public UserSignatureKeyPairMapperProfile()
     {
-        CreateMap<Core.Entities.UserSignatureKeyPair, UserSigningKeys>().ReverseMap();
+        CreateMap<Core.Entities.UserSignatureKeyPair, UserSignatureKeyPair>().ReverseMap();
     }
 }

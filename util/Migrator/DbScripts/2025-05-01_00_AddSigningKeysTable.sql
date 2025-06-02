@@ -1,4 +1,4 @@
-CREATE TABLE [dbo].[UserSigningKey] (
+CREATE TABLE [dbo].[UserSignatureKeyPair] (
     [Id]                        UNIQUEIDENTIFIER NOT NULL,
     [UserId]                    UNIQUEIDENTIFIER,
     [KeyType]                   TINYINT NOT NULL,
@@ -11,17 +11,17 @@ CREATE TABLE [dbo].[UserSigningKey] (
 );
 GO
 
-CREATE PROCEDURE [dbo].[UserSigningKey_ReadByUserId]
+CREATE PROCEDURE [dbo].[UserSignatureKeyPair_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
     SELECT *
-    FROM [dbo].[UserSigningKey]
+    FROM [dbo].[UserSignatureKeyPair]
     WHERE [UserId] = @UserId;
 END
 GO
 
-CREATE PROCEDURE [dbo].[UserSigningKey_UpdateForRotation]
+CREATE PROCEDURE [dbo].[UserSignatureKeyPair_UpdateForRotation]
     @UserId UNIQUEIDENTIFIER,
     @KeyType TINYINT,
     @VerifyingKey VARCHAR(MAX),
@@ -29,7 +29,7 @@ CREATE PROCEDURE [dbo].[UserSigningKey_UpdateForRotation]
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
-    UPDATE [dbo].[UserSigningKey]
+    UPDATE [dbo].[UserSignatureKeyPair]
     SET [KeyType] = @KeyType,
         [VerifyingKey] = @VerifyingKey,
         [SigningKey] = @SigningKey,
@@ -38,7 +38,7 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE [dbo].[UserSigningKey_SetForRotation]
+CREATE PROCEDURE [dbo].[UserSignatureKeyPair_SetForRotation]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @KeyType TINYINT,
@@ -48,7 +48,7 @@ CREATE PROCEDURE [dbo].[UserSigningKey_SetForRotation]
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
-    INSERT INTO [dbo].[UserSigningKey] ([Id], [UserId], [KeyType], [VerifyingKey], [SigningKey], [CreationDate], [RevisionDate])
+    INSERT INTO [dbo].[UserSignatureKeyPair] ([Id], [UserId], [KeyType], [VerifyingKey], [SigningKey], [CreationDate], [RevisionDate])
     VALUES (@Id, @UserId, @KeyType, @VerifyingKey, @SigningKey, @CreationDate, @RevisionDate)
 END
 GO

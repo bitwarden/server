@@ -28,7 +28,7 @@ public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, G
         using (var connection = new SqlConnection(ConnectionString))
         {
             return await connection.QuerySingleOrDefaultAsync<SignatureKeyPairData>(
-                "[dbo].[UserSigningKey_ReadByUserId]",
+                "[dbo].[UserSignatureKeyPair_ReadByUserId]",
                 new
                 {
                     UserId = userId
@@ -42,7 +42,7 @@ public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, G
         return async (SqlConnection connection, SqlTransaction transaction) =>
         {
             await connection.QueryAsync(
-                "[dbo].[UserSigningKey_SetForRotation]",
+                "[dbo].[UserSignatureKeyPair_SetForRotation]",
                 new
                 {
                     Id = Guid.NewGuid(),
@@ -63,7 +63,7 @@ public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, G
         return async (SqlConnection connection, SqlTransaction transaction) =>
         {
             await connection.QueryAsync(
-                "[dbo].[UserSigningKey_UpdateForRotation]",
+                "[dbo].[UserSignatureKeyPair_UpdateForRotation]",
                 new
                 {
                     UserId = grantorId,

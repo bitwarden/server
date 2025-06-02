@@ -71,7 +71,7 @@ public class DatabaseContext : DbContext
     public DbSet<TaxRate> TaxRates { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<User> Users { get; set; }
-    public DbSet<UserSigningKeys> UserSigningKeys { get; set; }
+    public DbSet<UserSignatureKeyPair> UserSignatureKeyPair { get; set; }
     public DbSet<AuthRequest> AuthRequests { get; set; }
     public DbSet<OrganizationDomain> OrganizationDomains { get; set; }
     public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; }
@@ -109,7 +109,7 @@ public class DatabaseContext : DbContext
         var eSsoConfig = builder.Entity<SsoConfig>();
         var eTaxRate = builder.Entity<TaxRate>();
         var eUser = builder.Entity<User>();
-        var eUserSigningKeys = builder.Entity<UserSigningKeys>();
+        var eUserSignatureKeyPair = builder.Entity<UserSignatureKeyPair>();
         var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
@@ -130,7 +130,7 @@ public class DatabaseContext : DbContext
         eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationDomain.Property(ar => ar.Id).ValueGeneratedNever();
         aWebAuthnCredential.Property(ar => ar.Id).ValueGeneratedNever();
-        eUserSigningKeys.Property(ar => ar.Id).ValueGeneratedNever();
+        eUserSignatureKeyPair.Property(ar => ar.Id).ValueGeneratedNever();
 
         eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
         eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
@@ -171,7 +171,7 @@ public class DatabaseContext : DbContext
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eOrganizationDomain.ToTable(nameof(OrganizationDomain));
         aWebAuthnCredential.ToTable(nameof(WebAuthnCredential));
-        eUserSigningKeys.ToTable(nameof(UserSigningKeys));
+        eUserSignatureKeyPair.ToTable(nameof(UserSignatureKeyPair));
 
         ConfigureDateTimeUtcQueries(builder);
     }
