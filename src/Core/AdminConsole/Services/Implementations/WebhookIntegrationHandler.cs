@@ -31,7 +31,7 @@ public class WebhookIntegrationHandler(IHttpClientFactory httpClientFactory)
             case HttpStatusCode.ServiceUnavailable:
             case HttpStatusCode.GatewayTimeout:
                 result.Retryable = true;
-                result.FailureReason = response.ReasonPhrase ?? string.Empty;
+                result.FailureReason = response.ReasonPhrase ?? $"Failure with status code: {(int)response.StatusCode}";
 
                 if (response.Headers.TryGetValues("Retry-After", out var values))
                 {
@@ -54,7 +54,7 @@ public class WebhookIntegrationHandler(IHttpClientFactory httpClientFactory)
                 break;
             default:
                 result.Retryable = false;
-                result.FailureReason = response.ReasonPhrase ?? string.Empty;
+                result.FailureReason = response.ReasonPhrase ?? $"Failure with status code {(int)response.StatusCode}";
                 break;
         }
 
