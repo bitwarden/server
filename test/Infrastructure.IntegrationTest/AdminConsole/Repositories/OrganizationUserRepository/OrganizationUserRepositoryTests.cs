@@ -867,4 +867,181 @@ public class OrganizationUserRepositoryTests
         Assert.Contains(user1Result.Collections, c => c.Id == collection1.Id);
         Assert.Contains(user1Result.Collections, c => c.Id == collection2.Id);
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByOrganizationWithClaimedDomainsAsync_vNext_WithVerifiedDomain_WithOneMatchingEmailDomain_ReturnsSingle(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationDomainRepository organizationDomainRepository)
+    {
+        var id = Guid.NewGuid();
+        var domainName = $"{id}.example.com";
+        var requestTime = DateTime.UtcNow;
+
+        var user1 = await userRepository.CreateAsync(new User
+        {
+            Id = CoreHelpers.GenerateComb(),
+            Name = "Test User 1",
+            Email = $"test+{id}@{domainName}",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            CreationDate = requestTime,
+            RevisionDate = requestTime,
+            AccountRevisionDate = requestTime
+        });
+
+        var user2 = await userRepository.CreateAsync(new User
+        {
+            Id = CoreHelpers.GenerateComb(),
+            Name = "Test User 2",
+            Email = $"test+{id}@x-{domainName}", // Different domain
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            CreationDate = requestTime,
+            RevisionDate = requestTime,
+            AccountRevisionDate = requestTime
+        });
+
+        var user3 = await userRepository.CreateAsync(new User
+        {
+            Id = CoreHelpers.GenerateComb(),
+            Name = "Test User 3",
+            Email = $"test+{id}@{domainName}.example.com", // Different domain
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            CreationDate = requestTime,
+            RevisionDate = requestTime,
+            AccountRevisionDate = requestTime
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Id = CoreHelpers.GenerateComb(),
+            Name = $"Test Org {id}",
+            BillingEmail = user1.Email,
+            Plan = "Test",
+            Enabled = true,
+            CreationDate = requestTime,
+            RevisionDate = requestTime
+        });
+
+        var organizationDomain = new OrganizationDomain
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            DomainName = domainName,
+            Txt = "btw+12345",
+            CreationDate = requestTime
+        };
+        organizationDomain.SetNextRunDate(12);
+        organizationDomain.SetVerifiedDate();
+        organizationDomain.SetJobRunCount();
+        await organizationDomainRepository.CreateAsync(organizationDomain);
+
+        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            UserId = user1.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+            CreationDate = requestTime,
+            RevisionDate = requestTime
+        });
+
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            UserId = user2.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+            CreationDate = requestTime,
+            RevisionDate = requestTime
+        });
+
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            UserId = user3.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+            CreationDate = requestTime,
+            RevisionDate = requestTime
+        });
+
+        var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync_vNext(organization.Id);
+
+        Assert.NotNull(responseModel);
+        Assert.Single(responseModel);
+        Assert.Equal(orgUser1.Id, responseModel.Single().Id);
+        Assert.Equal(user1.Id, responseModel.Single().UserId);
+        Assert.Equal(organization.Id, responseModel.Single().OrganizationId);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByOrganizationWithClaimedDomainsAsync_vNext_WithNoVerifiedDomain_ReturnsEmpty(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationDomainRepository organizationDomainRepository)
+    {
+        var id = Guid.NewGuid();
+        var domainName = $"{id}.example.com";
+        var requestTime = DateTime.UtcNow;
+
+        var user1 = await userRepository.CreateAsync(new User
+        {
+            Id = CoreHelpers.GenerateComb(),
+            Name = "Test User 1",
+            Email = $"test+{id}@{domainName}",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            CreationDate = requestTime,
+            RevisionDate = requestTime,
+            AccountRevisionDate = requestTime
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Id = CoreHelpers.GenerateComb(),
+            Name = $"Test Org {id}",
+            BillingEmail = user1.Email,
+            Plan = "Test",
+            Enabled = true,
+            CreationDate = requestTime,
+            RevisionDate = requestTime
+        });
+
+        // Create domain but do NOT verify it
+        var organizationDomain = new OrganizationDomain
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            DomainName = domainName,
+            Txt = "btw+12345",
+            CreationDate = requestTime
+        };
+        organizationDomain.SetNextRunDate(12);
+        // Note: NOT calling SetVerifiedDate()
+        await organizationDomainRepository.CreateAsync(organizationDomain);
+
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            UserId = user1.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+            CreationDate = requestTime,
+            RevisionDate = requestTime
+        });
+
+        var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync_vNext(organization.Id);
+
+        Assert.NotNull(responseModel);
+        Assert.Empty(responseModel);
+    }
 }
