@@ -11,14 +11,14 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.KeyManagement.Repositories;
 
-public class UserSigningKeysRepository : Repository<UserSignatureKeyPair, Guid>, IUserSignatureKeyPairRepository
+public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, Guid>, IUserSignatureKeyPairRepository
 {
-    public UserSigningKeysRepository(GlobalSettings globalSettings)
+    public UserSignatureKeyPairRepository(GlobalSettings globalSettings)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
     }
 
-    public UserSigningKeysRepository(string connectionString, string readOnlyConnectionString) : base(
+    public UserSignatureKeyPairRepository(string connectionString, string readOnlyConnectionString) : base(
         connectionString, readOnlyConnectionString)
     {
     }
