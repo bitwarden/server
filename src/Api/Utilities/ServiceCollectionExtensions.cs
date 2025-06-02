@@ -112,7 +112,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthorizationHandler, SecurityTaskOrganizationAuthorizationHandler>();
 
         services.AddScoped<IAuthorizationHandler, OrganizationRequirementHandler>();
-        // services.AddScoped<IAuthorizationHandler, SameSendIdHandler>();
     }
 
     public static void AddPhishingDomainServices(this IServiceCollection services, GlobalSettings globalSettings)
