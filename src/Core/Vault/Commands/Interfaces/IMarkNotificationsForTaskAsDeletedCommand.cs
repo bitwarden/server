@@ -6,7 +6,6 @@ public interface IMarkNotificationsForTaskAsDeletedCommand
     /// Marks notifications associated with a given taskId as deleted.
     /// </summary>
     /// <param name="taskId">The unique identifier of the task to complete</param>
-    /// <param name="userId">User Id</param>
     /// <returns>A task representing the async operation</returns>
-    Task MarkAsDeletedAsync(Guid taskId, Guid userId);
+    Task MarkAsDeletedAsync(Guid taskId);
 }

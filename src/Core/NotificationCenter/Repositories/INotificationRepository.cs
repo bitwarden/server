@@ -37,9 +37,8 @@ public interface INotificationRepository : IRepository<Notification, Guid>
     /// Marks notifications as deleted by a task Id.
     /// </summary>
     /// <param name="taskId">The unique identifier of the task.</param>
-    /// <param name="userId">User Id</param>
     /// <returns>
     /// A collection of users ids for the notifications that are now marked as deleted.
     /// </returns>
-    Task<IEnumerable<Guid>> MarkNotificationsAsDeletedByTask(Guid taskId, Guid userId);
+    Task<IEnumerable<Guid>> MarkNotificationsAsDeletedByTask(Guid taskId);
 }

@@ -57,7 +57,7 @@ public class NotificationRepository : Repository<Notification, Guid>, INotificat
         };
     }
 
-    public async Task<IEnumerable<Guid>> MarkNotificationsAsDeletedByTask(Guid taskId, Guid userId)
+    public async Task<IEnumerable<Guid>> MarkNotificationsAsDeletedByTask(Guid taskId)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
@@ -66,7 +66,6 @@ public class NotificationRepository : Repository<Notification, Guid>, INotificat
             new
             {
                 TaskId = taskId,
-                UserId = userId,
             },
             commandType: CommandType.StoredProcedure);
 
