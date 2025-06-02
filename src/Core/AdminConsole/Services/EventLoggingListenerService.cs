@@ -37,7 +37,7 @@ public abstract class EventLoggingListenerService : BackgroundService
             }
             else
             {
-                _logger.LogError($"An error occurred while processing message {messageId} - Invalid JSON");
+                _logger.LogError("An error occured while processing message: {MessageId} - Invalid JSON", messageId);
             }
         }
         catch (JsonException exception)

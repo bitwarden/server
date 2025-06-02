@@ -77,7 +77,7 @@ public class RabbitMqIntegrationListenerService : BackgroundService
                 integrationMessage.DelayUntilDate.Value > DateTime.UtcNow)
             {
                 await _rabbitMqService.RepublishToRetryQueueAsync(channel, ea);
-                await channel.BasicAckAsync(ea.DeliveryTag, false);
+                await channel.BasicAckAsync(ea.DeliveryTag, false, cancellationToken);
                 return;
             }
 
