@@ -58,11 +58,11 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     /// </summary>
     /// <param name="request">Request details for the query</param>
     /// <returns>List of OrganizationUserUserDetails</returns>
-    public async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> Get(OrganizationUserUserDetailsQueryRequest request, bool queryOptimization = false)
+    public async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> Get(OrganizationUserUserDetailsQueryRequest request)
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.MembersGetEndpointOptimization))
         {
-            return await Get_vNext(request, queryOptimization);
+            return await Get_vNext(request);
         }
 
         var organizationUsers = await GetOrganizationUserUserDetails(request);
@@ -75,13 +75,10 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
         return responses;
     }
 
-    private async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> Get_vNext(OrganizationUserUserDetailsQueryRequest request, bool queryOptimization = false)
+    private async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> Get_vNext(OrganizationUserUserDetailsQueryRequest request)
     {
-        var organizationUsers = queryOptimization
-            ? await _organizationUserRepository
-                .GetManyDetailsByOrganizationAsync_vNext(request.OrganizationId, request.IncludeGroups, request.IncludeCollections)
-            : await _organizationUserRepository
-                .GetManyDetailsByOrganizationAsync(request.OrganizationId, request.IncludeGroups, request.IncludeCollections);
+        var organizationUsers = await _organizationUserRepository
+            .GetManyDetailsByOrganizationAsync_vNext(request.OrganizationId, request.IncludeGroups, request.IncludeCollections);
 
         var twoFactorTask = _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
         var claimedStatusTask = _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(request.OrganizationId, organizationUsers.Select(o => o.Id));

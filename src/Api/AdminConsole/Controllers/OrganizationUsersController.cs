@@ -161,12 +161,12 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false, bool queryOptimization = false)
+    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
 
         if (_featureService.IsEnabled(FeatureFlagKeys.SeparateCustomRolePermissions))
         {
-            return await GetvNextAsync(orgId, includeGroups, includeCollections, queryOptimization);
+            return await GetvNextAsync(orgId, includeGroups, includeCollections);
         }
 
         var authorized = (await _authorizationService.AuthorizeAsync(
@@ -198,7 +198,7 @@ public class OrganizationUsersController : Controller
         return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
     }
 
-    private async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> GetvNextAsync(Guid orgId, bool includeGroups = false, bool includeCollections = false, bool queryOptimization = false)
+    private async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> GetvNextAsync(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
         var request = new OrganizationUserUserDetailsQueryRequest
         {
@@ -209,7 +209,7 @@ public class OrganizationUsersController : Controller
 
         if ((await _authorizationService.AuthorizeAsync(User, new ManageUsersRequirement())).Succeeded)
         {
-            var results = await _organizationUserUserDetailsQuery.Get(request, queryOptimization);
+            var results = await _organizationUserUserDetailsQuery.Get(request);
             return GetResultListResponseModel(results);
         }
 
