@@ -18,7 +18,7 @@ public abstract class EventLoggingListenerService : BackgroundService
         _logger = logger;
     }
 
-    internal async Task ProcessReceivedMessageAsync(string body, string messageId)
+    internal async Task ProcessReceivedMessageAsync(string body, string? messageId)
     {
         try
         {
@@ -37,24 +37,51 @@ public abstract class EventLoggingListenerService : BackgroundService
             }
             else
             {
-                _logger.LogError("An error occured while processing message: {MessageId} - Invalid JSON", messageId);
+                if (!string.IsNullOrEmpty(messageId))
+                {
+                    _logger.LogError("An error occurred while processing message: {MessageId} - Invalid JSON", messageId);
+                }
+                else
+                {
+                    _logger.LogError("An Invalid JSON error occurred while processing a message with an empty message id");
+                }
             }
         }
         catch (JsonException exception)
         {
-            _logger.LogError(
-                exception,
-                "An error occured while processing message: {MessageId} - Invalid JSON",
-                messageId
-            );
+            if (!string.IsNullOrEmpty(messageId))
+            {
+                _logger.LogError(
+                    exception,
+                    "An error occurred while processing message: {MessageId} - Invalid JSON",
+                    messageId
+                );
+            }
+            else
+            {
+                _logger.LogError(
+                    exception,
+                    "An Invalid JSON error occurred while processing a message with an empty message id"
+                );
+            }
         }
         catch (Exception exception)
         {
-            _logger.LogError(
-                exception,
-                "An error occured while processing message: {MessageId}",
-                messageId
-            );
+            if (!string.IsNullOrEmpty(messageId))
+            {
+                _logger.LogError(
+                    exception,
+                    "An error occurred while processing message: {MessageId}",
+                    messageId
+                );
+            }
+            else
+            {
+                _logger.LogError(
+                    exception,
+                    "An error occurred while processing a message with an empty message id"
+                );
+            }
         }
     }
 }

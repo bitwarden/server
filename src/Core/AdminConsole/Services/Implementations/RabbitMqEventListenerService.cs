@@ -44,7 +44,7 @@ public class RabbitMqEventListenerService : EventLoggingListenerService
     {
         await ProcessReceivedMessageAsync(
             Encoding.UTF8.GetString(eventArgs.Body.Span),
-            eventArgs.BasicProperties.MessageId ?? string.Empty);
+            eventArgs.BasicProperties.MessageId);
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
