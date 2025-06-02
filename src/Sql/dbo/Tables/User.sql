@@ -14,7 +14,6 @@
     [AccountRevisionDate]              DATETIME2 (7)    NOT NULL,
     [Key]                              VARCHAR (MAX)    NULL,
     [PublicKey]                        VARCHAR (MAX)    NULL,
-    [SignedPublicKey]                  VARCHAR (MAX)    NULL,
     [PrivateKey]                       VARCHAR (MAX)    NULL,
     [Premium]                          BIT              NOT NULL,
     [PremiumExpirationDate]            DATETIME2 (7)    NULL,
@@ -43,6 +42,7 @@
     [LastKeyRotationDate]              DATETIME2 (7)    NULL,
     [LastEmailChangeDate]              DATETIME2 (7)    NULL,
     [VerifyDevices]                    BIT              DEFAULT ((1)) NOT NULL,
+    [SignedPublicKey]                  VARCHAR (MAX)    NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

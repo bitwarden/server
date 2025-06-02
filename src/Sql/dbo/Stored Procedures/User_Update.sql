@@ -14,7 +14,6 @@
     @AccountRevisionDate DATETIME2(7),
     @Key NVARCHAR(MAX),
     @PublicKey NVARCHAR(MAX),
-    @SignedPublicKey NVARCHAR(MAX),
     @PrivateKey NVARCHAR(MAX),
     @Premium BIT,
     @PremiumExpirationDate DATETIME2(7),
@@ -42,7 +41,8 @@
     @LastKdfChangeDate DATETIME2(7) = NULL,
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
-    @VerifyDevices BIT = 1
+    @VerifyDevices BIT = 1,
+    @SignedPublicKey NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -64,7 +64,6 @@ BEGIN
         [AccountRevisionDate] = @AccountRevisionDate,
         [Key] = @Key,
         [PublicKey] = @PublicKey,
-        [SignedPublicKey] = @SignedPublicKey,
         [PrivateKey] = @PrivateKey,
         [Premium] = @Premium,
         [PremiumExpirationDate] = @PremiumExpirationDate,
@@ -92,7 +91,8 @@ BEGIN
         [LastKdfChangeDate] = @LastKdfChangeDate,
         [LastKeyRotationDate] = @LastKeyRotationDate,
         [LastEmailChangeDate] = @LastEmailChangeDate,
-        [VerifyDevices] = @VerifyDevices
+        [VerifyDevices] = @VerifyDevices,
+        [SignedPublicKey] = @SignedPublicKey
     WHERE
         [Id] = @Id
 END

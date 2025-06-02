@@ -1,13 +1,13 @@
 CREATE TABLE [dbo].[UserSignatureKeyPair] (
     [Id]                        UNIQUEIDENTIFIER NOT NULL,
-    [UserId]                    UNIQUEIDENTIFIER,
-    [KeyType]                   TINYINT NOT NULL,
-    [VerifyingKey]              VARCHAR(MAX) NOT NULL,
+    [UserId]                    UNIQUEIDENTIFIER NOT NULL,
+    [SignatureKeyPairAlgorithm] TINYINT NOT NULL,
     [SigningKey]                VARCHAR(MAX) NOT NULL,
+    [VerifyingKey]              VARCHAR(MAX) NOT NULL,
     [CreationDate]              DATETIME2 (7) NOT NULL,
     [RevisionDate]              DATETIME2 (7) NOT NULL,
-    CONSTRAINT [PK_UserSigningKeys] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [FK_UserSigningKeys_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
+    CONSTRAINT [PK_UserSignatureKeyPair] PRIMARY KEY CLUSTERED ([Id] ASC),
+    CONSTRAINT [FK_UserSignatureKeyPair_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );
 GO
 
@@ -23,16 +23,16 @@ GO
 
 CREATE PROCEDURE [dbo].[UserSignatureKeyPair_UpdateForRotation]
     @UserId UNIQUEIDENTIFIER,
-    @KeyType TINYINT,
-    @VerifyingKey VARCHAR(MAX),
+    @SignatureKeyPairAlgorithm TINYINT,
     @SigningKey VARCHAR(MAX),
+    @VerifyingKey VARCHAR(MAX),
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
     UPDATE [dbo].[UserSignatureKeyPair]
-    SET [KeyType] = @KeyType,
-        [VerifyingKey] = @VerifyingKey,
+    SET [SignatureKeyPairAlgorithm] = @SignatureKeyPairAlgorithm,
         [SigningKey] = @SigningKey,
+        [VerifyingKey] = @VerifyingKey,
         [RevisionDate] = @RevisionDate
     WHERE [UserId] = @UserId;
 END
@@ -41,15 +41,15 @@ GO
 CREATE PROCEDURE [dbo].[UserSignatureKeyPair_SetForRotation]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
-    @KeyType TINYINT,
-    @VerifyingKey VARCHAR(MAX),
+    @SignatureKeyPairAlgorithm TINYINT,
     @SigningKey VARCHAR(MAX),
+    @VerifyingKey VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
-    INSERT INTO [dbo].[UserSignatureKeyPair] ([Id], [UserId], [KeyType], [VerifyingKey], [SigningKey], [CreationDate], [RevisionDate])
-    VALUES (@Id, @UserId, @KeyType, @VerifyingKey, @SigningKey, @CreationDate, @RevisionDate)
+    INSERT INTO [dbo].[UserSignatureKeyPair] ([Id], [UserId], [SignatureKeyPairAlgorithm], [SigningKey], [VerifyingKey], [CreationDate], [RevisionDate])
+    VALUES (@Id, @UserId, @SignatureKeyPairAlgorithm, @SigningKey, @VerifyingKey, @CreationDate, @RevisionDate)
 END
 GO
 
@@ -81,7 +81,6 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @AccountRevisionDate DATETIME2(7),
     @Key NVARCHAR(MAX),
     @PublicKey NVARCHAR(MAX),
-    @SignedPublicKey NVARCHAR(MAX),
     @PrivateKey NVARCHAR(MAX),
     @Premium BIT,
     @PremiumExpirationDate DATETIME2(7),
@@ -109,7 +108,8 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @LastKdfChangeDate DATETIME2(7) = NULL,
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
-    @VerifyDevices BIT = 1
+    @VerifyDevices BIT = 1,
+    @SignedPublicKey NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -131,7 +131,6 @@ BEGIN
         [AccountRevisionDate],
         [Key],
         [PublicKey],
-        [SignedPublicKey],
         [PrivateKey],
         [Premium],
         [PremiumExpirationDate],
@@ -159,7 +158,8 @@ BEGIN
         [LastKdfChangeDate],
         [LastKeyRotationDate],
         [LastEmailChangeDate],
-        [VerifyDevices]
+        [VerifyDevices],
+        [SignedPublicKey]
     )
     VALUES
     (
@@ -178,7 +178,6 @@ BEGIN
         @AccountRevisionDate,
         @Key,
         @PublicKey,
-        @SignedPublicKey,
         @PrivateKey,
         @Premium,
         @PremiumExpirationDate,
@@ -206,7 +205,8 @@ BEGIN
         @LastKdfChangeDate,
         @LastKeyRotationDate,
         @LastEmailChangeDate,
-        @VerifyDevices
+        @VerifyDevices,
+        @SignedPublicKey
     )
 END
 GO
@@ -227,7 +227,6 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @AccountRevisionDate DATETIME2(7),
     @Key NVARCHAR(MAX),
     @PublicKey NVARCHAR(MAX),
-    @SignedPublicKey NVARCHAR(MAX),
     @PrivateKey NVARCHAR(MAX),
     @Premium BIT,
     @PremiumExpirationDate DATETIME2(7),
@@ -255,7 +254,8 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @LastKdfChangeDate DATETIME2(7) = NULL,
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
-    @VerifyDevices BIT = 1
+    @VerifyDevices BIT = 1,
+    @SignedPublicKey NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -277,7 +277,6 @@ BEGIN
         [AccountRevisionDate] = @AccountRevisionDate,
         [Key] = @Key,
         [PublicKey] = @PublicKey,
-        [SignedPublicKey] = @SignedPublicKey,
         [PrivateKey] = @PrivateKey,
         [Premium] = @Premium,
         [PremiumExpirationDate] = @PremiumExpirationDate,
@@ -305,7 +304,8 @@ BEGIN
         [LastKdfChangeDate] = @LastKdfChangeDate,
         [LastKeyRotationDate] = @LastKeyRotationDate,
         [LastEmailChangeDate] = @LastEmailChangeDate,
-        [VerifyDevices] = @VerifyDevices
+        [VerifyDevices] = @VerifyDevices,
+        [SignedPublicKey] = @SignedPublicKey
     WHERE
         [Id] = @Id
 END
