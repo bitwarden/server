@@ -19,6 +19,19 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
     public async Task GetAsync(int seats)
     {
         await using var factory = new SqlServerApiApplicationFactory();
+
+        var optimizationEnabled = false;
+
+        // Mock feature service with changeable state
+        factory.SubstituteService<IFeatureService>(featureService =>
+        {
+            featureService.IsEnabled(FeatureFlagKeys.MembersGetEndpointOptimization)
+                .Returns(_ => optimizationEnabled);
+            // Enable other flags
+            featureService.IsEnabled(Arg.Is<string>(key => key != FeatureFlagKeys.MembersGetEndpointOptimization))
+                .Returns(true);
+        });
+
         var client = factory.CreateClient();
         client.Timeout = TimeSpan.FromMinutes(5);
 

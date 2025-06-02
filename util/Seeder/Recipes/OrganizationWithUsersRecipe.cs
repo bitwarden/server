@@ -1,6 +1,7 @@
 ﻿using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Factories;
+using LinqToDB.Data;
 using LinqToDB.EntityFrameworkCore;
 
 namespace Bit.Seeder.Recipes;
@@ -47,8 +48,8 @@ public class OrganizationWithUsersRecipe(DatabaseContext db)
         var (collectionUsers, groupUsers) = CreateUserAssociations(additionalOrgUsers, collections, groups);
 
         // Bulk insert associations
-        db.BulkCopy(collectionUsers);
-        db.BulkCopy(groupUsers);
+        db.BulkCopy(new BulkCopyOptions { TableName = "CollectionUser" }, collectionUsers);
+        db.BulkCopy(new BulkCopyOptions { TableName = "GroupUser" }, groupUsers);
 
         return organization.Id;
     }
