@@ -78,7 +78,7 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     private async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> Get_vNext(OrganizationUserUserDetailsQueryRequest request)
     {
         var organizationUsers = await _organizationUserRepository
-            .GetManyDetailsWithGroupsCollectionsByOrganizationAsync(request.OrganizationId, request.IncludeGroups, request.IncludeCollections);
+            .GetManyDetailsByOrganizationAsync_vNext(request.OrganizationId, request.IncludeGroups, request.IncludeCollections);
 
         var twoFactorTask = _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
         var claimedStatusTask = _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(request.OrganizationId, organizationUsers.Select(o => o.Id));

@@ -36,12 +36,10 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
 
     /// <summary>
-    /// Optimized version of <see cref="GetManyDetailsByOrganizationAsync"/> for retrieving organization user details.
-    /// Uses the most appropriate optimization strategy for each data provider:
-    /// - Dapper: Single stored procedure call with multiple result sets
-    /// - EF: Single query with projection and conditional loading
+    /// Optimized version of <see cref="GetManyDetailsByOrganizationAsync"/> with better performance.
+    /// Reduces database round trips by fetching all data in fewer queries.
     /// </summary>
-    Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsWithGroupsCollectionsByOrganizationAsync(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
+    Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
 
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null);

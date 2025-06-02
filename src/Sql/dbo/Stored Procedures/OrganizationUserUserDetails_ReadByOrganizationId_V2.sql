@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUserUserDetails_WithGroupsCollections_ReadByOrganizationId]
+﻿CREATE PROCEDURE [dbo].[OrganizationUserUserDetails_ReadByOrganizationId_V2]
     @OrganizationId UNIQUEIDENTIFIER,
     @IncludeGroups BIT = 0,
     @IncludeCollections BIT = 0

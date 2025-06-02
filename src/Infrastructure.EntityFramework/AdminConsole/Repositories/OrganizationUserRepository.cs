@@ -404,7 +404,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsWithGroupsCollectionsByOrganizationAsync(
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(
         Guid organizationId, bool includeGroups, bool includeCollections)
     {
         using var scope = ServiceScopeFactory.CreateScope();
