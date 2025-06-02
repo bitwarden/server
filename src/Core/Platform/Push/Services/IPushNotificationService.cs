@@ -389,10 +389,10 @@ public interface IPushNotificationService
             ExcludeCurrentContext = false,
         });
 
-    Task PushPendingSecurityTasksAsync(Guid userId)
+    Task PushRefreshSecurityTasksAsync(Guid userId)
         => PushAsync(new PushNotification<UserPushNotification>
         {
-            Type = PushType.PendingSecurityTasks,
+            Type = PushType.RefreshSecurityTasks,
             Target = NotificationTarget.User,
             TargetId = userId,
             Payload = new UserPushNotification
