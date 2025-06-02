@@ -784,13 +784,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync_vNext(Guid organizationId)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var query = new OrganizationUserReadByClaimedOrganizationDomainsQuery_vNext(organizationId);
-            var data = await query.Run(dbContext).ToListAsync();
-            return data;
-        }
+        // No EF optimization is required for this query
+        return await GetManyByOrganizationWithClaimedDomainsAsync(organizationId);
     }
 
     public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
