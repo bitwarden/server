@@ -22,6 +22,9 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     [MaxLength(256)]
     public string Email { get; set; } = null!;
     public bool EmailVerified { get; set; }
+    /// <summary>
+    /// The server-side master-password hash
+    /// </summary>
     [MaxLength(300)]
     public string? MasterPassword { get; set; }
     [MaxLength(50)]
@@ -42,9 +45,22 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     /// organization membership.
     /// </summary>
     public DateTime AccountRevisionDate { get; set; } = DateTime.UtcNow;
+    /// <summary>
+    /// The master-password-sealed user key.
+    /// </summary>
     public string? Key { get; set; }
+    /// <summary>
+    /// The raw public key, without a signature from the user's signature key.
+    /// </summary> 
     public string? PublicKey { get; set; }
+    /// <summary>
+    /// User key wrapped private key.
+    /// </summary>
     public string? PrivateKey { get; set; }
+    /// <summary>
+    /// The public key, signed by the user's signature key.
+    /// </summary>
+    public string? SignedPublicKey { get; set; }
     public bool Premium { get; set; }
     public DateTime? PremiumExpirationDate { get; set; }
     public DateTime? RenewalReminderDate { get; set; }
