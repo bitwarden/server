@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[UserSigningKeys_UpdateForRotation]
+CREATE PROCEDURE [dbo].[UserSigningKey_UpdateForRotation]
     @UserId UNIQUEIDENTIFIER,
     @KeyType TINYINT,
     @VerifyingKey VARCHAR(MAX),
@@ -6,7 +6,7 @@ CREATE PROCEDURE [dbo].[UserSigningKeys_UpdateForRotation]
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
-    UPDATE [dbo].[UserSigningKeys]
+    UPDATE [dbo].[UserSigningKey]
     SET [KeyType] = @KeyType,
         [VerifyingKey] = @VerifyingKey,
         [SigningKey] = @SigningKey,

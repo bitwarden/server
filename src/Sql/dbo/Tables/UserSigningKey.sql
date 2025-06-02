@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[UserSigningKeys] (
+﻿CREATE TABLE [dbo].[UserSigningKey] (
     [Id]                        UNIQUEIDENTIFIER NOT NULL,
     [UserId]                    UNIQUEIDENTIFIER,
     [KeyType]                   TINYINT NOT NULL,

@@ -1,8 +1,8 @@
-CREATE PROCEDURE [dbo].[UserSigningKeys_ReadByUserId]
+CREATE PROCEDURE [dbo].[UserSigningKey_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
     SELECT *
-    FROM [dbo].[UserSigningKeys]
+    FROM [dbo].[UserSigningKey]
     WHERE [UserId] = @UserId;
 END

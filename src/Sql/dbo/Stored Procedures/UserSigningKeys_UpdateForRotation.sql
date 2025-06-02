@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[UserSigningKeys_SetForRotation]
+CREATE PROCEDURE [dbo].[UserSigningKey_SetForRotation]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @KeyType TINYINT,
@@ -8,6 +8,6 @@ CREATE PROCEDURE [dbo].[UserSigningKeys_SetForRotation]
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
-    INSERT INTO [dbo].[UserSigningKeys] ([Id], [UserId], [KeyType], [VerifyingKey], [SigningKey], [CreationDate], [RevisionDate])
+    INSERT INTO [dbo].[UserSigningKey] ([Id], [UserId], [KeyType], [VerifyingKey], [SigningKey], [CreationDate], [RevisionDate])
     VALUES (@Id, @UserId, @KeyType, @VerifyingKey, @SigningKey, @CreationDate, @RevisionDate)
 END
