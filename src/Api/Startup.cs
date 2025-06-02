@@ -272,22 +272,6 @@ public class Startup
         // Add current context
         app.UseMiddleware<CurrentContextMiddleware>();
 
-        // Add endpoints to the request pipeline.
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapDefaultControllerRoute();
-
-            if (!globalSettings.SelfHosted)
-            {
-                endpoints.MapHealthChecks("/healthz");
-
-                endpoints.MapHealthChecks("/healthz/extended", new HealthCheckOptions
-                {
-                    ResponseWriter = HealthCheckServiceExtensions.WriteResponse
-                });
-            }
-        });
-
         // Add Swagger
         if (Environment.IsDevelopment() || globalSettings.SelfHosted)
         {
