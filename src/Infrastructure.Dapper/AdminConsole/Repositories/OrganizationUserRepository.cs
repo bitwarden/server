@@ -626,7 +626,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUser>(
-                $"[{Schema}].[OrganizationUser_ReadByOrganizationIdWithClaimedDomainsv2]",
+                $"[{Schema}].[OrganizationUser_ReadByOrganizationIdWithClaimedDomains_V2]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
