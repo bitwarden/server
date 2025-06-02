@@ -380,8 +380,48 @@ public class OrganizationUserRepositoryTests(ITestOutputHelper testOutputHelper)
             ResetPasswordKey = "resetpasswordkey1",
         });
 
+        // Test original version
+        var stopwatch1 = Stopwatch.StartNew();
         var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organization.Id);
+        stopwatch1.Stop();
+        var originalQueryTime = stopwatch1.ElapsedMilliseconds;
 
+        // Test optimized version
+        var stopwatch2 = Stopwatch.StartNew();
+        var optimizedResponseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync_vNext(organization.Id);
+        stopwatch2.Stop();
+        var optimizedQueryTime = stopwatch2.ElapsedMilliseconds;
+
+        // Verify both results are identical
+        Assert.Equal(responseModel.Count, optimizedResponseModel.Count);
+
+        // Sort both results by Id to ensure consistent comparison
+        var sortedOriginal = responseModel.OrderBy(u => u.Id).ToList();
+        var sortedOptimized = optimizedResponseModel.OrderBy(u => u.Id).ToList();
+
+        // Compare using JSON serialization for comprehensive comparison
+        var originalJson = JsonSerializer.Serialize(sortedOriginal, new JsonSerializerOptions { WriteIndented = true });
+        var optimizedJson = JsonSerializer.Serialize(sortedOptimized, new JsonSerializerOptions { WriteIndented = true });
+
+        if (originalJson != optimizedJson)
+        {
+            testOutputHelper.WriteLine("❌ Results differ!");
+            testOutputHelper.WriteLine($"Original: {originalJson}");
+            testOutputHelper.WriteLine($"Optimized: {optimizedJson}");
+        }
+
+        Assert.Equal(originalJson, optimizedJson);
+
+        // Log benchmark results
+        testOutputHelper.WriteLine($"Benchmark results for GetManyByOrganizationWithClaimedDomainsAsync:");
+        testOutputHelper.WriteLine($"  Original version: {originalQueryTime}ms");
+        testOutputHelper.WriteLine($"  Optimized version: {optimizedQueryTime}ms");
+
+        var improvement = originalQueryTime > 0 ? ((double)(originalQueryTime - optimizedQueryTime) / originalQueryTime * 100) : 0;
+        testOutputHelper.WriteLine($"  Performance improvement: {improvement:F1}%");
+        testOutputHelper.WriteLine($"  Data identical: ✅");
+
+        // Verify test expectations
         Assert.NotNull(responseModel);
         Assert.Single(responseModel);
         Assert.Equal(orgUser1.Id, responseModel.Single().Id);
