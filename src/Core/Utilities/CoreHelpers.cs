@@ -660,9 +660,9 @@ public static class CoreHelpers
     {
         if (globalSettings.SelfHosted &&
             SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
-            && File.Exists("identity.pfx"))
+            && File.Exists(globalSettings.IdentityServer.CertificateLocation))
         {
-            return GetCertificate("identity.pfx",
+            return GetCertificate(globalSettings.IdentityServer.CertificateLocation,
                 globalSettings.IdentityServer.CertificatePassword);
         }
         else if (SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))
@@ -712,6 +712,7 @@ public static class CoreHelpers
             new(Claims.Premium, isPremium ? "true" : "false"),
             new(JwtClaimTypes.Email, user.Email),
             new(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false"),
+            // TODO: [https://bitwarden.atlassian.net/browse/PM-22171] Remove this since it is already added from the persisted grant
             new(Claims.SecurityStamp, user.SecurityStamp),
         };
 
