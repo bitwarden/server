@@ -4,7 +4,9 @@
     @Name VARCHAR(MAX),
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @UserDefaultCollectionEmail NVARCHAR(256) = NULL,
+    @Type TINYINT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -16,7 +18,9 @@ BEGIN
         [Name],
         [ExternalId],
         [CreationDate],
-        [RevisionDate]
+        [RevisionDate],
+        [UserDefaultCollectionEmail],
+        [Type]
     )
     VALUES
     (
@@ -25,7 +29,9 @@ BEGIN
         @Name,
         @ExternalId,
         @CreationDate,
-        @RevisionDate
+        @RevisionDate,
+        @UserDefaultCollectionEmail,
+     @Type
     )
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionId] @Id, @OrganizationId

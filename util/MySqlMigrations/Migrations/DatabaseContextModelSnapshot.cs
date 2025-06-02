@@ -970,6 +970,12 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserDefaultCollectionEmail")
+                        .HasColumnType("longtext");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId");

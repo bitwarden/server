@@ -959,6 +959,12 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserDefaultCollectionEmail")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId");
