@@ -92,7 +92,7 @@ BEGIN
         [LastKeyRotationDate],
         [LastEmailChangeDate],
         [VerifyDevices],
-        [SignedPublicKey],
+        [SignedPublicKey]
     )
     VALUES
     (
