@@ -31,6 +31,7 @@ public class OrganizationBillingService(
     IGlobalSettings globalSettings,
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
+    IOrganizationUserRepository organizationUserRepository,
     IPricingClient pricingClient,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
@@ -107,6 +108,8 @@ public class OrganizationBillingService(
             ? await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions())
             : null;
 
+        var orgOccupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+
         return new OrganizationMetadata(
             isEligibleForSelfHost,
             isManaged,
@@ -117,7 +120,8 @@ public class OrganizationBillingService(
             subscription.Status == StripeConstants.SubscriptionStatus.Canceled,
             invoice?.DueDate,
             invoice?.Created,
-            subscription.CurrentPeriodEnd);
+            subscription.CurrentPeriodEnd,
+            orgOccupiedSeats);
     }
 
     public async Task
