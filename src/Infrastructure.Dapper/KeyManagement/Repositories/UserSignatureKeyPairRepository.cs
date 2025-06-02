@@ -48,8 +48,8 @@ public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, G
                     Id = Guid.NewGuid(),
                     UserId = userId,
                     SignatureAlgorithm = (byte)signingKeys.SignatureAlgorithm,
-                    signingKeys.VerifyingKey,
                     SigningKey = signingKeys.WrappedSigningKey,
+                    signingKeys.VerifyingKey,
                     CreationDate = DateTime.UtcNow,
                     RevisionDate = DateTime.UtcNow
                 },
@@ -68,8 +68,8 @@ public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, G
                 {
                     UserId = grantorId,
                     SignatureAlgorithm = (byte)signingKeys.SignatureAlgorithm,
-                    signingKeys.VerifyingKey,
                     SigningKey = signingKeys.WrappedSigningKey,
+                    signingKeys.VerifyingKey,
                     RevisionDate = DateTime.UtcNow
                 },
                 commandType: CommandType.StoredProcedure,
