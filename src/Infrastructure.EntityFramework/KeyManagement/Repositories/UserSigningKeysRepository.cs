@@ -28,8 +28,8 @@ public class UserSignatureKeyPairRepository : Repository<Core.Entities.UserSigna
         return new SignatureKeyPairData
         {
             SignatureAlgorithm = signingKeys.SignatureAlgorithm,
-            VerifyingKey = signingKeys.VerifyingKey,
             WrappedSigningKey = signingKeys.SigningKey,
+            VerifyingKey = signingKeys.VerifyingKey,
         };
     }
 
@@ -44,8 +44,8 @@ public class UserSignatureKeyPairRepository : Repository<Core.Entities.UserSigna
                 Id = Guid.NewGuid(),
                 UserId = userId,
                 SignatureAlgorithm = signingKeys.SignatureAlgorithm,
-                VerifyingKey = signingKeys.VerifyingKey,
                 SigningKey = signingKeys.WrappedSigningKey,
+                VerifyingKey = signingKeys.VerifyingKey,
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow,
             };
@@ -64,8 +64,8 @@ public class UserSignatureKeyPairRepository : Repository<Core.Entities.UserSigna
             if (entity != null)
             {
                 entity.SignatureAlgorithm = signingKeys.SignatureAlgorithm;
-                entity.VerifyingKey = signingKeys.VerifyingKey;
                 entity.SigningKey = signingKeys.WrappedSigningKey;
+                entity.VerifyingKey = signingKeys.VerifyingKey;
                 entity.RevisionDate = DateTime.UtcNow;
                 await dbContext.SaveChangesAsync();
             }
