@@ -1064,7 +1064,7 @@ public class CiphersController : Controller
 
     [HttpPut("share")]
     [HttpPost("share")]
-    public async Task PutShareMany([FromBody] CipherBulkShareRequestModel model)
+    public async Task<CipherMiniResponseModel[]> PutShareMany([FromBody] CipherBulkShareRequestModel model)
     {
         var organizationId = new Guid(model.Ciphers.First().OrganizationId);
         if (!await _currentContext.OrganizationUser(organizationId))
@@ -1073,38 +1073,40 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
+
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: false);
         var ciphersDict = ciphers.ToDictionary(c => c.Id);
 
         // Validate the model was encrypted for the posting user
         foreach (var cipher in model.Ciphers)
         {
-            if (cipher.EncryptedFor != null)
+            if (cipher.EncryptedFor.HasValue && cipher.EncryptedFor.Value != userId)
             {
-                if (cipher.EncryptedFor != userId)
-                {
-                    throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
-                }
+                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }
 
         var shareCiphers = new List<(Cipher, DateTime?)>();
         foreach (var cipher in model.Ciphers)
         {
-            if (!ciphersDict.ContainsKey(cipher.Id.Value))
+            if (!ciphersDict.TryGetValue(cipher.Id.Value, out var existingCipher))
             {
-                throw new BadRequestException("Trying to move ciphers that you do not own.");
+                throw new BadRequestException("Trying to share ciphers that you do not own.");
             }
-
-            var existingCipher = ciphersDict[cipher.Id.Value];
 
             ValidateClientVersionForFido2CredentialSupport(existingCipher);
 
-            shareCiphers.Add((cipher.ToCipher(existingCipher), cipher.LastKnownRevisionDate));
+            shareCiphers.Add(((Cipher)existingCipher, cipher.LastKnownRevisionDate));
         }
 
-        await _cipherService.ShareManyAsync(shareCiphers, organizationId,
-            model.CollectionIds.Select(c => new Guid(c)), userId);
+        var updated = await _cipherService.ShareManyAsync(
+            shareCiphers,
+            organizationId,
+            model.CollectionIds.Select(Guid.Parse),
+            userId
+        );
+
+        return updated.Select(c => new CipherMiniResponseModel(c, _globalSettings, false)).ToArray();
     }
 
     [HttpPost("purge")]
