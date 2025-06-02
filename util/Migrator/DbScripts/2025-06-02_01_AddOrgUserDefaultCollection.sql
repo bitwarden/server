@@ -291,3 +291,166 @@ BEGIN
         END
 END
 GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Collection_CreateWithGroupsAndUsers]
+    @Id UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Name VARCHAR(MAX),
+    @ExternalId NVARCHAR(300),
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7),
+    @Groups AS [dbo].[CollectionAccessSelectionType] READONLY,
+    @Users AS [dbo].[CollectionAccessSelectionType] READONLY,
+    @UserDefaultCollectionEmail NVARCHAR(256) = NULL,
+    @Type TINYINT = 0
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [dbo].[Collection_Create] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @UserDefaultCollectionEmail, @Type
+
+    -- Groups
+    ;WITH [AvailableGroupsCTE] AS(
+        SELECT
+            [Id]
+        FROM
+            [dbo].[Group]
+        WHERE
+            [OrganizationId] = @OrganizationId
+    )
+     INSERT INTO [dbo].[CollectionGroup]
+     (
+         [CollectionId],
+         [GroupId],
+         [ReadOnly],
+         [HidePasswords],
+         [Manage]
+     )
+     SELECT
+         @Id,
+         [Id],
+         [ReadOnly],
+         [HidePasswords],
+         [Manage]
+     FROM
+         @Groups
+     WHERE
+         [Id] IN (SELECT [Id] FROM [AvailableGroupsCTE])
+
+    -- Users
+    ;WITH [AvailableUsersCTE] AS(
+        SELECT
+            [Id]
+        FROM
+            [dbo].[OrganizationUser]
+        WHERE
+            [OrganizationId] = @OrganizationId
+    )
+     INSERT INTO [dbo].[CollectionUser]
+     (
+         [CollectionId],
+         [OrganizationUserId],
+         [ReadOnly],
+         [HidePasswords],
+         [Manage]
+     )
+     SELECT
+         @Id,
+         [Id],
+         [ReadOnly],
+         [HidePasswords],
+         [Manage]
+     FROM
+         @Users
+     WHERE
+         [Id] IN (SELECT [Id] FROM [AvailableUsersCTE])
+
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadByIdWithPermissions]
+    @CollectionId UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER,
+    @IncludeAccessRelationships BIT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        C.*,
+        MIN(CASE
+                WHEN
+                    COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
+                    THEN 0
+                ELSE 1
+            END) AS [ReadOnly],
+        MIN (CASE
+                 WHEN
+                     COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+                     THEN 0
+                 ELSE 1
+            END) AS [HidePasswords],
+        MAX(CASE
+                WHEN
+                    COALESCE(CU.[Manage], CG.[Manage], 0) = 0
+                    THEN 0
+                ELSE 1
+            END) AS [Manage],
+        MAX(CASE
+                WHEN
+                    CU.[CollectionId] IS NULL AND CG.[CollectionId] IS NULL
+                    THEN 0
+                ELSE 1
+            END) AS [Assigned],
+        CASE
+            WHEN
+                -- No user or group has manage rights
+                NOT EXISTS(
+                    SELECT 1
+                    FROM [dbo].[CollectionUser] CU2
+                             JOIN [dbo].[OrganizationUser] OU2 ON CU2.[OrganizationUserId] = OU2.[Id]
+                    WHERE
+                        CU2.[CollectionId] = C.[Id] AND
+                        CU2.[Manage] = 1
+                )
+                    AND NOT EXISTS (
+                    SELECT 1
+                    FROM [dbo].[CollectionGroup] CG2
+                    WHERE
+                        CG2.[CollectionId] = C.[Id] AND
+                        CG2.[Manage] = 1
+                )
+                THEN 1
+            ELSE 0
+            END AS [Unmanaged]
+    FROM
+        [dbo].[CollectionView] C
+            LEFT JOIN
+        [dbo].[OrganizationUser] OU ON C.[OrganizationId] = OU.[OrganizationId] AND OU.[UserId] = @UserId
+            LEFT JOIN
+        [dbo].[CollectionUser] CU ON CU.[CollectionId] = C.[Id] AND CU.[OrganizationUserId] = [OU].[Id]
+            LEFT JOIN
+        [dbo].[GroupUser] GU ON CU.[CollectionId] IS NULL AND GU.[OrganizationUserId] = OU.[Id]
+            LEFT JOIN
+        [dbo].[Group] G ON G.[Id] = GU.[GroupId]
+            LEFT JOIN
+        [dbo].[CollectionGroup] CG ON CG.[CollectionId] = C.[Id] AND CG.[GroupId] = GU.[GroupId]
+    WHERE
+        C.[Id] = @CollectionId
+    GROUP BY
+        C.[Id],
+        C.[OrganizationId],
+        C.[Name],
+        C.[CreationDate],
+        C.[RevisionDate],
+        C.[ExternalId],
+        C.UserDefaultCollectionEmail,
+        C.Type
+
+    IF (@IncludeAccessRelationships = 1)
+        BEGIN
+            EXEC [dbo].[CollectionGroup_ReadByCollectionId] @CollectionId
+            EXEC [dbo].[CollectionUser_ReadByCollectionId] @CollectionId
+        END
+END
