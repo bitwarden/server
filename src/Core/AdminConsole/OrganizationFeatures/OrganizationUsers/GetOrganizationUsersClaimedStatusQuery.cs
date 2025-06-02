@@ -8,13 +8,16 @@ public class GetOrganizationUsersClaimedStatusQuery : IGetOrganizationUsersClaim
 {
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IFeatureService _featureService;
 
     public GetOrganizationUsersClaimedStatusQuery(
         IApplicationCacheService applicationCacheService,
-        IOrganizationUserRepository organizationUserRepository)
+        IOrganizationUserRepository organizationUserRepository,
+        IFeatureService featureService)
     {
         _applicationCacheService = applicationCacheService;
         _organizationUserRepository = organizationUserRepository;
+        _featureService = featureService;
     }
 
     public async Task<IDictionary<Guid, bool>> GetUsersOrganizationClaimedStatusAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds)
@@ -27,7 +30,9 @@ public class GetOrganizationUsersClaimedStatusQuery : IGetOrganizationUsersClaim
             if (organizationAbility is { Enabled: true, UseOrganizationDomains: true })
             {
                 // Get all organization users with claimed domains by the organization
-                var organizationUsersWithClaimedDomain = await _organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organizationId);
+                var organizationUsersWithClaimedDomain = _featureService.IsEnabled(FeatureFlagKeys.MembersGetEndpointOptimization)
+                    ? await _organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync_vNext(organizationId)
+                    : await _organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organizationId);
 
                 // Create a dictionary with the OrganizationUserId and a boolean indicating if the user is claimed by the organization
                 return organizationUserIds.ToDictionary(ouId => ouId, ouId => organizationUsersWithClaimedDomain.Any(ou => ou.Id == ouId));
