@@ -11,7 +11,7 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.KeyManagement.Repositories;
 
-public class UserSigningKeysRepository : Repository<UserSigningKeys, Guid>, IUserSigningKeysRepository
+public class UserSigningKeysRepository : Repository<UserSignatureKeyPair, Guid>, IUserSignatureKeyPairRepository
 {
     public UserSigningKeysRepository(GlobalSettings globalSettings)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
@@ -23,11 +23,11 @@ public class UserSigningKeysRepository : Repository<UserSigningKeys, Guid>, IUse
     {
     }
 
-    public async Task<SigningKeyData?> GetByUserIdAsync(Guid userId)
+    public async Task<SignatureKeyPairData?> GetByUserIdAsync(Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            return await connection.QuerySingleOrDefaultAsync<SigningKeyData>(
+            return await connection.QuerySingleOrDefaultAsync<SignatureKeyPairData>(
                 "[dbo].[UserSigningKey_ReadByUserId]",
                 new
                 {
@@ -37,7 +37,7 @@ public class UserSigningKeysRepository : Repository<UserSigningKeys, Guid>, IUse
         }
     }
 
-    public UpdateEncryptedDataForKeyRotation SetUserSigningKeys(Guid userId, SigningKeyData signingKeys)
+    public UpdateEncryptedDataForKeyRotation SetUserSignatureKeyPair(Guid userId, SignatureKeyPairData signingKeys)
     {
         return async (SqlConnection connection, SqlTransaction transaction) =>
         {
@@ -47,7 +47,7 @@ public class UserSigningKeysRepository : Repository<UserSigningKeys, Guid>, IUse
                 {
                     Id = Guid.NewGuid(),
                     UserId = userId,
-                    KeyType = (byte)signingKeys.KeyAlgorithm,
+                    SignatureAlgorithm = (byte)signingKeys.SignatureAlgorithm,
                     signingKeys.VerifyingKey,
                     SigningKey = signingKeys.WrappedSigningKey,
                     CreationDate = DateTime.UtcNow,
@@ -58,7 +58,7 @@ public class UserSigningKeysRepository : Repository<UserSigningKeys, Guid>, IUse
         };
     }
 
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid grantorId, SigningKeyData signingKeys)
+    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid grantorId, SignatureKeyPairData signingKeys)
     {
         return async (SqlConnection connection, SqlTransaction transaction) =>
         {
@@ -67,7 +67,7 @@ public class UserSigningKeysRepository : Repository<UserSigningKeys, Guid>, IUse
                 new
                 {
                     UserId = grantorId,
-                    KeyType = (byte)signingKeys.KeyAlgorithm,
+                    SignatureAlgorithm = (byte)signingKeys.SignatureAlgorithm,
                     signingKeys.VerifyingKey,
                     SigningKey = signingKeys.WrappedSigningKey,
                     RevisionDate = DateTime.UtcNow

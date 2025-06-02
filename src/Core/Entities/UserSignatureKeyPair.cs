@@ -6,16 +6,16 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities;
 
-public class UserSigningKeys : ITableObject<Guid>, IRevisable
+public class UserSignatureKeyPair : ITableObject<Guid>, IRevisable
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
-    public SigningKeyType KeyType { get; set; }
+    public SignatureAlgorithm SignatureAlgorithm { get; set; }
 
     [MaxLength(500)]
-    public string? VerifyingKey { get; set; }
+    required public string VerifyingKey { get; set; }
     [MaxLength(500)]
-    public string? SigningKey { get; set; }
+    required public string SigningKey { get; set; }
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;

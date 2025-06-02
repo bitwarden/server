@@ -9,13 +9,13 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.KeyManagement.Repositories;
 
-public class UserSigningKeysRepository : Repository<Core.Entities.UserSigningKeys, Models.UserSigningKeys, Guid>, IUserSigningKeysRepository
+public class UserSignatureKeyPairRepository : Repository<Core.Entities.UserSignatureKeyPair, Models.UserSigningKeys, Guid>, IUserSignatureKeyPairRepository
 {
-    public UserSigningKeysRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper) : base(serviceScopeFactory, mapper, context => context.UserSigningKeys)
+    public UserSignatureKeyPairRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper) : base(serviceScopeFactory, mapper, context => context.UserSigningKeys)
     {
     }
 
-    public async Task<SigningKeyData?> GetByUserIdAsync(Guid userId)
+    public async Task<SignatureKeyPairData?> GetByUserIdAsync(Guid userId)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -25,15 +25,15 @@ public class UserSigningKeysRepository : Repository<Core.Entities.UserSigningKey
             return null;
         }
 
-        return new SigningKeyData
+        return new SignatureKeyPairData
         {
-            KeyAlgorithm = signingKeys.KeyType,
+            SignatureAlgorithm = signingKeys.SignatureAlgorithm,
             VerifyingKey = signingKeys.VerifyingKey,
             WrappedSigningKey = signingKeys.SigningKey,
         };
     }
 
-    public UpdateEncryptedDataForKeyRotation SetUserSigningKeys(Guid userId, SigningKeyData signingKeys)
+    public UpdateEncryptedDataForKeyRotation SetUserSignatureKeyPair(Guid userId, SignatureKeyPairData signingKeys)
     {
         return async (_, _) =>
         {
@@ -43,7 +43,7 @@ public class UserSigningKeysRepository : Repository<Core.Entities.UserSigningKey
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
-                KeyType = signingKeys.KeyAlgorithm,
+                SignatureAlgorithm = signingKeys.SignatureAlgorithm,
                 VerifyingKey = signingKeys.VerifyingKey,
                 SigningKey = signingKeys.WrappedSigningKey,
                 CreationDate = DateTime.UtcNow,
@@ -54,7 +54,7 @@ public class UserSigningKeysRepository : Repository<Core.Entities.UserSigningKey
         };
     }
 
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid grantorId, SigningKeyData signingKeys)
+    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid grantorId, SignatureKeyPairData signingKeys)
     {
         return async (_, _) =>
         {
@@ -63,7 +63,7 @@ public class UserSigningKeysRepository : Repository<Core.Entities.UserSigningKey
             var entity = await dbContext.UserSigningKeys.FirstOrDefaultAsync(x => x.UserId == grantorId);
             if (entity != null)
             {
-                entity.KeyType = signingKeys.KeyAlgorithm;
+                entity.SignatureAlgorithm = signingKeys.SignatureAlgorithm;
                 entity.VerifyingKey = signingKeys.VerifyingKey;
                 entity.SigningKey = signingKeys.WrappedSigningKey;
                 entity.RevisionDate = DateTime.UtcNow;
