@@ -127,7 +127,8 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
 
     private async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> GetAccountRecoveryEnrolledUsers_vNext(OrganizationUserUserDetailsQueryRequest request)
     {
-        var organizationUsers = (await GetOrganizationUserUserDetails(request))
+        var organizationUsers = (await _organizationUserRepository
+            .GetManyDetailsByOrganizationAsync_vNext(request.OrganizationId, request.IncludeGroups, request.IncludeCollections))
             .Where(o => o.Status.Equals(OrganizationUserStatusType.Confirmed) && o.UsesKeyConnector == false && !String.IsNullOrEmpty(o.ResetPasswordKey))
             .ToArray();
 
@@ -136,10 +137,18 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
 
         await Task.WhenAll(twoFactorTask, claimedStatusTask);
 
-        var organizationUsersTwoFactorEnabled = twoFactorTask.Result.ToDictionary(u => u.user.Id);
+        var organizationUsersTwoFactorEnabled = twoFactorTask.Result.ToDictionary(u => u.user.Id, u => u.twoFactorIsEnabled);
         var organizationUsersClaimedStatus = claimedStatusTask.Result;
-        var responses = organizationUsers
-            .Select(o => (o, organizationUsersTwoFactorEnabled[o.Id].twoFactorIsEnabled, organizationUsersClaimedStatus[o.Id]));
+        var responses = organizationUsers.Select(organizationUserDetails =>
+        {
+            var organizationUserPermissions = organizationUserDetails.GetPermissions();
+            organizationUserDetails.Permissions = CoreHelpers.ClassToJsonData(organizationUserPermissions);
+
+            var userHasTwoFactorEnabled = organizationUsersTwoFactorEnabled[organizationUserDetails.Id];
+            var userIsClaimedByOrganization = organizationUsersClaimedStatus[organizationUserDetails.Id];
+
+            return (organizationUserDetails, userHasTwoFactorEnabled, userIsClaimedByOrganization);
+        });
 
         return responses;
     }
