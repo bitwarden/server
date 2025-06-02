@@ -16,9 +16,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.Identity.Models.Response.Accounts;
@@ -39,7 +36,6 @@ public class AccountsController : Controller
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
 
@@ -86,7 +82,6 @@ public class AccountsController : Controller
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
         ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
-        IReferenceEventService referenceEventService,
         IFeatureService featureService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
         GlobalSettings globalSettings
@@ -99,7 +94,6 @@ public class AccountsController : Controller
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
         _sendVerificationEmailForRegistrationCommand = sendVerificationEmailForRegistrationCommand;
-        _referenceEventService = referenceEventService;
         _featureService = featureService;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
 
@@ -114,15 +108,6 @@ public class AccountsController : Controller
     {
         var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
             model.ReceiveMarketingEmails);
-
-        var refEvent = new ReferenceEvent
-        {
-            Type = ReferenceEventType.SignupEmailSubmit,
-            ClientId = _currentContext.ClientId,
-            ClientVersion = _currentContext.ClientVersion,
-            Source = ReferenceEventSource.Registration
-        };
-        await _referenceEventService.RaiseEventAsync(refEvent);
 
         if (token != null)
         {
@@ -141,18 +126,6 @@ public class AccountsController : Controller
         // where a user finishes registration and then clicks the email verification link again.
         var user = await _userRepository.GetByEmailAsync(model.Email);
         var userExists = user != null;
-
-        var refEvent = new ReferenceEvent
-        {
-            Type = ReferenceEventType.SignupEmailClicked,
-            ClientId = _currentContext.ClientId,
-            ClientVersion = _currentContext.ClientVersion,
-            Source = ReferenceEventSource.Registration,
-            EmailVerificationTokenValid = tokenValid,
-            UserAlreadyExists = userExists
-        };
-
-        await _referenceEventService.RaiseEventAsync(refEvent);
 
         if (!tokenValid || userExists)
         {
