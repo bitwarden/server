@@ -557,7 +557,7 @@ public static class ServiceCollectionExtensions
             services.AddKeyedSingleton<IEventWriteService, AzureQueueEventWriteService>("storage");
 
             if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
-                CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.TopicName))
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.EventTopicName))
             {
                 services.AddKeyedSingleton<IEventWriteService, AzureServiceBusEventWriteService>("broadcast");
             }
@@ -589,86 +589,83 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    private static IServiceCollection AddAzureServiceBusEventRepositoryListener(this IServiceCollection services, GlobalSettings globalSettings)
+    {
+        services.AddSingleton<IEventRepository, TableStorageRepos.EventRepository>();
+        services.AddSingleton<AzureTableStorageEventHandler>();
+        services.AddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
+
+        services.AddSingleton<IHostedService>(provider =>
+            new AzureServiceBusEventListenerService(
+                handler: provider.GetRequiredService<AzureTableStorageEventHandler>(),
+                logger: provider.GetRequiredService<ILogger<AzureServiceBusEventListenerService>>(),
+                globalSettings: globalSettings,
+                subscriptionName: globalSettings.EventLogging.AzureServiceBus.EventRepositorySubscriptionName));
+
+        return services;
+    }
+
+    private static IServiceCollection AddAzureServiceBusIntegration<TConfig, THandler>(
+        this IServiceCollection services,
+        string eventSubscriptionName,
+        string integrationSubscriptionName,
+        IntegrationType integrationType,
+        GlobalSettings globalSettings)
+        where TConfig : class
+        where THandler : class, IIntegrationHandler<TConfig>
+    {
+        var routingKey = integrationType.ToRoutingKey();
+
+        services.AddSingleton<IIntegrationPublisher, AzureServiceBusIntegrationPublisher>();
+
+        services.AddKeyedSingleton<IEventMessageHandler>(routingKey, (provider, _) =>
+            new EventIntegrationHandler<TConfig>(
+                integrationType,
+                provider.GetRequiredService<IIntegrationPublisher>(),
+                provider.GetRequiredService<IOrganizationIntegrationConfigurationRepository>(),
+                provider.GetRequiredService<IUserRepository>(),
+                provider.GetRequiredService<IOrganizationRepository>()));
+
+        services.AddSingleton<IHostedService>(provider =>
+            new AzureServiceBusEventListenerService(
+                handler: provider.GetRequiredKeyedService<IEventMessageHandler>(routingKey),
+                logger: provider.GetRequiredService<ILogger<AzureServiceBusEventListenerService>>(),
+                globalSettings: globalSettings,
+                subscriptionName: eventSubscriptionName));
+
+        services.AddSingleton<IIntegrationHandler<TConfig>, THandler>();
+
+        services.AddSingleton<IHostedService>(provider =>
+            new AzureServiceBusIntegrationListenerService(
+                handler: provider.GetRequiredService<IIntegrationHandler<TConfig>>(),
+                subscriptionName: integrationSubscriptionName,
+                logger: provider.GetRequiredService<ILogger<AzureServiceBusIntegrationListenerService>>(),
+                globalSettings: globalSettings));
+
+        return services;
+    }
+
     public static IServiceCollection AddAzureServiceBusListeners(this IServiceCollection services, GlobalSettings globalSettings)
     {
-        if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
-            CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.TopicName))
-        {
-            services.AddSingleton<IEventRepository, TableStorageRepos.EventRepository>();
-            services.AddSingleton<AzureTableStorageEventHandler>();
-            services.AddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
-            services.AddSingleton<IHostedService>(provider =>
-                new AzureServiceBusEventListenerService(
-                    provider.GetRequiredService<AzureTableStorageEventHandler>(),
-                    provider.GetRequiredService<ILogger<AzureServiceBusEventListenerService>>(),
-                    globalSettings,
-                    globalSettings.EventLogging.AzureServiceBus.EventRepositorySubscriptionName));
+        if (!CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) ||
+            !CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.EventTopicName))
+            return services;
 
+        services.AddAzureServiceBusEventRepositoryListener(globalSettings);
 
-            services.AddSlackService(globalSettings);
-            services.AddSingleton<SlackEventHandler>();
-            services.AddSingleton<IHostedService>(provider =>
-                new AzureServiceBusEventListenerService(
-                    provider.GetRequiredService<SlackEventHandler>(),
-                    provider.GetRequiredService<ILogger<AzureServiceBusEventListenerService>>(),
-                    globalSettings,
-                    globalSettings.EventLogging.AzureServiceBus.SlackSubscriptionName));
+        services.AddSlackService(globalSettings);
+        services.AddAzureServiceBusIntegration<SlackIntegrationConfigurationDetails, SlackIntegrationHandler>(
+            eventSubscriptionName: globalSettings.EventLogging.AzureServiceBus.SlackEventSubscriptionName,
+            integrationSubscriptionName: globalSettings.EventLogging.AzureServiceBus.SlackIntegrationSubscriptionName,
+            integrationType: IntegrationType.Slack,
+            globalSettings: globalSettings);
 
-            services.AddSingleton<WebhookEventHandler>();
-            services.AddHttpClient(WebhookEventHandler.HttpClientName);
-            services.AddSingleton<IHostedService>(provider =>
-                new AzureServiceBusEventListenerService(
-                    provider.GetRequiredService<WebhookEventHandler>(),
-                    provider.GetRequiredService<ILogger<AzureServiceBusEventListenerService>>(),
-                    globalSettings,
-                    globalSettings.EventLogging.AzureServiceBus.WebhookSubscriptionName));
-        }
-
-        return services;
-    }
-
-    public static IServiceCollection AddRabbitMqListeners(this IServiceCollection services, GlobalSettings globalSettings)
-    {
-        if (IsRabbitMqEnabled(globalSettings))
-        {
-            services.AddRabbitMqEventRepositoryListener(globalSettings);
-
-            services.AddSlackService(globalSettings);
-            services.AddRabbitMqIntegration<SlackIntegrationConfigurationDetails, SlackIntegrationHandler>(
-                globalSettings.EventLogging.RabbitMq.SlackEventsQueueName,
-                globalSettings.EventLogging.RabbitMq.SlackIntegrationQueueName,
-                globalSettings.EventLogging.RabbitMq.SlackIntegrationRetryQueueName,
-                globalSettings.EventLogging.RabbitMq.IntegrationDeadLetterQueueName,
-                IntegrationType.Slack,
-                globalSettings);
-
-            services.AddHttpClient(WebhookIntegrationHandler.HttpClientName);
-            services.AddRabbitMqIntegration<WebhookIntegrationConfigurationDetails, WebhookIntegrationHandler>(
-                globalSettings.EventLogging.RabbitMq.WebhookEventsQueueName,
-                globalSettings.EventLogging.RabbitMq.WebhookIntegrationQueueName,
-                globalSettings.EventLogging.RabbitMq.WebhookIntegrationRetryQueueName,
-                globalSettings.EventLogging.RabbitMq.IntegrationDeadLetterQueueName,
-                IntegrationType.Webhook,
-                globalSettings);
-        }
-
-        return services;
-    }
-
-    public static IServiceCollection AddSlackService(this IServiceCollection services, GlobalSettings globalSettings)
-    {
-        if (CoreHelpers.SettingHasValue(globalSettings.Slack.ClientId) &&
-            CoreHelpers.SettingHasValue(globalSettings.Slack.ClientSecret) &&
-            CoreHelpers.SettingHasValue(globalSettings.Slack.Scopes))
-        {
-            services.AddHttpClient(SlackService.HttpClientName);
-            services.AddSingleton<ISlackService, SlackService>();
-        }
-        else
-        {
-            services.AddSingleton<ISlackService, NoopSlackService>();
-        }
-
+        services.AddHttpClient(WebhookIntegrationHandler.HttpClientName);
+        services.AddAzureServiceBusIntegration<WebhookIntegrationConfigurationDetails, WebhookIntegrationHandler>(
+            eventSubscriptionName: globalSettings.EventLogging.AzureServiceBus.WebhookEventSubscriptionName,
+            integrationSubscriptionName: globalSettings.EventLogging.AzureServiceBus.WebhookIntegrationSubscriptionName,
+            integrationType: IntegrationType.Webhook,
+            globalSettings: globalSettings);
         return services;
     }
 
@@ -729,12 +726,59 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddRabbitMqListeners(this IServiceCollection services, GlobalSettings globalSettings)
+    {
+        if (!IsRabbitMqEnabled(globalSettings))
+        {
+            return services;
+        }
+
+        services.AddRabbitMqEventRepositoryListener(globalSettings);
+
+        services.AddSlackService(globalSettings);
+        services.AddRabbitMqIntegration<SlackIntegrationConfigurationDetails, SlackIntegrationHandler>(
+            globalSettings.EventLogging.RabbitMq.SlackEventsQueueName,
+            globalSettings.EventLogging.RabbitMq.SlackIntegrationQueueName,
+            globalSettings.EventLogging.RabbitMq.SlackIntegrationRetryQueueName,
+            globalSettings.EventLogging.RabbitMq.IntegrationDeadLetterQueueName,
+            IntegrationType.Slack,
+            globalSettings);
+
+        services.AddHttpClient(WebhookIntegrationHandler.HttpClientName);
+        services.AddRabbitMqIntegration<WebhookIntegrationConfigurationDetails, WebhookIntegrationHandler>(
+            globalSettings.EventLogging.RabbitMq.WebhookEventsQueueName,
+            globalSettings.EventLogging.RabbitMq.WebhookIntegrationQueueName,
+            globalSettings.EventLogging.RabbitMq.WebhookIntegrationRetryQueueName,
+            globalSettings.EventLogging.RabbitMq.IntegrationDeadLetterQueueName,
+            IntegrationType.Webhook,
+            globalSettings);
+
+        return services;
+    }
+
     private static bool IsRabbitMqEnabled(GlobalSettings settings)
     {
         return CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.HostName) &&
                CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.Username) &&
                CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.Password) &&
                CoreHelpers.SettingHasValue(settings.EventLogging.RabbitMq.EventExchangeName);
+    }
+
+    public static IServiceCollection AddSlackService(this IServiceCollection services, GlobalSettings globalSettings)
+    {
+        if (CoreHelpers.SettingHasValue(globalSettings.Slack.ClientId) &&
+            CoreHelpers.SettingHasValue(globalSettings.Slack.ClientSecret) &&
+            CoreHelpers.SettingHasValue(globalSettings.Slack.Scopes))
+        {
+            services.AddHttpClient(SlackService.HttpClientName);
+            services.AddSingleton<ISlackService, SlackService>();
+        }
+        else
+        {
+            services.AddSingleton<ISlackService, NoopSlackService>();
+        }
+
+        return services;
     }
 
     public static void UseDefaultMiddleware(this IApplicationBuilder app,

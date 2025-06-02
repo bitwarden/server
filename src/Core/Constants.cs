@@ -109,6 +109,8 @@ public static class FeatureFlagKeys
     public const string SsoExternalIdVisibility = "pm-18630-sso-external-id-visibility";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
+    public const string OptimizeNestedTraverseTypescript = "pm-21695-optimize-nested-traverse-typescript";
+    public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
@@ -144,7 +146,6 @@ public static class FeatureFlagKeys
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
     public const string PM18794_ProviderPaymentMethod = "pm-18794-provider-payment-method";
     public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
-    public const string PM18770_EnableOrganizationBusinessUnitConversion = "pm-18770-enable-organization-business-unit-conversion";
     public const string PM199566_UpdateMSPToChargeAutomatically = "pm-199566-update-msp-to-charge-automatically";
     public const string PM19956_RequireProviderPaymentMethodDuringSetup = "pm-19956-require-provider-payment-method-during-setup";
     public const string UseOrganizationWarningsService = "use-organization-warnings-service";
@@ -200,7 +201,6 @@ public static class FeatureFlagKeys
     public const string DesktopCipherForms = "pm-18520-desktop-cipher-forms";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
     public const string EndUserNotifications = "pm-10609-end-user-notifications";
-    public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string PhishingDetection = "phishing-detection";
     public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
 

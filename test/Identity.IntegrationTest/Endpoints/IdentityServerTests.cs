@@ -9,7 +9,6 @@ using Bit.Core.Enums;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Auth.AutoFixture;
-using Bit.Identity.IdentityServer;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
