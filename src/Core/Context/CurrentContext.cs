@@ -134,6 +134,26 @@ public class CurrentContext : ICurrentContext
 
         var claimsDict = user.Claims.GroupBy(c => c.Type).ToDictionary(c => c.Key, c => c.Select(v => v));
 
+        var clientType = GetClaimValue(claimsDict, Claims.Type);
+        if (clientType != null)
+        {
+            Enum.TryParse(clientType, out IdentityClientType c);
+            IdentityClientType = c;
+        }
+
+        if (IdentityClientType == IdentityClientType.Send)
+        {
+            // For the Send client, we don't need to set any User specific properties on the context
+            // so just short circuit and return here.
+            return Task.FromResult(0);
+        }
+
+        if (IdentityClientType == IdentityClientType.ServiceAccount)
+        {
+            ServiceAccountOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
+        }
+
+
         var subject = GetClaimValue(claimsDict, "sub");
         if (Guid.TryParse(subject, out var subIdGuid))
         {
@@ -162,20 +182,7 @@ public class CurrentContext : ICurrentContext
             }
         }
 
-        var clientType = GetClaimValue(claimsDict, Claims.Type);
-        if (clientType != null)
-        {
-            Enum.TryParse(clientType, out IdentityClientType c);
-            IdentityClientType = c;
-        }
 
-        if (IdentityClientType == IdentityClientType.ServiceAccount)
-        {
-            ServiceAccountOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
-        }
-
-        // TODO: IdentityClientType.Send should maybe be wired up here. Have further discussion with Justin
-        // Create an ExtensionMethod on HttpContext to get the send id from the subject claim
 
         DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
 
