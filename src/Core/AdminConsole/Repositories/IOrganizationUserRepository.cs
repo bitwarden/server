@@ -36,12 +36,12 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
 
     /// <summary>
-    /// Optimized version for retrieving organization user details.
+    /// Optimized version of <see cref="GetManyDetailsByOrganizationAsync"/> for retrieving organization user details.
     /// Uses the most appropriate optimization strategy for each data provider:
     /// - Dapper: Single stored procedure call with multiple result sets
     /// - EF: Single query with projection and conditional loading
     /// </summary>
-    Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
+    Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsWithGroupsCollectionsByOrganizationAsync(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
 
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null);
@@ -77,6 +77,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// Returns a list of OrganizationUsers with email domains that match one of the Organization's claimed domains.
     /// </summary>
     Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId);
+    Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync_vNext(Guid organizationId);
 
     Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds);
 

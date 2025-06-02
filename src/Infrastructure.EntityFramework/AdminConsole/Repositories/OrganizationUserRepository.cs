@@ -404,7 +404,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsWithGroupsCollectionsByOrganizationAsync(
         Guid organizationId, bool includeGroups, bool includeCollections)
     {
         using var scope = ServiceScopeFactory.CreateScope();
@@ -777,6 +777,17 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         {
             var dbContext = GetDatabaseContext(scope);
             var query = new OrganizationUserReadByClaimedOrganizationDomainsQuery(organizationId);
+            var data = await query.Run(dbContext).ToListAsync();
+            return data;
+        }
+    }
+
+    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync_vNext(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new OrganizationUserReadByClaimedOrganizationDomainsQuery_vNext(organizationId);
             var data = await query.Run(dbContext).ToListAsync();
             return data;
         }

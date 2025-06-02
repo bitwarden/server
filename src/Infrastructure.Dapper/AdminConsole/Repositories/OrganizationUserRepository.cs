@@ -288,7 +288,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         throw new NotImplementedException("EF-specific optimization not available in Dapper implementation");
     }
 
-    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups, bool includeCollections)
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsWithGroupsCollectionsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeCollections)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -625,6 +625,19 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         {
             var results = await connection.QueryAsync<OrganizationUser>(
                 $"[{Schema}].[OrganizationUser_ReadByOrganizationIdWithClaimedDomains]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync_vNext(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUser>(
+                $"[{Schema}].[OrganizationUser_ReadByOrganizationIdWithClaimedDomainsv2]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
