@@ -404,6 +404,56 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(
+        Guid organizationId, bool includeGroups, bool includeCollections)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var query = from ou in dbContext.OrganizationUsers
+                    where ou.OrganizationId == organizationId
+                    select new OrganizationUserUserDetails
+                    {
+                        Id = ou.Id,
+                        UserId = ou.UserId,
+                        OrganizationId = ou.OrganizationId,
+                        Name = ou.User.Name,
+                        Email = ou.User.Email ?? ou.Email,
+                        AvatarColor = ou.User.AvatarColor,
+                        TwoFactorProviders = ou.User.TwoFactorProviders,
+                        Premium = ou.User.Premium,
+                        Status = ou.Status,
+                        Type = ou.Type,
+                        ExternalId = ou.ExternalId,
+                        SsoExternalId = ou.User.SsoUsers
+                            .Where(su => su.OrganizationId == ou.OrganizationId)
+                            .Select(su => su.ExternalId)
+                            .FirstOrDefault(),
+                        Permissions = ou.Permissions,
+                        ResetPasswordKey = ou.ResetPasswordKey,
+                        UsesKeyConnector = ou.User != null && ou.User.UsesKeyConnector,
+                        AccessSecretsManager = ou.AccessSecretsManager,
+                        HasMasterPassword = ou.User != null && !string.IsNullOrWhiteSpace(ou.User.MasterPassword),
+
+                        // Project directly from navigation properties with conditional loading
+                        Groups = includeGroups
+                            ? ou.GroupUsers.Select(gu => gu.GroupId).ToList()
+                            : new List<Guid>(),
+
+                        Collections = includeCollections
+                            ? ou.CollectionUsers.Select(cu => new CollectionAccessSelection
+                            {
+                                Id = cu.CollectionId,
+                                ReadOnly = cu.ReadOnly,
+                                HidePasswords = cu.HidePasswords,
+                                Manage = cu.Manage
+                            }).ToList()
+                            : new List<CollectionAccessSelection>()
+                    };
+
+        return await query.ToListAsync();
+    }
+
     public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
             OrganizationUserStatusType? status = null)
     {
@@ -730,6 +780,12 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var data = await query.Run(dbContext).ToListAsync();
             return data;
         }
+    }
+
+    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync_vNext(Guid organizationId)
+    {
+        // No EF optimization is required for this query
+        return await GetManyByOrganizationWithClaimedDomainsAsync(organizationId);
     }
 
     public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
