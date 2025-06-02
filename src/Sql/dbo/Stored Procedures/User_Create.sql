@@ -139,6 +139,6 @@ BEGIN
         @LastKeyRotationDate,
         @LastEmailChangeDate,
         @VerifyDevices,
-        @SignedPublicKey,
+        @SignedPublicKey
     )
 END
