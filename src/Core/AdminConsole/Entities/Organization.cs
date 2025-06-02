@@ -257,12 +257,12 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     public bool TwoFactorProviderIsEnabled(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.ContainsKey(provider))
+        if (providers == null || !providers.TryGetValue(provider, out var twoFactorProvider))
         {
             return false;
         }
 
-        return providers[provider].Enabled && Use2fa;
+        return twoFactorProvider.Enabled && Use2fa;
     }
 
     public bool TwoFactorIsEnabled()
@@ -279,12 +279,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     public TwoFactorProvider? GetTwoFactorProvider(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.ContainsKey(provider))
-        {
-            return null;
-        }
-
-        return providers[provider];
+        return providers?.GetValueOrDefault(provider);
     }
 
     public void UpdateFromLicense(OrganizationLicense license, IFeatureService featureService)

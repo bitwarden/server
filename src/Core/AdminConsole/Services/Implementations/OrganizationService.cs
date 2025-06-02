@@ -612,12 +612,12 @@ public class OrganizationService : IOrganizationService
         }
 
         var providers = organization.GetTwoFactorProviders();
-        if (!providers?.ContainsKey(type) ?? true)
+        if (providers is null || !providers.TryGetValue(type, out var provider))
         {
             return;
         }
 
-        providers[type].Enabled = true;
+        provider.Enabled = true;
         organization.SetTwoFactorProviders(providers);
         await UpdateAsync(organization);
     }
@@ -1115,7 +1115,7 @@ public class OrganizationService : IOrganizationService
             var existingUsersDict = existingExternalUsers.ToDictionary(u => u.ExternalId);
             var removeUsersSet = new HashSet<string>(removeUserExternalIds)
                 .Except(newUsersSet)
-                .Where(u => existingUsersDict.ContainsKey(u) && existingUsersDict[u].Type != OrganizationUserType.Owner)
+                .Where(u => existingUsersDict.TryGetValue(u, out var existingUser) && existingUser.Type != OrganizationUserType.Owner)
                 .Select(u => existingUsersDict[u]);
 
             await _organizationUserRepository.DeleteManyAsync(removeUsersSet.Select(u => u.Id));

@@ -28,8 +28,8 @@ public class AppleController : Controller
             return new BadRequestResult();
         }
 
-        var key = HttpContext.Request.Query.ContainsKey("key") ?
-            HttpContext.Request.Query["key"].ToString() : null;
+        var key = HttpContext.Request.Query.TryGetValue("key", out var keyValue) ?
+            keyValue.ToString() : null;
         if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.AppleWebhookKey))
         {
             return new BadRequestResult();
