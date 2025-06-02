@@ -53,12 +53,12 @@ BEGIN
 END
 GO
 
-IF COL_LENGTH('[dbo].[User]', 'SignedPublicKeyOwnershipClaim') IS NULL
+IF COL_LENGTH('[dbo].[User]', 'SignedPublicKey') IS NULL
 BEGIN
     ALTER TABLE
         [dbo].[User]
     ADD
-        [SignedPublicKeyOwnershipClaim] VARCHAR(MAX) NULL;
+        [SignedPublicKey] VARCHAR(MAX) NULL;
 END
 GO
 
@@ -81,7 +81,7 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @AccountRevisionDate DATETIME2(7),
     @Key NVARCHAR(MAX),
     @PublicKey NVARCHAR(MAX),
-    @SignedPublicKeyOwnershipClaim NVARCHAR(MAX),
+    @SignedPublicKey NVARCHAR(MAX),
     @PrivateKey NVARCHAR(MAX),
     @Premium BIT,
     @PremiumExpirationDate DATETIME2(7),
@@ -131,7 +131,7 @@ BEGIN
         [AccountRevisionDate],
         [Key],
         [PublicKey],
-        [SignedPublicKeyOwnershipClaim],
+        [SignedPublicKey],
         [PrivateKey],
         [Premium],
         [PremiumExpirationDate],
@@ -178,7 +178,7 @@ BEGIN
         @AccountRevisionDate,
         @Key,
         @PublicKey,
-        @SignedPublicKeyOwnershipClaim,
+        @SignedPublicKey,
         @PrivateKey,
         @Premium,
         @PremiumExpirationDate,
@@ -227,7 +227,7 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @AccountRevisionDate DATETIME2(7),
     @Key NVARCHAR(MAX),
     @PublicKey NVARCHAR(MAX),
-    @SignedPublicKeyOwnershipClaim NVARCHAR(MAX),
+    @SignedPublicKey NVARCHAR(MAX),
     @PrivateKey NVARCHAR(MAX),
     @Premium BIT,
     @PremiumExpirationDate DATETIME2(7),
@@ -277,7 +277,7 @@ BEGIN
         [AccountRevisionDate] = @AccountRevisionDate,
         [Key] = @Key,
         [PublicKey] = @PublicKey,
-        [SignedPublicKeyOwnershipClaim] = @SignedPublicKeyOwnershipClaim,
+        [SignedPublicKey] = @SignedPublicKey,
         [PrivateKey] = @PrivateKey,
         [Premium] = @Premium,
         [PremiumExpirationDate] = @PremiumExpirationDate,
