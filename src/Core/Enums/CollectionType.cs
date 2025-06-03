@@ -2,6 +2,6 @@
 
 public enum CollectionType
 {
-    Shared,
-    DefaultUserCollection,
+    SharedCollection = 0,
+    DefaultUserCollection = 1,
 }

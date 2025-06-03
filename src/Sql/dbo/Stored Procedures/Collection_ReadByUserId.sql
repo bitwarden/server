@@ -14,8 +14,8 @@ BEGIN
         MIN([ReadOnly]) AS [ReadOnly],
         MIN([HidePasswords]) AS [HidePasswords],
         MAX([Manage]) AS [Manage],
-        UserDefaultCollectionEmail,
-        Type as [Type]
+        [UserDefaultCollectionEmail],
+        [Type]
     FROM
         [dbo].[UserCollectionDetails](@UserId)
     GROUP BY
