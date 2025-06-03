@@ -44,7 +44,6 @@ jobs:
       id-token: write
     strategy:
       fail-fast: false
-      max-parallel: 10
       matrix:
         include:
           - project_name: Admin
@@ -238,18 +237,10 @@ jobs:
           fi
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
-      - name: Generate image full name
-        id: cache-name
-        env:
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: echo "name=${_AZ_REGISTRY}/${PROJECT_NAME}:buildcache" >> $GITHUB_OUTPUT
-
       - name: Build Docker image
         id: build-artifacts
         uses: docker/build-push-action@67a2d409c0a876cbe6b11854e3e25193efe4e62d # v6.12.0
         with:
-          cache-from: type=registry,ref=${{ steps.cache-name.outputs.name }}
-          cache-to: type=registry,ref=${{ steps.cache-name.outputs.name }},mode=max
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: |
