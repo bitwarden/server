@@ -44,7 +44,7 @@ jobs:
       id-token: write
     strategy:
       fail-fast: false
-      max-parallel: 3
+      max-parallel: 10
       matrix:
         include:
           - project_name: Admin
