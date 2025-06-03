@@ -6,15 +6,15 @@ namespace Bit.Core.KeyManagement.Sends;
 public class SendPasswordHasher(IPasswordHasher<User> passwordHasher) : ISendPasswordHasher
 {
     /// <summary>
-    /// Verifies an existing send password hash against a new user submitted password hash.
+    /// Verifies an existing send password hash against a new input password hash.
     /// </summary>
-    public bool VerifyPasswordHash(string sendPasswordHash, string userSubmittedPasswordHash)
+    public bool VerifyPasswordHash(string sendPasswordHash, string inputPasswordHash)
     {
-        if (string.IsNullOrWhiteSpace(sendPasswordHash) || string.IsNullOrWhiteSpace(userSubmittedPasswordHash))
+        if (string.IsNullOrWhiteSpace(sendPasswordHash) || string.IsNullOrWhiteSpace(inputPasswordHash))
         {
             return false;
         }
-        var passwordResult = passwordHasher.VerifyHashedPassword(new User(), sendPasswordHash, userSubmittedPasswordHash);
+        var passwordResult = passwordHasher.VerifyHashedPassword(new User(), sendPasswordHash, inputPasswordHash);
 
         return passwordResult is PasswordVerificationResult.Success or PasswordVerificationResult.SuccessRehashNeeded;
     }

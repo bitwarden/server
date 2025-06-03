@@ -2,6 +2,6 @@
 
 public interface ISendPasswordHasher
 {
-    bool VerifyPasswordHash(string sendPasswordHash, string userSubmittedPasswordHash);
+    bool VerifyPasswordHash(string sendPasswordHash, string inputPasswordHash);
     string HashPasswordHash(string clientHashedPassword);
 }
