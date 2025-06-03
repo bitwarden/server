@@ -44,6 +44,7 @@ jobs:
       id-token: write
     strategy:
       fail-fast: false
+      max-parallel: 3
       matrix:
         include:
           - project_name: Admin
@@ -247,6 +248,8 @@ jobs:
         id: build-artifacts
         uses: docker/build-push-action@67a2d409c0a876cbe6b11854e3e25193efe4e62d # v6.12.0
         with:
+          cache-from: type=registry,ref=${{ steps.cache-name.outputs.name }}
+          cache-to: type=registry,ref=${{ steps.cache-name.outputs.name }},mode=max
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: |
