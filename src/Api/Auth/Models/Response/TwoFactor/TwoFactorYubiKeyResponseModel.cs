@@ -19,29 +19,29 @@ public class TwoFactorYubiKeyResponseModel : ResponseModel
         {
             Enabled = provider.Enabled;
 
-            if (provider.MetaData.ContainsKey("Key1"))
+            if (provider.MetaData.TryGetValue("Key1", out var key1))
             {
-                Key1 = (string)provider.MetaData["Key1"];
+                Key1 = (string)key1;
             }
-            if (provider.MetaData.ContainsKey("Key2"))
+            if (provider.MetaData.TryGetValue("Key2", out var key2))
             {
-                Key2 = (string)provider.MetaData["Key2"];
+                Key2 = (string)key2;
             }
-            if (provider.MetaData.ContainsKey("Key3"))
+            if (provider.MetaData.TryGetValue("Key3", out var key3))
             {
-                Key3 = (string)provider.MetaData["Key3"];
+                Key3 = (string)key3;
             }
-            if (provider.MetaData.ContainsKey("Key4"))
+            if (provider.MetaData.TryGetValue("Key4", out var key4))
             {
-                Key4 = (string)provider.MetaData["Key4"];
+                Key4 = (string)key4;
             }
-            if (provider.MetaData.ContainsKey("Key5"))
+            if (provider.MetaData.TryGetValue("Key5", out var key5))
             {
-                Key5 = (string)provider.MetaData["Key5"];
+                Key5 = (string)key5;
             }
-            if (provider.MetaData.ContainsKey("Nfc"))
+            if (provider.MetaData.TryGetValue("Nfc", out var nfc))
             {
-                Nfc = (bool)provider.MetaData["Nfc"];
+                Nfc = (bool)nfc;
             }
         }
         else

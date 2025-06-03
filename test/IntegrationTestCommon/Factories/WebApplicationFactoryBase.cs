@@ -4,7 +4,6 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -208,9 +207,6 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
             // TODO: Install and use azurite in CI pipeline
             Replace<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>(services);
-
-            // TODO: Install and use azurite in CI pipeline
-            Replace<IReferenceEventService, NoopReferenceEventService>(services);
 
             // Our Rate limiter works so well that it begins to fail tests unless we carve out
             // one whitelisted ip. We should still test the rate limiter though and they should change the Ip

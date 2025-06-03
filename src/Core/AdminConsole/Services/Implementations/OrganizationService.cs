@@ -29,9 +29,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -56,7 +53,6 @@ public class OrganizationService : IOrganizationService
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
     private readonly ISsoUserRepository _ssoUserRepository;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly ICurrentContext _currentContext;
@@ -88,7 +84,6 @@ public class OrganizationService : IOrganizationService
         IPolicyRepository policyRepository,
         IPolicyService policyService,
         ISsoUserRepository ssoUserRepository,
-        IReferenceEventService referenceEventService,
         IGlobalSettings globalSettings,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         ICurrentContext currentContext,
@@ -120,7 +115,6 @@ public class OrganizationService : IOrganizationService
         _policyRepository = policyRepository;
         _policyService = policyService;
         _ssoUserRepository = ssoUserRepository;
-        _referenceEventService = referenceEventService;
         _globalSettings = globalSettings;
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _currentContext = currentContext;
@@ -153,11 +147,6 @@ public class OrganizationService : IOrganizationService
         }
 
         await _paymentService.CancelSubscriptionAsync(organization, eop);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.CancelSubscription, organization, _currentContext)
-            {
-                EndOfPeriod = endOfPeriod,
-            });
     }
 
     public async Task ReinstateSubscriptionAsync(Guid organizationId)
@@ -169,8 +158,6 @@ public class OrganizationService : IOrganizationService
         }
 
         await _paymentService.ReinstateSubscriptionAsync(organization);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.ReinstateSubscription, organization, _currentContext));
     }
 
     public async Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
@@ -190,13 +177,6 @@ public class OrganizationService : IOrganizationService
 
         var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, organization, storageAdjustmentGb,
             plan.PasswordManager.StripeStoragePlanId);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustStorage, organization, _currentContext)
-            {
-                PlanName = plan.Name,
-                PlanType = plan.Type,
-                Storage = storageAdjustmentGb,
-            });
         await ReplaceAndUpdateCacheAsync(organization);
         return secret;
     }
@@ -329,14 +309,6 @@ public class OrganizationService : IOrganizationService
         }
 
         var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, _currentContext)
-            {
-                PlanName = plan.Name,
-                PlanType = plan.Type,
-                Seats = newSeatTotal,
-                PreviousSeats = organization.Seats
-            });
         organization.Seats = (short?)newSeatTotal;
         await ReplaceAndUpdateCacheAsync(organization);
 
@@ -641,12 +613,12 @@ public class OrganizationService : IOrganizationService
         }
 
         var providers = organization.GetTwoFactorProviders();
-        if (!providers?.ContainsKey(type) ?? true)
+        if (providers is null || !providers.TryGetValue(type, out var provider))
         {
             return;
         }
 
-        providers[type].Enabled = true;
+        provider.Enabled = true;
         organization.SetTwoFactorProviders(providers);
         await UpdateAsync(organization);
     }
@@ -887,12 +859,6 @@ public class OrganizationService : IOrganizationService
             }
 
             await SendInvitesAsync(allOrgUsers, organization);
-
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.InvitedUsers, organization, _currentContext)
-                {
-                    Users = orgUserInvitedCount
-                });
         }
         catch (Exception e)
         {
@@ -1150,7 +1116,7 @@ public class OrganizationService : IOrganizationService
             var existingUsersDict = existingExternalUsers.ToDictionary(u => u.ExternalId);
             var removeUsersSet = new HashSet<string>(removeUserExternalIds)
                 .Except(newUsersSet)
-                .Where(u => existingUsersDict.ContainsKey(u) && existingUsersDict[u].Type != OrganizationUserType.Owner)
+                .Where(u => existingUsersDict.TryGetValue(u, out var existingUser) && existingUser.Type != OrganizationUserType.Owner)
                 .Select(u => existingUsersDict[u]);
 
             await _organizationUserRepository.DeleteManyAsync(removeUsersSet.Select(u => u.Id));
@@ -1318,8 +1284,6 @@ public class OrganizationService : IOrganizationService
         }
 
         await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.ou, e.e, eventSystemUser, e.d)));
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.DirectorySynced, organization, _currentContext));
     }
 
     public async Task DeleteSsoUserAsync(Guid userId, Guid? organizationId)
@@ -1755,11 +1719,5 @@ public class OrganizationService : IOrganizationService
 
         await SendInviteAsync(ownerOrganizationUser, organization, true);
         await _eventService.LogOrganizationUserEventAsync(ownerOrganizationUser, EventType.OrganizationUser_Invited);
-
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationCreatedByAdmin, organization, _currentContext)
-        {
-            EventRaisedByUser = userService.GetUserName(user),
-            SalesAssistedTrialStarted = salesAssistedTrialStarted,
-        });
     }
 }
