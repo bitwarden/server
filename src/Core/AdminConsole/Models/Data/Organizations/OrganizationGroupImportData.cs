@@ -5,8 +5,23 @@ namespace Bit.Core.Models.Data.Organizations;
 
 public class OrganizationGroupImportData
 {
-    public IEnumerable<ImportedGroup> Groups { get; set; }
-    public ICollection<Group> ExistingGroups { get; set; }
-    public IEnumerable<Group> ExistingExternalGroups { get; set; }
-    public IDictionary<string, ImportedGroup> GroupsDict { get; set; }
+    public IEnumerable<ImportedGroup> Groups { get; init; }
+    public ICollection<Group> ExistingGroups { get; init; }
+    public IEnumerable<Group> ExistingExternalGroups { get; init; }
+    public IDictionary<string, ImportedGroup> GroupsDict { get; init; }
+
+    public OrganizationGroupImportData(IEnumerable<ImportedGroup> groups, ICollection<Group> existingGroups)
+    {
+        Groups = groups;
+        GroupsDict = groups.ToDictionary(g => g.Group.ExternalId);
+        ExistingGroups = existingGroups;
+        ExistingExternalGroups = GetExistingExternalGroups(existingGroups);
+    }
+
+    private IEnumerable<Group> GetExistingExternalGroups(ICollection<Group> existingGroups)
+    {
+        return existingGroups
+            .Where(u => !string.IsNullOrWhiteSpace(u.ExternalId))
+            .ToList();
+    }
 }

@@ -29,6 +29,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
     private readonly IOrganizationService _organizationService;
     private readonly IInviteOrganizationUsersCommand _inviteOrganizationUsersCommand;
     private readonly IPricingClient _pricingClient;
+    private readonly TimeProvider _timeProvider;
 
     private readonly EventSystemUser _EventSystemUser = EventSystemUser.PublicApi;
 
@@ -40,7 +41,8 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             ICurrentContext currentContext,
             IOrganizationService organizationService,
             IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
-            IPricingClient pricingClient
+            IPricingClient pricingClient,
+            TimeProvider timeProvider
             )
     {
         _organizationRepository = organizationRepository;
@@ -52,6 +54,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         _organizationService = organizationService;
         _inviteOrganizationUsersCommand = inviteOrganizationUsersCommand;
         _pricingClient = pricingClient;
+        _timeProvider = timeProvider;
     }
 
     public async Task ImportAsync(Guid organizationId,
@@ -72,15 +75,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         }
 
         var existingUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-
-        var importUserData = new OrganizationUserImportData
-        {
-            NewUsersSet = new HashSet<string>(newUsers?.Select(u => u.ExternalId) ?? new List<string>()),
-            ExistingUsers = existingUsers,
-            ExistingExternalUsers = GetExistingExternalUsers(existingUsers),
-            ExistingExternalUsersIdDict = GetExistingExternalUsers(existingUsers).ToDictionary(u => u.ExternalId, u => u.Id)
-        };
-
+        var importUserData = new OrganizationUserImportData(existingUsers, new HashSet<string>(newUsers?.Select(u => u.ExternalId) ?? new List<string>()));
         var events = new List<(OrganizationUserUserDetails ou, EventType e, DateTime? d)>();
 
         await RemoveExistingExternalUsers(removeUserExternalIds, events, importUserData);
@@ -90,7 +85,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             await OverwriteExisting(events, importUserData);
         }
 
-        await UpsertExistingUsers(organization, newUsers, importUserData);
+        await UpsertExistingUsers(newUsers, importUserData);
 
         await AddNewUsers(organization, newUsers, importUserData);
 
@@ -136,10 +131,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         );
     }
 
-    private async Task UpsertExistingUsers(Organization organization,
-            IEnumerable<ImportedOrganizationUser> newUsers,
-            OrganizationUserImportData importUserData
-            )
+    private async Task UpsertExistingUsers(IEnumerable<ImportedOrganizationUser> newUsers, OrganizationUserImportData importUserData)
     {
         if (!newUsers.Any())
         {
@@ -157,7 +149,9 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
 
         foreach (var user in newAndExistingUsersIntersection)
         {
-            var organizationUser = organizationUsers[existingUsersEmailsDict[user].Id];
+            existingUsersEmailsDict.TryGetValue(user, out var existingUser);
+            organizationUsers.TryGetValue(existingUser.Id, out var organizationUser);
+
             if (organizationUser != null)
             {
                 organizationUser.ExternalId = newUsersEmailsDict[user].ExternalId;
@@ -172,14 +166,11 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             IEnumerable<ImportedOrganizationUser> newUsers,
             OrganizationUserImportData importUserData)
     {
-
-        var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
         var userInvites = new List<OrganizationUserInviteCommandModel>();
 
         foreach (var user in newUsers)
         {
-            var invite = new OrganizationUserInviteCommandModel(user.Email, user.ExternalId);
-            userInvites.Add(new OrganizationUserInviteCommandModel(invite, hasStandaloneSecretsManager));
+            userInvites.Add(new OrganizationUserInviteCommandModel(user.Email, user.ExternalId));
         }
 
         var commandResult = await InviteUsersAsync(userInvites, organization);
@@ -246,13 +237,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         }
 
         var existingGroups = await _groupRepository.GetManyByOrganizationIdAsync(organization.Id);
-        var importGroupData = new OrganizationGroupImportData
-        {
-            Groups = groups,
-            GroupsDict = groups.ToDictionary(g => g.Group.ExternalId),
-            ExistingGroups = existingGroups,
-            ExistingExternalGroups = GetExistingExternalGroups(existingGroups)
-        };
+        var importGroupData = new OrganizationGroupImportData(groups, existingGroups);
 
         await SaveNewGroups(importGroupData, importUserData);
         await UpdateExistingGroups(importGroupData, importUserData, organization);
@@ -314,20 +299,6 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
                 updateGroups.Select(g => (g, EventType.Group_Updated, (EventSystemUser?)_EventSystemUser, (DateTime?)DateTime.UtcNow)));
         }
 
-    }
-
-    private IEnumerable<OrganizationUserUserDetails> GetExistingExternalUsers(ICollection<OrganizationUserUserDetails> existingUsers)
-    {
-        return existingUsers
-            .Where(u => !string.IsNullOrWhiteSpace(u.ExternalId))
-            .ToList();
-    }
-
-    private IEnumerable<Group> GetExistingExternalGroups(ICollection<Group> existingGroups)
-    {
-        return existingGroups
-            .Where(u => !string.IsNullOrWhiteSpace(u.ExternalId))
-            .ToList();
     }
 
     private async Task<Organization> GetOrgById(Guid id)
