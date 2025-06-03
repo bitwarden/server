@@ -1783,8 +1783,8 @@ public class CiphersControllerTests
 
         var newDate1 = oldDate1.AddMinutes(5);
         var newDate2 = oldDate2.AddMinutes(5);
-        var updatedCipher1 = new Cipher { Id = detail1.Id, RevisionDate = newDate1, Type = detail1.Type, Data = detail1.Data };
-        var updatedCipher2 = new Cipher { Id = detail2.Id, RevisionDate = newDate2, Type = detail2.Type, Data = detail2.Data };
+        var updatedCipher1 = new CipherDetails { Id = detail1.Id, RevisionDate = newDate1, Type = detail1.Type, Data = detail1.Data };
+        var updatedCipher2 = new CipherDetails { Id = detail2.Id, RevisionDate = newDate2, Type = detail2.Type, Data = detail2.Data };
 
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationUser(organizationId)
@@ -1802,12 +1802,12 @@ public class CiphersControllerTests
 
         sutProvider.GetDependency<ICipherService>()
             .ShareManyAsync(
-                Arg.Any<IEnumerable<(Cipher, DateTime?)>>(),
+                Arg.Any<IEnumerable<(CipherDetails, DateTime?)>>(),
                 organizationId,
                 Arg.Any<IEnumerable<Guid>>(),
                 userId
             )
-            .Returns(Task.FromResult<IEnumerable<Cipher>>(new[] { updatedCipher1, updatedCipher2 }));
+            .Returns(Task.FromResult<IEnumerable<CipherDetails>>(new[] { updatedCipher1, updatedCipher2 }));
 
         var cipherRequests = preloadedDetails.Select(d =>
         {

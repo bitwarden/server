@@ -1086,7 +1086,7 @@ public class CiphersController : Controller
             }
         }
 
-        var shareCiphers = new List<(Cipher, DateTime?)>();
+        var shareCiphers = new List<(CipherDetails, DateTime?)>();
         foreach (var cipher in model.Ciphers)
         {
             if (!ciphersDict.TryGetValue(cipher.Id.Value, out var existingCipher))
@@ -1096,7 +1096,7 @@ public class CiphersController : Controller
 
             ValidateClientVersionForFido2CredentialSupport(existingCipher);
 
-            shareCiphers.Add((cipher.ToCipher(existingCipher), cipher.LastKnownRevisionDate));
+            shareCiphers.Add((cipher.ToCipherDetails(existingCipher), cipher.LastKnownRevisionDate));
         }
 
         var updated = await _cipherService.ShareManyAsync(
@@ -1106,7 +1106,7 @@ public class CiphersController : Controller
             userId
         );
 
-        var response = updated.Select(c => new CipherMiniResponseModel(c, _globalSettings, false));
+        var response = updated.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
         return new ListResponseModel<CipherMiniResponseModel>(response);
     }
 
