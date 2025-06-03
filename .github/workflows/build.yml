@@ -600,6 +600,7 @@ jobs:
       project: server
       pull_request_number: ${{ github.event.number }}
     secrets: inherit
+    permissions: read-all
 
   check-failures:
     name: Check for failures
