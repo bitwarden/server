@@ -1096,7 +1096,7 @@ public class CiphersController : Controller
 
             ValidateClientVersionForFido2CredentialSupport(existingCipher);
 
-            shareCiphers.Add(((Cipher)existingCipher, cipher.LastKnownRevisionDate));
+            shareCiphers.Add((cipher.ToCipher(existingCipher), cipher.LastKnownRevisionDate));
         }
 
         var updated = await _cipherService.ShareManyAsync(
