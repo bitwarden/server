@@ -1,10 +1,4 @@
-IF OBJECT_ID('[dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]
-END
-GO
-
-CREATE PROCEDURE [dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
