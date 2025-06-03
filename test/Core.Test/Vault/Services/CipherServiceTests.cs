@@ -651,7 +651,7 @@ public class CipherServiceTests
     [BitAutoData("")]
     [BitAutoData("Correct Time")]
     public async Task ShareManyAsync_CorrectRevisionDate_Passes(string revisionDateString,
-        SutProvider<CipherService> sutProvider, IEnumerable<Cipher> ciphers, Organization organization, List<Guid> collectionIds)
+        SutProvider<CipherService> sutProvider, IEnumerable<CipherDetails> ciphers, Organization organization, List<Guid> collectionIds)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id)
             .Returns(new Organization
