@@ -1106,7 +1106,7 @@ public class CiphersController : Controller
             userId
         );
 
-        var response = updated.Select(c => new CipherMiniResponseModel(c, _globalSettings, false)).ToArray();
+        var response = updated.Select(c => new CipherMiniResponseModel(c, _globalSettings, false));
         return new ListResponseModel<CipherMiniResponseModel>(response);
     }
 
