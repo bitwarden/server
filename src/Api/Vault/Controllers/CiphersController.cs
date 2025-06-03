@@ -1064,7 +1064,7 @@ public class CiphersController : Controller
 
     [HttpPut("share")]
     [HttpPost("share")]
-    public async Task<CipherMiniResponseModel[]> PutShareMany([FromBody] CipherBulkShareRequestModel model)
+    public async Task<ListResponseModel<CipherMiniResponseModel>> PutShareMany([FromBody] CipherBulkShareRequestModel model)
     {
         var organizationId = new Guid(model.Ciphers.First().OrganizationId);
         if (!await _currentContext.OrganizationUser(organizationId))
@@ -1086,7 +1086,7 @@ public class CiphersController : Controller
             }
         }
 
-        var shareCiphers = new List<(Cipher, DateTime?)>();
+        var shareCiphers = new List<(CipherDetails, DateTime?)>();
         foreach (var cipher in model.Ciphers)
         {
             if (!ciphersDict.TryGetValue(cipher.Id.Value, out var existingCipher))
@@ -1096,7 +1096,7 @@ public class CiphersController : Controller
 
             ValidateClientVersionForFido2CredentialSupport(existingCipher);
 
-            shareCiphers.Add(((Cipher)existingCipher, cipher.LastKnownRevisionDate));
+            shareCiphers.Add((cipher.ToCipherDetails(existingCipher), cipher.LastKnownRevisionDate));
         }
 
         var updated = await _cipherService.ShareManyAsync(
@@ -1106,7 +1106,8 @@ public class CiphersController : Controller
             userId
         );
 
-        return updated.Select(c => new CipherMiniResponseModel(c, _globalSettings, false)).ToArray();
+        var response = updated.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        return new ListResponseModel<CipherMiniResponseModel>(response);
     }
 
     [HttpPost("purge")]
