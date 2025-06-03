@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Api.Vault.Controllers;
+using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
@@ -1774,8 +1775,8 @@ public class CiphersControllerTests
             Id = Guid.NewGuid(),
             UserId = userId,
             OrganizationId = organizationId,
-            Type = CipherType.SecureNote,
-            Data = JsonSerializer.Serialize(new CipherSecureNoteData()),
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new CipherLoginData()),
             RevisionDate = oldDate2
         };
         var preloadedDetails = new List<CipherDetails> { detail1, detail2 };
@@ -1808,12 +1809,32 @@ public class CiphersControllerTests
             )
             .Returns(Task.FromResult<IEnumerable<Cipher>>(new[] { updatedCipher1, updatedCipher2 }));
 
-        var cipherRequests = preloadedDetails.Select(d => new CipherWithIdRequestModel
+        var cipherRequests = preloadedDetails.Select(d =>
         {
-            Id = d.Id,
-            OrganizationId = d.OrganizationId!.Value.ToString(),
-            LastKnownRevisionDate = d.RevisionDate,
-            Type = d.Type
+            var m = new CipherWithIdRequestModel
+            {
+                Id = d.Id,
+                OrganizationId = d.OrganizationId!.Value.ToString(),
+                LastKnownRevisionDate = d.RevisionDate,
+                Type = d.Type,
+            };
+
+            if (d.Type == CipherType.Login)
+            {
+                m.Login = new CipherLoginModel
+                {
+                    Username = "",
+                    Password = "",
+                    Uris = [],
+                };
+                m.Name = "";
+                m.Notes = "";
+                m.Fields = Array.Empty<CipherFieldModel>();
+                m.PasswordHistory = Array.Empty<CipherPasswordHistoryModel>();
+            }
+
+            // similar for SecureNote, Card, etc., if you ever hit those branches
+            return m;
         }).ToList();
 
         var model = new CipherBulkShareRequestModel
@@ -1824,8 +1845,8 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutShareMany(model);
 
-        Assert.Equal(2, result.Length);
-        var revisionDates = result.Select(r => r.RevisionDate).ToList();
+        Assert.Equal(2, result.Data.Count());
+        var revisionDates = result.Data.Select(x => x.RevisionDate).ToList();
         Assert.Contains(newDate1, revisionDates);
         Assert.Contains(newDate2, revisionDates);
 
