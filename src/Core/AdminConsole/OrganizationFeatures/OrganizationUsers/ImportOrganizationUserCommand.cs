@@ -15,9 +15,6 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
@@ -28,7 +25,6 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
     private readonly IPaymentService _paymentService;
     private readonly IGroupRepository _groupRepository;
     private readonly IEventService _eventService;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
     private readonly IOrganizationService _organizationService;
     private readonly IInviteOrganizationUsersCommand _inviteOrganizationUsersCommand;
@@ -41,7 +37,6 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             IPaymentService paymentService,
             IGroupRepository groupRepository,
             IEventService eventService,
-            IReferenceEventService referenceEventService,
             ICurrentContext currentContext,
             IOrganizationService organizationService,
             IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
@@ -53,7 +48,6 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         _paymentService = paymentService;
         _groupRepository = groupRepository;
         _eventService = eventService;
-        _referenceEventService = referenceEventService;
         _currentContext = currentContext;
         _organizationService = organizationService;
         _inviteOrganizationUsersCommand = inviteOrganizationUsersCommand;
@@ -103,9 +97,6 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         await ImportGroups(organization, groups, importUserData);
 
         await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.ou, e.e, _EventSystemUser, e.d)));
-
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.DirectorySynced, organization, _currentContext));
     }
 
     private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,
