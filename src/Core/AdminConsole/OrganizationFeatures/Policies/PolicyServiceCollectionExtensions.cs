@@ -37,5 +37,6 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, PersonalOwnershipPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, RequireSsoPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, RequireTwoFactorPolicyRequirementFactory>();
+        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, SingleOrganizationPolicyRequirementFactory>();
     }
 }
