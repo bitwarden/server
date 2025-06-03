@@ -247,6 +247,7 @@ jobs:
         id: build-artifacts
         uses: docker/build-push-action@67a2d409c0a876cbe6b11854e3e25193efe4e62d # v6.12.0
         with:
+          additional-args: "--verbose"
           cache-from: type=registry,ref=${{ steps.cache-name.outputs.name }}
           cache-to: type=registry,ref=${{ steps.cache-name.outputs.name}},mode=max
           context: .
