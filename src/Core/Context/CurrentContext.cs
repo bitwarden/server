@@ -134,6 +134,8 @@ public class CurrentContext : ICurrentContext
 
         var claimsDict = user.Claims.GroupBy(c => c.Type).ToDictionary(c => c.Key, c => c.Select(v => v));
 
+        ClientId = GetClaimValue(claimsDict, "client_id");
+
         var clientType = GetClaimValue(claimsDict, Claims.Type);
         if (clientType != null)
         {
@@ -160,7 +162,6 @@ public class CurrentContext : ICurrentContext
             UserId = subIdGuid;
         }
 
-        ClientId = GetClaimValue(claimsDict, "client_id");
         var clientSubject = GetClaimValue(claimsDict, "client_sub");
         var orgApi = false;
         if (clientSubject != null)
@@ -181,8 +182,6 @@ public class CurrentContext : ICurrentContext
                 }
             }
         }
-
-
 
         DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
 
