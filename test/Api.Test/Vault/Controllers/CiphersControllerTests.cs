@@ -1853,7 +1853,7 @@ public class CiphersControllerTests
         await sutProvider.GetDependency<ICipherService>()
             .Received(1)
             .ShareManyAsync(
-                Arg.Is<IEnumerable<(Cipher, DateTime?)>>(list =>
+                Arg.Is<IEnumerable<(CipherDetails, DateTime?)>>(list =>
                     list.Select(x => x.Item1.Id).OrderBy(id => id)
                         .SequenceEqual(new[] { detail1.Id, detail2.Id }.OrderBy(id => id))
                 ),
