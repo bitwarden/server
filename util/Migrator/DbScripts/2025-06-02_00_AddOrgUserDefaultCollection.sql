@@ -3,11 +3,11 @@ IF NOT EXISTS (
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = 'dbo'
       AND TABLE_NAME = 'Collection'
-      AND COLUMN_NAME = 'UserDefaultCollectionEmail'
+      AND COLUMN_NAME = 'DefaultUserCollectionEmail'
 )
     BEGIN
         ALTER TABLE [dbo].[Collection]
-            ADD [UserDefaultCollectionEmail] NVARCHAR(256) NULL
+            ADD [DefaultUserCollectionEmail] NVARCHAR(256) NULL
     END
 GO
 

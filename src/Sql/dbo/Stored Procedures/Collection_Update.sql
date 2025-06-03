@@ -5,7 +5,7 @@
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @UserDefaultCollectionEmail NVARCHAR(256) = NULL,
+    @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
     @Type TINYINT = 0
 AS
 BEGIN
@@ -19,7 +19,7 @@ BEGIN
         [ExternalId] = @ExternalId,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
-        [UserDefaultCollectionEmail] = @UserDefaultCollectionEmail,
+        [DefaultUserCollectionEmail] = @DefaultUserCollectionEmail,
         [Type] = @Type
     WHERE
         [Id] = @Id

@@ -5,7 +5,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Collection_Create]
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @UserDefaultCollectionEmail NVARCHAR(256) = NULL,
+    @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
     @Type TINYINT = 0
 AS
 BEGIN
@@ -19,7 +19,7 @@ BEGIN
         [ExternalId],
         [CreationDate],
         [RevisionDate],
-        [UserDefaultCollectionEmail],
+        [DefaultUserCollectionEmail],
         [Type]
     )
     VALUES
@@ -30,7 +30,7 @@ BEGIN
             @ExternalId,
             @CreationDate,
             @RevisionDate,
-            @UserDefaultCollectionEmail,
+            @DefaultUserCollectionEmail,
             @Type
         )
 
@@ -45,28 +45,28 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        Id,
-        OrganizationId,
+        [Id],
+        [OrganizationId],
         [Name],
-        CreationDate,
-        RevisionDate,
-        ExternalId,
+        [CreationDate],
+        [RevisionDate],
+        [ExternalId],
         MIN([ReadOnly]) AS [ReadOnly],
         MIN([HidePasswords]) AS [HidePasswords],
         MAX([Manage]) AS [Manage],
-        [UserDefaultCollectionEmail],
+        [DefaultUserCollectionEmail],
         [Type]
     FROM
         [dbo].[UserCollectionDetails](@UserId)
     GROUP BY
-        Id,
-        OrganizationId,
+        [Id],
+        [OrganizationId],
         [Name],
-        CreationDate,
-        RevisionDate,
-        ExternalId,
-        UserDefaultCollectionEmail,
-        Type
+        [CreationDate],
+        [RevisionDate],
+        [ExternalId],
+        [DefaultUserCollectionEmail],
+        [Type]
 END
 GO
 
@@ -77,7 +77,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Collection_Update]
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @UserDefaultCollectionEmail NVARCHAR(256) = NULL,
+    @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
     @Type TINYINT = 0
 AS
 BEGIN
@@ -91,7 +91,7 @@ BEGIN
         [ExternalId] = @ExternalId,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
-        [UserDefaultCollectionEmail] = @UserDefaultCollectionEmail,
+        [DefaultUserCollectionEmail] = @DefaultUserCollectionEmail,
         [Type] = @Type
     WHERE
         [Id] = @Id
@@ -109,13 +109,13 @@ CREATE OR ALTER PROCEDURE [dbo].[Collection_UpdateWithGroupsAndUsers]
     @RevisionDate DATETIME2(7),
     @Groups AS [dbo].[CollectionAccessSelectionType] READONLY,
     @Users AS [dbo].[CollectionAccessSelectionType] READONLY,
-    @UserDefaultCollectionEmail NVARCHAR(256) = NULL,
+    @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
     @Type TINYINT = 0
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @UserDefaultCollectionEmail, @Type
+    EXEC [dbo].[Collection_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type
 
     -- Groups
     -- Delete groups that are no longer in source
@@ -281,7 +281,7 @@ BEGIN
         C.[CreationDate],
         C.[RevisionDate],
         C.[ExternalId],
-        C.[UserDefaultCollectionEmail],
+        C.[DefaultUserCollectionEmail],
         C.[Type]
 
     IF (@IncludeAccessRelationships = 1)
@@ -301,13 +301,13 @@ CREATE OR ALTER PROCEDURE [dbo].[Collection_CreateWithGroupsAndUsers]
     @RevisionDate DATETIME2(7),
     @Groups AS [dbo].[CollectionAccessSelectionType] READONLY,
     @Users AS [dbo].[CollectionAccessSelectionType] READONLY,
-    @UserDefaultCollectionEmail NVARCHAR(256) = NULL,
+    @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
     @Type TINYINT = 0
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[Collection_Create] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @UserDefaultCollectionEmail, @Type
+    EXEC [dbo].[Collection_Create] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type
 
     -- Groups
     ;WITH [AvailableGroupsCTE] AS(
@@ -445,8 +445,8 @@ BEGIN
         C.[CreationDate],
         C.[RevisionDate],
         C.[ExternalId],
-        C.UserDefaultCollectionEmail,
-        C.Type
+        C.[DefaultUserCollectionEmail],
+        C.[Type]
 
     IF (@IncludeAccessRelationships = 1)
         BEGIN

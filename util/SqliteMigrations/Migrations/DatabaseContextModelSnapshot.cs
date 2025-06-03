@@ -945,6 +945,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DefaultUserCollectionEmail")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ExternalId")
                         .HasMaxLength(300)
                         .HasColumnType("TEXT");
@@ -961,9 +964,6 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<int>("Type")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("UserDefaultCollectionEmail")
-                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 

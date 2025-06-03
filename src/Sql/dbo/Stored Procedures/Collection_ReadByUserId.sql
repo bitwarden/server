@@ -14,7 +14,7 @@ BEGIN
         MIN([ReadOnly]) AS [ReadOnly],
         MIN([HidePasswords]) AS [HidePasswords],
         MAX([Manage]) AS [Manage],
-        [UserDefaultCollectionEmail],
+        [DefaultUserCollectionEmail],
         [Type]
     FROM
         [dbo].[UserCollectionDetails](@UserId)
@@ -25,6 +25,6 @@ BEGIN
         CreationDate,
         RevisionDate,
         ExternalId,
-        [UserDefaultCollectionEmail],
+        [DefaultUserCollectionEmail],
         [Type]
 END

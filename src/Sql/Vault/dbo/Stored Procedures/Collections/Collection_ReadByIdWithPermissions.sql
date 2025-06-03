@@ -74,8 +74,8 @@ BEGIN
     	C.[CreationDate],
     	C.[RevisionDate],
     	C.[ExternalId],
-        C.UserDefaultCollectionEmail,
-        C.Type
+        C.[DefaultUserCollectionEmail],
+        C.[Type]
 
    IF (@IncludeAccessRelationships = 1)
     BEGIN

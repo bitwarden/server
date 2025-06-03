@@ -16,7 +16,7 @@ public class Collection : ITableObject<Guid>
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
     public CollectionType Type { get; set; } = CollectionType.SharedCollection;
-    public string? UserDefaultCollectionEmail { get; set; }
+    public string? DefaultUserCollectionEmail { get; set; }
 
     public void SetNewId()
     {

@@ -961,6 +961,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DefaultUserCollectionEmail")
+                        .HasColumnType("text");
+
                     b.Property<string>("ExternalId")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
@@ -977,9 +980,6 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<int>("Type")
                         .HasColumnType("integer");
-
-                    b.Property<string>("UserDefaultCollectionEmail")
-                        .HasColumnType("text");
 
                     b.HasKey("Id");
 

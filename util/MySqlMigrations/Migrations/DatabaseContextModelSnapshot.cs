@@ -956,6 +956,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("DefaultUserCollectionEmail")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("ExternalId")
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)");
@@ -972,9 +975,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<int>("Type")
                         .HasColumnType("int");
-
-                    b.Property<string>("UserDefaultCollectionEmail")
-                        .HasColumnType("longtext");
 
                     b.HasKey("Id");
 

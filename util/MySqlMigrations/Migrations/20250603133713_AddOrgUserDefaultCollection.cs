@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations;
+namespace Bit.MySqlMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class AddOrgUserDefaultCollection : Migration
@@ -10,29 +10,30 @@ public partial class AddOrgUserDefaultCollection : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.AddColumn<string>(
+            name: "DefaultUserCollectionEmail",
+            table: "Collection",
+            type: "longtext",
+            nullable: true)
+            .Annotation("MySql:CharSet", "utf8mb4");
+
         migrationBuilder.AddColumn<int>(
             name: "Type",
             table: "Collection",
-            type: "INTEGER",
+            type: "int",
             nullable: false,
             defaultValue: 0);
-
-        migrationBuilder.AddColumn<string>(
-            name: "UserDefaultCollectionEmail",
-            table: "Collection",
-            type: "TEXT",
-            nullable: true);
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropColumn(
-            name: "Type",
+            name: "DefaultUserCollectionEmail",
             table: "Collection");
 
         migrationBuilder.DropColumn(
-            name: "UserDefaultCollectionEmail",
+            name: "Type",
             table: "Collection");
     }
 }

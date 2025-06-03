@@ -10,29 +10,29 @@ public partial class AddOrgUserDefaultCollection : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.AddColumn<string>(
+            name: "DefaultUserCollectionEmail",
+            table: "Collection",
+            type: "text",
+            nullable: true);
+
         migrationBuilder.AddColumn<int>(
             name: "Type",
             table: "Collection",
             type: "integer",
             nullable: false,
             defaultValue: 0);
-
-        migrationBuilder.AddColumn<string>(
-            name: "UserDefaultCollectionEmail",
-            table: "Collection",
-            type: "text",
-            nullable: true);
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropColumn(
-            name: "Type",
+            name: "DefaultUserCollectionEmail",
             table: "Collection");
 
         migrationBuilder.DropColumn(
-            name: "UserDefaultCollectionEmail",
+            name: "Type",
             table: "Collection");
     }
 }
