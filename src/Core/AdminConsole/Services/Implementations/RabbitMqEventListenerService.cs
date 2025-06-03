@@ -29,7 +29,7 @@ public class RabbitMqEventListenerService : EventLoggingListenerService
             UserName = globalSettings.EventLogging.RabbitMq.Username,
             Password = globalSettings.EventLogging.RabbitMq.Password
         };
-        _exchangeName = globalSettings.EventLogging.RabbitMq.ExchangeName;
+        _exchangeName = globalSettings.EventLogging.RabbitMq.EventExchangeName;
         _logger = logger;
         _queueName = queueName;
     }

@@ -13,7 +13,6 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
@@ -28,9 +27,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -43,7 +39,6 @@ public class OrganizationService : IOrganizationService
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IUserRepository _userRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IMailService _mailService;
     private readonly IPushNotificationService _pushNotificationService;
@@ -56,7 +51,6 @@ public class OrganizationService : IOrganizationService
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
     private readonly ISsoUserRepository _ssoUserRepository;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly ICurrentContext _currentContext;
@@ -67,7 +61,6 @@ public class OrganizationService : IOrganizationService
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IProviderRepository _providerRepository;
     private readonly IFeatureService _featureService;
-    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
@@ -77,7 +70,6 @@ public class OrganizationService : IOrganizationService
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository,
-        IUserRepository userRepository,
         IGroupRepository groupRepository,
         IMailService mailService,
         IPushNotificationService pushNotificationService,
@@ -90,7 +82,6 @@ public class OrganizationService : IOrganizationService
         IPolicyRepository policyRepository,
         IPolicyService policyService,
         ISsoUserRepository ssoUserRepository,
-        IReferenceEventService referenceEventService,
         IGlobalSettings globalSettings,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         ICurrentContext currentContext,
@@ -101,7 +92,6 @@ public class OrganizationService : IOrganizationService
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IProviderRepository providerRepository,
         IFeatureService featureService,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         IPolicyRequirementQuery policyRequirementQuery,
@@ -111,7 +101,6 @@ public class OrganizationService : IOrganizationService
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
-        _userRepository = userRepository;
         _groupRepository = groupRepository;
         _mailService = mailService;
         _pushNotificationService = pushNotificationService;
@@ -124,7 +113,6 @@ public class OrganizationService : IOrganizationService
         _policyRepository = policyRepository;
         _policyService = policyService;
         _ssoUserRepository = ssoUserRepository;
-        _referenceEventService = referenceEventService;
         _globalSettings = globalSettings;
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _currentContext = currentContext;
@@ -135,32 +123,10 @@ public class OrganizationService : IOrganizationService
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _providerRepository = providerRepository;
         _featureService = featureService;
-        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
         _policyRequirementQuery = policyRequirementQuery;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
-    }
-
-    public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
-        PaymentMethodType paymentMethodType, TaxInfo taxInfo)
-    {
-        var organization = await GetOrgById(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
-        var updated = await _paymentService.UpdatePaymentMethodAsync(
-            organization,
-            paymentMethodType,
-            paymentToken,
-            taxInfo);
-        if (updated)
-        {
-            await ReplaceAndUpdateCacheAsync(organization);
-        }
     }
 
     public async Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null)
@@ -179,11 +145,6 @@ public class OrganizationService : IOrganizationService
         }
 
         await _paymentService.CancelSubscriptionAsync(organization, eop);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.CancelSubscription, organization, _currentContext)
-            {
-                EndOfPeriod = endOfPeriod,
-            });
     }
 
     public async Task ReinstateSubscriptionAsync(Guid organizationId)
@@ -195,8 +156,6 @@ public class OrganizationService : IOrganizationService
         }
 
         await _paymentService.ReinstateSubscriptionAsync(organization);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.ReinstateSubscription, organization, _currentContext));
     }
 
     public async Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
@@ -216,13 +175,6 @@ public class OrganizationService : IOrganizationService
 
         var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, organization, storageAdjustmentGb,
             plan.PasswordManager.StripeStoragePlanId);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustStorage, organization, _currentContext)
-            {
-                PlanName = plan.Name,
-                PlanType = plan.Type,
-                Storage = storageAdjustmentGb,
-            });
         await ReplaceAndUpdateCacheAsync(organization);
         return secret;
     }
@@ -354,14 +306,6 @@ public class OrganizationService : IOrganizationService
         }
 
         var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, _currentContext)
-            {
-                PlanName = plan.Name,
-                PlanType = plan.Type,
-                Seats = newSeatTotal,
-                PreviousSeats = organization.Seats
-            });
         organization.Seats = (short?)newSeatTotal;
         await ReplaceAndUpdateCacheAsync(organization);
 
@@ -427,65 +371,6 @@ public class OrganizationService : IOrganizationService
         {
             throw new GatewayException(e.Message);
         }
-    }
-
-    public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup)
-    {
-        var plan = await _pricingClient.GetPlanOrThrow(signup.Plan);
-
-        ValidatePlan(plan, signup.AdditionalSeats, "Password Manager");
-
-        var organization = new Organization
-        {
-            // Pre-generate the org id so that we can save it with the Stripe subscription.
-            Id = CoreHelpers.GenerateComb(),
-            Name = signup.Name,
-            BillingEmail = signup.BillingEmail,
-            PlanType = plan!.Type,
-            Seats = signup.AdditionalSeats,
-            MaxCollections = plan.PasswordManager.MaxCollections,
-            MaxStorageGb = 1,
-            UsePolicies = plan.HasPolicies,
-            UseSso = plan.HasSso,
-            UseGroups = plan.HasGroups,
-            UseEvents = plan.HasEvents,
-            UseDirectory = plan.HasDirectory,
-            UseTotp = plan.HasTotp,
-            Use2fa = plan.Has2fa,
-            UseApi = plan.HasApi,
-            UseResetPassword = plan.HasResetPassword,
-            SelfHost = plan.HasSelfHost,
-            UsersGetPremium = plan.UsersGetPremium,
-            UseCustomPermissions = plan.HasCustomPermissions,
-            UseScim = plan.HasScim,
-            Plan = plan.Name,
-            Gateway = GatewayType.Stripe,
-            ReferenceData = signup.Owner.ReferenceData,
-            Enabled = true,
-            LicenseKey = CoreHelpers.SecureRandomString(20),
-            PublicKey = signup.PublicKey,
-            PrivateKey = signup.PrivateKey,
-            CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow,
-            Status = OrganizationStatusType.Created,
-            UsePasswordManager = true,
-            // Secrets Manager not available for purchase with Consolidated Billing.
-            UseSecretsManager = false,
-        };
-
-        var returnValue = await SignUpAsync(organization, default, signup.OwnerKey, signup.CollectionName, false);
-
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.Signup, organization, _currentContext)
-            {
-                PlanName = plan.Name,
-                PlanType = plan.Type,
-                Seats = returnValue.Item1.Seats,
-                SignupInitiationPath = signup.InitiationPath,
-                Storage = returnValue.Item1.MaxStorageGb,
-            });
-
-        return returnValue;
     }
 
     private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
@@ -568,6 +453,8 @@ public class OrganizationService : IOrganizationService
             SmSeats = license.SmSeats,
             SmServiceAccounts = license.SmServiceAccounts,
             UseRiskInsights = license.UseRiskInsights,
+            UseOrganizationDomains = license.UseOrganizationDomains,
+            UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies,
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
@@ -723,12 +610,12 @@ public class OrganizationService : IOrganizationService
         }
 
         var providers = organization.GetTwoFactorProviders();
-        if (!providers?.ContainsKey(type) ?? true)
+        if (providers is null || !providers.TryGetValue(type, out var provider))
         {
             return;
         }
 
-        providers[type].Enabled = true;
+        provider.Enabled = true;
         organization.SetTwoFactorProviders(providers);
         await UpdateAsync(organization);
     }
@@ -969,12 +856,6 @@ public class OrganizationService : IOrganizationService
             }
 
             await SendInvitesAsync(allOrgUsers, organization);
-
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.InvitedUsers, organization, _currentContext)
-                {
-                    Users = orgUserInvitedCount
-                });
         }
         catch (Exception e)
         {
@@ -1592,72 +1473,6 @@ public class OrganizationService : IOrganizationService
         return result;
     }
 
-    private async Task CheckPoliciesBeforeRestoreAsync(OrganizationUser orgUser, bool userHasTwoFactorEnabled)
-    {
-        // An invited OrganizationUser isn't linked with a user account yet, so these checks are irrelevant
-        // The user will be subject to the same checks when they try to accept the invite
-        if (GetPriorActiveOrganizationUserStatusType(orgUser) == OrganizationUserStatusType.Invited)
-        {
-            return;
-        }
-
-        var userId = orgUser.UserId.Value;
-
-        // Enforce Single Organization Policy of organization user is being restored to
-        var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
-        var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
-        var singleOrgPoliciesApplyingToRevokedUsers = await _policyService.GetPoliciesApplicableToUserAsync(userId,
-            PolicyType.SingleOrg, OrganizationUserStatusType.Revoked);
-        var singleOrgPolicyApplies = singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
-
-        var singleOrgCompliant = true;
-        var belongsToOtherOrgCompliant = true;
-        var twoFactorCompliant = true;
-
-        if (hasOtherOrgs && singleOrgPolicyApplies)
-        {
-            singleOrgCompliant = false;
-        }
-
-        // Enforce Single Organization Policy of other organizations user is a member of
-        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(userId,
-            PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
-        {
-            belongsToOtherOrgCompliant = false;
-        }
-
-        // Enforce Two Factor Authentication Policy of organization user is trying to join
-        if (!userHasTwoFactorEnabled)
-        {
-            var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId,
-                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Revoked);
-            if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
-            {
-                twoFactorCompliant = false;
-            }
-        }
-
-        var user = await _userRepository.GetByIdAsync(userId);
-
-        if (!singleOrgCompliant && !twoFactorCompliant)
-        {
-            throw new BadRequestException(user.Email + " is not compliant with the single organization and two-step login polciy");
-        }
-        else if (!singleOrgCompliant)
-        {
-            throw new BadRequestException(user.Email + " is not compliant with the single organization policy");
-        }
-        else if (!belongsToOtherOrgCompliant)
-        {
-            throw new BadRequestException(user.Email + " belongs to an organization that doesn't allow them to join multiple organizations");
-        }
-        else if (!twoFactorCompliant)
-        {
-            throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
-        }
-    }
-
     public static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)
     {
         // Determine status to revert back to
@@ -1697,11 +1512,5 @@ public class OrganizationService : IOrganizationService
 
         await SendInviteAsync(ownerOrganizationUser, organization, true);
         await _eventService.LogOrganizationUserEventAsync(ownerOrganizationUser, EventType.OrganizationUser_Invited);
-
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationCreatedByAdmin, organization, _currentContext)
-        {
-            EventRaisedByUser = userService.GetUserName(user),
-            SalesAssistedTrialStarted = salesAssistedTrialStarted,
-        });
     }
 }

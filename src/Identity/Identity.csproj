@@ -12,4 +12,8 @@
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Identity.Test" />
+  </ItemGroup>
+
 </Project>

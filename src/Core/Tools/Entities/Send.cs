@@ -60,8 +60,20 @@ public class Send : ITableObject<Guid>
     /// <summary>
     /// Password provided by the user. Protected with pbkdf2.
     /// </summary>
+    /// <remarks>
+    /// This field is mutually exclusive with <see cref="Emails" />
+    /// </remarks>
     [MaxLength(300)]
     public string? Password { get; set; }
+
+    /// <summary>
+    /// Comma-separated list of emails for OTP authentication.
+    /// </summary>
+    /// <remarks>
+    /// This field is mutually exclusive with <see cref="Password" />
+    /// </remarks>
+    [MaxLength(1024)]
+    public string? Emails { get; set; }
 
     /// <summary>
     /// The send becomes unavailable to API callers when

@@ -16,9 +16,6 @@ using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -28,8 +25,6 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     IInviteUsersValidator inviteUsersValidator,
     IPaymentService paymentService,
     IOrganizationRepository organizationRepository,
-    IReferenceEventService referenceEventService,
-    ICurrentContext currentContext,
     IApplicationCacheService applicationCacheService,
     IMailService mailService,
     ILogger<InviteOrganizationUsersCommand> logger,
@@ -155,8 +150,6 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             await SendAdditionalEmailsAsync(validatedRequest, organization);
 
             await SendInvitesAsync(organizationUserToInviteEntities, organization);
-
-            await PublishReferenceEventAsync(validatedRequest, organization);
         }
         catch (Exception ex)
         {
@@ -223,14 +216,6 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdateRevert);
         }
     }
-
-    private async Task PublishReferenceEventAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult,
-        Organization organization) =>
-        await referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.InvitedUsers, organization, currentContext)
-            {
-                Users = validatedResult.Value.Invites.Length
-            });
 
     private async Task SendInvitesAsync(IEnumerable<CreateOrganizationUser> users, Organization organization) =>
         await sendOrganizationInvitesCommand.SendInvitesAsync(
@@ -318,15 +303,6 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
             await organizationRepository.ReplaceAsync(organization); // could optimize this with only a property update
             await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
-
-            await referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, currentContext)
-                {
-                    PlanName = validatedResult.Value.InviteOrganization.Plan.Name,
-                    PlanType = validatedResult.Value.InviteOrganization.Plan.Type,
-                    Seats = validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal,
-                    PreviousSeats = validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats
-                });
         }
     }
 }

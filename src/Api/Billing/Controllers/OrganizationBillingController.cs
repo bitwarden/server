@@ -4,11 +4,12 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Api.Billing.Queries.Organizations;
-using Bit.Core;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -23,7 +24,6 @@ namespace Bit.Api.Billing.Controllers;
 public class OrganizationBillingController(
     IBusinessUnitConverter businessUnitConverter,
     ICurrentContext currentContext,
-    IFeatureService featureService,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
     IOrganizationWarningsQuery organizationWarningsQuery,
@@ -291,14 +291,20 @@ public class OrganizationBillingController(
         sale.Organization.PlanType = plan.Type;
         sale.Organization.Plan = plan.Name;
         sale.SubscriptionSetup.SkipTrial = true;
-        await organizationBillingService.Finalize(sale);
+
+        if (organizationSignup.PaymentMethodType == null || string.IsNullOrEmpty(organizationSignup.PaymentToken))
+        {
+            return Error.BadRequest("A payment method is required to restart the subscription.");
+        }
         var org = await organizationRepository.GetByIdAsync(organizationId);
         Debug.Assert(org is not null, "This organization has already been found via this same ID, this should be fine.");
-        if (organizationSignup.PaymentMethodType != null)
+        var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
+        var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
+        await organizationBillingService.Finalize(sale);
+        var updatedOrg = await organizationRepository.GetByIdAsync(organizationId);
+        if (updatedOrg != null)
         {
-            var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
-            var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
-            await organizationBillingService.UpdatePaymentMethod(org, paymentSource, taxInformation);
+            await organizationBillingService.UpdatePaymentMethod(updatedOrg, paymentSource, taxInformation);
         }
 
         return TypedResults.Ok();
@@ -310,14 +316,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] SetupBusinessUnitRequestBody requestBody)
     {
-        var enableOrganizationBusinessUnitConversion =
-            featureService.IsEnabled(FeatureFlagKeys.PM18770_EnableOrganizationBusinessUnitConversion);
-
-        if (!enableOrganizationBusinessUnitConversion)
-        {
-            return Error.NotFound();
-        }
-
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 
         if (organization == null)

@@ -13,9 +13,9 @@ public class DomainMappingService : IDomainMappingService
 
     public string MapDomain(string hostname)
     {
-        if (_map.ContainsKey(hostname))
+        if (_map.TryGetValue(hostname, out var mappedDomain))
         {
-            return _map[hostname];
+            return mappedDomain;
         }
 
         return hostname;
