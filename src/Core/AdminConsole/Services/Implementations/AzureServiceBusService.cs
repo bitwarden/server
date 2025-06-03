@@ -30,6 +30,7 @@ public class AzureServiceBusService : IAzureServiceBusService
         var serviceBusMessage = new ServiceBusMessage(json)
         {
             Subject = message.IntegrationType.ToRoutingKey(),
+            MessageId = message.MessageId
         };
 
         await _integrationSender.SendMessageAsync(serviceBusMessage);
@@ -42,7 +43,8 @@ public class AzureServiceBusService : IAzureServiceBusService
         var serviceBusMessage = new ServiceBusMessage(json)
         {
             Subject = message.IntegrationType.ToRoutingKey(),
-            ScheduledEnqueueTime = message.DelayUntilDate ?? DateTime.UtcNow
+            ScheduledEnqueueTime = message.DelayUntilDate ?? DateTime.UtcNow,
+            MessageId = message.MessageId
         };
 
         await _integrationSender.SendMessageAsync(serviceBusMessage);
@@ -52,7 +54,8 @@ public class AzureServiceBusService : IAzureServiceBusService
     {
         var message = new ServiceBusMessage(body)
         {
-            ContentType = "application/json"
+            ContentType = "application/json",
+            MessageId = Guid.NewGuid().ToString()
         };
 
         await _eventSender.SendMessageAsync(message);

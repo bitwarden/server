@@ -34,6 +34,7 @@ public class EventIntegrationHandler<T>(
             var template = configuration.Template ?? string.Empty;
             var context = await BuildContextAsync(eventMessage, template);
             var renderedTemplate = IntegrationTemplateProcessor.ReplaceTokens(template, context);
+            var messageId = eventMessage.IdempotencyId ?? Guid.NewGuid();
 
             var config = configuration.MergedConfiguration.Deserialize<T>()
                          ?? throw new InvalidOperationException($"Failed to deserialize to {typeof(T).Name}");
@@ -41,6 +42,7 @@ public class EventIntegrationHandler<T>(
             var message = new IntegrationMessage<T>
             {
                 IntegrationType = integrationType,
+                MessageId = messageId.ToString(),
                 Configuration = config,
                 RenderedTemplate = renderedTemplate,
                 RetryCount = 0,

@@ -8,6 +8,7 @@ namespace Bit.Core.AdminConsole.Models.Data.Integrations;
 public class IntegrationMessage : IIntegrationMessage
 {
     public IntegrationType IntegrationType { get; set; }
+    public required string MessageId { get; set; }
     public required string RenderedTemplate { get; set; }
     public int RetryCount { get; set; } = 0;
     public DateTime? DelayUntilDate { get; set; }

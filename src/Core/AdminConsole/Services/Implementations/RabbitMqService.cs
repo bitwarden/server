@@ -110,7 +110,11 @@ public class RabbitMqService : IRabbitMqService
         await using var channel = await CreateChannelAsync();
 
         var body = Encoding.UTF8.GetBytes(message.ToJson());
-        var properties = new BasicProperties { Persistent = true };
+        var properties = new BasicProperties
+        {
+            MessageId = message.MessageId,
+            Persistent = true
+        };
 
         await channel.BasicPublishAsync(
             exchange: _integrationExchangeName,
@@ -123,7 +127,11 @@ public class RabbitMqService : IRabbitMqService
     public async Task PublishEventAsync(string body)
     {
         await using var channel = await CreateChannelAsync();
-        var properties = new BasicProperties { Persistent = true };
+        var properties = new BasicProperties
+        {
+            MessageId = Guid.NewGuid().ToString(),
+            Persistent = true
+        };
 
         await channel.BasicPublishAsync(
             exchange: _eventExchangeName,
@@ -140,6 +148,7 @@ public class RabbitMqService : IRabbitMqService
         var properties = new BasicProperties
         {
             Persistent = true,
+            MessageId = message.MessageId,
             Headers = _useDelayPlugin && message.DelayUntilDate.HasValue ?
                 new Dictionary<string, object?>
                 {
@@ -162,7 +171,11 @@ public class RabbitMqService : IRabbitMqService
         IIntegrationMessage message,
         CancellationToken cancellationToken)
     {
-        var properties = new BasicProperties { Persistent = true };
+        var properties = new BasicProperties
+        {
+            MessageId = message.MessageId,
+            Persistent = true
+        };
 
         await channel.BasicPublishAsync(
             exchange: _integrationExchangeName,
