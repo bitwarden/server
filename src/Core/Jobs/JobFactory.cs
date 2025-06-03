@@ -4,6 +4,8 @@ using Quartz.Spi;
 
 namespace Bit.Core.Jobs;
 
+#nullable enable
+
 public class JobFactory : IJobFactory
 {
     private readonly IServiceProvider _container;
@@ -16,7 +18,7 @@ public class JobFactory : IJobFactory
     public IJob NewJob(TriggerFiredBundle bundle, IScheduler scheduler)
     {
         var scope = _container.CreateScope();
-        return scope.ServiceProvider.GetService(bundle.JobDetail.JobType) as IJob;
+        return (scope.ServiceProvider.GetService(bundle.JobDetail.JobType) as IJob)!;
     }
 
     public void ReturnJob(IJob job)
