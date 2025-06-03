@@ -1173,7 +1173,7 @@ public class CipherServiceTests
 
     [Theory, BitAutoData]
     public async Task ShareManyAsync_FreeOrgWithAttachment_Throws(SutProvider<CipherService> sutProvider,
-        IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
+        IEnumerable<CipherDetails> ciphers, Guid organizationId, List<Guid> collectionIds)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(new Organization
         {
@@ -1194,7 +1194,7 @@ public class CipherServiceTests
 
     [Theory, BitAutoData]
     public async Task ShareManyAsync_PaidOrgWithAttachment_Passes(SutProvider<CipherService> sutProvider,
-        IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
+        IEnumerable<CipherDetails> ciphers, Guid organizationId, List<Guid> collectionIds)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
             .Returns(new Organization
