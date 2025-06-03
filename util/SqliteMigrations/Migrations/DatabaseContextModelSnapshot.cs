@@ -668,7 +668,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ExternalId")
-                        .HasMaxLength(50)
+                        .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("OrganizationId")
@@ -1425,6 +1425,10 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<bool>("Disabled")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Emails")
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("TEXT");

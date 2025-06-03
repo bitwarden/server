@@ -50,9 +50,9 @@ public class SutProvider<TSut> : ISutProvider
     /// </summary>
     private SutProvider<TSut> SetDependency(Type dependencyType, object dependency, string parameterName = "")
     {
-        if (_dependencies.ContainsKey(dependencyType))
+        if (_dependencies.TryGetValue(dependencyType, out var dependencyForType))
         {
-            _dependencies[dependencyType][parameterName] = dependency;
+            dependencyForType[parameterName] = dependency;
         }
         else
         {
@@ -82,12 +82,11 @@ public class SutProvider<TSut> : ISutProvider
             return _dependencies[dependencyType][parameterName];
         }
 
-        if (_dependencies.ContainsKey(dependencyType))
+        if (_dependencies.TryGetValue(dependencyType, out var knownDependencies))
         {
-            var knownDependencies = _dependencies[dependencyType];
             if (knownDependencies.Values.Count == 1)
             {
-                return _dependencies[dependencyType].Values.Single();
+                return knownDependencies.Values.Single();
             }
 
             throw new ArgumentException(string.Concat($"Dependency of type {dependencyType.Name} and name ",

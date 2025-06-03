@@ -288,11 +288,15 @@ public class GlobalSettings : IGlobalSettings
         public class AzureServiceBusSettings
         {
             private string _connectionString;
-            private string _topicName;
+            private string _eventTopicName;
+            private string _integrationTopicName;
 
+            public int MaxRetries { get; set; } = 3;
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
-            public virtual string SlackSubscriptionName { get; set; } = "events-slack-subscription";
-            public virtual string WebhookSubscriptionName { get; set; } = "events-webhook-subscription";
+            public virtual string SlackEventSubscriptionName { get; set; } = "events-slack-subscription";
+            public virtual string SlackIntegrationSubscriptionName { get; set; } = "integration-slack-subscription";
+            public virtual string WebhookEventSubscriptionName { get; set; } = "events-webhook-subscription";
+            public virtual string WebhookIntegrationSubscriptionName { get; set; } = "integration-webhook-subscription";
 
             public string ConnectionString
             {
@@ -300,10 +304,16 @@ public class GlobalSettings : IGlobalSettings
                 set => _connectionString = value.Trim('"');
             }
 
-            public string TopicName
+            public string EventTopicName
             {
-                get => _topicName;
-                set => _topicName = value.Trim('"');
+                get => _eventTopicName;
+                set => _eventTopicName = value.Trim('"');
+            }
+
+            public string IntegrationTopicName
+            {
+                get => _integrationTopicName;
+                set => _integrationTopicName = value.Trim('"');
             }
         }
 
@@ -312,11 +322,19 @@ public class GlobalSettings : IGlobalSettings
             private string _hostName;
             private string _username;
             private string _password;
-            private string _exchangeName;
+            private string _eventExchangeName;
+            private string _integrationExchangeName;
 
+            public int MaxRetries { get; set; } = 3;
+            public int RetryTiming { get; set; } = 30000; // 30s
             public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
-            public virtual string WebhookQueueName { get; set; } = "events-webhook-queue";
-            public virtual string SlackQueueName { get; set; } = "events-slack-queue";
+            public virtual string IntegrationDeadLetterQueueName { get; set; } = "integration-dead-letter-queue";
+            public virtual string SlackEventsQueueName { get; set; } = "events-slack-queue";
+            public virtual string SlackIntegrationQueueName { get; set; } = "integration-slack-queue";
+            public virtual string SlackIntegrationRetryQueueName { get; set; } = "integration-slack-retry-queue";
+            public virtual string WebhookEventsQueueName { get; set; } = "events-webhook-queue";
+            public virtual string WebhookIntegrationQueueName { get; set; } = "integration-webhook-queue";
+            public virtual string WebhookIntegrationRetryQueueName { get; set; } = "integration-webhook-retry-queue";
 
             public string HostName
             {
@@ -333,10 +351,15 @@ public class GlobalSettings : IGlobalSettings
                 get => _password;
                 set => _password = value.Trim('"');
             }
-            public string ExchangeName
+            public string EventExchangeName
             {
-                get => _exchangeName;
-                set => _exchangeName = value.Trim('"');
+                get => _eventExchangeName;
+                set => _eventExchangeName = value.Trim('"');
+            }
+            public string IntegrationExchangeName
+            {
+                get => _integrationExchangeName;
+                set => _integrationExchangeName = value.Trim('"');
             }
         }
     }
@@ -423,6 +446,7 @@ public class GlobalSettings : IGlobalSettings
 
     public class IdentityServerSettings
     {
+        public string CertificateLocation { get; set; } = "identity.pfx";
         public string CertificateThumbprint { get; set; }
         public string CertificatePassword { get; set; }
         public string RedisConnectionString { get; set; }
