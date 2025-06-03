@@ -1064,7 +1064,7 @@ public class CiphersController : Controller
 
     [HttpPut("share")]
     [HttpPost("share")]
-    public async Task<CipherMiniResponseModel[]> PutShareMany([FromBody] CipherBulkShareRequestModel model)
+    public async Task<ListResponseModel<CipherMiniResponseModel>> PutShareMany([FromBody] CipherBulkShareRequestModel model)
     {
         var organizationId = new Guid(model.Ciphers.First().OrganizationId);
         if (!await _currentContext.OrganizationUser(organizationId))
@@ -1106,7 +1106,8 @@ public class CiphersController : Controller
             userId
         );
 
-        return updated.Select(c => new CipherMiniResponseModel(c, _globalSettings, false)).ToArray();
+        var response = updated.Select(c => new CipherMiniResponseModel(c, _globalSettings, false)).ToArray();
+        return new ListResponseModel<CipherMiniResponseModel>(response);
     }
 
     [HttpPost("purge")]
