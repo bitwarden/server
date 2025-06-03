@@ -2,7 +2,7 @@
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services.Contracts;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Services.Implementations;
 using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture;

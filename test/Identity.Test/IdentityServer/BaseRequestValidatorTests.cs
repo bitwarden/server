@@ -373,8 +373,7 @@ public class BaseRequestValidatorTests
         // Assert
         Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-        var expectedMessage = $"Encryption key migration is required. Please log in to the web " +
-                              $"vault at {_globalSettings.BaseServiceUri.VaultWithHash}";
+        var expectedMessage = "Legacy encryption without a userkey is no longer supported. To recover your account, please contact support";
         Assert.Equal(expectedMessage, errorResponse.Message);
     }
 

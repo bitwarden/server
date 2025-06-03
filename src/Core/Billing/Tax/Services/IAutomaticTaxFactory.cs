@@ -1,4 +1,4 @@
-﻿using Bit.Core.Billing.Services.Contracts;
+﻿using Bit.Core.Billing.Tax.Models;
 
 namespace Bit.Core.Billing.Tax.Services;
 

@@ -46,7 +46,7 @@ public static class LoggerFactoryExtensions
             {
                 return true;
             }
-            var eventId = e.Properties.ContainsKey("EventId") ? e.Properties["EventId"].ToString() : null;
+            var eventId = e.Properties.TryGetValue("EventId", out var eventIdValue) ? eventIdValue.ToString() : null;
             if (eventId?.Contains(Constants.BypassFiltersEventId.ToString()) ?? false)
             {
                 return true;

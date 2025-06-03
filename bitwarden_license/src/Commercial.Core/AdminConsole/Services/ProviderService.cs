@@ -11,7 +11,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -287,11 +287,10 @@ public class ProviderService : IProviderService
 
         foreach (var user in users)
         {
-            if (!keyedFilteredUsers.ContainsKey(user.Id))
+            if (!keyedFilteredUsers.TryGetValue(user.Id, out var providerUser))
             {
                 continue;
             }
-            var providerUser = keyedFilteredUsers[user.Id];
             try
             {
                 if (providerUser.Status != ProviderUserStatusType.Accepted || providerUser.ProviderId != providerId)
