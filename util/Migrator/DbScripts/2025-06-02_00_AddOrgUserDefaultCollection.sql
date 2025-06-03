@@ -7,7 +7,7 @@ IF NOT EXISTS (
 )
     BEGIN
         ALTER TABLE [dbo].[Collection]
-            ADD UserDefaultCollectionEmail NVARCHAR(256) NULL
+            ADD [UserDefaultCollectionEmail] NVARCHAR(256) NULL
     END
 GO
 
@@ -20,7 +20,7 @@ IF NOT EXISTS (
 )
     BEGIN
         ALTER TABLE [dbo].[Collection]
-            ADD Type TINYINT NOT NULL DEFAULT (0)
+            ADD [Type] TINYINT NOT NULL DEFAULT (0)
     END
 GO
 

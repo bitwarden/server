@@ -25,6 +25,6 @@ BEGIN
         CreationDate,
         RevisionDate,
         ExternalId,
-        UserDefaultCollectionEmail,
-        Type
+        [UserDefaultCollectionEmail],
+        [Type]
 END
