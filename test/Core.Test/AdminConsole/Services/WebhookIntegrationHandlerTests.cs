@@ -79,6 +79,7 @@ public class WebhookIntegrationHandlerTests
         Assert.Equal(result.Message, message);
         Assert.True(result.DelayUntilDate.HasValue);
         Assert.InRange(result.DelayUntilDate.Value, DateTime.UtcNow.AddSeconds(59), DateTime.UtcNow.AddSeconds(61));
+        Assert.Equal("Too Many Requests", result.FailureReason);
     }
 
     [Theory, BitAutoData]
@@ -99,6 +100,7 @@ public class WebhookIntegrationHandlerTests
         Assert.Equal(result.Message, message);
         Assert.True(result.DelayUntilDate.HasValue);
         Assert.InRange(result.DelayUntilDate.Value, DateTime.UtcNow.AddSeconds(59), DateTime.UtcNow.AddSeconds(61));
+        Assert.Equal("Too Many Requests", result.FailureReason);
     }
 
     [Theory, BitAutoData]
@@ -117,6 +119,7 @@ public class WebhookIntegrationHandlerTests
         Assert.True(result.Retryable);
         Assert.Equal(result.Message, message);
         Assert.False(result.DelayUntilDate.HasValue);
+        Assert.Equal("Internal Server Error", result.FailureReason);
     }
 
     [Theory, BitAutoData]
@@ -135,5 +138,6 @@ public class WebhookIntegrationHandlerTests
         Assert.False(result.Retryable);
         Assert.Equal(result.Message, message);
         Assert.Null(result.DelayUntilDate);
+        Assert.Equal("Temporary Redirect", result.FailureReason);
     }
 }
