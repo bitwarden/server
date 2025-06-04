@@ -29,7 +29,6 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
     private readonly IOrganizationService _organizationService;
     private readonly IInviteOrganizationUsersCommand _inviteOrganizationUsersCommand;
     private readonly IPricingClient _pricingClient;
-    private readonly TimeProvider _timeProvider;
 
     private readonly EventSystemUser _EventSystemUser = EventSystemUser.PublicApi;
 
@@ -41,8 +40,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             ICurrentContext currentContext,
             IOrganizationService organizationService,
             IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
-            IPricingClient pricingClient,
-            TimeProvider timeProvider
+            IPricingClient pricingClient
             )
     {
         _organizationRepository = organizationRepository;
@@ -54,7 +52,6 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         _organizationService = organizationService;
         _inviteOrganizationUsersCommand = inviteOrganizationUsersCommand;
         _pricingClient = pricingClient;
-        _timeProvider = timeProvider;
     }
 
     public async Task ImportAsync(Guid organizationId,
