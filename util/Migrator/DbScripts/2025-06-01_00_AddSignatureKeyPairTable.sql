@@ -11,12 +11,19 @@ CREATE TABLE [dbo].[UserSignatureKeyPair] (
 );
 GO
 
+CREATE VIEW [dbo].[UserSignatureKeyPairView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[UserSignatureKeyPair]
+
 CREATE PROCEDURE [dbo].[UserSignatureKeyPair_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
     SELECT *
-    FROM [dbo].[UserSignatureKeyPair]
+    FROM [dbo].[UserSignatureKeyPairView]
     WHERE [UserId] = @UserId;
 END
 GO

@@ -3,6 +3,6 @@ CREATE PROCEDURE [dbo].[UserSignatureKeyPair_ReadByUserId]
 AS
 BEGIN
     SELECT *
-    FROM [dbo].[UserSignatureKeyPair]
+    FROM [dbo].[UserSignatureKeyPairView]
     WHERE [UserId] = @UserId;
 END
