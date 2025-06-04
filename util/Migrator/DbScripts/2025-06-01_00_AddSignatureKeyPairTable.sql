@@ -13,12 +13,10 @@ GO
 
 CREATE VIEW [dbo].[UserSignatureKeyPairView]
 AS
-BEGIN
-    SELECT
-        *
-    FROM
-        [dbo].[UserSignatureKeyPair]
-END
+SELECT
+    *
+FROM
+    [dbo].[UserSignatureKeyPair]
 GO
 
 CREATE PROCEDURE [dbo].[UserSignatureKeyPair_ReadByUserId]
