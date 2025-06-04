@@ -23,6 +23,7 @@ public static class Constants
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
     public const string SSHKeyCipherMinimumVersion = "2024.12.0";
+    public const string DenyLegacyUserMinimumVersion = "2025.6.0";
 
     /// <summary>
     /// Used by IdentityServer to identify our own provider.
@@ -144,9 +145,7 @@ public static class FeatureFlagKeys
     public const string PM17772_AdminInitiatedSponsorships = "pm-17772-admin-initiated-sponsorships";
     public const string UsePricingService = "use-pricing-service";
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
-    public const string PM18794_ProviderPaymentMethod = "pm-18794-provider-payment-method";
     public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
-    public const string PM18770_EnableOrganizationBusinessUnitConversion = "pm-18770-enable-organization-business-unit-conversion";
     public const string PM199566_UpdateMSPToChargeAutomatically = "pm-199566-update-msp-to-charge-automatically";
     public const string PM19956_RequireProviderPaymentMethodDuringSetup = "pm-19956-require-provider-payment-method-during-setup";
     public const string UseOrganizationWarningsService = "use-organization-warnings-service";
