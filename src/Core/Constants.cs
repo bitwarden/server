@@ -204,6 +204,9 @@ public static class FeatureFlagKeys
     public const string PhishingDetection = "phishing-detection";
     public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
 
+    /* Innovation Team */
+    public const string ArchiveVaultItems = "pm-19148-innovation-archive";
+
     public static List<string> GetAllKeys()
     {
         return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
