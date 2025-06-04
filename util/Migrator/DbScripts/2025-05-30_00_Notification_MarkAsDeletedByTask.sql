@@ -28,7 +28,7 @@ BEGIN
     WHERE n.TaskId = @TaskId
       AND ns.NotificationId IS NULL;
 
-    -- Return the user ids associated with the altered notifications
+    -- Return the UserIds associated with the altered notifications
     SELECT u.UserId
     FROM @UserIdsForAlteredNotifications u;
 END

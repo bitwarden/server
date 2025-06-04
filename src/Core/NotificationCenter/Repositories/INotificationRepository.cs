@@ -34,11 +34,11 @@ public interface INotificationRepository : IRepository<Notification, Guid>
         NotificationStatusFilter? statusFilter, PageOptions pageOptions);
 
     /// <summary>
-    /// Marks notifications as deleted by a task Id.
+    /// Marks notifications as deleted by a taskId.
     /// </summary>
     /// <param name="taskId">The unique identifier of the task.</param>
     /// <returns>
-    /// A collection of users ids for the notifications that are now marked as deleted.
+    /// A collection of UserIds for the notifications that are now marked as deleted.
     /// </returns>
     Task<IEnumerable<Guid>> MarkNotificationsAsDeletedByTask(Guid taskId);
 }
