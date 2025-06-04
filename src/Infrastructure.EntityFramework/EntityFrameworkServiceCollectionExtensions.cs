@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Repositories;
+using Bit.Core.Dirt.Reports.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.NotificationCenter.Repositories;
@@ -13,6 +14,7 @@ using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories;
 using Bit.Infrastructure.EntityFramework.Billing.Repositories;
+using Bit.Infrastructure.EntityFramework.Dirt;
 using Bit.Infrastructure.EntityFramework.KeyManagement.Repositories;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Repositories;
 using Bit.Infrastructure.EntityFramework.Platform;
@@ -105,6 +107,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<ISecurityTaskRepository, SecurityTaskRepository>();
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
         services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
+        services.AddSingleton<IMemberAccessCipherDetailsRepository, MemberAccessCipherDetailsRepository>();
 
         if (selfHosted)
         {

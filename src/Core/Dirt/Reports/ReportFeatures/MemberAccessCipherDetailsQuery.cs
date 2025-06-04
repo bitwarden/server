@@ -2,19 +2,19 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Dirt.Reports.Models.Data;
+using Bit.Core.Dirt.Reports.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Bit.Core.Tools.ReportFeatures.Requests;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 
 namespace Bit.Core.Tools.ReportFeatures;
 
@@ -26,6 +26,7 @@ public class MemberAccessCipherDetailsQuery : IMemberAccessCipherDetailsQuery
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IMemberAccessCipherDetailsRepository _memberAccessCipherDetailsRepository;
 
     public MemberAccessCipherDetailsQuery(
         IOrganizationUserUserDetailsQuery organizationUserUserDetailsQuery,
@@ -33,7 +34,8 @@ public class MemberAccessCipherDetailsQuery : IMemberAccessCipherDetailsQuery
         ICollectionRepository collectionRepository,
         IOrganizationCiphersQuery organizationCiphersQuery,
         IApplicationCacheService applicationCacheService,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IMemberAccessCipherDetailsRepository memberAccessCipherDetailsRepository
     )
     {
         _organizationUserUserDetailsQuery = organizationUserUserDetailsQuery;
@@ -42,32 +44,12 @@ public class MemberAccessCipherDetailsQuery : IMemberAccessCipherDetailsQuery
         _organizationCiphersQuery = organizationCiphersQuery;
         _applicationCacheService = applicationCacheService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _memberAccessCipherDetailsRepository = memberAccessCipherDetailsRepository;
     }
 
     public async Task<IEnumerable<MemberAccessCipherDetails>> GetMemberAccessCipherDetails(MemberAccessCipherDetailsRequest request)
     {
-        var orgUsers = await _organizationUserUserDetailsQuery.GetOrganizationUserUserDetails(
-            new OrganizationUserUserDetailsQueryRequest
-            {
-                OrganizationId = request.OrganizationId,
-                IncludeCollections = true,
-                IncludeGroups = true
-            });
-
-        var orgGroups = await _groupRepository.GetManyByOrganizationIdAsync(request.OrganizationId);
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(request.OrganizationId);
-        var orgCollectionsWithAccess = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(request.OrganizationId);
-        var orgItems = await _organizationCiphersQuery.GetAllOrganizationCiphers(request.OrganizationId);
-        var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUsers);
-
-        var memberAccessCipherDetails = GenerateAccessDataParallelV2(
-            orgGroups,
-            orgCollectionsWithAccess,
-            orgItems,
-            organizationUsersTwoFactorEnabled,
-            orgAbility);
-
-        return memberAccessCipherDetails;
+        return await _memberAccessCipherDetailsRepository.GetMemberAccessCipherDetailsByOrganizationId(request.OrganizationId);
     }
 
     private IEnumerable<MemberAccessCipherDetails> GenerateAccessData(

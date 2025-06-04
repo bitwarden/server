@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
@@ -80,6 +81,7 @@ public class DatabaseContext : DbContext
     public DbSet<NotificationStatus> NotificationStatuses { get; set; }
     public DbSet<ClientOrganizationMigrationRecord> ClientOrganizationMigrationRecords { get; set; }
     public DbSet<PasswordHealthReportApplication> PasswordHealthReportApplications { get; set; }
+    public DbSet<MemberAccessCipherDetails> MemberAccessCipherDetails { get; set; }
     public DbSet<SecurityTask> SecurityTasks { get; set; }
     public DbSet<OrganizationInstallation> OrganizationInstallations { get; set; }
 
