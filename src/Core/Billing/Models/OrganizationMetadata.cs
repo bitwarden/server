@@ -1,5 +1,6 @@
 ﻿namespace Bit.Core.Billing.Models;
 
+[Obsolete("This concept is being phased out. Don't add additional properties.")]
 public record OrganizationMetadata(
     bool IsEligibleForSelfHost,
     bool IsManaged,
@@ -10,8 +11,7 @@ public record OrganizationMetadata(
     bool IsSubscriptionCanceled,
     DateTime? InvoiceDueDate,
     DateTime? InvoiceCreatedDate,
-    DateTime? SubPeriodEndDate,
-    int OrganizationOccupiedSeats)
+    DateTime? SubPeriodEndDate)
 {
     public static OrganizationMetadata Default => new OrganizationMetadata(
         false,
@@ -23,6 +23,5 @@ public record OrganizationMetadata(
         false,
         null,
         null,
-        null,
-        0);
+        null);
 }

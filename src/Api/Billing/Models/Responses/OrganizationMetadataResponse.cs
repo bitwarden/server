@@ -12,8 +12,7 @@ public record OrganizationMetadataResponse(
     bool IsSubscriptionCanceled,
     DateTime? InvoiceDueDate,
     DateTime? InvoiceCreatedDate,
-    DateTime? SubPeriodEndDate,
-    int OrganizationOccupiedSeats)
+    DateTime? SubPeriodEndDate)
 {
     public static OrganizationMetadataResponse From(OrganizationMetadata metadata)
         => new(
@@ -26,6 +25,5 @@ public record OrganizationMetadataResponse(
             metadata.IsSubscriptionCanceled,
             metadata.InvoiceDueDate,
             metadata.InvoiceCreatedDate,
-            metadata.SubPeriodEndDate,
-            metadata.OrganizationOccupiedSeats);
+            metadata.SubPeriodEndDate);
 }
