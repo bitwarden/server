@@ -7,12 +7,17 @@ namespace Bit.Core.Test.Models.Data.Integrations;
 
 public class IntegrationMessageTests
 {
+    private const string _messageId = "TestMessageId";
+
     [Fact]
     public void ApplyRetry_IncrementsRetryCountAndSetsDelayUntilDate()
     {
         var message = new IntegrationMessage<WebhookIntegrationConfigurationDetails>
         {
+            Configuration = new WebhookIntegrationConfigurationDetails("https://localhost"),
+            MessageId = _messageId,
             RetryCount = 2,
+            RenderedTemplate = string.Empty,
             DelayUntilDate = null
         };
 
@@ -30,19 +35,22 @@ public class IntegrationMessageTests
         var message = new IntegrationMessage<WebhookIntegrationConfigurationDetails>
         {
             Configuration = new WebhookIntegrationConfigurationDetails("https://localhost"),
+            MessageId = _messageId,
             RenderedTemplate = "This is the message",
             IntegrationType = IntegrationType.Webhook,
             RetryCount = 2,
-            DelayUntilDate = null
+            DelayUntilDate = DateTime.UtcNow
         };
 
         var json = message.ToJson();
         var result = IntegrationMessage<WebhookIntegrationConfigurationDetails>.FromJson(json);
 
         Assert.Equal(message.Configuration, result.Configuration);
+        Assert.Equal(message.MessageId, result.MessageId);
         Assert.Equal(message.RenderedTemplate, result.RenderedTemplate);
         Assert.Equal(message.IntegrationType, result.IntegrationType);
         Assert.Equal(message.RetryCount, result.RetryCount);
+        Assert.Equal(message.DelayUntilDate, result.DelayUntilDate);
     }
 
     [Fact]
@@ -50,5 +58,27 @@ public class IntegrationMessageTests
     {
         var json = "{ Invalid JSON";
         Assert.Throws<JsonException>(() => IntegrationMessage<WebhookIntegrationConfigurationDetails>.FromJson(json));
+    }
+
+    [Fact]
+    public void ToJson_BaseIntegrationMessage_DeserializesCorrectly()
+    {
+        var message = new IntegrationMessage
+        {
+            MessageId = _messageId,
+            RenderedTemplate = "This is the message",
+            IntegrationType = IntegrationType.Webhook,
+            RetryCount = 2,
+            DelayUntilDate = DateTime.UtcNow
+        };
+
+        var json = message.ToJson();
+        var result = JsonSerializer.Deserialize<IntegrationMessage>(json);
+
+        Assert.Equal(message.MessageId, result.MessageId);
+        Assert.Equal(message.RenderedTemplate, result.RenderedTemplate);
+        Assert.Equal(message.IntegrationType, result.IntegrationType);
+        Assert.Equal(message.RetryCount, result.RetryCount);
+        Assert.Equal(message.DelayUntilDate, result.DelayUntilDate);
     }
 }
