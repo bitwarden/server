@@ -109,7 +109,6 @@ public class DatabaseContext : DbContext
         var eSsoConfig = builder.Entity<SsoConfig>();
         var eTaxRate = builder.Entity<TaxRate>();
         var eUser = builder.Entity<User>();
-        var eUserSignatureKeyPair = builder.Entity<UserSignatureKeyPair>();
         var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
@@ -130,7 +129,6 @@ public class DatabaseContext : DbContext
         eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationDomain.Property(ar => ar.Id).ValueGeneratedNever();
         aWebAuthnCredential.Property(ar => ar.Id).ValueGeneratedNever();
-        eUserSignatureKeyPair.Property(ar => ar.Id).ValueGeneratedNever();
 
         eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
         eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
@@ -171,7 +169,6 @@ public class DatabaseContext : DbContext
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eOrganizationDomain.ToTable(nameof(OrganizationDomain));
         aWebAuthnCredential.ToTable(nameof(WebAuthnCredential));
-        eUserSignatureKeyPair.ToTable(nameof(UserSignatureKeyPair));
 
         ConfigureDateTimeUtcQueries(builder);
     }
