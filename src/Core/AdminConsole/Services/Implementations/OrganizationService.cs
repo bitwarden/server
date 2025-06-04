@@ -298,8 +298,16 @@ public class OrganizationService : IOrganizationService
 
             if (seatCounts.Total > newSeatTotal)
             {
-                throw new BadRequestException($"Your organization has {seatCounts.Users} members and {seatCounts.Sponsored} sponsored families. " +
-                    $"To decrease the seat count below {seatCounts.Total}, you must remove members or sponsorships.");
+                if (organization.UseAdminSponsoredFamilies || seatCounts.Sponsored > 0)
+                {
+                    throw new BadRequestException($"Your organization has {seatCounts.Users} members and {seatCounts.Sponsored} sponsored families. " +
+                                                  $"To decrease the seat count below {seatCounts.Total}, you must remove members or sponsorships.");
+                }
+                else
+                {
+                    throw new BadRequestException($"Your organization currently has {seatCounts.Total} seats filled. " +
+                                                  $"Your new plan only has ({newSeatTotal}) seats. Remove some users.");
+                }
             }
         }
 
