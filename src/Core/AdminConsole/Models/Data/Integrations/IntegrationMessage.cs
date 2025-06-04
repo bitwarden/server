@@ -1,13 +1,15 @@
-﻿using System.Text.Json;
+﻿#nullable enable
+
+using System.Text.Json;
 using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.Models.Data.Integrations;
 
-public class IntegrationMessage<T> : IIntegrationMessage
+public class IntegrationMessage : IIntegrationMessage
 {
     public IntegrationType IntegrationType { get; set; }
-    public T Configuration { get; set; }
-    public string RenderedTemplate { get; set; }
+    public required string MessageId { get; set; }
+    public required string RenderedTemplate { get; set; }
     public int RetryCount { get; set; } = 0;
     public DateTime? DelayUntilDate { get; set; }
 
@@ -22,12 +24,22 @@ public class IntegrationMessage<T> : IIntegrationMessage
         DelayUntilDate = baseTime.AddSeconds(backoffSeconds + jitterSeconds);
     }
 
-    public string ToJson()
+    public virtual string ToJson()
+    {
+        return JsonSerializer.Serialize(this);
+    }
+}
+
+public class IntegrationMessage<T> : IntegrationMessage
+{
+    public required T Configuration { get; set; }
+
+    public override string ToJson()
     {
         return JsonSerializer.Serialize(this);
     }
 
-    public static IntegrationMessage<T> FromJson(string json)
+    public static IntegrationMessage<T>? FromJson(string json)
     {
         return JsonSerializer.Deserialize<IntegrationMessage<T>>(json);
     }
