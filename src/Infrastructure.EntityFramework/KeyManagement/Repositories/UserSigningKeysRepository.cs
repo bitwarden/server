@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.KeyManagement.Repositories;
 
-public class UserSignatureKeyPairRepository : Repository<Core.Entities.UserSignatureKeyPair, Models.UserSignatureKeyPair, Guid>, IUserSignatureKeyPairRepository
+public class UserSignatureKeyPairRepository : Repository<Core.KeyManagement.Entities.UserSignatureKeyPair, Models.UserSignatureKeyPair, Guid>, IUserSignatureKeyPairRepository
 {
     public UserSignatureKeyPairRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper) : base(serviceScopeFactory, mapper, context => context.UserSignatureKeyPair)
     {
