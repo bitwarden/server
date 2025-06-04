@@ -1,10 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
 #nullable enable
 
-namespace Bit.Core.Entities;
+namespace Bit.Core.KeyManagement.Entities;
 
 public class UserSignatureKeyPair : ITableObject<Guid>, IRevisable
 {
