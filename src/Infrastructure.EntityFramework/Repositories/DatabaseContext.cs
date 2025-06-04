@@ -114,6 +114,7 @@ public class DatabaseContext : DbContext
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
+        var eMemberAccessCipherDetails = builder.Entity<MemberAccessCipherDetails>();
 
         // Shadow property configurations go here
 
@@ -135,6 +136,8 @@ public class DatabaseContext : DbContext
         eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
         eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
+
+        eMemberAccessCipherDetails.HasNoKey();
 
         var dataProtector = this.GetService<DP.IDataProtectionProvider>().CreateProtector(
             Constants.DatabaseFieldProtectorPurpose);

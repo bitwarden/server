@@ -1,9 +1,7 @@
-﻿#nullable enable
-using System.Data;
+﻿using System.Data;
 using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Reports.Repositories;
 using Bit.Core.Settings;
-
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -26,6 +24,7 @@ public class MemberAccessCipherDetailsRepository : BaseRepository, IMemberAccess
     {
         await using var connection = new SqlConnection(ConnectionString);
 
+
         var result = await connection.QueryAsync<MemberAccessCipherDetails>(
             "[dbo].[MemberAccessReport_GetMemberAccessCipherDetailsByOrganizationId]",
             new
@@ -35,6 +34,7 @@ public class MemberAccessCipherDetailsRepository : BaseRepository, IMemberAccess
             }, commandType: CommandType.StoredProcedure);
 
         return result;
+
     }
 
 }
