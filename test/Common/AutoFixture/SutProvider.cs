@@ -63,7 +63,8 @@ public class SutProvider<TSut> : ISutProvider
     }
 
     /// <summary>
-    /// Gets a dependency of the sut. Can only be called after the SutProvider has been initialized with <see cref="Create"/>.
+    /// Gets a dependency of the sut. Can only be called after the dependency has been set, either explicitly with
+    /// <see cref="SetDependency{T}"/> or automatically with <see cref="Create"/>.
     /// As dependencies are initialized with NSubstitute mocks by default, this is often used to retrieve those mocks in order to
     /// configure them during the arrange stage, or check received calls in the assert stage.
     /// </summary>
@@ -188,8 +189,10 @@ public class SutProvider<TSut> : ISutProvider
                 return _sutProvider.GetDependency(parameterInfo.ParameterType, "");
             }
 
-            // Fallback: create an NSubstitute mock (assuming the WithAutoNSubstitutions customization has been used)
-            // and register it using SetDependency so it can be retrieved later.
+            // Fallback: pass the request down the chain. This lets another fixture customization populate the value.
+            // If you haven't added any customizations, this should be an NSubstitute mock.
+            // It is registered with SetDependency so you can retrieve it later.
+
             // This is the equivalent of _fixture.Create<parameterInfo.ParameterType>, but no overload for
             // Create(Type type) exists.
             var dependency = new SpecimenContext(_fixture).Resolve(new SeededRequest(parameterInfo.ParameterType,
