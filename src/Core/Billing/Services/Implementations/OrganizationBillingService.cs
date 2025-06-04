@@ -417,6 +417,18 @@ public class OrganizationBillingService(
             TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
         };
 
+        // Only set trial_settings.end_behavior.missing_payment_method to "cancel" if there is no payment method
+        if (string.IsNullOrEmpty(customer.InvoiceSettings?.DefaultPaymentMethodId))
+        {
+            subscriptionCreateOptions.TrialSettings = new SubscriptionTrialSettingsOptions
+            {
+                EndBehavior = new SubscriptionTrialSettingsEndBehaviorOptions
+                {
+                    MissingPaymentMethod = "cancel"
+                }
+            };
+        }
+
         var setNonUSBusinessUseToReverseCharge =
             featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
 
