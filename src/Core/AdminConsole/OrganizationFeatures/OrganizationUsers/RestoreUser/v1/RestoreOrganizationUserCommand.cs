@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Diagnostics;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -238,6 +239,12 @@ public class RestoreOrganizationUserCommand(
 
     private async Task CheckPoliciesBeforeRestoreAsync(OrganizationUser orgUser, bool userHasTwoFactorEnabled)
     {
+        if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            await CheckPoliciesBeforeRestoreAsync_v2(orgUser, userHasTwoFactorEnabled);
+            return;
+        }
+
         // An invited OrganizationUser isn't linked with a user account yet, so these checks are irrelevant
         // The user will be subject to the same checks when they try to accept the invite
         if (OrganizationService.GetPriorActiveOrganizationUserStatusType(orgUser) == OrganizationUserStatusType.Invited)
@@ -296,6 +303,64 @@ public class RestoreOrganizationUserCommand(
         else if (!twoFactorCompliant)
         {
             throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
+        }
+    }
+
+    private async Task CheckPoliciesBeforeRestoreAsync_v2(OrganizationUser orgUser, bool userHasTwoFactorEnabled)
+    {
+        // An invited OrganizationUser isn't linked with a user account yet, so these checks are irrelevant
+        // The user will be subject to the same checks when they try to accept the invite
+        if (OrganizationService.GetPriorActiveOrganizationUserStatusType(orgUser) == OrganizationUserStatusType.Invited)
+        {
+            return;
+        }
+
+        Debug.Assert(orgUser.UserId.HasValue, "OrganizationUser is not invited but does not have a UserId.");
+
+        var userId = orgUser.UserId.Value;
+
+        // Check single org policy
+        var singleOrganizationPolicyRequirement =
+            await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(userId);
+        var singleOrganizationPolicyResult =
+            singleOrganizationPolicyRequirement.CanBeRestoredToOrganization(orgUser.OrganizationId);
+
+        // Check two factor policy
+        var twoFactorCompliant = userHasTwoFactorEnabled ||
+            !await IsTwoFactorRequiredForOrganizationAsync(userId, orgUser.OrganizationId);
+
+        // Return early if compliant with both policies
+        if (twoFactorCompliant && singleOrganizationPolicyResult is SingleOrganizationRequirementResult.Ok)
+        {
+            return;
+        }
+
+        var user = await userRepository.GetByIdAsync(userId);
+        if (user is null)
+        {
+            throw new NotFoundException("User not found.");
+        }
+
+        // Throw a detailed error message based on the particular combination of non-compliance
+        switch (singleOrganizationPolicyResult)
+        {
+            case SingleOrganizationRequirementResult.BlockedByThisOrganization when !twoFactorCompliant:
+                throw new BadRequestException(user.Email +
+                                              " is not compliant with the single organization and two-step login policy");
+
+            case SingleOrganizationRequirementResult.BlockedByThisOrganization:
+                throw new BadRequestException(user.Email + " is not compliant with the single organization policy");
+
+            case SingleOrganizationRequirementResult.BlockedByOtherOrganization:
+                throw new BadRequestException(user.Email +
+                                              " belongs to an organization that doesn't allow them to join multiple organizations");
+
+            case SingleOrganizationRequirementResult.Ok when !twoFactorCompliant:
+                throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
+
+            case SingleOrganizationRequirementResult.Ok:
+            default:
+                break;
         }
     }
 
