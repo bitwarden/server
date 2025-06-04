@@ -4,7 +4,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Collect NotificationIds as they are altered
+    -- Collect UserIds as they are altered
     DECLARE @UserIdsForAlteredNotifications TABLE (
         UserId UNIQUEIDENTIFIER
     );
