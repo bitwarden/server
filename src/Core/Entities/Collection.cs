@@ -15,7 +15,7 @@ public class Collection : ITableObject<Guid>
     public string? ExternalId { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
-    public CollectionType type { get; set; } = CollectionType.Shared;
+    public CollectionType Type { get; set; } = CollectionType.Shared;
 
     public void SetNewId()
     {

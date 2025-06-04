@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 
@@ -18,12 +19,14 @@ public class CollectionResponseModel : ResponseModel
         OrganizationId = collection.OrganizationId;
         Name = collection.Name;
         ExternalId = collection.ExternalId;
+        Type = collection.Type;
     }
 
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
     public string Name { get; set; }
     public string ExternalId { get; set; }
+    public CollectionType Type { get; set; }
 }
 
 /// <summary>
@@ -41,6 +44,7 @@ public class CollectionDetailsResponseModel : CollectionResponseModel
         ReadOnly = collectionDetails.ReadOnly;
         HidePasswords = collectionDetails.HidePasswords;
         Manage = collectionDetails.Manage;
+        Type = collectionDetails.Type;
     }
 
     public bool ReadOnly { get; set; }
@@ -60,7 +64,9 @@ public class CollectionAccessDetailsResponseModel : CollectionResponseModel
     /// <param name="collection"></param>
     public CollectionAccessDetailsResponseModel(Collection collection)
         : base(collection, "collectionAccessDetails")
-    { }
+    {
+        Type = collection.Type;
+    }
 
     /// <summary>
     /// Create a response model for when the requesting user is assumed not assigned to the collection. Includes
@@ -76,6 +82,7 @@ public class CollectionAccessDetailsResponseModel : CollectionResponseModel
     {
         Groups = groups.Select(g => new SelectionReadOnlyResponseModel(g));
         Users = users.Select(g => new SelectionReadOnlyResponseModel(g));
+        Type = collection.Type;
     }
 
     /// <summary>
@@ -92,6 +99,7 @@ public class CollectionAccessDetailsResponseModel : CollectionResponseModel
         Unmanaged = collection.Unmanaged;
         Groups = collection.Groups?.Select(g => new SelectionReadOnlyResponseModel(g)) ?? Enumerable.Empty<SelectionReadOnlyResponseModel>();
         Users = collection.Users?.Select(g => new SelectionReadOnlyResponseModel(g)) ?? Enumerable.Empty<SelectionReadOnlyResponseModel>();
+        Type = collection.Type;
     }
 
     public IEnumerable<SelectionReadOnlyResponseModel> Groups { get; set; }
