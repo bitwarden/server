@@ -420,7 +420,7 @@ public class OrganizationBillingService(
         var setNonUSBusinessUseToReverseCharge =
             featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
 
-        if (setNonUSBusinessUseToReverseCharge)
+        if (setNonUSBusinessUseToReverseCharge && customer.HasBillingLocation())
         {
             subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
