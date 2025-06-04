@@ -1,7 +1,6 @@
 ﻿#nullable enable
 
 using Azure.Messaging.ServiceBus;
-using Bit.Core.Settings;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -10,39 +9,30 @@ namespace Bit.Core.Services;
 public class AzureServiceBusIntegrationListenerService : BackgroundService
 {
     private readonly int _maxRetries;
-    private readonly string _subscriptionName;
-    private readonly string _topicName;
+    private readonly IAzureServiceBusService _serviceBusService;
     private readonly IIntegrationHandler _handler;
-    private readonly ServiceBusClient _client;
     private readonly ServiceBusProcessor _processor;
-    private readonly ServiceBusSender _sender;
     private readonly ILogger<AzureServiceBusIntegrationListenerService> _logger;
 
-    public AzureServiceBusIntegrationListenerService(
-        IIntegrationHandler handler,
+    public AzureServiceBusIntegrationListenerService(IIntegrationHandler handler,
+        string topicName,
         string subscriptionName,
-        GlobalSettings globalSettings,
+        int maxRetries,
+        IAzureServiceBusService serviceBusService,
         ILogger<AzureServiceBusIntegrationListenerService> logger)
     {
         _handler = handler;
         _logger = logger;
-        _maxRetries = globalSettings.EventLogging.AzureServiceBus.MaxRetries;
-        _topicName = globalSettings.EventLogging.AzureServiceBus.IntegrationTopicName;
-        _subscriptionName = subscriptionName;
+        _maxRetries = maxRetries;
+        _serviceBusService = serviceBusService;
 
-        _client = new ServiceBusClient(globalSettings.EventLogging.AzureServiceBus.ConnectionString);
-        _processor = _client.CreateProcessor(_topicName, _subscriptionName, new ServiceBusProcessorOptions());
-        _sender = _client.CreateSender(_topicName);
+        _processor = _serviceBusService.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions());
     }
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         _processor.ProcessMessageAsync += HandleMessageAsync;
-        _processor.ProcessErrorAsync += args =>
-        {
-            _logger.LogError(args.Exception, "Azure Service Bus error");
-            return Task.CompletedTask;
-        };
+        _processor.ProcessErrorAsync += ProcessErrorAsync;
 
         await _processor.StartProcessingAsync(cancellationToken);
     }
@@ -51,51 +41,67 @@ public class AzureServiceBusIntegrationListenerService : BackgroundService
     {
         await _processor.StopProcessingAsync(cancellationToken);
         await _processor.DisposeAsync();
-        await _sender.DisposeAsync();
-        await _client.DisposeAsync();
         await base.StopAsync(cancellationToken);
     }
 
-    private async Task HandleMessageAsync(ProcessMessageEventArgs args)
+    internal Task ProcessErrorAsync(ProcessErrorEventArgs args)
     {
-        var json = args.Message.Body.ToString();
+        _logger.LogError(
+            args.Exception,
+            "An error occurred. Entity Path: {EntityPath}, Error Source: {ErrorSource}",
+            args.EntityPath,
+            args.ErrorSource
+        );
+        return Task.CompletedTask;
+    }
 
+    internal async Task<bool> HandleMessageAsync(string body)
+    {
         try
         {
-            var result = await _handler.HandleAsync(json);
+            var result = await _handler.HandleAsync(body);
             var message = result.Message;
 
             if (result.Success)
             {
-                await args.CompleteMessageAsync(args.Message);
-                return;
+                // Successful integration. Return true to indicate the message has been handled
+                return true;
             }
 
             message.ApplyRetry(result.DelayUntilDate);
 
             if (result.Retryable && message.RetryCount < _maxRetries)
             {
-                var scheduledTime = (DateTime)message.DelayUntilDate!;
-                var retryMsg = new ServiceBusMessage(message.ToJson())
-                {
-                    Subject = args.Message.Subject,
-                    ScheduledEnqueueTime = scheduledTime
-                };
-
-                await _sender.SendMessageAsync(retryMsg);
+                // Publish message to the retry queue. It will be re-published for retry after a delay
+                // Return true to indicate the message has been handled
+                await _serviceBusService.PublishToRetryAsync(message);
+                return true;
             }
             else
             {
-                await args.DeadLetterMessageAsync(args.Message, "Retry limit exceeded or non-retryable");
-                return;
+                // Non-recoverable failure or exceeded the max number of retries
+                // Return false to indicate this message should be dead-lettered
+                return false;
             }
-
-            await args.CompleteMessageAsync(args.Message);
         }
         catch (Exception ex)
         {
+            // Unknown exception - log error, return true so the message will be acknowledged and not resent
             _logger.LogError(ex, "Unhandled error processing ASB message");
+            return true;
+        }
+    }
+
+    private async Task HandleMessageAsync(ProcessMessageEventArgs args)
+    {
+        var json = args.Message.Body.ToString();
+        if (await HandleMessageAsync(json))
+        {
             await args.CompleteMessageAsync(args.Message);
+        }
+        else
+        {
+            await args.DeadLetterMessageAsync(args.Message, "Retry limit exceeded or non-retryable");
         }
     }
 }

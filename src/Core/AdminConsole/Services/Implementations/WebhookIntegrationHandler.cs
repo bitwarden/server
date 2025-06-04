@@ -1,4 +1,6 @@
-﻿using System.Globalization;
+﻿#nullable enable
+
+using System.Globalization;
 using System.Net;
 using System.Text;
 using Bit.Core.AdminConsole.Models.Data.Integrations;
@@ -29,7 +31,7 @@ public class WebhookIntegrationHandler(IHttpClientFactory httpClientFactory)
             case HttpStatusCode.ServiceUnavailable:
             case HttpStatusCode.GatewayTimeout:
                 result.Retryable = true;
-                result.FailureReason = response.ReasonPhrase;
+                result.FailureReason = response.ReasonPhrase ?? $"Failure with status code: {(int)response.StatusCode}";
 
                 if (response.Headers.TryGetValues("Retry-After", out var values))
                 {
@@ -52,7 +54,7 @@ public class WebhookIntegrationHandler(IHttpClientFactory httpClientFactory)
                 break;
             default:
                 result.Retryable = false;
-                result.FailureReason = response.ReasonPhrase;
+                result.FailureReason = response.ReasonPhrase ?? $"Failure with status code {(int)response.StatusCode}";
                 break;
         }
 

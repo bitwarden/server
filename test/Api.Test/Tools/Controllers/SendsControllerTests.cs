@@ -3,7 +3,6 @@ using AutoFixture.Xunit2;
 using Bit.Api.Tools.Controllers;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
@@ -33,7 +32,6 @@ public class SendsControllerTests : IDisposable
     private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly ILogger<SendsController> _logger;
-    private readonly ICurrentContext _currentContext;
 
     public SendsControllerTests()
     {
@@ -45,7 +43,6 @@ public class SendsControllerTests : IDisposable
         _sendFileStorageService = Substitute.For<ISendFileStorageService>();
         _globalSettings = new GlobalSettings();
         _logger = Substitute.For<ILogger<SendsController>>();
-        _currentContext = Substitute.For<ICurrentContext>();
 
         _sut = new SendsController(
             _sendRepository,
@@ -55,8 +52,7 @@ public class SendsControllerTests : IDisposable
             _nonAnonymousSendCommand,
             _sendFileStorageService,
             _logger,
-            _globalSettings,
-            _currentContext
+            _globalSettings
         );
     }
 

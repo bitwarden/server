@@ -72,7 +72,7 @@ public class CipherServiceTests
 
     [Theory, BitAutoData]
     public async Task ShareManyAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider,
-        IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
+        IEnumerable<CipherDetails> ciphers, Guid organizationId, List<Guid> collectionIds)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
             .Returns(new Organization
@@ -651,7 +651,7 @@ public class CipherServiceTests
     [BitAutoData("")]
     [BitAutoData("Correct Time")]
     public async Task ShareManyAsync_CorrectRevisionDate_Passes(string revisionDateString,
-        SutProvider<CipherService> sutProvider, IEnumerable<Cipher> ciphers, Organization organization, List<Guid> collectionIds)
+        SutProvider<CipherService> sutProvider, IEnumerable<CipherDetails> ciphers, Organization organization, List<Guid> collectionIds)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id)
             .Returns(new Organization
@@ -1173,7 +1173,7 @@ public class CipherServiceTests
 
     [Theory, BitAutoData]
     public async Task ShareManyAsync_FreeOrgWithAttachment_Throws(SutProvider<CipherService> sutProvider,
-        IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
+        IEnumerable<CipherDetails> ciphers, Guid organizationId, List<Guid> collectionIds)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(new Organization
         {
@@ -1194,7 +1194,7 @@ public class CipherServiceTests
 
     [Theory, BitAutoData]
     public async Task ShareManyAsync_PaidOrgWithAttachment_Passes(SutProvider<CipherService> sutProvider,
-        IEnumerable<Cipher> ciphers, Guid organizationId, List<Guid> collectionIds)
+        IEnumerable<CipherDetails> ciphers, Guid organizationId, List<Guid> collectionIds)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
             .Returns(new Organization

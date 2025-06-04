@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Api.Vault.Controllers;
+using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
@@ -1741,8 +1742,200 @@ public class CiphersControllerTests
     {
         model.OrganizationId = Guid.NewGuid();
 
-        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(model.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderUserForOrgAsync(new Guid(model.OrganizationId.ToString()))
+            .Returns(Task.FromResult(true));
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PutRestoreManyAdmin(model));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.PutRestoreManyAdmin(model)
+        );
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutShareMany_ShouldShareCiphersAndReturnRevisionDateMap(
+        User user,
+        Guid organizationId,
+        Guid userId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var oldDate1 = DateTime.UtcNow.AddDays(-1);
+        var oldDate2 = DateTime.UtcNow.AddDays(-2);
+        var detail1 = new CipherDetails
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            OrganizationId = organizationId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new CipherLoginData()),
+            RevisionDate = oldDate1
+        };
+        var detail2 = new CipherDetails
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            OrganizationId = organizationId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new CipherLoginData()),
+            RevisionDate = oldDate2
+        };
+        var preloadedDetails = new List<CipherDetails> { detail1, detail2 };
+
+        var newDate1 = oldDate1.AddMinutes(5);
+        var newDate2 = oldDate2.AddMinutes(5);
+        var updatedCipher1 = new CipherDetails { Id = detail1.Id, RevisionDate = newDate1, Type = detail1.Type, Data = detail1.Data };
+        var updatedCipher2 = new CipherDetails { Id = detail2.Id, RevisionDate = newDate2, Type = detail2.Type, Data = detail2.Data };
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(Task.FromResult(true));
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(Task.FromResult(user));
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(default!)
+            .ReturnsForAnyArgs(userId);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(userId, withOrganizations: false)
+            .Returns(Task.FromResult((ICollection<CipherDetails>)preloadedDetails));
+
+        sutProvider.GetDependency<ICipherService>()
+            .ShareManyAsync(
+                Arg.Any<IEnumerable<(CipherDetails, DateTime?)>>(),
+                organizationId,
+                Arg.Any<IEnumerable<Guid>>(),
+                userId
+            )
+            .Returns(Task.FromResult<IEnumerable<CipherDetails>>(new[] { updatedCipher1, updatedCipher2 }));
+
+        var cipherRequests = preloadedDetails.Select(d =>
+        {
+            var m = new CipherWithIdRequestModel
+            {
+                Id = d.Id,
+                OrganizationId = d.OrganizationId!.Value.ToString(),
+                LastKnownRevisionDate = d.RevisionDate,
+                Type = d.Type,
+            };
+
+            if (d.Type == CipherType.Login)
+            {
+                m.Login = new CipherLoginModel
+                {
+                    Username = "",
+                    Password = "",
+                    Uris = [],
+                };
+                m.Name = "";
+                m.Notes = "";
+                m.Fields = Array.Empty<CipherFieldModel>();
+                m.PasswordHistory = Array.Empty<CipherPasswordHistoryModel>();
+            }
+
+            // similar for SecureNote, Card, etc., if you ever hit those branches
+            return m;
+        }).ToList();
+
+        var model = new CipherBulkShareRequestModel
+        {
+            Ciphers = cipherRequests,
+            CollectionIds = new[] { Guid.NewGuid().ToString() }
+        };
+
+        var result = await sutProvider.Sut.PutShareMany(model);
+
+        Assert.Equal(2, result.Data.Count());
+        var revisionDates = result.Data.Select(x => x.RevisionDate).ToList();
+        Assert.Contains(newDate1, revisionDates);
+        Assert.Contains(newDate2, revisionDates);
+
+        await sutProvider.GetDependency<ICipherService>()
+            .Received(1)
+            .ShareManyAsync(
+                Arg.Is<IEnumerable<(CipherDetails, DateTime?)>>(list =>
+                    list.Select(x => x.Item1.Id).OrderBy(id => id)
+                        .SequenceEqual(new[] { detail1.Id, detail2.Id }.OrderBy(id => id))
+                ),
+                organizationId,
+                Arg.Any<IEnumerable<Guid>>(),
+                userId
+            );
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutShareMany_OrganizationUserFalse_ThrowsNotFound(
+        CipherBulkShareRequestModel model,
+        SutProvider<CiphersController> sut)
+    {
+        model.Ciphers = new[] {
+          new CipherWithIdRequestModel { Id = Guid.NewGuid(), OrganizationId = Guid.NewGuid().ToString() }
+        };
+        sut.GetDependency<ICurrentContext>()
+            .OrganizationUser(Arg.Any<Guid>())
+            .Returns(Task.FromResult(false));
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sut.Sut.PutShareMany(model));
+    }
+    [Theory, BitAutoData]
+    public async Task PutShareMany_CipherNotOwned_ThrowsNotFoundException(
+        Guid organizationId,
+        Guid userId,
+        CipherWithIdRequestModel request,
+        SutProvider<CiphersController> sutProvider)
+    {
+        request.EncryptedFor = userId;
+        var model = new CipherBulkShareRequestModel
+        {
+            Ciphers = new[] { request },
+            CollectionIds = new[] { Guid.NewGuid().ToString() }
+        };
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(Task.FromResult(true));
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(default)
+            .ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(userId, withOrganizations: false)
+            .Returns(Task.FromResult((ICollection<CipherDetails>)new List<CipherDetails>()));
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.PutShareMany(model)
+        );
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutShareMany_EncryptedForWrongUser_ThrowsNotFoundException(
+        Guid organizationId,
+        Guid userId,
+        CipherWithIdRequestModel request,
+        SutProvider<CiphersController> sutProvider)
+    {
+        request.EncryptedFor = Guid.NewGuid(); // not equal to userId
+        var model = new CipherBulkShareRequestModel
+        {
+            Ciphers = new[] { request },
+            CollectionIds = new[] { Guid.NewGuid().ToString() }
+        };
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(Task.FromResult(true));
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(default)
+            .ReturnsForAnyArgs(userId);
+
+        var existing = new CipherDetails { Id = request.Id.Value };
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(userId, withOrganizations: false)
+            .Returns(Task.FromResult((ICollection<CipherDetails>)(new[] { existing })));
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.PutShareMany(model)
+        );
+    }
+
 }
+
