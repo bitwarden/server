@@ -800,7 +800,7 @@ public class AzureQueuePushNotificationServiceTests
     }
 
     [Fact]
-    public async Task PushPendingSecurityTasksAsync_SendsExpectedResponse()
+    public async Task PushRefreshSecurityTasksAsync_SendsExpectedResponse()
     {
         var userId = Guid.NewGuid();
 
@@ -815,7 +815,7 @@ public class AzureQueuePushNotificationServiceTests
         };
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushPendingSecurityTasksAsync(userId),
+            async sut => await sut.PushRefreshSecurityTasksAsync(userId),
             expectedPayload
         );
     }

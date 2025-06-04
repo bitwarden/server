@@ -223,9 +223,9 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         await SendMessageAsync(PushType.NotificationStatus, message, true);
     }
 
-    public async Task PushPendingSecurityTasksAsync(Guid userId)
+    public async Task PushRefreshSecurityTasksAsync(Guid userId)
     {
-        await PushUserAsync(userId, PushType.PendingSecurityTasks);
+        await PushUserAsync(userId, PushType.RefreshSecurityTasks);
     }
 
     private async Task PushSendAsync(Send send, PushType type)

@@ -135,7 +135,7 @@ public static class HubHelpers
                 }
 
                 break;
-            case PushType.PendingSecurityTasks:
+            case PushType.RefreshSecurityTasks:
                 var pendingTasksData = JsonSerializer.Deserialize<PushNotificationData<UserPushNotification>>(notificationJson, _deserializerOptions);
                 await hubContext.Clients.User(pendingTasksData.Payload.UserId.ToString())
                     .SendAsync(_receiveMessageMethod, pendingTasksData, cancellationToken);

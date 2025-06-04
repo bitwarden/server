@@ -305,9 +305,9 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             false
         );
 
-    public async Task PushPendingSecurityTasksAsync(Guid userId)
+    public async Task PushRefreshSecurityTasksAsync(Guid userId)
     {
-        await PushUserAsync(userId, PushType.PendingSecurityTasks);
+        await PushUserAsync(userId, PushType.RefreshSecurityTasks);
     }
 
     private async Task SendPayloadToInstallationAsync(PushType type, object payload, bool excludeCurrentContext,
