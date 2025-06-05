@@ -11,13 +11,7 @@ CREATE TABLE [dbo].[UserSignatureKeyPair] (
 );
 GO
 
-IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'UserSignatureKeyPairView')
-BEGIN
-    DROP VIEW [dbo].[UserSignatureKeyPairView]
-END
-GO
-
-CREATE VIEW [dbo].[UserSignatureKeyPairView]
+CREATE OR ALTER VIEW [dbo].[UserSignatureKeyPairView]
 AS
 SELECT
     *
