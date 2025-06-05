@@ -15,8 +15,7 @@
       matchManagers: ["github-actions"],
       matchFileNames: [
         ".github/workflows/publish.yml",
-        ".github/workflows/release.yml",
-        ".github/workflows/repository-management.yml"
+        ".github/workflows/release.yml"
       ],
       commitMessagePrefix: "[deps] BRE:",
       reviewers: ["team:dept-bre"],
@@ -134,8 +133,8 @@
       reviewers: ["team:dept-dbops"],
     },
     {
-      matchPackageNames: ["CommandDotNet", "YamlDotNet"],
-      description: "DevOps owned dependencies",
+      matchPackageNames: ["YamlDotNet"],
+      description: "BRE owned dependencies",
       commitMessagePrefix: "[deps] BRE:",
       reviewers: ["team:dept-bre"],
     },
