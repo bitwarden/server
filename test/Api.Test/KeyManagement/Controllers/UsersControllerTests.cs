@@ -5,7 +5,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -81,7 +80,13 @@ public class UsersControllerTests
         };
 
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(userId).Returns(user);
-        sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(userId).ReturnsNull();
+        sutProvider.GetDependency<IUserAccountKeysQuery>()
+            .Run(user)
+            .Returns(new UserAccountKeysData
+            {
+                PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("wrappedPrivateKey", "publicKey", null),
+                SignatureKeyPairData = null,
+            });
 
         var result = await sutProvider.Sut.GetAccountKeysAsync(userId.ToString());
         Assert.NotNull(result);
