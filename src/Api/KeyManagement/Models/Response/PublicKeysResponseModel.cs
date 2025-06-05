@@ -1,6 +1,9 @@
-﻿using Bit.Core.Models.Api;
+﻿using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.Models.Api;
 
 namespace Bit.Api.KeyManagement.Models.Response;
+
+#nullable enable
 
 /// <summary>
 /// This response model is used to return the public keys of a user, to any other registered user or entity on the server.
@@ -8,16 +11,24 @@ namespace Bit.Api.KeyManagement.Models.Response;
 /// </summary>
 public class PublicKeysResponseModel : ResponseModel
 {
-    public PublicKeysResponseModel(string verifyingKey, string publicKey, string signedPublicKey)
+    public PublicKeysResponseModel(UserAccountKeysData accountKeys)
         : base("publicKeys")
     {
-        VerifyingKey = verifyingKey;
-        SignedPublicKey = signedPublicKey;
-        PublicKey = publicKey;
+        if (accountKeys == null)
+        {
+            throw new ArgumentNullException(nameof(accountKeys));
+        }
+
+        if (accountKeys.SignatureKeyPairData != null)
+        {
+            SignedPublicKey = accountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey;
+            VerifyingKey = accountKeys.SignatureKeyPairData.VerifyingKey;
+        }
+        PublicKey = accountKeys.PublicKeyEncryptionKeyPairData.PublicKey;
     }
 
-    public string VerifyingKey { get; set; }
-    public string SignedPublicKey { get; set; }
-    [System.Obsolete("Use SignedPublicKey for new code.")]
-    public string PublicKey { get; set; }
+    public string? VerifyingKey { get; set; }
+    public string? SignedPublicKey { get; set; }
+    [System.Obsolete("Use SignedPublicKey for new code, if it is not null.")]
+    public required string PublicKey { get; set; }
 }
