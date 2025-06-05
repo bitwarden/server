@@ -59,7 +59,7 @@ public class AccountsController(
         var userTwoFactorEnabled = await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
-        var userAccountKeysData = await userAccountKeysQuery.Run(user);
+        var userAccountKeysData = new PrivateKeysResponseModel(await userAccountKeysQuery.Run(user));
 
         var profile = new ProfileResponseModel(user, userAccountKeysData, null, null, null, userTwoFactorEnabled,
             userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);

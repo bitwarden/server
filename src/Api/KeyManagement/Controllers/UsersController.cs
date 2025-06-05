@@ -1,6 +1,6 @@
 ﻿using Bit.Api.KeyManagement.Models.Response;
+using Bit.Api.KeyManagement.Queries;
 using Bit.Core.Exceptions;
-using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,19 +10,10 @@ namespace Bit.Api.Controllers;
 
 [Route("users")]
 [Authorize("Application")]
-public class UsersController : Controller
+public class UsersController(
+    IUserRepository _userRepository,
+    IUserAccountKeysQuery _userAccountKeysQuery) : Controller
 {
-    private readonly IUserRepository _userRepository;
-    private readonly IUserSignatureKeyPairRepository _signatureKeyPairRepository;
-
-    public UsersController(
-        IUserRepository userRepository,
-        IUserSignatureKeyPairRepository signatureKeyPairRepository)
-    {
-        _userRepository = userRepository;
-        _signatureKeyPairRepository = signatureKeyPairRepository;
-    }
-
     [HttpGet("{id}/public-key")]
     public async Task<UserKeyResponseModel> Get(string id)
     {
@@ -46,9 +37,11 @@ public class UsersController : Controller
             throw new NotFoundException();
         }
 
-        var signingKeys = await _signatureKeyPairRepository.GetByUserIdAsync(guidId);
-        var verifyingKey = signingKeys?.VerifyingKey;
-
-        return new PublicKeysResponseModel(verifyingKey, user.PublicKey, null);
+        var accountKeys = await _userAccountKeysQuery.Run(user);
+        if (accountKeys == null)
+        {
+            throw new NotFoundException("User account keys not found.");
+        }
+        return new PublicKeysResponseModel(accountKeys);
     }
 }

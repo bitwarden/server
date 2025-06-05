@@ -4,7 +4,6 @@ using Bit.Api.Tools.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Entities;
-using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
@@ -21,7 +20,7 @@ public class SyncResponseModel : ResponseModel
     public SyncResponseModel(
         GlobalSettings globalSettings,
         User user,
-        UserAccountKeysData userAccountKeysData,
+        PrivateKeysResponseModel privateKeysResponseModel,
         bool userTwoFactorEnabled,
         bool userHasPremiumFromOrganization,
         IDictionary<Guid, OrganizationAbility> organizationAbilities,
@@ -38,7 +37,7 @@ public class SyncResponseModel : ResponseModel
         IEnumerable<Send> sends)
         : base("sync")
     {
-        Profile = new ProfileResponseModel(user, userAccountKeysData, organizationUserDetails, providerUserDetails,
+        Profile = new ProfileResponseModel(user, privateKeysResponseModel, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingingUser);
         Folders = folders.Select(f => new FolderResponseModel(f));
         Ciphers = ciphers.Select(cipher =>

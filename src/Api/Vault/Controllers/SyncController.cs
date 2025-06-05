@@ -1,4 +1,5 @@
-﻿using Bit.Api.Vault.Models.Response;
+﻿using Bit.Api.Models.Response;
+using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -124,7 +125,7 @@ public class SyncController : Controller
             SignatureKeyPairData = signingKeys,
         };
 
-        var response = new SyncResponseModel(_globalSettings, user, userAccountKeysData, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
+        var response = new SyncResponseModel(_globalSettings, user, new PrivateKeysResponseModel(userAccountKeysData), userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;

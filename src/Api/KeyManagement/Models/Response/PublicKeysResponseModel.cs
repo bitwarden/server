@@ -11,9 +11,11 @@ namespace Bit.Api.KeyManagement.Models.Response;
 /// </summary>
 public class PublicKeysResponseModel : ResponseModel
 {
+    [System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute]
     public PublicKeysResponseModel(UserAccountKeysData accountKeys)
         : base("publicKeys")
     {
+        PublicKey = accountKeys.PublicKeyEncryptionKeyPairData.PublicKey;
         if (accountKeys == null)
         {
             throw new ArgumentNullException(nameof(accountKeys));
@@ -24,11 +26,9 @@ public class PublicKeysResponseModel : ResponseModel
             SignedPublicKey = accountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey;
             VerifyingKey = accountKeys.SignatureKeyPairData.VerifyingKey;
         }
-        PublicKey = accountKeys.PublicKeyEncryptionKeyPairData.PublicKey;
     }
 
     public string? VerifyingKey { get; set; }
     public string? SignedPublicKey { get; set; }
-    [System.Obsolete("Use SignedPublicKey for new code, if it is not null.")]
     public required string PublicKey { get; set; }
 }
