@@ -18,12 +18,7 @@ public class UsersController(
     public async Task<UserKeyResponseModel> GetPublicKeyAsync(string id)
     {
         var guidId = new Guid(id);
-        var key = await _userRepository.GetPublicKeyAsync(guidId);
-        if (key == null)
-        {
-            throw new NotFoundException();
-        }
-
+        var key = await _userRepository.GetPublicKeyAsync(guidId) ?? throw new NotFoundException();
         return new UserKeyResponseModel(guidId, key);
     }
 
@@ -31,17 +26,8 @@ public class UsersController(
     public async Task<PublicKeysResponseModel> GetAccountKeysAsync(string id)
     {
         var guidId = new Guid(id);
-        var user = await _userRepository.GetByIdAsync(guidId);
-        if (user == null)
-        {
-            throw new NotFoundException();
-        }
-
-        var accountKeys = await _userAccountKeysQuery.Run(user);
-        if (accountKeys == null)
-        {
-            throw new NotFoundException("User account keys not found.");
-        }
+        var user = await _userRepository.GetByIdAsync(guidId) ?? throw new NotFoundException();
+        var accountKeys = await _userAccountKeysQuery.Run(user) ?? throw new NotFoundException("User account keys not found.");
         return new PublicKeysResponseModel(accountKeys);
     }
 }
