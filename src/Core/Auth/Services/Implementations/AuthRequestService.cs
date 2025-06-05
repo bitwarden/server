@@ -85,12 +85,6 @@ public class AuthRequestService : IAuthRequestService
         return authRequest;
     }
 
-    /// <summary>
-    /// Validates and Creates an <see cref="AuthRequest" /> in the database, as well as pushes it through notifications services
-    /// </summary>
-    /// <remarks>
-    /// This method can only be called inside of an HTTP call because of it's reliance on <see cref="ICurrentContext" />
-    /// </remarks>
     public async Task<AuthRequest> CreateAuthRequestAsync(AuthRequestCreateRequestModel model)
     {
         if (!_currentContext.DeviceType.HasValue)
