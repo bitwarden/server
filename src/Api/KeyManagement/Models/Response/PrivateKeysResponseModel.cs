@@ -1,7 +1,7 @@
 ﻿using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response;
+namespace Bit.Api.KeyManagement.Models.Response;
 
 #nullable enable
 
