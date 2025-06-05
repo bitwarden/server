@@ -9,6 +9,7 @@ public interface IAuthRequestRepository : IRepository<AuthRequest, Guid>
 {
     Task<int> DeleteExpiredAsync(TimeSpan userRequestExpiration, TimeSpan adminRequestExpiration, TimeSpan afterAdminApprovalExpiration);
     Task<ICollection<AuthRequest>> GetManyByUserIdAsync(Guid userId);
+    Task<IEnumerable<AuthRequest>> GetManyPendingAuthRequestByUserId(Guid userId);
     Task<ICollection<OrganizationAdminAuthRequest>> GetManyPendingByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<OrganizationAdminAuthRequest>> GetManyAdminApprovalRequestsByManyIdsAsync(Guid organizationId, IEnumerable<Guid> ids);
     Task UpdateManyAsync(IEnumerable<AuthRequest> authRequests);

@@ -3,7 +3,9 @@ using AutoMapper.QueryableExtensions;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
+using Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,9 +16,13 @@ namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 
 public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, AuthRequest, Guid>, IAuthRequestRepository
 {
-    public AuthRequestRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.AuthRequests)
-    { }
+    private readonly IGlobalSettings _globalSettings;
+    public AuthRequestRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper, IGlobalSettings globalSettings)
+        : base(serviceScopeFactory, mapper, context => context.AuthRequests)
+    {
+        _globalSettings = globalSettings;
+    }
+
     public async Task<int> DeleteExpiredAsync(
         TimeSpan userRequestExpiration, TimeSpan adminRequestExpiration, TimeSpan afterAdminApprovalExpiration)
     {
@@ -55,6 +61,17 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
 
             return orgUserAuthRequests;
         }
+    }
+
+    public async Task<IEnumerable<Core.Auth.Entities.AuthRequest>> GetManyPendingAuthRequestByUserId(Guid userId)
+    {
+        var expirationMinutes = (int)_globalSettings.PasswordlessAuth.UserRequestExpiration.TotalMinutes;
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var pendingAuthRequestQuery = new AuthRequestReadPendingByUserIdQuery()
+            .GetQuery(dbContext, userId, expirationMinutes);
+
+        return await pendingAuthRequestQuery.ToListAsync();
     }
 
     public async Task<ICollection<OrganizationAdminAuthRequest>> GetManyAdminApprovalRequestsByManyIdsAsync(
