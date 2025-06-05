@@ -12,7 +12,7 @@ public interface IMailer
     /// </summary>
     /// <param name="message"></param>
     /// <param name="recipient">Recipient email</param>
-    public void SendEmail(BaseMailModel2 message, string recipient);
+    public Task SendEmail(BaseMailModel2 message, string recipient);
 
     /// <summary>
     /// Sends multiple emails message to the specified recipients.
