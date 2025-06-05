@@ -4,6 +4,7 @@ namespace Bit.Infrastructure.EntityFramework.Models;
 
 public class UserSignatureKeyPair : Core.KeyManagement.Entities.UserSignatureKeyPair
 {
+    public virtual User User { get; set; }
 }
 
 public class UserSignatureKeyPairMapperProfile : Profile
