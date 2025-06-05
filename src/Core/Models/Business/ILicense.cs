@@ -15,7 +15,6 @@ public interface ILicense
     string Hash { get; set; }
     string Signature { get; set; }
     string Token { get; set; }
-    byte[] SignatureBytes { get; }
     byte[] GetDataBytes(bool forHash = false);
     byte[] ComputeHash();
     bool VerifySignature(X509Certificate2 certificate);

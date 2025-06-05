@@ -62,7 +62,7 @@ public class CloudGetOrganizationLicenseQueryTests
         Assert.Equal(LicenseType.Organization, result.LicenseType);
         Assert.Equal(organization.Id, result.Id);
         Assert.Equal(installationId, result.InstallationId);
-        Assert.Equal(licenseSignature, result.SignatureBytes);
+        Assert.Equal(licenseSignature, Convert.FromBase64String(result.Signature));
         Assert.Equal(string.Empty, result.Token);
     }
 
@@ -111,7 +111,7 @@ public class CloudGetOrganizationLicenseQueryTests
         Assert.Equal(LicenseType.Organization, result.LicenseType);
         Assert.Equal(organization.Id, result.Id);
         Assert.Equal(installationId, result.InstallationId);
-        Assert.Equal(licenseSignature, result.SignatureBytes);
+        Assert.Equal(licenseSignature, Convert.FromBase64String(result.Signature));
         Assert.Equal(DateTime.UtcNow.AddYears(1).Date, result.Expires!.Value.Date);
     }
 }

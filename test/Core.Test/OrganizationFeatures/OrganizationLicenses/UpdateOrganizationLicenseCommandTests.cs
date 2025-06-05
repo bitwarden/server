@@ -48,6 +48,7 @@ public class UpdateOrganizationLicenseCommandTests
         license.Version = OrganizationLicense.CurrentLicenseFileVersion;
         license.InstallationId = globalSettings.Installation.Id;
         license.LicenseType = LicenseType.Organization;
+        license.SelfHost = true;
         sutProvider.GetDependency<ILicensingService>().VerifyLicense(license).Returns(true);
         sutProvider.GetDependency<ILicensingService>()
             .GetClaimsPrincipalFromLicense(license)
@@ -74,7 +75,7 @@ public class UpdateOrganizationLicenseCommandTests
             await using var fs = File.OpenRead(filePath);
             var licenseFromFile = await JsonSerializer.DeserializeAsync<OrganizationLicense>(fs);
 
-            AssertHelper.AssertPropertyEqual(license, licenseFromFile, "SignatureBytes");
+            AssertHelper.AssertPropertyEqual(license, licenseFromFile, "");
 
             // Assertion: should have updated and saved the organization
             // Properties excluded from the comparison below are exceptions to the rule that the Organization mirrors
@@ -84,7 +85,7 @@ public class UpdateOrganizationLicenseCommandTests
                 .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(
                     org => AssertPropertyEqual(license, org,
                         "Id", "MaxStorageGb", "Issued", "Refresh", "Version", "Trial", "LicenseType",
-                        "Hash", "Signature", "SignatureBytes", "InstallationId", "Expires",
+                        "Hash", "Signature", "InstallationId", "Expires",
                         "ExpirationWithoutGracePeriod", "Token", "LimitCollectionCreationDeletion",
                         "LimitCollectionCreation", "LimitCollectionDeletion", "AllowAdminAccessToAllCollectionItems",
                         "UseOrganizationDomains", "UseAdminSponsoredFamilies") &&
