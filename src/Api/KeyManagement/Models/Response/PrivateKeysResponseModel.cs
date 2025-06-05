@@ -1,5 +1,4 @@
-﻿using System.Text.Json.Serialization;
-using Bit.Core.KeyManagement.Models.Data;
+﻿using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.KeyManagement.Models.Response;
@@ -14,11 +13,10 @@ namespace Bit.Api.KeyManagement.Models.Response;
 /// </summary>
 public class PrivateKeysResponseModel : ResponseModel
 {
-    [JsonConstructor]
     [System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute]
     public PrivateKeysResponseModel(UserAccountKeysData accountKeys) : base("privateKeys")
     {
-        PublicKeyEncryptionKeyPair = accountKeys.PublicKeyEncryptionKeyPairData;
+        PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairModel(accountKeys.PublicKeyEncryptionKeyPairData);
         if (accountKeys == null)
         {
             throw new ArgumentNullException(nameof(accountKeys));
@@ -26,12 +24,12 @@ public class PrivateKeysResponseModel : ResponseModel
 
         if (accountKeys.SignatureKeyPairData != null)
         {
-            SignatureKeyPair = accountKeys.SignatureKeyPairData;
+            SignatureKeyPair = new SignatureKeyPairResponseModel(accountKeys.SignatureKeyPairData);
         }
     }
 
     // Not all accounts have signature keys, but all accounts have public encryption keys.
-    public SignatureKeyPairData? SignatureKeyPair { get; set; }
-    public required PublicKeyEncryptionKeyPairData PublicKeyEncryptionKeyPair { get; set; }
+    public SignatureKeyPairResponseModel? SignatureKeyPair { get; set; }
+    public required PublicKeyEncryptionKeyPairModel PublicKeyEncryptionKeyPair { get; set; }
 
 }
