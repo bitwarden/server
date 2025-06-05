@@ -228,12 +228,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         return await GetCountFromQuery(query);
     }
 
-    public async Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
-    {
-        var query = new OrganizationUserReadOccupiedSeatCountByOrganizationIdQuery(organizationId);
-        return await GetCountFromQuery(query);
-    }
-
     public async Task<int> GetCountByOrganizationIdAsync(Guid organizationId)
     {
         var query = new OrganizationUserReadCountByOrganizationIdQuery(organizationId);
