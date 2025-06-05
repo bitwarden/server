@@ -1,24 +1,24 @@
 # Design goals
 
-The main goal of event integrations is to enable easily adding new integrations over time without the need
+The main goal of event integrations is to easily enable adding new integrations over time without the need
 for a lot of custom work to expose events to a new integration. The ability of fan-out offered by AMQP
 (either in RabbitMQ or in Azure Service Bus) gives us a way to attach any number of new integrations to the
 existing event system without needing to add special handling. By adding a new listener to the existing
 pipeline, it gains an independent stream of events without the need for additional broadcast code.
 
-In addition, we wanted to enable robust handling of failures and retries. By utilizing the two-tier approach
+We want to enable robust handling of failures and retries. By utilizing the two-tier approach
 (described below), we have built-in support at the service level for retries. When we add new integrations,
 they can focus solely on the process of sending the specific integration and reporting status, with all the
 process of retries and delays offloaded to the messaging system.
 
-Another goal was to not only support this functionality for the Cloud version, but offer it as well to
+Another goal was to not only support this functionality for the cloud version, but offer it as well to
 self-hosted instances. By using RabbitMQ for the self-hosted piece, we have a lightweight way to tie
 into the event system outside of the Cloud offering (which is using Azure Service Bus) using the same robust
 architecture for integrations locally.
 
-Finally, we wanted to offer Organization admins flexibility and control over what events are significant, where
+Finally, we wanted to offer organization admins flexibility and control over what events are significant, where
 to send events, and the data to be included in the message. The configuration architecture allows Organizations
-to customize details of a specific integration, See Integrations and integration configurations below for more
+to customize details of a specific integration; see Integrations and integration configurations below for more
 details on the configuration piece.
 
 
