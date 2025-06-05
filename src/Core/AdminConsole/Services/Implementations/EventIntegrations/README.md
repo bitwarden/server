@@ -201,38 +201,38 @@ Currently, there are integrations / handlers for Slack and webhooks (as mentione
 
 ### `OrganizationIntegration`
 
-- The top level object that enables a specific integration for the organization.
-- Includes any properties that apply to the entire integration across all events.
+  - The top level object that enables a specific integration for the organization.
+  - Includes any properties that apply to the entire integration across all events.
+    - For Slack, it consists of the token:
 
-  - For Slack, it consists of the token:
-
-    ``` json
-      { "token": "xoxb-token-from-slack" }
-    ```
-
+      ``` json
+        { "token": "xoxb-token-from-slack" }
+      ```
     - For webhooks, it is `null`. However, even though there is no configuration, an organization must
       have a webhook `OrganizationIntegration` to enable configuration via
       `OrganizationIntegrationConfiguration`.
 
 ### `OrganizationIntegrationConfiguration`
 
-- This contains the configurations specific to each `EventType` for the integration.
-- `Configuration` contains the event-specific configuration.
+  - This contains the configurations specific to each `EventType` for the integration.
+  - `Configuration` contains the event-specific configuration.
 
-  - For Slack, this would contain what channel to send the message to:
+    - For Slack, this would contain what channel to send the message to:
 
-    ``` json
-       { "channelId": "C123456" }
-    ```
+      ``` json
+         {
+           "channelId": "C123456"
+         }
+      ```
 
-  - For Webhook, this is the URL the request should be sent to:
+    - For Webhooks, this is the URL the request should be sent to:
 
-    ``` json
-      { "url": "https://api.example.com" }
-    ```
+      ``` json
+         { "url": "https://api.example.com" }
+      ```
 
-- `Template` contains a template string that is expected to be filled in with the contents of the
-  actual event.
+  - `Template` contains a template string that is expected to be filled in with the contents of the
+    actual event.
     - The tokens in the string are wrapped in `#` characters. For instance, the UserId would be
       `#UserId#`.
     - The `IntegrationTemplateProcessor` does the actual work of replacing these tokens with
