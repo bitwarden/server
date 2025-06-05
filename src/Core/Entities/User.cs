@@ -263,11 +263,6 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
             throw new InvalidOperationException("User public key encryption key pair is not fully initialized.");
         }
 
-        return new PublicKeyEncryptionKeyPairData
-        {
-            WrappedPrivateKey = PrivateKey,
-            SignedPublicKey = SignedPublicKey,
-            PublicKey = PublicKey
-        };
+        return new PublicKeyEncryptionKeyPairData(PrivateKey, PublicKey, SignedPublicKey);
     }
 }

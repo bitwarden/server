@@ -25,12 +25,7 @@ public class UserSignatureKeyPairRepository : Repository<Core.KeyManagement.Enti
             return null;
         }
 
-        return new SignatureKeyPairData
-        {
-            SignatureAlgorithm = signingKeys.SignatureAlgorithm,
-            WrappedSigningKey = signingKeys.SigningKey,
-            VerifyingKey = signingKeys.VerifyingKey,
-        };
+        return signingKeys.ToSignatureKeyPairData();
     }
 
     public UpdateEncryptedDataForKeyRotation SetUserSignatureKeyPair(Guid userId, SignatureKeyPairData signingKeys)
