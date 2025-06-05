@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UserKeyResponseModel = Bit.Api.Models.Response.UserKeyResponseModel;
 
-namespace Bit.Api.Controllers;
+namespace Bit.Api.KeyManagement.Controllers;
 
 [Route("users")]
 [Authorize("Application")]
@@ -15,7 +15,7 @@ public class UsersController(
     IUserAccountKeysQuery _userAccountKeysQuery) : Controller
 {
     [HttpGet("{id}/public-key")]
-    public async Task<UserKeyResponseModel> Get(string id)
+    public async Task<UserKeyResponseModel> GetPublicKey(string id)
     {
         var guidId = new Guid(id);
         var key = await _userRepository.GetPublicKeyAsync(guidId);
