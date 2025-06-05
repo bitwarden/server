@@ -124,8 +124,9 @@ public class SyncController : Controller
             PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
             SignatureKeyPairData = signingKeys,
         };
+        var accountKeys = new PrivateKeysResponseModel(userAccountKeysData);
 
-        var response = new SyncResponseModel(_globalSettings, user, new PrivateKeysResponseModel(userAccountKeysData), userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
+        var response = new SyncResponseModel(_globalSettings, user, accountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;
