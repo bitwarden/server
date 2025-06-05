@@ -1,4 +1,5 @@
-﻿using Bit.Api.Models.Response;
+﻿using Bit.Api.KeyManagement.Queries;
+using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
@@ -9,8 +10,6 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -42,7 +41,7 @@ public class SyncController : Controller
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
-    private readonly IUserSignatureKeyPairRepository _userSignatureKeyPairRepository;
+    private readonly IUserAccountKeysQuery _userAccountKeysQuery;
 
     public SyncController(
         IUserService userService,
@@ -59,7 +58,7 @@ public class SyncController : Controller
         IFeatureService featureService,
         IApplicationCacheService applicationCacheService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IUserSignatureKeyPairRepository userSignatureKeyPairRepository)
+        IUserAccountKeysQuery userAccountKeysQuery)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -75,7 +74,7 @@ public class SyncController : Controller
         _featureService = featureService;
         _applicationCacheService = applicationCacheService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
-        _userSignatureKeyPairRepository = userSignatureKeyPairRepository;
+        _userAccountKeysQuery = userAccountKeysQuery;
     }
 
     [HttpGet("")]
@@ -118,13 +117,7 @@ public class SyncController : Controller
         var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
 
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-        var signingKeys = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id);
-        var userAccountKeysData = new UserAccountKeysData
-        {
-            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
-            SignatureKeyPairData = signingKeys,
-        };
-        var accountKeys = new PrivateKeysResponseModel(userAccountKeysData);
+        var accountKeys = new PrivateKeysResponseModel(await _userAccountKeysQuery.Run(user));
 
         var response = new SyncResponseModel(_globalSettings, user, accountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
