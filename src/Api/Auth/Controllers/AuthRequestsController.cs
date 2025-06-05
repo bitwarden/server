@@ -20,14 +20,12 @@ public class AuthRequestsController(
     IUserService userService,
     IAuthRequestRepository authRequestRepository,
     IGlobalSettings globalSettings,
-    IAuthRequestService authRequestService,
-    IFeatureService featureService) : Controller
+    IAuthRequestService authRequestService) : Controller
 {
     private readonly IUserService _userService = userService;
     private readonly IAuthRequestRepository _authRequestRepository = authRequestRepository;
     private readonly IGlobalSettings _globalSettings = globalSettings;
     private readonly IAuthRequestService _authRequestService = authRequestService;
-    private readonly IFeatureService _featureService = featureService;
 
     [HttpGet("")]
     public async Task<ListResponseModel<AuthRequestResponseModel>> Get()

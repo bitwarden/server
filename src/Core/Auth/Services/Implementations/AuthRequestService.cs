@@ -58,9 +58,9 @@ public class AuthRequestService : IAuthRequestService
         _logger = logger;
     }
 
-    public async Task<AuthRequest?> GetAuthRequestAsync(Guid id, Guid userId)
+    public async Task<AuthRequest?> GetAuthRequestAsync(Guid authRequestId, Guid userId)
     {
-        var authRequest = await _authRequestRepository.GetByIdAsync(id);
+        var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId);
         if (authRequest == null || authRequest.UserId != userId)
         {
             return null;
@@ -69,10 +69,10 @@ public class AuthRequestService : IAuthRequestService
         return authRequest;
     }
 
-    public async Task<AuthRequest?> GetValidatedAuthRequestAsync(Guid id, string code)
+    public async Task<AuthRequest?> GetValidatedAuthRequestAsync(Guid authRequestId, string accessCode)
     {
-        var authRequest = await _authRequestRepository.GetByIdAsync(id);
-        if (authRequest == null || !CoreHelpers.FixedTimeEquals(authRequest.AccessCode, code))
+        var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId);
+        if (authRequest == null || !CoreHelpers.FixedTimeEquals(authRequest.AccessCode, accessCode))
         {
             return null;
         }
