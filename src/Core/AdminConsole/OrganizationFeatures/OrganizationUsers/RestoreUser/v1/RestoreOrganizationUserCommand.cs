@@ -241,7 +241,7 @@ public class RestoreOrganizationUserCommand(
     {
         if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
-            await CheckPoliciesBeforeRestoreAsync_v2(orgUser, userHasTwoFactorEnabled);
+            await CheckPoliciesBeforeRestoreAsync_vNext(orgUser, userHasTwoFactorEnabled);
             return;
         }
 
@@ -306,7 +306,7 @@ public class RestoreOrganizationUserCommand(
         }
     }
 
-    private async Task CheckPoliciesBeforeRestoreAsync_v2(OrganizationUser orgUser, bool userHasTwoFactorEnabled)
+    private async Task CheckPoliciesBeforeRestoreAsync_vNext(OrganizationUser orgUser, bool userHasTwoFactorEnabled)
     {
         // An invited OrganizationUser isn't linked with a user account yet, so these checks are irrelevant
         // The user will be subject to the same checks when they try to accept the invite

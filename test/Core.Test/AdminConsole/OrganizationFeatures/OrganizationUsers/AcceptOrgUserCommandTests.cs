@@ -305,6 +305,10 @@ public class AcceptOrgUserCommandTests
                     PolicyType = PolicyType.TwoFactorAuthentication,
                 }
             ]));
+        sutProvider
+            .GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
@@ -342,6 +346,10 @@ public class AcceptOrgUserCommandTests
                     PolicyType = PolicyType.TwoFactorAuthentication,
                 }
             ]));
+        sutProvider
+            .GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
 
         await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
 
@@ -374,6 +382,10 @@ public class AcceptOrgUserCommandTests
                     PolicyType = PolicyType.TwoFactorAuthentication,
                 }
             ]));
+        sutProvider
+            .GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
 
         await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
 
