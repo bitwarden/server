@@ -304,6 +304,12 @@ public class SyncControllerTests
         twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
         userService.HasPremiumFromOrganization(user).Returns(false);
 
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
         // Execute GET
         var result = await sutProvider.Sut.Get();
 
