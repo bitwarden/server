@@ -1,4 +1,6 @@
 ﻿#nullable enable
+
+using Bit.Api.KeyManagement.Models.Response;
 using Bit.Api.KeyManagement.Queries;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
