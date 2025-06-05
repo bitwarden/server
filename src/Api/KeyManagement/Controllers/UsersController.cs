@@ -15,7 +15,7 @@ public class UsersController(
     IUserAccountKeysQuery _userAccountKeysQuery) : Controller
 {
     [HttpGet("{id}/public-key")]
-    public async Task<UserKeyResponseModel> GetPublicKey(string id)
+    public async Task<UserKeyResponseModel> GetPublicKeyAsync(string id)
     {
         var guidId = new Guid(id);
         var key = await _userRepository.GetPublicKeyAsync(guidId);
@@ -28,7 +28,7 @@ public class UsersController(
     }
 
     [HttpGet("{id}/keys")]
-    public async Task<PublicKeysResponseModel> GetAccountKeys(string id)
+    public async Task<PublicKeysResponseModel> GetAccountKeysAsync(string id)
     {
         var guidId = new Guid(id);
         var user = await _userRepository.GetByIdAsync(guidId);
