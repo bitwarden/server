@@ -258,6 +258,11 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
 
     public PublicKeyEncryptionKeyPairData GetPublicKeyEncryptionKeyPair()
     {
+        if (string.IsNullOrWhiteSpace(PrivateKey) || string.IsNullOrWhiteSpace(PublicKey))
+        {
+            throw new InvalidOperationException("User public key encryption key pair is not fully initialized.");
+        }
+
         return new PublicKeyEncryptionKeyPairData
         {
             WrappedPrivateKey = PrivateKey,
