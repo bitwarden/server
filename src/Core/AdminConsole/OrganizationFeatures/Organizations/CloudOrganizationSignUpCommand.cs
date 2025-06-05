@@ -1,5 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Sales;
@@ -39,7 +41,9 @@ public class CloudOrganizationSignUpCommand(
     IPushNotificationService pushNotificationService,
     ICollectionRepository collectionRepository,
     IDeviceRepository deviceRepository,
-    IPricingClient pricingClient) : ICloudOrganizationSignUpCommand
+    IPricingClient pricingClient,
+    IFeatureService featureService,
+    IPolicyRequirementQuery policyRequirementQuery) : ICloudOrganizationSignUpCommand
 {
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
     {
@@ -232,10 +236,13 @@ public class CloudOrganizationSignUpCommand(
         }
     }
 
-    private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
+    private async Task ValidateSignUpPoliciesAsync(Guid ownerUserId)
     {
-        var anySingleOrgPolicies = await policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
+        var blockedBySingleOrganizationPolicy = featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            ? !(await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerUserId)).CanCreateOrganization()
+            : await policyService.AnyPoliciesApplicableToUserAsync(ownerUserId, PolicyType.SingleOrg);
+
+        if (blockedBySingleOrganizationPolicy)
         {
             throw new BadRequestException("You may not create an organization. You belong to an organization " +
                                           "which has a policy that prohibits you from being a member of any other organization.");

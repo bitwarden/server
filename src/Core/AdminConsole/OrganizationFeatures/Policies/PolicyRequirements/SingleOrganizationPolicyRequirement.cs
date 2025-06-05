@@ -53,7 +53,7 @@ public class SingleOrganizationPolicyRequirement(IEnumerable<PolicyDetails> sing
         => CanJoinOrganization(organizationId);
 
     public bool CanCreateOrganization()
-        => singleOrganizationPolicies.Any(p =>
+        => !singleOrganizationPolicies.Any(p =>
             p.OrganizationUserStatus is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed);
 }
 
