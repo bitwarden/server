@@ -1,4 +1,5 @@
-﻿using Bit.Api.KeyManagement.Queries;
+﻿using Bit.Api.KeyManagement.Models.Response;
+using Bit.Api.KeyManagement.Queries;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
