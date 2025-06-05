@@ -5,7 +5,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 
-namespace Bit.Core.AdminConsole.Models.Data.Integrations;
+namespace Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
 public class IntegrationTemplateContext(EventMessage eventMessage)
 {
