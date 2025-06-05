@@ -74,9 +74,9 @@ jobs:
         env:
           PREFIX: ${{ needs.setup.outputs.migration_filename_prefix }}
         run: |
-          moved_files=""
-
           # scripts
+          moved_files="Migration scripts moved:\n\n"
+
           src_dirs="util/Migrator/DbScripts_transition,util/Migrator/DbScripts_finalization"
           dest_dir="util/Migrator/DbScripts"
           i=0
@@ -89,29 +89,31 @@ jobs:
               new_filename="${PREFIX}_${filenumber}_${filename}"
               dest_file="$dest_dir/$new_filename"
 
+              # Replace any finalization references due to the move
+              sed -i -e 's/dbo_finalization/dbo/g' "$file"
+
               mv "$file" "$dest_file"
               moved_files="$moved_files \n $filename -> $new_filename"
-
-              # Replace any finalization references due to the move
-              sed -i -e 's/dbo_finalization/dbo/g' "$dest_file"
 
               i=$((i+1))
             done
           done
 
           # schema
+          moved_files="$moved_files\n\nFinalization scripts moved:\n\n"
+
           src_dir="src/Sql/dbo_finalization"
           dest_dir="src/Sql/dbo"
 
-          for file in "$src_dir"/*; do
-            filename=$(basename "$file")
-            dest_file="$dest_dir/$filename"
+          # sync finalization schema back to dbo, maintaining structure
+          rsync -r $src_dir $dest_dir
+          rm -rf $src_dir/*
 
-            mv "$file" "$dest_file"
-            moved_files="$moved_files \n $filename"
+          # Replace any finalization references due to the move
+          sed -i -e 's/dbo_finalization/dbo/g' "$dest_dir/**/*.sql"
 
-            # Replace any finalization references due to the move
-            sed -i -e 's/dbo_finalization/dbo/g' "$dest_file"
+          for file in "$src_dir"/**/*; do
+            moved_files="$moved_files \n $file"
           done
 
           echo "moved_files=$moved_files" >> $GITHUB_OUTPUT
