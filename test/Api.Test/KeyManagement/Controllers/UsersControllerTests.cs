@@ -51,12 +51,7 @@ public class UsersControllerTests
         };
 
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(userId).Returns(user);
-        sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(userId).Returns(new SignatureKeyPairData
-        {
-            WrappedSigningKey = "signingKey",
-            VerifyingKey = "verifyingKey",
-            SignatureAlgorithm = SignatureAlgorithm.Ed25519
-        });
+        sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(userId).Returns(new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "wrappedSigningKey", "verifyingKey"));
 
         var result = await sutProvider.Sut.GetAccountKeys(userId.ToString());
         Assert.NotNull(result);
