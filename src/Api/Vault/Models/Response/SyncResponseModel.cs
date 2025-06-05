@@ -1,4 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.KeyManagement.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.AdminConsole.Entities;
