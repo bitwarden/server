@@ -418,7 +418,8 @@ public class OrganizationBillingService(
         };
 
         // Only set trial_settings.end_behavior.missing_payment_method to "cancel" if there is no payment method
-        if (string.IsNullOrEmpty(customer.InvoiceSettings?.DefaultPaymentMethodId))
+        if (string.IsNullOrEmpty(customer.InvoiceSettings?.DefaultPaymentMethodId) &&
+            !customer.Metadata.ContainsKey(BraintreeCustomerIdKey))
         {
             subscriptionCreateOptions.TrialSettings = new SubscriptionTrialSettingsOptions
             {
