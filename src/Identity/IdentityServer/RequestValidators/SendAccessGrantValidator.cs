@@ -16,9 +16,9 @@ public class SendAccessGrantValidator(ISendAuthenticationQuery sendAuthenticatio
     string IExtensionGrantValidator.GrantType => GrantType;
 
     private const string _invalidRequestMissingSendIdMessage = "send_id is required.";
-    private const string _invalidRequestPasswordRequiredMessage = "Password is required.";
+    private const string _invalidRequestPasswordHashRequiredMessage = "Password hash is required.";
     // TODO: add email + OTP errors here
-    private const string _invalidGrantPasswordInvalid = "Password invalid.";
+    private const string _invalidGrantPasswordHashInvalid = "Password hash invalid.";
     // TODO: add email OTP validation error messages here.
 
     public async Task ValidateAsync(ExtensionGrantValidationContext context)
@@ -65,7 +65,7 @@ public class SendAccessGrantValidator(ISendAuthenticationQuery sendAuthenticatio
 
                 if (string.IsNullOrEmpty(password))
                 {
-                    context.Result = new GrantValidationResult(TokenRequestErrors.InvalidRequest, errorDescription: _invalidRequestPasswordRequiredMessage);
+                    context.Result = new GrantValidationResult(TokenRequestErrors.InvalidRequest, errorDescription: _invalidRequestPasswordHashRequiredMessage);
                     return;
                 }
 
@@ -73,7 +73,7 @@ public class SendAccessGrantValidator(ISendAuthenticationQuery sendAuthenticatio
 
                 if (!passwordValid)
                 {
-                    context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, errorDescription: _invalidGrantPasswordInvalid);
+                    context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, errorDescription: _invalidGrantPasswordHashInvalid);
                     return;
                 }
 
