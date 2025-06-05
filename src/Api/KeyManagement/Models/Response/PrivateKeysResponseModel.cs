@@ -1,4 +1,5 @@
-﻿using Bit.Core.KeyManagement.Models.Data;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.KeyManagement.Models.Response;
@@ -13,6 +14,7 @@ namespace Bit.Api.KeyManagement.Models.Response;
 /// </summary>
 public class PrivateKeysResponseModel : ResponseModel
 {
+    [JsonConstructor]
     [System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute]
     public PrivateKeysResponseModel(UserAccountKeysData accountKeys) : base("privateKeys")
     {
