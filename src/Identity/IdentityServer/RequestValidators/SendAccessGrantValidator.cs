@@ -17,7 +17,7 @@ public class SendAccessGrantValidator(ISendAuthenticationQuery sendAuthenticatio
 
     private const string _invalidRequestMissingSendIdMessage = "send_id is required.";
     private const string _invalidRequestPasswordRequiredMessage = "Password is required.";
-    private const string _invalidRequestEmailOtpRequiredMessage = "Email and OTP are required.";
+    // TODO: add email + OTP errors here
     private const string _invalidGrantPasswordInvalid = "Password invalid.";
     // TODO: add email OTP validation error messages here.
 
