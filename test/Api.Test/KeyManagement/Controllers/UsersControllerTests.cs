@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Bit.Api.KeyManagement.Controllers;
+using Bit.Api.KeyManagement.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -51,7 +52,13 @@ public class UsersControllerTests
         };
 
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(userId).Returns(user);
-        sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(userId).Returns(new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "wrappedSigningKey", "verifyingKey"));
+        sutProvider.GetDependency<IUserAccountKeysQuery>()
+            .Run(user)
+            .Returns(new UserAccountKeysData
+            {
+                PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("wrappedPrivateKey", "publicKey", "signedPublicKey"),
+                SignatureKeyPairData = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "wrappedSigningKey", "verifyingKey"),
+            });
 
         var result = await sutProvider.Sut.GetAccountKeysAsync(userId.ToString());
         Assert.NotNull(result);
