@@ -30,7 +30,7 @@ public static class LicenseExtensions
                     return true;
                 }
 
-                return forHash && ignoreAttr.IncludeInHash;
+                return !forHash && ignoreAttr.IncludeInSignature;
             })
             .OrderBy(p => p.Name)
             .Select(p => $"{p.Name}:{CoreHelpers.FormatLicenseSignatureValue(p.GetValue(license, null))}")

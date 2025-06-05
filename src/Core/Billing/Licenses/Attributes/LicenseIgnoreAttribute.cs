@@ -1,12 +1,12 @@
 ﻿namespace Bit.Core.Billing.Licenses.Attributes;
 
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
-public class LicenseIgnoreAttribute(bool includeInHash = true) : Attribute
+public class LicenseIgnoreAttribute(bool includeInSignature = false) : Attribute
 {
 
     /// <summary>
-    /// If true, the property will be included when computing the license hash, but ignored for other operations.
-    /// If false, the property will be completely ignored including for hash computation.
+    /// If true, the property will be included when computing the license signature, but ignored for other operations.
+    /// If false, the property will be completely ignored including for signature computation.
     /// </summary>
-    public bool IncludeInHash { get; } = includeInHash;
+    public bool IncludeInSignature { get; } = includeInSignature;
 }
