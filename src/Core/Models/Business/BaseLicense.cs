@@ -1,6 +1,5 @@
 ﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.Json.Serialization;
 using Bit.Core.Billing.Licenses.Attributes;
 using Bit.Core.Enums;
 
@@ -48,10 +47,6 @@ public abstract class BaseLicense : ILicense
     [LicenseIgnore]
     public string Token { get; set; }
 
-    [JsonIgnore]
-    [LicenseIgnore]
-    public byte[] SignatureBytes => Convert.FromBase64String(Signature);
-
     public abstract byte[] GetDataBytes(bool forHash = false);
 
     public byte[] ComputeHash()
@@ -66,7 +61,7 @@ public abstract class BaseLicense : ILicense
     {
         using (var rsa = certificate.GetRSAPublicKey())
         {
-            return rsa.VerifyData(GetDataBytes(), SignatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            return rsa.VerifyData(GetDataBytes(), Convert.FromBase64String(Signature), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         }
     }
 
