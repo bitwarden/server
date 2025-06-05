@@ -134,7 +134,6 @@ public class ConfirmOrganizationUserCommandTests
         await organizationUserRepository.Received(1).ReplaceManyAsync(Arg.Is<List<OrganizationUser>>(users => users.Contains(orgUser) && users.Count == 1));
     }
 
-
     [Theory, BitAutoData]
     public async Task ConfirmUserAsync_AsUser_WithSingleOrgPolicyAppliedFromConfirmingOrg_ThrowsBadRequestException(Organization org, OrganizationUser confirmingUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
@@ -395,6 +394,8 @@ public class ConfirmOrganizationUserCommandTests
             ]));
         twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (user.Id, false) });
+        policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, "key", confirmingUser.Id);
 
@@ -435,11 +436,119 @@ public class ConfirmOrganizationUserCommandTests
             ]));
         twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (user.Id, true) });
+        policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, "key", confirmingUser.Id);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
         await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email, orgUser.AccessSecretsManager);
+        await organizationUserRepository.Received(1).ReplaceManyAsync(Arg.Is<List<OrganizationUser>>(users => users.Contains(orgUser) && users.Count == 1));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmUserAsync_WithPolicyRequirementsEnabled_AsUser_WithSingleOrgPolicyAppliedFromConfirmingOrg_ThrowsBadRequestException(Organization org, OrganizationUser confirmingUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
+        OrganizationUser orgUserAnotherOrg, string key, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+
+        org.PlanType = PlanType.EnterpriseAnnually;
+        orgUser.Status = OrganizationUserStatusType.Accepted;
+        orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
+        orgUser.UserId = orgUserAnotherOrg.UserId = user.Id;
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByManyUsersAsync(default).ReturnsForAnyArgs(new[] { orgUserAnotherOrg });
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+        sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
+
+        var policyRequirementQuery = sutProvider.GetDependency<IPolicyRequirementQuery>();
+        policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([new PolicyDetails
+            {
+                OrganizationId = orgUser.OrganizationId,
+                PolicyType = PolicyType.SingleOrg,
+                OrganizationUserStatus = OrganizationUserStatusType.Accepted
+            }]));
+
+        policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(new RequireTwoFactorPolicyRequirement([]));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
+        Assert.Contains("Cannot confirm this member to the organization until they leave or remove all other organizations.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmUserAsync_WithPolicyRequirementsEnabled_AsUser_WithSingleOrgPolicyAppliedFromOtherOrg_ThrowsBadRequestException(
+        Organization org, OrganizationUser confirmingUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
+        OrganizationUser orgUserAnotherOrg, string key, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+
+        org.PlanType = PlanType.EnterpriseAnnually;
+        orgUser.Status = OrganizationUserStatusType.Accepted;
+        orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
+        orgUser.UserId = orgUserAnotherOrg.UserId = user.Id;
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByManyUsersAsync(default).ReturnsForAnyArgs(new[] { orgUserAnotherOrg });
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+        sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
+
+        var policyRequirementQuery = sutProvider.GetDependency<IPolicyRequirementQuery>();
+        policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([new PolicyDetails
+            {
+                OrganizationId = Guid.NewGuid(),    // another org
+                PolicyType = PolicyType.SingleOrg,
+                OrganizationUserStatus = OrganizationUserStatusType.Confirmed
+            }]));
+
+        policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(new RequireTwoFactorPolicyRequirement([]));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
+        Assert.Contains("Cannot confirm this member to the organization because they are in another organization which forbids it.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task ConfirmUserAsync_WithPolicyRequirementsEnabled_Succeeds(
+        OrganizationUserType userType, Organization org, OrganizationUser confirmingUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
+        OrganizationUser orgUserAnotherOrg,
+        string key, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+
+        org.PlanType = PlanType.EnterpriseAnnually;
+        orgUser.Type = userType;
+        orgUser.Status = OrganizationUserStatusType.Accepted;
+        orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
+        orgUser.UserId = orgUserAnotherOrg.UserId = user.Id;
+        orgUser.AccessSecretsManager = true;
+        organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
+        organizationUserRepository.GetManyByManyUsersAsync(default).ReturnsForAnyArgs(new[] { orgUserAnotherOrg });
+        organizationRepository.GetByIdAsync(org.Id).Returns(org);
+        userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
+
+        var policyRequirementQuery = sutProvider.GetDependency<IPolicyRequirementQuery>();
+        policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+        policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(new RequireTwoFactorPolicyRequirement([]));
+
+        await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id);
+
+        await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
+        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email, true);
         await organizationUserRepository.Received(1).ReplaceManyAsync(Arg.Is<List<OrganizationUser>>(users => users.Contains(orgUser) && users.Count == 1));
     }
 }
