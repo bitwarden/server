@@ -67,6 +67,43 @@ public class AcceptOrgUserCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task AcceptOrgUser_WithPolicyRequirementsEnabled_InvitedUserToSingleOrg_AcceptsOrgUser(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        sutProvider
+            .GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+        sutProvider
+            .GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(new RequireTwoFactorPolicyRequirement([]));
+
+        // Act
+        var resultOrgUser = await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
+
+        // Assert
+        // Verify returned org user details
+        AssertValidAcceptedOrgUser(resultOrgUser, orgUser, user);
+
+        // Verify org repository called with updated orgUser
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou => ou.Id == orgUser.Id && ou.Status == OrganizationUserStatusType.Accepted));
+
+        // Verify emails sent to admin
+        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationAcceptedEmailAsync(
+            Arg.Is<Organization>(o => o.Id == org.Id),
+            Arg.Is<string>(e => e == user.Email),
+            Arg.Is<IEnumerable<string>>(a => a.Contains(adminUserDetails.Email))
+        );
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task AcceptOrgUser_OrgUserStatusIsRevoked_ReturnsBadRequest(
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
@@ -158,6 +195,66 @@ public class AcceptOrgUserCommandTests
             exception.Message);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUser_WithPolicyRequirementsEnabled_UserJoiningOrgWithSingleOrgPolicyWhileInAnotherOrg_ThrowsBadRequest(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+
+        sutProvider
+            .GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([
+                new PolicyDetails
+                {
+                    OrganizationId = org.Id,
+                    PolicyType = PolicyType.SingleOrg,
+                    OrganizationUserStatus = OrganizationUserStatusType.Invited
+                }
+            ]));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
+
+        Assert.Equal("You may not join this organization until you leave or remove all other organizations.",
+            exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUserAsync_WithPolicyRequirementsEnabled_UserInOrgWithSingleOrgPolicyAlready_ThrowsBadRequest(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+
+        sutProvider
+            .GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([
+                new PolicyDetails
+                {
+                    OrganizationId = Guid.NewGuid(), // different org
+                    PolicyType = PolicyType.SingleOrg,
+                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed
+                }
+            ]));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
+
+        Assert.Equal(
+            "You cannot join this organization because you are a member of another organization which forbids it",
+            exception.Message);
+    }
 
     [Theory]
     [BitAutoData]

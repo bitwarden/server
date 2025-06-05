@@ -183,26 +183,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             }
         }
 
-        // Enforce Single Organization Policy of organization user is trying to join
-        var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-        var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
-        var invitedSingleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
-            PolicyType.SingleOrg, OrganizationUserStatusType.Invited);
-
-        if (hasOtherOrgs && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
-        {
-            throw new BadRequestException("You may not join this organization until you leave or remove all other organizations.");
-        }
-
-        // Enforce Single Organization Policy of other organizations user is a member of
-        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id,
-            PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
-        {
-            throw new BadRequestException("You cannot join this organization because you are a member of another organization which forbids it");
-        }
-
-        // Enforce Two Factor Authentication Policy of organization user is trying to join
+        // Validate policies
+        await ValidateSingleOrganizationPolicyAsync(user, orgUser);
         await ValidateTwoFactorAuthenticationPolicyAsync(user, orgUser.OrganizationId);
 
         orgUser.Status = OrganizationUserStatusType.Accepted;
@@ -221,6 +203,54 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         }
 
         return orgUser;
+    }
+
+    private async Task ValidateSingleOrganizationPolicyAsync(User user, OrganizationUser orgUser)
+    {
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            await ValidateSingleOrganizationPolicyAsync_vNext(user, orgUser.OrganizationId);
+            return;
+        }
+
+        // Enforce Single Organization Policy of organization user is trying to join
+        var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+        var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
+        var invitedSingleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
+            PolicyType.SingleOrg, OrganizationUserStatusType.Invited);
+
+        if (hasOtherOrgs && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
+        {
+            throw new BadRequestException("You may not join this organization until you leave or remove all other organizations.");
+        }
+
+        // Enforce Single Organization Policy of other organizations user is a member of
+        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id,
+            PolicyType.SingleOrg);
+        if (anySingleOrgPolicies)
+        {
+            throw new BadRequestException("You cannot join this organization because you are a member of another organization which forbids it");
+        }
+    }
+
+    private async Task ValidateSingleOrganizationPolicyAsync_vNext(User user, Guid organizationId)
+    {
+        var singleOrganizationPolicyRequirement =
+            await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id);
+        var singleOrganizationPolicyResult =
+            singleOrganizationPolicyRequirement.CanBeRestoredToOrganization(organizationId);
+
+        switch (singleOrganizationPolicyResult)
+        {
+            case SingleOrganizationRequirementResult.BlockedByThisOrganization:
+                throw new BadRequestException("You may not join this organization until you leave or remove all other organizations.");
+            case SingleOrganizationRequirementResult.BlockedByOtherOrganization:
+                throw new BadRequestException("You cannot join this organization because you are a member of another organization which forbids it");
+            case SingleOrganizationRequirementResult.Ok:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
     }
 
     private async Task ValidateTwoFactorAuthenticationPolicyAsync(User user, Guid organizationId)
