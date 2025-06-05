@@ -11,7 +11,7 @@ $corsRules = (@{
         AllowedMethods  = @("Get", "PUT");
     });
 $containers = "attachments", "sendfiles", "misc";
-$queues = "event", "notifications", "reference-events", "mail";
+$queues = "event", "notifications", "mail";
 $tables = "event", "metadata", "installationdevice";
 # End configuration
 
