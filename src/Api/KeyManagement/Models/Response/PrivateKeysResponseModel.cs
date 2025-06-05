@@ -3,28 +3,36 @@ using Bit.Core.Models.Api;
 
 namespace Bit.Api.Models.Response;
 
+#nullable enable
+
 /// <summary>
-/// This response model is used to return keys of a user - downstream of the user key - to the client.
-/// This includes the private keys (signature/encryption), and proof tying one to another. This could
-/// also be used to contain further user-owned keys in the future (per-vault keys, etc). This should
-/// not be used to contain keys not just owned by the user (e.g. organization keys).
+/// This response model is used to return the the asymmetric encryption keys,
+/// and signature keys of an entity. This includes the private keys of the key pairs,
+/// (private key, signing key), and the public keys of the key pairs (unsigned public key,
+/// signed public key, verification key). 
 /// </summary>
-public class PrivateAccountKeysResponseModel : ResponseModel
+public class PrivateKeysResponseModel : ResponseModel
 {
-    public PrivateAccountKeysResponseModel(UserAccountKeysData accountKeys) : base("accountKeys")
+    public PrivateKeysResponseModel(UserAccountKeysData accountKeys) : base("accountKeys")
     {
-        if (accountKeys != null)
+        if (accountKeys == null)
         {
-            SignatureKeyPair = accountKeys.signatureKeyPairData;
+            throw new ArgumentNullException(nameof(accountKeys));
+        }
+
+        if (accountKeys.SignatureKeyPairData != null)
+        {
+            SignatureKeyPair = accountKeys.SignatureKeyPairData;
         }
         PublicKeyEncryptionKeyPair = accountKeys.PublicKeyEncryptionKeyPairData;
     }
 
-    public PrivateAccountKeysResponseModel() : base("accountKeys")
+    public PrivateKeysResponseModel() : base("privateKeys")
     {
     }
 
-    public SignatureKeyPairData SignatureKeyPair { get; set; }
-    public PublicKeyEncryptionKeyPairData PublicKeyEncryptionKeyPair { get; set; }
+    // Not all accounts have signature keys, but all accounts have public encryption keys.
+    public SignatureKeyPairData? SignatureKeyPair { get; set; }
+    public required PublicKeyEncryptionKeyPairData PublicKeyEncryptionKeyPair { get; set; }
 
 }
