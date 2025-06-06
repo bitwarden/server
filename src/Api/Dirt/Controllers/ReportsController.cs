@@ -1,9 +1,9 @@
 ﻿using Bit.Api.Tools.Models;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.Context;
+using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Exceptions;
 using Bit.Core.Tools.Entities;
-using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.ReportFeatures.Interfaces;
 using Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Bit.Core.Tools.ReportFeatures.Requests;

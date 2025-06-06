@@ -22,6 +22,41 @@ namespace Bit.MySqlMigrations.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("Bit.Core.Dirt.Reports.Models.Data.MemberAccessCipherDetails", b =>
+                {
+                    b.Property<bool>("AccountRecoveryEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("CipherIds")
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("CollectionsCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("GroupsCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalItemCount")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<Guid?>("UserGuid")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("UserName")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("UsesKeyConnector")
+                        .HasColumnType("tinyint(1)");
+
+                    b.ToTable("MemberAccessCipherDetails");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
                 {
                     b.Property<Guid>("Id")

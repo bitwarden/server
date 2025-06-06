@@ -1,4 +1,5 @@
-﻿using Bit.Core.Tools.ReportFeatures.Interfaces;
+﻿using Bit.Core.Dirt.Reports.ReportFeatures;
+using Bit.Core.Tools.ReportFeatures.Interfaces;
 using Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 

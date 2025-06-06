@@ -17,6 +17,41 @@ namespace Bit.SqliteMigrations.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.8");
 
+            modelBuilder.Entity("Bit.Core.Dirt.Reports.Models.Data.MemberAccessCipherDetails", b =>
+                {
+                    b.Property<bool>("AccountRecoveryEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CipherIds")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CollectionsCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("GroupsCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalItemCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("UserGuid")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("UsesKeyConnector")
+                        .HasColumnType("INTEGER");
+
+                    b.ToTable("MemberAccessCipherDetails");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
                 {
                     b.Property<Guid>("Id")
