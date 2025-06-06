@@ -1,7 +1,7 @@
-﻿using System.Text;
-using System.Text.Json;
+﻿#nullable enable
+
+using System.Text;
 using Azure.Messaging.ServiceBus;
-using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
@@ -9,65 +9,45 @@ namespace Bit.Core.Services;
 
 public class AzureServiceBusEventListenerService : EventLoggingListenerService
 {
-    private readonly ILogger<AzureServiceBusEventListenerService> _logger;
-    private readonly ServiceBusClient _client;
     private readonly ServiceBusProcessor _processor;
 
     public AzureServiceBusEventListenerService(
         IEventMessageHandler handler,
-        ILogger<AzureServiceBusEventListenerService> logger,
+        IAzureServiceBusService serviceBusService,
+        string subscriptionName,
         GlobalSettings globalSettings,
-        string subscriptionName) : base(handler)
+        ILogger<AzureServiceBusEventListenerService> logger) : base(handler, logger)
     {
-        _client = new ServiceBusClient(globalSettings.EventLogging.AzureServiceBus.ConnectionString);
-        _processor = _client.CreateProcessor(globalSettings.EventLogging.AzureServiceBus.EventTopicName, subscriptionName, new ServiceBusProcessorOptions());
+        _processor = serviceBusService.CreateProcessor(
+            globalSettings.EventLogging.AzureServiceBus.EventTopicName,
+            subscriptionName,
+            new ServiceBusProcessorOptions());
         _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        _processor.ProcessMessageAsync += async args =>
-        {
-            try
-            {
-                using var jsonDocument = JsonDocument.Parse(Encoding.UTF8.GetString(args.Message.Body));
-                var root = jsonDocument.RootElement;
-
-                if (root.ValueKind == JsonValueKind.Array)
-                {
-                    var eventMessages = root.Deserialize<IEnumerable<EventMessage>>();
-                    await _handler.HandleManyEventsAsync(eventMessages);
-                }
-                else if (root.ValueKind == JsonValueKind.Object)
-                {
-                    var eventMessage = root.Deserialize<EventMessage>();
-                    await _handler.HandleEventAsync(eventMessage);
-
-                }
-                await args.CompleteMessageAsync(args.Message);
-            }
-            catch (Exception exception)
-            {
-                _logger.LogError(
-                    exception,
-                    "An error occured while processing message: {MessageId}",
-                    args.Message.MessageId
-                );
-            }
-        };
-
-        _processor.ProcessErrorAsync += args =>
-        {
-            _logger.LogError(
-                args.Exception,
-                "An error occurred. Entity Path: {EntityPath}, Error Source: {ErrorSource}",
-                args.EntityPath,
-                args.ErrorSource
-            );
-            return Task.CompletedTask;
-        };
+        _processor.ProcessMessageAsync += ProcessReceivedMessageAsync;
+        _processor.ProcessErrorAsync += ProcessErrorAsync;
 
         await _processor.StartProcessingAsync(cancellationToken);
+    }
+
+    internal Task ProcessErrorAsync(ProcessErrorEventArgs args)
+    {
+        _logger.LogError(
+            args.Exception,
+            "An error occurred. Entity Path: {EntityPath}, Error Source: {ErrorSource}",
+            args.EntityPath,
+            args.ErrorSource
+        );
+        return Task.CompletedTask;
+    }
+
+    private async Task ProcessReceivedMessageAsync(ProcessMessageEventArgs args)
+    {
+        await ProcessReceivedMessageAsync(Encoding.UTF8.GetString(args.Message.Body), args.Message.MessageId);
+        await args.CompleteMessageAsync(args.Message);
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
@@ -79,7 +59,6 @@ public class AzureServiceBusEventListenerService : EventLoggingListenerService
     public override void Dispose()
     {
         _processor.DisposeAsync().GetAwaiter().GetResult();
-        _client.DisposeAsync().GetAwaiter().GetResult();
         base.Dispose();
     }
 }

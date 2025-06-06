@@ -19,6 +19,8 @@ using Notification = Bit.Core.NotificationCenter.Entities.Notification;
 
 namespace Bit.Core.NotificationHub;
 
+#nullable enable
+
 /// <summary>
 /// Sends mobile push notifications to the Azure Notification Hub.
 /// Used by Cloud-Hosted environments.

@@ -4,6 +4,7 @@ using AutoMapper;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,7 +38,7 @@ public class UserSignatureKeyPairRepository : Repository<Core.KeyManagement.Enti
             var dbContext = GetDatabaseContext(scope);
             var entity = new Models.UserSignatureKeyPair
             {
-                Id = Guid.NewGuid(),
+                Id = CoreHelpers.GenerateComb(),
                 UserId = userId,
                 SignatureAlgorithm = signingKeys.SignatureAlgorithm,
                 SigningKey = signingKeys.WrappedSigningKey,

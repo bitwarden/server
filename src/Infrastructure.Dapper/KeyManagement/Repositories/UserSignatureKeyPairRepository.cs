@@ -5,6 +5,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -45,7 +46,7 @@ public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, G
                 "[dbo].[UserSignatureKeyPair_SetForRotation]",
                 new
                 {
-                    Id = Guid.NewGuid(),
+                    Id = CoreHelpers.GenerateComb(),
                     UserId = userId,
                     SignatureAlgorithm = (byte)signingKeys.SignatureAlgorithm,
                     SigningKey = signingKeys.WrappedSigningKey,

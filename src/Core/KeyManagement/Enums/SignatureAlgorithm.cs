@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Enums;
+﻿namespace Bit.Core.KeyManagement.Enums;
 
 // <summary>
 // Represents the algorithm / digital signature scheme used for a signature key pair.
