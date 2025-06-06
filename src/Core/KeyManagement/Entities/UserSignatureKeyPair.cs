@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
@@ -14,9 +13,7 @@ public class UserSignatureKeyPair : ITableObject<Guid>, IRevisable
     public Guid UserId { get; set; }
     public SignatureAlgorithm SignatureAlgorithm { get; set; }
 
-    [MaxLength(500)]
     required public string VerifyingKey { get; set; }
-    [MaxLength(500)]
     required public string SigningKey { get; set; }
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
