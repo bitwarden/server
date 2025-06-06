@@ -1,4 +1,6 @@
-﻿using Bit.Api.Vault.Models.Response;
+﻿using Bit.Api.KeyManagement.Models.Response;
+using Bit.Api.KeyManagement.Queries;
+using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -39,6 +41,7 @@ public class SyncController : Controller
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IUserAccountKeysQuery _userAccountKeysQuery;
 
     public SyncController(
         IUserService userService,
@@ -54,7 +57,8 @@ public class SyncController : Controller
         ICurrentContext currentContext,
         IFeatureService featureService,
         IApplicationCacheService applicationCacheService,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IUserAccountKeysQuery userAccountKeysQuery)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -70,6 +74,7 @@ public class SyncController : Controller
         _featureService = featureService;
         _applicationCacheService = applicationCacheService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _userAccountKeysQuery = userAccountKeysQuery;
     }
 
     [HttpGet("")]
@@ -112,8 +117,9 @@ public class SyncController : Controller
         var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
 
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var accountKeys = new PrivateKeysResponseModel(await _userAccountKeysQuery.Run(user));
 
-        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
+        var response = new SyncResponseModel(_globalSettings, user, accountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;
