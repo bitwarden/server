@@ -3,5 +3,5 @@
 public enum CollectionType : byte
 {
     Shared = 1,
-    Individual = 0
+    Individual = 2
 }
