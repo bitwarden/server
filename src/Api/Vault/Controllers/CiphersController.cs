@@ -42,7 +42,6 @@ public class CiphersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
-    private readonly IFeatureService _featureService;
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ICollectionRepository _collectionRepository;
@@ -57,7 +56,6 @@ public class CiphersController : Controller
         ICurrentContext currentContext,
         ILogger<CiphersController> logger,
         GlobalSettings globalSettings,
-        IFeatureService featureService,
         IOrganizationCiphersQuery organizationCiphersQuery,
         IApplicationCacheService applicationCacheService,
         ICollectionRepository collectionRepository)
@@ -71,7 +69,6 @@ public class CiphersController : Controller
         _currentContext = currentContext;
         _logger = logger;
         _globalSettings = globalSettings;
-        _featureService = featureService;
         _organizationCiphersQuery = organizationCiphersQuery;
         _applicationCacheService = applicationCacheService;
         _collectionRepository = collectionRepository;
@@ -375,11 +372,6 @@ public class CiphersController : Controller
 
     private async Task<bool> CanDeleteOrRestoreCipherAsAdminAsync(Guid organizationId, IEnumerable<Guid> cipherIds)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.LimitItemDeletion))
-        {
-            return await CanEditCipherAsAdminAsync(organizationId, cipherIds);
-        }
-
         var org = _currentContext.GetOrganization(organizationId);
 
         // If we're not an "admin" or if we're a provider user we don't need to check the ciphers
