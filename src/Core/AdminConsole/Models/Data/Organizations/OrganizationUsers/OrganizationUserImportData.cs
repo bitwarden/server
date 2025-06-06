@@ -1,24 +1,30 @@
-﻿namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
+﻿using Bit.Core.Models.Business;
+namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 public class OrganizationUserImportData
 {
-    public HashSet<string> NewUsersSet { get; init; }
-    public ICollection<OrganizationUserUserDetails> ExistingUsers { get; init; }
-    public IEnumerable<OrganizationUserUserDetails> ExistingExternalUsers { get; init; }
-    public Dictionary<string, Guid> ExistingExternalUsersIdDict { get; init; }
+    /// <summary>
+    /// Set of user ExternalIds that are being imported
+    /// </summary>
+    public readonly HashSet<string> ImportedExternalIds;
+    /// <summary>
+    /// Exising organization users details
+    /// </summary>
+    public readonly ICollection<OrganizationUserUserDetails> ExistingUsers;
+    /// <summary>
+    /// List of ExternalIds belonging to existing organization Users
+    /// </summary>
+    public readonly IEnumerable<OrganizationUserUserDetails> ExistingExternalUsers;
+    /// <summary>
+    /// Mapping of an existing users's ExternalId to their Id
+    /// </summary>
+    public readonly Dictionary<string, Guid> ExistingExternalUsersIdDict;
 
-    public OrganizationUserImportData(ICollection<OrganizationUserUserDetails> existingUsers, HashSet<string> newUsersSet)
+    public OrganizationUserImportData(ICollection<OrganizationUserUserDetails> existingUsers, IEnumerable<ImportedOrganizationUser> importedUsers)
     {
-        NewUsersSet = newUsersSet;
+        ImportedExternalIds = new HashSet<string>(importedUsers?.Select(u => u.ExternalId) ?? new List<string>());
         ExistingUsers = existingUsers;
-        ExistingExternalUsers = GetExistingExternalUsers(existingUsers);
-        ExistingExternalUsersIdDict = GetExistingExternalUsers(existingUsers).ToDictionary(u => u.ExternalId, u => u.Id);
-    }
-
-    private IEnumerable<OrganizationUserUserDetails> GetExistingExternalUsers(ICollection<OrganizationUserUserDetails> existingUsers)
-    {
-        return existingUsers
-            .Where(u => !string.IsNullOrWhiteSpace(u.ExternalId))
-            .ToList();
+        ExistingExternalUsers = ExistingUsers.Where(u => !string.IsNullOrWhiteSpace(u.ExternalId)).ToList();
+        ExistingExternalUsersIdDict = ExistingExternalUsers.ToDictionary(u => u.ExternalId, u => u.Id);
     }
 }
