@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.KeyManagement.Models.Data;
+﻿namespace Bit.Core.KeyManagement.Models.Data.Models;
 
 #nullable enable
 
