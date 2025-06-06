@@ -1,4 +1,4 @@
-﻿using Bit.Core.KeyManagement.Models.Data;
+﻿using Bit.Core.KeyManagement.Models.Data.Models;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.KeyManagement.Models.Response;
