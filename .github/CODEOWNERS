@@ -14,7 +14,7 @@
 .github/workflows/publish.yml @bitwarden/dept-bre
 
 ## These are shared workflows ##
-.github/workflows/_move_finalization_db_scripts.yml
+.github/workflows/_move_edd_db_scripts.yml
 .github/workflows/release.yml
 
 # Database Operations for database changes
