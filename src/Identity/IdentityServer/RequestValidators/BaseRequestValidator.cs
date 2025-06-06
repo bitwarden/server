@@ -361,7 +361,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicyAsync(User user)
     {
         // Check current context/cache to see if user is in any organizations, avoids extra DB call if not
-        var orgs = (await CurrentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
+        var orgs = (await CurrentContext.OrganizationAcceptedOrConfirmedAsync(_organizationUserRepository, user.Id))
             .ToList();
 
         if (orgs.Count == 0)
@@ -369,7 +369,7 @@ public abstract class BaseRequestValidator<T> where T : class
             return null;
         }
 
-        return new MasterPasswordPolicyResponseModel(await PolicyService.GetMasterPasswordPolicyForUserAsync(user));
+        return new MasterPasswordPolicyResponseModel(await PolicyService.GetMasterPasswordPolicyForUserAsync(user, true));
     }
 
     /// <summary>
@@ -401,8 +401,8 @@ public abstract class BaseRequestValidator<T> where T : class
     /// <summary>
     /// Builds the custom response that will be sent to the client upon successful authentication, which
     /// includes the information needed for the client to initialize the user's account in state.
-    /// </summary> 
-    /// <param name="user">The authenticated user.</param> 
+    /// </summary>
+    /// <param name="user">The authenticated user.</param>
     /// <param name="context">The current request context.</param>
     /// <param name="device">The device used for authentication.</param>
     /// <param name="sendRememberToken">Whether to send a 2FA remember token.</param>
