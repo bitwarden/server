@@ -2,9 +2,11 @@
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public class BitPayClient
 {
-    private readonly BitPayLight.BitPay _bpClient;
+    private readonly BitPayLight.BitPay? _bpClient;
 
     public BitPayClient(GlobalSettings globalSettings)
     {
@@ -15,13 +17,21 @@ public class BitPayClient
         }
     }
 
-    public Task<BitPayLight.Models.Invoice.Invoice> GetInvoiceAsync(string id)
+    public async Task<BitPayLight.Models.Invoice.Invoice?> GetInvoiceAsync(string id)
     {
-        return _bpClient.GetInvoice(id);
+        if (_bpClient is null)
+        {
+            return null;
+        }
+        return await _bpClient.GetInvoice(id);
     }
 
-    public Task<BitPayLight.Models.Invoice.Invoice> CreateInvoiceAsync(BitPayLight.Models.Invoice.Invoice invoice)
+    public async Task<BitPayLight.Models.Invoice.Invoice?> CreateInvoiceAsync(BitPayLight.Models.Invoice.Invoice invoice)
     {
-        return _bpClient.CreateInvoice(invoice);
+        if (_bpClient is null)
+        {
+            return null;
+        }
+        return await _bpClient.CreateInvoice(invoice);
     }
 }

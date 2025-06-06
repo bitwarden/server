@@ -6,6 +6,8 @@ using NS = Newtonsoft.Json;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public static class JsonHelpers
 {
     public static JsonSerializerOptions Default { get; }
@@ -46,7 +48,7 @@ public static class JsonHelpers
         };
     }
 
-    public static T DeserializeOrNew<T>(string json, JsonSerializerOptions options = null)
+    public static T? DeserializeOrNew<T>(string json, JsonSerializerOptions? options = null)
         where T : new()
     {
         if (string.IsNullOrWhiteSpace(json))
@@ -67,13 +69,13 @@ public static class JsonHelpers
     };
 
     [Obsolete(LegacyMessage)]
-    public static string LegacySerialize(object value, NS.JsonSerializerSettings settings = null)
+    public static string LegacySerialize(object value, NS.JsonSerializerSettings? settings = null)
     {
         return NS.JsonConvert.SerializeObject(value, settings);
     }
 
     [Obsolete(LegacyMessage)]
-    public static T LegacyDeserialize<T>(string value, NS.JsonSerializerSettings settings = null)
+    public static T? LegacyDeserialize<T>(string value, NS.JsonSerializerSettings? settings = null)
     {
         return NS.JsonConvert.DeserializeObject<T>(value, settings);
     }
@@ -88,9 +90,9 @@ public class EnumKeyResolver<T> : NS.Serialization.DefaultContractResolver
         var contract = base.CreateDictionaryContract(objectType);
         var keyType = contract.DictionaryKeyType;
 
-        if (keyType.BaseType == typeof(Enum))
+        if (keyType?.BaseType == typeof(Enum))
         {
-            contract.DictionaryKeyResolver = propName => ((T)Enum.Parse(keyType, propName)).ToString();
+            contract.DictionaryKeyResolver = propName => ((T)Enum.Parse(keyType, propName)).ToString()!;
         }
 
         return contract;
@@ -120,8 +122,10 @@ public class MsEpochConverter : JsonConverter<DateTime?>
         {
             writer.WriteNullValue();
         }
-
-        writer.WriteStringValue(CoreHelpers.ToEpocMilliseconds(value.Value).ToString());
+        else
+        {
+            writer.WriteStringValue(CoreHelpers.ToEpocMilliseconds(value.Value).ToString());
+        }
     }
 }
 
@@ -137,7 +141,7 @@ public class PermissiveStringConverter : JsonConverter<string>
     {
         return reader.TokenType switch
         {
-            JsonTokenType.String => reader.GetString(),
+            JsonTokenType.String => reader.GetString()!,
             JsonTokenType.Number => reader.GetDecimal().ToString(_cultureInfo),
             JsonTokenType.True => bool.TrueString,
             JsonTokenType.False => bool.FalseString,
@@ -200,7 +204,7 @@ public class PermissiveStringEnumerableConverter : JsonConverter<IEnumerable<str
 /// </summary>
 public class HtmlEncodingStringConverter : JsonConverter<string>
 {
-    public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType == JsonTokenType.String)
         {
