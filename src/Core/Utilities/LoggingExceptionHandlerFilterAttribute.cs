@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public class LoggingExceptionHandlerFilterAttribute : ExceptionFilterAttribute
 {
     public override void OnException(ExceptionContext context)

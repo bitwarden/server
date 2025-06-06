@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public static class AuthorizationServiceExtensions
 {
     /// <summary>

@@ -4,6 +4,8 @@ using Microsoft.Extensions.Hosting;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public static class HostBuilderExtensions
 {
     public static IHostBuilder ConfigureCustomAppConfiguration(this IHostBuilder hostBuilder, string[] args)

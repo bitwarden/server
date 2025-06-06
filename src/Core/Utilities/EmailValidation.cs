@@ -3,6 +3,8 @@ using MimeKit;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public static class EmailValidation
 {
     public static bool IsValidEmail(this string emailAddress)

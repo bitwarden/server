@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public class SelfHostedAttribute : ActionFilterAttribute
 {
     public bool SelfHostedOnly { get; set; }

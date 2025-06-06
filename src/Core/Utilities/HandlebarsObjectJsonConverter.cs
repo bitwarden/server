@@ -3,10 +3,12 @@ using System.Text.Json.Serialization;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public class HandlebarsObjectJsonConverter : JsonConverter<object>
 {
     public override bool CanConvert(Type typeToConvert) => true;
-    public override object Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         return JsonSerializer.Deserialize<Dictionary<string, object>>(ref reader, options);
     }
