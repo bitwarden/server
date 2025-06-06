@@ -40,7 +40,7 @@ public class UserSignatureKeyPairRepository : Repository<Core.KeyManagement.Enti
             var dbContext = GetDatabaseContext(scope);
             var entity = new Models.UserSignatureKeyPair
             {
-                Id = Guid.NewGuid(),
+                Id = CoreHelpers.GenerateComb(),
                 UserId = userId,
                 SignatureAlgorithm = signingKeys.SignatureAlgorithm,
                 SigningKey = signingKeys.WrappedSigningKey,
