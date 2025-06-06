@@ -3,6 +3,8 @@ using Quartz;
 
 namespace Bit.Core.Jobs;
 
+#nullable enable
+
 public class JobListener : IJobListener
 {
     private readonly ILogger<JobListener> _logger;
@@ -28,7 +30,7 @@ public class JobListener : IJobListener
         return Task.FromResult(0);
     }
 
-    public Task JobWasExecuted(IJobExecutionContext context, JobExecutionException jobException,
+    public Task JobWasExecuted(IJobExecutionContext context, JobExecutionException? jobException,
         CancellationToken cancellationToken = default(CancellationToken))
     {
         _logger.LogInformation(Constants.BypassFiltersEventId, null, "Finished job {0} at {1}.",

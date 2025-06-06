@@ -10,9 +10,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.HostedServices;
 
+#nullable enable
+
 public class ApplicationCacheHostedService : IHostedService, IDisposable
 {
-    private readonly InMemoryServiceBusApplicationCacheService _applicationCacheService;
+    private readonly InMemoryServiceBusApplicationCacheService? _applicationCacheService;
     private readonly IOrganizationRepository _organizationRepository;
     protected readonly ILogger<ApplicationCacheHostedService> _logger;
     private readonly ServiceBusClient _serviceBusClient;
@@ -20,8 +22,8 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
     private readonly ServiceBusAdministrationClient _serviceBusAdministrationClient;
     private readonly string _subName;
     private readonly string _topicName;
-    private CancellationTokenSource _cts;
-    private Task _executingTask;
+    private CancellationTokenSource? _cts;
+    private Task? _executingTask;
 
 
     public ApplicationCacheHostedService(
@@ -67,13 +69,17 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
     {
         await _subscriptionReceiver.CloseAsync(cancellationToken);
         await _serviceBusClient.DisposeAsync();
-        _cts.Cancel();
+        _cts?.Cancel();
         try
         {
             await _serviceBusAdministrationClient.DeleteSubscriptionAsync(_topicName, _subName, cancellationToken);
         }
         catch { }
-        await _executingTask;
+
+        if (_executingTask != null)
+        {
+            await _executingTask;
+        }
     }
 
     public virtual void Dispose()

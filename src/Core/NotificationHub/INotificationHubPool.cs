@@ -2,6 +2,8 @@
 
 namespace Bit.Core.NotificationHub;
 
+#nullable enable
+
 public interface INotificationHubPool
 {
     NotificationHubConnection ConnectionFor(Guid comb);
