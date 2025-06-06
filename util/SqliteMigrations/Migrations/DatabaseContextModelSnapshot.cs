@@ -1741,7 +1741,6 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<string>("SigningKey")
                         .IsRequired()
-                        .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("UserId")
@@ -1749,7 +1748,6 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<string>("VerifyingKey")
                         .IsRequired()
-                        .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
