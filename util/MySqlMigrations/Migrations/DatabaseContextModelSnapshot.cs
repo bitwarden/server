@@ -1705,6 +1705,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
+                    b.Property<string>("SignedPublicKey")
+                        .HasColumnType("longtext");
+
                     b.Property<long?>("Storage")
                         .HasColumnType("bigint");
 
@@ -1731,6 +1734,38 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("User", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<byte>("SignatureAlgorithm")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<string>("SigningKey")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("VerifyingKey")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserSignatureKeyPair", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.NotificationCenter.Models.Notification", b =>
@@ -2732,6 +2767,17 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Organization");
 
                     b.Navigation("Provider");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.UserSignatureKeyPair", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
