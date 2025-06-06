@@ -7,8 +7,8 @@ existing event system without needing to add special handling. By adding a new l
 pipeline, it gains an independent stream of events without the need for additional broadcast code.
 
 We want to enable robust handling of failures and retries. By utilizing the two-tier approach
-(described below), we build in support at the service level for retries. When we add new integrations,
-they can focus solely on the integration-specific logic and reporting status, with all the
+([described below](#two-tier-exchange)), we build in support at the service level for retries. When we add
+new integrations, they can focus solely on the integration-specific logic and reporting status, with all the
 process of retries and delays managed by the messaging system.
 
 Another goal is to not only support this functionality in the cloud version, but offer it as well to
@@ -17,8 +17,8 @@ using the same robust architecture for integrations without the need for Azure S
 
 Finally, we want to offer organization admins flexibility and control over what events are significant, where
 to send events, and the data to be included in the message. The configuration architecture allows Organizations
-to customize details of a specific integration; see Integrations and integration configurations below for more
-details on the configuration piece.
+to customize details of a specific integration; see [Integrations and integration
+configurations](#integrations-and-integration-configurations) below for more details on the configuration piece.
 
 # Architecture
 
@@ -203,12 +203,7 @@ Currently, there are integrations / handlers for Slack and webhooks (as mentione
 
 - The top-level object that enables a specific integration for the organization.
 - Includes any properties that apply to the entire integration across all events.
-    - For Slack, it consists of the token:
-
-      ```json
-      { "token": "xoxb-token-from-slack" }
-      ```
-
+    - For Slack, it consists of the token: `{ "token": "xoxb-token-from-slack" }`
     - For webhooks, it is `null`. However, even though there is no configuration, an organization must
       have a webhook `OrganizationIntegration` to enable configuration via `OrganizationIntegrationConfiguration`.
 
@@ -216,18 +211,8 @@ Currently, there are integrations / handlers for Slack and webhooks (as mentione
 
 - This contains the configurations specific to each `EventType` for the integration.
 - `Configuration` contains the event-specific configuration.
-    - For Slack, this would contain what channel to send the message to:
-
-      ```json
-      { "channelId": "C123456" }
-      ```
-
-    - For Webhook, this is the URL the request should be sent to:
-
-      ```json
-      { "url": "https://api.example.com" }
-      ```
-
+    - For Slack, this would contain what channel to send the message to: `{ "channelId": "C123456" }`
+    - For Webhook, this is the URL the request should be sent to: `{ "url": "https://api.example.com" }`
 - `Template` contains a template string that is expected to be filled in with the contents of the actual event.
     - The tokens in the string are wrapped in `#` characters. For instance, the UserId would be `#UserId#`.
     - The `IntegrationTemplateProcessor` does the actual work of replacing these tokens with introspected values from
@@ -302,8 +287,8 @@ that they will be created when first accessed in code by RabbitMQ.
 Add the subscription names to use for ASB for this integration. Similar to RabbitMQ a
 default value is provided so that we don't require configuring it in secrets but allow
 it to be overridden. **However**, unlike RabbitMQ these subscriptions must exist prior
-to the code accessing them. They will not be created on the fly. See Deploying a new
-integration below
+to the code accessing them. They will not be created on the fly. See [Deploying a new
+integration](#deploying-a-new-integration) below
 
 1. `ExmpleEventSubscriptionName`
 2. `ExmpleIntegrationSubscriptionName`
