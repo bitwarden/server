@@ -1,10 +1,9 @@
 ﻿using System.Net;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.Models.Public.Response;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,18 +14,18 @@ namespace Bit.Api.AdminConsole.Public.Controllers;
 [Authorize("Organization")]
 public class OrganizationController : Controller
 {
-    private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
+    private readonly IImportOrganizationUserCommand _importOrganizationUserCommand;
 
     public OrganizationController(
-        IOrganizationService organizationService,
         ICurrentContext currentContext,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        IImportOrganizationUserCommand importOrganizationUserCommand)
     {
-        _organizationService = organizationService;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
+        _importOrganizationUserCommand = importOrganizationUserCommand;
     }
 
     /// <summary>
@@ -47,13 +46,12 @@ public class OrganizationController : Controller
             throw new BadRequestException("You cannot import this much data at once.");
         }
 
-        await _organizationService.ImportAsync(
+        await _importOrganizationUserCommand.ImportAsync(
             _currentContext.OrganizationId.Value,
             model.Groups.Select(g => g.ToImportedGroup(_currentContext.OrganizationId.Value)),
             model.Members.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
             model.Members.Where(u => u.Deleted).Select(u => u.ExternalId),
-            model.OverwriteExisting.GetValueOrDefault(),
-            EventSystemUser.PublicApi);
+            model.OverwriteExisting.GetValueOrDefault());
         return new OkResult();
     }
 }
