@@ -2,8 +2,8 @@
 using Bit.Api.KeyManagement.Controllers;
 using Bit.Api.KeyManagement.Queries;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
