@@ -2,6 +2,8 @@
 
 namespace Bit.Core.NotificationHub;
 
+#nullable enable
+
 public class NotificationHubClientProxy : INotificationHubProxy
 {
     private readonly IEnumerable<INotificationHubClient> _clients;
