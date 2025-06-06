@@ -45,6 +45,7 @@ public static class DeviceTypes
         DeviceType.IEBrowser,
         DeviceType.SafariBrowser,
         DeviceType.VivaldiBrowser,
+        DeviceType.DuckDuckGoBrowser,
         DeviceType.UnknownBrowser
     ];
 
