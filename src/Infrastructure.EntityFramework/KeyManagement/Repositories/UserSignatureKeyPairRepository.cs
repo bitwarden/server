@@ -10,12 +10,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.KeyManagement.Repositories;
 
-public class UserSignatureKeyPairRepository : Repository<Core.KeyManagement.Entities.UserSignatureKeyPair, Models.UserSignatureKeyPair, Guid>, IUserSignatureKeyPairRepository
+public class UserSignatureKeyPairRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper) : Repository<Core.KeyManagement.Entities.UserSignatureKeyPair, Models.UserSignatureKeyPair, Guid>(serviceScopeFactory, mapper, context => context.UserSignatureKeyPair), IUserSignatureKeyPairRepository
 {
-    public UserSignatureKeyPairRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper) : base(serviceScopeFactory, mapper, context => context.UserSignatureKeyPair)
-    {
-    }
-
     public async Task<SignatureKeyPairData?> GetByUserIdAsync(Guid userId)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
