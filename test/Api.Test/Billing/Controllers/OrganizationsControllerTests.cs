@@ -23,7 +23,6 @@ using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Services;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -46,7 +45,6 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly ISubscriberService _subscriberService;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IOrganizationInstallationRepository _organizationInstallationRepository;
@@ -71,7 +69,6 @@ public class OrganizationsControllerTests : IDisposable
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
-        _referenceEventService = Substitute.For<IReferenceEventService>();
         _subscriberService = Substitute.For<ISubscriberService>();
         _removeOrganizationUserCommand = Substitute.For<IRemoveOrganizationUserCommand>();
         _organizationInstallationRepository = Substitute.For<IOrganizationInstallationRepository>();
@@ -90,7 +87,6 @@ public class OrganizationsControllerTests : IDisposable
             _updateSecretsManagerSubscriptionCommand,
             _upgradeOrganizationPlanCommand,
             _addSecretsManagerSubscriptionCommand,
-            _referenceEventService,
             _subscriberService,
             _organizationInstallationRepository,
             _pricingClient);

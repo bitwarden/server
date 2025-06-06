@@ -12,7 +12,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -20,9 +19,6 @@ using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
@@ -45,12 +41,9 @@ public class OrganizationsController : Controller
     private readonly IPaymentService _paymentService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly GlobalSettings _globalSettings;
-    private readonly IReferenceEventService _referenceEventService;
-    private readonly IUserService _userService;
     private readonly IProviderRepository _providerRepository;
     private readonly ILogger<OrganizationsController> _logger;
     private readonly IAccessControlService _accessControlService;
-    private readonly ICurrentContext _currentContext;
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
@@ -73,12 +66,9 @@ public class OrganizationsController : Controller
         IPaymentService paymentService,
         IApplicationCacheService applicationCacheService,
         GlobalSettings globalSettings,
-        IReferenceEventService referenceEventService,
-        IUserService userService,
         IProviderRepository providerRepository,
         ILogger<OrganizationsController> logger,
         IAccessControlService accessControlService,
-        ICurrentContext currentContext,
         ISecretRepository secretRepository,
         IProjectRepository projectRepository,
         IServiceAccountRepository serviceAccountRepository,
@@ -100,12 +90,9 @@ public class OrganizationsController : Controller
         _paymentService = paymentService;
         _applicationCacheService = applicationCacheService;
         _globalSettings = globalSettings;
-        _referenceEventService = referenceEventService;
-        _userService = userService;
         _providerRepository = providerRepository;
         _logger = logger;
         _accessControlService = accessControlService;
-        _currentContext = currentContext;
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
         _serviceAccountRepository = serviceAccountRepository;
@@ -294,11 +281,6 @@ public class OrganizationsController : Controller
         await _organizationRepository.ReplaceAsync(organization);
 
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationEditedByAdmin, organization, _currentContext)
-        {
-            EventRaisedByUser = _userService.GetUserName(User),
-            SalesAssistedTrialStarted = model.SalesAssistedTrialStarted,
-        });
 
         return RedirectToAction("Edit", new { id });
     }

@@ -3,16 +3,12 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.Permissions;
 using Bit.Core.Vault.Entities;
@@ -41,8 +37,6 @@ public class CipherService : ICipherService
     private readonly IPolicyService _policyService;
     private readonly GlobalSettings _globalSettings;
     private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
-    private readonly IReferenceEventService _referenceEventService;
-    private readonly ICurrentContext _currentContext;
     private readonly IGetCipherPermissionsForUserQuery _getCipherPermissionsForUserQuery;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IApplicationCacheService _applicationCacheService;
@@ -62,8 +56,6 @@ public class CipherService : ICipherService
         IUserService userService,
         IPolicyService policyService,
         GlobalSettings globalSettings,
-        IReferenceEventService referenceEventService,
-        ICurrentContext currentContext,
         IGetCipherPermissionsForUserQuery getCipherPermissionsForUserQuery,
         IPolicyRequirementQuery policyRequirementQuery,
         IApplicationCacheService applicationCacheService,
@@ -82,8 +74,6 @@ public class CipherService : ICipherService
         _userService = userService;
         _policyService = policyService;
         _globalSettings = globalSettings;
-        _referenceEventService = referenceEventService;
-        _currentContext = currentContext;
         _getCipherPermissionsForUserQuery = getCipherPermissionsForUserQuery;
         _policyRequirementQuery = policyRequirementQuery;
         _applicationCacheService = applicationCacheService;
@@ -108,9 +98,6 @@ public class CipherService : ICipherService
                     cipher.UserId = savingUserId;
                 }
                 await _cipherRepository.CreateAsync(cipher, collectionIds);
-
-                await _referenceEventService.RaiseEventAsync(
-                    new ReferenceEvent(ReferenceEventType.CipherCreated, await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value), _currentContext));
             }
             else
             {
@@ -325,12 +312,10 @@ public class CipherService : ICipherService
             }
 
             var attachments = cipher.GetAttachments();
-            if (!attachments.ContainsKey(attachmentId))
+            if (!attachments.TryGetValue(attachmentId, out var originalAttachmentMetadata))
             {
                 throw new BadRequestException($"Cipher does not own specified attachment");
             }
-
-            var originalAttachmentMetadata = attachments[attachmentId];
 
             if (originalAttachmentMetadata.TempMetadata != null)
             {
@@ -408,12 +393,11 @@ public class CipherService : ICipherService
     {
         var attachments = cipher?.GetAttachments() ?? new Dictionary<string, CipherAttachment.MetaData>();
 
-        if (!attachments.ContainsKey(attachmentId))
+        if (!attachments.TryGetValue(attachmentId, out var data))
         {
             throw new NotFoundException();
         }
 
-        var data = attachments[attachmentId];
         var response = new AttachmentResponseData
         {
             Cipher = cipher,
@@ -641,7 +625,7 @@ public class CipherService : ICipherService
         await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
     }
 
-    public async Task ShareManyAsync(IEnumerable<(Cipher cipher, DateTime? lastKnownRevisionDate)> cipherInfos,
+    public async Task<IEnumerable<CipherDetails>> ShareManyAsync(IEnumerable<(CipherDetails cipher, DateTime? lastKnownRevisionDate)> cipherInfos,
         Guid organizationId, IEnumerable<Guid> collectionIds, Guid sharingUserId)
     {
         var cipherIds = new List<Guid>();
@@ -668,6 +652,7 @@ public class CipherService : ICipherService
 
         // push
         await _pushService.PushSyncCiphersAsync(sharingUserId);
+        return cipherInfos.Select(c => c.cipher);
     }
 
     public async Task SaveCollectionsAsync(Cipher cipher, IEnumerable<Guid> collectionIds, Guid savingUserId,

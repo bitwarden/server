@@ -7,9 +7,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 
 #nullable enable
 
@@ -24,7 +21,6 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IPushNotificationService _pushService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderUserRepository _providerUserRepository;
@@ -36,7 +32,6 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         IUserRepository userRepository,
         ICurrentContext currentContext,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-        IReferenceEventService referenceEventService,
         IPushNotificationService pushService,
         IOrganizationRepository organizationRepository,
         IProviderUserRepository providerUserRepository)
@@ -48,7 +43,6 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         _userRepository = userRepository;
         _currentContext = currentContext;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
-        _referenceEventService = referenceEventService;
         _pushService = pushService;
         _organizationRepository = organizationRepository;
         _providerUserRepository = providerUserRepository;
@@ -195,8 +189,6 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         await _userRepository.DeleteManyAsync(users);
         foreach (var user in users)
         {
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.DeleteAccount, user, _currentContext));
             await _pushService.PushLogOutAsync(user.Id);
         }
 
