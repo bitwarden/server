@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Enums;
 using Bit.Core.Utilities;
 
 #nullable enable

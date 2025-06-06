@@ -1,7 +1,7 @@
 ﻿#nullable enable
 
 using System.Text.Json.Serialization;
-using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Enums;
 
 namespace Bit.Core.KeyManagement.Models.Data;
 
