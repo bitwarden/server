@@ -45,8 +45,8 @@ public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, G
                 "[dbo].[UserSignatureKeyPair_SetForRotation]",
                 new
                 {
-                    Id = Guid.NewGuid(),
-                    UserId = userId,
+                    Id = CoreHelpers.GenerateComb();
+            UserId = userId,
                     SignatureAlgorithm = (byte)signingKeys.SignatureAlgorithm,
                     SigningKey = signingKeys.WrappedSigningKey,
                     signingKeys.VerifyingKey,
@@ -55,25 +55,25 @@ public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, G
                 },
                 commandType: CommandType.StoredProcedure,
                 transaction: transaction);
-        };
-    }
+    };
+}
 
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid grantorId, SignatureKeyPairData signingKeys)
+public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid grantorId, SignatureKeyPairData signingKeys)
+{
+    return async (SqlConnection connection, SqlTransaction transaction) =>
     {
-        return async (SqlConnection connection, SqlTransaction transaction) =>
-        {
-            await connection.QueryAsync(
-                "[dbo].[UserSignatureKeyPair_UpdateForRotation]",
-                new
-                {
-                    UserId = grantorId,
-                    SignatureAlgorithm = (byte)signingKeys.SignatureAlgorithm,
-                    SigningKey = signingKeys.WrappedSigningKey,
-                    signingKeys.VerifyingKey,
-                    RevisionDate = DateTime.UtcNow
-                },
-                commandType: CommandType.StoredProcedure,
-                transaction: transaction);
-        };
-    }
+        await connection.QueryAsync(
+            "[dbo].[UserSignatureKeyPair_UpdateForRotation]",
+            new
+            {
+                UserId = grantorId,
+                SignatureAlgorithm = (byte)signingKeys.SignatureAlgorithm,
+                SigningKey = signingKeys.WrappedSigningKey,
+                signingKeys.VerifyingKey,
+                RevisionDate = DateTime.UtcNow
+            },
+            commandType: CommandType.StoredProcedure,
+            transaction: transaction);
+    };
+}
 }
