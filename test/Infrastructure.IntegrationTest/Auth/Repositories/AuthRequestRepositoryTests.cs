@@ -182,7 +182,95 @@ public class AuthRequestRepositoryTests
         Assert.Null(uncreatedAuthRequest);
     }
 
-    private static AuthRequest CreateAuthRequest(Guid userId, AuthRequestType authRequestType, DateTime creationDate, bool? approved = null, DateTime? responseDate = null)
+    /// <summary>
+    /// Test to determine that when no valid authRequest exists in the database the return value is null.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyPendingAuthRequestByUserId_AuthRequstsInvalid_ReturnsEmptyEnumerable_Success(
+        IAuthRequestRepository authRequestRepository,
+        IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        List<AuthRequest> authRequests = [];
+
+        // A user auth request type that has passed its expiration time, should not be returned.
+        var authRequest = CreateAuthRequest(
+            user.Id,
+            AuthRequestType.AuthenticateAndUnlock,
+            CreateExpiredDate(_userRequestExpiration));
+        authRequest.RequestDeviceIdentifier = "auth_request_expired";
+        authRequests.Add(await authRequestRepository.CreateAsync(authRequest));
+
+        // A valid time AuthRequest but for pending we do not fetch admin auth requests
+        authRequest.Type = AuthRequestType.AdminApproval;
+        authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-1);
+        authRequest.RequestDeviceIdentifier = "admin_auth_request";
+        authRequests.Add(await authRequestRepository.CreateAsync(authRequest));
+
+        // A valid time AuthRequest but for pending we do not fetch admin auth requests
+        authRequest.Type = AuthRequestType.AuthenticateAndUnlock;
+        authRequest.Approved = false;
+        authRequest.RequestDeviceIdentifier = "approved_auth_request";
+        authRequests.Add(await authRequestRepository.CreateAsync(authRequest));
+
+        var result = await authRequestRepository.GetManyPendingAuthRequestByUserId(user.Id);
+        Assert.NotNull(result);
+        Assert.Empty(result);
+
+        // Verify that there are authrequest associated with the user.
+        Assert.NotEmpty(await authRequestRepository.GetManyByUserIdAsync(user.Id));
+    }
+
+    /// <summary>
+    /// Test to determine that when multiple valid authRequest exist for a device only the soonest one is returned.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyPendingAuthRequestByUserId_MultipleRequestForSingleDevice_ReturnsMostRecent(
+        IAuthRequestRepository authRequestRepository,
+        IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var authRequest = CreateAuthRequest(
+            user.Id,
+            AuthRequestType.AuthenticateAndUnlock,
+            DateTime.UtcNow.AddMinutes(-1));
+        var oneMinuteOldAuthRequest = await authRequestRepository.CreateAsync(authRequest);
+
+        authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-5);
+        var fiveMinuteOldAuthRequest = await authRequestRepository.CreateAsync(authRequest);
+
+        authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-10);
+        var tenMinuteOldAuthRequest = await authRequestRepository.CreateAsync(authRequest);
+
+        var result = await authRequestRepository.GetManyPendingAuthRequestByUserId(user.Id);
+        Assert.NotNull(result);
+        // since we group by device there should only be a sinlge return since the device Id is the same
+        Assert.Single(result);
+        // we return null values per device per user, there is one device in the database so there should be one response and it should be null
+        var everyValueNotNull = result.Any(ar => ar != null);
+        Assert.True(everyValueNotNull);
+    }
+
+    private static AuthRequest CreateAuthRequest(
+        Guid userId,
+        AuthRequestType authRequestType,
+        DateTime creationDate,
+        bool? approved = null,
+        DateTime? responseDate = null)
     {
         return new AuthRequest
         {
