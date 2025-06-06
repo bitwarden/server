@@ -308,6 +308,8 @@ public class OrganizationBillingController(
             sale.Organization.UseKeyConnector = plan.HasKeyConnector;
             sale.Organization.UseScim = plan.HasScim;
             sale.Organization.UseCustomPermissions = plan.HasCustomPermissions;
+            sale.Organization.UseOrganizationDomains = plan.HasOrganizationDomains;
+            sale.Organization.MaxCollections = plan.PasswordManager.MaxCollections;
         }
 
         if (organizationSignup.PaymentMethodType == null || string.IsNullOrEmpty(organizationSignup.PaymentToken))
