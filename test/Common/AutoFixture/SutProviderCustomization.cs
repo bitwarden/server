@@ -7,7 +7,7 @@ public class SutProviderCustomization : ICustomization, ISpecimenBuilder
 {
     private IFixture _fixture = null;
 
-    public object Create(object request, ISpecimenContext context)
+    public virtual object Create(object request, ISpecimenContext context)
     {
         if (context == null)
         {
