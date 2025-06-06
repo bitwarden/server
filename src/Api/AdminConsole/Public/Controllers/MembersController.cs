@@ -177,9 +177,10 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
+        var existingUserType = existingUser.Type;
         var updatedUser = model.ToOrganizationUser(existingUser);
         var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
-        await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, null, associations, model.Groups);
+        await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, existingUserType, null, associations, model.Groups);
         MemberResponseModel response = null;
         if (existingUser.UserId.HasValue)
         {

@@ -521,7 +521,9 @@ public class OrganizationUsersController : Controller
             .Concat(readonlyCollectionAccess)
             .ToList();
 
-        await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), userId,
+        var existingUserType = organizationUser.Type;
+
+        await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), existingUserType, userId,
             collectionsToSave, groupsToSave);
     }
 
