@@ -11,6 +11,16 @@ CREATE TABLE [dbo].[UserSignatureKeyPair] (
 );
 GO
 
+IF NOT EXISTS(SELECT name
+FROM sys.indexes
+WHERE name = 'IX_UserSignatureKeyPair_UserId')
+BEGIN
+CREATE NONCLUSTERED INDEX [IX_UserSignatureKeyPair_UserId]
+    ON [dbo].[UserSignatureKeyPair]([UserId] ASC);
+END
+GO
+
+
 CREATE OR ALTER VIEW [dbo].[UserSignatureKeyPairView]
 AS
 SELECT

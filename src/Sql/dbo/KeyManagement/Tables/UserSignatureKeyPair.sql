@@ -9,3 +9,8 @@
     CONSTRAINT [PK_UserSignatureKeyPair] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_UserSignatureKeyPair_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
 );
+GO
+
+CREATE NONCLUSTERED INDEX [IX_UserSignatureKeyPair_UserId]
+    ON [dbo].[UserSignatureKeyPair]([UserId] ASC);
+GO
