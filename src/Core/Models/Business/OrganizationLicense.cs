@@ -88,48 +88,10 @@ public class OrganizationLicense : BaseLicense
         AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems;
         //
 
-        if (subscriptionInfo?.Subscription == null)
-        {
-            if (org.PlanType == PlanType.Custom && org.ExpirationDate.HasValue)
-            {
-                Expires = Refresh = org.ExpirationDate.Value;
-                Trial = false;
-            }
-            else
-            {
-                Expires = Refresh = Issued.AddDays(7);
-                Trial = true;
-            }
-        }
-        else if (subscriptionInfo.Subscription.TrialEndDate.HasValue &&
-                 subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow)
-        {
-            Expires = Refresh = subscriptionInfo.Subscription.TrialEndDate.Value;
-            Trial = true;
-        }
-        else
-        {
-            if (org.ExpirationDate.HasValue && org.ExpirationDate.Value < DateTime.UtcNow)
-            {
-                // expired
-                Expires = Refresh = org.ExpirationDate.Value;
-            }
-            else if (subscriptionInfo?.Subscription?.PeriodDuration != null &&
-                     subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
-            {
-                Refresh = DateTime.UtcNow.AddDays(30);
-                Expires = subscriptionInfo.Subscription.PeriodEndDate?.AddDays(Constants
-                    .OrganizationSelfHostSubscriptionGracePeriodDays);
-                ExpirationWithoutGracePeriod = subscriptionInfo.Subscription.PeriodEndDate;
-            }
-            else
-            {
-                Expires = org.ExpirationDate.HasValue ? org.ExpirationDate.Value.AddMonths(11) : Issued.AddYears(1);
-                Refresh = DateTime.UtcNow - Expires > TimeSpan.FromDays(30) ? DateTime.UtcNow.AddDays(30) : Expires;
-            }
-
-            Trial = false;
-        }
+        Expires = org.CalculateFreshExpirationDate(subscriptionInfo, Issued);
+        Refresh = org.CalculateFreshRefreshDate(subscriptionInfo, Expires, Issued);
+        ExpirationWithoutGracePeriod = org.CalculateFreshExpirationDateWithoutGracePeriod(subscriptionInfo);
+        Trial = org.IsTrialing(subscriptionInfo);
 
         UseAdminSponsoredFamilies = org.UseAdminSponsoredFamilies;
         Hash = Convert.ToBase64String(ComputeHash());
@@ -247,7 +209,7 @@ public class OrganizationLicense : BaseLicense
 
     private bool ValidLicenseVersion
     {
-        get => Version is >= 1 and <= 16;
+        get => Version is >= 1 and <= CurrentLicenseFileVersion + 1;
     }
 
     public override byte[] GetDataBytes(bool forHash = false)
@@ -569,7 +531,7 @@ public class OrganizationLicense : BaseLicense
             * validation.
             */
 
-        if (valid && Version >= 16)
+        if (valid && Version >= CurrentLicenseFileVersion + 1)
         {
             valid = organization.UseOrganizationDomains;
         }

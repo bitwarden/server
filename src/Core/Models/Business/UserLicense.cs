@@ -24,12 +24,9 @@ public class UserLicense : BaseLicense
         Premium = user.Premium;
         MaxStorageGb = user.MaxStorageGb;
         Issued = DateTime.UtcNow;
-        Expires = subscriptionInfo?.UpcomingInvoice?.Date != null ?
-            subscriptionInfo.UpcomingInvoice.Date.Value.AddDays(7) :
-            user.PremiumExpirationDate?.AddDays(7);
-        Refresh = subscriptionInfo?.UpcomingInvoice?.Date;
-        Trial = (subscriptionInfo?.Subscription?.TrialEndDate.HasValue ?? false) &&
-            subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow;
+        Expires = user.CalculateFreshExpirationDate(subscriptionInfo);
+        Refresh = user.CalculateFreshRefreshDate(subscriptionInfo);
+        Trial = user.IsTrialing(subscriptionInfo);
 
         Hash = Convert.ToBase64String(ComputeHash());
         Signature = Convert.ToBase64String(licenseService.SignLicense(this));
@@ -46,9 +43,9 @@ public class UserLicense : BaseLicense
         Premium = user.Premium;
         MaxStorageGb = user.MaxStorageGb;
         Issued = DateTime.UtcNow;
-        Expires = user.PremiumExpirationDate?.AddDays(7);
-        Refresh = user.PremiumExpirationDate?.Date;
-        Trial = false;
+        Expires = user.CalculateFreshExpirationDate(null);
+        Refresh = user.CalculateFreshRefreshDate(null);
+        Trial = user.IsTrialing(null);
 
         Hash = Convert.ToBase64String(ComputeHash());
         Signature = Convert.ToBase64String(licenseService.SignLicense(this));

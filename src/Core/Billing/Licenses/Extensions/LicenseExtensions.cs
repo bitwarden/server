@@ -116,23 +116,51 @@ public static class LicenseExtensions
 
 public static class OrganizationLicenseExtensions
 {
-    public static DateTime CalculateFreshExpirationDate(this Organization org, SubscriptionInfo subscriptionInfo)
+    public static DateTime CalculateFreshExpirationDate(this Organization org, SubscriptionInfo subscriptionInfo, DateTime issued)
     {
         if (subscriptionInfo?.Subscription == null)
         {
-            if (org.PlanType == PlanType.Custom && org.ExpirationDate.HasValue)
-            {
-                return org.ExpirationDate.Value;
-            }
-
-            return DateTime.UtcNow.AddDays(7);
+            return org.PlanType == PlanType.Custom && org.ExpirationDate.HasValue
+                ? org.ExpirationDate.Value
+                : issued.AddDays(7);
         }
 
-        var subscription = subscriptionInfo.Subscription;
-
-        if (subscription.TrialEndDate > DateTime.UtcNow)
+        if (subscriptionInfo.Subscription.TrialEndDate.HasValue &&
+                 subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow)
         {
-            return subscription.TrialEndDate.Value;
+            return subscriptionInfo.Subscription.TrialEndDate.Value;
+        }
+
+        if (org.ExpirationDate.HasValue && org.ExpirationDate.Value < DateTime.UtcNow)
+        {
+            // expired
+            return org.ExpirationDate.Value;
+        }
+
+        if (subscriptionInfo?.Subscription?.PeriodDuration != null &&
+                    subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
+        {
+            return subscriptionInfo.Subscription.PeriodEndDate.Value.AddDays(Core.Constants.OrganizationSelfHostSubscriptionGracePeriodDays);
+        }
+
+        return org.ExpirationDate.HasValue
+            ? org.ExpirationDate.Value.AddMonths(11)
+            : issued.AddYears(1);
+    }
+
+    public static DateTime CalculateFreshRefreshDate(this Organization org, SubscriptionInfo subscriptionInfo, DateTime? expirationDate, DateTime issued)
+    {
+        if (subscriptionInfo?.Subscription == null)
+        {
+            return org.PlanType == PlanType.Custom && org.ExpirationDate.HasValue
+                ? org.ExpirationDate.Value
+                : issued.AddDays(7);
+        }
+
+        if (subscriptionInfo.Subscription.TrialEndDate.HasValue &&
+                 subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow)
+        {
+            return subscriptionInfo.Subscription.TrialEndDate.Value;
         }
 
         if (org.ExpirationDate.HasValue && org.ExpirationDate.Value < DateTime.UtcNow)
@@ -140,66 +168,48 @@ public static class OrganizationLicenseExtensions
             return org.ExpirationDate.Value;
         }
 
-        if (subscription.PeriodEndDate.HasValue && subscription.PeriodDuration > TimeSpan.FromDays(180))
+        if (subscriptionInfo?.Subscription?.PeriodDuration != null &&
+                    subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
         {
-            return subscription.PeriodEndDate
-                .Value
-                .AddDays(Bit.Core.Constants.OrganizationSelfHostSubscriptionGracePeriodDays);
+            return DateTime.UtcNow.AddDays(30);
         }
 
-        return org.ExpirationDate?.AddMonths(11) ?? DateTime.UtcNow.AddYears(1);
-    }
-
-    public static DateTime CalculateFreshRefreshDate(this Organization org, SubscriptionInfo subscriptionInfo, DateTime expirationDate)
-    {
-        if (subscriptionInfo?.Subscription == null ||
-            subscriptionInfo.Subscription.TrialEndDate > DateTime.UtcNow ||
-            org.ExpirationDate < DateTime.UtcNow)
-        {
-            return expirationDate;
-        }
-
-        return subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180) ||
-            DateTime.UtcNow - expirationDate > TimeSpan.FromDays(30)
+        return !expirationDate.HasValue || DateTime.UtcNow - expirationDate.Value > TimeSpan.FromDays(30)
             ? DateTime.UtcNow.AddDays(30)
-            : expirationDate;
+            : expirationDate.Value;
     }
 
-    public static DateTime CalculateFreshExpirationDateWithoutGracePeriod(this Organization org, SubscriptionInfo subscriptionInfo, DateTime expirationDate)
-    {
-        if (subscriptionInfo?.Subscription is null)
-        {
-            return expirationDate;
-        }
-
-        var subscription = subscriptionInfo.Subscription;
-
-        if (subscription.TrialEndDate <= DateTime.UtcNow &&
-            org.ExpirationDate >= DateTime.UtcNow &&
-            subscription.PeriodEndDate.HasValue &&
-            subscription.PeriodDuration > TimeSpan.FromDays(180))
-        {
-            return subscription.PeriodEndDate.Value;
-        }
-
-        return expirationDate;
-    }
+    public static DateTime? CalculateFreshExpirationDateWithoutGracePeriod(this Organization org, SubscriptionInfo subscriptionInfo) =>
+        subscriptionInfo?.Subscription != null &&
+        (!subscriptionInfo.Subscription.TrialEndDate.HasValue || subscriptionInfo.Subscription.TrialEndDate.Value <= DateTime.UtcNow) &&
+        (!org.ExpirationDate.HasValue || org.ExpirationDate.Value >= DateTime.UtcNow) &&
+        subscriptionInfo.Subscription.PeriodDuration != null &&
+        subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180)
+            ? subscriptionInfo.Subscription.PeriodEndDate
+            : null;
 
     public static bool IsTrialing(this Organization org, SubscriptionInfo subscriptionInfo) =>
-        subscriptionInfo?.Subscription is null
+        subscriptionInfo?.Subscription == null
             ? org.PlanType != PlanType.Custom || !org.ExpirationDate.HasValue
-            : subscriptionInfo.Subscription.TrialEndDate > DateTime.UtcNow;
+            : subscriptionInfo.Subscription.TrialEndDate.HasValue && subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow;
 }
 
 public static class UserLicenseExtensions
 {
     public static DateTime? CalculateFreshExpirationDate(this User user, SubscriptionInfo subscriptionInfo) =>
-        subscriptionInfo?.UpcomingInvoice?.Date?.AddDays(7) ?? user.PremiumExpirationDate?.AddDays(7);
+        subscriptionInfo == null
+            ? user.PremiumExpirationDate?.AddDays(7)
+            : subscriptionInfo.UpcomingInvoice?.Date != null
+                ? subscriptionInfo.UpcomingInvoice.Date.Value.AddDays(7)
+                : user.PremiumExpirationDate?.AddDays(7);
 
     public static DateTime? CalculateFreshRefreshDate(this User user, SubscriptionInfo subscriptionInfo) =>
-        subscriptionInfo?.UpcomingInvoice?.Date ?? user.PremiumExpirationDate;
+        subscriptionInfo == null
+            ? user.PremiumExpirationDate?.Date
+            : subscriptionInfo?.UpcomingInvoice?.Date;
 
     public static bool IsTrialing(this User user, SubscriptionInfo subscriptionInfo) =>
-        (subscriptionInfo?.Subscription?.TrialEndDate.HasValue ?? false) &&
-        subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow;
+        subscriptionInfo != null &&
+            (subscriptionInfo?.Subscription?.TrialEndDate.HasValue ?? false) &&
+            subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow;
 }
