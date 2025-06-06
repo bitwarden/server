@@ -1,9 +1,9 @@
 ﻿using System.Text.Json;
-using Bit.Core.AdminConsole.Models.Data.Integrations;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
 using Xunit;
 
-namespace Bit.Core.Test.Models.Data.Integrations;
+namespace Bit.Core.Test.Models.Data.EventIntegrations;
 
 public class IntegrationMessageTests
 {
@@ -45,6 +45,7 @@ public class IntegrationMessageTests
         var json = message.ToJson();
         var result = IntegrationMessage<WebhookIntegrationConfigurationDetails>.FromJson(json);
 
+        Assert.NotNull(result);
         Assert.Equal(message.Configuration, result.Configuration);
         Assert.Equal(message.MessageId, result.MessageId);
         Assert.Equal(message.RenderedTemplate, result.RenderedTemplate);

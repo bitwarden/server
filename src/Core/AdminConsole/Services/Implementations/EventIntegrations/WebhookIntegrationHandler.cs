@@ -3,7 +3,7 @@
 using System.Globalization;
 using System.Net;
 using System.Text;
-using Bit.Core.AdminConsole.Models.Data.Integrations;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
 #nullable enable
 
