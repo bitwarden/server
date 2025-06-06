@@ -4,7 +4,6 @@ using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -72,7 +71,7 @@ public class EmergencyAccessController : Controller
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var policies = await _emergencyAccessService.GetPoliciesAsync(id, user);
-        var responses = policies.Select<Policy, PolicyResponseModel>(policy => new PolicyResponseModel(policy));
+        var responses = policies?.Select(policy => new PolicyResponseModel(policy));
         return new ListResponseModel<PolicyResponseModel>(responses);
     }
 
