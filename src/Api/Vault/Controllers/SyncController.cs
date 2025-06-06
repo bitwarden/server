@@ -81,12 +81,15 @@ public class SyncController : Controller
             throw new BadRequestException("User not found.");
         }
 
-        var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
+        var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(
+            user.Id,
             OrganizationUserStatusType.Confirmed);
-        var providerUserDetails = await _providerUserRepository.GetManyDetailsByUserAsync(user.Id,
+        var providerUserDetails = await _providerUserRepository.GetManyDetailsByUserAsync(
+            user.Id,
             ProviderUserStatusType.Confirmed);
         var providerUserOrganizationDetails =
-            await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(user.Id,
+            await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(
+                user.Id,
                 ProviderUserStatusType.Confirmed);
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
 

@@ -70,6 +70,9 @@ public interface ICurrentContext
     Task<ICollection<CurrentContextOrganization>> OrganizationMembershipAsync(
         IOrganizationUserRepository organizationUserRepository, Guid userId);
 
+    Task<ICollection<CurrentContextOrganization>> OrganizationAcceptedOrConfirmedAsync(
+        IOrganizationUserRepository organizationUserRepository, Guid userId);
+
     Task<ICollection<CurrentContextProvider>> ProviderMembershipAsync(
         IProviderUserRepository providerUserRepository, Guid userId);
 

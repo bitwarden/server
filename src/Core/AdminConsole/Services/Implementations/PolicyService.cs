@@ -29,9 +29,13 @@ public class PolicyService : IPolicyService
         _globalSettings = globalSettings;
     }
 
-    public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
+    public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user, bool getConfirmedOrAccepted = false)
     {
-        var policies = (await _policyRepository.GetManyByUserIdAsync(user.Id))
+        var policies = getConfirmedOrAccepted ?
+            (await _policyRepository.GetManyAcceptedOrConfirmedByUserIdAsync(user.Id))
+            .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
+            .ToList()
+            : (await _policyRepository.GetManyByUserIdAsync(user.Id))
             .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
             .ToList();
 
