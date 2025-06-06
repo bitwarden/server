@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -26,6 +27,7 @@ namespace Bit.Core.KeyManagement.UserKey.Implementations;
 /// <param name="_pushService">Logs out user from other devices after successful rotation</param>
 /// <param name="_identityErrorDescriber">Provides a password mismatch error if master password hash validation fails</param>
 /// <param name="_credentialRepository">Provides a method to update re-encrypted WebAuthn keys</param>
+/// <param name="_userSignatureKeyPairRepository">Provides a method to update re-encrypted signature keys</param>
 public class RotateUserAccountKeysCommand(
     IUserService _userService,
     IUserRepository _userRepository,
@@ -38,7 +40,8 @@ public class RotateUserAccountKeysCommand(
     IPasswordHasher<User> _passwordHasher,
     IPushNotificationService _pushService,
     IdentityErrorDescriber _identityErrorDescriber,
-    IWebAuthnCredentialRepository _credentialRepository
+    IWebAuthnCredentialRepository _credentialRepository,
+    IUserSignatureKeyPairRepository _userSignatureKeyPairRepository
 ) : IRotateUserAccountKeysCommand
 {
     /// <inheritdoc />
@@ -58,15 +61,52 @@ public class RotateUserAccountKeysCommand(
         user.RevisionDate = user.AccountRevisionDate = now;
         user.LastKeyRotationDate = now;
         user.SecurityStamp = Guid.NewGuid().ToString();
-        List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = new();
+        var currentSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id);
+        List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = [];
 
         if (!model.MasterPasswordUnlockData.ValidateForUser(user))
         {
             throw new InvalidOperationException("The provided master password unlock data is not valid for this user.");
         }
-        if (model.AccountPublicKey != user.PublicKey)
+        if (model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey != user.PublicKey)
         {
             throw new InvalidOperationException("The provided account public key does not match the user's current public key, and changing the account asymmetric keypair is currently not supported during key rotation.");
+        }
+
+        if (currentSignatureKeyPair != null)
+        {
+            // user is already v2 user
+            if (model.AccountKeys.SignatureKeyPairData == null)
+            {
+                throw new InvalidOperationException("The provided signing key data is null, but the user already has signing keys.");
+            }
+
+            if (model.AccountKeys.SignatureKeyPairData.VerifyingKey != currentSignatureKeyPair.VerifyingKey)
+            {
+                throw new InvalidOperationException("The provided signing key data does not match the user's current signing key data.");
+            }
+            if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey))
+            {
+                throw new InvalidOperationException("No signed public key provided, but the user already has a signature key pair.");
+            }
+        }
+        else
+        {
+            if (model.AccountKeys.SignatureKeyPairData != null)
+            {
+                // user is upgrading
+                if (string.IsNullOrEmpty(model.AccountKeys.SignatureKeyPairData.VerifyingKey))
+                {
+                    throw new InvalidOperationException("The provided signing key data does not contain a valid verifying key.");
+                }
+
+                if (string.IsNullOrEmpty(model.AccountKeys.SignatureKeyPairData.WrappedSigningKey))
+                {
+                    throw new InvalidOperationException("The provided signing key data does not contain a valid wrapped signing key.");
+                }
+                saveEncryptedDataActions.Add(_userSignatureKeyPairRepository.SetUserSignatureKeyPair(user.Id, model.AccountKeys.SignatureKeyPairData));
+                user.SignedPublicKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey;
+            }
         }
 
         user.Key = model.MasterPasswordUnlockData.MasterKeyEncryptedUserKey;
