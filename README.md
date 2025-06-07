@@ -1,3 +1,5 @@
+# Bitwarden Server
+
 <p align="center">
   <img src="https://github.com/bitwarden/brand/blob/main/screenshots/apps-combo-logo.png" alt="Bitwarden" />
 </p>
