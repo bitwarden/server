@@ -196,6 +196,9 @@ FakesAssemblies/
 # Visual Studio 6 workspace options file
 *.opt
 
+# Lint
+megalinter-reports/
+
 # Other
 project.lock.json
 *.jfm
