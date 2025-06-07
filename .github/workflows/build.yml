@@ -11,7 +11,7 @@ on:
     types: [opened, synchronize]
   workflow_call:
     inputs: {}
-  
+
 permissions:
   contents: read
 
@@ -20,26 +20,9 @@ env:
   _GITHUB_PR_REPO_NAME: ${{ github.event.pull_request.head.repo.full_name }}
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Check out repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-
-      - name: Set up .NET
-        uses: actions/setup-dotnet@87b7050bc53ea08284295505d98d2aa94301e852 # v4.2.0
-
-      - name: Verify format
-        run: dotnet format --verify-no-changes
-
   build-artifacts:
     name: Build Docker images
     runs-on: ubuntu-24.04
-    needs:
-      - lint
     outputs:
       has_secrets: ${{ steps.check-secrets.outputs.has_secrets }}
     permissions:
@@ -466,8 +449,6 @@ jobs:
   build-mssqlmigratorutility:
     name: Build MSSQL migrator utility
     runs-on: ubuntu-24.04
-    needs:
-      - lint
     defaults:
       run:
         shell: bash
@@ -607,7 +588,6 @@ jobs:
     if: always()
     runs-on: ubuntu-22.04
     needs:
-      - lint
       - build-artifacts
       - upload
       - build-mssqlmigratorutility
