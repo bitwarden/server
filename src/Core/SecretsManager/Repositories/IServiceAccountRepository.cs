@@ -4,10 +4,12 @@ using Bit.Core.SecretsManager.Models.Data;
 
 namespace Bit.Core.SecretsManager.Repositories;
 
+#nullable enable
+
 public interface IServiceAccountRepository
 {
     Task<IEnumerable<ServiceAccount>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType);
-    Task<ServiceAccount> GetByIdAsync(Guid id);
+    Task<ServiceAccount?> GetByIdAsync(Guid id);
     Task<IEnumerable<ServiceAccount>> GetManyByIds(IEnumerable<Guid> ids);
     Task<ServiceAccount> CreateAsync(ServiceAccount serviceAccount);
     Task ReplaceAsync(ServiceAccount serviceAccount);

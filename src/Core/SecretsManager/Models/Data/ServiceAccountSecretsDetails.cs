@@ -2,8 +2,10 @@
 
 namespace Bit.Core.SecretsManager.Models.Data;
 
+#nullable enable
+
 public class ServiceAccountSecretsDetails
 {
-    public ServiceAccount ServiceAccount { get; set; }
+    public required ServiceAccount ServiceAccount { get; set; }
     public int AccessToSecrets { get; set; }
 }

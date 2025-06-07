@@ -295,7 +295,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(resource.OrganizationId)
             .Returns(true);
-        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, resource.OrganizationId)
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(null!, resource.OrganizationId)
             .ReturnsForAnyArgs((accessClientType, userId));
     }
 
