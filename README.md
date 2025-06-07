@@ -18,7 +18,7 @@ The Bitwarden Server project contains the APIs, database, and other core infrast
 
 The server project is written in C# using .NET Core with ASP.NET Core. The database is written in T-SQL/SQL Server. The codebase can be developed, built, run, and deployed cross-platform on Windows, macOS, and Linux distributions.
 
-# Contributing
+## Contributing
 
 Code contributions are welcome! Please commit any pull requests against the `main` branch. Learn more about how to contribute by reading the [Contributing Guidelines](https://contributing.bitwarden.com/contributing/). Check out the [Contributing Documentation](https://contributing.bitwarden.com/) for how to get started with your first contribution.
 
@@ -26,7 +26,7 @@ Security audits and feedback are welcome. Please open an issue or email us priva
 
 No grant of any rights in the trademarks, service marks, or logos of Bitwarden is made (except as may be necessary to comply with the notice requirements as applicable), and use of any Bitwarden trademarks must comply with [Bitwarden Trademark Guidelines](https://github.com/bitwarden/server/blob/main/TRADEMARK_GUIDELINES.md).
 
-# Deploying
+## Deploying
 
 <p align="center">
   <a href="https://github.com/orgs/bitwarden/packages" target="_blank">
@@ -38,14 +38,14 @@ You can deploy Bitwarden using Docker containers on Windows, macOS, and Linux di
 
 Full documentation for deploying Bitwarden with Docker can be found in our help center at: <https://help.bitwarden.com/article/install-on-premise/>
 
-## Requirements
+### Requirements
 
 - [Docker](https://www.docker.com/community-edition#/download)
 - [Docker Compose](https://docs.docker.com/compose/install/) (already included with some Docker installations)
 
 _These dependencies are free to use._
 
-### Linux & macOS
+#### Linux & macOS
 
 ```sh
 curl -s -L -o bitwarden.sh \
@@ -55,7 +55,7 @@ curl -s -L -o bitwarden.sh \
 ./bitwarden.sh start
 ```
 
-### Windows
+#### Windows
 
 ```cmd
 Invoke-RestMethod -OutFile bitwarden.ps1 `
@@ -64,11 +64,11 @@ Invoke-RestMethod -OutFile bitwarden.ps1 `
 .\bitwarden.ps1 -start
 ```
 
-# Developers
+## Developers
 
 Please refer to the [Server Setup Guide](https://contributing.bitwarden.com/getting-started/server/guide) in the [Contributing Documentation](https://contributing.bitwarden.com/) for build instructions, recommended tooling, code style tips, and lots of other great information to get you started.
 
-## Hooks
+### Hooks
 
 To gain enhanced functionality such as local linting, install the hooks for this repository:
 
