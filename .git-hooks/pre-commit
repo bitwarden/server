@@ -6,7 +6,7 @@ FILES=$(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g')
 if npx mega-linter-runner --containername "megalinter-incremental" \
         --flavor formatters --remove-container --fix --env "'APPLY_FIXES=all'" \
         --env "'CLEAR_REPORT_FOLDER=true'" --env "'LOG_LEVEL=warning'" \
-        --filesonly $FILES; then
+        --env "'FLAVOR_SUGGESTIONS=false'" --filesonly $FILES; then
         echo "$FILES" | xargs git add
         exit 0
 fi
