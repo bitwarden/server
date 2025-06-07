@@ -80,6 +80,15 @@ public class PreviewTaxAmountCommand(
                     Value = taxInformation.TaxId
                 }
             ];
+
+            if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
+            {
+                options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
+                {
+                    Type = StripeConstants.TaxIdType.EUVAT,
+                    Value = $"ES{parameters.TaxInformation.TaxId}"
+                });
+            }
         }
 
         if (planType.GetProductTier() == ProductTierType.Families)
