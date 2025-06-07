@@ -2,6 +2,8 @@
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 /// <summary>
 /// Allows a single authorization handler implementation to handle requirements for
 /// both singular or bulk operations on single or multiple resources.
@@ -25,7 +27,7 @@ public abstract class BulkAuthorizationHandler<TRequirement, TResource> : Author
         await HandleRequirementAsync(context, requirement, bulkResources);
     }
 
-    private static ICollection<TResource> GetBulkResourceFromContext(AuthorizationHandlerContext context)
+    private static ICollection<TResource>? GetBulkResourceFromContext(AuthorizationHandlerContext context)
     {
         return context.Resource switch
         {

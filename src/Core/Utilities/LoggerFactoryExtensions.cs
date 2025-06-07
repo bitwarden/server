@@ -11,6 +11,8 @@ using Serilog.Sinks.Syslog;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public static class LoggerFactoryExtensions
 {
     public static void UseSerilog(
@@ -30,7 +32,7 @@ public static class LoggerFactoryExtensions
     public static ILoggingBuilder AddSerilog(
         this ILoggingBuilder builder,
         WebHostBuilderContext context,
-        Func<LogEvent, IGlobalSettings, bool> filter = null)
+        Func<LogEvent, IGlobalSettings, bool>? filter = null)
     {
         var globalSettings = new GlobalSettings();
         ConfigurationBinder.Bind(context.Configuration.GetSection("GlobalSettings"), globalSettings);
@@ -59,13 +61,13 @@ public static class LoggerFactoryExtensions
             .Enrich.FromLogContext()
             .Filter.ByIncludingOnly(inclusionPredicate);
 
-        if (CoreHelpers.SettingHasValue(globalSettings?.Sentry.Dsn))
+        if (CoreHelpers.SettingHasValue(globalSettings.Sentry.Dsn))
         {
             config.WriteTo.Sentry(globalSettings.Sentry.Dsn)
                 .Enrich.FromLogContext()
                 .Enrich.WithProperty("Project", globalSettings.ProjectName);
         }
-        else if (CoreHelpers.SettingHasValue(globalSettings?.Syslog.Destination))
+        else if (CoreHelpers.SettingHasValue(globalSettings.Syslog.Destination))
         {
             // appending sitename to project name to allow easier identification in syslog.
             var appName = $"{globalSettings.SiteName}-{globalSettings.ProjectName}";

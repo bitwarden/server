@@ -2,12 +2,14 @@
 
 namespace Bit.Core.SecretsManager.Models.Data;
 
+#nullable enable
+
 public class ServiceAccountPeopleAccessPolicies
 {
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
-    public IEnumerable<UserServiceAccountAccessPolicy> UserAccessPolicies { get; set; }
-    public IEnumerable<GroupServiceAccountAccessPolicy> GroupAccessPolicies { get; set; }
+    public IEnumerable<UserServiceAccountAccessPolicy>? UserAccessPolicies { get; set; }
+    public IEnumerable<GroupServiceAccountAccessPolicy>? GroupAccessPolicies { get; set; }
 
     public IEnumerable<BaseAccessPolicy> ToBaseAccessPolicies()
     {

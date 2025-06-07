@@ -2,6 +2,8 @@
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public static class ClaimsExtensions
 {
     public static bool HasSsoIdP(this IEnumerable<Claim> claims)

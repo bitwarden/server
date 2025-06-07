@@ -6,6 +6,8 @@ using Microsoft.Extensions.Options;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public class CustomIpRateLimitMiddleware : IpRateLimitMiddleware
 {
     private readonly IpRateLimitOptions _options;
