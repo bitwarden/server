@@ -45,7 +45,24 @@ public class OrganizationSale
 
     public static OrganizationSale From(
         Organization organization,
-        OrganizationUpgrade upgrade) => From(organization, (OrganizationSignup)upgrade);
+        OrganizationUpgrade upgrade)
+    {
+        var signup = new OrganizationSignup
+        {
+            BusinessName = upgrade.BusinessName,
+            Plan = upgrade.Plan,
+            AdditionalSeats = upgrade.AdditionalSeats,
+            AdditionalStorageGb = upgrade.AdditionalStorageGb,
+            PremiumAccessAddon = upgrade.PremiumAccessAddon,
+            TaxInfo = upgrade.TaxInfo,
+            PublicKey = upgrade.PublicKey,
+            PrivateKey = upgrade.PrivateKey,
+            AdditionalSmSeats = upgrade.AdditionalSmSeats,
+            AdditionalServiceAccounts = upgrade.AdditionalServiceAccounts,
+            UseSecretsManager = upgrade.UseSecretsManager
+        };
+        return From(organization, signup);
+    }
 
     private static CustomerSetup GetCustomerSetup(OrganizationSignup signup)
     {
