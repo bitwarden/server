@@ -15,6 +15,7 @@ public class IntegrationHandlerTests
         var expected = new IntegrationMessage<WebhookIntegrationConfigurationDetails>()
         {
             Configuration = new WebhookIntegrationConfigurationDetails("https://localhost"),
+            MessageId = "TestMessageId",
             IntegrationType = IntegrationType.Webhook,
             RenderedTemplate = "Template",
             DelayUntilDate = null,
