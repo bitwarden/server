@@ -281,4 +281,58 @@ public class RotateUserAccountKeysCommandTests
         Assert.Equal("The provided signing key data is null, but the user already has signing keys.", exception.Message);
     }
 
+    [Theory, BitAutoData]
+    public async Task ValidateRotationModelSignatureKeyPairForV2User_VerifyingKeyMismatch_Throws(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        user.Kdf = Enums.KdfType.Argon2id;
+        user.KdfIterations = 3;
+        user.KdfMemory = 64;
+        user.KdfParallelism = 4;
+        user.PublicKey = "public-key";
+        user.PrivateKey = "2.abc";
+        var repoKeyPair = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "wrapped", "verifying-key");
+        var modelKeyPair = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "wrapped", "different-verifying-key");
+        model.AccountKeys.SignatureKeyPairData = modelKeyPair;
+        model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("2.abc", user.PublicKey, "signed-public-key");
+        sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(user.Id)
+            .Returns(repoKeyPair);
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.ValidateRotationModelSignatureKeyPairForV2User(model, user));
+        Assert.Equal("The provided verifying key does not match the user's current verifying key.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateRotationModelSignatureKeyPairForV2User_SignedPublicKeyNullOrEmpty_Throws(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        user.Kdf = Enums.KdfType.Argon2id;
+        user.KdfIterations = 3;
+        user.KdfMemory = 64;
+        user.KdfParallelism = 4;
+        user.PublicKey = "public-key";
+        user.PrivateKey = "2.abc";
+        var keyPair = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "wrapped", "verifying-key");
+        model.AccountKeys.SignatureKeyPairData = keyPair;
+        model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("2.abc", user.PublicKey, null);
+        sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(user.Id)
+            .Returns(keyPair);
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.ValidateRotationModelSignatureKeyPairForV2User(model, user));
+        Assert.Equal("No signed public key provided, but the user already has a signature key pair.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateRotationModelSignatureKeyPairForV2User_WrappedSigningKeyNotXChaCha20_Throws(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        user.Kdf = Enums.KdfType.Argon2id;
+        user.KdfIterations = 3;
+        user.KdfMemory = 64;
+        user.KdfParallelism = 4;
+        user.PublicKey = "public-key";
+        user.PrivateKey = "2.abc";
+        var keyPair = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "2.xxx", "verifying-key");
+        model.AccountKeys.SignatureKeyPairData = keyPair;
+        model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("7.xxx", user.PublicKey, "signed-public-key");
+        sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(user.Id)
+            .Returns(keyPair);
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.ValidateRotationModelSignatureKeyPairForV2User(model, user));
+        Assert.Equal("The provided signing key data is not wrapped with XChaCha20-Poly1305.", ex.Message);
+    }
 }

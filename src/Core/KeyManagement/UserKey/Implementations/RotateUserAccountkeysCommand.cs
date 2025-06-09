@@ -106,7 +106,7 @@ public class RotateUserAccountKeysCommand(
         }
         if (model.AccountKeys.SignatureKeyPairData.VerifyingKey != currentSignatureKeyPair.VerifyingKey)
         {
-            throw new InvalidOperationException("The provided signing key data does not match the user's current signing key data.");
+            throw new InvalidOperationException("The provided verifying key does not match the user's current verifying key.");
         }
         if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData?.SignedPublicKey))
         {
