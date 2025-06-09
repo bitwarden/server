@@ -44,9 +44,12 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
         return organizationUsers
             .Select(o =>
             {
-                var userPermissions = o.GetPermissions();
-
-                o.Permissions = CoreHelpers.ClassToJsonData(userPermissions);
+                // Only set permissions for Custom user types for performance optimization
+                if (o.Type == OrganizationUserType.Custom)
+                {
+                    var userPermissions = o.GetPermissions();
+                    o.Permissions = CoreHelpers.ClassToJsonData(userPermissions);
+                }
 
                 return o;
             });
@@ -113,8 +116,12 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
         var organizationUsersClaimedStatus = claimedStatusTask.Result;
         var responses = organizationUsers.Select(organizationUserDetails =>
         {
-            var organizationUserPermissions = organizationUserDetails.GetPermissions();
-            organizationUserDetails.Permissions = CoreHelpers.ClassToJsonData(organizationUserPermissions);
+            // Only set permissions for Custom user types for performance optimization
+            if (organizationUserDetails.Type == OrganizationUserType.Custom)
+            {
+                var organizationUserPermissions = organizationUserDetails.GetPermissions();
+                organizationUserDetails.Permissions = CoreHelpers.ClassToJsonData(organizationUserPermissions);
+            }
 
             var userHasTwoFactorEnabled = organizationUsersTwoFactorEnabled[organizationUserDetails.Id];
             var userIsClaimedByOrganization = organizationUsersClaimedStatus[organizationUserDetails.Id];
@@ -141,8 +148,12 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
         var organizationUsersClaimedStatus = claimedStatusTask.Result;
         var responses = organizationUsers.Select(organizationUserDetails =>
         {
-            var organizationUserPermissions = organizationUserDetails.GetPermissions();
-            organizationUserDetails.Permissions = CoreHelpers.ClassToJsonData(organizationUserPermissions);
+            // Only set permissions for Custom user types for performance optimization
+            if (organizationUserDetails.Type == OrganizationUserType.Custom)
+            {
+                var organizationUserPermissions = organizationUserDetails.GetPermissions();
+                organizationUserDetails.Permissions = CoreHelpers.ClassToJsonData(organizationUserPermissions);
+            }
 
             var userHasTwoFactorEnabled = organizationUsersTwoFactorEnabled[organizationUserDetails.Id];
             var userIsClaimedByOrganization = organizationUsersClaimedStatus[organizationUserDetails.Id];
