@@ -65,7 +65,7 @@ public class RotateUserAccountKeysCommand(
 
         List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = [];
 
-        UpdateAccountKeys(model, user, saveEncryptedDataActions);
+        await UpdateAccountKeys(model, user, saveEncryptedDataActions);
         UpdateUnlockMethods(model, user, saveEncryptedDataActions);
         UpdateUserData(model, user, saveEncryptedDataActions);
 
@@ -97,10 +97,10 @@ public class RotateUserAccountKeysCommand(
         throw new InvalidOperationException("User is in an invalid state for key rotation. User has a signature key pair, but the private key is not in v2 format, or vice versa.");
     }
 
-    async void ValidateRotationModelSignatureKeyPairForV2User(RotateUserAccountKeysData model, User user)
+    async Task ValidateRotationModelSignatureKeyPairForV2User(RotateUserAccountKeysData model, User user)
     {
         var currentSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id);
-        if (model.AccountKeys.SignatureKeyPairData == null)
+        if (model.AccountKeys == null || model.AccountKeys.SignatureKeyPairData == null)
         {
             throw new InvalidOperationException("The provided signing key data is null, but the user already has signing keys.");
         }
@@ -108,7 +108,7 @@ public class RotateUserAccountKeysCommand(
         {
             throw new InvalidOperationException("The provided signing key data does not match the user's current signing key data.");
         }
-        if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey))
+        if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData?.SignedPublicKey))
         {
             throw new InvalidOperationException("No signed public key provided, but the user already has a signature key pair.");
         }
@@ -137,12 +137,13 @@ public class RotateUserAccountKeysCommand(
         }
     }
 
-    async void UpdateAccountKeys(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    async Task UpdateAccountKeys(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
         var isV2User = await IsV2EncryptionUserAsync(user);
 
         // Changing the public key encryption key pair is not supported during key rotation for now; so this ensures it is not accidentally changed
-        if (model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey != user.PublicKey)
+        var providedPublicKey = model.AccountKeys?.PublicKeyEncryptionKeyPairData?.PublicKey ?? model.AccountPublicKey;
+        if (providedPublicKey != user.PublicKey)
         {
             throw new InvalidOperationException("The provided account public key does not match the user's current public key, and changing the account asymmetric keypair is currently not supported during key rotation.");
         }
@@ -162,7 +163,7 @@ public class RotateUserAccountKeysCommand(
 
         if (isV2User)
         {
-            ValidateRotationModelSignatureKeyPairForV2User(model, user);
+            await ValidateRotationModelSignatureKeyPairForV2User(model, user);
         }
         else
         {

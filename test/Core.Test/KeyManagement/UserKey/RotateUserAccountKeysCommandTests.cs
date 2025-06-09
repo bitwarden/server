@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.KeyManagement.UserKey.Implementations;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -25,12 +26,14 @@ public class RotateUserAccountKeysCommandTests
 
         Assert.NotEqual(IdentityResult.Success, result);
     }
+
     [Theory, BitAutoData]
     public async Task ThrowsWhenUserIsNull(SutProvider<RotateUserAccountKeysCommand> sutProvider,
           RotateUserAccountKeysData model)
     {
         await Assert.ThrowsAsync<ArgumentNullException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(null, model));
     }
+
     [Theory, BitAutoData]
     public async Task RejectsEmailChange(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
@@ -75,6 +78,7 @@ public class RotateUserAccountKeysCommandTests
         RotateUserAccountKeysData model)
     {
         user.PublicKey = "old-public";
+        user.PrivateKey = "2.xxx";
         user.Kdf = Enums.KdfType.Argon2id;
         user.KdfIterations = 3;
         user.KdfMemory = 64;
@@ -117,4 +121,60 @@ public class RotateUserAccountKeysCommandTests
 
         Assert.Equal(IdentityResult.Success, result);
     }
+
+    [Theory, BitAutoData]
+    public async Task ThrowsWhenSignatureKeyPairMissingForV2User(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+        RotateUserAccountKeysData model)
+    {
+        // Simulate v2 user (e.g., by setting a property or flag, depending on implementation)
+        user.Kdf = Enums.KdfType.Argon2id;
+        user.KdfIterations = 3;
+        user.KdfMemory = 64;
+        user.KdfParallelism = 4;
+        user.PublicKey = "v2-public-key";
+        // Remove signature key pair
+        if (model.AccountKeys != null)
+        {
+            model.AccountKeys.SignatureKeyPairData = null;
+        }
+        model.MasterPasswordUnlockData.Email = user.Email;
+        model.MasterPasswordUnlockData.KdfType = Enums.KdfType.Argon2id;
+        model.MasterPasswordUnlockData.KdfIterations = 3;
+        model.MasterPasswordUnlockData.KdfMemory = 64;
+        model.MasterPasswordUnlockData.KdfParallelism = 4;
+        model.AccountPublicKey = user.PublicKey;
+        sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(user.Id)
+            .Returns((SignatureKeyPairData)null);
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task DoesNotThrowWhenSignatureKeyPairPresentForV2User(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+        RotateUserAccountKeysData model)
+    {
+        user.Kdf = Enums.KdfType.Argon2id;
+        user.KdfIterations = 3;
+        user.KdfMemory = 64;
+        user.KdfParallelism = 4;
+        user.PublicKey = "v2-public-key";
+        // Ensure signature key pair is present
+        if (model.AccountKeys != null)
+        {
+            model.AccountKeys.SignatureKeyPairData = new SignatureKeyPairData(
+                Bit.Core.KeyManagement.Enums.SignatureAlgorithm.Ed25519, "dummyWrappedSigningKey", "dummyVerifyingKey");
+        }
+        model.MasterPasswordUnlockData.Email = user.Email;
+        model.MasterPasswordUnlockData.KdfType = Enums.KdfType.Argon2id;
+        model.MasterPasswordUnlockData.KdfIterations = 3;
+        model.MasterPasswordUnlockData.KdfMemory = 64;
+        model.MasterPasswordUnlockData.KdfParallelism = 4;
+        model.AccountPublicKey = user.PublicKey;
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+        var result = await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
+        Assert.Equal(IdentityResult.Success, result);
+    }
+
 }
