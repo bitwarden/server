@@ -60,9 +60,14 @@ public class UserLicense : BaseLicense
     [LicenseVersion(1)]
     public short? MaxStorageGb { get; set; }
 
+    private bool ValidLicenseVersion
+    {
+        get => Version == 1;
+    }
+
     public override byte[] GetDataBytes(bool forHash = false)
     {
-        if (Version != 1)
+        if (!ValidLicenseVersion)
         {
             throw new NotSupportedException($"Version {Version} is not supported.");
         }
@@ -123,7 +128,7 @@ public class UserLicense : BaseLicense
             errorMessages.AppendLine("The license has expired.");
         }
 
-        if (Version != 1)
+        if (!ValidLicenseVersion)
         {
             throw new NotSupportedException($"Version {Version} is not supported.");
         }
@@ -179,7 +184,7 @@ public class UserLicense : BaseLicense
             return false;
         }
 
-        if (Version != 1)
+        if (!ValidLicenseVersion)
         {
             throw new NotSupportedException($"Version {Version} is not supported.");
         }
