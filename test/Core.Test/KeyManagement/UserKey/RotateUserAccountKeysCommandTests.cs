@@ -267,4 +267,132 @@ public class RotateUserAccountKeysCommandTests
         var excepction = Assert.Throws<InvalidOperationException>(() => sutProvider.Sut.ValidateRotationModelSignatureKeyPairForV1UserAndUpgradeToV2(model, user, encryptedDataActions));
         Assert.Equal("The provided public key encryption key pair data does not contain a valid signed public key.", excepction.Message);
     }
+
+    [Theory, BitAutoData]
+    public async Task ThrowsIfSignatureKeyPairDataIsNull(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        user.Kdf = Enums.KdfType.Argon2id;
+        user.PrivateKey = "2.abc";
+        user.PublicKey = "public-key";
+        if (model.AccountKeys != null)
+        {
+            model.AccountKeys.SignatureKeyPairData = null;
+        }
+        model.MasterPasswordUnlockData.Email = user.Email;
+        model.MasterPasswordUnlockData.KdfType = Enums.KdfType.Argon2id;
+        model.MasterPasswordUnlockData.KdfIterations = 3;
+        model.MasterPasswordUnlockData.KdfMemory = 64;
+        model.MasterPasswordUnlockData.KdfParallelism = 4;
+        model.AccountPublicKey = user.PublicKey;
+        model.UserKeyEncryptedAccountPrivateKey = "2.abc";
+        model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("2.abc", user.PublicKey, "signed-public-key");
+        sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(user.Id)
+            .Returns(new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "dummyWrappedSigningKey", "dummyVerifyingKey"));
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ThrowsIfVerifyingKeyDoesNotMatch(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        user.Kdf = Enums.KdfType.Argon2id;
+        user.PrivateKey = "2.abc";
+        user.PublicKey = "public-key";
+        var repoKeyPair = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "signingKey", "verifyingKey");
+        var modelKeyPair = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "signingKey", "verifyingKey-different");
+        if (model.AccountKeys == null)
+        {
+            model.AccountKeys = new Core.KeyManagement.Models.Data.Models.UserAccountKeysData
+            {
+                PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("2.abc", user.PublicKey, "signed-public-key"),
+                SignatureKeyPairData = modelKeyPair
+            };
+        }
+        else
+        {
+            model.AccountKeys.SignatureKeyPairData = modelKeyPair;
+            model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("2.abc", user.PublicKey, "signed-public-key");
+        }
+        model.MasterPasswordUnlockData.Email = user.Email;
+        model.MasterPasswordUnlockData.KdfType = Enums.KdfType.Argon2id;
+        model.MasterPasswordUnlockData.KdfIterations = 3;
+        model.MasterPasswordUnlockData.KdfMemory = 64;
+        model.MasterPasswordUnlockData.KdfParallelism = 4;
+        model.AccountPublicKey = user.PublicKey;
+        model.UserKeyEncryptedAccountPrivateKey = "2.abc";
+        sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(user.Id)
+            .Returns(repoKeyPair);
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ThrowsIfSignedPublicKeyIsNullOrEmpty(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        user.Kdf = Enums.KdfType.Argon2id;
+        user.PrivateKey = "2.abc";
+        user.PublicKey = "public-key";
+        var keyPair = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "dummyWrappedSigningKey", "dummyVerifyingKey");
+        if (model.AccountKeys == null)
+        {
+            model.AccountKeys = new Core.KeyManagement.Models.Data.Models.UserAccountKeysData
+            {
+                PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("2.abc", user.PublicKey, null),
+                SignatureKeyPairData = keyPair
+            };
+        }
+        else
+        {
+            model.AccountKeys.SignatureKeyPairData = keyPair;
+            model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("2.abc", user.PublicKey, null);
+        }
+        model.MasterPasswordUnlockData.Email = user.Email;
+        model.MasterPasswordUnlockData.KdfType = Enums.KdfType.Argon2id;
+        model.MasterPasswordUnlockData.KdfIterations = 3;
+        model.MasterPasswordUnlockData.KdfMemory = 64;
+        model.MasterPasswordUnlockData.KdfParallelism = 4;
+        model.AccountPublicKey = user.PublicKey;
+        model.UserKeyEncryptedAccountPrivateKey = "2.abc";
+        sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(user.Id)
+            .Returns(keyPair);
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ThrowsIfWrappedSigningKeyIsNotXChaCha20(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        user.Kdf = Enums.KdfType.Argon2id;
+        user.PrivateKey = "2.abc";
+        user.PublicKey = "public-key";
+        var keyPair = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "signingKey", "verifyingKey");
+        if (model.AccountKeys == null)
+        {
+            model.AccountKeys = new Core.KeyManagement.Models.Data.Models.UserAccountKeysData
+            {
+                PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("2.abc", user.PublicKey, "signed-public-key"),
+                SignatureKeyPairData = keyPair
+            };
+        }
+        else
+        {
+            model.AccountKeys.SignatureKeyPairData = keyPair;
+            model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("2.abc", user.PublicKey, "signed-public-key");
+        }
+        model.MasterPasswordUnlockData.Email = user.Email;
+        model.MasterPasswordUnlockData.KdfType = Enums.KdfType.Argon2id;
+        model.MasterPasswordUnlockData.KdfIterations = 3;
+        model.MasterPasswordUnlockData.KdfMemory = 64;
+        model.MasterPasswordUnlockData.KdfParallelism = 4;
+        model.AccountPublicKey = user.PublicKey;
+        model.UserKeyEncryptedAccountPrivateKey = "2.abc";
+        sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(user.Id)
+            .Returns(keyPair);
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
+    }
 }
