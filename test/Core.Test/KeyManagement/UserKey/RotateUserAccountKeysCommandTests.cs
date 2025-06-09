@@ -38,6 +38,9 @@ public class RotateUserAccountKeysCommandTests
     public async Task RejectsEmailChange(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
     {
+        user.PublicKey = "old-public";
+        user.PrivateKey = "2.xxx";
+
         user.Kdf = Enums.KdfType.Argon2id;
         user.KdfIterations = 3;
         user.KdfMemory = 64;
@@ -48,6 +51,10 @@ public class RotateUserAccountKeysCommandTests
         model.MasterPasswordUnlockData.KdfIterations = 3;
         model.MasterPasswordUnlockData.KdfMemory = 64;
         model.MasterPasswordUnlockData.KdfParallelism = 4;
+        model.UserKeyEncryptedAccountPrivateKey = "2.xxx";
+
+        model.AccountPublicKey = user.PublicKey;
+        model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey = user.PublicKey;
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
@@ -57,6 +64,9 @@ public class RotateUserAccountKeysCommandTests
     public async Task RejectsKdfChange(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
     {
+        user.PublicKey = "old-public";
+        user.PrivateKey = "2.xxx";
+
         user.Kdf = Enums.KdfType.Argon2id;
         user.KdfIterations = 3;
         user.KdfMemory = 64;
@@ -67,6 +77,7 @@ public class RotateUserAccountKeysCommandTests
         model.MasterPasswordUnlockData.KdfIterations = 600000;
         model.MasterPasswordUnlockData.KdfMemory = null;
         model.MasterPasswordUnlockData.KdfParallelism = null;
+        model.UserKeyEncryptedAccountPrivateKey = "2.xxx";
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
@@ -79,6 +90,7 @@ public class RotateUserAccountKeysCommandTests
     {
         user.PublicKey = "old-public";
         user.PrivateKey = "2.xxx";
+
         user.Kdf = Enums.KdfType.Argon2id;
         user.KdfIterations = 3;
         user.KdfMemory = 64;
@@ -116,7 +128,6 @@ public class RotateUserAccountKeysCommandTests
 
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
-
         var result = await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
 
         Assert.Equal(IdentityResult.Success, result);
@@ -132,6 +143,7 @@ public class RotateUserAccountKeysCommandTests
         user.KdfMemory = 64;
         user.KdfParallelism = 4;
         user.PublicKey = "v2-public-key";
+        user.PrivateKey = "2.xxx";
         // Remove signature key pair
         if (model.AccountKeys != null)
         {
@@ -143,6 +155,8 @@ public class RotateUserAccountKeysCommandTests
         model.MasterPasswordUnlockData.KdfMemory = 64;
         model.MasterPasswordUnlockData.KdfParallelism = 4;
         model.AccountPublicKey = user.PublicKey;
+        model.UserKeyEncryptedAccountPrivateKey = "2.xxx";
+        model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey = user.PublicKey;
         sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(user.Id)
             .Returns((SignatureKeyPairData)null);
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
@@ -159,6 +173,7 @@ public class RotateUserAccountKeysCommandTests
         user.KdfMemory = 64;
         user.KdfParallelism = 4;
         user.PublicKey = "v2-public-key";
+        user.PrivateKey = "2.xxx";
         // Ensure signature key pair is present
         if (model.AccountKeys != null)
         {
@@ -171,6 +186,8 @@ public class RotateUserAccountKeysCommandTests
         model.MasterPasswordUnlockData.KdfMemory = 64;
         model.MasterPasswordUnlockData.KdfParallelism = 4;
         model.AccountPublicKey = user.PublicKey;
+        model.UserKeyEncryptedAccountPrivateKey = "2.xxx";
+        model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey = user.PublicKey;
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
         var result = await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
