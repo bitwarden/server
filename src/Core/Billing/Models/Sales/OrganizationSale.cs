@@ -45,11 +45,7 @@ public class OrganizationSale
 
     public static OrganizationSale From(
         Organization organization,
-        OrganizationUpgrade upgrade) => new()
-        {
-            Organization = organization,
-            SubscriptionSetup = GetSubscriptionSetup(upgrade)
-        };
+        OrganizationUpgrade upgrade) => From(organization, (OrganizationSignup)upgrade);
 
     private static CustomerSetup GetCustomerSetup(OrganizationSignup signup)
     {
@@ -85,28 +81,39 @@ public class OrganizationSale
         return customerSetup;
     }
 
-    private static SubscriptionSetup GetSubscriptionSetup(OrganizationUpgrade upgrade)
+    private static SubscriptionSetup GetSubscriptionSetup(OrganizationSignup signup)
     {
         var passwordManagerOptions = new SubscriptionSetup.PasswordManager
         {
-            Seats = upgrade.AdditionalSeats,
-            Storage = upgrade.AdditionalStorageGb,
-            PremiumAccess = upgrade.PremiumAccessAddon
+            Seats = signup.AdditionalSeats,
+            Storage = signup.AdditionalStorageGb,
+            PremiumAccess = signup.PremiumAccessAddon
         };
 
-        var secretsManagerOptions = upgrade.UseSecretsManager
+        var secretsManagerOptions = signup.UseSecretsManager
             ? new SubscriptionSetup.SecretsManager
             {
-                Seats = upgrade.AdditionalSmSeats ?? 0,
-                ServiceAccounts = upgrade.AdditionalServiceAccounts
+                Seats = signup.AdditionalSmSeats ?? 0,
+                ServiceAccounts = signup.AdditionalServiceAccounts
             }
             : null;
 
-        return new SubscriptionSetup
+        var subscriptionSetup = new SubscriptionSetup
         {
-            PlanType = upgrade.Plan,
+            PlanType = signup.Plan,
             PasswordManagerOptions = passwordManagerOptions,
-            SecretsManagerOptions = secretsManagerOptions
+            SecretsManagerOptions = secretsManagerOptions,
+            SkipTrial = signup.SkipTrial
         };
+
+        // Set trial source based on initiation path
+        if (!string.IsNullOrEmpty(signup.InitiationPath))
+        {
+            subscriptionSetup.TrialSource = signup.InitiationPath.Contains("trial from marketing website")
+                ? "marketing-initiated"
+                : "product-initiated";
+        }
+
+        return subscriptionSetup;
     }
 }
