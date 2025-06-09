@@ -9,7 +9,7 @@ public class MailerTest
     [Fact]
     public async Task SendEmailAsync()
     {
-        var mailer = new Mailer();
+        var mailer = new Mailer(new HandlebarMailRenderer());
 
         var mail = new VerifyEmail
         {
