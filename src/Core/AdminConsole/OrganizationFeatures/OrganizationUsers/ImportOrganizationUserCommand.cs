@@ -11,7 +11,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -196,78 +195,46 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
     /// <param name="organization">The target organization to which users are being added.</param>
     /// <param name="importedUsers">A collection of imported users to consider for addition.</param>
     /// <param name="importUserData">Data containing imported user info and existing user mappings.</param>
-
     private async Task AddNewUsers(Organization organization,
             IEnumerable<ImportedOrganizationUser> importedUsers,
             OrganizationUserImportData importUserData)
     {
         var userInvites = new List<OrganizationUserInviteCommandModel>();
 
-        // Determine which users are already in the organization
-        var existingUsersSet = new HashSet<string>(importUserData.ExistingExternalUsersIdDict.Keys).ToList();
-        var usersToAdd = importUserData.ImportedExternalIds.Except(existingUsersSet).ToList();
-
         foreach (var user in importedUsers)
         {
-            // Ignore users already part of the organization
-            if (!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
-            {
-                continue;
-            }
-
             userInvites.Add(new OrganizationUserInviteCommandModel(user.Email, user.ExternalId));
         }
 
-        await InviteUsersAsync(organization, usersToAdd, importedUsers, importUserData);
+        var commandResult = await InviteUsersAsync(userInvites, organization);
+
+        switch (commandResult)
+        {
+            case Success<InviteOrganizationUsersResponse> result:
+                foreach (var u in result.Value.InvitedUsers)
+                {
+                    importUserData.ExistingExternalUsersIdDict.Add(u.ExternalId!, u.Id);
+                }
+                break;
+            case Failure<InviteOrganizationUsersResponse> failure:
+                throw new BadRequestException(failure.Error.Message);
+            default:
+                throw new InvalidOperationException($"Unhandled commandResult type: {commandResult.GetType().Name}");
+        }
     }
 
-    private async Task InviteUsersAsync(Organization organization,
-            IEnumerable<string> usersToAdd,
-            IEnumerable<ImportedOrganizationUser> importedUsers,
-            OrganizationUserImportData importUserData)
+    /// <summary>
+    /// Sends the user invites through the InviteOrganizationUserCommand
+    /// <param name="invites">The list of organization user invites command models to be used for inviting users</param>
+    /// <param name="organization">The organization to which users are being invited</param>
+    /// </summary>
+    private async Task<CommandResult<InviteOrganizationUsersResponse>> InviteUsersAsync(List<OrganizationUserInviteCommandModel> invites, Organization organization)
     {
-        var seatsAvailable = int.MaxValue;
-        var enoughSeatsAvailable = true;
-        if (organization.Seats.HasValue)
-        {
-            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            seatsAvailable = organization.Seats.Value - occupiedSeats;
-            enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count();
-        }
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+        var inviteOrganization = new InviteOrganization(organization, plan);
+        var request = new InviteOrganizationUsersRequest(invites.ToArray(), inviteOrganization, Guid.Empty, DateTimeOffset.UtcNow);
 
-        var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
-
-        var userInvites = new List<(OrganizationUserInvite, string)>();
-        foreach (var user in importedUsers)
-        {
-            if (!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
-            {
-                continue;
-            }
-
-            try
-            {
-                var invite = new OrganizationUserInvite
-                {
-                    Emails = new List<string> { user.Email },
-                    Type = OrganizationUserType.User,
-                    Collections = new List<CollectionAccessSelection>(),
-                    AccessSecretsManager = hasStandaloneSecretsManager
-                };
-                userInvites.Add((invite, user.ExternalId));
-            }
-            catch (BadRequestException)
-            {
-                // Thrown when the user is already invited to the organization
-                continue;
-            }
-        }
-
-        var invitedUsers = await _organizationService.InviteUsersAsync(organization.Id, Guid.Empty, _EventSystemUser, userInvites);
-        foreach (var invitedUser in invitedUsers)
-        {
-            importUserData.ExistingExternalUsersIdDict.TryAdd(invitedUser.ExternalId!, invitedUser.Id);
-        }
+        return await _inviteOrganizationUsersCommand.InviteImportedOrganizationUsersAsync(request);
     }
 
     /// <summary>
