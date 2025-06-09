@@ -243,7 +243,8 @@ public class RotateUserAccountKeysCommandTests
         model.AccountKeys.PublicKeyEncryptionKeyPairData = null;
         model.AccountKeys.SignatureKeyPairData = null;
         var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeys(model, user, saveEncryptedDataActions));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeys(model, user, saveEncryptedDataActions));
+        Assert.Equal("The provided user key encrypted account private key was not wrapped with AES-256-CBC-HMAC", ex.Message);
     }
 
     [Theory, BitAutoData]
@@ -271,4 +272,13 @@ public class RotateUserAccountKeysCommandTests
         var exception = Assert.Throws<InvalidOperationException>(() => sutProvider.Sut.ValidateRotationModelSignatureKeyPairForV1UserAndUpgradeToV2(model, user, encryptedDataActions));
         Assert.Equal("The provided public key encryption key pair data does not contain a valid signed public key.", exception.Message);
     }
+
+    [Theory, BitAutoData]
+    public async Task ValidateRotationModelSignatureKeyPairForV2User_NoSignatureKeyPairThrows(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        model.AccountKeys.SignatureKeyPairData = null;
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.ValidateRotationModelSignatureKeyPairForV2User(model, user));
+        Assert.Equal("The provided signing key data is null, but the user already has signing keys.", exception.Message);
+    }
+
 }

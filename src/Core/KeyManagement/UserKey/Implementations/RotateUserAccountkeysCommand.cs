@@ -97,7 +97,7 @@ public class RotateUserAccountKeysCommand(
         throw new InvalidOperationException("User is in an invalid state for key rotation. User has a signature key pair, but the private key is not in v2 format, or vice versa.");
     }
 
-    async Task ValidateRotationModelSignatureKeyPairForV2User(RotateUserAccountKeysData model, User user)
+    public async Task ValidateRotationModelSignatureKeyPairForV2User(RotateUserAccountKeysData model, User user)
     {
         var currentSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id);
         if (model.AccountKeys == null || model.AccountKeys.SignatureKeyPairData == null)
