@@ -1,5 +1,4 @@
-﻿using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Text.Json.Serialization;
 using Bit.Core.Billing.Licenses.Attributes;
 using Bit.Core.Enums;
 
@@ -47,18 +46,7 @@ public abstract class BaseLicense : ILicense
     [LicenseIgnore]
     public string Token { get; set; }
 
-    public abstract byte[] GetDataBytes(bool forHash = false);
-
-    public byte[] Sign(X509Certificate2 certificate)
-    {
-        if (!certificate.HasPrivateKey)
-        {
-            throw new InvalidOperationException("You don't have the private key!");
-        }
-
-        using (var rsa = certificate.GetRSAPrivateKey())
-        {
-            return rsa.SignData(GetDataBytes(), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        }
-    }
+    [LicenseIgnore]
+    [JsonIgnore]
+    public abstract bool ValidLicenseVersion { get; }
 }

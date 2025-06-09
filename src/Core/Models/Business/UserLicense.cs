@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using System.Text;
+using System.Text.Json.Serialization;
 using Bit.Core.Billing.Licenses.Attributes;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Entities;
@@ -60,19 +61,11 @@ public class UserLicense : BaseLicense
     [LicenseVersion(1)]
     public short? MaxStorageGb { get; set; }
 
-    private bool ValidLicenseVersion
+    [LicenseIgnore]
+    [JsonIgnore]
+    public override bool ValidLicenseVersion
     {
         get => Version == 1;
-    }
-
-    public override byte[] GetDataBytes(bool forHash = false)
-    {
-        if (!ValidLicenseVersion)
-        {
-            throw new NotSupportedException($"Version {Version} is not supported.");
-        }
-
-        return this.GetDataBytesWithAttributes(forHash);
     }
 
     public bool CanUse(User user, ClaimsPrincipal claimsPrincipal, out string exception)

@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using System.Text;
+using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses.Attributes;
@@ -207,20 +208,14 @@ public class OrganizationLicense : BaseLicense
     [LicenseIgnore]
     public bool UseRiskInsights { get; set; }
 
-    private bool ValidLicenseVersion
+    [LicenseIgnore]
+    [JsonIgnore]
+    public override bool ValidLicenseVersion
     {
         get => Version is >= 1 and <= CurrentLicenseFileVersion + 1;
     }
 
-    public override byte[] GetDataBytes(bool forHash = false)
-    {
-        if (!ValidLicenseVersion)
-        {
-            throw new NotSupportedException($"Version {Version} is not supported.");
-        }
 
-        return this.GetDataBytesWithAttributes(forHash);
-    }
 
     public bool CanUse(
         IGlobalSettings globalSettings,

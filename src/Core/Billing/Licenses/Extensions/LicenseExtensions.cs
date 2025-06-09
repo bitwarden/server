@@ -14,18 +14,37 @@ namespace Bit.Core.Billing.Licenses.Extensions;
 
 public static class LicenseExtensions
 {
-    public static byte[] ComputeHash(this ILicense license) => SHA256.HashData(license.GetDataBytes(true));
+    public static byte[] ComputeHash(this ILicense license) => SHA256.HashData(license.ToByteArray(true));
 
     public static bool VerifySignature(this ILicense license, X509Certificate2 certificate)
     {
-        var dataBytes = license.GetDataBytes();
+        var dataBytes = license.ToByteArray();
         var signatureBytes = Convert.FromBase64String(license.Signature);
         using var rsa = certificate.GetRSAPublicKey();
+
         return rsa.VerifyData(dataBytes, signatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
     }
 
-    public static byte[] GetDataBytesWithAttributes(this ILicense license, bool forHash = false)
+    public static byte[] Sign(this ILicense license, X509Certificate2 certificate)
     {
+        if (!certificate.HasPrivateKey)
+        {
+            throw new InvalidOperationException("You don't have the private key!");
+        }
+
+        var dataBytes = license.ToByteArray();
+        using var rsa = certificate.GetRSAPrivateKey();
+
+        return rsa.SignData(dataBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+    }
+
+    public static byte[] ToByteArray(this ILicense license, bool forHash = false)
+    {
+        if (!license.ValidLicenseVersion)
+        {
+            throw new NotSupportedException($"Version {license.Version} is not supported.");
+        }
+
         var props = license.GetType()
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p =>

@@ -1,5 +1,4 @@
-﻿using System.Security.Cryptography.X509Certificates;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Business;
 
@@ -15,6 +14,5 @@ public interface ILicense
     string Hash { get; set; }
     string Signature { get; set; }
     string Token { get; set; }
-    byte[] GetDataBytes(bool forHash = false);
-    byte[] Sign(X509Certificate2 certificate);
+    bool ValidLicenseVersion { get; }
 }
