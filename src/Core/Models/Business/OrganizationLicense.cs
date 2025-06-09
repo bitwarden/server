@@ -1,13 +1,9 @@
-﻿using System.Security.Claims;
-using System.Text;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses.Attributes;
 using Bit.Core.Billing.Licenses.Extensions;
-using Bit.Core.Enums;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 
 namespace Bit.Core.Models.Business;
 
@@ -17,34 +13,6 @@ public class OrganizationLicense : BaseLicense
     {
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="OrganizationLicense"/> class.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// ⚠️ DEPRECATED: This constructor and the entire property-based licensing system is deprecated.
-    /// Do not add new properties to this constructor or extend its functionality.
-    /// </para>
-    /// <para>
-    /// This implementation has been replaced by a new claims-based licensing system that provides better security
-    /// and flexibility. The new system uses JWT claims to store and validate license information, making it more
-    /// secure and easier to extend without requiring changes to the license format.
-    /// </para>
-    /// <para>
-    /// For new license-related features or modifications:
-    /// 1. Use the claims-based system instead of adding properties here
-    /// 2. Add new claims to the license token
-    /// 3. Validate claims in the <see cref="CanUse"/> and <see cref="VerifyData"/> methods
-    /// </para>
-    /// <para>
-    /// This constructor is maintained only for backward compatibility with existing licenses.
-    /// </para>
-    /// </remarks>
-    /// <param name="org">The organization to create the license for.</param>
-    /// <param name="subscriptionInfo">Information about the organization's subscription.</param>
-    /// <param name="installationId">The ID of the current installation.</param>
-    /// <param name="licenseService">The service used to sign the license.</param>
-    /// <param name="version">Optional version number for the license format.</param>
     public OrganizationLicense(Organization org, SubscriptionInfo subscriptionInfo, Guid installationId,
         ILicensingService licenseService, int? version = null)
     {
@@ -217,111 +185,5 @@ public class OrganizationLicense : BaseLicense
 
 
 
-    public bool CanUse(
-        IGlobalSettings globalSettings,
-        ClaimsPrincipal claimsPrincipal,
-        out string exception)
-    {
-        var errorMessages = new StringBuilder();
 
-        var enabled = claimsPrincipal.GetValue<bool>(nameof(Enabled));
-        if (!enabled)
-        {
-            errorMessages.AppendLine("Your cloud-hosted organization is currently disabled.");
-        }
-
-        var installationId = claimsPrincipal.GetValue<Guid>(nameof(InstallationId));
-        if (installationId != globalSettings.Installation.Id)
-        {
-            errorMessages.AppendLine("The installation ID does not match the current installation.");
-        }
-
-        var selfHost = claimsPrincipal.GetValue<bool>(nameof(SelfHost));
-        if (!selfHost)
-        {
-            errorMessages.AppendLine("The license does not allow for on-premise hosting of organizations.");
-        }
-
-        var licenseType = claimsPrincipal.GetValue<LicenseType>(nameof(LicenseType));
-        if (licenseType != LicenseType.Organization)
-        {
-            errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
-                                     "Upload this license from your personal account settings page.");
-        }
-
-        if (errorMessages.Length > 0)
-        {
-            exception = $"Invalid license. {errorMessages.ToString().TrimEnd()}";
-            return false;
-        }
-
-        exception = "";
-        return true;
-    }
-
-    public bool VerifyData(
-        Organization organization,
-        ClaimsPrincipal claimsPrincipal,
-        IGlobalSettings globalSettings)
-    {
-        var issued = claimsPrincipal.GetValue<DateTime>(nameof(Issued));
-        var expires = claimsPrincipal.GetValue<DateTime>(nameof(Expires));
-        var installationId = claimsPrincipal.GetValue<Guid>(nameof(InstallationId));
-        var licenseKey = claimsPrincipal.GetValue<string>(nameof(LicenseKey));
-        var enabled = claimsPrincipal.GetValue<bool>(nameof(Enabled));
-        var planType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
-        var seats = claimsPrincipal.GetValue<int?>(nameof(Seats));
-        var maxCollections = claimsPrincipal.GetValue<short?>(nameof(MaxCollections));
-        var useGroups = claimsPrincipal.GetValue<bool>(nameof(UseGroups));
-        var useDirectory = claimsPrincipal.GetValue<bool>(nameof(UseDirectory));
-        var useTotp = claimsPrincipal.GetValue<bool>(nameof(UseTotp));
-        var selfHost = claimsPrincipal.GetValue<bool>(nameof(SelfHost));
-        var name = claimsPrincipal.GetValue<string>(nameof(Name));
-        var usersGetPremium = claimsPrincipal.GetValue<bool>(nameof(UsersGetPremium));
-        var useEvents = claimsPrincipal.GetValue<bool>(nameof(UseEvents));
-        var use2fa = claimsPrincipal.GetValue<bool>(nameof(Use2fa));
-        var useApi = claimsPrincipal.GetValue<bool>(nameof(UseApi));
-        var usePolicies = claimsPrincipal.GetValue<bool>(nameof(UsePolicies));
-        var useSso = claimsPrincipal.GetValue<bool>(nameof(UseSso));
-        var useResetPassword = claimsPrincipal.GetValue<bool>(nameof(UseResetPassword));
-        var useKeyConnector = claimsPrincipal.GetValue<bool>(nameof(UseKeyConnector));
-        var useScim = claimsPrincipal.GetValue<bool>(nameof(UseScim));
-        var useCustomPermissions = claimsPrincipal.GetValue<bool>(nameof(UseCustomPermissions));
-        var useSecretsManager = claimsPrincipal.GetValue<bool>(nameof(UseSecretsManager));
-        var usePasswordManager = claimsPrincipal.GetValue<bool>(nameof(UsePasswordManager));
-        var smSeats = claimsPrincipal.GetValue<int?>(nameof(SmSeats));
-        var smServiceAccounts = claimsPrincipal.GetValue<int?>(nameof(SmServiceAccounts));
-        var useAdminSponsoredFamilies = claimsPrincipal.GetValue<bool>(nameof(UseAdminSponsoredFamilies));
-        var useOrganizationDomains = claimsPrincipal.GetValue<bool>(nameof(UseOrganizationDomains));
-
-        return issued <= DateTime.UtcNow &&
-               expires >= DateTime.UtcNow &&
-               installationId == globalSettings.Installation.Id &&
-               licenseKey == organization.LicenseKey &&
-               enabled == organization.Enabled &&
-               planType == organization.PlanType &&
-               seats == organization.Seats &&
-               maxCollections == organization.MaxCollections &&
-               useGroups == organization.UseGroups &&
-               useDirectory == organization.UseDirectory &&
-               useTotp == organization.UseTotp &&
-               selfHost == organization.SelfHost &&
-               name == organization.Name &&
-               usersGetPremium == organization.UsersGetPremium &&
-               useEvents == organization.UseEvents &&
-               use2fa == organization.Use2fa &&
-               useApi == organization.UseApi &&
-               usePolicies == organization.UsePolicies &&
-               useSso == organization.UseSso &&
-               useResetPassword == organization.UseResetPassword &&
-               useKeyConnector == organization.UseKeyConnector &&
-               useScim == organization.UseScim &&
-               useCustomPermissions == organization.UseCustomPermissions &&
-               useSecretsManager == organization.UseSecretsManager &&
-               usePasswordManager == organization.UsePasswordManager &&
-               smSeats == organization.SmSeats &&
-               smServiceAccounts == organization.SmServiceAccounts &&
-               useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies &&
-               useOrganizationDomains == organization.UseOrganizationDomains;
-    }
 }

@@ -1,6 +1,4 @@
-﻿using System.Security.Claims;
-using System.Text;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Bit.Core.Billing.Licenses.Attributes;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Entities;
@@ -68,39 +66,5 @@ public class UserLicense : BaseLicense
         get => Version == 1;
     }
 
-    public bool CanUse(User user, ClaimsPrincipal claimsPrincipal, out string exception)
-    {
-        var errorMessages = new StringBuilder();
 
-        if (!user.EmailVerified)
-        {
-            errorMessages.AppendLine("The user's email is not verified.");
-        }
-
-        var email = claimsPrincipal.GetValue<string>(nameof(Email));
-        if (!email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
-        {
-            errorMessages.AppendLine("The user's email does not match the license email.");
-        }
-
-        if (errorMessages.Length > 0)
-        {
-            exception = $"Invalid license. {errorMessages.ToString().TrimEnd()}";
-            return false;
-        }
-
-        exception = "";
-        return true;
-    }
-
-    public bool VerifyData(User user, ClaimsPrincipal claimsPrincipal)
-    {
-        var licenseKey = claimsPrincipal.GetValue<string>(nameof(LicenseKey));
-        var premium = claimsPrincipal.GetValue<bool>(nameof(Premium));
-        var email = claimsPrincipal.GetValue<string>(nameof(Email));
-
-        return licenseKey == user.LicenseKey &&
-               premium == user.Premium &&
-               email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase);
-    }
 }
