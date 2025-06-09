@@ -1752,16 +1752,14 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("SigningKey")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
+                        .HasColumnType("longtext");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("char(36)");
 
                     b.Property<string>("VerifyingKey")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
+                        .HasColumnType("longtext");
 
                     b.HasKey("Id");
 

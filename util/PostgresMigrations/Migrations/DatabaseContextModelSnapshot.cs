@@ -1758,16 +1758,14 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<string>("SigningKey")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("VerifyingKey")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
