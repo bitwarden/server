@@ -64,9 +64,7 @@ public class CollectionAccessDetailsResponseModel : CollectionResponseModel
     /// <param name="collection"></param>
     public CollectionAccessDetailsResponseModel(Collection collection)
         : base(collection, "collectionAccessDetails")
-    {
-        Type = collection.Type;
-    }
+    { }
 
     /// <summary>
     /// Create a response model for when the requesting user is assumed not assigned to the collection. Includes
