@@ -1,14 +1,18 @@
-CREATE TABLE [dbo].[UserSignatureKeyPair] (
-    [Id]                        UNIQUEIDENTIFIER NOT NULL,
-    [UserId]                    UNIQUEIDENTIFIER NOT NULL,
-    [SignatureKeyPairAlgorithm] TINYINT NOT NULL,
-    [SigningKey]                VARCHAR(MAX) NOT NULL,
-    [VerifyingKey]              VARCHAR(MAX) NOT NULL,
-    [CreationDate]              DATETIME2 (7) NOT NULL,
-    [RevisionDate]              DATETIME2 (7) NOT NULL,
-    CONSTRAINT [PK_UserSignatureKeyPair] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [FK_UserSignatureKeyPair_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
-);
+IF OBJECT_ID('[dbo].[UserSignatureKeyPair]') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[UserSignatureKeyPair]
+    (
+        [Id] UNIQUEIDENTIFIER NOT NULL,
+        [UserId] UNIQUEIDENTIFIER NOT NULL,
+        [SignatureKeyPairAlgorithm] TINYINT NOT NULL,
+        [SigningKey] VARCHAR(MAX) NOT NULL,
+        [VerifyingKey] VARCHAR(MAX) NOT NULL,
+        [CreationDate] DATETIME2 (7) NOT NULL,
+        [RevisionDate] DATETIME2 (7) NOT NULL,
+        CONSTRAINT [PK_UserSignatureKeyPair] PRIMARY KEY CLUSTERED ([Id] ASC),
+        CONSTRAINT [FK_UserSignatureKeyPair_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
+    );
+END
 GO
 
 IF NOT EXISTS(SELECT name
