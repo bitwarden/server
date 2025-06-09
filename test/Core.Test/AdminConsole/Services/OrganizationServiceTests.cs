@@ -165,7 +165,6 @@ public class OrganizationServiceTests
             events.Count(e => e.Item2 == EventType.OrganizationUser_Invited) == expectedNewUsersCount));
     }
 
-
     [Theory]
     [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
          InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]

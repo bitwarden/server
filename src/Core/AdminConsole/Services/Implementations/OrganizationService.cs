@@ -1082,12 +1082,12 @@ public class OrganizationService : IOrganizationService
     }
 
     public async Task ImportAsync(Guid organizationId,
-       IEnumerable<ImportedGroup> groups,
-       IEnumerable<ImportedOrganizationUser> newUsers,
-       IEnumerable<string> removeUserExternalIds,
-       bool overwriteExisting,
-       EventSystemUser eventSystemUser
-   )
+        IEnumerable<ImportedGroup> groups,
+        IEnumerable<ImportedOrganizationUser> newUsers,
+        IEnumerable<string> removeUserExternalIds,
+        bool overwriteExisting,
+        EventSystemUser eventSystemUser
+    )
     {
         var organization = await GetOrgById(organizationId);
         if (organization == null)
