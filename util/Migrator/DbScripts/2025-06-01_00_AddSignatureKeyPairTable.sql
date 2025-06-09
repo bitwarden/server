@@ -39,7 +39,7 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE [dbo].[UserSignatureKeyPair_UpdateForRotation]
+CREATE OR ALTER PROCEDURE [dbo].[UserSignatureKeyPair_UpdateForRotation]
     @UserId UNIQUEIDENTIFIER,
     @SignatureKeyPairAlgorithm TINYINT,
     @SigningKey VARCHAR(MAX),
