@@ -112,13 +112,15 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RotatesCorrectly(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+    public async Task RotatesCorrectlyV1Async(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
     {
         user.Kdf = Enums.KdfType.Argon2id;
         user.KdfIterations = 3;
         user.KdfMemory = 64;
         user.KdfParallelism = 4;
+        user.PrivateKey = "2.xxx";
+        user.SignedPublicKey = null;
 
         model.MasterPasswordUnlockData.Email = user.Email;
         model.MasterPasswordUnlockData.KdfType = Enums.KdfType.Argon2id;
@@ -127,6 +129,8 @@ public class RotateUserAccountKeysCommandTests
         model.MasterPasswordUnlockData.KdfParallelism = 4;
 
         model.AccountPublicKey = user.PublicKey;
+        model.UserKeyEncryptedAccountPrivateKey = "2.xxx";
+        model.AccountKeys.SignatureKeyPairData = null;
 
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);

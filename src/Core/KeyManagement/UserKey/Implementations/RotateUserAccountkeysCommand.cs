@@ -159,7 +159,7 @@ public class RotateUserAccountKeysCommand(
         {
             await ValidateRotationModelSignatureKeyPairForV2User(model, user);
         }
-        else
+        else if (model.AccountKeys.SignatureKeyPairData != null)
         {
             ValidateRotationModelSignatureKeyPairForV1UserAndUpgradeToV2(model, user, saveEncryptedDataActions);
         }
