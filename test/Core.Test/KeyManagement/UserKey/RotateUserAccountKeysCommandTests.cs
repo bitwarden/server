@@ -136,7 +136,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ThrowsWhenSignatureKeyPairMissingForV2User(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+    public async Task ThrowsWhenSignatureKeyPairMissingInModelForV2User(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
     {
         // Simulate v2 user (e.g., by setting a property or flag, depending on implementation)
@@ -144,8 +144,8 @@ public class RotateUserAccountKeysCommandTests
         user.KdfIterations = 3;
         user.KdfMemory = 64;
         user.KdfParallelism = 4;
-        user.PublicKey = "v2-public-key";
-        user.PrivateKey = "2.xxx";
+        user.PublicKey = "public-key";
+        user.PrivateKey = "7.xxx";
         // Remove signature key pair
         if (model.AccountKeys != null)
         {
@@ -160,10 +160,11 @@ public class RotateUserAccountKeysCommandTests
         model.UserKeyEncryptedAccountPrivateKey = "2.xxx";
         model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey = user.PublicKey;
         sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(user.Id)
-            .Returns((SignatureKeyPairData)null);
+            .Returns(new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "dummyWrappedSigningKey", "dummyVerifyingKey"));
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
+        Assert.Equal("The provided user key encrypted account private key was not wrapped with XChaCha20-Poly1305", ex.Message);
     }
 
     [Theory, BitAutoData]

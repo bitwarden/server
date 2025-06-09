@@ -108,7 +108,7 @@ public class RotateUserAccountKeysCommand(
         {
             throw new InvalidOperationException("The provided signing key data does not match the user's current signing key data.");
         }
-        if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData?.SiginedPublicKey))
+        if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData?.SignedPublicKey))
         {
             throw new InvalidOperationException("No signed public key provided, but the user already has a signature key pair.");
         }
