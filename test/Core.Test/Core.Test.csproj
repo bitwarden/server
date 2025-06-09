@@ -29,5 +29,12 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Utilities\data\embeddedResource.txt" />
+    <EmbeddedResource Include="Views\VerifyEmail.html.cshtml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Update="Views\VerifyEmail.html.cshtml">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 </Project>

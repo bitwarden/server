@@ -35,6 +35,25 @@ public enum TemplateType
     Txt
 }
 
+public class RazorMailRenderer : IMailRenderer
+{
+    private readonly IRazorViewToStringRenderer _renderer;
+
+    public RazorMailRenderer(IRazorViewToStringRenderer renderer)
+    {
+        _renderer = renderer;
+    }
+
+    public async Task<(string html, string? txt)> RenderAsync(BaseMailModel2 model)
+    {
+        //var html = await _renderer.RenderViewToStringAsync($"Views/VerifyEmail.html.cshtml", model);
+        var html = "";
+        //var txt = await _renderer.RenderViewToStringAsync($"{model.GetType().FullName?.Replace(".", "/").Replace("Bit/Core/","")}.txt.cshtml", model);
+        var txt = await _renderer.RenderViewToStringAsync($"{model.GetType().FullName?.Replace(".", "/").Replace("Bit/Core/", "")}.txt.cshtml", model);
+        return (html, txt);
+    }
+}
+
 public class HandlebarMailRenderer : IMailRenderer
 {
     /// <summary>
