@@ -1,4 +1,7 @@
-﻿using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Core.Enums;
+using Bit.Core.Models.Data;
+using Bit.Core.Utilities;
+using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Factories;
 using LinqToDB.Data;
@@ -16,11 +19,64 @@ public class OrganizationWithUsersRecipe(DatabaseContext db)
 
         var additionalUsers = new List<User>();
         var additionalOrgUsers = new List<OrganizationUser>();
+
+        // Create sample custom permissions for Custom user types
+        var customPermissions = new Permissions
+        {
+            AccessEventLogs = true,
+            AccessImportExport = false,
+            AccessReports = true,
+            CreateNewCollections = true,
+            EditAnyCollection = false,
+            DeleteAnyCollection = false,
+            ManageGroups = false,
+            ManagePolicies = false,
+            ManageSso = false,
+            ManageUsers = false,
+            ManageResetPassword = false,
+            ManageScim = false
+        };
+
+        var customPermissionsJson = CoreHelpers.ClassToJsonData(customPermissions);
+
         for (var i = 0; i < users; i++)
         {
             var additionalUser = UserSeeder.CreateUser($"user{i}@{domain}");
             additionalUsers.Add(additionalUser);
-            additionalOrgUsers.Add(organization.CreateOrganizationUser(additionalUser));
+
+            // Create OrganizationUser with mixed types to test the optimization
+            var additionalOrgUser = organization.CreateOrganizationUser(additionalUser);
+
+            // Set permissions for ALL users to test the optimization
+            additionalOrgUser.Permissions = customPermissionsJson;
+
+            // Distribute user types to test the optimization:
+            // - 50% Custom users (with serialized permissions) - these should have permissions processed after optimization
+            // - 50% mixed other types (Admin/User/Owner with serialized permissions) - these should be skipped after optimization
+            var userTypeDistribution = i % 2;
+
+            if (userTypeDistribution == 0) // 50% Custom users
+            {
+                additionalOrgUser.Type = OrganizationUserType.Custom;
+            }
+            else // 50% other types
+            {
+                var otherTypeDistribution = i % 6;
+                if (otherTypeDistribution < 2) // ~17% Admin users
+                {
+                    additionalOrgUser.Type = OrganizationUserType.Admin;
+                }
+                else if (otherTypeDistribution < 5) // ~25% User type
+                {
+                    additionalOrgUser.Type = OrganizationUserType.User;
+                }
+                else // ~8% Owner type
+                {
+                    additionalOrgUser.Type = OrganizationUserType.Owner;
+                }
+            }
+
+            additionalOrgUsers.Add(additionalOrgUser);
         }
 
         // Create collections for the organization
