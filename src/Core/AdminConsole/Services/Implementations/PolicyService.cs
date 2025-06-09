@@ -39,7 +39,7 @@ public class PolicyService : IPolicyService
 
     public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements) || true)
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
             var masterPaswordPolicy = (await _policyRequirementQuery.GetAsync<MasterPasswordPolicyRequirement>(user.Id));
 

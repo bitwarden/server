@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.Enums;
 
 #nullable enable
 
@@ -25,6 +26,10 @@ public class MasterPasswordPolicyRequirementFactory : BasePolicyRequirementFacto
 {
     public override PolicyType PolicyType => PolicyType.MasterPassword;
 
+    protected override bool ExemptProviders => false;
+
+    protected override IEnumerable<OrganizationUserType> ExemptRoles => [];
+
     public override MasterPasswordPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
         var result = policyDetails
@@ -36,7 +41,7 @@ public class MasterPasswordPolicyRequirementFactory : BasePolicyRequirementFacto
                     data.CombineWith(result.EnforcedOptions);
                     return new MasterPasswordPolicyRequirement
                     {
-                        Enabled = result.Enabled,
+                        Enabled = policyDetails.Any(),
                         EnforcedOptions = data
                     };
                 });
