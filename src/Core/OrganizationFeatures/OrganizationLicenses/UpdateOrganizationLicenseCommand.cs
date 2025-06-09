@@ -40,7 +40,7 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
         }
 
         var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
-        var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception) &&
+        var canUse = license.CanUse(_globalSettings, claimsPrincipal, out var exception) &&
             selfHostedOrganization.CanUseLicense(license, out exception);
 
         if (!canUse)

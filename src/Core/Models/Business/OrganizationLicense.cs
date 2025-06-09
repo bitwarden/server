@@ -224,15 +224,9 @@ public class OrganizationLicense : BaseLicense
 
     public bool CanUse(
         IGlobalSettings globalSettings,
-        ILicensingService licensingService,
         ClaimsPrincipal claimsPrincipal,
         out string exception)
     {
-        if (string.IsNullOrWhiteSpace(Token) || claimsPrincipal is null)
-        {
-            return ObsoleteCanUse(globalSettings, licensingService, out exception);
-        }
-
         var errorMessages = new StringBuilder();
 
         var enabled = claimsPrincipal.GetValue<bool>(nameof(Enabled));
@@ -254,96 +248,10 @@ public class OrganizationLicense : BaseLicense
         }
 
         var licenseType = claimsPrincipal.GetValue<LicenseType>(nameof(LicenseType));
-        if (licenseType != Enums.LicenseType.Organization)
+        if (licenseType != LicenseType.Organization)
         {
             errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
                                      "Upload this license from your personal account settings page.");
-        }
-
-        if (errorMessages.Length > 0)
-        {
-            exception = $"Invalid license. {errorMessages.ToString().TrimEnd()}";
-            return false;
-        }
-
-        exception = "";
-        return true;
-    }
-
-    /// <summary>
-    /// Validates an obsolete license format using property-based validation.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// ⚠️ DEPRECATED: This method is deprecated and should not be extended or modified.
-    /// It is maintained only for backward compatibility with old license formats.
-    /// </para>
-    /// <para>
-    /// This method has been replaced by a new claims-based validation system that provides:
-    /// - Better security through JWT claims
-    /// - More flexible validation rules
-    /// - Easier extensibility without changing the license format
-    /// - Better separation of concerns
-    /// </para>
-    /// <para>
-    /// To add new license validation rules:
-    /// 1. Add new claims to the license token in the claims-based system
-    /// 2. Extend the <see cref="CanUse(IGlobalSettings, ILicensingService, ClaimsPrincipal, out string)"/> method
-    /// 3. Validate the new claims using the ClaimsPrincipal parameter
-    /// </para>
-    /// <para>
-    /// This method will be removed in a future version once all old licenses have been migrated
-    /// to the new claims-based system.
-    /// </para>
-    /// </remarks>
-    /// <param name="globalSettings">The global settings containing installation information.</param>
-    /// <param name="licensingService">The service used to verify the license signature.</param>
-    /// <param name="exception">When the method returns false, contains the error message explaining why the license is invalid.</param>
-    /// <returns>True if the license is valid, false otherwise.</returns>
-    private bool ObsoleteCanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
-    {
-        // Do not extend this method. It is only here for backwards compatibility with old licenses.
-        var errorMessages = new StringBuilder();
-
-        if (!Enabled)
-        {
-            errorMessages.AppendLine("Your cloud-hosted organization is currently disabled.");
-        }
-
-        if (Issued > DateTime.UtcNow)
-        {
-            errorMessages.AppendLine("The license hasn't been issued yet.");
-        }
-
-        if (Expires < DateTime.UtcNow)
-        {
-            errorMessages.AppendLine("The license has expired.");
-        }
-
-        if (!ValidLicenseVersion)
-        {
-            errorMessages.AppendLine($"Version {Version} is not supported.");
-        }
-
-        if (InstallationId != globalSettings.Installation.Id)
-        {
-            errorMessages.AppendLine("The installation ID does not match the current installation.");
-        }
-
-        if (!SelfHost)
-        {
-            errorMessages.AppendLine("The license does not allow for on-premise hosting of organizations.");
-        }
-
-        if (LicenseType != LicenseType.Organization)
-        {
-            errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
-                                     "Upload this license from your personal account settings page.");
-        }
-
-        if (!licensingService.VerifyLicense(this))
-        {
-            errorMessages.AppendLine("The license verification failed.");
         }
 
         if (errorMessages.Length > 0)
@@ -361,11 +269,6 @@ public class OrganizationLicense : BaseLicense
         ClaimsPrincipal claimsPrincipal,
         IGlobalSettings globalSettings)
     {
-        if (string.IsNullOrWhiteSpace(Token))
-        {
-            return ObsoleteVerifyData(organization, globalSettings);
-        }
-
         var issued = claimsPrincipal.GetValue<DateTime>(nameof(Issued));
         var expires = claimsPrincipal.GetValue<DateTime>(nameof(Expires));
         var installationId = claimsPrincipal.GetValue<Guid>(nameof(InstallationId));
@@ -425,117 +328,5 @@ public class OrganizationLicense : BaseLicense
                smServiceAccounts == organization.SmServiceAccounts &&
                useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies &&
                useOrganizationDomains == organization.UseOrganizationDomains;
-
-    }
-
-    /// <summary>
-    /// Do not extend this method. It is only here for backwards compatibility with old licenses.
-    /// Instead, extend the VerifyData method using the ClaimsPrincipal.
-    /// </summary>
-    /// <param name="organization"></param>
-    /// <param name="globalSettings"></param>
-    /// <returns></returns>
-    /// <exception cref="NotSupportedException"></exception>
-    private bool ObsoleteVerifyData(Organization organization, IGlobalSettings globalSettings)
-    {
-        // Do not extend this method. It is only here for backwards compatibility with old licenses.
-        if (Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
-        {
-            return false;
-        }
-
-        if (!ValidLicenseVersion)
-        {
-            throw new NotSupportedException($"Version {Version} is not supported.");
-        }
-
-        var valid =
-            globalSettings.Installation.Id == InstallationId &&
-            organization.LicenseKey != null && organization.LicenseKey.Equals(LicenseKey) &&
-            organization.Enabled == Enabled &&
-            organization.PlanType == PlanType &&
-            organization.Seats == Seats &&
-            organization.MaxCollections == MaxCollections &&
-            organization.UseGroups == UseGroups &&
-            organization.UseDirectory == UseDirectory &&
-            organization.UseTotp == UseTotp &&
-            organization.SelfHost == SelfHost &&
-            organization.Name.Equals(Name);
-
-        if (valid && Version >= 2)
-        {
-            valid = organization.UsersGetPremium == UsersGetPremium;
-        }
-
-        if (valid && Version >= 3)
-        {
-            valid = organization.UseEvents == UseEvents;
-        }
-
-        if (valid && Version >= 4)
-        {
-            valid = organization.Use2fa == Use2fa;
-        }
-
-        if (valid && Version >= 5)
-        {
-            valid = organization.UseApi == UseApi;
-        }
-
-        if (valid && Version >= 6)
-        {
-            valid = organization.UsePolicies == UsePolicies;
-        }
-
-        if (valid && Version >= 7)
-        {
-            valid = organization.UseSso == UseSso;
-        }
-
-        if (valid && Version >= 8)
-        {
-            valid = organization.UseResetPassword == UseResetPassword;
-        }
-
-        if (valid && Version >= 9)
-        {
-            valid = organization.UseKeyConnector == UseKeyConnector;
-        }
-
-        if (valid && Version >= 10)
-        {
-            valid = organization.UseScim == UseScim;
-        }
-
-        if (valid && Version >= 11)
-        {
-            valid = organization.UseCustomPermissions == UseCustomPermissions;
-        }
-
-        /*Version 12 added ExpirationWithoutDatePeriod, but that property is informational only and is not saved
-            to the Organization object. It's validated as part of the hash but does not need to be validated here.
-            */
-
-        if (valid && Version >= 13)
-        {
-            valid = organization.UseSecretsManager == UseSecretsManager &&
-                    organization.UsePasswordManager == UsePasswordManager &&
-                    organization.SmSeats == SmSeats &&
-                    organization.SmServiceAccounts == SmServiceAccounts;
-        }
-
-        /*
-            * Version 14 added LimitCollectionCreationDeletion and Version
-            * 15 added AllowAdminAccessToAllCollectionItems, however they
-            * are no longer used and are intentionally excluded from
-            * validation.
-            */
-
-        if (valid && Version >= CurrentLicenseFileVersion + 1)
-        {
-            valid = organization.UseOrganizationDomains;
-        }
-
-        return valid;
     }
 }
