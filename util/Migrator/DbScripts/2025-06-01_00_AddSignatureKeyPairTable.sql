@@ -29,7 +29,7 @@ FROM
     [dbo].[UserSignatureKeyPair]
 GO
 
-CREATE PROCEDURE [dbo].[UserSignatureKeyPair_ReadByUserId]
+CREATE OR ALTER PROCEDURE [dbo].[UserSignatureKeyPair_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
