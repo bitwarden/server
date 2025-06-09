@@ -9,7 +9,6 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -23,9 +22,6 @@ using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Core.Tokens;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -101,10 +97,6 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>(events =>
             events.Count() == expectedNewUsersCount));
-        await sutProvider.GetDependency<IReferenceEventService>().Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
-            referenceEvent.Type == ReferenceEventType.InvitedUsers && referenceEvent.Id == org.Id &&
-            referenceEvent.Users == expectedNewUsersCount));
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
@@ -171,51 +163,6 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>(events =>
             events.Count(e => e.Item2 == EventType.OrganizationUser_Invited) == expectedNewUsersCount));
-        await sutProvider.GetDependency<IReferenceEventService>().Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
-            referenceEvent.Type == ReferenceEventType.InvitedUsers && referenceEvent.Id == org.Id &&
-            referenceEvent.Users == expectedNewUsersCount));
-    }
-
-    [Theory, BitAutoData]
-    public async Task SignupClientAsync_Succeeds(
-        OrganizationSignup signup,
-        SutProvider<OrganizationService> sutProvider)
-    {
-        signup.Plan = PlanType.TeamsMonthly;
-
-        var plan = StaticStore.GetPlan(signup.Plan);
-
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(plan);
-
-        var (organization, _, _) = await sutProvider.Sut.SignupClientAsync(signup);
-
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(Arg.Is<Organization>(org =>
-            org.Id == organization.Id &&
-            org.Name == signup.Name &&
-            org.Plan == plan.Name &&
-            org.PlanType == plan.Type &&
-            org.UsePolicies == plan.HasPolicies &&
-            org.PublicKey == signup.PublicKey &&
-            org.PrivateKey == signup.PrivateKey &&
-            org.UseSecretsManager == false));
-
-        await sutProvider.GetDependency<IOrganizationApiKeyRepository>().Received(1)
-            .CreateAsync(Arg.Is<OrganizationApiKey>(orgApiKey =>
-                orgApiKey.OrganizationId == organization.Id));
-
-        await sutProvider.GetDependency<IApplicationCacheService>().Received(1)
-            .UpsertOrganizationAbilityAsync(organization);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
-
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1)
-            .CreateAsync(Arg.Is<Collection>(c => c.Name == signup.CollectionName && c.OrganizationId == organization.Id), null, null);
-
-        await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(
-            re =>
-                re.Type == ReferenceEventType.Signup &&
-                re.PlanType == plan.Type));
     }
 
     [Theory]
@@ -770,9 +717,8 @@ public class OrganizationServiceTests
             .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>())
             .ReturnsForAnyArgs(Task.FromResult(0)).AndDoes(x => organization.SmSeats += invitedSmUsers);
 
-        // Throw error at the end of the try block
-        sutProvider.GetDependency<IReferenceEventService>().RaiseEventAsync(default)
-            .ThrowsForAnyArgs<BadRequestException>();
+        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .SendInvitesAsync(Arg.Any<SendInvitesRequest>()).ThrowsAsync<Exception>();
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
             .Returns(StaticStore.GetPlan(organization.PlanType));

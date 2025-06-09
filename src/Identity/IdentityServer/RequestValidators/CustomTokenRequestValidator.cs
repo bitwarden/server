@@ -27,6 +27,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 {
     private readonly UserManager<User> _userManager;
     private readonly IUpdateInstallationCommand _updateInstallationCommand;
+    private readonly Version _denyLegacyUserMinimumVersion = new(Constants.DenyLegacyUserMinimumVersion);
 
     public CustomTokenRequestValidator(
         UserManager<User> userManager,
@@ -35,7 +36,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
         ILogger<CustomTokenRequestValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
@@ -53,7 +53,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             deviceValidator,
             twoFactorAuthenticationValidator,
             organizationUserRepository,
-            mailService,
             logger,
             currentContext,
             globalSettings,
@@ -75,7 +74,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         {
             // Force legacy users to the web for migration
             if (await _userService.IsLegacyUser(GetSubject(context)?.GetSubjectId()) &&
-                context.Result.ValidatedRequest.ClientId != "web")
+                (context.Result.ValidatedRequest.ClientId != "web" || CurrentContext.ClientVersion >= _denyLegacyUserMinimumVersion))
             {
                 await FailAuthForLegacyUserAsync(null, context);
                 return;

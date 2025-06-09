@@ -182,9 +182,8 @@ public class LicensingService : ILicensingService
 
         // Only check once per day
         var now = DateTime.UtcNow;
-        if (_userCheckCache.ContainsKey(user.Id))
+        if (_userCheckCache.TryGetValue(user.Id, out var lastCheck))
         {
-            var lastCheck = _userCheckCache[user.Id];
             if (lastCheck < now && now - lastCheck < TimeSpan.FromDays(1))
             {
                 return user.Premium;
@@ -339,13 +338,12 @@ public class LicensingService : ILicensingService
         }
     }
 
-    public async Task<string> CreateOrganizationTokenAsync(Organization organization, Guid installationId, SubscriptionInfo subscriptionInfo, int? smMaxProjects)
+    public async Task<string> CreateOrganizationTokenAsync(Organization organization, Guid installationId, SubscriptionInfo subscriptionInfo)
     {
         var licenseContext = new LicenseContext
         {
             InstallationId = installationId,
             SubscriptionInfo = subscriptionInfo,
-            SmMaxProjects = smMaxProjects
         };
 
         var claims = await _organizationLicenseClaimsFactory.GenerateClaims(organization, licenseContext);

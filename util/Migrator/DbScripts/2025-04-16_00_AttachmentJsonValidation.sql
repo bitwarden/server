@@ -129,7 +129,7 @@ BEGIN
     END
 
     -- Check if the attachment exists before trying to remove it
-    IF JSON_PATH_EXISTS(@CurrentAttachments, @AttachmentIdPath) = 0
+    IF JSON_QUERY(@CurrentAttachments, @AttachmentIdPath) IS NULL
     BEGIN
         -- Attachment doesn't exist, nothing to do
         RETURN;

@@ -1,7 +1,6 @@
-﻿using System.Text;
-using System.Text.Json;
-using Bit.Core.Models.Data;
-using Bit.Core.Settings;
+﻿#nullable enable
+
+using System.Text;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -10,94 +9,60 @@ namespace Bit.Core.Services;
 
 public class RabbitMqEventListenerService : EventLoggingListenerService
 {
-    private IChannel _channel;
-    private IConnection _connection;
-    private readonly string _exchangeName;
-    private readonly ConnectionFactory _factory;
-    private readonly ILogger<RabbitMqEventListenerService> _logger;
+    private readonly Lazy<Task<IChannel>> _lazyChannel;
     private readonly string _queueName;
+    private readonly IRabbitMqService _rabbitMqService;
 
     public RabbitMqEventListenerService(
         IEventMessageHandler handler,
-        ILogger<RabbitMqEventListenerService> logger,
-        GlobalSettings globalSettings,
-        string queueName) : base(handler)
+        string queueName,
+        IRabbitMqService rabbitMqService,
+        ILogger<RabbitMqEventListenerService> logger) : base(handler, logger)
     {
-        _factory = new ConnectionFactory
-        {
-            HostName = globalSettings.EventLogging.RabbitMq.HostName,
-            UserName = globalSettings.EventLogging.RabbitMq.Username,
-            Password = globalSettings.EventLogging.RabbitMq.Password
-        };
-        _exchangeName = globalSettings.EventLogging.RabbitMq.ExchangeName;
         _logger = logger;
         _queueName = queueName;
+        _rabbitMqService = rabbitMqService;
+        _lazyChannel = new Lazy<Task<IChannel>>(() => _rabbitMqService.CreateChannelAsync());
     }
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        _connection = await _factory.CreateConnectionAsync(cancellationToken);
-        _channel = await _connection.CreateChannelAsync(cancellationToken: cancellationToken);
-
-        await _channel.ExchangeDeclareAsync(exchange: _exchangeName,
-                                            type: ExchangeType.Fanout,
-                                            durable: true,
-                                            cancellationToken: cancellationToken);
-        await _channel.QueueDeclareAsync(queue: _queueName,
-                                         durable: true,
-                                         exclusive: false,
-                                         autoDelete: false,
-                                         arguments: null,
-                                         cancellationToken: cancellationToken);
-        await _channel.QueueBindAsync(queue: _queueName,
-                                      exchange: _exchangeName,
-                                      routingKey: string.Empty,
-                                      cancellationToken: cancellationToken);
+        await _rabbitMqService.CreateEventQueueAsync(_queueName, cancellationToken);
         await base.StartAsync(cancellationToken);
     }
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        var consumer = new AsyncEventingBasicConsumer(_channel);
-        consumer.ReceivedAsync += async (_, eventArgs) =>
-        {
-            try
-            {
-                using var jsonDocument = JsonDocument.Parse(Encoding.UTF8.GetString(eventArgs.Body.Span));
-                var root = jsonDocument.RootElement;
+        var channel = await _lazyChannel.Value;
+        var consumer = new AsyncEventingBasicConsumer(channel);
+        consumer.ReceivedAsync += async (_, eventArgs) => { await ProcessReceivedMessageAsync(eventArgs); };
 
-                if (root.ValueKind == JsonValueKind.Array)
-                {
-                    var eventMessages = root.Deserialize<IEnumerable<EventMessage>>();
-                    await _handler.HandleManyEventsAsync(eventMessages);
-                }
-                else if (root.ValueKind == JsonValueKind.Object)
-                {
-                    var eventMessage = root.Deserialize<EventMessage>();
-                    await _handler.HandleEventAsync(eventMessage);
+        await channel.BasicConsumeAsync(_queueName, autoAck: true, consumer: consumer, cancellationToken: cancellationToken);
+    }
 
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while processing the message");
-            }
-        };
-
-        await _channel.BasicConsumeAsync(_queueName, autoAck: true, consumer: consumer, cancellationToken: cancellationToken);
+    internal async Task ProcessReceivedMessageAsync(BasicDeliverEventArgs eventArgs)
+    {
+        await ProcessReceivedMessageAsync(
+            Encoding.UTF8.GetString(eventArgs.Body.Span),
+            eventArgs.BasicProperties.MessageId);
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        await _channel.CloseAsync(cancellationToken);
-        await _connection.CloseAsync(cancellationToken);
+        if (_lazyChannel.IsValueCreated)
+        {
+            var channel = await _lazyChannel.Value;
+            await channel.CloseAsync(cancellationToken);
+        }
         await base.StopAsync(cancellationToken);
     }
 
     public override void Dispose()
     {
-        _channel.Dispose();
-        _connection.Dispose();
+        if (_lazyChannel.IsValueCreated && _lazyChannel.Value.IsCompletedSuccessfully)
+        {
+            _lazyChannel.Value.Result.Dispose();
+        }
         base.Dispose();
     }
 }

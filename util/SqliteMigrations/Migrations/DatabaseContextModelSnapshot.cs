@@ -180,6 +180,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseKeyConnector")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseOrganizationDomains")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("INTEGER");
 
@@ -665,7 +668,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ExternalId")
-                        .HasMaxLength(50)
+                        .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("OrganizationId")
@@ -942,6 +945,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DefaultUserCollectionEmail")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ExternalId")
                         .HasMaxLength(300)
                         .HasColumnType("TEXT");
@@ -955,6 +961,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -1422,6 +1431,10 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<bool>("Disabled")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Emails")
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("TEXT");

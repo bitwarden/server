@@ -251,16 +251,17 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
 
     private async Task InitAsync(string containerName)
     {
-        if (!_attachmentContainers.ContainsKey(containerName) || _attachmentContainers[containerName] == null)
+        if (!_attachmentContainers.TryGetValue(containerName, out var attachmentContainer) || attachmentContainer == null)
         {
-            _attachmentContainers[containerName] = _blobServiceClient.GetBlobContainerClient(containerName);
+            attachmentContainer = _blobServiceClient.GetBlobContainerClient(containerName);
+            _attachmentContainers[containerName] = attachmentContainer;
             if (containerName == "attachments")
             {
-                await _attachmentContainers[containerName].CreateIfNotExistsAsync(PublicAccessType.Blob, null, null);
+                await attachmentContainer.CreateIfNotExistsAsync(PublicAccessType.Blob, null, null);
             }
             else
             {
-                await _attachmentContainers[containerName].CreateIfNotExistsAsync(PublicAccessType.None, null, null);
+                await attachmentContainer.CreateIfNotExistsAsync(PublicAccessType.None, null, null);
             }
         }
     }
