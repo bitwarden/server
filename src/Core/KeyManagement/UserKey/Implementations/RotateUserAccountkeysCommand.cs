@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Platform.Push;
@@ -73,11 +74,27 @@ public class RotateUserAccountKeysCommand(
         return IdentityResult.Success;
     }
 
-    async Task<bool> IsUserV2UserAsync(User user)
+    async Task<bool> IsV2EncryptionUserAsync(User user)
     {
+        // A V2 user has a signature key pair, and their user key is COSE
+        // The user key cannot be directly checked here; but the items encrypted with it can be checked.
         ArgumentNullException.ThrowIfNull(user);
-        var currentSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id);
-        return currentSignatureKeyPair != null;
+        var hasSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id) != null;
+        var isPrivateKeyEncryptionV2 = GetEncryptionType(user.PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
+
+        // Valid v2 user
+        if (hasSignatureKeyPair && isPrivateKeyEncryptionV2)
+        {
+            return true;
+        }
+
+        // Valid v1 user
+        if (!hasSignatureKeyPair && !isPrivateKeyEncryptionV2)
+        {
+            return false;
+        }
+
+        throw new InvalidOperationException("User is in an invalid state for key rotation. User has a signature key pair, but the private key is not in v2 format, or vice versa.");
     }
 
     async void ValidateRotationModelSignatureKeyPairForV2User(RotateUserAccountKeysData model, User user)
@@ -87,7 +104,6 @@ public class RotateUserAccountKeysCommand(
         {
             throw new InvalidOperationException("The provided signing key data is null, but the user already has signing keys.");
         }
-
         if (model.AccountKeys.SignatureKeyPairData.VerifyingKey != currentSignatureKeyPair.VerifyingKey)
         {
             throw new InvalidOperationException("The provided signing key data does not match the user's current signing key data.");
@@ -95,6 +111,10 @@ public class RotateUserAccountKeysCommand(
         if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey))
         {
             throw new InvalidOperationException("No signed public key provided, but the user already has a signature key pair.");
+        }
+        if (GetEncryptionType(model.AccountKeys.SignatureKeyPairData.WrappedSigningKey) != EncryptionType.XChaCha20Poly1305_B64)
+        {
+            throw new InvalidOperationException("The provided signing key data is not wrapped with XChaCha20-Poly1305.");
         }
     }
 
@@ -119,16 +139,28 @@ public class RotateUserAccountKeysCommand(
 
     async void UpdateAccountKeys(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
+        var isV2User = await IsV2EncryptionUserAsync(user);
+
         // Changing the public key encryption key pair is not supported during key rotation for now; so this ensures it is not accidentally changed
         if (model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey != user.PublicKey)
         {
             throw new InvalidOperationException("The provided account public key does not match the user's current public key, and changing the account asymmetric keypair is currently not supported during key rotation.");
         }
+
+        // Validate that the user key is in the right format by checking that the private key is wrapped with the expected encryption type.
+        if (isV2User && GetEncryptionType(model.UserKeyEncryptedAccountPrivateKey) != EncryptionType.XChaCha20Poly1305_B64)
+        {
+            throw new InvalidOperationException("The provided user key encrypted account private key was not wrapped with XChaCha20-Poly1305");
+        }
+        if (!isV2User && GetEncryptionType(model.UserKeyEncryptedAccountPrivateKey) != EncryptionType.AesCbc256_HmacSha256_B64)
+        {
+            throw new InvalidOperationException("The provided user key encrypted account private key was not wrapped with AES-256-CBC-HMAC");
+        }
         // Private key is re-wrapped with new user key by client
         user.PrivateKey = model.UserKeyEncryptedAccountPrivateKey;
 
 
-        if (await IsUserV2UserAsync(user))
+        if (isV2User)
         {
             ValidateRotationModelSignatureKeyPairForV2User(model, user);
         }
@@ -186,5 +218,22 @@ public class RotateUserAccountKeysCommand(
         {
             saveEncryptedDataActions.Add(_deviceRepository.UpdateKeysForRotationAsync(user.Id, model.DeviceKeys));
         }
+    }
+
+    /// <summary>
+    /// Helper method to convert an encryption type string to an enum value.
+    /// </summary>
+    private EncryptionType GetEncryptionType(string encString)
+    {
+        var parts = encString.Split('.');
+        if (parts.Length == 0)
+        {
+            throw new ArgumentException("Invalid encryption type string.", nameof(encString));
+        }
+        if (byte.TryParse(parts[0], out var encryptionTypeNumber))
+        {
+            return (EncryptionType)encryptionTypeNumber;
+        }
+        throw new ArgumentException("Invalid encryption type string.", nameof(encString));
     }
 }
