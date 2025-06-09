@@ -56,7 +56,7 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE [dbo].[UserSignatureKeyPair_SetForRotation]
+CREATE OR ALTER PROCEDURE [dbo].[UserSignatureKeyPair_SetForRotation]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @SignatureKeyPairAlgorithm TINYINT,
