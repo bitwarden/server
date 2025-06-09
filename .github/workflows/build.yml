@@ -11,6 +11,9 @@ on:
     types: [opened, synchronize]
   workflow_call:
     inputs: {}
+  
+permissions:
+  contents: read
 
 env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
@@ -237,18 +240,10 @@ jobs:
           fi
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
-      - name: Generate image full name
-        id: cache-name
-        env:
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: echo "name=${_AZ_REGISTRY}/${PROJECT_NAME}:buildcache" >> $GITHUB_OUTPUT
-
       - name: Build Docker image
         id: build-artifacts
         uses: docker/build-push-action@67a2d409c0a876cbe6b11854e3e25193efe4e62d # v6.12.0
         with:
-          cache-from: type=registry,ref=${{ steps.cache-name.outputs.name }}
-          cache-to: type=registry,ref=${{ steps.cache-name.outputs.name}},mode=max
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: |
@@ -335,9 +330,9 @@ jobs:
 
           # Run setup
           docker run -i --rm --name setup -v $STUB_OUTPUT/US:/bitwarden $SETUP_IMAGE \
-            dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin -cloud-region US
+            /app/Setup -stub 1 -install 1 -domain bitwarden.example.com -os lin -cloud-region US
           docker run -i --rm --name setup -v $STUB_OUTPUT/EU:/bitwarden $SETUP_IMAGE \
-            dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin -cloud-region EU
+            /app/Setup -stub 1 -install 1 -domain bitwarden.example.com -os lin -cloud-region EU
 
           sudo chown -R $(whoami):$(whoami) $STUB_OUTPUT
 
@@ -603,8 +598,9 @@ jobs:
     uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
     with:
       project: server
-      pull_request_number: ${{ github.event.number }}
+      pull_request_number: ${{ github.event.number || 0 }}
     secrets: inherit
+    permissions: read-all
 
   check-failures:
     name: Check for failures

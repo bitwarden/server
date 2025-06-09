@@ -99,7 +99,7 @@ services:
       - idp
 
   rabbitmq:
-    image: rabbitmq:management
+    image: rabbitmq:4.1.0-management
     container_name: rabbitmq
     ports:
       - "5672:5672"
@@ -108,7 +108,7 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq_data
+      - rabbitmq_data:/var/lib/rabbitmq
     profiles:
       - rabbitmq
 
