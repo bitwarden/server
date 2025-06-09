@@ -78,13 +78,14 @@ public class OrganizationBillingService(
         var isEligibleForSelfHost = await IsEligibleForSelfHostAsync(organization);
 
         var isManaged = organization.Status == OrganizationStatusType.Managed;
-
+        var orgOccupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
             return OrganizationMetadata.Default with
             {
                 IsEligibleForSelfHost = isEligibleForSelfHost,
-                IsManaged = isManaged
+                IsManaged = isManaged,
+                OrganizationOccupiedSeats = orgOccupiedSeats
             };
         }
 
@@ -107,8 +108,6 @@ public class OrganizationBillingService(
         var invoice = !string.IsNullOrEmpty(subscription.LatestInvoiceId)
             ? await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions())
             : null;
-
-        var orgOccupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
 
         return new OrganizationMetadata(
             isEligibleForSelfHost,
@@ -248,12 +247,23 @@ public class OrganizationBillingService(
                         organization.Id,
                         customerSetup.TaxInformation.Country,
                         customerSetup.TaxInformation.TaxId);
+
+                    throw new BadRequestException("billingTaxIdTypeInferenceError");
                 }
 
                 customerCreateOptions.TaxIdData =
                 [
                     new() { Type = taxIdType, Value = customerSetup.TaxInformation.TaxId }
                 ];
+
+                if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
+                {
+                    customerCreateOptions.TaxIdData.Add(new CustomerTaxIdDataOptions
+                    {
+                        Type = StripeConstants.TaxIdType.EUVAT,
+                        Value = $"ES{customerSetup.TaxInformation.TaxId}"
+                    });
+                }
             }
 
             var (paymentMethodType, paymentMethodToken) = customerSetup.TokenizedPaymentSource;

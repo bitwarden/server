@@ -598,7 +598,7 @@ jobs:
     uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
     with:
       project: server
-      pull_request_number: ${{ github.event.number }}
+      pull_request_number: ${{ github.event.number || 0 }}
     secrets: inherit
     permissions: read-all
 
