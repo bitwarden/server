@@ -49,14 +49,6 @@ public abstract class BaseLicense : ILicense
 
     public abstract byte[] GetDataBytes(bool forHash = false);
 
-    public bool VerifySignature(X509Certificate2 certificate)
-    {
-        using (var rsa = certificate.GetRSAPublicKey())
-        {
-            return rsa.VerifyData(GetDataBytes(), Convert.FromBase64String(Signature), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        }
-    }
-
     public byte[] Sign(X509Certificate2 certificate)
     {
         if (!certificate.HasPrivateKey)

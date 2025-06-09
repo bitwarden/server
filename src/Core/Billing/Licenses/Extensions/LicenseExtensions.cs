@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
@@ -13,12 +14,14 @@ namespace Bit.Core.Billing.Licenses.Extensions;
 
 public static class LicenseExtensions
 {
-    public static byte[] ComputeHash(this ILicense license)
+    public static byte[] ComputeHash(this ILicense license) => SHA256.HashData(license.GetDataBytes(true));
+
+    public static bool VerifySignature(this ILicense license, X509Certificate2 certificate)
     {
-        using (var alg = SHA256.Create())
-        {
-            return alg.ComputeHash(license.GetDataBytes(true));
-        }
+        var dataBytes = license.GetDataBytes();
+        var signatureBytes = Convert.FromBase64String(license.Signature);
+        using var rsa = certificate.GetRSAPublicKey();
+        return rsa.VerifyData(dataBytes, signatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
     }
 
     public static byte[] GetDataBytesWithAttributes(this ILicense license, bool forHash = false)
