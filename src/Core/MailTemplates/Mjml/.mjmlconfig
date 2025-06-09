@@ -1,5 +1,5 @@
 {
-    "packages": [
-        "components/hero"
-    ]
+  "packages": [
+    "components/hero"
+  ]
 }

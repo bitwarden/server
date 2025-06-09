@@ -18,12 +18,6 @@
             <p>Your two-step verification code is: <b>{{Token}}</b></p>
             <p>Use this code to complete logging in with Bitwarden.</p>
           </mj-text>
-          <mj-bw-hero
-            img-src="https://assets.bitwarden.com/email/v1/business.png"
-            title="Bitwarden Business"
-            button-text="Hi"
-            button-url="#"
-          />
         </mj-column>
       </mj-section>
     </mj-wrapper>
