@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
@@ -12,6 +13,14 @@ namespace Bit.Core.Billing.Licenses.Extensions;
 
 public static class LicenseExtensions
 {
+    public static byte[] ComputeHash(this ILicense license)
+    {
+        using (var alg = SHA256.Create())
+        {
+            return alg.ComputeHash(license.GetDataBytes(true));
+        }
+    }
+
     public static byte[] GetDataBytesWithAttributes(this ILicense license, bool forHash = false)
     {
         var props = license.GetType()

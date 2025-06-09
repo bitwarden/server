@@ -49,14 +49,6 @@ public abstract class BaseLicense : ILicense
 
     public abstract byte[] GetDataBytes(bool forHash = false);
 
-    public byte[] ComputeHash()
-    {
-        using (var alg = SHA256.Create())
-        {
-            return alg.ComputeHash(GetDataBytes(true));
-        }
-    }
-
     public bool VerifySignature(X509Certificate2 certificate)
     {
         using (var rsa = certificate.GetRSAPublicKey())

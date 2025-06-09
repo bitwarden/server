@@ -94,7 +94,7 @@ public class OrganizationLicense : BaseLicense
         Trial = org.IsTrialing(subscriptionInfo);
 
         UseAdminSponsoredFamilies = org.UseAdminSponsoredFamilies;
-        Hash = Convert.ToBase64String(ComputeHash());
+        Hash = Convert.ToBase64String(this.ComputeHash());
         Signature = Convert.ToBase64String(licenseService.SignLicense(this));
     }
 

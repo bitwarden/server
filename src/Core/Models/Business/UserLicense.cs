@@ -28,7 +28,7 @@ public class UserLicense : BaseLicense
         Refresh = user.CalculateFreshRefreshDate(subscriptionInfo);
         Trial = user.IsTrialing(subscriptionInfo);
 
-        Hash = Convert.ToBase64String(ComputeHash());
+        Hash = Convert.ToBase64String(this.ComputeHash());
         Signature = Convert.ToBase64String(licenseService.SignLicense(this));
     }
 
@@ -47,7 +47,7 @@ public class UserLicense : BaseLicense
         Refresh = user.CalculateFreshRefreshDate(null);
         Trial = user.IsTrialing(null);
 
-        Hash = Convert.ToBase64String(ComputeHash());
+        Hash = Convert.ToBase64String(this.ComputeHash());
         Signature = Convert.ToBase64String(licenseService.SignLicense(this));
     }
 
