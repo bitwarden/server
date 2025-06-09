@@ -1,78 +1,12 @@
 ﻿using System.Text.Json.Serialization;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses.Attributes;
-using Bit.Core.Billing.Licenses.Extensions;
-using Bit.Core.Services;
 
 namespace Bit.Core.Models.Business;
 
 public class OrganizationLicense : BaseLicense
 {
-    public OrganizationLicense()
-    {
-    }
-
-    public OrganizationLicense(Organization org, SubscriptionInfo subscriptionInfo, Guid installationId,
-        ILicensingService licenseService, int? version = null)
-    {
-        Version = version.GetValueOrDefault(CurrentLicenseFileVersion); // TODO: Remember to change the constant
-        LicenseType = Enums.LicenseType.Organization;
-        LicenseKey = org.LicenseKey;
-        InstallationId = installationId;
-        Id = org.Id;
-        Name = org.Name;
-        BillingEmail = org.BillingEmail;
-        BusinessName = org.BusinessName;
-        Enabled = org.Enabled;
-        Plan = org.Plan;
-        PlanType = org.PlanType;
-        Seats = org.Seats;
-        MaxCollections = org.MaxCollections;
-        UsePolicies = org.UsePolicies;
-        UseSso = org.UseSso;
-        UseKeyConnector = org.UseKeyConnector;
-        UseScim = org.UseScim;
-        UseGroups = org.UseGroups;
-        UseEvents = org.UseEvents;
-        UseDirectory = org.UseDirectory;
-        UseTotp = org.UseTotp;
-        Use2fa = org.Use2fa;
-        UseApi = org.UseApi;
-        UseResetPassword = org.UseResetPassword;
-        MaxStorageGb = org.MaxStorageGb;
-        SelfHost = org.SelfHost;
-        UsersGetPremium = org.UsersGetPremium;
-        UseCustomPermissions = org.UseCustomPermissions;
-        Issued = DateTime.UtcNow;
-        UsePasswordManager = org.UsePasswordManager;
-        UseSecretsManager = org.UseSecretsManager;
-        SmSeats = org.SmSeats;
-        SmServiceAccounts = org.SmServiceAccounts;
-        UseRiskInsights = org.UseRiskInsights;
-        UseOrganizationDomains = org.UseOrganizationDomains;
-
-        // Deprecated. Left for backwards compatibility with old license versions.
-        LimitCollectionCreationDeletion = org.LimitCollectionCreation || org.LimitCollectionDeletion;
-        AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems;
-        //
-
-        Expires = org.CalculateFreshExpirationDate(subscriptionInfo, Issued);
-        Refresh = org.CalculateFreshRefreshDate(subscriptionInfo, Expires, Issued);
-        ExpirationWithoutGracePeriod = org.CalculateFreshExpirationDateWithoutGracePeriod(subscriptionInfo);
-        Trial = org.IsTrialing(subscriptionInfo);
-
-        UseAdminSponsoredFamilies = org.UseAdminSponsoredFamilies;
-        Hash = Convert.ToBase64String(this.ComputeHash());
-        Signature = Convert.ToBase64String(licenseService.SignLicense(this));
-    }
-
-    /// <summary>
-    /// Represents the current version of the license format. Should be updated whenever new fields are added.
-    /// </summary>
-    /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
-    /// getting out of date license errors
-    /// </remarks>
+    [Obsolete("No longer used in the JWT based license format")]
     public const int CurrentLicenseFileVersion = 15;
 
     [LicenseVersion(1)]
@@ -182,8 +116,4 @@ public class OrganizationLicense : BaseLicense
     {
         get => Version is >= 1 and <= CurrentLicenseFileVersion + 1;
     }
-
-
-
-
 }
