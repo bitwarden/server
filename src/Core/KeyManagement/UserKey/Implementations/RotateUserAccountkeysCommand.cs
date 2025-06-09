@@ -108,7 +108,7 @@ public class RotateUserAccountKeysCommand(
         {
             throw new InvalidOperationException("The provided signing key data does not match the user's current signing key data.");
         }
-        if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData?.SignedPublicKey))
+        if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData?.SiginedPublicKey))
         {
             throw new InvalidOperationException("No signed public key provided, but the user already has a signature key pair.");
         }
@@ -118,31 +118,25 @@ public class RotateUserAccountKeysCommand(
         }
     }
 
-    void ValidateRotationModelSignatureKeyPairForV1UserAndUpgradeToV2(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    public void ValidateRotationModelSignatureKeyPairForV1UserAndUpgradeToV2(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
         if (model.AccountKeys.SignatureKeyPairData != null)
         {
-            // user is upgrading
-            if (string.IsNullOrEmpty(model.AccountKeys.SignatureKeyPairData.VerifyingKey))
+            if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData?.SignedPublicKey))
             {
-                throw new InvalidOperationException("The provided signing key data does not contain a valid verifying key.");
-            }
-
-            if (string.IsNullOrEmpty(model.AccountKeys.SignatureKeyPairData.WrappedSigningKey))
-            {
-                throw new InvalidOperationException("The provided signing key data does not contain a valid wrapped signing key.");
+                throw new InvalidOperationException("The provided public key encryption key pair data does not contain a valid signed public key.");
             }
             saveEncryptedDataActions.Add(_userSignatureKeyPairRepository.SetUserSignatureKeyPair(user.Id, model.AccountKeys.SignatureKeyPairData));
             user.SignedPublicKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey;
         }
     }
 
-    async Task UpdateAccountKeys(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    public async Task UpdateAccountKeys(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
         var isV2User = await IsV2EncryptionUserAsync(user);
 
         // Changing the public key encryption key pair is not supported during key rotation for now; so this ensures it is not accidentally changed
-        var providedPublicKey = model.AccountKeys?.PublicKeyEncryptionKeyPairData?.PublicKey ?? model.AccountPublicKey;
+        var providedPublicKey = model.AccountPublicKey;
         if (providedPublicKey != user.PublicKey)
         {
             throw new InvalidOperationException("The provided account public key does not match the user's current public key, and changing the account asymmetric keypair is currently not supported during key rotation.");
@@ -153,7 +147,7 @@ public class RotateUserAccountKeysCommand(
         {
             throw new InvalidOperationException("The provided user key encrypted account private key was not wrapped with XChaCha20-Poly1305");
         }
-        if (!isV2User && GetEncryptionType(model.UserKeyEncryptedAccountPrivateKey) != EncryptionType.AesCbc256_HmacSha256_B64)
+        if (!isV2User && model.AccountKeys.SignatureKeyPairData == null && GetEncryptionType(model.UserKeyEncryptedAccountPrivateKey) != EncryptionType.AesCbc256_HmacSha256_B64)
         {
             throw new InvalidOperationException("The provided user key encrypted account private key was not wrapped with AES-256-CBC-HMAC");
         }
