@@ -10,13 +10,13 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.KeyManagement.Repositories;
 
-public class UserSignatureKeyPairRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper) : Repository<Core.KeyManagement.Entities.UserSignatureKeyPair, Models.UserSignatureKeyPair, Guid>(serviceScopeFactory, mapper, context => context.UserSignatureKeyPair), IUserSignatureKeyPairRepository
+public class UserSignatureKeyPairRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper) : Repository<Core.KeyManagement.Entities.UserSignatureKeyPair, Models.UserSignatureKeyPair, Guid>(serviceScopeFactory, mapper, context => context.UserSignatureKeyPairs), IUserSignatureKeyPairRepository
 {
     public async Task<SignatureKeyPairData?> GetByUserIdAsync(Guid userId)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
-        var signingKeys = await dbContext.UserSignatureKeyPair.FindAsync(userId);
+        var signingKeys = await dbContext.UserSignatureKeyPairs.FindAsync(userId);
         if (signingKeys == null)
         {
             return null;
@@ -45,7 +45,7 @@ public class UserSignatureKeyPairRepository(IServiceScopeFactory serviceScopeFac
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow,
             };
-            await dbContext.UserSignatureKeyPair.AddAsync(entity);
+            await dbContext.UserSignatureKeyPairs.AddAsync(entity);
             await dbContext.SaveChangesAsync();
         };
     }
@@ -56,7 +56,7 @@ public class UserSignatureKeyPairRepository(IServiceScopeFactory serviceScopeFac
         {
             await using var scope = ServiceScopeFactory.CreateAsyncScope();
             var dbContext = GetDatabaseContext(scope);
-            var entity = await dbContext.UserSignatureKeyPair.FirstOrDefaultAsync(x => x.UserId == grantorId);
+            var entity = await dbContext.UserSignatureKeyPairs.FirstOrDefaultAsync(x => x.UserId == grantorId);
             if (entity != null)
             {
                 entity.SignatureAlgorithm = signingKeys.SignatureAlgorithm;
