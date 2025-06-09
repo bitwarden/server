@@ -30,9 +30,6 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 using Fido2NetLib;
@@ -69,7 +66,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
     private readonly IDataProtector _organizationServiceDataProtector;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IFido2 _fido2;
     private readonly ICurrentContext _currentContext;
     private readonly IGlobalSettings _globalSettings;
@@ -109,7 +105,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IPaymentService paymentService,
         IPolicyRepository policyRepository,
         IPolicyService policyService,
-        IReferenceEventService referenceEventService,
         IFido2 fido2,
         ICurrentContext currentContext,
         IGlobalSettings globalSettings,
@@ -154,7 +149,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _policyService = policyService;
         _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
             "OrganizationServiceDataProtector");
-        _referenceEventService = referenceEventService;
         _fido2 = fido2;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
@@ -299,8 +293,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         await _userRepository.DeleteAsync(user);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.DeleteAccount, user, _currentContext));
         await _pushService.PushLogOutAsync(user.Id);
         return IdentityResult.Success;
     }
@@ -365,12 +357,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     public async Task SendTwoFactorEmailAsync(User user, bool authentication = true)
     {
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-        if (provider == null || provider.MetaData == null || !provider.MetaData.ContainsKey("Email"))
+        if (provider == null || provider.MetaData == null || !provider.MetaData.TryGetValue("Email", out var emailValue))
         {
             throw new ArgumentNullException("No email.");
         }
 
-        var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
+        var email = ((string)emailValue).ToLowerInvariant();
         var token = await base.GenerateTwoFactorTokenAsync(user,
             CoreHelpers.CustomProviderName(TwoFactorProviderType.Email));
 
@@ -398,12 +390,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     public async Task<bool> VerifyTwoFactorEmailAsync(User user, string token)
     {
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-        if (provider == null || provider.MetaData == null || !provider.MetaData.ContainsKey("Email"))
+        if (provider == null || provider.MetaData == null || !provider.MetaData.TryGetValue("Email", out var emailValue))
         {
             throw new ArgumentNullException("No email.");
         }
 
-        var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
+        var email = ((string)emailValue).ToLowerInvariant();
         return await base.VerifyTwoFactorTokenAsync(user,
             CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), token);
     }
@@ -461,12 +453,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var keyId = $"Key{id}";
 
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        if (!provider?.MetaData?.ContainsKey("pending") ?? true)
+        if (provider?.MetaData is null || !provider.MetaData.TryGetValue("pending", out var pendingValue))
         {
             return false;
         }
 
-        var options = CredentialCreateOptions.FromJson((string)provider.MetaData["pending"]);
+        var options = CredentialCreateOptions.FromJson((string)pendingValue);
 
         // Callback to ensure credential ID is unique. Always return true since we don't care if another
         // account uses the same 2FA key.
@@ -1046,12 +1038,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         {
             await SaveUserAsync(user);
             await _pushService.PushSyncVaultAsync(user.Id);
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.UpgradePlan, user, _currentContext)
-                {
-                    Storage = user.MaxStorageGb,
-                    PlanName = PremiumPlanId,
-                });
         }
         catch when (!_globalSettings.SelfHosted)
         {
@@ -1117,12 +1103,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb,
             StripeConstants.Prices.StoragePlanPersonal);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustStorage, user, _currentContext)
-            {
-                Storage = storageAdjustmentGb,
-                PlanName = StripeConstants.Prices.StoragePlanPersonal,
-            });
         await SaveUserAsync(user);
         return secret;
     }
@@ -1150,18 +1130,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             eop = false;
         }
         await _paymentService.CancelSubscriptionAsync(user, eop);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.CancelSubscription, user, _currentContext)
-            {
-                EndOfPeriod = eop
-            });
     }
 
     public async Task ReinstatePremiumAsync(User user)
     {
         await _paymentService.ReinstateSubscriptionAsync(user);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.ReinstateSubscription, user, _currentContext));
     }
 
     public async Task EnablePremiumAsync(Guid userId, DateTime? expirationDate)
@@ -1380,14 +1353,14 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     public void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true)
     {
         var providers = user.GetTwoFactorProviders();
-        if (!providers?.ContainsKey(type) ?? true)
+        if (providers is null || !providers.TryGetValue(type, out var provider))
         {
             return;
         }
 
         if (setEnabled)
         {
-            providers[type].Enabled = true;
+            provider.Enabled = true;
         }
         user.SetTwoFactorProviders(providers);
 
@@ -1444,17 +1417,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }).ToArray();
 
         await Task.WhenAll(legacyRevokeOrgUserTasks);
-    }
-
-    public override async Task<IdentityResult> ConfirmEmailAsync(User user, string token)
-    {
-        var result = await base.ConfirmEmailAsync(user, token);
-        if (result.Succeeded)
-        {
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.ConfirmEmailAddress, user, _currentContext));
-        }
-        return result;
     }
 
     public async Task RotateApiKeyAsync(User user)

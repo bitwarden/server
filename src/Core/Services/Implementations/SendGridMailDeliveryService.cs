@@ -72,8 +72,8 @@ public class SendGridMailDeliveryService : IMailDeliveryService, IDisposable
         msg.SetOpenTracking(false);
 
         if (message.MetaData != null &&
-            message.MetaData.ContainsKey("SendGridBypassListManagement") &&
-            Convert.ToBoolean(message.MetaData["SendGridBypassListManagement"]))
+            message.MetaData.TryGetValue("SendGridBypassListManagement", out var sendGridBypassListManagement) &&
+            Convert.ToBoolean(sendGridBypassListManagement))
         {
             msg.SetBypassListManagement(true);
         }
