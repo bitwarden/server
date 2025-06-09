@@ -9,7 +9,7 @@ public static class ReportingServiceCollectionExtensions
 {
     public static void AddReportingServices(this IServiceCollection services)
     {
-        services.AddScoped<IMemberAccessCipherDetailsQuery, MemberAccessCipherDetailsQuery>();
+        services.AddScoped<IRiskInsightsReportQuery, RiskInsightsReportQuery>();
         services.AddScoped<IMemberAccessReportQuery, MemberAccessReportQuery>();
         services.AddScoped<IAddPasswordHealthReportApplicationCommand, AddPasswordHealthReportApplicationCommand>();
         services.AddScoped<IGetPasswordHealthReportApplicationQuery, GetPasswordHealthReportApplicationQuery>();
