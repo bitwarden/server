@@ -45,7 +45,18 @@ public class OrganizationSale
 
     public static OrganizationSale From(
         Organization organization,
-        OrganizationUpgrade upgrade) => From(organization, (OrganizationSignup)upgrade);
+        OrganizationUpgrade upgrade)
+    {
+        var customerSetup = string.IsNullOrEmpty(organization.GatewayCustomerId) ? GetCustomerSetup(upgrade) : null;
+        var subscriptionSetup = GetSubscriptionSetup(upgrade);
+
+        return new OrganizationSale
+        {
+            Organization = organization,
+            CustomerSetup = customerSetup,
+            SubscriptionSetup = subscriptionSetup
+        };
+    }
 
     private static CustomerSetup GetCustomerSetup(OrganizationSignup signup)
     {
@@ -79,6 +90,22 @@ public class OrganizationSale
             signup.TaxInfo.BillingAddressState);
 
         return customerSetup;
+    }
+
+    private static CustomerSetup GetCustomerSetup(OrganizationUpgrade upgrade)
+    {
+        return new CustomerSetup
+        {
+            TaxInformation = new TaxInformation(
+                upgrade.TaxInfo.BillingAddressCountry,
+                upgrade.TaxInfo.BillingAddressPostalCode,
+                upgrade.TaxInfo.TaxIdNumber,
+                upgrade.TaxInfo.TaxIdType,
+                upgrade.TaxInfo.BillingAddressLine1,
+                upgrade.TaxInfo.BillingAddressLine2,
+                upgrade.TaxInfo.BillingAddressCity,
+                upgrade.TaxInfo.BillingAddressState)
+        };
     }
 
     private static SubscriptionSetup GetSubscriptionSetup(OrganizationSignup signup)
@@ -115,5 +142,31 @@ public class OrganizationSale
         }
 
         return subscriptionSetup;
+    }
+
+    private static SubscriptionSetup GetSubscriptionSetup(OrganizationUpgrade upgrade)
+    {
+        var passwordManagerOptions = new SubscriptionSetup.PasswordManager
+        {
+            Seats = upgrade.AdditionalSeats,
+            Storage = upgrade.AdditionalStorageGb,
+            PremiumAccess = upgrade.PremiumAccessAddon
+        };
+
+        var secretsManagerOptions = upgrade.UseSecretsManager
+            ? new SubscriptionSetup.SecretsManager
+            {
+                Seats = upgrade.AdditionalSmSeats ?? 0,
+                ServiceAccounts = upgrade.AdditionalServiceAccounts
+            }
+            : null;
+
+        return new SubscriptionSetup
+        {
+            PlanType = upgrade.Plan,
+            PasswordManagerOptions = passwordManagerOptions,
+            SecretsManagerOptions = secretsManagerOptions,
+            SkipTrial = true // Upgrades should always skip trial
+        };
     }
 }
