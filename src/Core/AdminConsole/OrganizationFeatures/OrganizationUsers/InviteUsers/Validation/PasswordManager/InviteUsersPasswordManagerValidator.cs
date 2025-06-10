@@ -83,14 +83,8 @@ public class InviteUsersPasswordManagerValidator(
             return invalidEnvironment.Map(request);
         }
 
-        var organizationValidationResult = await inviteUsersOrganizationValidator.ValidateAsync(request.InviteOrganization);
-
-        if (organizationValidationResult is Invalid<InviteOrganization> organizationValidation)
-        {
-            return organizationValidation.Map(request);
-        }
-
         var provider = await providerRepository.GetByOrganizationIdAsync(request.InviteOrganization.OrganizationId);
+
         if (provider is not null)
         {
             var providerValidationResult = InvitingUserOrganizationProviderValidator.Validate(new InviteOrganizationProvider(provider));
@@ -99,6 +93,13 @@ public class InviteUsersPasswordManagerValidator(
             {
                 return invalidProviderValidation.Map(request);
             }
+        }
+
+        var organizationValidationResult = await inviteUsersOrganizationValidator.ValidateAsync(request.InviteOrganization);
+
+        if (organizationValidationResult is Invalid<InviteOrganization> organizationValidation)
+        {
+            return organizationValidation.Map(request);
         }
 
         var paymentSubscription = await paymentService.GetSubscriptionAsync(
