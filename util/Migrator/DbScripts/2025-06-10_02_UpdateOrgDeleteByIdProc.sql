@@ -9,6 +9,8 @@ BEGIN
 
     DECLARE @BatchSize INT = 100
     WHILE @BatchSize > 0
+GO
+
 BEGIN
 BEGIN TRANSACTION Organization_DeleteById_Ciphers
 
@@ -23,6 +25,8 @@ BEGIN TRANSACTION Organization_DeleteById_Ciphers
 
         COMMIT TRANSACTION Organization_DeleteById_Ciphers
 END
+
+GO
 
 BEGIN TRANSACTION Organization_DeleteById
 
@@ -159,3 +163,5 @@ WHERE
 
     COMMIT TRANSACTION Organization_DeleteById
 END
+
+GO
