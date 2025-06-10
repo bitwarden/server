@@ -1,5 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
@@ -10,6 +15,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -252,5 +258,70 @@ public class CloudICloudOrganizationSignUpCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
         Assert.Contains("You can only be an admin of one free organization.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    public async Task SignUp_WhenSingleOrganizationPolicyApplies_Fails(PlanType planType, OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        signup.Plan = planType;
+        signup.AdditionalSeats = 10;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
+        signup.IsFromSecretsManagerTrial = false;
+        signup.IsFromProvider = false;
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+
+        sutProvider.GetDependency<IPolicyService>()
+            .AnyPoliciesApplicableToUserAsync(signup.Owner.Id, PolicyType.SingleOrg).Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpOrganizationAsync(signup));
+        Assert.Contains("You may not create an organization. You belong to an organization " +
+                        "which has a policy that prohibits you from being a member of any other organization.",
+            exception.Message);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+        await sutProvider.GetDependency<IOrganizationBillingService>().DidNotReceiveWithAnyArgs().Finalize(default);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    public async Task SignUp_WithPolicyRequirementsEnabled_WhenSingleOrganizationPolicyApplies_Fails(PlanType planType, OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+
+        signup.Plan = planType;
+        signup.AdditionalSeats = 10;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
+        signup.IsFromSecretsManagerTrial = false;
+        signup.IsFromProvider = false;
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+
+        sutProvider
+            .GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([
+                new PolicyDetails
+                {
+                    OrganizationId = Guid.NewGuid(),
+                    PolicyType = PolicyType.SingleOrg,
+                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed
+                }
+            ]));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpOrganizationAsync(signup));
+        Assert.Contains("You may not create an organization. You belong to an organization " +
+                        "which has a policy that prohibits you from being a member of any other organization.",
+            exception.Message);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+        await sutProvider.GetDependency<IOrganizationBillingService>().DidNotReceiveWithAnyArgs().Finalize(default);
     }
 }

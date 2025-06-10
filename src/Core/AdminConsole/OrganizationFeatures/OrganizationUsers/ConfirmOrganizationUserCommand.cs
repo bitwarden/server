@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿using System.ComponentModel;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -127,7 +128,11 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
                 }
 
                 var userTwoFactorEnabled = usersTwoFactorEnabled.FirstOrDefault(tuple => tuple.userId == user.Id).twoFactorIsEnabled;
-                await CheckPoliciesAsync(organizationId, user, orgUsers, userTwoFactorEnabled);
+
+                // Enforce policies
+                await ValidateTwoFactorAuthenticationPolicyAsync(user, organizationId, userTwoFactorEnabled);
+                await ValidateSingleOrganizationPolicyAsync(user, orgUsers, organizationId);
+
                 orgUser.Status = OrganizationUserStatusType.Confirmed;
                 orgUser.Key = keys[orgUser.Id];
                 orgUser.Email = null;
@@ -149,11 +154,13 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         return result;
     }
 
-    private async Task CheckPoliciesAsync(Guid organizationId, User user,
-        ICollection<OrganizationUser> userOrgs, bool userTwoFactorEnabled)
+    private async Task ValidateSingleOrganizationPolicyAsync(User user, ICollection<OrganizationUser> userOrgs, Guid organizationId)
     {
-        // Enforce Two Factor Authentication Policy for this organization
-        await ValidateTwoFactorAuthenticationPolicyAsync(user, organizationId, userTwoFactorEnabled);
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            await ValidateSingleOrganizationPolicyAsync_vNext(user, organizationId);
+            return;
+        }
 
         var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
         var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
@@ -168,6 +175,26 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         if (otherSingleOrgPolicies.Any())
         {
             throw new BadRequestException("Cannot confirm this member to the organization because they are in another organization which forbids it.");
+        }
+    }
+
+    private async Task ValidateSingleOrganizationPolicyAsync_vNext(User user, Guid organizationId)
+    {
+        var singleOrganizationPolicyRequirement =
+            await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id);
+        var singleOrganizationPolicyResult =
+            singleOrganizationPolicyRequirement.CanBeRestoredToOrganization(organizationId);
+
+        switch (singleOrganizationPolicyResult)
+        {
+            case SingleOrganizationRequirementResult.BlockedByThisOrganization:
+                throw new BadRequestException("Cannot confirm this member to the organization until they leave or remove all other organizations.");
+            case SingleOrganizationRequirementResult.BlockedByOtherOrganization:
+                throw new BadRequestException("Cannot confirm this member to the organization because they are in another organization which forbids it.");
+            case SingleOrganizationRequirementResult.Ok:
+                break;
+            default:
+                throw new InvalidEnumArgumentException();
         }
     }
 
