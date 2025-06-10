@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[RiskInsightReport_ReadByOrganizationId]
+CREATE PROCEDURE [dbo].[OrganizationApplication_ReadByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
     SET NOCOUNT ON;
@@ -9,9 +9,8 @@ AS
     SELECT
         [Id],
         [OrganizationId],
-        [Date],
-        [ReportData],
+        [Applications],
         [CreationDate],
         [RevisionDate]
-    FROM [dbo].[RiskInsightReport]
+    FROM [dbo].[OrganizationApplication]
     WHERE [OrganizationId] = @OrganizationId;

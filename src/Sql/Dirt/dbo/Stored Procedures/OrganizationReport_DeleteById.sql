@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[RiskInsightReport_DeleteById]
+CREATE PROCEDURE [dbo].[OrganizationReport_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
     SET NOCOUNT ON;
@@ -6,5 +6,5 @@ AS
     IF @Id IS NULL
        THROW 50000, 'Id cannot be null', 1;
 
-    DELETE FROM [dbo].[RiskInsightReport]
+    DELETE FROM [dbo].[OrganizationReport]
     WHERE [Id] = @Id

@@ -1,16 +1,17 @@
-CREATE PROCEDURE [dbo].[RiskInsightCriticalApplication_ReadById]
+CREATE PROCEDURE [dbo].[OrganizationReport_ReadById]
     @Id UNIQUEIDENTIFIER
 AS
     SET NOCOUNT ON;
 
     IF @Id IS NULL
-       THROW 50000, 'Id cannot be null', 1;
+        THROW 50000, 'Id cannot be null', 1;
 
     SELECT
         [Id],
         [OrganizationId],
-        [Applications],
+        [Date],
+        [ReportData],
         [CreationDate],
         [RevisionDate]
-    FROM [dbo].[RiskInsightCriticalApplication]
+    FROM [dbo].[OrganizationReport]
     WHERE [Id] = @Id;

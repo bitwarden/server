@@ -1,31 +1,31 @@
-IF OBJECT_ID('dbo.RiskInsightCriticalApplication') IS NULL
+IF OBJECT_ID('dbo.OrganizationApplication') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[RiskInsightCriticalApplication] (
+    CREATE TABLE [dbo].[OrganizationApplication] (
         [Id]                       UNIQUEIDENTIFIER NOT NULL,
         [OrganizationId]           UNIQUEIDENTIFIER NOT NULL,
         [Applications]             NVARCHAR(MAX)    NOT NULL,
         [CreationDate]             DATETIME2 (7)    NOT NULL,
         [RevisionDate]             DATETIME2 (7)    NOT NULL,
-        CONSTRAINT [PK_RiskInsightCriticalApplication] PRIMARY KEY CLUSTERED ([Id] ASC),
-        CONSTRAINT [FK_RiskInsightCriticalApplication_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
+        CONSTRAINT [PK_OrganizationApplication] PRIMARY KEY CLUSTERED ([Id] ASC),
+        CONSTRAINT [FK_OrganizationApplication_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
         );
 
-    CREATE NONCLUSTERED INDEX [IX_RiskInsightCriticalApplication_OrganizationId]
-        ON [dbo].[RiskInsightCriticalApplication]([OrganizationId] ASC);
+    CREATE NONCLUSTERED INDEX [IX_OrganizationApplication_OrganizationId]
+        ON [dbo].[OrganizationApplication]([OrganizationId] ASC);
 END
 GO
 
-IF OBJECT_ID('dbo.RiskInsightCriticalApplicationView') IS NOT NULL
+IF OBJECT_ID('dbo.OrganizationApplicationView') IS NOT NULL
 BEGIN
-    DROP VIEW [dbo].[RiskInsightCriticalApplicationView];
+    DROP VIEW [dbo].[OrganizationApplicationView];
 END
 GO
 
-CREATE VIEW [dbo].[RiskInsightCriticalApplicationView] AS
-    SELECT * FROM [dbo].[RiskInsightCriticalApplication];
+CREATE VIEW [dbo].[OrganizationApplicationView] AS
+    SELECT * FROM [dbo].[OrganizationApplication];
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[RiskInsightCriticalApplication_Create]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_Create]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Applications NVARCHAR(MAX),
@@ -34,7 +34,7 @@ CREATE OR ALTER PROCEDURE [dbo].[RiskInsightCriticalApplication_Create]
 AS
     SET NOCOUNT ON;
 
-    INSERT INTO [dbo].[RiskInsightCriticalApplication]
+    INSERT INTO [dbo].[OrganizationApplication]
     (
         [Id],
         [OrganizationId],
@@ -52,7 +52,7 @@ AS
         );
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[RiskInsightCriticalApplication_ReadByOrganizationId]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_ReadByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
     SET NOCOUNT ON;
@@ -66,11 +66,11 @@ AS
         [Applications],
         [CreationDate],
         [RevisionDate]
-    FROM [dbo].[RiskInsightCriticalApplication]
+    FROM [dbo].[OrganizationApplication]
     WHERE [OrganizationId] = @OrganizationId;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[RiskInsightCriticalApplication_ReadById]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_ReadById]
     @Id UNIQUEIDENTIFIER
 AS
     SET NOCOUNT ON;
@@ -84,18 +84,18 @@ AS
         [Applications],
         [CreationDate],
         [RevisionDate]
-    FROM [dbo].[RiskInsightCriticalApplication]
+    FROM [dbo].[OrganizationApplication]
     WHERE [Id] = @Id;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[RiskInsightCriticalApplication_Update]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_Update]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Applications NVARCHAR(MAX),
     @RevisionDate DATETIME2(7)
 AS
     SET NOCOUNT ON;
-    UPDATE [dbo].[RiskInsightCriticalApplication]
+    UPDATE [dbo].[OrganizationApplication]
     SET
         [OrganizationId] = @OrganizationId,
         [Applications] = @Applications,
@@ -103,7 +103,7 @@ AS
     WHERE [Id] = @Id;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[RiskInsightCriticalApplication_DeleteById]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
     SET NOCOUNT ON;
@@ -111,7 +111,7 @@ AS
     IF @Id IS NULL
        THROW 50000, 'Id cannot be null', 1;
 
-    DELETE FROM [dbo].[RiskInsightCriticalApplication]
+    DELETE FROM [dbo].[OrganizationApplication]
     WHERE [Id] = @Id;
 GO
 

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Bit.Infrastructure.EntityFramework.Dirt.Configurations;
 
-public class RiskInsightReportEntityTypeConfiguration : IEntityTypeConfiguration<OrganizationReport>
+public class OrganizationReportEntityTypeConfiguration : IEntityTypeConfiguration<OrganizationReport>
 {
     public void Configure(EntityTypeBuilder<OrganizationReport> builder)
     {

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[RiskInsightReport_Create]
+CREATE PROCEDURE [dbo].[OrganizationReport_Create]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Date DATETIME2(7),
@@ -8,5 +8,5 @@ CREATE PROCEDURE [dbo].[RiskInsightReport_Create]
 AS
     SET NOCOUNT ON;
 
-    INSERT INTO [dbo].[RiskInsightReport]( [Id],[OrganizationId],[Date],[ReportData],[CreationDate],[RevisionDate] )
+    INSERT INTO [dbo].[OrganizationReport]( [Id],[OrganizationId],[Date],[ReportData],[CreationDate],[RevisionDate] )
     VALUES ( @Id,@OrganizationId,@Date,@ReportData,@CreationDate,@RevisionDate);

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[RiskInsightCriticalApplication_Create]
+CREATE PROCEDURE [dbo].[OrganizationApplication_Create]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Applications NVARCHAR(MAX),
@@ -7,7 +7,7 @@ CREATE PROCEDURE [dbo].[RiskInsightCriticalApplication_Create]
 AS
     SET NOCOUNT ON;
 
-    INSERT INTO [dbo].[RiskInsightCriticalApplication]
+    INSERT INTO [dbo].[OrganizationApplication]
     (
         [Id],
         [OrganizationId],
