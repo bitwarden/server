@@ -28,4 +28,26 @@ public class PersonalOwnershipPolicyRequirementFactoryTests
 
         Assert.True(actual.DisablePersonalOwnership);
     }
+
+    [Theory, BitAutoData]
+    public void RequiresDefaultCollection_WithNoPolicies_ReturnsFalse(
+        Guid organizationId,
+        SutProvider<PersonalOwnershipPolicyRequirementFactory> sutProvider)
+    {
+        var actual = sutProvider.Sut.Create([]);
+
+        Assert.False(actual.RequiresDefaultCollection(organizationId));
+    }
+
+    [Theory, BitAutoData]
+    public void RequiresDefaultCollection_WithPersonalOwnershipPolicies_ReturnsCorrectResult(
+        [PolicyDetails(PolicyType.PersonalOwnership)] PolicyDetails[] policies,
+        Guid nonPolicyOrganizationId,
+        SutProvider<PersonalOwnershipPolicyRequirementFactory> sutProvider)
+    {
+        var actual = sutProvider.Sut.Create(policies);
+
+        Assert.True(actual.RequiresDefaultCollection(policies[0].OrganizationId));
+        Assert.False(actual.RequiresDefaultCollection(nonPolicyOrganizationId));
+    }
 }
