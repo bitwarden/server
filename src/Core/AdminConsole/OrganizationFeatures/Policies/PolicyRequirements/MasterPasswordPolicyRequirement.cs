@@ -30,6 +30,8 @@ public class MasterPasswordPolicyRequirementFactory : BasePolicyRequirementFacto
 
     protected override IEnumerable<OrganizationUserType> ExemptRoles => [];
 
+    protected override IEnumerable<OrganizationUserStatusType> ExemptStatuses => [];
+
     public override MasterPasswordPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
         var result = policyDetails
