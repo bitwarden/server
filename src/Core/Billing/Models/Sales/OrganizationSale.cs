@@ -85,58 +85,6 @@ public class OrganizationSale
         return customerSetup;
     }
 
-    private static CustomerSetup GetCustomerSetup(OrganizationUpgrade upgrade)
-    {
-        return new CustomerSetup
-        {
-            TaxInformation = new TaxInformation(
-                upgrade.TaxInfo.BillingAddressCountry,
-                upgrade.TaxInfo.BillingAddressPostalCode,
-                upgrade.TaxInfo.TaxIdNumber,
-                upgrade.TaxInfo.TaxIdType,
-                upgrade.TaxInfo.BillingAddressLine1,
-                upgrade.TaxInfo.BillingAddressLine2,
-                upgrade.TaxInfo.BillingAddressCity,
-                upgrade.TaxInfo.BillingAddressState)
-        };
-    }
-
-    private static SubscriptionSetup GetSubscriptionSetup(OrganizationSignup signup)
-    {
-        var passwordManagerOptions = new SubscriptionSetup.PasswordManager
-        {
-            Seats = signup.AdditionalSeats,
-            Storage = signup.AdditionalStorageGb,
-            PremiumAccess = signup.PremiumAccessAddon
-        };
-
-        var secretsManagerOptions = signup.UseSecretsManager
-            ? new SubscriptionSetup.SecretsManager
-            {
-                Seats = signup.AdditionalSmSeats ?? 0,
-                ServiceAccounts = signup.AdditionalServiceAccounts
-            }
-            : null;
-
-        var subscriptionSetup = new SubscriptionSetup
-        {
-            PlanType = signup.Plan,
-            PasswordManagerOptions = passwordManagerOptions,
-            SecretsManagerOptions = secretsManagerOptions,
-            SkipTrial = signup.SkipTrial
-        };
-
-        // Set trial source based on initiation path
-        if (!string.IsNullOrEmpty(signup.InitiationPath))
-        {
-            subscriptionSetup.TrialSource = signup.InitiationPath.Contains("trial from marketing website")
-                ? "marketing-initiated"
-                : "product-initiated";
-        }
-
-        return subscriptionSetup;
-    }
-
     private static SubscriptionSetup GetSubscriptionSetup(OrganizationUpgrade upgrade)
     {
         var passwordManagerOptions = new SubscriptionSetup.PasswordManager
@@ -158,8 +106,7 @@ public class OrganizationSale
         {
             PlanType = upgrade.Plan,
             PasswordManagerOptions = passwordManagerOptions,
-            SecretsManagerOptions = secretsManagerOptions,
-            SkipTrial = true // Upgrades should always skip trial
+            SecretsManagerOptions = secretsManagerOptions
         };
     }
 }
