@@ -30,7 +30,8 @@ FROM dbo.OrganizationUser OU
     INNER JOIN dbo.Collection C ON C.Id = CU.CollectionId
     INNER JOIN dbo.CollectionCipher CC ON CC.CollectionId = C.Id
     INNER JOIN dbo.Cipher Cipher ON Cipher.Id = CC.CipherId
-WHERE OU.Status = 2
+    AND Cipher.OrganizationId = @OrganizationId
+WHERE OU.Status in (0,1,2)
   AND Cipher.DeletedDate IS NULL
 
 UNION ALL
@@ -62,5 +63,6 @@ FROM dbo.OrganizationUser OU
     INNER JOIN dbo.Collection C ON C.Id = CG.CollectionId
     INNER JOIN dbo.CollectionCipher CC ON CC.CollectionId = C.Id
     INNER JOIN dbo.Cipher Cipher ON Cipher.Id = CC.CipherId
-WHERE OU.Status = 2
+    AND Cipher.OrganizationId = @OrganizationId
+WHERE OU.Status in (0,1,2)
   AND Cipher.DeletedDate IS NULL
