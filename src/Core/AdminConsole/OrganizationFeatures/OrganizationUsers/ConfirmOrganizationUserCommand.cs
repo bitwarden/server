@@ -8,6 +8,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -28,6 +29,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private readonly IDeviceRepository _deviceRepository;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFeatureService _featureService;
+    private readonly ICollectionRepository _collectionRepository;
 
     public ConfirmOrganizationUserCommand(
         IOrganizationRepository organizationRepository,
@@ -41,7 +43,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         IPolicyService policyService,
         IDeviceRepository deviceRepository,
         IPolicyRequirementQuery policyRequirementQuery,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ICollectionRepository collectionRepository)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -55,10 +58,11 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         _deviceRepository = deviceRepository;
         _policyRequirementQuery = policyRequirementQuery;
         _featureService = featureService;
+        _collectionRepository = collectionRepository;
     }
 
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
-        Guid confirmingUserId)
+        Guid confirmingUserId, string defaultUserCollectionName = null)
     {
         var result = await ConfirmUsersAsync(
             organizationId,
@@ -75,6 +79,13 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         {
             throw new BadRequestException(error);
         }
+
+        var organizationRequiresDefaultCollection = await OrganizationRequiresDefaultCollectionAsync(organizationId, orgUser.UserId.Value, defaultUserCollectionName);
+        if (organizationRequiresDefaultCollection)
+        {
+            await CreateDefaultCollectionAsync(organizationId, orgUser.Id, defaultUserCollectionName);
+        }
+
         return orgUser;
     }
 
@@ -212,5 +223,45 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         return devices
             .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
             .Select(d => d.Id.ToString());
+    }
+
+    private async Task<bool> OrganizationRequiresDefaultCollectionAsync(Guid organizationId, Guid userId, string defaultUserCollectionName)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
+        {
+            return false;
+        }
+
+        // Skip if no collection name provided (backwards compatibility)
+        if (string.IsNullOrWhiteSpace(defaultUserCollectionName))
+        {
+            return false;
+        }
+
+        var personalOwnershipRequirement = await _policyRequirementQuery.GetAsync<PersonalOwnershipPolicyRequirement>(userId);
+        return personalOwnershipRequirement.RequiresDefaultCollection(organizationId);
+    }
+
+    private async Task CreateDefaultCollectionAsync(Guid organizationId, Guid organizationUserId, string defaultCollectionName)
+    {
+        var collection = new Collection
+        {
+            OrganizationId = organizationId,
+            Name = defaultCollectionName,
+            Type = CollectionType.DefaultUserCollection
+        };
+
+        var userAccess = new List<CollectionAccessSelection>
+        {
+            new CollectionAccessSelection
+            {
+                Id = organizationUserId,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true
+            }
+        };
+
+        await _collectionRepository.CreateAsync(collection, groups: null, users: userAccess);
     }
 }
