@@ -1,14 +1,13 @@
 ﻿using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Dirt.Reports.Entities;
+using Bit.Core.Dirt.Reports.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Core.Tools.Entities;
-using Bit.Core.Tools.Repositories;
+using Bit.Infrastructure.Dapper.Dirt;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
-using EfToolsRepo = Bit.Infrastructure.EntityFramework.Tools.Repositories;
-using SqlAdminConsoleRepo = Bit.Infrastructure.Dapper.Tools.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Tools.Repositories;
@@ -19,9 +18,9 @@ public class PasswordHealthReportApplicationRepositoryTests
     public async Task CreateAsync_Works_DataMatches(
         PasswordHealthReportApplication passwordHealthReportApplication,
         Organization organization,
-        List<EfToolsRepo.PasswordHealthReportApplicationRepository> suts,
+        List<EntityFramework.Dirt.Repositories.PasswordHealthReportApplicationRepository> suts,
         List<EfRepo.OrganizationRepository> efOrganizationRepos,
-        SqlAdminConsoleRepo.PasswordHealthReportApplicationRepository sqlPasswordHealthReportApplicationRepo,
+        PasswordHealthReportApplicationRepository sqlPasswordHealthReportApplicationRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo
         )
     {
@@ -53,7 +52,7 @@ public class PasswordHealthReportApplicationRepositoryTests
 
     [CiSkippedTheory, EfPasswordHealthReportApplicationAutoData]
     public async Task RetrieveByOrganisation_Works(
-        SqlAdminConsoleRepo.PasswordHealthReportApplicationRepository sqlPasswordHealthReportApplicationRepo,
+        PasswordHealthReportApplicationRepository sqlPasswordHealthReportApplicationRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo)
     {
         var (firstOrg, firstRecord) = await CreateSampleRecord(sqlOrganizationRepo, sqlPasswordHealthReportApplicationRepo);
@@ -68,9 +67,9 @@ public class PasswordHealthReportApplicationRepositoryTests
 
     [CiSkippedTheory, EfPasswordHealthReportApplicationAutoData]
     public async Task ReplaceQuery_Works(
-        List<EfToolsRepo.PasswordHealthReportApplicationRepository> suts,
+        List<EntityFramework.Dirt.Repositories.PasswordHealthReportApplicationRepository> suts,
         List<EfRepo.OrganizationRepository> efOrganizationRepos,
-        SqlAdminConsoleRepo.PasswordHealthReportApplicationRepository sqlPasswordHealthReportApplicationRepo,
+        PasswordHealthReportApplicationRepository sqlPasswordHealthReportApplicationRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo)
     {
         var (org, pwdRecord) = await CreateSampleRecord(sqlOrganizationRepo, sqlPasswordHealthReportApplicationRepo);
@@ -127,9 +126,9 @@ public class PasswordHealthReportApplicationRepositoryTests
 
     [CiSkippedTheory, EfPasswordHealthReportApplicationAutoData]
     public async Task Upsert_Works(
-        List<EfToolsRepo.PasswordHealthReportApplicationRepository> suts,
+        List<EntityFramework.Dirt.Repositories.PasswordHealthReportApplicationRepository> suts,
         List<EfRepo.OrganizationRepository> efOrganizationRepos,
-        SqlAdminConsoleRepo.PasswordHealthReportApplicationRepository sqlPasswordHealthReportApplicationRepo,
+        PasswordHealthReportApplicationRepository sqlPasswordHealthReportApplicationRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo)
     {
         var fixture = new Fixture();
@@ -204,9 +203,9 @@ public class PasswordHealthReportApplicationRepositoryTests
 
     [CiSkippedTheory, EfPasswordHealthReportApplicationAutoData]
     public async Task Delete_Works(
-        List<EfToolsRepo.PasswordHealthReportApplicationRepository> suts,
+        List<EntityFramework.Dirt.Repositories.PasswordHealthReportApplicationRepository> suts,
         List<EfRepo.OrganizationRepository> efOrganizationRepos,
-        SqlAdminConsoleRepo.PasswordHealthReportApplicationRepository sqlPasswordHealthReportApplicationRepo,
+        PasswordHealthReportApplicationRepository sqlPasswordHealthReportApplicationRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo)
     {
         var fixture = new Fixture();
