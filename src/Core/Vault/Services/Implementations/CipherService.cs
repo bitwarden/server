@@ -625,7 +625,7 @@ public class CipherService : ICipherService
         await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
     }
 
-    public async Task<IEnumerable<Cipher>> ShareManyAsync(IEnumerable<(Cipher cipher, DateTime? lastKnownRevisionDate)> cipherInfos,
+    public async Task<IEnumerable<CipherDetails>> ShareManyAsync(IEnumerable<(CipherDetails cipher, DateTime? lastKnownRevisionDate)> cipherInfos,
         Guid organizationId, IEnumerable<Guid> collectionIds, Guid sharingUserId)
     {
         var cipherIds = new List<Guid>();
@@ -821,11 +821,6 @@ public class CipherService : ICipherService
 
     private async Task<bool> UserCanDeleteAsync(CipherDetails cipher, Guid userId)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.LimitItemDeletion))
-        {
-            return await UserCanEditAsync(cipher, userId);
-        }
-
         var user = await _userService.GetUserByIdAsync(userId);
         var organizationAbility = cipher.OrganizationId.HasValue ?
             await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null;
@@ -835,11 +830,6 @@ public class CipherService : ICipherService
 
     private async Task<bool> UserCanRestoreAsync(CipherDetails cipher, Guid userId)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.LimitItemDeletion))
-        {
-            return await UserCanEditAsync(cipher, userId);
-        }
-
         var user = await _userService.GetUserByIdAsync(userId);
         var organizationAbility = cipher.OrganizationId.HasValue ?
             await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null;
@@ -1059,17 +1049,11 @@ public class CipherService : ICipherService
     }
 
     // This method is used to filter ciphers based on the user's permissions to delete them.
-    // It supports both the old and new logic depending on the feature flag.
     private async Task<List<T>> FilterCiphersByDeletePermission<T>(
         IEnumerable<T> ciphers,
         HashSet<Guid> cipherIdsSet,
         Guid userId) where T : CipherDetails
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.LimitItemDeletion))
-        {
-            return ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).ToList();
-        }
-
         var user = await _userService.GetUserByIdAsync(userId);
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
 

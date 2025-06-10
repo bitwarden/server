@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.AdminConsole.Models.Data.Integrations;
+﻿#nullable enable
+
+namespace Bit.Core.AdminConsole.Models.Data.Integrations;
 
 public class IntegrationHandlerResult
 {
