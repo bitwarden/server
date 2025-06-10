@@ -106,8 +106,8 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<ISecurityTaskRepository, SecurityTaskRepository>();
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
         services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
-        services.AddSingleton<IRiskInsightReportRepository, RiskInsightReportRepository>();
-        services.AddSingleton<IRiskInsightCriticalApplicationRepository, RiskInsightCriticalApplicationRepository>();
+        services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
+        services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
 
         if (selfHosted)
         {

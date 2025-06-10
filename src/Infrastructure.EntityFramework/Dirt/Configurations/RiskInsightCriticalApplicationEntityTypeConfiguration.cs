@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Bit.Infrastructure.EntityFramework.Dirt.Configurations;
 
-public class RiskInsightCriticalApplicationEntityTypeConfiguration : IEntityTypeConfiguration<RiskInsightCriticalApplication>
+public class RiskInsightCriticalApplicationEntityTypeConfiguration : IEntityTypeConfiguration<OrganizationApplication>
 {
-    public void Configure(EntityTypeBuilder<RiskInsightCriticalApplication> builder)
+    public void Configure(EntityTypeBuilder<OrganizationApplication> builder)
     {
         builder
             .Property(s => s.Id)
@@ -19,6 +19,6 @@ public class RiskInsightCriticalApplicationEntityTypeConfiguration : IEntityType
             .HasIndex(s => s.OrganizationId)
             .IsClustered(false);
 
-        builder.ToTable(nameof(RiskInsightCriticalApplication));
+        builder.ToTable(nameof(OrganizationApplication));
     }
 }

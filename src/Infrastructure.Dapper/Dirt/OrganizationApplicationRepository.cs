@@ -8,24 +8,24 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Dirt;
 
-public class RiskInsightReportRepository : Repository<RiskInsightReport, Guid>, IRiskInsightReportRepository
+public class OrganizationApplicationRepository : Repository<OrganizationApplication, Guid>, IOrganizationApplicationRepository
 {
-    public RiskInsightReportRepository(GlobalSettings globalSettings)
+    public OrganizationApplicationRepository(GlobalSettings globalSettings)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
     }
 
-    public RiskInsightReportRepository(string connectionString, string readOnlyConnectionString)
+    public OrganizationApplicationRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
     {
     }
 
-    public async Task<ICollection<RiskInsightReport>> GetByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<OrganizationApplication>> GetByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
-            var results = await connection.QueryAsync<RiskInsightReport>(
-                $"[{Schema}].[RiskInsightReport_ReadByOrganizationId]",
+            var results = await connection.QueryAsync<OrganizationApplication>(
+                $"[{Schema}].[RiskInsightCriticalApplication_ReadByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
