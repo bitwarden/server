@@ -87,26 +87,29 @@ public class OrganizationSale
 
     private static SubscriptionSetup GetSubscriptionSetup(OrganizationUpgrade upgrade)
     {
-        var passwordManagerOptions = new SubscriptionSetup.PasswordManager
-        {
-            Seats = upgrade.AdditionalSeats,
-            Storage = upgrade.AdditionalStorageGb,
-            PremiumAccess = upgrade.PremiumAccessAddon
-        };
-
-        var secretsManagerOptions = upgrade.UseSecretsManager
-            ? new SubscriptionSetup.SecretsManager
-            {
-                Seats = upgrade.AdditionalSmSeats ?? 0,
-                ServiceAccounts = upgrade.AdditionalServiceAccounts
-            }
-            : null;
-
-        return new SubscriptionSetup
+        var subscriptionSetup = new SubscriptionSetup
         {
             PlanType = upgrade.Plan,
-            PasswordManagerOptions = passwordManagerOptions,
-            SecretsManagerOptions = secretsManagerOptions
+            PasswordManagerOptions = new SubscriptionSetup.PasswordManager
+            {
+                Seats = upgrade.AdditionalSeats,
+                Storage = upgrade.AdditionalStorageGb,
+                PremiumAccess = upgrade.PremiumAccessAddon
+            },
+            SecretsManagerOptions = upgrade.UseSecretsManager
+                ? new SubscriptionSetup.SecretsManager
+                {
+                    Seats = upgrade.AdditionalSmSeats ?? 0,
+                    ServiceAccounts = upgrade.AdditionalServiceAccounts
+                }
+                : null
         };
+
+        if (upgrade is OrganizationSignup signup)
+        {
+            subscriptionSetup.InitiationPath = signup.InitiationPath;
+        }
+
+        return subscriptionSetup;
     }
 }
