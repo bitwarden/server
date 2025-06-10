@@ -16,5 +16,5 @@ public class OrganizationSignup : OrganizationUpgrade
     public string InitiationPath { get; set; }
     public bool IsFromSecretsManagerTrial { get; set; }
     public bool IsFromProvider { get; set; }
-    public bool SkipTrial { get; set; }
+    public new bool SkipTrial { get; set; }
 }
