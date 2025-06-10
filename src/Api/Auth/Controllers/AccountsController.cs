@@ -278,7 +278,7 @@ public class AccountsController : Controller
 
         if (await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
         {
-            var policyData = await _policyService.GetMasterPasswordPolicyForUserAsync(user);
+            var policyData = await _policyService.GetMasterPasswordPolicyForUserAsync(user.Id);
 
             return new MasterPasswordPolicyResponseModel(policyData);
         }
