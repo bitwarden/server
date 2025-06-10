@@ -427,12 +427,6 @@ public class OrganizationBillingService(
             TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
         };
 
-        // Add trial source to metadata if present
-        if (!string.IsNullOrEmpty(subscriptionSetup.TrialSource))
-        {
-            subscriptionCreateOptions.Metadata["trialSource"] = subscriptionSetup.TrialSource;
-        }
-
         var setNonUSBusinessUseToReverseCharge =
             featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
 
