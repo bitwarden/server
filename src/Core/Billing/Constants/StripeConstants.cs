@@ -96,6 +96,12 @@ public static class StripeConstants
         public const string Reverse = "reverse";
     }
 
+    public static class TaxIdType
+    {
+        public const string EUVAT = "eu_vat";
+        public const string SpanishNIF = "es_cif";
+    }
+
     public static class ValidateTaxLocationTiming
     {
         public const string Deferred = "deferred";

@@ -44,6 +44,7 @@ jobs:
         with:
           accessToken: ${{ secrets.LD_ACCESS_TOKEN }}
           projKey: default
+          allowTags: true
 
       - name: Add label
         if: steps.collect.outputs.any-changed == 'true'

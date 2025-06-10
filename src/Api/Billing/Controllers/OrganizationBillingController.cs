@@ -4,10 +4,11 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Api.Billing.Queries.Organizations;
-using Bit.Core;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
@@ -24,7 +25,6 @@ namespace Bit.Api.Billing.Controllers;
 public class OrganizationBillingController(
     IBusinessUnitConverter businessUnitConverter,
     ICurrentContext currentContext,
-    IFeatureService featureService,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
     IOrganizationWarningsQuery organizationWarningsQuery,
@@ -281,17 +281,36 @@ public class OrganizationBillingController(
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
-
         if (organization == null)
         {
             return Error.NotFound();
         }
+        var existingPlan = organization.PlanType;
         var organizationSignup = model.ToOrganizationSignup(user);
         var sale = OrganizationSale.From(organization, organizationSignup);
         var plan = await pricingClient.GetPlanOrThrow(model.PlanType);
         sale.Organization.PlanType = plan.Type;
         sale.Organization.Plan = plan.Name;
         sale.SubscriptionSetup.SkipTrial = true;
+        if (existingPlan == PlanType.Free && organization.GatewaySubscriptionId is not null)
+        {
+            sale.Organization.UseTotp = plan.HasTotp;
+            sale.Organization.UseGroups = plan.HasGroups;
+            sale.Organization.UseDirectory = plan.HasDirectory;
+            sale.Organization.SelfHost = plan.HasSelfHost;
+            sale.Organization.UsersGetPremium = plan.UsersGetPremium;
+            sale.Organization.UseEvents = plan.HasEvents;
+            sale.Organization.Use2fa = plan.Has2fa;
+            sale.Organization.UseApi = plan.HasApi;
+            sale.Organization.UsePolicies = plan.HasPolicies;
+            sale.Organization.UseSso = plan.HasSso;
+            sale.Organization.UseResetPassword = plan.HasResetPassword;
+            sale.Organization.UseKeyConnector = plan.HasKeyConnector;
+            sale.Organization.UseScim = plan.HasScim;
+            sale.Organization.UseCustomPermissions = plan.HasCustomPermissions;
+            sale.Organization.UseOrganizationDomains = plan.HasOrganizationDomains;
+            sale.Organization.MaxCollections = plan.PasswordManager.MaxCollections;
+        }
 
         if (organizationSignup.PaymentMethodType == null || string.IsNullOrEmpty(organizationSignup.PaymentToken))
         {
@@ -301,8 +320,12 @@ public class OrganizationBillingController(
         Debug.Assert(org is not null, "This organization has already been found via this same ID, this should be fine.");
         var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
         var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
-        await organizationBillingService.UpdatePaymentMethod(org, paymentSource, taxInformation);
         await organizationBillingService.Finalize(sale);
+        var updatedOrg = await organizationRepository.GetByIdAsync(organizationId);
+        if (updatedOrg != null)
+        {
+            await organizationBillingService.UpdatePaymentMethod(updatedOrg, paymentSource, taxInformation);
+        }
 
         return TypedResults.Ok();
     }
@@ -313,14 +336,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] SetupBusinessUnitRequestBody requestBody)
     {
-        var enableOrganizationBusinessUnitConversion =
-            featureService.IsEnabled(FeatureFlagKeys.PM18770_EnableOrganizationBusinessUnitConversion);
-
-        if (!enableOrganizationBusinessUnitConversion)
-        {
-            return Error.NotFound();
-        }
-
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 
         if (organization == null)

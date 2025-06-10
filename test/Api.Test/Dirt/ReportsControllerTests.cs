@@ -10,7 +10,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Tools.Controllers;
+namespace Bit.Api.Test.Dirt;
 
 
 [ControllerCustomize(typeof(ReportsController))]

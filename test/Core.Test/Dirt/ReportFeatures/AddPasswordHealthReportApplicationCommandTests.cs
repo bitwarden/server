@@ -11,7 +11,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Tools.ReportFeatures;
+namespace Bit.Core.Test.Dirt.ReportFeatures;
 
 [SutProviderCustomize]
 public class AddPasswordHealthReportApplicationCommandTests
