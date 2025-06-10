@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Dirt.Reports.Models.Data;
-using Bit.Core.Tools.ReportFeatures.Requests;
+using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 
-namespace Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
+namespace Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
 
 public interface IMemberAccessReportQuery
 {

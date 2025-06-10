@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,59 +11,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20250603133708_AddOrgUserDefaultCollection")]
+    partial class AddOrgUserDefaultCollection
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.8");
-
-            modelBuilder.Entity("Bit.Core.Dirt.Reports.Models.Data.OrganizationMemberBaseDetail", b =>
-                {
-                    b.Property<Guid>("CipherId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("CollectionId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CollectionName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Email")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("GroupId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GroupName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool?>("HidePasswords")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool?>("Manage")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool?>("ReadOnly")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ResetPasswordKey")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TwoFactorProviders")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("UserGuid")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("UserName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("UsesKeyConnector")
-                        .HasColumnType("INTEGER");
-
-                    b.ToTable("OrganizationMemberBaseDetails");
-                });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
                 {

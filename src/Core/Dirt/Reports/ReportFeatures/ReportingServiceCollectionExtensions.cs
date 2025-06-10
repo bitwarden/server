@@ -1,9 +1,8 @@
-﻿using Bit.Core.Dirt.Reports.ReportFeatures;
-using Bit.Core.Tools.ReportFeatures.Interfaces;
-using Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
+﻿using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
+using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Core.Tools.ReportFeatures;
+namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
 public static class ReportingServiceCollectionExtensions
 {

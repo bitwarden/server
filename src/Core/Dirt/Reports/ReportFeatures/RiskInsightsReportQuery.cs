@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Dirt.Reports.Models.Data;
+using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
+using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Reports.Repositories;
-using Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
-using Bit.Core.Tools.ReportFeatures.Requests;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 

@@ -1,16 +1,16 @@
-﻿using Bit.Api.Tools.Models;
-using Bit.Api.Tools.Models.Response;
+﻿using Bit.Api.Dirt.Models;
+using Bit.Api.Dirt.Models.Response;
 using Bit.Core.Context;
+using Bit.Core.Dirt.Reports.Entities;
 using Bit.Core.Dirt.Reports.Models.Data;
+using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
+using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
+using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Exceptions;
-using Bit.Core.Tools.Entities;
-using Bit.Core.Tools.ReportFeatures.Interfaces;
-using Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
-using Bit.Core.Tools.ReportFeatures.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Tools.Controllers;
+namespace Bit.Api.Dirt.Controllers;
 
 [Route("reports")]
 [Authorize("Application")]
@@ -87,7 +87,12 @@ public class ReportsController : Controller
     }
 
     /// <summary>
+<<<<<<< HEAD
     /// Details for a user's group/collection permissions and numbers of ciphers they are associated with
+=======
+    /// Contains the organization member info, the cipher ids associated with the member,
+    /// and details on their collections, groups, and permissions
+>>>>>>> main
     /// </summary>
     /// <param name="request">Request parameters</param>
     /// <returns>
