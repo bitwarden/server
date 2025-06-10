@@ -45,18 +45,11 @@ public class OrganizationSale
 
     public static OrganizationSale From(
         Organization organization,
-        OrganizationUpgrade upgrade)
-    {
-        var customerSetup = string.IsNullOrEmpty(organization.GatewayCustomerId) ? GetCustomerSetup(upgrade) : null;
-        var subscriptionSetup = GetSubscriptionSetup(upgrade);
-
-        return new OrganizationSale
+        OrganizationUpgrade upgrade) => new()
         {
             Organization = organization,
-            CustomerSetup = customerSetup,
-            SubscriptionSetup = subscriptionSetup
+            SubscriptionSetup = GetSubscriptionSetup(upgrade)
         };
-    }
 
     private static CustomerSetup GetCustomerSetup(OrganizationSignup signup)
     {
