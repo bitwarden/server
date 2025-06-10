@@ -10,7 +10,7 @@ using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
-namespace Bit.Infrastructure.EFIntegration.Test.Tools.Repositories;
+namespace Bit.Infrastructure.EFIntegration.Test.Dirt.Repositories;
 
 public class PasswordHealthReportApplicationRepositoryTests
 {

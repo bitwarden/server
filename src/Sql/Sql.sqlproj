@@ -21,8 +21,5 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Billing\dbo\" />
-    <Folder Include="dbo\Dirt\Stored Procedures\" />
-    <Folder Include="dbo\Dirt\Tables\" />
-    <Folder Include="dbo\Dirt\Views\" />
   </ItemGroup>
 </Project>
