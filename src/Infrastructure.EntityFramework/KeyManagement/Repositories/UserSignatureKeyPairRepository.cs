@@ -16,7 +16,7 @@ public class UserSignatureKeyPairRepository(IServiceScopeFactory serviceScopeFac
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
-        var signingKeys = await dbContext.UserSignatureKeyPairs.FindAsync(userId);
+        var signingKeys = await dbContext.UserSignatureKeyPairs.FirstOrDefaultAsync(x => x.UserId == userId);
         if (signingKeys == null)
         {
             return null;
