@@ -9,8 +9,7 @@ public class SubscriptionSetup
     public required PlanType PlanType { get; set; }
     public required PasswordManager PasswordManagerOptions { get; set; }
     public SecretsManager? SecretsManagerOptions { get; set; }
-    public bool SkipTrial { get; set; }
-    public string? TrialSource { get; set; }
+    public bool SkipTrial = false;
 
     public class PasswordManager
     {
