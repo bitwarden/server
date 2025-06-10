@@ -6,12 +6,14 @@ CREATE PROCEDURE [dbo].[Collection_CreateWithGroupsAndUsers]
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @Groups AS [dbo].[CollectionAccessSelectionType] READONLY,
-    @Users AS [dbo].[CollectionAccessSelectionType] READONLY
+    @Users AS [dbo].[CollectionAccessSelectionType] READONLY,
+    @DefaultUserCollectionEmail NVARCHAR(256) = NULL,
+    @Type TINYINT = 0
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[Collection_Create] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate
+    EXEC [dbo].[Collection_Create] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type
 
     -- Groups
     ;WITH [AvailableGroupsCTE] AS(
