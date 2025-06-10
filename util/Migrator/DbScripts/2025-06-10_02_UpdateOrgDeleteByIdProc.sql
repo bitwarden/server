@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[dbo].[Organization_DeleteById]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_DeleteById]
     @OrganizationId UNIQUEIDENTIFIER
 WITH RECOMPILE
 AS
