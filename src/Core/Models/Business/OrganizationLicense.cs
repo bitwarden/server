@@ -6,7 +6,6 @@ namespace Bit.Core.Models.Business;
 
 public class OrganizationLicense : BaseLicense
 {
-    [Obsolete("No longer used in the JWT based license format")]
     public const int CurrentLicenseFileVersion = 15;
 
     [LicenseVersion(1)]
