@@ -54,6 +54,7 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
             new(nameof(OrganizationLicenseConstants.ExpirationWithoutGracePeriod), expirationWithoutGracePeriod.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.Trial), trial.ToString()),
             new(nameof(OrganizationLicenseConstants.UseAdminSponsoredFamilies), entity.UseAdminSponsoredFamilies.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseOrganizationDomains), entity.UseOrganizationDomains.ToString()),
         };
 
         if (entity.Name is not null)

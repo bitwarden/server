@@ -9,7 +9,6 @@ using Bit.Core.Enums;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Auth.AutoFixture;
-using Bit.Identity.IdentityServer;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -57,8 +56,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var localFactory = new IdentityApplicationFactory();
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
 
-        var context = await PostLoginAsync(localFactory.Server, user, requestModel.MasterPasswordHash,
-            context => context.SetAuthEmail(user.Email));
+        var context = await PostLoginAsync(localFactory.Server, user, requestModel.MasterPasswordHash);
 
         using var body = await AssertDefaultTokenBodyAsync(context);
         var root = body.RootElement;
@@ -70,71 +68,6 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var kdfIterations = AssertHelper.AssertJsonProperty(root, "KdfIterations", JsonValueKind.Number).GetInt32();
         Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, kdfIterations);
         AssertUserDecryptionOptions(root);
-    }
-
-    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
-    public async Task TokenEndpoint_GrantTypePassword_NoAuthEmailHeader_Fails(
-        RegisterFinishRequestModel requestModel)
-    {
-        requestModel.Email = "test+noauthemailheader@email.com";
-
-        var localFactory = new IdentityApplicationFactory();
-        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
-
-        var context = await PostLoginAsync(localFactory.Server, user, requestModel.MasterPasswordHash, null);
-
-        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
-
-        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
-
-        var error = AssertHelper.AssertJsonProperty(root, "error", JsonValueKind.String).GetString();
-        Assert.Equal("invalid_grant", error);
-        AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String);
-    }
-
-    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
-    public async Task TokenEndpoint_GrantTypePassword_InvalidBase64AuthEmailHeader_Fails(
-        RegisterFinishRequestModel requestModel)
-    {
-        requestModel.Email = "test+badauthheader@email.com";
-
-        var localFactory = new IdentityApplicationFactory();
-        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
-
-        var context = await PostLoginAsync(localFactory.Server, user, requestModel.MasterPasswordHash,
-            context => context.Request.Headers.Append("Auth-Email", "bad_value"));
-
-        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
-
-        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
-
-        var error = AssertHelper.AssertJsonProperty(root, "error", JsonValueKind.String).GetString();
-        Assert.Equal("invalid_grant", error);
-        AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String);
-    }
-
-    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
-    public async Task TokenEndpoint_GrantTypePassword_WrongAuthEmailHeader_Fails(
-        RegisterFinishRequestModel requestModel)
-    {
-        requestModel.Email = "test+badauthheader@email.com";
-
-        var localFactory = new IdentityApplicationFactory();
-        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
-
-        var context = await PostLoginAsync(localFactory.Server, user, requestModel.MasterPasswordHash,
-            context => context.SetAuthEmail("bad_value"));
-
-        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
-
-        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
-
-        var error = AssertHelper.AssertJsonProperty(root, "error", JsonValueKind.String).GetString();
-        Assert.Equal("invalid_grant", error);
-        AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String);
     }
 
     [Theory, RegisterFinishRequestModelCustomize]
@@ -157,8 +90,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         await CreateOrganizationWithSsoPolicyAsync(localFactory,
             organizationId, user.Email, organizationUserType, ssoPolicyEnabled: false);
 
-        var context = await PostLoginAsync(server, user, requestModel.MasterPasswordHash,
-                context => context.SetAuthEmail(user.Email));
+        var context = await PostLoginAsync(server, user, requestModel.MasterPasswordHash);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
     }
@@ -184,8 +116,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         await CreateOrganizationWithSsoPolicyAsync(
             localFactory, organizationId, user.Email, organizationUserType, ssoPolicyEnabled: false);
 
-        var context = await PostLoginAsync(server, user, requestModel.MasterPasswordHash,
-                context => context.SetAuthEmail(user.Email));
+        var context = await PostLoginAsync(server, user, requestModel.MasterPasswordHash);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
     }
@@ -209,8 +140,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
 
         await CreateOrganizationWithSsoPolicyAsync(localFactory, organizationId, user.Email, organizationUserType, ssoPolicyEnabled: true);
 
-        var context = await PostLoginAsync(server, user, requestModel.MasterPasswordHash,
-                context => context.SetAuthEmail(user.Email));
+        var context = await PostLoginAsync(server, user, requestModel.MasterPasswordHash);
 
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
         await AssertRequiredSsoAuthenticationResponseAsync(context);
@@ -234,8 +164,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
 
         await CreateOrganizationWithSsoPolicyAsync(localFactory, organizationId, user.Email, organizationUserType, ssoPolicyEnabled: true);
 
-        var context = await PostLoginAsync(server, user, requestModel.MasterPasswordHash,
-            context => context.SetAuthEmail(user.Email));
+        var context = await PostLoginAsync(server, user, requestModel.MasterPasswordHash);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
     }
@@ -258,8 +187,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
 
         await CreateOrganizationWithSsoPolicyAsync(localFactory, organizationId, user.Email, organizationUserType, ssoPolicyEnabled: true);
 
-        var context = await PostLoginAsync(server, user, requestModel.MasterPasswordHash,
-                context => context.SetAuthEmail(user.Email));
+        var context = await PostLoginAsync(server, user, requestModel.MasterPasswordHash);
 
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
         await AssertRequiredSsoAuthenticationResponseAsync(context);
@@ -310,7 +238,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
-    public async Task TokenEndpoint_GrantTypeClientCredentials_AsLegacyUser_NotOnWebClient_Fails(
+    public async Task TokenEndpoint_GrantTypeClientCredentials_AsLegacyUser_Fails(
         RegisterFinishRequestModel model,
         string deviceId)
     {
@@ -342,14 +270,14 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
                 { "grant_type", "password" },
                 { "username", model.Email },
                 { "password", model.MasterPasswordHash },
-            }), context => context.SetAuthEmail(model.Email));
+            }));
 
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 
         var errorBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "ErrorModel", JsonValueKind.Object);
         var message = AssertHelper.AssertJsonProperty(error, "Message", JsonValueKind.String).GetString();
-        Assert.StartsWith("Encryption key migration is required.", message);
+        Assert.StartsWith("Legacy encryption without a userkey is no longer supported.", message);
     }
 
 
@@ -554,12 +482,12 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
                 { "grant_type", "password" },
                 { "username", user.Email},
                 { "password", "master_password_hash" },
-            }), context => context.SetAuthEmail(user.Email).SetIp("1.1.1.2"));
+            }), context => context.SetIp("1.1.1.2"));
         }
     }
 
     private async Task<HttpContext> PostLoginAsync(
-        TestServer server, User user, string MasterPasswordHash, Action<HttpContext> extraConfiguration)
+        TestServer server, User user, string MasterPasswordHash)
     {
         return await server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -571,7 +499,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
             { "grant_type", "password" },
             { "username", user.Email },
             { "password", MasterPasswordHash },
-        }), extraConfiguration);
+        }));
     }
 
     private async Task CreateOrganizationWithSsoPolicyAsync(

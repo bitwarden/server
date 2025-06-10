@@ -1,5 +1,7 @@
 ﻿namespace Bit.Core.Exceptions;
 
+#nullable enable
+
 public class DomainClaimedException : Exception
 {
     public DomainClaimedException()

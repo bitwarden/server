@@ -11,6 +11,10 @@ namespace Bit.Api.Vault.Models.Request;
 
 public class CipherRequestModel
 {
+    /// <summary>
+    /// The Id of the user that encrypted the cipher. It should always represent a UserId.
+    /// </summary>
+    public Guid? EncryptedFor { get; set; }
     public CipherType Type { get; set; }
 
     [StringLength(36)]
@@ -109,18 +113,25 @@ public class CipherRequestModel
 
         if (hasAttachments2)
         {
-            foreach (var attachment in attachments.Where(a => Attachments2.ContainsKey(a.Key)))
+            foreach (var attachment in attachments)
             {
-                var attachment2 = Attachments2[attachment.Key];
+                if (!Attachments2.TryGetValue(attachment.Key, out var attachment2))
+                {
+                    continue;
+                }
                 attachment.Value.FileName = attachment2.FileName;
                 attachment.Value.Key = attachment2.Key;
             }
         }
         else if (hasAttachments)
         {
-            foreach (var attachment in attachments.Where(a => Attachments.ContainsKey(a.Key)))
+            foreach (var attachment in attachments)
             {
-                attachment.Value.FileName = Attachments[attachment.Key];
+                if (!Attachments.TryGetValue(attachment.Key, out var attachmentForKey))
+                {
+                    continue;
+                }
+                attachment.Value.FileName = attachmentForKey;
                 attachment.Value.Key = null;
             }
         }

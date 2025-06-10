@@ -116,7 +116,7 @@ public class OrganizationSponsorshipsController : Controller
     [Authorize("Application")]
     [HttpPost("{sponsoringOrgId}/families-for-enterprise/resend")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task ResendSponsorshipOffer(Guid sponsoringOrgId)
+    public async Task ResendSponsorshipOffer(Guid sponsoringOrgId, [FromQuery] string sponsoredFriendlyName)
     {
         var freeFamiliesSponsorshipPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(sponsoringOrgId,
             PolicyType.FreeFamiliesSponsorshipPolicy);
@@ -129,11 +129,14 @@ public class OrganizationSponsorshipsController : Controller
         var sponsoringOrgUser = await _organizationUserRepository
             .GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
 
-        await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(
-            await _organizationRepository.GetByIdAsync(sponsoringOrgId),
-            sponsoringOrgUser,
-            await _organizationSponsorshipRepository
-                .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id));
+        var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
+        var filteredSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
+        if (filteredSponsorship != null)
+        {
+            await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(
+                await _organizationRepository.GetByIdAsync(sponsoringOrgId),
+                sponsoringOrgUser, filteredSponsorship);
+        }
     }
 
     [Authorize("Application")]
@@ -220,6 +223,20 @@ public class OrganizationSponsorshipsController : Controller
     }
 
     [Authorize("Application")]
+    [HttpDelete("{sponsoringOrgId}/{sponsoredFriendlyName}/revoke")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task AdminInitiatedRevokeSponsorshipAsync(Guid sponsoringOrgId, string sponsoredFriendlyName)
+    {
+        var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
+        var existingOrgSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
+        if (existingOrgSponsorship == null)
+        {
+            throw new BadRequestException("The specified sponsored organization could not be found under the given sponsoring organization.");
+        }
+        await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
+    }
+
+    [Authorize("Application")]
     [HttpDelete("sponsored/{sponsoredOrgId}")]
     [HttpPost("sponsored/{sponsoredOrgId}/remove")]
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -268,8 +285,11 @@ public class OrganizationSponsorshipsController : Controller
         }
 
         var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
-        return new ListResponseModel<OrganizationSponsorshipInvitesResponseModel>(sponsorships.Select(s =>
-            new OrganizationSponsorshipInvitesResponseModel(new OrganizationSponsorshipData(s))));
+        return new ListResponseModel<OrganizationSponsorshipInvitesResponseModel>(
+            sponsorships
+                .Where(s => s.IsAdminInitiated)
+                .Select(s => new OrganizationSponsorshipInvitesResponseModel(new OrganizationSponsorshipData(s)))
+        );
 
     }
 

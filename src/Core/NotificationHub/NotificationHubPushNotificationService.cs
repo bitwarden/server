@@ -15,6 +15,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.NotificationHub;
 
+#nullable enable
+
 /// <summary>
 /// Sends mobile push notifications to the Azure Notification Hub.
 /// Used by Cloud-Hosted environments.

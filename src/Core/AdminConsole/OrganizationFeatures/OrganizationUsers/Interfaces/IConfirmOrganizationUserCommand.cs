@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 

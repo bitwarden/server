@@ -43,7 +43,15 @@ src/Core/IdentityServer @bitwarden/team-auth-dev
 # Key Management team
 **/KeyManagement @bitwarden/team-key-management-dev
 
+# Tools team
 **/Tools @bitwarden/team-tools-dev
+
+# Dirt (Data Insights & Reporting) team
+src/Api/Controllers/Dirt @bitwarden/team-data-insights-and-reporting-dev
+src/Core/Dirt @bitwarden/team-data-insights-and-reporting-dev
+src/Infrastructure.Dapper/Dirt @bitwarden/team-data-insights-and-reporting-dev
+test/Api.Test/Dirt @bitwarden/team-data-insights-and-reporting-dev
+test/Core.Test/Dirt @bitwarden/team-data-insights-and-reporting-dev
 
 # Vault team
 **/Vault @bitwarden/team-vault-dev
@@ -82,6 +90,9 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 .github/workflows/test-database.yml @bitwarden/team-platform-dev
 .github/workflows/test.yml @bitwarden/team-platform-dev
 **/*Platform* @bitwarden/team-platform-dev
+**/.dockerignore @bitwarden/team-platform-dev
+**/Dockerfile @bitwarden/team-platform-dev
+**/entrypoint.sh @bitwarden/team-platform-dev
 
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json

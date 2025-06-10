@@ -185,6 +185,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseKeyConnector")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseOrganizationDomains")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UsePasswordManager")
                         .HasColumnType("tinyint(1)");
 
@@ -676,8 +679,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("ExternalId")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
 
                     b.Property<Guid?>("OrganizationId")
                         .HasColumnType("char(36)");
@@ -953,6 +956,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("DefaultUserCollectionEmail")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("ExternalId")
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)");
@@ -966,6 +972,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -1433,6 +1442,10 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<bool>("Disabled")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Emails")
+                        .HasMaxLength(1024)
+                        .HasColumnType("varchar(1024)");
 
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("datetime(6)");

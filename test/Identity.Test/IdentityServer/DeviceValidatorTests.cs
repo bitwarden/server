@@ -1,5 +1,4 @@
-﻿using Bit.Core;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
@@ -28,7 +27,7 @@ public class DeviceValidatorTests
     private readonly IUserService _userService;
     private readonly IDistributedCache _distributedCache;
     private readonly Logger<DeviceValidator> _logger;
-    private readonly IFeatureService _featureService;
+
     private readonly DeviceValidator _sut;
 
     public DeviceValidatorTests()
@@ -41,7 +40,6 @@ public class DeviceValidatorTests
         _userService = Substitute.For<IUserService>();
         _distributedCache = Substitute.For<IDistributedCache>();
         _logger = new Logger<DeviceValidator>(Substitute.For<ILoggerFactory>());
-        _featureService = Substitute.For<IFeatureService>();
         _sut = new DeviceValidator(
             _deviceService,
             _deviceRepository,
@@ -50,8 +48,7 @@ public class DeviceValidatorTests
             _currentContext,
             _userService,
             _distributedCache,
-            _logger,
-            _featureService);
+            _logger);
     }
 
     [Theory, BitAutoData]
@@ -312,8 +309,6 @@ public class DeviceValidatorTests
         AddValidDeviceToRequest(request);
         _deviceRepository.GetByIdentifierAsync(context.Device.Identifier, context.User.Id)
             .Returns(null as Device);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
-            .Returns(true);
 
         request.GrantType = grantType;
 
@@ -336,8 +331,6 @@ public class DeviceValidatorTests
         AddValidDeviceToRequest(request);
         _deviceRepository.GetByIdentifierAsync(context.Device.Identifier, context.User.Id)
             .Returns(null as Device);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
-            .Returns(true);
 
         request.Raw.Add("AuthRequest", "authRequest");
 
@@ -360,8 +353,6 @@ public class DeviceValidatorTests
         AddValidDeviceToRequest(request);
         _deviceRepository.GetByIdentifierAsync(context.Device.Identifier, context.User.Id)
             .Returns(null as Device);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
-            .Returns(true);
 
         context.TwoFactorRequired = true;
 
@@ -384,8 +375,6 @@ public class DeviceValidatorTests
         AddValidDeviceToRequest(request);
         _deviceRepository.GetByIdentifierAsync(context.Device.Identifier, context.User.Id)
             .Returns(null as Device);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
-            .Returns(true);
 
         context.SsoRequired = true;
 
@@ -404,7 +393,6 @@ public class DeviceValidatorTests
     {
         // Arrange
         ArrangeForHandleNewDeviceVerificationTest(context, request);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification).Returns(true);
         _globalSettings.EnableNewDeviceVerification = true;
 
         context.User = null;
@@ -430,7 +418,6 @@ public class DeviceValidatorTests
     {
         // Arrange
         ArrangeForHandleNewDeviceVerificationTest(context, request);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification).Returns(true);
         _globalSettings.EnableNewDeviceVerification = true;
         context.User.VerifyDevices = false;
 
@@ -454,7 +441,6 @@ public class DeviceValidatorTests
     {
         // Arrange
         ArrangeForHandleNewDeviceVerificationTest(context, request);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification).Returns(true);
         _globalSettings.EnableNewDeviceVerification = true;
         _distributedCache.GetAsync(Arg.Any<string>()).Returns(null as byte[]);
         context.User.CreationDate = DateTime.UtcNow - TimeSpan.FromHours(23);
@@ -479,7 +465,6 @@ public class DeviceValidatorTests
     {
         // Arrange
         ArrangeForHandleNewDeviceVerificationTest(context, request);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification).Returns(true);
         _globalSettings.EnableNewDeviceVerification = true;
         _distributedCache.GetAsync(Arg.Any<string>()).Returns([1]);
 
@@ -503,7 +488,6 @@ public class DeviceValidatorTests
     {
         // Arrange
         ArrangeForHandleNewDeviceVerificationTest(context, request);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification).Returns(true);
         _globalSettings.EnableNewDeviceVerification = true;
         _distributedCache.GetAsync(Arg.Any<string>()).Returns(null as byte[]);
 
@@ -535,7 +519,6 @@ public class DeviceValidatorTests
     {
         // Arrange
         ArrangeForHandleNewDeviceVerificationTest(context, request);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification).Returns(true);
         _globalSettings.EnableNewDeviceVerification = true;
         _distributedCache.GetAsync(Arg.Any<string>()).Returns(null as byte[]);
 
@@ -564,7 +547,6 @@ public class DeviceValidatorTests
     {
         // Arrange
         ArrangeForHandleNewDeviceVerificationTest(context, request);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification).Returns(true);
         _globalSettings.EnableNewDeviceVerification = true;
         _distributedCache.GetAsync(Arg.Any<string>()).Returns([1]);
         _deviceRepository.GetManyByUserIdAsync(context.User.Id).Returns([]);
@@ -590,7 +572,6 @@ public class DeviceValidatorTests
     {
         // Arrange
         ArrangeForHandleNewDeviceVerificationTest(context, request);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification).Returns(true);
         _globalSettings.EnableNewDeviceVerification = true;
         _deviceRepository.GetManyByUserIdAsync(context.User.Id).Returns([new Device()]);
         _distributedCache.GetAsync(Arg.Any<string>()).Returns(null as byte[]);
