@@ -19,6 +19,12 @@ public class OrganizationReportEntityTypeConfiguration : IEntityTypeConfiguratio
             .HasIndex(s => s.OrganizationId)
             .IsClustered(false);
 
+        builder
+            .HasOne(s => s.Organization)
+            .WithMany()
+            .HasForeignKey(s => s.OrganizationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.ToTable(nameof(OrganizationReport));
     }
 }
