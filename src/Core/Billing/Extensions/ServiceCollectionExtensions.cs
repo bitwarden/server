@@ -10,6 +10,10 @@ using Bit.Core.Billing.Tax.Services.Implementations;
 
 namespace Bit.Core.Billing.Extensions;
 
+using Bit.Core.Billing.Licenses.Queries;
+using Bit.Core.Billing.Licenses.Queries.Implementations;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 public static class ServiceCollectionExtensions
@@ -27,5 +31,14 @@ public static class ServiceCollectionExtensions
         services.AddLicenseServices();
         services.AddPricingClient();
         services.AddTransient<IPreviewTaxAmountCommand, PreviewTaxAmountCommand>();
+        services.AddOrganizationLicenseCommandsQueries();
+    }
+
+    private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)
+    {
+        services.AddScoped<ICloudGetOrganizationLicenseQuery, CloudGetOrganizationLicenseQuery>();
+        services.AddScoped<ISelfHostedGetOrganizationLicenseQuery, SelfHostedGetOrganizationLicenseQuery>();
+        services.AddScoped<IUpdateOrganizationLicenseCommand, UpdateOrganizationLicenseCommand>();
+        services.AddScoped<IGetUserLicenseQuery, GetUserLicenseQuery>();
     }
 }

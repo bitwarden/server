@@ -1,11 +1,11 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
+using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.OrganizationLicenses;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +18,7 @@ namespace Bit.Api.Controllers;
 public class LicensesController : Controller
 {
     private readonly IUserRepository _userRepository;
-    private readonly IUserService _userService;
+    private readonly IGetUserLicenseQuery _getUserLicenseQuery;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly IValidateBillingSyncKeyCommand _validateBillingSyncKeyCommand;
@@ -26,14 +26,14 @@ public class LicensesController : Controller
 
     public LicensesController(
         IUserRepository userRepository,
-        IUserService userService,
+        IGetUserLicenseQuery getUserLicenseQuery,
         IOrganizationRepository organizationRepository,
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         IValidateBillingSyncKeyCommand validateBillingSyncKeyCommand,
         ICurrentContext currentContext)
     {
         _userRepository = userRepository;
-        _userService = userService;
+        _getUserLicenseQuery = getUserLicenseQuery;
         _organizationRepository = organizationRepository;
         _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
         _validateBillingSyncKeyCommand = validateBillingSyncKeyCommand;
@@ -54,7 +54,7 @@ public class LicensesController : Controller
             throw new BadRequestException("Invalid license key.");
         }
 
-        var license = await _userService.GenerateLicenseAsync(user, null);
+        var license = await _getUserLicenseQuery.GetLicenseAsync(user, null);
         return license;
     }
 
