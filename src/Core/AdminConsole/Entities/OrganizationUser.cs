@@ -37,12 +37,12 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     [MaxLength(256)]
     public string? Email { get; set; }
     /// <summary>
-    /// The Organization symmetric key encrypted with the User's symmetric key. NULL if the user is not in a Confirmed
+    /// The Organization symmetric key encrypted with the User's public key. NULL if the user is not in a Confirmed
     /// (or Confirmed and then Revoked) status.
     /// </summary>
     public string? Key { get; set; }
     /// <summary>
-    /// The User's symmetric key encrypted with the Organization's symmetric key. NULL if the OrganizationUser
+    /// The User's symmetric key encrypted with the Organization's public key. NULL if the OrganizationUser
     /// is not enrolled in account recovery.
     /// </summary>
     public string? ResetPasswordKey { get; set; }
