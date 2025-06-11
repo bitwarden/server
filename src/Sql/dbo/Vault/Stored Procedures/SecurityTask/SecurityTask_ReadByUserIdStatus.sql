@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
+CREATE OR ALTER PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
     @UserId UNIQUEIDENTIFIER,
     @Status TINYINT = NULL
 AS
