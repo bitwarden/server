@@ -31,7 +31,6 @@ public class OrganizationBillingService(
     IGlobalSettings globalSettings,
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
-    IOrganizationUserRepository organizationUserRepository,
     IPricingClient pricingClient,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
@@ -78,13 +77,14 @@ public class OrganizationBillingService(
         var isEligibleForSelfHost = await IsEligibleForSelfHostAsync(organization);
 
         var isManaged = organization.Status == OrganizationStatusType.Managed;
-
+        var orgOccupiedSeats = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
             return OrganizationMetadata.Default with
             {
                 IsEligibleForSelfHost = isEligibleForSelfHost,
-                IsManaged = isManaged
+                IsManaged = isManaged,
+                OrganizationOccupiedSeats = orgOccupiedSeats.Total
             };
         }
 
@@ -108,8 +108,6 @@ public class OrganizationBillingService(
             ? await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions())
             : null;
 
-        var orgOccupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-
         return new OrganizationMetadata(
             isEligibleForSelfHost,
             isManaged,
@@ -121,7 +119,7 @@ public class OrganizationBillingService(
             invoice?.DueDate,
             invoice?.Created,
             subscription.CurrentPeriodEnd,
-            orgOccupiedSeats);
+            orgOccupiedSeats.Total);
     }
 
     public async Task
@@ -248,12 +246,23 @@ public class OrganizationBillingService(
                         organization.Id,
                         customerSetup.TaxInformation.Country,
                         customerSetup.TaxInformation.TaxId);
+
+                    throw new BadRequestException("billingTaxIdTypeInferenceError");
                 }
 
                 customerCreateOptions.TaxIdData =
                 [
                     new() { Type = taxIdType, Value = customerSetup.TaxInformation.TaxId }
                 ];
+
+                if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
+                {
+                    customerCreateOptions.TaxIdData.Add(new CustomerTaxIdDataOptions
+                    {
+                        Type = StripeConstants.TaxIdType.EUVAT,
+                        Value = $"ES{customerSetup.TaxInformation.TaxId}"
+                    });
+                }
             }
 
             var (paymentMethodType, paymentMethodToken) = customerSetup.TokenizedPaymentSource;
@@ -420,7 +429,7 @@ public class OrganizationBillingService(
         var setNonUSBusinessUseToReverseCharge =
             featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
 
-        if (setNonUSBusinessUseToReverseCharge)
+        if (setNonUSBusinessUseToReverseCharge && customer.HasBillingLocation())
         {
             subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
