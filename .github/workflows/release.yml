@@ -17,6 +17,9 @@ on:
 env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
 
+permissions:
+  contents: read
+
 jobs:
   setup:
     name: Setup
