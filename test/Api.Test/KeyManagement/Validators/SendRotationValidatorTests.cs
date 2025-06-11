@@ -23,11 +23,11 @@ public class SendRotationValidatorTests
     public async Task ValidateAsync_Success()
     {
         // Arrange
-        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+        var sendService = Substitute.For<ISendService>();
         var sendRepository = Substitute.For<ISendRepository>();
 
         var sut = new SendRotationValidator(
-            sendAuthorizationService,
+            sendService,
             sendRepository
         );
 
@@ -52,11 +52,11 @@ public class SendRotationValidatorTests
     public async Task ValidateAsync_SendNotReturnedFromRepository_NotIncludedInOutput()
     {
         // Arrange
-        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+        var sendService = Substitute.For<ISendService>();
         var sendRepository = Substitute.For<ISendRepository>();
 
         var sut = new SendRotationValidator(
-            sendAuthorizationService,
+            sendService,
             sendRepository
         );
 
@@ -76,11 +76,11 @@ public class SendRotationValidatorTests
     public async Task ValidateAsync_InputMissingUserSend_Throws()
     {
         // Arrange
-        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+        var sendService = Substitute.For<ISendService>();
         var sendRepository = Substitute.For<ISendRepository>();
 
         var sut = new SendRotationValidator(
-            sendAuthorizationService,
+            sendService,
             sendRepository
         );
 

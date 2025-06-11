@@ -36,31 +36,31 @@ public class SendRequestModel
     public bool? Disabled { get; set; }
     public bool? HideEmail { get; set; }
 
-    public Send ToSend(Guid userId, ISendAuthorizationService sendAuthorizationService)
+    public Send ToSend(Guid userId, ISendService sendService)
     {
         var send = new Send
         {
             Type = Type,
             UserId = (Guid?)userId
         };
-        ToSend(send, sendAuthorizationService);
+        ToSend(send, sendService);
         return send;
     }
 
-    public (Send, SendFileData) ToSend(Guid userId, string fileName, ISendAuthorizationService sendAuthorizationService)
+    public (Send, SendFileData) ToSend(Guid userId, string fileName, ISendService sendService)
     {
         var send = ToSendBase(new Send
         {
             Type = Type,
             UserId = (Guid?)userId
-        }, sendAuthorizationService);
+        }, sendService);
         var data = new SendFileData(Name, Notes, fileName);
         return (send, data);
     }
 
-    public Send ToSend(Send existingSend, ISendAuthorizationService sendAuthorizationService)
+    public Send ToSend(Send existingSend, ISendService sendService)
     {
-        existingSend = ToSendBase(existingSend, sendAuthorizationService);
+        existingSend = ToSendBase(existingSend, sendService);
         switch (existingSend.Type)
         {
             case SendType.File:
@@ -125,7 +125,7 @@ public class SendRequestModel
         }
     }
 
-    private Send ToSendBase(Send existingSend, ISendAuthorizationService authorizationService)
+    private Send ToSendBase(Send existingSend, ISendService sendService)
     {
         existingSend.Key = Key;
         existingSend.ExpirationDate = ExpirationDate;
@@ -133,7 +133,7 @@ public class SendRequestModel
         existingSend.MaxAccessCount = MaxAccessCount;
         if (!string.IsNullOrWhiteSpace(Password))
         {
-            existingSend.Password = authorizationService.HashPassword(Password);
+            existingSend.Password = sendService.HashPassword(Password);
         }
         existingSend.Disabled = Disabled.GetValueOrDefault();
         existingSend.HideEmail = HideEmail.GetValueOrDefault();

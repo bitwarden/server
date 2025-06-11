@@ -9,9 +9,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
-using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
@@ -27,9 +25,7 @@ public class SendsControllerTests : IDisposable
     private readonly GlobalSettings _globalSettings;
     private readonly IUserService _userService;
     private readonly ISendRepository _sendRepository;
-    private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
-    private readonly IAnonymousSendCommand _anonymousSendCommand;
-    private readonly ISendAuthorizationService _sendAuthorizationService;
+    private readonly ISendService _sendService;
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly ILogger<SendsController> _logger;
 
@@ -37,9 +33,7 @@ public class SendsControllerTests : IDisposable
     {
         _userService = Substitute.For<IUserService>();
         _sendRepository = Substitute.For<ISendRepository>();
-        _nonAnonymousSendCommand = Substitute.For<INonAnonymousSendCommand>();
-        _anonymousSendCommand = Substitute.For<IAnonymousSendCommand>();
-        _sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+        _sendService = Substitute.For<ISendService>();
         _sendFileStorageService = Substitute.For<ISendFileStorageService>();
         _globalSettings = new GlobalSettings();
         _logger = Substitute.For<ILogger<SendsController>>();
@@ -47,9 +41,7 @@ public class SendsControllerTests : IDisposable
         _sut = new SendsController(
             _sendRepository,
             _userService,
-            _sendAuthorizationService,
-            _anonymousSendCommand,
-            _nonAnonymousSendCommand,
+            _sendService,
             _sendFileStorageService,
             _logger,
             _globalSettings
@@ -72,8 +64,7 @@ public class SendsControllerTests : IDisposable
         send.Data = JsonSerializer.Serialize(new Dictionary<string, string>());
         send.HideEmail = true;
 
-        _sendRepository.GetByIdAsync(Arg.Any<Guid>()).Returns(send);
-        _sendAuthorizationService.AccessAsync(send, null).Returns(SendAccessResult.Granted);
+        _sendService.AccessAsync(id, null).Returns((send, false, false));
         _userService.GetUserByIdAsync(Arg.Any<Guid>()).Returns(user);
 
         var request = new SendAccessRequestModel();

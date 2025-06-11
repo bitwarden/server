@@ -12,17 +12,17 @@ namespace Bit.Api.KeyManagement.Validators;
 /// </summary>
 public class SendRotationValidator : IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>
 {
-    private readonly ISendAuthorizationService _sendAuthorizationService;
+    private readonly ISendService _sendService;
     private readonly ISendRepository _sendRepository;
 
     /// <summary>
     /// Instantiates a new <see cref="SendRotationValidator"/>
     /// </summary>
-    /// <param name="sendAuthorizationService">Enables conversion of <see cref="SendWithIdRequestModel"/> to <see cref="Send"/></param>
+    /// <param name="sendService">Enables conversion of <see cref="SendWithIdRequestModel"/> to <see cref="Send"/></param>
     /// <param name="sendRepository">Retrieves all user <see cref="Send"/>s</param>
-    public SendRotationValidator(ISendAuthorizationService sendAuthorizationService, ISendRepository sendRepository)
+    public SendRotationValidator(ISendService sendService, ISendRepository sendRepository)
     {
-        _sendAuthorizationService = sendAuthorizationService;
+        _sendService = sendService;
         _sendRepository = sendRepository;
     }
 
@@ -44,7 +44,7 @@ public class SendRotationValidator : IRotationValidator<IEnumerable<SendWithIdRe
                 throw new BadRequestException("All existing sends must be included in the rotation.");
             }
 
-            result.Add(send.ToSend(existing, _sendAuthorizationService));
+            result.Add(send.ToSend(existing, _sendService));
         }
 
         return result;

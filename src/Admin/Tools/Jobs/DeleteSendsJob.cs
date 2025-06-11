@@ -2,7 +2,7 @@
 using Bit.Core;
 using Bit.Core.Jobs;
 using Bit.Core.Tools.Repositories;
-using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
+using Bit.Core.Tools.Services;
 using Quartz;
 
 namespace Bit.Admin.Tools.Jobs;
@@ -32,10 +32,10 @@ public class DeleteSendsJob : BaseJob
         }
         using (var scope = _serviceProvider.CreateScope())
         {
-            var nonAnonymousSendCommand = scope.ServiceProvider.GetRequiredService<INonAnonymousSendCommand>();
+            var sendService = scope.ServiceProvider.GetRequiredService<ISendService>();
             foreach (var send in sends)
             {
-                await nonAnonymousSendCommand.DeleteSendAsync(send);
+                await sendService.DeleteSendAsync(send);
             }
         }
     }
