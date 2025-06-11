@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -16,11 +18,9 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-#nullable enable
-
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
-public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
+public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersAndGroupsCommand
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -34,7 +34,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
 
     private readonly EventSystemUser _EventSystemUser = EventSystemUser.PublicApi;
 
-    public ImportOrganizationUserCommand(IOrganizationRepository organizationRepository,
+    public ImportOrganizationUsersAndGroupsCommand(IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
             IPaymentService paymentService,
             IGroupRepository groupRepository,
@@ -95,7 +95,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
             await OverwriteExisting(events, importUserData);
         }
 
-        await Update(importedUsers, importUserData);
+        await UpdateExistingUsers(importedUsers, importUserData);
 
         await AddNewUsers(organization, importedUsers, importUserData);
 
@@ -144,7 +144,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
     /// </summary>
     /// <param name="importedUsers">List of imported organization users.</param>
     /// <param name="importUserData">Data containing existing and imported users, along with mapping dictionaries.</param>
-    private async Task Update(IEnumerable<ImportedOrganizationUser> importedUsers, OrganizationUserImportData importUserData)
+    private async Task UpdateExistingUsers(IEnumerable<ImportedOrganizationUser> importedUsers, OrganizationUserImportData importUserData)
     {
         if (!importedUsers.Any())
         {
@@ -160,27 +160,24 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
         var importedUsersEmailsDict = importedUsers.ToDictionary(u => u.Email);
 
         // Determine which users to update.
-        var userDetailsToUpdate = existingUsersEmailsDict.Keys.Intersect(importedUsersEmailsDict.Keys).ToList();
-        var userIdsToUpdate = importUserData.ExistingUsers
-            .Where(u => userDetailsToUpdate.Contains(u.Email))
-            .Select(u => u.Id)
-            .ToList();
+        var userEmailsToUpdate = existingUsersEmailsDict.Keys.Intersect(importedUsersEmailsDict.Keys).ToList();
+        var userIdsToUpdate = userEmailsToUpdate.Select(e => existingUsersEmailsDict[e].Id).ToList();
 
         var organizationUsers = (await _organizationUserRepository.GetManyAsync(userIdsToUpdate)).ToDictionary(u => u.Id);
 
-        foreach (var userEmail in userDetailsToUpdate)
+        foreach (var userEmail in userEmailsToUpdate)
         {
             // verify userEmail has an associated OrganizationUser
             existingUsersEmailsDict.TryGetValue(userEmail, out var existingUser);
             organizationUsers.TryGetValue(existingUser!.Id, out var organizationUser);
-            importedUsersEmailsDict.TryGetValue(userEmail, out var user);
+            importedUsersEmailsDict.TryGetValue(userEmail, out var importedUser);
 
-            if (organizationUser is null || user is null)
+            if (organizationUser is null || importedUser is null)
             {
                 continue;
             }
 
-            organizationUser.ExternalId = user.ExternalId;
+            organizationUser.ExternalId = importedUser.ExternalId;
             updateUsers.Add(organizationUser);
             importUserData.ExistingExternalUsersIdDict.Add(organizationUser.ExternalId, organizationUser.Id);
         }
@@ -302,11 +299,8 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
     /// <param name="organization">The organization into which groups are being imported.</param>
     /// <param name="importedGroups">A collection of groups to be imported.</param>
     /// <param name="importUserData">Data containing information about existing and imported users.</param>
-    private async Task ImportGroups(Organization organization,
-            IEnumerable<ImportedGroup> importedGroups,
-            OrganizationUserImportData importUserData)
+    private async Task ImportGroups(Organization organization, IEnumerable<ImportedGroup> importedGroups, OrganizationUserImportData importUserData)
     {
-
         if (!importedGroups.Any())
         {
             return;
@@ -314,7 +308,7 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
 
         if (!organization.UseGroups)
         {
-            throw new BadRequestException("Organization cannot use importedGroups.");
+            throw new BadRequestException("Organization cannot use groups.");
         }
 
         var existingGroups = await _groupRepository.GetManyByOrganizationIdAsync(organization.Id);
@@ -332,9 +326,11 @@ public class ImportOrganizationUserCommand : IImportOrganizationUserCommand
     /// <param name="importUserData">Data containing information about existing and imported users.</param>
     private async Task SaveNewGroups(OrganizationGroupImportData importGroupData, OrganizationUserImportData importUserData)
     {
+        var existingExternalGroupsDict = importGroupData.ExistingExternalGroups.ToDictionary(g => g.ExternalId!);
         var newGroups = importGroupData.Groups
-            .Where(g => !importGroupData.ExistingExternalGroups.ToDictionary(g => g.ExternalId!).ContainsKey(g.Group.ExternalId!))
-            .Select(g => g.Group).ToList()!;
+            .Where(g => !existingExternalGroupsDict.ContainsKey(g.Group.ExternalId!))
+            .Select(g => g.Group)
+            .ToList()!;
 
         var savedGroups = new List<Group>();
         foreach (var group in newGroups)

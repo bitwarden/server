@@ -1,9 +1,11 @@
-﻿using Bit.Core.AdminConsole.Models.Business;
+﻿#nullable enable
+
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 
-public interface IImportOrganizationUserCommand
+public interface IImportOrganizationUsersAndGroupsCommand
 {
     Task ImportAsync(Guid organizationId,
         IEnumerable<ImportedGroup> groups,

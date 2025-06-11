@@ -20,20 +20,20 @@ public class OrganizationController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
-    private readonly IImportOrganizationUserCommand _importOrganizationUserCommand;
+    private readonly IImportOrganizationUsersAndGroupsCommand _importOrganizationUsersAndGroupsCommand;
     private readonly IFeatureService _featureService;
 
     public OrganizationController(
         IOrganizationService organizationService,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        IImportOrganizationUserCommand importOrganizationUserCommand,
+        IImportOrganizationUsersAndGroupsCommand importOrganizationUsersAndGroupsCommand,
         IFeatureService featureService)
     {
         _organizationService = organizationService;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
-        _importOrganizationUserCommand = importOrganizationUserCommand;
+        _importOrganizationUsersAndGroupsCommand = importOrganizationUsersAndGroupsCommand;
         _featureService = featureService;
     }
 
@@ -57,7 +57,7 @@ public class OrganizationController : Controller
 
         if (_featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization))
         {
-            await _importOrganizationUserCommand.ImportAsync(
+            await _importOrganizationUsersAndGroupsCommand.ImportAsync(
                 _currentContext.OrganizationId.Value,
                 model.Groups.Select(g => g.ToImportedGroup(_currentContext.OrganizationId.Value)),
                 model.Members.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),

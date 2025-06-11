@@ -1,4 +1,6 @@
-﻿using Bit.Core.Models.Business;
+﻿#nullable enable
+
+using Bit.Core.Models.Business;
 namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 public class OrganizationUserImportData
@@ -8,11 +10,11 @@ public class OrganizationUserImportData
     /// </summary>
     public readonly HashSet<string> ImportedExternalIds;
     /// <summary>
-    /// Exising organization users details
+    /// All existing OrganizationUsers for the organization
     /// </summary>
     public readonly ICollection<OrganizationUserUserDetails> ExistingUsers;
     /// <summary>
-    /// List of ExternalIds belonging to existing organization Users
+    /// Existing OrganizationUsers with ExternalIds set.
     /// </summary>
     public readonly IEnumerable<OrganizationUserUserDetails> ExistingExternalUsers;
     /// <summary>
