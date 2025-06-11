@@ -80,11 +80,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             throw new BadRequestException(error);
         }
 
-        var organizationRequiresDefaultCollection = await OrganizationRequiresDefaultCollectionAsync(organizationId, orgUser.UserId.Value, defaultUserCollectionName);
-        if (organizationRequiresDefaultCollection)
-        {
-            await CreateDefaultCollectionAsync(organizationId, orgUser.Id, defaultUserCollectionName);
-        }
+        await HandleConfirmationSideEffectsAsync(organizationId, orgUser, defaultUserCollectionName);
 
         return orgUser;
     }
@@ -223,6 +219,16 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         return devices
             .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
             .Select(d => d.Id.ToString());
+    }
+
+    private async Task HandleConfirmationSideEffectsAsync(Guid organizationId, OrganizationUser organizationUser, string defaultUserCollectionName)
+    {
+        // Create DefaultUserCollection type collection for the user if the PersonalOwnership policy is enabled for the organization
+        var requiresDefaultCollection = await OrganizationRequiresDefaultCollectionAsync(organizationId, organizationUser.UserId.Value, defaultUserCollectionName);
+        if (requiresDefaultCollection)
+        {
+            await CreateDefaultCollectionAsync(organizationId, organizationUser.Id, defaultUserCollectionName);
+        }
     }
 
     private async Task<bool> OrganizationRequiresDefaultCollectionAsync(Guid organizationId, Guid userId, string defaultUserCollectionName)
