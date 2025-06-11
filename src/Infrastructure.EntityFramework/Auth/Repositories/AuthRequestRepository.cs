@@ -5,7 +5,6 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
-using Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
