@@ -610,7 +610,10 @@ public class OrganizationService : IOrganizationService
                     [
                         new CollectionAccessSelection
                         {
-                            Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true
+                            Id = orgUser.Id,
+                            HidePasswords = false,
+                            ReadOnly = false,
+                            Manage = true
                         }
                     ];
                 }
@@ -673,7 +676,8 @@ public class OrganizationService : IOrganizationService
             await customerService.UpdateAsync(organization.GatewayCustomerId,
                 new CustomerUpdateOptions
                 {
-                    Email = organization.BillingEmail, Description = organization.DisplayBusinessName()
+                    Email = organization.BillingEmail,
+                    Description = organization.DisplayBusinessName()
                 });
         }
 
