@@ -69,7 +69,7 @@ public class AuthRequestRepositoryTests
         // Ensure the repository responds with the amount of items it deleted and it deleted the right amount.
         // NOTE: On local development this might fail on it's first run because the developer could have expired AuthRequests
         // on their machine but aren't running the job that would delete them. The second run of this test should succeed.
-        Assert.Equal(4, numberOfDeleted);
+        Assert.True(numberOfDeleted >= 4);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -209,14 +209,19 @@ public class AuthRequestRepositoryTests
         authRequests.Add(await authRequestRepository.CreateAsync(authRequest));
 
         // A valid time AuthRequest but for pending we do not fetch admin auth requests
-        authRequest.Type = AuthRequestType.AdminApproval;
-        authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-1);
+        authRequest = CreateAuthRequest(
+            user.Id,
+            AuthRequestType.AdminApproval,
+            DateTime.UtcNow.AddMinutes(-1));
         authRequest.RequestDeviceIdentifier = "admin_auth_request";
         authRequests.Add(await authRequestRepository.CreateAsync(authRequest));
 
-        // A valid time AuthRequest but for pending we do not fetch admin auth requests
-        authRequest.Type = AuthRequestType.AuthenticateAndUnlock;
-        authRequest.Approved = false;
+        // A valid time AuthRequest but the request has been approved/rejected, so it should not be returned.
+        authRequest = CreateAuthRequest(
+            user.Id,
+            AuthRequestType.AuthenticateAndUnlock,
+            DateTime.UtcNow.AddMinutes(-1),
+            false);
         authRequest.RequestDeviceIdentifier = "approved_auth_request";
         authRequests.Add(await authRequestRepository.CreateAsync(authRequest));
 
@@ -226,6 +231,8 @@ public class AuthRequestRepositoryTests
 
         // Verify that there are authrequest associated with the user.
         Assert.NotEmpty(await authRequestRepository.GetManyByUserIdAsync(user.Id));
+
+        await CleanupTestAsync(authRequests, authRequestRepository);
     }
 
     /// <summary>
@@ -244,25 +251,80 @@ public class AuthRequestRepositoryTests
             SecurityStamp = "stamp",
         });
 
-        var authRequest = CreateAuthRequest(
+        var oneMinuteOldAuthRequest = CreateAuthRequest(
             user.Id,
             AuthRequestType.AuthenticateAndUnlock,
             DateTime.UtcNow.AddMinutes(-1));
-        var oneMinuteOldAuthRequest = await authRequestRepository.CreateAsync(authRequest);
+        oneMinuteOldAuthRequest = await authRequestRepository.CreateAsync(oneMinuteOldAuthRequest);
 
-        authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-5);
-        var fiveMinuteOldAuthRequest = await authRequestRepository.CreateAsync(authRequest);
+        var fiveMinuteOldAuthRequest = CreateAuthRequest(
+            user.Id,
+            AuthRequestType.AuthenticateAndUnlock,
+            DateTime.UtcNow.AddMinutes(-5));
+        fiveMinuteOldAuthRequest = await authRequestRepository.CreateAsync(fiveMinuteOldAuthRequest);
 
-        authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-10);
-        var tenMinuteOldAuthRequest = await authRequestRepository.CreateAsync(authRequest);
+        var tenMinuteOldAuthRequest = CreateAuthRequest(
+            user.Id,
+            AuthRequestType.AuthenticateAndUnlock,
+            DateTime.UtcNow.AddMinutes(-10));
+        tenMinuteOldAuthRequest = await authRequestRepository.CreateAsync(tenMinuteOldAuthRequest);
 
         var result = await authRequestRepository.GetManyPendingAuthRequestByUserId(user.Id);
         Assert.NotNull(result);
         // since we group by device there should only be a sinlge return since the device Id is the same
         Assert.Single(result);
-        // we return null values per device per user, there is one device in the database so there should be one response and it should be null
-        var everyValueNotNull = result.Any(ar => ar != null);
-        Assert.True(everyValueNotNull);
+        var resultAuthRequest = result.First();
+        Assert.Equal(oneMinuteOldAuthRequest.Id, resultAuthRequest.Id);
+
+        List<AuthRequest> authRequests = [oneMinuteOldAuthRequest, fiveMinuteOldAuthRequest, tenMinuteOldAuthRequest];
+
+        await CleanupTestAsync(authRequests, authRequestRepository);
+    }
+
+    /// <summary>
+    /// Test to determine that when multiple authRequests exist for a device if the most recent is approved then
+    /// there should be no return.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyPendingAuthRequestByUserId_MultipleRequestForSingleDevice_MostRecentIsApproved_ReturnsEmpty(
+        IAuthRequestRepository authRequestRepository,
+        IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        // approved auth request
+        var oneMinuteOldAuthRequest = CreateAuthRequest(
+            user.Id,
+            AuthRequestType.AuthenticateAndUnlock,
+            DateTime.UtcNow.AddMinutes(-1),
+            false);
+        oneMinuteOldAuthRequest = await authRequestRepository.CreateAsync(oneMinuteOldAuthRequest);
+
+        var fiveMinuteOldAuthRequest = CreateAuthRequest(
+            user.Id,
+            AuthRequestType.AuthenticateAndUnlock,
+            DateTime.UtcNow.AddMinutes(-5));
+        fiveMinuteOldAuthRequest = await authRequestRepository.CreateAsync(fiveMinuteOldAuthRequest);
+
+        var tenMinuteOldAuthRequest = CreateAuthRequest(
+            user.Id,
+            AuthRequestType.AuthenticateAndUnlock,
+            DateTime.UtcNow.AddMinutes(-10));
+        tenMinuteOldAuthRequest = await authRequestRepository.CreateAsync(tenMinuteOldAuthRequest);
+
+        var result = await authRequestRepository.GetManyPendingAuthRequestByUserId(user.Id);
+        Assert.NotNull(result);
+        // result should be empty since the most recent request was addressed
+        Assert.Empty(result);
+
+        List<AuthRequest> authRequests = [oneMinuteOldAuthRequest, fiveMinuteOldAuthRequest, tenMinuteOldAuthRequest];
+        await CleanupTestAsync(authRequests, authRequestRepository);
     }
 
     private static AuthRequest CreateAuthRequest(
@@ -290,5 +352,21 @@ public class AuthRequestRepositoryTests
     {
         var exp = expirationPeriod + TimeSpan.FromMinutes(1);
         return DateTime.UtcNow.Add(exp.Negate());
+    }
+
+    /// <summary>
+    /// Cleans up the test data created by the test methods. This supports the DeleteExpiredAsync Test.
+    /// </summary>
+    /// <param name="authRequests">Created Auth Requests</param>
+    /// <param name="authRequestRepository">repository context for the current test</param>
+    /// <returns>void</returns>
+    private static async Task CleanupTestAsync(
+        IEnumerable<AuthRequest> authRequests,
+        IAuthRequestRepository authRequestRepository)
+    {
+        foreach (var authRequest in authRequests)
+        {
+            await authRequestRepository.DeleteAsync(authRequest);
+        }
     }
 }
