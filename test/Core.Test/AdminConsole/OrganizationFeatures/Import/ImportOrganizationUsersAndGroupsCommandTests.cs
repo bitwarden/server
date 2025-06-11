@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Utilities.Commands;
@@ -21,14 +22,14 @@ using Organization = Bit.Core.AdminConsole.Entities.Organization;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationUsers;
 
-public class ImportOrganizationUserCommandTests
+public class ImportOrganizationUsersAndGroupsCommandTests
 {
 
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>();
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
     public async Task OrgImportCallsInviteOrgUserCommand(
-            SutProvider<ImportOrganizationUserCommand> sutProvider,
+            SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
             Organization org,
             List<OrganizationUserUserDetails> existingUsers,
             List<ImportedOrganizationUser> newUsers,
@@ -75,7 +76,7 @@ public class ImportOrganizationUserCommandTests
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
     public async Task OrgImportCreateNewUsersAndMarryExistingUser(
-            SutProvider<ImportOrganizationUserCommand> sutProvider,
+            SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
             Organization org,
             List<OrganizationUserUserDetails> existingUsers,
             List<ImportedOrganizationUser> newUsers,
@@ -130,7 +131,7 @@ public class ImportOrganizationUserCommandTests
     }
 
     private void SetupOrganizationConfigForImport(
-            SutProvider<ImportOrganizationUserCommand> sutProvider,
+            SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
             Organization org,
             List<OrganizationUserUserDetails> existingUsers,
             List<ImportedOrganizationUser> newUsers)

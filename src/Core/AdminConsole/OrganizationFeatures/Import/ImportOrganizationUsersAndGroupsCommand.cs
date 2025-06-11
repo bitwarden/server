@@ -338,7 +338,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             group.CreationDate = group.RevisionDate = DateTime.UtcNow;
 
             savedGroups.Add(await _groupRepository.CreateAsync(group));
-            await UpdateUsersAsync(group, importGroupData.GroupsDict[group.ExternalId].ExternalUserIds,
+            await UpdateUsersAsync(group, importGroupData.GroupsDict[group.ExternalId!].ExternalUserIds,
                 importUserData.ExistingExternalUsersIdDict);
         }
 
@@ -359,7 +359,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             Organization organization)
     {
         var updateGroups = importGroupData.ExistingExternalGroups
-            .Where(g => importGroupData.GroupsDict.ContainsKey(g.ExternalId))
+            .Where(g => importGroupData.GroupsDict.ContainsKey(g.ExternalId!))
             .ToList();
 
         if (updateGroups.Any())
@@ -373,7 +373,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             foreach (var group in updateGroups)
             {
                 // Check for changes to the group, update if changed.
-                var updatedGroup = importGroupData.GroupsDict[group.ExternalId].Group;
+                var updatedGroup = importGroupData.GroupsDict[group.ExternalId!].Group;
                 if (group.Name != updatedGroup.Name)
                 {
                     group.RevisionDate = DateTime.UtcNow;
@@ -383,7 +383,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
                 }
 
                 // compare and update user group associations
-                await UpdateUsersAsync(group, importGroupData.GroupsDict[group.ExternalId].ExternalUserIds,
+                await UpdateUsersAsync(group, importGroupData.GroupsDict[group.ExternalId!].ExternalUserIds,
                     importUserData.ExistingExternalUsersIdDict,
                     existingGroupUsers.ContainsKey(group.Id) ? existingGroupUsers[group.Id] : null);
 
