@@ -76,6 +76,26 @@ public class PremiumUserBillingService(
             };
 
             await stripeAdapter.CustomerUpdateAsync(customer.Id, options);
+
+            // If the user has a subscription in trial, update the trial settings
+            if (!string.IsNullOrEmpty(user.GatewaySubscriptionId))
+            {
+                var subscription = await stripeAdapter.SubscriptionGetAsync(user.GatewaySubscriptionId);
+                if (subscription?.Status == "trialing" && (string.IsNullOrEmpty(customer.InvoiceSettings?.DefaultPaymentMethodId) &&
+            !customer.Metadata.ContainsKey(BraintreeCustomerIdKey)))
+                {
+                    await stripeAdapter.SubscriptionUpdateAsync(user.GatewaySubscriptionId, new SubscriptionUpdateOptions
+                    {
+                        TrialSettings = new SubscriptionTrialSettingsOptions
+                        {
+                            EndBehavior = new SubscriptionTrialSettingsEndBehaviorOptions
+                            {
+                                MissingPaymentMethod = "create_invoice"
+                            }
+                        }
+                    });
+                }
+            }
         }
     }
 

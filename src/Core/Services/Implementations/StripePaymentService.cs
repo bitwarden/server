@@ -654,10 +654,32 @@ public class StripePaymentService : IPaymentService
             subscriber.Gateway = GatewayType.Stripe;
             subscriber.GatewayCustomerId = customer.Id;
         }
+
         await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
         {
             Balance = customer.Balance - (long)(creditAmount * 100)
         });
+
+        if (!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
+        {
+            var subscription = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+            if (subscription?.Status == "trialing" &&
+                string.IsNullOrEmpty(customer.InvoiceSettings?.DefaultPaymentMethodId) &&
+                !customer.Metadata.ContainsKey("btCustomerId"))
+            {
+                await _stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId, new SubscriptionUpdateOptions
+                {
+                    TrialSettings = new SubscriptionTrialSettingsOptions
+                    {
+                        EndBehavior = new SubscriptionTrialSettingsEndBehaviorOptions
+                        {
+                            MissingPaymentMethod = "create_invoice"
+                        }
+                    }
+                });
+            }
+        }
+
         return !customerExists;
     }
 
