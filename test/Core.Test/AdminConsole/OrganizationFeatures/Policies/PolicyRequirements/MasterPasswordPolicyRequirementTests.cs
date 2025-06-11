@@ -17,16 +17,24 @@ public class MasterPasswordPolicyRequirementFactoryTests
         var actual = sutProvider.Sut.Create([]);
 
         Assert.False(actual.Enabled);
+        Assert.Null(actual.EnforcedOptions);
     }
 
     [Theory, BitAutoData]
     public void MasterPassword_IsTrue_IfAnyDisableSendPolicies(
         [PolicyDetails(PolicyType.MasterPassword)] PolicyDetails[] policies,
-        SutProvider<MasterPasswordPolicyRequirementFactory> sutProvider
-        )
+        SutProvider<MasterPasswordPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create(policies);
 
         Assert.True(actual.Enabled);
+        Assert.NotNull(actual.EnforcedOptions);
+        Assert.NotNull(actual.EnforcedOptions.EnforceOnLogin);
+        Assert.NotNull(actual.EnforcedOptions.RequireLower);
+        Assert.NotNull(actual.EnforcedOptions.RequireNumbers);
+        Assert.NotNull(actual.EnforcedOptions.RequireSpecial);
+        Assert.NotNull(actual.EnforcedOptions.RequireUpper);
+        Assert.Null(actual.EnforcedOptions.MinComplexity);
+        Assert.Null(actual.EnforcedOptions.MinLength);
     }
 }
