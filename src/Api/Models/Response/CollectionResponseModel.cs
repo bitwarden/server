@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 
@@ -18,12 +19,14 @@ public class CollectionResponseModel : ResponseModel
         OrganizationId = collection.OrganizationId;
         Name = collection.Name;
         ExternalId = collection.ExternalId;
+        Type = collection.Type;
     }
 
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
     public string Name { get; set; }
     public string ExternalId { get; set; }
+    public CollectionType Type { get; set; }
 }
 
 /// <summary>
