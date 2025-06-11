@@ -63,6 +63,9 @@ jobs:
     name: Publish Docker images
     runs-on: ubuntu-22.04
     needs: setup
+    permissions:
+      contents: read
+      id-token: write
     env:
       _RELEASE_VERSION: ${{ needs.setup.outputs.release-version }}
       _BRANCH_NAME: ${{ needs.setup.outputs.branch-name }}
@@ -109,10 +112,13 @@ jobs:
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
 
       ########## ACR PROD ##########
-      - name: Log in to Azure - production subscription
-        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
+      - name: Azure Login
+        id: azure-login
+        uses: bitwarden/gh-actions/azure-login@main
         with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
 
       - name: Log in to Azure ACR
         run: az acr login -n $_AZ_REGISTRY --only-show-errors
@@ -151,6 +157,9 @@ jobs:
 
       - name: Log out of Docker
         run: docker logout
+
+      - name: Azure Logout
+        uses: bitwarden/gh-actions/azure-logout@main
 
   update-deployment:
     name: Update Deployment Status
