@@ -68,10 +68,22 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
         var expirationMinutes = (int)_globalSettings.PasswordlessAuth.UserRequestExpiration.TotalMinutes;
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var pendingAuthRequestQuery = new AuthRequestReadPendingByUserIdQuery()
-            .GetQuery(dbContext, userId, expirationMinutes);
+        var mostRecentAuthRequests = await
+            (from authRequest in dbContext.AuthRequests
+             where authRequest.Type == AuthRequestType.AuthenticateAndUnlock
+                || authRequest.Type == AuthRequestType.Unlock
+             where authRequest.UserId == userId
+             where authRequest.CreationDate.AddMinutes(expirationMinutes) > DateTime.UtcNow
+             group authRequest by authRequest.RequestDeviceIdentifier into groupedAuthRequests
+             select
+                 (from r in groupedAuthRequests
+                  orderby r.CreationDate descending
+                  select r).First()).ToListAsync();
 
-        return await pendingAuthRequestQuery.ToListAsync();
+        // Pending AuthRequests are those where Approved is null.
+        mostRecentAuthRequests.RemoveAll(a => a.Approved != null);
+
+        return mostRecentAuthRequests;
     }
 
     public async Task<ICollection<OrganizationAdminAuthRequest>> GetManyAdminApprovalRequestsByManyIdsAsync(

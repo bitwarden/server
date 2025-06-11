@@ -13,9 +13,9 @@ BEGIN
         WHERE Type IN (0, 1)
             AND AR.CreationDate >= DATEADD(MINUTE, -@ExpirationMinutes, GETUTCDATE())
             AND AR.UserId = @UserId
-            AND AR.Approved IS NULL
     )
     SELECT PR.*
     FROM PendingRequests PR
-    WHERE rn = 1;
+    WHERE rn = 1
+    AND AR.Approved IS NULL;
 END;
