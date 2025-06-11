@@ -84,6 +84,7 @@ public class InviteUsersPasswordManagerValidator(
             return invalidEnvironment.Map(request);
         }
 
+        // Organizations managed by a provider need to be scaled by the provider. This needs to be checked in the event seats are increasing.
         var provider = await providerRepository.GetByOrganizationIdAsync(request.InviteOrganization.OrganizationId);
 
         if (provider is not null)
