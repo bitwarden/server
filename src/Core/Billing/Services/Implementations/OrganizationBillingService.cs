@@ -31,7 +31,6 @@ public class OrganizationBillingService(
     IGlobalSettings globalSettings,
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
-    IOrganizationUserRepository organizationUserRepository,
     IPricingClient pricingClient,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
@@ -78,14 +77,14 @@ public class OrganizationBillingService(
         var isEligibleForSelfHost = await IsEligibleForSelfHostAsync(organization);
 
         var isManaged = organization.Status == OrganizationStatusType.Managed;
-        var orgOccupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+        var orgOccupiedSeats = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
             return OrganizationMetadata.Default with
             {
                 IsEligibleForSelfHost = isEligibleForSelfHost,
                 IsManaged = isManaged,
-                OrganizationOccupiedSeats = orgOccupiedSeats
+                OrganizationOccupiedSeats = orgOccupiedSeats.Total
             };
         }
 
@@ -120,7 +119,7 @@ public class OrganizationBillingService(
             invoice?.DueDate,
             invoice?.Created,
             subscription.CurrentPeriodEnd,
-            orgOccupiedSeats);
+            orgOccupiedSeats.Total);
     }
 
     public async Task
