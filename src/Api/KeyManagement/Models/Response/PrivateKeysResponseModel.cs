@@ -7,7 +7,7 @@ namespace Bit.Api.KeyManagement.Models.Response;
 #nullable enable
 
 /// <summary>
-/// This response model is used to return the the asymmetric encryption keys,
+/// This response model is used to return the asymmetric encryption keys,
 /// and signature keys of an entity. This includes the private keys of the key pairs,
 /// (private key, signing key), and the public keys of the key pairs (unsigned public key,
 /// signed public key, verification key). 
