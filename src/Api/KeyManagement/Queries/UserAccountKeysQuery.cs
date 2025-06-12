@@ -1,7 +1,7 @@
 ﻿#nullable enable
 
 using Bit.Core.Entities;
-using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Models.Data.Models;
 using Bit.Core.KeyManagement.Repositories;
 
 namespace Bit.Api.KeyManagement.Queries;
