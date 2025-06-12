@@ -1,15 +1,12 @@
 ﻿#nullable enable
 
+using Bit.Api.KeyManagement.Queries.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
 
-namespace Bit.Api.KeyManagement.Queries;
+namespace Bit.Core.KeyManagement.Queries;
 
-public interface IUserAccountKeysQuery
-{
-    Task<UserAccountKeysData> Run(User user);
-}
 
 public class UserAccountKeysQuery(IUserSignatureKeyPairRepository signatureKeyPairRepository) : IUserAccountKeysQuery
 {

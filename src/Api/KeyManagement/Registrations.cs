@@ -1,4 +1,5 @@
-﻿using Bit.Api.KeyManagement.Queries;
+﻿using Bit.Api.KeyManagement.Queries.Interfaces;
+using Bit.Core.KeyManagement.Queries;
 
 namespace Bit.Api.KeyManagement;
 
