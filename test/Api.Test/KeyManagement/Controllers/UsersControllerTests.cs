@@ -30,6 +30,21 @@ public class UsersControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task GetPublicKey_ReturnsUserKeyResponseModel(
+        SutProvider<UsersController> sutProvider,
+        Guid userId)
+    {
+        var publicKey = "publicKey";
+        sutProvider.GetDependency<IUserRepository>().GetPublicKeyAsync(userId).Returns(publicKey);
+
+        var result = await sutProvider.Sut.GetPublicKeyAsync(userId.ToString());
+        Assert.NotNull(result);
+        Assert.Equal(userId, result.UserId);
+        Assert.Equal(publicKey, result.PublicKey);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task GetAccountKeys_UserNotFound_ThrowsNotFoundException(
         SutProvider<UsersController> sutProvider)
     {
