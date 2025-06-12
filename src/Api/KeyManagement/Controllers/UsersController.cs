@@ -23,10 +23,9 @@ public class UsersController(
     }
 
     [HttpGet("{id}/keys")]
-    public async Task<PublicKeysResponseModel> GetAccountKeysAsync(string id)
+    public async Task<PublicKeysResponseModel> GetAccountKeysAsync([FromRoute]Guid id)
     {
-        var guidId = new Guid(id);
-        var user = await _userRepository.GetByIdAsync(guidId) ?? throw new NotFoundException();
+        var user = await _userRepository.GetByIdAsync(id) ?? throw new NotFoundException();
         var accountKeys = await _userAccountKeysQuery.Run(user) ?? throw new NotFoundException("User account keys not found.");
         return new PublicKeysResponseModel(accountKeys);
     }
