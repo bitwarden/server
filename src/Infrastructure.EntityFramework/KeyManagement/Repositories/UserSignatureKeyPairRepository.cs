@@ -1,4 +1,5 @@
 ﻿#nullable enable
+
 using AutoMapper;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
@@ -22,11 +23,7 @@ public class UserSignatureKeyPairRepository(IServiceScopeFactory serviceScopeFac
             return null;
         }
 
-        return new SignatureKeyPairData(
-            signingKeys.SignatureAlgorithm,
-            signingKeys.SigningKey,
-            signingKeys.VerifyingKey
-        );
+        return signingKeys.ToSignatureKeyPairData();
     }
 
     public UpdateEncryptedDataForKeyRotation SetUserSignatureKeyPair(Guid userId, SignatureKeyPairData signingKeys)

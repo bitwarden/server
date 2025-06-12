@@ -34,6 +34,8 @@ using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Tools.ReportFeatures;
 using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Tools.SendFeatures;
+using Bit.Api.KeyManagement;
+
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -185,6 +187,7 @@ public class Startup
         services.AddPhishingDomainServices(globalSettings);
 
         services.AddBillingQueries();
+        services.AddKeyManagementQueries();
         services.AddSendServices();
 
         // Authorization Handlers

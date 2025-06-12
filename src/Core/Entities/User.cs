@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 
@@ -253,5 +254,15 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public bool HasMasterPassword()
     {
         return MasterPassword != null;
+    }
+
+    public PublicKeyEncryptionKeyPairData GetPublicKeyEncryptionKeyPair()
+    {
+        if (string.IsNullOrWhiteSpace(PrivateKey) || string.IsNullOrWhiteSpace(PublicKey))
+        {
+            throw new InvalidOperationException("User public key encryption key pair is not fully initialized.");
+        }
+
+        return new PublicKeyEncryptionKeyPairData(PrivateKey, PublicKey, SignedPublicKey);
     }
 }

@@ -1,0 +1,31 @@
+﻿using System.Text.Json.Serialization;
+using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.Models.Api;
+
+namespace Bit.Api.KeyManagement.Models.Response;
+
+#nullable enable
+
+public class SignatureKeyPairResponseModel : ResponseModel
+{
+    public required string WrappedSigningKey;
+    public required string VerifyingKey;
+
+    [System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute]
+    public SignatureKeyPairResponseModel(SignatureKeyPairData signatureKeyPair)
+        : base("signatureKeyPair")
+    {
+        ArgumentNullException.ThrowIfNull(signatureKeyPair);
+        WrappedSigningKey = signatureKeyPair.WrappedSigningKey;
+        VerifyingKey = signatureKeyPair.VerifyingKey;
+    }
+
+
+    [JsonConstructor]
+    public SignatureKeyPairResponseModel(string wrappedSigningKey, string verifyingKey)
+        : base("signatureKeyPair")
+    {
+        WrappedSigningKey = wrappedSigningKey ?? throw new ArgumentNullException(nameof(wrappedSigningKey));
+        VerifyingKey = verifyingKey ?? throw new ArgumentNullException(nameof(verifyingKey));
+    }
+}
