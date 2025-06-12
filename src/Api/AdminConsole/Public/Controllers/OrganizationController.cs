@@ -54,25 +54,26 @@ public class OrganizationController : Controller
             throw new BadRequestException("You cannot import this much data at once.");
         }
 
-        string r = "";
-
-        r = await _importOrganizationUsersAndGroupsCommand.ImportAsync(
-            _currentContext.OrganizationId.Value,
-            model.Groups.Select(g => g.ToImportedGroup(_currentContext.OrganizationId.Value)),
-            model.Members.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
-            model.Members.Where(u => u.Deleted).Select(u => u.ExternalId),
-            model.OverwriteExisting.GetValueOrDefault());
-
-
         if (_featureService.IsEnabled(FeatureFlagKeys.ImportAsyncRefactor))
         {
-            r = "success";
+            await _importOrganizationUsersAndGroupsCommand.ImportAsync(
+                _currentContext.OrganizationId.Value,
+                model.Groups.Select(g => g.ToImportedGroup(_currentContext.OrganizationId.Value)),
+                model.Members.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
+                model.Members.Where(u => u.Deleted).Select(u => u.ExternalId),
+                model.OverwriteExisting.GetValueOrDefault());
         }
         else
         {
-            r = "fail";
+            await _organizationService.ImportAsync(
+                _currentContext.OrganizationId.Value,
+                model.Groups.Select(g => g.ToImportedGroup(_currentContext.OrganizationId.Value)),
+                model.Members.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
+                model.Members.Where(u => u.Deleted).Select(u => u.ExternalId),
+                model.OverwriteExisting.GetValueOrDefault(),
+                Core.Enums.EventSystemUser.PublicApi);
         }
 
-        return new OkObjectResult(r);
+        return new OkResult();
     }
 }

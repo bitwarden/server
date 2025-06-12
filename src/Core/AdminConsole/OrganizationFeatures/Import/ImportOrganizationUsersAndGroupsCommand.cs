@@ -66,7 +66,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
     /// who are not included in the current import.</param>
     /// <exception cref="NotFoundException">Thrown if the organization does not exist.</exception>
     /// <exception cref="BadRequestException">Thrown if the organization is not configured to use directory syncing.</exception>
-    public async Task<string> ImportAsync(Guid organizationId,
+    public async Task ImportAsync(Guid organizationId,
         IEnumerable<ImportedGroup> importedGroups,
         IEnumerable<ImportedOrganizationUser> importedUsers,
         IEnumerable<string> removeUserExternalIds,
@@ -101,8 +101,6 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
         await ImportGroups(organization, importedGroups, importUserData);
 
         await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.ou, e.e, _EventSystemUser, e.d)));
-
-        return "success";
     }
 
     /// <summary>
