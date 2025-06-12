@@ -401,8 +401,8 @@ public abstract class BaseRequestValidator<T> where T : class
     /// <summary>
     /// Builds the custom response that will be sent to the client upon successful authentication, which
     /// includes the information needed for the client to initialize the user's account in state.
-    /// </summary> 
-    /// <param name="user">The authenticated user.</param> 
+    /// </summary>
+    /// <param name="user">The authenticated user.</param>
     /// <param name="context">The current request context.</param>
     /// <param name="device">The device used for authentication.</param>
     /// <param name="sendRememberToken">Whether to send a 2FA remember token.</param>
