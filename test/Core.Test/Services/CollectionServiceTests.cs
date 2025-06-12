@@ -22,7 +22,6 @@ public class CollectionServiceTest
     {
         collection.OrganizationId = organization.Id;
         organizationUser.OrganizationId = organization.Id;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
 
@@ -38,7 +37,6 @@ public class CollectionServiceTest
         OrganizationUser organizationUser, SutProvider<CollectionService> sutProvider)
     {
         collection.OrganizationId = organization.Id;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
 
