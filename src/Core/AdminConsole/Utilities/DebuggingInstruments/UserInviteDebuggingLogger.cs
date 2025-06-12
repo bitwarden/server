@@ -5,18 +5,11 @@ using Quartz.Util;
 
 namespace Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 
-public class UserInviteDebuggingLogger : IUserInviteDebuggingLogger
+public class UserInviteDebuggingLogger(ILogger<UserInviteDebuggingLogger> logger) : IUserInviteDebuggingLogger
 {
-    private readonly ILogger<UserInviteDebuggingLogger> _logger;
-
-    public UserInviteDebuggingLogger(ILogger<UserInviteDebuggingLogger> logger)
-    {
-        _logger = logger;
-    }
-
     public void Log(OrganizationUser allOrgUser)
     {
-        this.Log([allOrgUser]);
+        Log([allOrgUser]);
     }
 
     public void Log(IEnumerable<OrganizationUser> allOrgUsers)
@@ -27,21 +20,21 @@ public class UserInviteDebuggingLogger : IUserInviteDebuggingLogger
 
             if (invalidInviteState)
             {
-                _logger.LogWarning("Warning invalid invited users.");
+                logger.LogWarning("Warning invalid invited state.");
             }
 
             var invalidNoneInviteState = allOrgUsers.Any(user => user.Status != OrganizationUserStatusType.Invited && !user.Email.IsNullOrWhiteSpace());
 
             if (invalidNoneInviteState)
             {
-                _logger.LogWarning("Warning invalid invited users.");
+                logger.LogWarning("Warning invalid non invited state.");
             }
         }
         catch (Exception exception)
         {
 
             // Ensure that this debugging instrument does not interfere with the current flow.
-            _logger.LogWarning(exception, "Unexpected exception from UserInviteDebuggingLogger");
+            logger.LogWarning(exception, "Unexpected exception from UserInviteDebuggingLogger");
         }
     }
 }
