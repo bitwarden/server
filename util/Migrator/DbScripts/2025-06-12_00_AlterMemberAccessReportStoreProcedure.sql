@@ -1,9 +1,9 @@
-CREATE PROCEDURE dbo.MemberAccessReport_GetMemberAccessCipherDetailsByOrganizationId
+CREATE OR ALTER PROC dbo.MemberAccessReport_GetMemberAccessCipherDetailsByOrganizationId
     @OrganizationId UNIQUEIDENTIFIER
 AS
     SET NOCOUNT ON;
 
-IF @OrganizationId IS NULL
+    IF @OrganizationId IS NULL
         THROW 50000, 'OrganizationId cannot be null', 1;
 
     SELECT
@@ -90,3 +90,5 @@ UNION ALL
                 inner join dbo.CollectionUser CU1 on CU1.OrganizationUserId = OU1.Id
             WHERE OU1.OrganizationId = @organizationId
         )
+
+GO

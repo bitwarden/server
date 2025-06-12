@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Dirt.Models;
 using Bit.Api.Dirt.Models.Response;
+using Bit.Api.Tools.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Reports.Entities;
 using Bit.Core.Dirt.Reports.Models.Data;
@@ -87,12 +88,8 @@ public class ReportsController : Controller
     }
 
     /// <summary>
-<<<<<<< HEAD
-    /// Details for a user's group/collection permissions and numbers of ciphers they are associated with
-=======
     /// Contains the organization member info, the cipher ids associated with the member,
     /// and details on their collections, groups, and permissions
->>>>>>> main
     /// </summary>
     /// <param name="request">Request parameters</param>
     /// <returns>
