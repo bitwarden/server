@@ -7,7 +7,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interface
 
 public interface IImportOrganizationUsersAndGroupsCommand
 {
-    Task ImportAsync(Guid organizationId,
+    Task<string> ImportAsync(Guid organizationId,
         IEnumerable<ImportedGroup> groups,
         IEnumerable<ImportedOrganizationUser> newUsers,
         IEnumerable<string> removeUserExternalIds,

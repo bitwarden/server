@@ -1,13 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
-using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -32,42 +30,57 @@ public class ImportOrganizationUsersAndGroupsCommandTests
             SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
             Organization org,
             List<OrganizationUserUserDetails> existingUsers,
-            List<ImportedOrganizationUser> newUsers,
+            List<ImportedOrganizationUser> importedUsers,
             List<ImportedGroup> newGroups)
     {
-        SetupOrganizationConfigForImport(sutProvider, org, existingUsers, newUsers);
+        SetupOrganizationConfigForImport(sutProvider, org, existingUsers, importedUsers);
 
-        newUsers.Add(new ImportedOrganizationUser
+        var orgUsers = new List<OrganizationUser>();
+
+        // fix mocked email format, mock OrganizationUsers.
+        foreach (var u in importedUsers)
+        {
+            u.Email += "@bitwardentest.com";
+            orgUsers.Add(new OrganizationUser { Email = u.Email, ExternalId = u.ExternalId });
+        }
+
+        importedUsers.Add(new ImportedOrganizationUser
         {
             Email = existingUsers.First().Email,
             ExternalId = existingUsers.First().ExternalId
         });
 
-        foreach (var u in newUsers)
-        {
-            u.Email += "@bitwardentest.com";
-        }
 
         existingUsers.First().Type = OrganizationUserType.Owner;
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
-        sutProvider.GetDependency<IPaymentService>().HasSecretsManagerStandalone(org).Returns(false);
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
+
+        sutProvider.GetDependency<IPaymentService>().HasSecretsManagerStandalone(org).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(existingUsers);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetCountByOrganizationIdAsync(org.Id).Returns(existingUsers.Count);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(org.Id).Returns(true);
-        sutProvider.GetDependency<IInviteOrganizationUsersCommand>().InviteImportedOrganizationUsersAsync(Arg.Any<InviteOrganizationUsersRequest>())
-            .Returns(new Success<InviteOrganizationUsersResponse>(new InviteOrganizationUsersResponse(org.Id)));
+        sutProvider.GetDependency<IOrganizationService>().InviteUsersAsync(org.Id, Guid.Empty, EventSystemUser.PublicApi,
+                Arg.Any<IEnumerable<(OrganizationUserInvite, string)>>())
+            .Returns(orgUsers);
 
-        await sutProvider.Sut.ImportAsync(org.Id, newGroups, newUsers, new List<string>(), false);
+        await sutProvider.Sut.ImportAsync(org.Id, newGroups, importedUsers, new List<string>(), false);
 
-        await sutProvider.GetDependency<IInviteOrganizationUsersCommand>().Received(1)
-            .InviteImportedOrganizationUsersAsync(Arg.Any<InviteOrganizationUsersRequest>());
+        var expectedNewUsersCount = importedUsers.Count - 1;
+
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .UpsertAsync(default);
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
             .UpsertManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => !users.Any()));
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .CreateAsync(default);
+
+        // Send Invites
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).
+            InviteUsersAsync(org.Id, Guid.Empty, EventSystemUser.PublicApi,
+                    Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(invites => invites.Count() == expectedNewUsersCount));
 
         // Send events
         await sutProvider.GetDependency<IEventService>().Received(1)
@@ -79,36 +92,55 @@ public class ImportOrganizationUsersAndGroupsCommandTests
             SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
             Organization org,
             List<OrganizationUserUserDetails> existingUsers,
-            List<ImportedOrganizationUser> newUsers,
+            List<ImportedOrganizationUser> importedUsers,
             List<ImportedGroup> newGroups)
     {
-        SetupOrganizationConfigForImport(sutProvider, org, existingUsers, newUsers);
+        SetupOrganizationConfigForImport(sutProvider, org, existingUsers, importedUsers);
 
+        var orgUsers = new List<OrganizationUser>();
         var reInvitedUser = existingUsers.First();
-        reInvitedUser.ExternalId = null;
+        // Existing user has no external ID. This will make the SUT call UpsertManyAsync
+        reInvitedUser.ExternalId = "";
+
+        // Mock an existing org user for this "existing" user
+        var reInvitedOrgUser = new OrganizationUser { Email = reInvitedUser.Email, Id = reInvitedUser.Id };
+
+        // fix email formatting, mock orgUsers to be returned
         foreach (var u in existingUsers)
         {
             u.Email += "@bitwardentest.com";
+            orgUsers.Add(new OrganizationUser { Email = u.Email, ExternalId = u.ExternalId });
         }
-        foreach (var u in newUsers)
+        foreach (var u in importedUsers)
         {
             u.Email += "@bitwardentest.com";
+            orgUsers.Add(new OrganizationUser { Email = u.Email, ExternalId = u.ExternalId });
         }
 
-        newUsers.Add(new ImportedOrganizationUser
+        // add the existing user to be re-imported
+        importedUsers.Add(new ImportedOrganizationUser
         {
             Email = reInvitedUser.Email,
             ExternalId = reInvitedUser.Email,
         });
 
+        var expectedNewUsersCount = importedUsers.Count - 1;
+
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<OrganizationUser>([reInvitedOrgUser]));
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(existingUsers);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetCountByOrganizationIdAsync(org.Id).Returns(existingUsers.Count);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(Arg.Any<IEnumerable<Guid>>()).Returns(new List<OrganizationUser> { new OrganizationUser { Id = reInvitedUser.Id } });
-        sutProvider.GetDependency<IInviteOrganizationUsersCommand>().InviteImportedOrganizationUsersAsync(Arg.Any<InviteOrganizationUsersRequest>())
-            .Returns(new Success<InviteOrganizationUsersResponse>(new InviteOrganizationUsersResponse(org.Id)));
 
-        await sutProvider.Sut.ImportAsync(org.Id, newGroups, newUsers, new List<string>(), false);
+        sutProvider.GetDependency<IOrganizationService>().InviteUsersAsync(org.Id, Guid.Empty, EventSystemUser.PublicApi,
+                Arg.Any<IEnumerable<(OrganizationUserInvite, string)>>())
+            .Returns(orgUsers);
+
+        await sutProvider.Sut.ImportAsync(org.Id, newGroups, importedUsers, new List<string>(), false);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .UpsertAsync(default);
@@ -119,28 +151,55 @@ public class ImportOrganizationUsersAndGroupsCommandTests
 
         // Upserted existing user
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
-            .UpsertManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == 1));
+            .UpsertManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == 1 && users.First() == reInvitedOrgUser));
 
-        await sutProvider.GetDependency<IInviteOrganizationUsersCommand>().Received(1)
-            .InviteImportedOrganizationUsersAsync(Arg.Any<InviteOrganizationUsersRequest>());
+        // Send Invites
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).
+            InviteUsersAsync(org.Id, Guid.Empty, EventSystemUser.PublicApi,
+                    Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(invites => invites.Count() == expectedNewUsersCount));
 
         // Send events
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUserUserDetails, EventType, EventSystemUser, DateTime?)>>());
-
     }
 
     private void SetupOrganizationConfigForImport(
             SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
             Organization org,
             List<OrganizationUserUserDetails> existingUsers,
-            List<ImportedOrganizationUser> newUsers)
+            List<ImportedOrganizationUser> importedUsers)
     {
         // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks
         sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
         sutProvider.Create();
 
         org.UseDirectory = true;
-        org.Seats = newUsers.Count + existingUsers.Count + 1;
+        org.Seats = importedUsers.Count + existingUsers.Count + 1;
+    }
+
+    // Must set real guids in order for dictionary of guids to not throw aggregate exceptions
+    private void SetupOrgUserRepositoryCreateManyAsyncMock(IOrganizationUserRepository organizationUserRepository)
+    {
+        organizationUserRepository.CreateManyAsync(Arg.Any<IEnumerable<OrganizationUser>>()).Returns(
+            info =>
+            {
+                var orgUsers = info.Arg<IEnumerable<OrganizationUser>>();
+                foreach (var orgUser in orgUsers)
+                {
+                    orgUser.Id = Guid.NewGuid();
+                }
+
+                return Task.FromResult<ICollection<Guid>>(orgUsers.Select(u => u.Id).ToList());
+            }
+        );
+
+        organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>(), Arg.Any<IEnumerable<CollectionAccessSelection>>()).Returns(
+            info =>
+            {
+                var orgUser = info.Arg<OrganizationUser>();
+                orgUser.Id = Guid.NewGuid();
+                return Task.FromResult<Guid>(orgUser.Id);
+            }
+        );
     }
 }

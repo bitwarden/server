@@ -4,15 +4,14 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -67,7 +66,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
     /// who are not included in the current import.</param>
     /// <exception cref="NotFoundException">Thrown if the organization does not exist.</exception>
     /// <exception cref="BadRequestException">Thrown if the organization is not configured to use directory syncing.</exception>
-    public async Task ImportAsync(Guid organizationId,
+    public async Task<string> ImportAsync(Guid organizationId,
         IEnumerable<ImportedGroup> importedGroups,
         IEnumerable<ImportedOrganizationUser> importedUsers,
         IEnumerable<string> removeUserExternalIds,
@@ -102,6 +101,8 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
         await ImportGroups(organization, importedGroups, importUserData);
 
         await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.ou, e.e, _EventSystemUser, e.d)));
+
+        return "success";
     }
 
     /// <summary>
@@ -196,73 +197,52 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             IEnumerable<ImportedOrganizationUser> importedUsers,
             OrganizationUserImportData importUserData)
     {
-        var userInvites = new List<OrganizationUserInviteCommandModel>();
+        // Determine which users are already in the organization
+        var existingUsersSet = new HashSet<string>(importUserData.ExistingExternalUsersIdDict.Keys).ToList();
+        var usersToAdd = importUserData.ImportedExternalIds.Except(existingUsersSet).ToList();
+
+        var seatsAvailable = int.MaxValue;
+        var enoughSeatsAvailable = true;
+
+        if (organization.Seats.HasValue)
+        {
+            seatsAvailable = organization.Seats.Value - await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count();
+        }
+
+
+        var userInvites = new List<(OrganizationUserInvite, string)>();
+        var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
 
         foreach (var user in importedUsers)
         {
-            userInvites.Add(new OrganizationUserInviteCommandModel(user.Email, user.ExternalId));
+            if (!usersToAdd.Contains(user.ExternalId) || string.IsNullOrWhiteSpace(user.Email))
+            {
+                continue;
+            }
+
+            try
+            {
+                var invite = new OrganizationUserInvite
+                {
+                    Emails = new List<string> { user.Email },
+                    Type = OrganizationUserType.User,
+                    Collections = new List<CollectionAccessSelection>(),
+                    AccessSecretsManager = hasStandaloneSecretsManager
+                };
+                userInvites.Add((invite, user.ExternalId));
+            }
+            catch (BadRequestException)
+            {
+                // Thrown when the user is already invited to the organization
+                continue;
+            }
         }
 
-        var commandResult = await InviteUsersAsync(userInvites, organization);
-
-        switch (commandResult)
+        var invitedUsers = await _organizationService.InviteUsersAsync(organization.Id, Guid.Empty, _EventSystemUser, userInvites);
+        foreach (var invitedUser in invitedUsers)
         {
-            case Success<InviteOrganizationUsersResponse> result:
-                foreach (var u in result.Value.InvitedUsers)
-                {
-                    importUserData.ExistingExternalUsersIdDict.Add(u.ExternalId!, u.Id);
-                }
-                break;
-            case Failure<InviteOrganizationUsersResponse> failure:
-                throw new BadRequestException(failure.Error.Message);
-            default:
-                throw new InvalidOperationException($"Unhandled commandResult type: {commandResult.GetType().Name}");
-        }
-    }
-
-    /// <summary>
-    /// Sends the user invites through the InviteOrganizationUserCommand
-    /// <param name="invites">The list of organization user invites command models to be used for inviting users</param>
-    /// <param name="organization">The organization to which users are being invited</param>
-    /// </summary>
-    private async Task<CommandResult<InviteOrganizationUsersResponse>> InviteUsersAsync(List<OrganizationUserInviteCommandModel> invites, Organization organization)
-    {
-        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
-        var inviteOrganization = new InviteOrganization(organization, plan);
-        var request = new InviteOrganizationUsersRequest(invites.ToArray(), inviteOrganization, Guid.Empty, DateTimeOffset.UtcNow);
-
-        return await _inviteOrganizationUsersCommand.InviteImportedOrganizationUsersAsync(request);
-    }
-
-    /// <summary>
-    /// Creates an InviteOrganizationUsersRequest for the provided invites and sends the request via the InviteOrganizationUsersCommand.
-    /// </summary>
-    private async Task vNextInviteUsersAsync(List<OrganizationUserInviteCommandModel> userInvites,
-            Organization organization,
-            OrganizationUserImportData importUserData)
-    {
-        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
-        var inviteOrganization = new InviteOrganization(organization, plan);
-        var request = new InviteOrganizationUsersRequest(userInvites.ToArray(), inviteOrganization, Guid.Empty, DateTimeOffset.UtcNow);
-        var commandResult = await _inviteOrganizationUsersCommand.InviteImportedOrganizationUsersAsync(request);
-
-        switch (commandResult)
-        {
-            case Success<InviteOrganizationUsersResponse> result:
-                foreach (var u in result.Value.InvitedUsers)
-                {
-                    if (u.ExternalId is null)
-                    {
-                        continue;
-                    }
-
-                    importUserData.ExistingExternalUsersIdDict.Add(u.ExternalId, u.Id);
-                }
-                break;
-            case Failure<InviteOrganizationUsersResponse> failure:
-                throw new BadRequestException(failure.Error.Message);
-            default:
-                throw new InvalidOperationException($"Unhandled commandResult type: {commandResult.GetType().Name}");
+            importUserData.ExistingExternalUsersIdDict.TryAdd(invitedUser.ExternalId!, invitedUser.Id);
         }
     }
 

@@ -4,7 +4,6 @@ using Bit.Api.Models.Public.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -55,26 +54,25 @@ public class OrganizationController : Controller
             throw new BadRequestException("You cannot import this much data at once.");
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization))
+        string r = "";
+
+        r = await _importOrganizationUsersAndGroupsCommand.ImportAsync(
+            _currentContext.OrganizationId.Value,
+            model.Groups.Select(g => g.ToImportedGroup(_currentContext.OrganizationId.Value)),
+            model.Members.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
+            model.Members.Where(u => u.Deleted).Select(u => u.ExternalId),
+            model.OverwriteExisting.GetValueOrDefault());
+
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.ImportAsyncRefactor))
         {
-            await _importOrganizationUsersAndGroupsCommand.ImportAsync(
-                _currentContext.OrganizationId.Value,
-                model.Groups.Select(g => g.ToImportedGroup(_currentContext.OrganizationId.Value)),
-                model.Members.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
-                model.Members.Where(u => u.Deleted).Select(u => u.ExternalId),
-                model.OverwriteExisting.GetValueOrDefault());
+            r = "success";
         }
         else
         {
-            await _organizationService.ImportAsync(
-                _currentContext.OrganizationId.Value,
-                model.Groups.Select(g => g.ToImportedGroup(_currentContext.OrganizationId.Value)),
-                model.Members.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
-                model.Members.Where(u => u.Deleted).Select(u => u.ExternalId),
-                model.OverwriteExisting.GetValueOrDefault(),
-                EventSystemUser.PublicApi
-                );
+            r = "fail";
         }
-        return new OkResult();
+
+        return new OkObjectResult(r);
     }
 }
