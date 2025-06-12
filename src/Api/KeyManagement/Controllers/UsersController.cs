@@ -10,10 +10,17 @@ namespace Bit.Api.KeyManagement.Controllers;
 
 [Route("users")]
 [Authorize("Application")]
-public class UsersController(
-    IUserRepository _userRepository,
-    IUserAccountKeysQuery _userAccountKeysQuery) : Controller
+public class UsersController : Controller
 {
+    private readonly IUserRepository _userRepository;
+    private readonly IUserAccountKeysQuery _userAccountKeysQuery;
+
+    public UsersController(IUserRepository userRepository, IUserAccountKeysQuery userAccountKeysQuery)
+    {
+        _userRepository = userRepository;
+        _userAccountKeysQuery = userAccountKeysQuery;
+    }
+
     [HttpGet("{id}/public-key")]
     public async Task<UserKeyResponseModel> GetPublicKeyAsync(string id)
     {
@@ -23,7 +30,7 @@ public class UsersController(
     }
 
     [HttpGet("{id}/keys")]
-    public async Task<PublicKeysResponseModel> GetAccountKeysAsync([FromRoute]Guid id)
+    public async Task<PublicKeysResponseModel> GetAccountKeysAsync([FromRoute] Guid id)
     {
         var user = await _userRepository.GetByIdAsync(id) ?? throw new NotFoundException();
         var accountKeys = await _userAccountKeysQuery.Run(user) ?? throw new NotFoundException("User account keys not found.");
