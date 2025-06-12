@@ -175,7 +175,7 @@ public class AccountsKeyManagementControllerTests
         }
         catch (BadRequestException ex)
         {
-            Assert.NotEmpty(ex.ModelState.Values);
+            Assert.NotEmpty(ex.ModelState!.Values);
         }
     }
 
@@ -210,7 +210,7 @@ public class AccountsKeyManagementControllerTests
         var badRequestException =
             await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PostSetKeyConnectorKeyAsync(data));
 
-        Assert.Equal(1, badRequestException.ModelState.ErrorCount);
+        Assert.Equal(1, badRequestException.ModelState!.ErrorCount);
         Assert.Equal("set key connector key error", badRequestException.ModelState.Root.Errors[0].ErrorMessage);
         await sutProvider.GetDependency<IUserService>().Received(1)
             .SetKeyConnectorKeyAsync(Arg.Do<User>(user =>
@@ -284,7 +284,7 @@ public class AccountsKeyManagementControllerTests
         var badRequestException =
             await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PostConvertToKeyConnectorAsync());
 
-        Assert.Equal(1, badRequestException.ModelState.ErrorCount);
+        Assert.Equal(1, badRequestException.ModelState!.ErrorCount);
         Assert.Equal("convert to key connector error", badRequestException.ModelState.Root.Errors[0].ErrorMessage);
         await sutProvider.GetDependency<IUserService>().Received(1)
             .ConvertToKeyConnectorAsync(Arg.Is(expectedUser));
