@@ -206,10 +206,10 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
 
         if (organization.Seats.HasValue)
         {
-            seatsAvailable = organization.Seats.Value - await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            seatsAvailable = organization.Seats.Value - occupiedSeats;
             enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count();
         }
-
 
         var userInvites = new List<(OrganizationUserInvite, string)>();
         var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
