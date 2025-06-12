@@ -1,7 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using AutoFixture;
-using Bit.Api.KeyManagement.Queries;
+using Bit.Api.KeyManagement.Queries.Interfaces;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.AdminConsole.Entities;

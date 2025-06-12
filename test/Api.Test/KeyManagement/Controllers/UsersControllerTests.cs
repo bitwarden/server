@@ -1,6 +1,6 @@
 ﻿#nullable enable
 using Bit.Api.KeyManagement.Controllers;
-using Bit.Api.KeyManagement.Queries;
+using Bit.Api.KeyManagement.Queries.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Enums;
