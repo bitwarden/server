@@ -8,16 +8,8 @@
 public interface IMailer
 {
     /// <summary>
-    /// Sends an email message to the specified recipient.
+    /// Sends an email message.
     /// </summary>
     /// <param name="message"></param>
-    /// <param name="recipient">Recipient email</param>
-    public Task SendEmail(BaseMailModel2 message, string recipient);
-
-    /// <summary>
-    /// Sends multiple emails message to the specified recipients.
-    /// </summary>
-    /// <param name="message"></param>
-    /// <param name="recipients">Recipient emails</param>
-    public void SendEmails(BaseMailModel2 message, string[] recipients);
+    public Task SendEmail<T>(BaseMail<T> message) where T : BaseMailView;
 }
