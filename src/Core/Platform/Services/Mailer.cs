@@ -13,6 +13,10 @@ public class Mailer(IMailRenderer renderer, IMailDeliveryService mailDeliverySer
         var content = await renderer.RenderAsync(message.View);
 
         var metadata = new Dictionary<string, object>();
+        if (message.IgnoreSuppressList)
+        {
+            metadata.Add("SendGridBypassListManagement", true);
+        }
 
         var mailMessage = new MailMessage
         {
