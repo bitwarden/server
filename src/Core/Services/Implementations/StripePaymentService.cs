@@ -654,12 +654,10 @@ public class StripePaymentService : IPaymentService
             subscriber.Gateway = GatewayType.Stripe;
             subscriber.GatewayCustomerId = customer.Id;
         }
-
         await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
         {
             Balance = customer.Balance - (long)(creditAmount * 100)
         });
-
         return !customerExists;
     }
 
