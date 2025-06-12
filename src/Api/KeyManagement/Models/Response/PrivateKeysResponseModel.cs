@@ -18,7 +18,7 @@ public class PrivateKeysResponseModel : ResponseModel
     public PrivateKeysResponseModel(UserAccountKeysData accountKeys) : base("privateKeys")
     {
         PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairModel(accountKeys.PublicKeyEncryptionKeyPairData);
-       ArgumentNullException.ThrowIfNull(accountKeys);
+        ArgumentNullException.ThrowIfNull(accountKeys);
 
         if (accountKeys.SignatureKeyPairData != null)
         {
