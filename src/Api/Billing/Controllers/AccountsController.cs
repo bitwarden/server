@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using Bit.Api.KeyManagement.Models.Response;
 using Bit.Api.KeyManagement.Queries.Interfaces;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
@@ -61,7 +60,7 @@ public class AccountsController(
         var userTwoFactorEnabled = await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
-        var accountKeys = new PrivateKeysResponseModel(await userAccountKeysQuery.Run(user));
+        var accountKeys = await userAccountKeysQuery.Run(user);
 
         var profile = new ProfileResponseModel(user, accountKeys, null, null, null, userTwoFactorEnabled,
             userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);

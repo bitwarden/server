@@ -3,7 +3,6 @@ using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.WebAuthn;
-using Bit.Api.KeyManagement.Models.Response;
 using Bit.Api.KeyManagement.Queries.Interfaces;
 using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Models.Request.Accounts;
@@ -402,9 +401,9 @@ public class AccountsController : Controller
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
-        var accountKeysResponse = new PrivateKeysResponseModel(await _userAccountKeysQuery.Run(user));
+        var accountKeys = await _userAccountKeysQuery.Run(user);
 
-        var response = new ProfileResponseModel(user, accountKeysResponse, organizationUserDetails, providerUserDetails,
+        var response = new ProfileResponseModel(user, accountKeys, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, twoFactorEnabled,
             hasPremiumFromOrg, organizationIdsClaimingActiveUser);
         return response;
@@ -437,9 +436,9 @@ public class AccountsController : Controller
         var twoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
-        var userAccountKeysData = await _userAccountKeysQuery.Run(user);
+        var userAccountKeys = await _userAccountKeysQuery.Run(user);
 
-        var response = new ProfileResponseModel(user, new PrivateKeysResponseModel(userAccountKeysData), null, null, null, twoFactorEnabled, hasPremiumFromOrg, organizationIdsClaimingActiveUser);
+        var response = new ProfileResponseModel(user, userAccountKeys, null, null, null, twoFactorEnabled, hasPremiumFromOrg, organizationIdsClaimingActiveUser);
         return response;
     }
 
@@ -457,7 +456,7 @@ public class AccountsController : Controller
         var userTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
-        var accountKeys = new PrivateKeysResponseModel(await _userAccountKeysQuery.Run(user));
+        var accountKeys = await _userAccountKeysQuery.Run(user);
 
         var response = new ProfileResponseModel(user, accountKeys, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);
         return response;
