@@ -15,7 +15,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER VIEW [dbo].[OrganizationApplicationView] AS
+CREATE OR ALTER VIEW[dbo].[OrganizationApplicationView] AS
     SELECT * FROM [dbo].[OrganizationApplication];
 GO
 

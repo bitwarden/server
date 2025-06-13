@@ -15,7 +15,13 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER VIEW [dbo].[OrganizationApplicationView] AS
+IF OBJECT_ID('dbo.OrganizationApplicationView') IS NOT NULL
+BEGIN
+    DROP VIEW [dbo].[OrganizationApplicationView];
+END
+GO
+
+CREATE VIEW [dbo].[OrganizationApplicationView] AS
     SELECT * FROM [dbo].[OrganizationApplication];
 GO
 
