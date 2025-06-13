@@ -57,7 +57,7 @@ public class TwoFactorEmailServiceTests
                 TwoFactorEmailPurpose.Login);
     }
 
-        [Theory, BitAutoData]
+    [Theory, BitAutoData]
     public async Task SendTwoFactorSetupEmailAsync_Success(SutProvider<TwoFactorEmailService> sutProvider, User user)
     {
         var email = user.Email.ToLowerInvariant();
@@ -97,7 +97,7 @@ public class TwoFactorEmailServiceTests
                 TwoFactorEmailPurpose.Login);
     }
 
-        [Theory, BitAutoData]
+    [Theory, BitAutoData]
     public async Task SendNewDeviceVerificationEmailAsync_Success(SutProvider<TwoFactorEmailService> sutProvider, User user)
     {
         var email = user.Email.ToLowerInvariant();
