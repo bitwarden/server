@@ -4,6 +4,7 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
@@ -20,6 +21,7 @@ namespace Bit.Api.Billing.Controllers;
 [Authorize("Application")]
 public class AccountsController(
     IUserService userService,
+    IGetUserLicenseQuery getUserLicenseQuery,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery) : Controller
 {
     [HttpPost("premium")]
@@ -82,12 +84,12 @@ public class AccountsController(
         if (!globalSettings.SelfHosted && user.Gateway != null)
         {
             var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
-            var license = await userService.GenerateLicenseAsync(user, subscriptionInfo);
+            var license = await getUserLicenseQuery.GetLicenseAsync(user, subscriptionInfo);
             return new SubscriptionResponseModel(user, subscriptionInfo, license);
         }
         else if (!globalSettings.SelfHosted)
         {
-            var license = await userService.GenerateLicenseAsync(user);
+            var license = await getUserLicenseQuery.GetLicenseAsync(user);
             return new SubscriptionResponseModel(user, license);
         }
         else
@@ -132,8 +134,6 @@ public class AccountsController(
         var result = await userService.AdjustStorageAsync(user, model.StorageGbAdjustment!.Value);
         return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
     }
-
-
 
     [HttpPost("license")]
     [SelfHosted(SelfHostedOnly = true)]
