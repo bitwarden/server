@@ -10,3 +10,4 @@ CREATE TABLE [dbo].[OrganizationApplication] (
 
 CREATE NONCLUSTERED INDEX [IX_OrganizationApplication_OrganizationId]
     ON [dbo].[OrganizationApplication]([OrganizationId] ASC);
+GO
