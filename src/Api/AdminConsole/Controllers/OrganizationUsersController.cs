@@ -403,16 +403,15 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpPost("{id}/confirm")]
-    public async Task Confirm(string orgId, string id, [FromBody] OrganizationUserConfirmRequestModel model)
+    public async Task Confirm(Guid orgId, Guid id, [FromBody] OrganizationUserConfirmRequestModel model)
     {
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ManageUsers(orgGuidId))
+        if (!await _currentContext.ManageUsers(orgId))
         {
             throw new NotFoundException();
         }
 
         var userId = _userService.GetProperUserId(User);
-        var result = await _confirmOrganizationUserCommand.ConfirmUserAsync(orgGuidId, new Guid(id), model.Key, userId.Value);
+        var result = await _confirmOrganizationUserCommand.ConfirmUserAsync(orgId, id, model.Key, userId.Value, model.DefaultUserCollectionName);
     }
 
     [HttpPost("confirm")]

@@ -60,6 +60,10 @@ public class OrganizationUserConfirmRequestModel
 {
     [Required]
     public string Key { get; set; }
+
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string DefaultUserCollectionName { get; set; }
 }
 
 public class OrganizationUserBulkConfirmRequestModelEntry
