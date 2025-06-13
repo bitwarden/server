@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Repositories;
@@ -70,6 +71,9 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<ISecurityTaskRepository, SecurityTaskRepository>();
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
         services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
+
+        // Debugging instruments
+        services.AddSingleton<IUserInviteDebuggingLogger, UserInviteDebuggingLogger>();
 
         if (selfHosted)
         {
