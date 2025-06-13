@@ -9,10 +9,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
-using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.ImportFeatures;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
@@ -183,8 +180,6 @@ public class ImportCiphersAsyncCommandTests
                 !cus.Any(cu => cu.CollectionId == collections[0].Id) && // Check that access was not added for the collection that already existed in the organization
                 cus.All(cu => cu.OrganizationUserId == importingOrganizationUser.Id && cu.Manage == true)));
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
-        await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(
-            Arg.Is<ReferenceEvent>(e => e.Type == ReferenceEventType.VaultImported));
     }
 
     [Theory, BitAutoData]
