@@ -19,7 +19,7 @@ jobs:
       - name: Check
         id: check-ld-secret
         run: |
-          if [ "${{ secrets.LD_ACCESS_TOKEN }}" != '' ]; then
+          if [ "${{ steps.get-kv-secrets.outputs.LD-ACCESS-TOKEN }}" != '' ]; then
             echo "available=true" >> $GITHUB_OUTPUT;
           else
             echo "available=false" >> $GITHUB_OUTPUT;
@@ -42,7 +42,7 @@ jobs:
         id: collect
         uses: launchdarkly/find-code-references@e3e9da201b87ada54eb4c550c14fb783385c5c8a # v2.13.0
         with:
-          accessToken: ${{ secrets.LD_ACCESS_TOKEN }}
+          accessToken: ${{ steps.get-kv-secrets.outputs.LD-ACCESS-TOKEN }}
           projKey: default
           allowTags: true
 
