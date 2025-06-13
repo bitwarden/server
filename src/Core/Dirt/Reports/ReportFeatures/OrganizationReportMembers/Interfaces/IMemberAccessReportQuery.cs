@@ -3,7 +3,7 @@ using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
 
-public interface IMemberAccessCipherDetailsQuery
+public interface IMemberAccessReportQuery
 {
-    Task<IEnumerable<MemberAccessCipherDetails>> GetMemberAccessCipherDetails(MemberAccessCipherDetailsRequest request);
+    Task<IEnumerable<MemberAccessReportDetail>> GetMemberAccessReportsAsync(MemberAccessReportRequest request);
 }
