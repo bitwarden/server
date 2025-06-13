@@ -87,19 +87,3 @@ BEGIN
     ORDER BY
         ST.CreationDate DESC;
 END
-GO
-
-CREATE NONCLUSTERED INDEX IX_CollectionGroup_GroupId_ReadOnly
-  ON dbo.CollectionGroup (GroupId, ReadOnly)
-  INCLUDE (CollectionId);
-GO
-
-CREATE NONCLUSTERED INDEX IX_CollectionUser_OrganizationUserId_ReadOnly
-  ON dbo.CollectionUser (OrganizationUserId, ReadOnly)
-  INCLUDE (CollectionId);
-GO
-
-CREATE NONCLUSTERED INDEX IX_SecurityTask_Status_OrgId_CreationDateDesc
-  ON dbo.SecurityTask (Status, OrganizationId, CreationDate DESC)
-  INCLUDE (CipherId, [Type], RevisionDate);
-GO

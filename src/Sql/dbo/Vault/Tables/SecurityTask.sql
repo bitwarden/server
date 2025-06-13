@@ -19,3 +19,8 @@ CREATE NONCLUSTERED INDEX [IX_SecurityTask_CipherId]
 GO
 CREATE NONCLUSTERED INDEX [IX_SecurityTask_OrganizationId]
     ON [dbo].[SecurityTask]([OrganizationId] ASC) WHERE OrganizationId IS NOT NULL;
+
+CREATE NONCLUSTERED INDEX IX_SecurityTask_Status_OrgId_CreationDateDesc
+  ON dbo.SecurityTask (Status, OrganizationId, CreationDate DESC)
+  INCLUDE (CipherId, [Type], RevisionDate);
+GO
