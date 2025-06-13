@@ -174,7 +174,7 @@ public class HandlebarsMailService : IMailService
         var model = new TwoFactorEmailTokenViewModel
         {
             Token = token,
-            EmailTotpAction = (purpose == TwoFactorEmailPurpose.Login) ? "logging in" : "setting up two-step login",
+            EmailTotpAction = (purpose == TwoFactorEmailPurpose.Setup) ? "setting up two-step login" : "logging in",
             AccountEmail = accountEmail,
             TheDate = requestDateTime.ToLongDateString(),
             TheTime = requestDateTime.ToShortTimeString(),
