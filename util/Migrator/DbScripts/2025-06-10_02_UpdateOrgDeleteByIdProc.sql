@@ -23,7 +23,6 @@ BEGIN
 
             COMMIT TRANSACTION Organization_DeleteById_Ciphers
     END
-    GO
 
     BEGIN TRANSACTION Organization_DeleteById
 
@@ -157,8 +156,6 @@ BEGIN
         [dbo].[Organization]
     WHERE
         [Id] = @Id
-
-        COMMIT TRANSACTION Organization_DeleteById
+    COMMIT TRANSACTION Organization_DeleteById
     END
-
     GO
