@@ -18,6 +18,7 @@ namespace Bit.Core.Test.Auth.Services;
 [SutProviderCustomize]
 public class TwoFactorEmailServiceTests
 {
+    
     [Theory, BitAutoData]
     public async Task SendTwoFactorEmailAsync_Success(SutProvider<TwoFactorEmailService> sutProvider, User user)
     {
@@ -34,7 +35,7 @@ public class TwoFactorEmailServiceTests
             .GenerateAsync("TwoFactor", Arg.Any<UserManager<User>>(), user)
             .Returns(Task.FromResult(token));
 
-        var context = sutProvider.GetDependency<ICurrentContext>();
+        var context = Substitute.For<ICurrentContext>();
         context.DeviceType = DeviceType.Android;
         context.IpAddress = IpAddress;
 
@@ -109,7 +110,7 @@ public class TwoFactorEmailServiceTests
     {
         var sutProvider = new SutProvider<TwoFactorEmailService>();
 
-        var context = sutProvider.GetDependency<ICurrentContext>();
+        var context = Substitute.For<ICurrentContext>();
         context.DeviceType = deviceType;
         context.IpAddress = "1.1.1.1";
 
@@ -125,7 +126,7 @@ public class TwoFactorEmailServiceTests
     {
         var sutProvider = new SutProvider<TwoFactorEmailService>();
 
-        var context = sutProvider.GetDependency<ICurrentContext>();
+        var context = Substitute.For<ICurrentContext>();
         context.DeviceType = null;
         context.IpAddress = "1.1.1.1";
 

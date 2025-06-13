@@ -12,9 +12,9 @@ namespace Bit.Core.Auth.Services;
 
 public class TwoFactorEmailService : ITwoFactorEmailService
 {
-    private ICurrentContext _currentContext;
-    private UserManager<User> _userManager;
-    private IMailService _mailService;
+    private readonly ICurrentContext _currentContext;
+    private readonly UserManager<User> _userManager;
+    private readonly IMailService _mailService;
 
     public TwoFactorEmailService(
         ICurrentContext currentContext,
