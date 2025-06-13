@@ -58,6 +58,65 @@ public class TwoFactorEmailServiceTests
                 TwoFactorEmailPurpose.Login);
     }
 
+        [Theory, BitAutoData]
+    public async Task SendTwoFactorSetupEmailAsync_Success(SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        var email = user.Email.ToLowerInvariant();
+        var token = "thisisatokentocompare";
+        var IpAddress = "1.1.1.1";
+        var deviceType = "Android";
+
+        var userTwoFactorTokenProvider = Substitute.For<IUserTwoFactorTokenProvider<User>>();
+        userTwoFactorTokenProvider
+            .CanGenerateTwoFactorTokenAsync(Arg.Any<UserManager<User>>(), user)
+            .Returns(Task.FromResult(true));
+        userTwoFactorTokenProvider
+            .GenerateAsync("TwoFactor", Arg.Any<UserManager<User>>(), user)
+            .Returns(Task.FromResult(token));
+
+        var context = Substitute.For<ICurrentContext>();
+        context.DeviceType = DeviceType.Android;
+        context.IpAddress = IpAddress;
+
+        await sutProvider.Sut.SendTwoFactorEmailAsync(user);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendTwoFactorEmailAsync(email, user.Email, token, IpAddress, deviceType,
+                TwoFactorEmailPurpose.Login);
+    }
+
+        [Theory, BitAutoData]
+    public async Task SendNewDeviceVerificationEmailAsync_Success(SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        var email = user.Email.ToLowerInvariant();
+        var token = "thisisatokentocompare";
+        var IpAddress = "1.1.1.1";
+        var deviceType = "Android";
+
+        var userTwoFactorTokenProvider = Substitute.For<IUserTwoFactorTokenProvider<User>>();
+        userTwoFactorTokenProvider
+            .CanGenerateTwoFactorTokenAsync(Arg.Any<UserManager<User>>(), user)
+            .Returns(Task.FromResult(true));
+        userTwoFactorTokenProvider
+            .GenerateAsync("TwoFactor", Arg.Any<UserManager<User>>(), user)
+            .Returns(Task.FromResult(token));
+
+        var context = Substitute.For<ICurrentContext>();
+        context.DeviceType = DeviceType.Android;
+        context.IpAddress = IpAddress;
+
+        var userManager = sutProvider.GetDependency<UserManager<User>>();
+        userManager.RegisterTokenProvider(CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), userTwoFactorTokenProvider);
+
+        await sutProvider.Sut.SendNewDeviceVerificationEmailAsync(user);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendTwoFactorEmailAsync(email, user.Email, token, IpAddress, deviceType,
+                TwoFactorEmailPurpose.NewDeviceVerification);
+    }
+
     [Theory, BitAutoData]
     public async Task SendTwoFactorEmailAsync_ExceptionBecauseNoProviderOnUser(SutProvider<TwoFactorEmailService> sutProvider, User user)
     {
@@ -180,8 +239,6 @@ public class TwoFactorEmailServiceTests
             .Received(1)
             .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), "Unknown Browser", Arg.Any<TwoFactorEmailPurpose>());
     }
-    
-    
 
     // [Theory, BitAutoData]
     // public async Task ResendNewDeviceVerificationEmail_UserNull_SendTwoFactorEmailAsyncNotCalled(
