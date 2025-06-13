@@ -12,6 +12,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
@@ -52,6 +53,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
             IReadOnlyList<OrganizationUser>>
         _resetPasswordValidator;
+    private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
         _webauthnKeyRotationValidator;
 
@@ -79,6 +81,7 @@ public class AccountsControllerTests : IDisposable
         _resetPasswordValidator = Substitute
             .For<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
                 IReadOnlyList<OrganizationUser>>>();
+        _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
 
         _sut = new AccountsController(
             _organizationService,
@@ -96,7 +99,8 @@ public class AccountsControllerTests : IDisposable
             _sendValidator,
             _emergencyAccessValidator,
             _resetPasswordValidator,
-            _webauthnKeyRotationValidator
+            _webauthnKeyRotationValidator,
+            _twoFactorEmailService
         );
     }
 

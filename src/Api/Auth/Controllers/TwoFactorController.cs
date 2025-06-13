@@ -7,6 +7,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.LoginFeatures.PasswordlessLogin.Interfaces;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -14,6 +15,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
+using Core.Auth.Enums;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -34,6 +36,7 @@ public class TwoFactorController : Controller
     private readonly IDuoUniversalTokenService _duoUniversalTokenService;
     private readonly IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> _twoFactorAuthenticatorDataProtector;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmailTwoFactorSessionDataProtector;
+    private readonly ITwoFactorEmailService _twoFactorEmailService;
 
     public TwoFactorController(
         IUserService userService,
@@ -44,7 +47,8 @@ public class TwoFactorController : Controller
         IVerifyAuthRequestCommand verifyAuthRequestCommand,
         IDuoUniversalTokenService duoUniversalConfigService,
         IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> twoFactorAuthenticatorDataProtector,
-        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmailTwoFactorSessionDataProtector)
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmailTwoFactorSessionDataProtector,
+        ITwoFactorEmailService twoFactorEmailService)
     {
         _userService = userService;
         _organizationRepository = organizationRepository;
@@ -55,6 +59,7 @@ public class TwoFactorController : Controller
         _duoUniversalTokenService = duoUniversalConfigService;
         _twoFactorAuthenticatorDataProtector = twoFactorAuthenticatorDataProtector;
         _ssoEmailTwoFactorSessionDataProtector = ssoEmailTwoFactorSessionDataProtector;
+        _twoFactorEmailService = twoFactorEmailService;
     }
 
     [HttpGet("")]
@@ -298,7 +303,7 @@ public class TwoFactorController : Controller
     {
         var user = await CheckAsync(model, false, true);
         model.ToUser(user);
-        await _userService.SendTwoFactorEmailAsync(user, false);
+        await _twoFactorEmailService.SendTwoFactorSetupEmailAsync(user);
     }
 
     [AllowAnonymous]
@@ -316,15 +321,14 @@ public class TwoFactorController : Controller
                         .VerifyAuthRequestAsync(new Guid(requestModel.AuthRequestId),
                             requestModel.AuthRequestAccessCode))
                 {
-                    await _userService.SendTwoFactorEmailAsync(user);
-                    return;
+                    await _twoFactorEmailService.SendTwoFactorEmailAsync(user);
                 }
             }
             else if (!string.IsNullOrEmpty(requestModel.SsoEmail2FaSessionToken))
             {
                 if (ValidateSsoEmail2FaToken(requestModel.SsoEmail2FaSessionToken, user))
                 {
-                    await _userService.SendTwoFactorEmailAsync(user);
+                    await _twoFactorEmailService.SendTwoFactorEmailAsync(user);
                     return;
                 }
 
@@ -333,7 +337,7 @@ public class TwoFactorController : Controller
             }
             else if (await _userService.VerifySecretAsync(user, requestModel.Secret))
             {
-                await _userService.SendTwoFactorEmailAsync(user);
+                await _twoFactorEmailService.SendTwoFactorEmailAsync(user);
                 return;
             }
         }
