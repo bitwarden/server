@@ -3,7 +3,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Dirt.Reports.Entities;
+namespace Bit.Core.Dirt.Entities;
 
 public class PasswordHealthReportApplication : ITableObject<Guid>, IRevisable
 {

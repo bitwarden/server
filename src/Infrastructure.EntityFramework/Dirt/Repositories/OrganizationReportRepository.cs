@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
-using Bit.Core.Dirt.Reports.Entities;
-using Bit.Core.Dirt.Reports.Repositories;
+using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using LinqToDB;
 using Microsoft.Extensions.DependencyInjection;
