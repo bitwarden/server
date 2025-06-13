@@ -3,6 +3,7 @@
   <ItemGroup>
     <EmbeddedResource Include="DbScripts\**\*.sql" />
     <EmbeddedResource Include="DbScripts_transition\**\*.sql" />
+    <EmbeddedResource Include="DbScripts_finalization\**\*.sql" />
   </ItemGroup>
 
   <ItemGroup>
