@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Models.Data.Integrations;
+﻿using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 

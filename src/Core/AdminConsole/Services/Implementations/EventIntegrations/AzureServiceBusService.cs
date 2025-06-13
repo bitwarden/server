@@ -1,5 +1,5 @@
 ﻿using Azure.Messaging.ServiceBus;
-using Bit.Core.AdminConsole.Models.Data.Integrations;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
 
