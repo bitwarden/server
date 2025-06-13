@@ -185,7 +185,7 @@ public class HandlebarsMailService : IMailService
             SiteName = _globalSettings.SiteName,
             // We only want to remind users to set up 2FA if they're getting a new device verification email.
             // For login with 2FA, and setup of 2FA, we do not want to show the reminder because users are already doing so.
-            DisplayTwoFactorReminder = purpose == TwoFactorEmailPurpose.NewDeviceVerification 
+            DisplayTwoFactorReminder = purpose == TwoFactorEmailPurpose.NewDeviceVerification
         };
         await AddMessageContentAsync(message, "Auth.TwoFactorEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);

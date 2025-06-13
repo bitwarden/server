@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Enums;
+﻿using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;

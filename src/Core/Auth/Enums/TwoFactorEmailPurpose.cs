@@ -1,4 +1,4 @@
-namespace Core.Auth.Enums;
+﻿namespace Core.Auth.Enums;
 
 public enum TwoFactorEmailPurpose
 {
