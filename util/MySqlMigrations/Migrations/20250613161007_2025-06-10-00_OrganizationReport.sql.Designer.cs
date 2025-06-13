@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250610180810_2025-06-10_02_UpdateOrgDeleteByIdProc.sql")]
-    partial class _20250610_02_UpdateOrgDeleteByIdProcsql
+    [Migration("20250613161007_2025-06-10-00_OrganizationReport.sql")]
+    partial class _2025061000_OrganizationReportsql
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

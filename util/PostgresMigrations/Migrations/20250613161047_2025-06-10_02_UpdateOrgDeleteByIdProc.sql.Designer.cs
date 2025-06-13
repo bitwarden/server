@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250610164247_2025-06-10-00_OrganizationReport.sql")]
-    partial class _2025061000_OrganizationReportsql
+    [Migration("20250613161047_2025-06-10_02_UpdateOrgDeleteByIdProc.sql")]
+    partial class _20250610_02_UpdateOrgDeleteByIdProcsql
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -685,8 +685,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ExternalId")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
                         .UseCollation("postgresIndetermanisticCollation");
 
                     b.Property<Guid?>("OrganizationId")
@@ -1053,6 +1053,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DefaultUserCollectionEmail")
+                        .HasColumnType("text");
+
                     b.Property<string>("ExternalId")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
@@ -1066,6 +1069,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -1533,6 +1539,10 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<bool>("Disabled")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("Emails")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
 
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("timestamp with time zone");
