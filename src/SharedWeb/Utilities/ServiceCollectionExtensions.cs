@@ -235,10 +235,10 @@ public static class ServiceCollectionExtensions
         });
         services.AddScoped<IPaymentService, StripePaymentService>();
         services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
+        services.AddScoped<ITwoFactorEmailService, TwoFactorEmailService>();
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
-        services.AddSingleton<ITwoFactorEmailService, TwoFactorEmailService>();
         services.AddSingleton<ILookupClient>(_ =>
         {
             var options = new LookupClientOptions { Timeout = TimeSpan.FromSeconds(15), UseTcpOnly = true };
