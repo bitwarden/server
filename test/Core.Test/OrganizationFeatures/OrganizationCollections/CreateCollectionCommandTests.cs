@@ -199,4 +199,27 @@ public class CreateCollectionCommandTests
             .DidNotReceiveWithAnyArgs()
             .LogCollectionEventAsync(default, default);
     }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_WithDefaultUserCollectionType_ThrowsBadRequest(
+        Organization organization, Collection collection, SutProvider<CreateCollectionCommand> sutProvider)
+    {
+        collection.Id = default;
+        collection.Type = CollectionType.DefaultUserCollection;
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(collection));
+        Assert.Contains("You cannot create a collection with the type as DefaultUserCollection.", ex.Message);
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default);
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default, default, default);
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogCollectionEventAsync(default, default);
+    }
 }
