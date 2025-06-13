@@ -12,7 +12,7 @@ namespace Bit.Core.Auth.Services;
 public interface IAuthRequestService
 {
     /// <summary>
-    /// fetches an authRequest by Id. Returns AuthRequest if AuthRequest.UserId mateches
+    /// Fetches an authRequest by Id. Returns AuthRequest if AuthRequest.UserId mateches
     /// userId. Returns null if the user doesn't match or if the AuthRequest is not found.
     /// </summary>
     /// <param name="authRequestId">Authrequest Id being fetched</param>
