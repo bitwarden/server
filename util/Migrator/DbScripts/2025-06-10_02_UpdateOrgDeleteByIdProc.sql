@@ -9,159 +9,156 @@ BEGIN
 
     DECLARE @BatchSize INT = 100
     WHILE @BatchSize > 0
-GO
+    BEGIN
+    BEGIN TRANSACTION Organization_DeleteById_Ciphers
 
-BEGIN
-BEGIN TRANSACTION Organization_DeleteById_Ciphers
+            DELETE TOP(@BatchSize)
+            FROM
+                [dbo].[Cipher]
+            WHERE
+                [UserId] IS NULL
+                AND [OrganizationId] = @Id
 
-        DELETE TOP(@BatchSize)
+            SET @BatchSize = @@ROWCOUNT
+
+            COMMIT TRANSACTION Organization_DeleteById_Ciphers
+    END
+    GO
+
+    BEGIN TRANSACTION Organization_DeleteById
+
+    DELETE
+    FROM
+        [dbo].[AuthRequest]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[SsoUser]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[SsoConfig]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE CU
         FROM
-            [dbo].[Cipher]
+            [dbo].[CollectionUser] CU
+        INNER JOIN
+            [dbo].[OrganizationUser] OU ON [CU].[OrganizationUserId] = [OU].[Id]
         WHERE
-            [UserId] IS NULL
-            AND [OrganizationId] = @Id
+            [OU].[OrganizationId] = @Id
 
-        SET @BatchSize = @@ROWCOUNT
+        DELETE AP
+        FROM
+            [dbo].[AccessPolicy] AP
+        INNER JOIN
+            [dbo].[OrganizationUser] OU ON [AP].[OrganizationUserId] = [OU].[Id]
+        WHERE
+            [OU].[OrganizationId] = @Id
 
-        COMMIT TRANSACTION Organization_DeleteById_Ciphers
-END
+        DELETE GU
+        FROM
+            [dbo].[GroupUser] GU
+        INNER JOIN
+            [dbo].[OrganizationUser] OU ON [GU].[OrganizationUserId] = [OU].[Id]
+        WHERE
+            [OU].[OrganizationId] = @Id
 
-GO
-
-BEGIN TRANSACTION Organization_DeleteById
-
-DELETE
-FROM
-    [dbo].[AuthRequest]
-WHERE
-    [OrganizationId] = @Id
-
-DELETE
-FROM
-    [dbo].[SsoUser]
-WHERE
-    [OrganizationId] = @Id
-
-DELETE
-FROM
-    [dbo].[SsoConfig]
-WHERE
-    [OrganizationId] = @Id
-
-DELETE CU
+    DELETE
     FROM
-        [dbo].[CollectionUser] CU
-    INNER JOIN
-        [dbo].[OrganizationUser] OU ON [CU].[OrganizationUserId] = [OU].[Id]
+        [dbo].[OrganizationUser]
     WHERE
-        [OU].[OrganizationId] = @Id
+        [OrganizationId] = @Id
 
-    DELETE AP
+    DELETE
     FROM
-        [dbo].[AccessPolicy] AP
-    INNER JOIN
-        [dbo].[OrganizationUser] OU ON [AP].[OrganizationUserId] = [OU].[Id]
+        [dbo].[ProviderOrganization]
     WHERE
-        [OU].[OrganizationId] = @Id
+        [OrganizationId] = @Id
 
-    DELETE GU
+        EXEC [dbo].[OrganizationApiKey_OrganizationDeleted] @Id
+        EXEC [dbo].[OrganizationConnection_OrganizationDeleted] @Id
+        EXEC [dbo].[OrganizationSponsorship_OrganizationDeleted] @Id
+        EXEC [dbo].[OrganizationDomain_OrganizationDeleted] @Id
+        EXEC [dbo].[OrganizationIntegration_OrganizationDeleted] @Id
+
+    DELETE
     FROM
-        [dbo].[GroupUser] GU
-    INNER JOIN
-        [dbo].[OrganizationUser] OU ON [GU].[OrganizationUserId] = [OU].[Id]
+        [dbo].[Project]
     WHERE
-        [OU].[OrganizationId] = @Id
+        [OrganizationId] = @Id
 
-DELETE
-FROM
-    [dbo].[OrganizationUser]
-WHERE
-    [OrganizationId] = @Id
-
-DELETE
-FROM
-    [dbo].[ProviderOrganization]
-WHERE
-    [OrganizationId] = @Id
-
-    EXEC [dbo].[OrganizationApiKey_OrganizationDeleted] @Id
-    EXEC [dbo].[OrganizationConnection_OrganizationDeleted] @Id
-    EXEC [dbo].[OrganizationSponsorship_OrganizationDeleted] @Id
-    EXEC [dbo].[OrganizationDomain_OrganizationDeleted] @Id
-    EXEC [dbo].[OrganizationIntegration_OrganizationDeleted] @Id
-
-DELETE
-FROM
-    [dbo].[Project]
-WHERE
-    [OrganizationId] = @Id
-
-DELETE
-FROM
-    [dbo].[Secret]
-WHERE
-    [OrganizationId] = @Id
-
-DELETE AK
+    DELETE
     FROM
-        [dbo].[ApiKey] AK
-    INNER JOIN
-        [dbo].[ServiceAccount] SA ON [AK].[ServiceAccountId] = [SA].[Id]
+        [dbo].[Secret]
     WHERE
-        [SA].[OrganizationId] = @Id
+        [OrganizationId] = @Id
 
-    DELETE AP
+    DELETE AK
+        FROM
+            [dbo].[ApiKey] AK
+        INNER JOIN
+            [dbo].[ServiceAccount] SA ON [AK].[ServiceAccountId] = [SA].[Id]
+        WHERE
+            [SA].[OrganizationId] = @Id
+
+        DELETE AP
+        FROM
+            [dbo].[AccessPolicy] AP
+        INNER JOIN
+            [dbo].[ServiceAccount] SA ON [AP].[GrantedServiceAccountId] = [SA].[Id]
+        WHERE
+            [SA].[OrganizationId] = @Id
+
+    DELETE
     FROM
-        [dbo].[AccessPolicy] AP
-    INNER JOIN
-        [dbo].[ServiceAccount] SA ON [AP].[GrantedServiceAccountId] = [SA].[Id]
+        [dbo].[ServiceAccount]
     WHERE
-        [SA].[OrganizationId] = @Id
+        [OrganizationId] = @Id
 
-DELETE
-FROM
-    [dbo].[ServiceAccount]
-WHERE
-    [OrganizationId] = @Id
+    -- Delete Notification Status
+    DELETE
+    NS
+        FROM
+            [dbo].[NotificationStatus] NS
+        INNER JOIN
+            [dbo].[Notification] N ON N.[Id] = NS.[NotificationId]
+        WHERE
+            N.[OrganizationId] = @Id
 
--- Delete Notification Status
-DELETE
-NS
+        -- Delete Notification
+    DELETE
     FROM
-        [dbo].[NotificationStatus] NS
-    INNER JOIN
-        [dbo].[Notification] N ON N.[Id] = NS.[NotificationId]
+        [dbo].[Notification]
     WHERE
-        N.[OrganizationId] = @Id
+        [OrganizationId] = @Id
 
-    -- Delete Notification
-DELETE
-FROM
-    [dbo].[Notification]
-WHERE
-    [OrganizationId] = @Id
+    -- Delete Organization Application
+    DELETE
+    FROM
+        [dbo].[OrganizationApplication]
+    WHERE
+        [Id] = @Id
 
--- Delete Organization Application
-DELETE
-FROM
-    [dbo].[OrganizationApplication]
-WHERE
-    [Id] = @Id
+    -- Delete Organization Report
+    DELETE
+    FROM
+        [dbo].[OrganizationReport]
+    WHERE
+        [Id] = @Id
 
--- Delete Organization Report
-DELETE
-FROM
-    [dbo].[OrganizationReport]
-WHERE
-    [Id] = @Id
+    DELETE
+    FROM
+        [dbo].[Organization]
+    WHERE
+        [Id] = @Id
 
-DELETE
-FROM
-    [dbo].[Organization]
-WHERE
-    [Id] = @Id
+        COMMIT TRANSACTION Organization_DeleteById
+    END
 
-    COMMIT TRANSACTION Organization_DeleteById
-END
-
-GO
+    GO
