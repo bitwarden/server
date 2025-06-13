@@ -2,26 +2,27 @@
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public class StrictEmailAddressListAttribute : ValidationAttribute
 {
-    protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
     {
         var strictEmailAttribute = new StrictEmailAddressAttribute();
-        var emails = value as IList<string>;
 
-        if (!emails?.Any() ?? true)
+        if (value is not IList<string> emails || emails.Count == 0)
         {
             return new ValidationResult("An email is required.");
         }
 
-        if (emails.Count() > 20)
+        if (emails.Count > 20)
         {
             return new ValidationResult("You can only submit up to 20 emails at a time.");
         }
 
-        for (var i = 0; i < emails.Count(); i++)
+        for (var i = 0; i < emails.Count; i++)
         {
-            var email = emails.ElementAt(i);
+            var email = emails[i];
             if (!strictEmailAttribute.IsValid(email))
             {
                 return new ValidationResult($"Email #{i + 1} is not valid.");

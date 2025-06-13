@@ -8,6 +8,8 @@ using StackExchange.Redis;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 /// <summary>
 /// A modified version of <see cref="AspNetCoreRateLimit.Redis.RedisProcessingStrategy"/> that gracefully
 /// handles a disrupted Redis connection. If the connection is down or the number of failed requests within
@@ -56,7 +58,7 @@ public class CustomRedisProcessingStrategy : RedisProcessingStrategy
         if (_memoryCache.TryGetValue<TimeoutCounter>(_redisTimeoutCacheKey, out var timeoutCounter))
         {
             // We've exceeded threshold, backoff Redis and skip rate limiting for now
-            if (timeoutCounter.Count >= _distributedSettings.MaxRedisTimeoutsThreshold)
+            if (timeoutCounter?.Count >= _distributedSettings.MaxRedisTimeoutsThreshold)
             {
                 _logger.LogDebug(
                     "Redis timeout threshold has been exceeded, backing off and skipping IP rate limiting");

@@ -1,5 +1,7 @@
 ﻿namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public static class SpanExtensions
 {
     public static bool TrySplitBy(this ReadOnlySpan<char> input,
