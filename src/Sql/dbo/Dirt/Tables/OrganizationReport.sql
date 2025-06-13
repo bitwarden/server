@@ -8,6 +8,7 @@ CREATE TABLE [dbo].[OrganizationReport] (
     CONSTRAINT [PK_OrganizationReport] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationReport_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
     );
+GO
 
 CREATE NONCLUSTERED INDEX [IX_OrganizationReport_OrganizationId]
     ON [dbo].[OrganizationReport]([OrganizationId] ASC);
