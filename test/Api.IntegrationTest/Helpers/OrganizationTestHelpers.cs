@@ -78,6 +78,7 @@ public static class OrganizationTestHelpers
             Status = userStatusType,
             ExternalId = null,
             AccessSecretsManager = accessSecretsManager,
+            Email = userEmail
         };
 
         if (permissions != null)
