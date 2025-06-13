@@ -26,6 +26,9 @@ jobs:
   setup:
     name: Setup
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      deployments: write
     outputs:
       branch-name: ${{ steps.branch.outputs.branch-name }}
       deployment-id: ${{ steps.deployment.outputs.deployment_id }}
@@ -167,6 +170,8 @@ jobs:
     needs:
       - setup
       - publish-docker
+    permissions:
+      deployments: write
     if: ${{ always() && inputs.publish_type != 'Dry Run' }}
     steps:
       - name: Check if any job failed

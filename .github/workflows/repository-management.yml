@@ -26,6 +26,7 @@ jobs:
   setup:
     name: Setup
     runs-on: ubuntu-24.04
+    permissions: {}
     outputs:
       branch: ${{ steps.set-branch.outputs.branch }}
     steps:
@@ -237,7 +238,28 @@ jobs:
     needs:
       - bump_version
       - setup
+    permissions:
+      contents: write
+      id-token: write
     steps:
+      - name: Azure Login
+        id: azure-login
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+
+      - name: Get KV secrets
+        id: get-kv-secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: gh-org-bitwarden
+          secrets: "BW-GHAPP-ID,BW-GHAPP-KEY"
+
+      - name: Azure Logout
+        uses: bitwarden/gh-actions/azure-logout@main
+
       - name: Generate GH App token
         uses: actions/create-github-app-token@c1a285145b9d317df6ced56c09f525b5c2b6f755 # v1.11.1
         id: app-token
@@ -320,3 +342,8 @@ jobs:
     needs: cherry_pick
     uses: ./.github/workflows/_move_finalization_db_scripts.yml
     secrets: inherit
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+      actions: read
