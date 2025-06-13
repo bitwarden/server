@@ -11,7 +11,7 @@ on:
     types: [opened, synchronize]
   workflow_call:
     inputs: {}
-  
+
 permissions:
   contents: read
 
@@ -95,10 +95,8 @@ jobs:
     steps:
       - name: Check secrets
         id: check-secrets
-        env:
-          AZURE_KV_CI_SERVICE_PRINCIPAL: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
         run: |
-          has_secrets=${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL != '' }}
+          has_secrets=${{ secrets.AZURE_CLIENT_ID != '' }}
           echo "has_secrets=$has_secrets" >> $GITHUB_OUTPUT
 
       - name: Check out repo
