@@ -5,6 +5,7 @@ using Bit.Api.Models.Response;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -100,7 +101,7 @@ public class AuthRequestsControllerTests
     public async Task GetPending_ReturnsExpectedResult(
         SutProvider<AuthRequestsController> sutProvider,
         User user,
-        AuthRequest authRequest)
+        PendingAuthRequestDetails authRequest)
     {
         // Arrange
         SetBaseServiceUri(sutProvider);
@@ -120,7 +121,7 @@ public class AuthRequestsControllerTests
         Assert.NotNull(result);
         var expectedCount = 1;
         Assert.Equal(result.Data.Count(), expectedCount);
-        Assert.IsType<ListResponseModel<AuthRequestResponseModel>>(result);
+        Assert.IsType<ListResponseModel<PendingAuthRequestResponseModel>>(result);
     }
 
     [Theory, BitAutoData]

@@ -52,12 +52,12 @@ public class AuthRequestsController(
 
     [HttpGet("pending")]
     [RequireFeature(FeatureFlagKeys.BrowserExtensionLoginApproval)]
-    public async Task<ListResponseModel<AuthRequestResponseModel>> GetPendingAuthRequestsAsync()
+    public async Task<ListResponseModel<PendingAuthRequestResponseModel>> GetPendingAuthRequestsAsync()
     {
         var userId = _userService.GetProperUserId(User).Value;
         var rawResponse = await _authRequestRepository.GetManyPendingAuthRequestByUserId(userId);
-        var responses = rawResponse.Select(a => new AuthRequestResponseModel(a, _globalSettings.BaseServiceUri.Vault));
-        return new ListResponseModel<AuthRequestResponseModel>(responses);
+        var responses = rawResponse.Select(a => new PendingAuthRequestResponseModel(a, _globalSettings.BaseServiceUri.Vault));
+        return new ListResponseModel<PendingAuthRequestResponseModel>(responses);
     }
 
     [HttpGet("{id}/response")]

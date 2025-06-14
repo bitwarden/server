@@ -15,7 +15,7 @@ public interface IAuthRequestRepository : IRepository<AuthRequest, Guid>
     /// </summary>
     /// <param name="userId">UserId of the owner of the AuthRequests</param>
     /// <returns>a collection Auth request details or null</returns>
-    Task<IEnumerable<AuthRequest>> GetManyPendingAuthRequestByUserId(Guid userId);
+    Task<IEnumerable<PendingAuthRequestDetails>> GetManyPendingAuthRequestByUserId(Guid userId);
     Task<ICollection<OrganizationAdminAuthRequest>> GetManyPendingByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<OrganizationAdminAuthRequest>> GetManyAdminApprovalRequestsByManyIdsAsync(Guid organizationId, IEnumerable<Guid> ids);
     Task UpdateManyAsync(IEnumerable<AuthRequest> authRequests);

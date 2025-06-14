@@ -9,9 +9,12 @@ BEGIN
     ;WITH PendingRequests AS (
         SELECT
             AR.*,
-            ROW_NUMBER() OVER (PARTITION BY RequestDeviceIdentifier ORDER BY CreationDate DESC) AS rn
+            D.Id AS DeviceId,
+            ROW_NUMBER() OVER (PARTITION BY AR.RequestDeviceIdentifier ORDER BY AR.CreationDate DESC) AS rn
         FROM dbo.AuthRequestView AR
-        WHERE Type IN (0, 1) -- 0 = AuthenticateAndUnlock, 1 = Unlock
+        LEFT JOIN
+        	Device D ON AR.RequestDeviceIdentifier = D.Identifier
+        WHERE AR.Type IN (0, 1) -- 0 = AuthenticateAndUnlock, 1 = Unlock
             AND AR.CreationDate >= DATEADD(MINUTE, -@ExpirationMinutes, GETUTCDATE())
             AND AR.UserId = @UserId
     )

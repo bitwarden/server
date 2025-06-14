@@ -51,11 +51,11 @@ public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequest
         }
     }
 
-    public async Task<IEnumerable<AuthRequest>> GetManyPendingAuthRequestByUserId(Guid userId)
+    public async Task<IEnumerable<PendingAuthRequestDetails>> GetManyPendingAuthRequestByUserId(Guid userId)
     {
         var expirationMinutes = (int)_globalSettings.PasswordlessAuth.UserRequestExpiration.TotalMinutes;
         using var connection = new SqlConnection(ConnectionString);
-        var results = await connection.QueryAsync<OrganizationAdminAuthRequest>(
+        var results = await connection.QueryAsync<PendingAuthRequestDetails>(
             $"[{Schema}].[AuthRequest_ReadPendingByUserId]",
             new { UserId = userId, ExpirationMinutes = expirationMinutes },
             commandType: CommandType.StoredProcedure);

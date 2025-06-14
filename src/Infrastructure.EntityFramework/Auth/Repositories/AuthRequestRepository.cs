@@ -62,7 +62,7 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
         }
     }
 
-    public async Task<IEnumerable<Core.Auth.Entities.AuthRequest>> GetManyPendingAuthRequestByUserId(Guid userId)
+    public async Task<IEnumerable<PendingAuthRequestDetails>> GetManyPendingAuthRequestByUserId(Guid userId)
     {
         var expirationMinutes = (int)_globalSettings.PasswordlessAuth.UserRequestExpiration.TotalMinutes;
         using var scope = ServiceScopeFactory.CreateScope();
@@ -76,10 +76,12 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
              group authRequest by authRequest.RequestDeviceIdentifier into groupedAuthRequests
              select
                  (from r in groupedAuthRequests
+                  join d in dbContext.Devices on r.RequestDeviceIdentifier equals d.Identifier into deviceJoin
+                  from dj in deviceJoin.DefaultIfEmpty() // This accomplishes a left join allowing nulld for devices
                   orderby r.CreationDate descending
-                  select r).First()).ToListAsync();
+                  select new PendingAuthRequestDetails(r, dj.Id)).First()
+             ).ToListAsync();
 
-        // Pending AuthRequests are those where Approved is null.
         mostRecentAuthRequests.RemoveAll(a => a.Approved != null);
 
         return mostRecentAuthRequests;
