@@ -71,7 +71,7 @@ one_time_setup() {
             # Make file for them
             echo "Making $REPO_ROOT/dev/dev.pfx file for you based on DEV_CERT_CONTENTS environment variable."
             # Assume content is base64 encoded
-            cat "$DEV_CERT_CONTENTS" | base64 -d > "$REPO_ROOT/dev/dev.pfx"
+            echo "$DEV_CERT_CONTENTS" | base64 -d > "$REPO_ROOT/dev/dev.pfx"
         else
             if [[ $allow_interactive -eq 1 ]]; then
                 read -r -p \
