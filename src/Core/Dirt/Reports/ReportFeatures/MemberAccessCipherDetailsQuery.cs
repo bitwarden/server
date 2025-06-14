@@ -2,7 +2,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
-using Bit.Core.Dirt.Reports.Models.Data;
+using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Entities;
