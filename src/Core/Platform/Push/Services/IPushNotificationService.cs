@@ -38,5 +38,5 @@ public interface IPushNotificationService
         string? deviceId = null, ClientType? clientType = null);
     Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string? identifier,
         string? deviceId = null, ClientType? clientType = null);
-    Task PushPendingSecurityTasksAsync(Guid userId);
+    Task PushRefreshSecurityTasksAsync(Guid userId);
 }

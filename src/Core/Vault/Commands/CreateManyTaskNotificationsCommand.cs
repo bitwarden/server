@@ -89,7 +89,7 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
             }
 
             // Notify the user that they have pending security tasks
-            await _pushNotificationService.PushPendingSecurityTasksAsync(userId);
+            await _pushNotificationService.PushRefreshSecurityTasksAsync(userId);
         }
     }
 }

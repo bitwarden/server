@@ -122,7 +122,7 @@ public class NoopPushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
-    public Task PushPendingSecurityTasksAsync(Guid userId)
+    public Task PushRefreshSecurityTasksAsync(Guid userId)
     {
         return Task.FromResult(0);
     }

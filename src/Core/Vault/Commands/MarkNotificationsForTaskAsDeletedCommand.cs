@@ -26,7 +26,7 @@ public class MarkNotificationsForTaskAsDeletedCommand : IMarkNotificationsForTas
         var uniqueUserIds = userIds.Distinct();
         foreach (var id in uniqueUserIds)
         {
-            await _pushNotificationService.PushPendingSecurityTasksAsync(id);
+            await _pushNotificationService.PushRefreshSecurityTasksAsync(id);
         }
     }
 }

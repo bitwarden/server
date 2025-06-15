@@ -520,7 +520,7 @@ public class RelayPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushPendingSecurityTasksResponsePayload(Guid userId)
+    protected override JsonNode GetPushRefreshSecurityTasksResponsePayload(Guid userId)
     {
         return new JsonObject
         {
