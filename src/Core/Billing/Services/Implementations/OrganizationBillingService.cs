@@ -420,7 +420,11 @@ public class OrganizationBillingService(
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
-                ["organizationId"] = organizationId.ToString()
+                ["organizationId"] = organizationId.ToString(),
+                ["trialInitiationPath"] = !string.IsNullOrEmpty(subscriptionSetup.InitiationPath) &&
+                    subscriptionSetup.InitiationPath.Contains("trial from marketing website")
+                    ? "marketing-initiated"
+                    : "product-initiated"
             },
             OffSession = true,
             TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
