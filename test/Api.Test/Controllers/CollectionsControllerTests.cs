@@ -5,6 +5,7 @@ using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
@@ -483,5 +484,32 @@ public class CollectionsControllerTests
             );
         await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().DidNotReceiveWithAnyArgs()
             .AddAccessAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutUsers_WithDefaultUserCollectionType_ThrowsBadRequest(Organization organization,
+        Collection collection, IEnumerable<SelectionReadOnlyRequestModel> model, SutProvider<CollectionsController> sutProvider)
+    {
+        collection.Type = CollectionType.DefaultUserCollection;
+        collection.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdAsync(collection.Id)
+            .Returns(collection);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                collection,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.ModifyUserAccess)))
+            .Returns(AuthorizationResult.Success());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.PutUsers(organization.Id, collection.Id, model));
+
+        Assert.Contains("You cannot modify member access for collections with the type as DefaultUserCollection.", exception.Message);
+
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateUsersAsync(default, default);
     }
 }

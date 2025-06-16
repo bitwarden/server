@@ -3,6 +3,7 @@ using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
@@ -206,6 +207,11 @@ public class CollectionsController : Controller
         if (!authorized)
         {
             throw new NotFoundException();
+        }
+
+        if (collection.Type == CollectionType.DefaultUserCollection)
+        {
+            throw new BadRequestException("You cannot modify member access for collections with the type as DefaultUserCollection.");
         }
 
         await _collectionRepository.UpdateUsersAsync(collection.Id, model?.Select(g => g.ToSelectionReadOnly()));
