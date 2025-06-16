@@ -12,21 +12,21 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyRequire
 public class PersonalOwnershipPolicyRequirementFactoryTests
 {
     [Theory, BitAutoData]
-    public void DisablePersonalOwnership_WithNoPolicies_ReturnsFalse(SutProvider<PersonalOwnershipPolicyRequirementFactory> sutProvider)
+    public void State_WithNoPolicies_ReturnsAllowed(SutProvider<PersonalOwnershipPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create([]);
 
-        Assert.False(actual.DisablePersonalOwnership);
+        Assert.Equal(PersonalOwnershipState.Allowed, actual.State);
     }
 
     [Theory, BitAutoData]
-    public void DisablePersonalOwnership_WithPersonalOwnershipPolicies_ReturnsTrue(
+    public void State_WithPersonalOwnershipPolicies_ReturnsRestricted(
         [PolicyDetails(PolicyType.PersonalOwnership)] PolicyDetails[] policies,
         SutProvider<PersonalOwnershipPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create(policies);
 
-        Assert.True(actual.DisablePersonalOwnership);
+        Assert.Equal(PersonalOwnershipState.Restricted, actual.State);
     }
 
     [Theory, BitAutoData]

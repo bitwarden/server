@@ -462,7 +462,9 @@ public class ConfirmOrganizationUserCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<PersonalOwnershipPolicyRequirement>(user.Id)
-            .Returns(new PersonalOwnershipPolicyRequirement(true, [organization.Id]));
+            .Returns(new PersonalOwnershipPolicyRequirement(
+                PersonalOwnershipState.Restricted,
+                [organization.Id]));
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
 
@@ -497,7 +499,9 @@ public class ConfirmOrganizationUserCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<PersonalOwnershipPolicyRequirement>(user.Id)
-            .Returns(new PersonalOwnershipPolicyRequirement(true, [org.Id]));
+            .Returns(new PersonalOwnershipPolicyRequirement(
+                PersonalOwnershipState.Restricted,
+                [org.Id]));
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, "");
 
@@ -523,7 +527,9 @@ public class ConfirmOrganizationUserCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<PersonalOwnershipPolicyRequirement>(user.Id)
-            .Returns(new PersonalOwnershipPolicyRequirement(true, [Guid.NewGuid()]));
+            .Returns(new PersonalOwnershipPolicyRequirement(
+                PersonalOwnershipState.Restricted,
+                [Guid.NewGuid()]));
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
 
