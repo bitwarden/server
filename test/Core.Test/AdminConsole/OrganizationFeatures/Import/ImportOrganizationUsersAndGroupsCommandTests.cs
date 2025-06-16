@@ -60,7 +60,12 @@ public class ImportOrganizationUsersAndGroupsCommandTests
 
         sutProvider.GetDependency<IPaymentService>().HasSecretsManagerStandalone(org).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(existingUsers);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetCountByOrganizationIdAsync(org.Id).Returns(existingUsers.Count);
+        sutProvider.GetDependency<IOrganizationRepository>().GetOccupiedSeatCountByOrganizationIdAsync(org.Id).Returns(
+            new OrganizationSeatCounts
+            {
+                Users = existingUsers.Count,
+                Sponsored = 0
+            });
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(org.Id).Returns(true);
         sutProvider.GetDependency<IOrganizationService>().InviteUsersAsync(org.Id, Guid.Empty, EventSystemUser.PublicApi,
                 Arg.Any<IEnumerable<(OrganizationUserInvite, string)>>())
@@ -134,7 +139,12 @@ public class ImportOrganizationUsersAndGroupsCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<OrganizationUser>([reInvitedOrgUser]));
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(existingUsers);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetCountByOrganizationIdAsync(org.Id).Returns(existingUsers.Count);
+        sutProvider.GetDependency<IOrganizationRepository>().GetOccupiedSeatCountByOrganizationIdAsync(org.Id).Returns(
+            new OrganizationSeatCounts
+            {
+                Users = existingUsers.Count,
+                Sponsored = 0
+            });
 
         sutProvider.GetDependency<IOrganizationService>().InviteUsersAsync(org.Id, Guid.Empty, EventSystemUser.PublicApi,
                 Arg.Any<IEnumerable<(OrganizationUserInvite, string)>>())
