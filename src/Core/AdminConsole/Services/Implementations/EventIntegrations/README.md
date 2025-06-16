@@ -228,6 +228,67 @@ Currently, there are integrations / handlers for Slack and webhooks (as mentione
 - An array of `OrganizationIntegrationConfigurationDetails` is what the `EventIntegrationHandler` fetches from
   the database to determine what to publish at the integration level.
 
+## Filtering
+
+In addition to the ability to configure integrations mentioned above, Organization admins can
+also add `Filters` stored in the `OrganizationIntegrationConfiguration`. Filters are completely
+optional and as simple or complex as organization admins want to make them. These are stored in
+the database as JSON and serialized into an `IntegrationFilterGroup`. This is then passed to
+the `IntegrationFilterService`, which evaluates it to a `bool`. If it's `true`, the integration
+proceeds as above. If it's `false`, we ignore this event and do not route it to the integration
+level.
+
+### `IntegrationFilterGroup`
+- Logical AND/OR grouping of a number of rules and other subgroups.
+- `AndOperator` indicates if they all must be true or if it should be true if any of them are
+  true.
+  - This applies to _both_ the inner group and the list of rules.
+  - For instance, if this group contained Rule1 and Rule2 and then Group1 and Group2:
+    - `true` would means: `Rule1 && Rule2 && Group1 && Group2`
+    - `false` would mean `Rule1 || Rule2 || Group1 || Group2`
+- `Rules` is a list of `IntegrationFlterRule`
+  - This can be null or empty - in which case it would provide only `true` in any calculations.
+- `Groups` is a list of additional `IntegrationFlterGroup`
+    - This can be null or empty - in which case it would provide only `true` in any calculations.
+
+### `IntegrationFilterRule`
+- The core of the filtering framework to determine if the data in this specific `EventMessage`
+  matches the data for which the filter is searching.
+- `Property` is the specific property on `EventMessage` that will be evaluated (e.g. `CollectionId`)
+- `Operation` is the type of comparison to perform on the property and value
+  - Supported Operations:
+    - `Equals`: the `Value` matches the property on the `EventMessage`
+      - Assumes the `Value` and the property are a `Guid`
+    - `NotEquals`: identical to `Equals` but the logical inverse.
+    - `In`: the property on the `EventMessage` is in the list in `Value`
+      - Assumes the `Value` a list of `Guid` and the property is a `Guid`
+    - `NotIn`: identical to `In` but the logical inverse.
+    - `DateBefore`: The `EventMessage.Date` is before the `Value`
+    - `DateAfter`: The `EventMessage.Date` is after the `Value`
+      - Both of these properties assume `Value` is a `DateTime`
+      - This really only can apply to a `Property` of `Date`, since `EventMessage` only has
+        one `DateTime` property.
+- `Value` is the value(s) to compare against.
+  - As mentioned above, the operation implies what type the value should be:
+    - `Equals` is a `Guid`
+    - `In` is a list of `Guid`
+    - `DateBefore` and `DateAfter` is `DateTime`
+
+```mermaid
+graph TD
+    A[IntegrationFilterGroup]
+    A -->|Has 0..many| B1[IntegrationFilterRule]
+    A --> D1[And Operator]
+    A -->|Has 0..many| C1[Nested IntegrationFilterGroup]
+
+    B1 --> B2[Property: string]
+    B1 --> B3[Operation: Equals/In/DateBefore/DateAfter]
+    B1 --> B4[Value: object?]
+
+    C1 -->|Has many| B1_2[IntegrationFilterRule]
+    C1 -->|Can contain| C2[IntegrationFilterGroup...]
+```
+
 # Building a new integration
 
 These are all the pieces required in the process of building out a new integration. For
