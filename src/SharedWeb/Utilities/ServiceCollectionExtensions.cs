@@ -362,7 +362,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
         services.AddScoped<ISecretRepository, NoopSecretRepository>();
         services.AddScoped<IProjectRepository, NoopProjectRepository>();
-        services.AddScoped<IUserInviteDebuggingLogger, UserInviteDebuggingLogger>();
+        services.AddScoped<IUserInviteDebuggingLogger, NoopUserInviteDebuggingLogger>();
     }
 
     public static void AddNoopServices(this IServiceCollection services)
