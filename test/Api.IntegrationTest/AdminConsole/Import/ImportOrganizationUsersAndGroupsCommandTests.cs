@@ -4,6 +4,7 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -178,5 +179,122 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
         Assert.Equal(newExternalId, newOrgUser.ExternalId);
         Assert.Equal(OrganizationUserStatusType.Invited, newOrgUser.Status);
         Assert.Equal(_organization.Id, newOrgUser.OrganizationId);
+    }
+
+    [Fact]
+    public async Task Import_Existing_Groups_Succeeds()
+    {
+        var group = await OrganizationTestHelpers.CreateGroup(_factory, _organization.Id);
+
+        var request = new OrganizationImportRequestModel();
+        request.LargeImport = false;
+        request.OverwriteExisting = false;
+        request.Groups = [
+            new OrganizationImportRequestModel.OrganizationImportGroupRequestModel
+            {
+                Name = group.Name,
+                ExternalId = group.ExternalId,
+                MemberExternalIds = []
+            }
+        ];
+        request.Members = [];
+
+        var response = await _client.PostAsync($"/public/organization/import", JsonContent.Create(request));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        // Assert against the database values
+        var groupRepository = _factory.GetService<IGroupRepository>();
+        var existingGroup = await groupRepository.GetByIdAsync(group.Id);
+
+        Assert.NotNull(existingGroup);
+        Assert.Equal(existingGroup.Id, group.Id);
+        Assert.Equal(existingGroup.Name, group.Name);
+        Assert.Equal(existingGroup.ExternalId, group.ExternalId);
+    }
+
+    [Fact]
+    public async Task Import_New_Groups_Succeeds()
+    {
+        var group = new Group
+        {
+            OrganizationId = _organization.Id,
+            ExternalId = new Guid().ToString(),
+            Name = "bwtest1"
+        };
+
+        var request = new OrganizationImportRequestModel();
+        request.LargeImport = false;
+        request.OverwriteExisting = false;
+        request.Groups = [
+            new OrganizationImportRequestModel.OrganizationImportGroupRequestModel
+            {
+                Name = group.Name,
+                ExternalId = group.ExternalId,
+                MemberExternalIds = []
+            }
+        ];
+        request.Members = [];
+
+        var response = await _client.PostAsync($"/public/organization/import", JsonContent.Create(request));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        // Assert against the database values
+        var groupRepository = _factory.GetService<IGroupRepository>();
+        var existingGroups = await groupRepository.GetManyByOrganizationIdAsync(_organization.Id);
+        var existingGroup = existingGroups.Where(g => g.ExternalId == group.ExternalId).FirstOrDefault();
+
+        Assert.NotNull(existingGroup);
+        Assert.Equal(existingGroup.Name, group.Name);
+        Assert.Equal(existingGroup.ExternalId, group.ExternalId);
+    }
+
+    [Fact]
+    public async Task Import_New_And_Existing_Groups_Succeeds()
+    {
+        var existingGroup = await OrganizationTestHelpers.CreateGroup(_factory, _organization.Id);
+
+        var newGroup = new Group
+        {
+            OrganizationId = _organization.Id,
+            ExternalId = "test",
+            Name = "bwtest1"
+        };
+
+        var request = new OrganizationImportRequestModel();
+        request.LargeImport = false;
+        request.OverwriteExisting = false;
+        request.Groups = [
+            new OrganizationImportRequestModel.OrganizationImportGroupRequestModel
+            {
+                Name = existingGroup.Name,
+                ExternalId = existingGroup.ExternalId,
+                MemberExternalIds = []
+            },
+            new OrganizationImportRequestModel.OrganizationImportGroupRequestModel
+            {
+                Name = newGroup.Name,
+                ExternalId = newGroup.ExternalId,
+                MemberExternalIds = []
+            }
+        ];
+        request.Members = [];
+
+        var response = await _client.PostAsync($"/public/organization/import", JsonContent.Create(request));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        // Assert against the database values
+        var groupRepository = _factory.GetService<IGroupRepository>();
+        var groups = await groupRepository.GetManyByOrganizationIdAsync(_organization.Id);
+
+        var newGroupInDb = groups.Where(g => g.ExternalId == newGroup.ExternalId).FirstOrDefault();
+        Assert.NotNull(newGroupInDb);
+        Assert.Equal(newGroupInDb.Name, newGroup.Name);
+        Assert.Equal(newGroupInDb.ExternalId, newGroup.ExternalId);
+
+        var existingGroupInDb = groups.Where(g => g.ExternalId == existingGroup.ExternalId).FirstOrDefault();
+        Assert.NotNull(existingGroupInDb);
+        Assert.Equal(existingGroupInDb.Id, existingGroup.Id);
+        Assert.Equal(existingGroupInDb.Name, existingGroup.Name);
+        Assert.Equal(existingGroupInDb.ExternalId, existingGroup.ExternalId);
     }
 }

@@ -2,6 +2,7 @@
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -130,5 +131,21 @@ public static class OrganizationTestHelpers
         verifiedDomain.SetVerifiedDate();
 
         await organizationDomainRepository.CreateAsync(verifiedDomain);
+    }
+
+    public static async Task<Group> CreateGroup(ApiApplicationFactory factory, Guid organizationId)
+    {
+
+        var groupRepository = factory.GetService<IGroupRepository>();
+        var group = new Group
+        {
+            OrganizationId = organizationId,
+            Id = new Guid(),
+            ExternalId = new Guid().ToString(),
+            Name = "bwtest"
+        };
+
+        await groupRepository.CreateAsync(group, new List<CollectionAccessSelection>());
+        return group;
     }
 }
