@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.KeyManagement.UserKey.Implementations;
 
+/// <inheritdoc />
 public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 {
     private readonly IUserService _userService;
@@ -66,7 +67,6 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         _passwordHasher = passwordHasher;
         _userSignatureKeyPairRepository = userSignatureKeyPairRepository;
     }
-
 
     /// <inheritdoc />
     public async Task<IdentityResult> RotateUserAccountKeysAsync(User user, RotateUserAccountKeysData model)
