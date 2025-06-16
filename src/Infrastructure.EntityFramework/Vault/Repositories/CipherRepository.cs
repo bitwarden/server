@@ -457,7 +457,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            IQueryable<CipherDetails> cipherDetailsView = withOrganizations ?
+            var cipherDetailsView = withOrganizations ?
                 new UserCipherDetailsQuery(userId).Run(dbContext) :
                 new CipherDetailsQuery(userId).Run(dbContext);
             if (!withOrganizations)
@@ -485,8 +485,15 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                         Key = c.Key
                                     };
             }
+
             var ciphers = await cipherDetailsView.ToListAsync();
-            return ciphers;
+
+            return ciphers.GroupBy(c => c.Id)
+                .Select(g => g.OrderByDescending(c => c.Edit)
+                    .ThenByDescending(c => c.ViewPassword)
+                    .ThenByDescending(c => c.Manage)
+                    .First())
+                .ToList();
         }
     }
 
