@@ -206,7 +206,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
         {
             var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
             seatsAvailable = organization.Seats.Value - occupiedSeats;
-            enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count();
+            enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
         }
 
         var userInvites = new List<(OrganizationUserInvite, string)>();
