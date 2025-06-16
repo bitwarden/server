@@ -8,7 +8,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Tools.Controllers;
+namespace Bit.Api.Dirt.Controllers;
 
 [Route("hibp")]
 [Authorize("Application")]

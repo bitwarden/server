@@ -1,9 +1,9 @@
-﻿using Bit.Core.Entities;
+﻿#nullable enable
+
+using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
-#nullable enable
-
-namespace Bit.Core.Tools.Entities;
+namespace Bit.Core.Dirt.Reports.Entities;
 
 public class PasswordHealthReportApplication : ITableObject<Guid>, IRevisable
 {
