@@ -151,7 +151,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Slack;
-        var slackConfig = new SlackIntegrationConfiguration(channelId: "C123456");
+        var slackConfig = new SlackIntegrationConfiguration(ChannelId: "C123456");
         model.Configuration = JsonSerializer.Serialize(slackConfig);
         model.Template = "Template String";
 
@@ -188,7 +188,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        var webhookConfig = new WebhookIntegrationConfiguration("Bearer", "AUTH-TOKEN", Url: "https://localhost");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
 
@@ -350,7 +350,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        var webhookConfig = new WebhookIntegrationConfiguration("Bearer", "AUTH-TOKEN", Url: "https://localhost");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = null;
 
@@ -393,7 +393,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
         organizationIntegration.Type = IntegrationType.Slack;
-        var slackConfig = new SlackIntegrationConfiguration(channelId: "C123456");
+        var slackConfig = new SlackIntegrationConfiguration(ChannelId: "C123456");
         model.Configuration = JsonSerializer.Serialize(slackConfig);
         model.Template = "Template String";
 
@@ -436,7 +436,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        var webhookConfig = new WebhookIntegrationConfiguration("Bearer", "AUTH-TOKEN", Url: "https://localhost");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
 
@@ -476,7 +476,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        var webhookConfig = new WebhookIntegrationConfiguration("Bearer", "AUTH-TOKEN", Url: "https://localhost");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
 
@@ -582,7 +582,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
         organizationIntegration.Type = IntegrationType.Slack;
-        var slackConfig = new SlackIntegrationConfiguration(channelId: "C123456");
+        var slackConfig = new SlackIntegrationConfiguration(ChannelId: "C123456");
         model.Configuration = JsonSerializer.Serialize(slackConfig);
         model.Template = null;
 

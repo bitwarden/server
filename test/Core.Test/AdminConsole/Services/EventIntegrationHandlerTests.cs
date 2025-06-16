@@ -46,7 +46,7 @@ public class EventIntegrationHandlerTests
         {
             IntegrationType = IntegrationType.Webhook,
             MessageId = "TestMessageId",
-            Configuration = new WebhookIntegrationConfigurationDetails(_url),
+            Configuration = new WebhookIntegrationConfigurationDetails(null, null, _url),
             RenderedTemplate = template,
             RetryCount = 0,
             DelayUntilDate = null
@@ -62,7 +62,7 @@ public class EventIntegrationHandlerTests
     {
         var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
         config.Configuration = null;
-        config.IntegrationConfiguration = JsonSerializer.Serialize(new { url = _url });
+        config.IntegrationConfiguration = JsonSerializer.Serialize(new { Url = _url });
         config.Template = template;
 
         return [config];
@@ -72,11 +72,11 @@ public class EventIntegrationHandlerTests
     {
         var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
         config.Configuration = null;
-        config.IntegrationConfiguration = JsonSerializer.Serialize(new { url = _url });
+        config.IntegrationConfiguration = JsonSerializer.Serialize(new { Url = _url });
         config.Template = template;
         var config2 = Substitute.For<OrganizationIntegrationConfigurationDetails>();
         config2.Configuration = null;
-        config2.IntegrationConfiguration = JsonSerializer.Serialize(new { url = _url2 });
+        config2.IntegrationConfiguration = JsonSerializer.Serialize(new { Url = _url2 });
         config2.Template = template;
 
         return [config, config2];
@@ -212,7 +212,7 @@ public class EventIntegrationHandlerTests
             await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(
                 AssertHelper.AssertPropertyEqual(expectedMessage, new[] { "MessageId" })));
 
-            expectedMessage.Configuration = new WebhookIntegrationConfigurationDetails(_url2);
+            expectedMessage.Configuration = new WebhookIntegrationConfigurationDetails(null, null, _url2);
             await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(
                 AssertHelper.AssertPropertyEqual(expectedMessage, new[] { "MessageId" })));
         }

@@ -2,6 +2,7 @@
 
 using System.Globalization;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
@@ -18,8 +19,16 @@ public class WebhookIntegrationHandler(IHttpClientFactory httpClientFactory)
 
     public override async Task<IntegrationHandlerResult> HandleAsync(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
-        var content = new StringContent(message.RenderedTemplate, Encoding.UTF8, "application/json");
-        var response = await _httpClient.PostAsync(message.Configuration.url, content);
+        var request = new HttpRequestMessage(HttpMethod.Post, message.Configuration.Url);
+        request.Content = new StringContent(message.RenderedTemplate, Encoding.UTF8, "application/json");
+        if (!string.IsNullOrEmpty(message.Configuration.Scheme))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue(
+                scheme: message.Configuration.Scheme,
+                parameter: message.Configuration.Token
+            );
+        }
+        var response = await _httpClient.SendAsync(request);
         var result = new IntegrationHandlerResult(success: response.IsSuccessStatusCode, message);
 
         switch (response.StatusCode)

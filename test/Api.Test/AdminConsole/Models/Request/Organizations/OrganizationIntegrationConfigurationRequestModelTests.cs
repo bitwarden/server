@@ -43,7 +43,7 @@ public class OrganizationIntegrationConfigurationRequestModelTests
     [InlineData("    ")]
     public void IsValidForType_EmptyTemplate_ReturnsFalse(string? template)
     {
-        var config = JsonSerializer.Serialize(new WebhookIntegrationConfiguration("https://example.com"));
+        var config = JsonSerializer.Serialize(new WebhookIntegrationConfiguration("Bearer", "AUTH-TOKEN", "https://example.com"));
         var model = new OrganizationIntegrationConfigurationRequestModel
         {
             Configuration = config,
@@ -92,9 +92,22 @@ public class OrganizationIntegrationConfigurationRequestModelTests
     }
 
     [Fact]
+    public void IsValidForType_ValidNoAuthWebhookConfiguration_ReturnsTrue()
+    {
+        var config = JsonSerializer.Serialize(new WebhookIntegrationConfiguration(null, null, "https://example.com"));
+        var model = new OrganizationIntegrationConfigurationRequestModel
+        {
+            Configuration = config,
+            Template = "template"
+        };
+
+        Assert.True(model.IsValidForType(IntegrationType.Webhook));
+    }
+
+    [Fact]
     public void IsValidForType_ValidWebhookConfiguration_ReturnsTrue()
     {
-        var config = JsonSerializer.Serialize(new WebhookIntegrationConfiguration("https://example.com"));
+        var config = JsonSerializer.Serialize(new WebhookIntegrationConfiguration("Bearer", "AUTH-TOKEN", "https://example.com"));
         var model = new OrganizationIntegrationConfigurationRequestModel
         {
             Configuration = config,
