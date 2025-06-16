@@ -1,5 +1,4 @@
-﻿using Bit.Api.KeyManagement.Models.Response;
-using Bit.Api.KeyManagement.Queries;
+﻿using Bit.Api.KeyManagement.Queries.Interfaces;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
@@ -117,9 +116,9 @@ public class SyncController : Controller
         var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
 
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-        var accountKeys = new PrivateKeysResponseModel(await _userAccountKeysQuery.Run(user));
+        var userAccountKeys = await _userAccountKeysQuery.Run(user);
 
-        var response = new SyncResponseModel(_globalSettings, user, accountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
+        var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;

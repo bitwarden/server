@@ -15,11 +15,7 @@ public class SignatureKeyPairResponseModel : ResponseModel
     public SignatureKeyPairResponseModel(SignatureKeyPairData signatureKeyPair)
         : base("signatureKeyPair")
     {
-        if (signatureKeyPair == null)
-        {
-            throw new ArgumentNullException(nameof(signatureKeyPair));
-        }
-
+        ArgumentNullException.ThrowIfNull(signatureKeyPair);
         WrappedSigningKey = signatureKeyPair.WrappedSigningKey;
         VerifyingKey = signatureKeyPair.VerifyingKey;
     }
