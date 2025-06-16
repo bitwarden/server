@@ -12,39 +12,62 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.KeyManagement.UserKey.Implementations;
 
-/// <inheritdoc />
-/// <summary>
-/// Instantiates a new <see cref="RotateUserAccountKeysCommand"/>
-/// </summary>
-/// <param name="_userService">Master password hash validation</param>
-/// <param name="_userRepository">Updates user keys and re-encrypted data if needed</param>
-/// <param name="_cipherRepository">Provides a method to update re-encrypted cipher data</param>
-/// <param name="_folderRepository">Provides a method to update re-encrypted folder data</param>
-/// <param name="_sendRepository">Provides a method to update re-encrypted send data</param>
-/// <param name="_emergencyAccessRepository">Provides a method to update re-encrypted emergency access data</param>
-/// <param name="_organizationUserRepository">Provides a method to update re-encrypted organization user data</param>
-/// <param name="_deviceRepository">Provides a method to update re-encrypted device data</param>
-/// <param name="_passwordHasher">Hashes the new master password</param>
-/// <param name="_pushService">Logs out user from other devices after successful rotation</param>
-/// <param name="_identityErrorDescriber">Provides a password mismatch error if master password hash validation fails</param>
-/// <param name="_credentialRepository">Provides a method to update re-encrypted WebAuthn keys</param>
-/// <param name="_userSignatureKeyPairRepository">Provides a method to update re-encrypted signature keys</param>
-public class RotateUserAccountKeysCommand(
-    IUserService _userService,
-    IUserRepository _userRepository,
-    ICipherRepository _cipherRepository,
-    IFolderRepository _folderRepository,
-    ISendRepository _sendRepository,
-    IEmergencyAccessRepository _emergencyAccessRepository,
-    IOrganizationUserRepository _organizationUserRepository,
-    IDeviceRepository _deviceRepository,
-    IPasswordHasher<User> _passwordHasher,
-    IPushNotificationService _pushService,
-    IdentityErrorDescriber _identityErrorDescriber,
-    IWebAuthnCredentialRepository _credentialRepository,
-    IUserSignatureKeyPairRepository _userSignatureKeyPairRepository
-) : IRotateUserAccountKeysCommand
+public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 {
+    private readonly IUserService _userService;
+    private readonly IUserRepository _userRepository;
+    private readonly ICipherRepository _cipherRepository;
+    private readonly IFolderRepository _folderRepository;
+    private readonly ISendRepository _sendRepository;
+    private readonly IEmergencyAccessRepository _emergencyAccessRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IDeviceRepository _deviceRepository;
+    private readonly IPushNotificationService _pushService;
+    private readonly IdentityErrorDescriber _identityErrorDescriber;
+    private readonly IWebAuthnCredentialRepository _credentialRepository;
+    private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly IUserSignatureKeyPairRepository _userSignatureKeyPairRepository;
+
+    /// <summary>
+    /// Instantiates a new <see cref="RotateUserAccountKeysCommand"/>
+    /// </summary>
+    /// <param name="userService">Master password hash validation</param>
+    /// <param name="userRepository">Updates user keys and re-encrypted data if needed</param>
+    /// <param name="cipherRepository">Provides a method to update re-encrypted cipher data</param>
+    /// <param name="folderRepository">Provides a method to update re-encrypted folder data</param>
+    /// <param name="sendRepository">Provides a method to update re-encrypted send data</param>
+    /// <param name="emergencyAccessRepository">Provides a method to update re-encrypted emergency access data</param>
+    /// <param name="organizationUserRepository">Provides a method to update re-encrypted organization user data</param>
+    /// <param name="deviceRepository">Provides a method to update re-encrypted device keys</param>
+    /// <param name="passwordHasher">Hashes the new master password</param>
+    /// <param name="pushService">Logs out user from other devices after successful rotation</param>
+    /// <param name="errors">Provides a password mismatch error if master password hash validation fails</param>
+    /// <param name="credentialRepository">Provides a method to update re-encrypted WebAuthn keys</param>
+    /// <param name="userSignatureKeyPairRepository">Provides a method to update re-encrypted signature keys</param>
+    public RotateUserAccountKeysCommand(IUserService userService, IUserRepository userRepository,
+        ICipherRepository cipherRepository, IFolderRepository folderRepository, ISendRepository sendRepository,
+        IEmergencyAccessRepository emergencyAccessRepository, IOrganizationUserRepository organizationUserRepository,
+        IDeviceRepository deviceRepository,
+        IPasswordHasher<User> passwordHasher,
+        IPushNotificationService pushService, IdentityErrorDescriber errors, IWebAuthnCredentialRepository credentialRepository,
+        IUserSignatureKeyPairRepository userSignatureKeyPairRepository)
+    {
+        _userService = userService;
+        _userRepository = userRepository;
+        _cipherRepository = cipherRepository;
+        _folderRepository = folderRepository;
+        _sendRepository = sendRepository;
+        _emergencyAccessRepository = emergencyAccessRepository;
+        _organizationUserRepository = organizationUserRepository;
+        _deviceRepository = deviceRepository;
+        _pushService = pushService;
+        _identityErrorDescriber = errors;
+        _credentialRepository = credentialRepository;
+        _passwordHasher = passwordHasher;
+        _userSignatureKeyPairRepository = userSignatureKeyPairRepository;
+    }
+
+
     /// <inheritdoc />
     public async Task<IdentityResult> RotateUserAccountKeysAsync(User user, RotateUserAccountKeysData model)
     {
