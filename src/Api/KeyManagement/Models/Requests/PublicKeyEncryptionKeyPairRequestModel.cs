@@ -8,7 +8,7 @@ public class PublicKeyEncryptionKeyPairRequestModel
 {
     [EncryptedString] public required string WrappedPrivateKey { get; set; }
     public required string PublicKey { get; set; }
-    public required string SignedPublicKey { get; set; }
+    public string? SignedPublicKey { get; set; }
 
     public PublicKeyEncryptionKeyPairData ToPublicKeyEncryptionKeyPairData()
     {
