@@ -121,7 +121,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             InviteOrganization = request.InviteOrganization,
             PerformedBy = request.PerformedBy,
             PerformedAt = request.PerformedAt,
-            OccupiedPmSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId),
+            OccupiedPmSeats = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId)).Total,
             OccupiedSmSeats = await organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId)
         });
 
