@@ -60,16 +60,19 @@ public class TwoFactorAuthenticationPolicyValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task OnSaveSideEffectsAsync_RevokesNonCompliantUsers(
+    public async Task OnSaveSideEffectsAsync_RevokesOnlyNonCompliantUsers(
         Organization organization,
         [PolicyUpdate(PolicyType.TwoFactorAuthentication)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.TwoFactorAuthentication, false)] Policy policy,
         SutProvider<TwoFactorAuthenticationPolicyValidator> sutProvider)
     {
-        policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
+        // Arrange
+        policy.OrganizationId = policyUpdate.OrganizationId;
+        organization.Id = policyUpdate.OrganizationId;
+
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
-        var orgUserDetailUserWithout2Fa = new OrganizationUserUserDetails
+        var nonCompliantUser = new OrganizationUserUserDetails
         {
             Id = Guid.NewGuid(),
             Status = OrganizationUserStatusType.Confirmed,
@@ -80,30 +83,57 @@ public class TwoFactorAuthenticationPolicyValidatorTests
             HasMasterPassword = true
         };
 
+        var compliantUser = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+            Email = "user4@test.com",
+            Name = "TEST",
+            UserId = Guid.NewGuid(),
+            HasMasterPassword = true
+        };
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
-            .Returns([orgUserDetailUserWithout2Fa]);
+            .Returns([nonCompliantUser, compliantUser]);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<OrganizationUserUserDetails>>())
             .Returns(new List<(OrganizationUserUserDetails user, bool hasTwoFactor)>()
             {
-                (orgUserDetailUserWithout2Fa, false)
+                (nonCompliantUser, false),
+                (compliantUser, true)
             });
 
         sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
             .Returns(new CommandResult());
 
+        // Act
         await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
 
+        // Assert
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .Received(1)
             .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>());
 
+        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+            .Received(1)
+            .RevokeNonCompliantOrganizationUsersAsync(Arg.Is<RevokeOrganizationUsersRequest>(req =>
+                    req.OrganizationId == policyUpdate.OrganizationId &&
+                    req.OrganizationUsers.SequenceEqual(new[] { nonCompliantUser })
+            ));
+
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(),
-                "user3@test.com");
+                nonCompliantUser.Email);
+
+        // Did not send out an email for compliantUser
+        await sutProvider.GetDependency<IMailService>()
+            .Received(0)
+            .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(),
+                compliantUser.Email);
     }
 }

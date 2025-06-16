@@ -1,15 +1,16 @@
 ﻿using AutoFixture;
-using Bit.Api.Tools.Controllers;
+using Bit.Api.Dirt.Controllers;
+using Bit.Api.Dirt.Models;
 using Bit.Core.Context;
+using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
+using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Exceptions;
-using Bit.Core.Tools.ReportFeatures.Interfaces;
-using Bit.Core.Tools.ReportFeatures.Requests;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Tools.Controllers;
+namespace Bit.Api.Test.Dirt;
 
 
 [ControllerCustomize(typeof(ReportsController))]
@@ -54,7 +55,7 @@ public class ReportsControllerTests
         sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(true);
 
         // Act
-        var request = new Api.Tools.Models.PasswordHealthReportApplicationModel
+        var request = new PasswordHealthReportApplicationModel
         {
             OrganizationId = Guid.NewGuid(),
             Url = "https://example.com",
@@ -77,7 +78,7 @@ public class ReportsControllerTests
 
         // Act
         var fixture = new Fixture();
-        var request = fixture.CreateMany<Api.Tools.Models.PasswordHealthReportApplicationModel>(2);
+        var request = fixture.CreateMany<PasswordHealthReportApplicationModel>(2);
         await sutProvider.Sut.AddPasswordHealthReportApplications(request);
 
         // Assert
@@ -93,7 +94,7 @@ public class ReportsControllerTests
         sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(false);
 
         // Act
-        var request = new Api.Tools.Models.PasswordHealthReportApplicationModel
+        var request = new PasswordHealthReportApplicationModel
         {
             OrganizationId = Guid.NewGuid(),
             Url = "https://example.com",
@@ -114,7 +115,7 @@ public class ReportsControllerTests
 
         // Act
         var fixture = new Fixture();
-        var request = fixture.Create<Api.Tools.Models.PasswordHealthReportApplicationModel>();
+        var request = fixture.Create<PasswordHealthReportApplicationModel>();
         await Assert.ThrowsAsync<NotFoundException>(async () =>
                 await sutProvider.Sut.AddPasswordHealthReportApplication(request));
 
