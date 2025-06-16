@@ -204,8 +204,8 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
 
         if (organization.Seats.HasValue)
         {
-            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            seatsAvailable = organization.Seats.Value - occupiedSeats;
+            var occupiedSeats = await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            seatsAvailable = organization.Seats.Value - occupiedSeats.Total;
             enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
         }
 
