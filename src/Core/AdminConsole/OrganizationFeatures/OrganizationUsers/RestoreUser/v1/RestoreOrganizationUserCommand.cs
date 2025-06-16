@@ -70,8 +70,8 @@ public class RestoreOrganizationUserCommand(
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
-        var occupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-        var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
+        var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+        var availableSeats = organization.Seats.GetValueOrDefault(0) - seatCounts.Total;
 
         if (availableSeats < 1)
         {
@@ -163,8 +163,8 @@ public class RestoreOrganizationUserCommand(
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
-        var occupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-        var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
+        var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+        var availableSeats = organization.Seats.GetValueOrDefault(0) - seatCounts.Total;
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
         await organizationService.AutoAddSeatsAsync(organization, newSeatsRequired);
 

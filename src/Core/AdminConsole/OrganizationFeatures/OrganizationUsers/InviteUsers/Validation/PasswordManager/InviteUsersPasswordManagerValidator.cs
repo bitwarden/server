@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.GlobalSettings;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Payments;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.Validation;
@@ -83,14 +84,9 @@ public class InviteUsersPasswordManagerValidator(
             return invalidEnvironment.Map(request);
         }
 
-        var organizationValidationResult = await inviteUsersOrganizationValidator.ValidateAsync(request.InviteOrganization);
-
-        if (organizationValidationResult is Invalid<InviteOrganization> organizationValidation)
-        {
-            return organizationValidation.Map(request);
-        }
-
+        // Organizations managed by a provider need to be scaled by the provider. This needs to be checked in the event seats are increasing.
         var provider = await providerRepository.GetByOrganizationIdAsync(request.InviteOrganization.OrganizationId);
+
         if (provider is not null)
         {
             var providerValidationResult = InvitingUserOrganizationProviderValidator.Validate(new InviteOrganizationProvider(provider));
@@ -99,6 +95,13 @@ public class InviteUsersPasswordManagerValidator(
             {
                 return invalidProviderValidation.Map(request);
             }
+        }
+
+        var organizationValidationResult = await inviteUsersOrganizationValidator.ValidateAsync(request.InviteOrganization);
+
+        if (organizationValidationResult is Invalid<InviteOrganization> organizationValidation)
+        {
+            return organizationValidation.Map(request);
         }
 
         var paymentSubscription = await paymentService.GetSubscriptionAsync(
