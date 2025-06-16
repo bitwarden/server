@@ -15,7 +15,7 @@ public class AccountKeysRequestModel
     public UserAccountKeysData ToAccountKeysData()
     {
         // This will be cleaned up, after a compatibility period, at which point PublicKeyEncryptionKeyPair and SignatureKeyPair will be required.
-        if (PublicKeyEncryptionKeyPair == null || SignatureKeyPair == null)
+        if (PublicKeyEncryptionKeyPair == null)
         {
             return new UserAccountKeysData
             {
@@ -28,11 +28,21 @@ public class AccountKeysRequestModel
         }
         else
         {
-            return new UserAccountKeysData
+            if (SignatureKeyPair == null)
             {
-                PublicKeyEncryptionKeyPairData = PublicKeyEncryptionKeyPair.ToPublicKeyEncryptionKeyPairData(),
-                SignatureKeyPairData = SignatureKeyPair.ToSignatureKeyPairData()
-            };
+                return new UserAccountKeysData
+                {
+                    PublicKeyEncryptionKeyPairData = PublicKeyEncryptionKeyPair.ToPublicKeyEncryptionKeyPairData(),
+                };
+            }
+            else
+            {
+                return new UserAccountKeysData
+                {
+                    PublicKeyEncryptionKeyPairData = PublicKeyEncryptionKeyPair.ToPublicKeyEncryptionKeyPairData(),
+                    SignatureKeyPairData = SignatureKeyPair.ToSignatureKeyPairData()
+                };
+            }
         }
     }
 }
