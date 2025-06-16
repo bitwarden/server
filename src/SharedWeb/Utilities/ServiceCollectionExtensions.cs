@@ -10,6 +10,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.AdminConsole.Services.NoopImplementations;
+using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
@@ -357,9 +358,11 @@ public static class ServiceCollectionExtensions
     public static void AddOosServices(this IServiceCollection services)
     {
         services.AddScoped<IProviderService, NoopProviderService>();
+        services.AddScoped<IProviderService, NoopProviderService>();
         services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
         services.AddScoped<ISecretRepository, NoopSecretRepository>();
         services.AddScoped<IProjectRepository, NoopProjectRepository>();
+        services.AddScoped<IUserInviteDebuggingLogger, UserInviteDebuggingLogger>();
     }
 
     public static void AddNoopServices(this IServiceCollection services)
