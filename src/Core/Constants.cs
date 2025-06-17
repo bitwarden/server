@@ -182,6 +182,7 @@ public static class FeatureFlagKeys
     public const string EnablePMFlightRecorder = "enable-pm-flight-recorder";
     public const string MobileErrorReporting = "mobile-error-reporting";
     public const string AndroidChromeAutofill = "android-chrome-autofill";
+    public const string UserManagedPrivilegedApps = "pm-18970-user-managed-privileged-apps";
     public const string EnablePMPreloginSettings = "enable-pm-prelogin-settings";
     public const string AppIntents = "app-intents";
 
