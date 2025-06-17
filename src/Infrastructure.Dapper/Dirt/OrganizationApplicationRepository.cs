@@ -25,7 +25,7 @@ public class OrganizationApplicationRepository : Repository<OrganizationApplicat
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationApplication>(
-                $"[{Schema}].[RiskInsightCriticalApplication_ReadByOrganizationId]",
+                $"[{Schema}].[OrganizationApplication_ReadByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 

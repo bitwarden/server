@@ -25,7 +25,7 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationReport>(
-                $"[{Schema}].[RiskInsightReport_ReadByOrganizationId]",
+                $"[{Schema}].[OrganizationReport_ReadByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
