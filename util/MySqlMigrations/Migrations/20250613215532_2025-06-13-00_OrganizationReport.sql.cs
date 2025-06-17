@@ -76,6 +76,12 @@ public partial class _2025061300_OrganizationReportsql : Migration
             name: "IX_OrganizationReport_OrganizationId",
             table: "OrganizationReport",
             column: "OrganizationId");
+
+        migrationBuilder.CreateIndex(
+            name: "IX_OrganizationReport_OrganizationId_Date",
+            table: "OrganizationReport",
+            columns: ["OrganizationId", "Date"],
+            descending: [false, true]);
     }
 
     /// <inheritdoc />
