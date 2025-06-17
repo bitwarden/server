@@ -2,4 +2,4 @@
 
 namespace Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
-public record WebhookIntegrationConfigurationDetails(string? Scheme, string? Token, string Url);
+public record WebhookIntegrationConfigurationDetails(string Url, string? Scheme = null, string? Token = null);

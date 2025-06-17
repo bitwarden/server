@@ -43,7 +43,7 @@ public class WebhookIntegrationHandlerTests
     public async Task HandleAsync_SuccessfulRequestWithoutAuth_ReturnsSuccess(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
-        message.Configuration = new WebhookIntegrationConfigurationDetails(null, null, _webhookUrl);
+        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl);
 
         var result = await sutProvider.Sut.HandleAsync(message);
 
@@ -69,7 +69,7 @@ public class WebhookIntegrationHandlerTests
     public async Task HandleAsync_SuccessfulRequestWithAuthorizationHeader_ReturnsSuccess(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_scheme, _token, _webhookUrl);
+        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl, _scheme, _token);
 
         var result = await sutProvider.Sut.HandleAsync(message);
 
@@ -95,7 +95,7 @@ public class WebhookIntegrationHandlerTests
     public async Task HandleAsync_TooManyRequests_ReturnsFailureSetsNotBeforUtc(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_scheme, _token, _webhookUrl);
+        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl, _scheme, _token);
 
         _handler.Fallback
             .WithStatusCode(HttpStatusCode.TooManyRequests)
@@ -116,7 +116,7 @@ public class WebhookIntegrationHandlerTests
     public async Task HandleAsync_TooManyRequestsWithDate_ReturnsFailureSetsNotBeforUtc(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_scheme, _token, _webhookUrl);
+        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl, _scheme, _token);
 
         _handler.Fallback
             .WithStatusCode(HttpStatusCode.TooManyRequests)
@@ -137,7 +137,7 @@ public class WebhookIntegrationHandlerTests
     public async Task HandleAsync_InternalServerError_ReturnsFailureSetsRetryable(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_scheme, _token, _webhookUrl);
+        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl, _scheme, _token);
 
         _handler.Fallback
             .WithStatusCode(HttpStatusCode.InternalServerError)
@@ -156,7 +156,7 @@ public class WebhookIntegrationHandlerTests
     public async Task HandleAsync_UnexpectedRedirect_ReturnsFailureNotRetryable(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_scheme, _token, _webhookUrl);
+        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl, _scheme, _token);
 
         _handler.Fallback
             .WithStatusCode(HttpStatusCode.TemporaryRedirect)

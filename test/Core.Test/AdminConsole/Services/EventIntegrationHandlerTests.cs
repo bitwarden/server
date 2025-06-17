@@ -46,7 +46,7 @@ public class EventIntegrationHandlerTests
         {
             IntegrationType = IntegrationType.Webhook,
             MessageId = "TestMessageId",
-            Configuration = new WebhookIntegrationConfigurationDetails(null, null, _url),
+            Configuration = new WebhookIntegrationConfigurationDetails(_url),
             RenderedTemplate = template,
             RetryCount = 0,
             DelayUntilDate = null
@@ -212,7 +212,7 @@ public class EventIntegrationHandlerTests
             await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(
                 AssertHelper.AssertPropertyEqual(expectedMessage, new[] { "MessageId" })));
 
-            expectedMessage.Configuration = new WebhookIntegrationConfigurationDetails(null, null, _url2);
+            expectedMessage.Configuration = new WebhookIntegrationConfigurationDetails(_url2);
             await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(
                 AssertHelper.AssertPropertyEqual(expectedMessage, new[] { "MessageId" })));
         }
