@@ -112,6 +112,7 @@ public static class FeatureFlagKeys
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
     public const string OptimizeNestedTraverseTypescript = "pm-21695-optimize-nested-traverse-typescript";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
+    public const string CreateDefaultLocation = "pm-19467-create-default-location";
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
@@ -181,6 +182,7 @@ public static class FeatureFlagKeys
     public const string EnablePMFlightRecorder = "enable-pm-flight-recorder";
     public const string MobileErrorReporting = "mobile-error-reporting";
     public const string AndroidChromeAutofill = "android-chrome-autofill";
+    public const string UserManagedPrivilegedApps = "pm-18970-user-managed-privileged-apps";
     public const string EnablePMPreloginSettings = "enable-pm-prelogin-settings";
     public const string AppIntents = "app-intents";
 
