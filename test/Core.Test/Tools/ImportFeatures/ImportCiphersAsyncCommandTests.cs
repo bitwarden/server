@@ -62,7 +62,9 @@ public class ImportCiphersAsyncCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<PersonalOwnershipPolicyRequirement>(importingUserId)
-            .Returns(new PersonalOwnershipPolicyRequirement { DisablePersonalOwnership = false });
+            .Returns(new PersonalOwnershipPolicyRequirement(
+                PersonalOwnershipState.Allowed,
+                []));
 
         sutProvider.GetDependency<IFolderRepository>()
             .GetManyByUserIdAsync(importingUserId)
@@ -116,7 +118,9 @@ public class ImportCiphersAsyncCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<PersonalOwnershipPolicyRequirement>(userId)
-            .Returns(new PersonalOwnershipPolicyRequirement { DisablePersonalOwnership = true });
+            .Returns(new PersonalOwnershipPolicyRequirement(
+                PersonalOwnershipState.Restricted,
+                [Guid.NewGuid()]));
 
         var folderRelationships = new List<KeyValuePair<int, int>>();
 
