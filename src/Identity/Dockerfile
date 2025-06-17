@@ -37,7 +37,7 @@ RUN . /tmp/rid.txt && dotnet publish \
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM cgr.dev/chainguard/wolfi-base:latest
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
@@ -46,12 +46,9 @@ ENV ASPNETCORE_URLS=http://+:5000
 ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 EXPOSE 5000
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    gosu \
+RUN apk add gosu \
     curl \
-    krb5-user \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/cache/apk/*
 
 # Copy app from the build stage
 WORKDIR /app
