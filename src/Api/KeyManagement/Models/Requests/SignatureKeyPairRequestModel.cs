@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 
@@ -7,14 +6,22 @@ namespace Bit.Api.KeyManagement.Models.Requests;
 
 public class SignatureKeyPairRequestModel
 {
-    public required SignatureAlgorithm SignatureAlgorithm { get; set; }
+    public required string SignatureAlgorithm { get; set; }
     [EncryptedString] public required string WrappedSigningKey { get; set; }
     public required string VerifyingKey { get; set; }
 
     public SignatureKeyPairData ToSignatureKeyPairData()
     {
+        if (SignatureAlgorithm != "ed25519")
+        {
+            throw new ArgumentException(
+                $"Unsupported signature algorithm: {SignatureAlgorithm}"
+            );
+        }
+        var algorithm = Core.KeyManagement.Enums.SignatureAlgorithm.Ed25519;
+
         return new SignatureKeyPairData(
-            SignatureAlgorithm,
+            algorithm,
             WrappedSigningKey,
             VerifyingKey
         );
