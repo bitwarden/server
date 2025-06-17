@@ -5,6 +5,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Bit.Test.Common.MockedHttpClient;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -33,6 +34,7 @@ public class WebhookIntegrationHandlerTests
 
         return new SutProvider<WebhookIntegrationHandler>()
             .SetDependency(clientFactory)
+            .WithFakeTimeProvider()
             .Create();
     }
 
@@ -65,6 +67,10 @@ public class WebhookIntegrationHandlerTests
     public async Task HandleAsync_TooManyRequests_ReturnsFailureSetsDelayUntilDate(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
+        var now = new DateTime(2014, 3, 2, 1, 0, 0, DateTimeKind.Utc);
+        var retryAfter = now.AddSeconds(60);
+
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
         message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl);
 
         _handler.Fallback
@@ -78,7 +84,7 @@ public class WebhookIntegrationHandlerTests
         Assert.True(result.Retryable);
         Assert.Equal(result.Message, message);
         Assert.True(result.DelayUntilDate.HasValue);
-        Assert.InRange(result.DelayUntilDate.Value, DateTime.UtcNow.AddSeconds(59), DateTime.UtcNow.AddSeconds(61));
+        Assert.Equal(retryAfter, result.DelayUntilDate.Value);
         Assert.Equal("Too Many Requests", result.FailureReason);
     }
 
@@ -86,7 +92,7 @@ public class WebhookIntegrationHandlerTests
     public async Task HandleAsync_TooManyRequestsWithDate_ReturnsFailureSetsDelayUntilDate(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
-        var now = DateTime.UtcNow;
+        var now = new DateTime(2014, 3, 2, 1, 0, 0, DateTimeKind.Utc);
         var retryAfter = now.AddSeconds(60);
         message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl);
 
@@ -101,7 +107,7 @@ public class WebhookIntegrationHandlerTests
         Assert.True(result.Retryable);
         Assert.Equal(result.Message, message);
         Assert.True(result.DelayUntilDate.HasValue);
-        Assert.InRange(result.DelayUntilDate.Value, retryAfter.AddSeconds(-1), retryAfter.AddSeconds(1));
+        Assert.Equal(retryAfter, result.DelayUntilDate.Value);
         Assert.Equal("Too Many Requests", result.FailureReason);
     }
 
