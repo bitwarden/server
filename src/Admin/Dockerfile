@@ -1,4 +1,15 @@
 ###############################################
+#           Node.js build stage               #
+###############################################
+FROM node:20-alpine AS node-build
+
+WORKDIR /app
+COPY src/Admin/package*.json ./
+COPY /src/Admin/ .
+RUN npm ci
+RUN npm run build
+
+###############################################
 #                 Build stage                 #
 ###############################################
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
@@ -20,12 +31,13 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     && echo "RID=$RID" > /tmp/rid.txt
 
 # Set up Node
-ARG NODE_VERSION=20
-RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
-    && apt-get update \
-    && apt-get install -y nodejs \
-    && npm install -g npm@latest && \
-    rm -rf /var/lib/apt/lists/*
+# ARG NODE_VERSION=20
+# RUN apk add --no-cache "nodejs~${NODE_VERSION}" "npm"
+# RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
+#     && apt-get update \
+#     && apt-get install -y nodejs \
+#     && npm install -g npm@latest && \
+#     rm -rf /var/lib/apt/lists/*
 
 # Copy required project files
 WORKDIR /source
@@ -33,11 +45,11 @@ COPY . ./
 
 # Restore project dependencies and tools
 WORKDIR /source/src/Admin
-RUN npm ci
+#RUN npm ci
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Build project
-RUN npm run build
+#RUN npm run build
 RUN . /tmp/rid.txt && dotnet publish \
     -c release \
     --no-restore \
@@ -60,12 +72,15 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 EXPOSE 5000
 
 RUN apk add curl \
+    icu-libs \
+    tzdata \
     && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu \
     && rm -rf /var/cache/apk/*
 
 # Copy app from the build stage
 WORKDIR /app
 COPY --from=build /source/src/Admin/out /app
+COPY --from=node-build /app/wwwroot /app/wwwroot
 COPY ./src/Admin/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
