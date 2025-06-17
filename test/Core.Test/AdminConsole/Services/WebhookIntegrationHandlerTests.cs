@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using Bit.Core.AdminConsole.Models.Data.Integrations;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

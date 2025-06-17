@@ -33,6 +33,13 @@ public class AzureServiceBusEventListenerService : EventLoggingListenerService
         await _processor.StartProcessingAsync(cancellationToken);
     }
 
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await _processor.StopProcessingAsync(cancellationToken);
+        await _processor.DisposeAsync();
+        await base.StopAsync(cancellationToken);
+    }
+
     internal Task ProcessErrorAsync(ProcessErrorEventArgs args)
     {
         _logger.LogError(
@@ -48,17 +55,5 @@ public class AzureServiceBusEventListenerService : EventLoggingListenerService
     {
         await ProcessReceivedMessageAsync(Encoding.UTF8.GetString(args.Message.Body), args.Message.MessageId);
         await args.CompleteMessageAsync(args.Message);
-    }
-
-    public override async Task StopAsync(CancellationToken cancellationToken)
-    {
-        await _processor.StopProcessingAsync(cancellationToken);
-        await base.StopAsync(cancellationToken);
-    }
-
-    public override void Dispose()
-    {
-        _processor.DisposeAsync().GetAwaiter().GetResult();
-        base.Dispose();
     }
 }
