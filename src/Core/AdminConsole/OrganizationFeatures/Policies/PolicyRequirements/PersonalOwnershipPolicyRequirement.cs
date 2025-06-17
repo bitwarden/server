@@ -4,49 +4,49 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
 /// <summary>
-/// Represents the personal ownership policy state.
+/// Represents the Organization Data Ownership policy state.
 /// </summary>
-public enum PersonalOwnershipState
+public enum OrganizationDataOwnershipState
 {
     /// <summary>
-    /// Personal ownership is allowed - users can save items to their personal vault.
+    /// Organization Data Ownership is not enforced- users can save items to their personal vault.
     /// </summary>
     Allowed,
 
     /// <summary>
-    /// Personal ownership is restricted - members are required to save items to an organization.
+    /// Organization Data Ownership is enforced- members are required to save items to an organization.
     /// </summary>
     Restricted
 }
 
 /// <summary>
-/// Policy requirements for the Disable Personal Ownership policy.
+/// Policy requirements for the Organization data ownership policy
 /// </summary>
-public class PersonalOwnershipPolicyRequirement : IPolicyRequirement
+public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
 {
     private readonly IEnumerable<Guid> _organizationIdsWithPolicyEnabled;
 
-    /// <param name="personalOwnershipState">
-    /// The personal ownership state for the user.
+    /// <param name="organizationDataOwnershipState">
+    /// The organization data ownership state for the user.
     /// </param>
     /// <param name="organizationIdsWithPolicyEnabled">
-    /// The collection of Organization IDs that have the Disable Personal Ownership policy enabled.
+    /// The collection of Organization IDs that have the Organization Data Ownership policy enabled.
     /// </param>
-    public PersonalOwnershipPolicyRequirement(
-        PersonalOwnershipState personalOwnershipState,
+    public OrganizationDataOwnershipPolicyRequirement(
+        OrganizationDataOwnershipState organizationDataOwnershipState,
         IEnumerable<Guid> organizationIdsWithPolicyEnabled)
     {
         _organizationIdsWithPolicyEnabled = organizationIdsWithPolicyEnabled ?? [];
-        State = personalOwnershipState;
+        State = organizationDataOwnershipState;
     }
 
     /// <summary>
-    /// The personal ownership policy state for the user.
+    /// The Organization data ownership policy state for the user.
     /// </summary>
-    public PersonalOwnershipState State { get; }
+    public OrganizationDataOwnershipState State { get; }
 
     /// <summary>
-    /// Returns true if the Disable Personal Ownership policy is enforced in that organization.
+    /// Returns true if the Organization Data Ownership policy is enforced in that organization.
     /// </summary>
     public bool RequiresDefaultCollection(Guid organizationId)
     {
@@ -54,19 +54,19 @@ public class PersonalOwnershipPolicyRequirement : IPolicyRequirement
     }
 }
 
-public class PersonalOwnershipPolicyRequirementFactory : BasePolicyRequirementFactory<PersonalOwnershipPolicyRequirement>
+public class OrganizationDataOwnershipPolicyRequirementFactory : BasePolicyRequirementFactory<OrganizationDataOwnershipPolicyRequirement>
 {
-    public override PolicyType PolicyType => PolicyType.PersonalOwnership;
+    public override PolicyType PolicyType => PolicyType.OrganizationDataOwnership;
 
-    public override PersonalOwnershipPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
+    public override OrganizationDataOwnershipPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
-        var personalOwnershipState = policyDetails.Any()
-            ? PersonalOwnershipState.Restricted
-            : PersonalOwnershipState.Allowed;
+        var organizationDataOwnershipState = policyDetails.Any()
+            ? OrganizationDataOwnershipState.Restricted
+            : OrganizationDataOwnershipState.Allowed;
         var organizationIdsWithPolicyEnabled = policyDetails.Select(p => p.OrganizationId).ToHashSet();
 
-        return new PersonalOwnershipPolicyRequirement(
-            personalOwnershipState,
+        return new OrganizationDataOwnershipPolicyRequirement(
+            organizationDataOwnershipState,
             organizationIdsWithPolicyEnabled);
     }
 }
