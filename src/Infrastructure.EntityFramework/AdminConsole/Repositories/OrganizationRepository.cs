@@ -324,12 +324,6 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         return await query.ToArrayAsync();
     }
 
-    public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetByVerifiedUserEmailDomainAsync_vNext(Guid userId)
-    {
-        // No EF optimization is required for this query
-        return await GetByVerifiedUserEmailDomainAsync(userId);
-    }
-
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetAddableToProviderByUserIdAsync(
         Guid userId,
         ProviderType providerType)

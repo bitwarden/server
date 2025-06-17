@@ -24,11 +24,6 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     /// Gets the organizations that have a verified domain matching the user's email domain.
     /// </summary>
     Task<ICollection<Organization>> GetByVerifiedUserEmailDomainAsync(Guid userId);
-    /// <inheritdoc cref="GetByVerifiedUserEmailDomainAsync"/>
-    /// <remarks>
-    /// This method is optimized for performance.
-    /// </remarks>
-    Task<ICollection<Organization>> GetByVerifiedUserEmailDomainAsync_vNext(Guid userId);
     Task<ICollection<Organization>> GetAddableToProviderByUserIdAsync(Guid userId, ProviderType providerType);
     Task<ICollection<Organization>> GetManyByIdsAsync(IEnumerable<Guid> ids);
 
