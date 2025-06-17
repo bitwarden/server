@@ -1,18 +1,21 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 
 # Docker buildx supplies the value for this arg
 ARG TARGETPLATFORM
 
 # Determine proper runtime value for .NET
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
-    RID=linux-x64 ; \
+    RID=linux-musl-x64 ; \
+    #RID=linux-x64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
-    RID=linux-arm64 ; \
+    RID=linux-musl-arm64 ; \
+    #RID=linux-arm64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
-    RID=linux-arm ; \
+    RID=linux-musl-arm ; \
+    #RID=linux-arm ; \
     fi \
     && echo "RID=$RID" > /tmp/rid.txt
 
@@ -36,13 +39,14 @@ RUN . /tmp/rid.txt && dotnet publish \
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM cgr.dev/chainguard/wolfi-base:latest
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:5000
 ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 EXPOSE 5000
 
 RUN apk add gosu \
