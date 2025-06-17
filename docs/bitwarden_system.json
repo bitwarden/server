@@ -1,10 +1,29 @@
 {
   "configuration" : { },
-  "description" : "General Bitwarden System",
-  "documentation" : { },
+  "description" : "Description",
+  "documentation" : {
+    "sections" : [ {
+      "content" : "## File Hierarchy\n",
+      "filename" : "file_hierarchy.md",
+      "format" : "Markdown",
+      "order" : 1,
+      "title" : ""
+    }, {
+      "content" : "## Perspectives\n\n### Security\nHighlights models and relationships identified as a part of [threat modeling](https://www.threatmodelingmanifesto.org/).\n\nIdentified threats are expected to be itemized in the perspective description, tagged with an appropriate `Security: threat` tag, and include a `!docs` property that describes the threat and mitigations. [`-> (relationships)`](https://docs.structurizr.com/dsl/language#relationship) do not allow for a `!docs` property, so a `url` property is used instead, linking to the appropriate section of the published docs.\n\n#### Example Model or Relationship\n\n##### Example Threat\n\n- **Type**: type\n- **Priority**: TBD/Low/Medium/High/Critical\n- **Likelihood**: TBD/Low/Medium/High/Critical\n- **Impact**: TBD/Low/Medium/High/Critical\n\ndescription of the threat.\n\n###### Example Threat Mitigations\ndescribe the mitigations for the threat and whether or not they are complete\n\n\n### SRE\n\nHighlights concerns and requirements for cloud deployments.\n",
+      "filename" : "perspectives.md",
+      "format" : "Markdown",
+      "order" : 2,
+      "title" : ""
+    }, {
+      "content" : "## Tags\n\n### Admin\n### API\n### Auth\n### Azure\n### Billing\n### Bitwarden Employee\n### Browser\n### CLI\n### Cloud Host Requirement\n### Database\n### Desktop\n### Directory\n### Events\n### External\n### HealthCheck\n### Icons\n### LDAP\n### MSP\n### Mobile\n### Queue\n### SCIM\n### Security:Privacy\n### Self-Hosted\n### Web\n",
+      "filename" : "tags.md",
+      "format" : "Markdown",
+      "order" : 3,
+      "title" : ""
+    } ]
+  },
   "id" : 1,
-  "lastModifiedAgent" : "structurizr-ui",
-  "lastModifiedDate" : "2025-05-20T20:49:59Z",
+  "lastModifiedDate" : "2025-07-01T14:14:59Z",
   "model" : {
     "people" : [ {
       "description" : "An end user of the Bitwarden System",
@@ -17,43 +36,43 @@
       "relationships" : [ {
         "description" : "Uses",
         "destinationId" : "16",
-        "id" : "48",
-        "sourceId" : "1",
-        "tags" : "Relationship"
-      }, {
-        "description" : "Uses",
-        "destinationId" : "15",
-        "id" : "49",
-        "linkedRelationshipId" : "48",
-        "sourceId" : "1"
-      }, {
-        "description" : "Uses",
-        "destinationId" : "17",
-        "id" : "50",
-        "sourceId" : "1",
-        "tags" : "Relationship"
-      }, {
-        "description" : "Uses",
-        "destinationId" : "18",
-        "id" : "51",
-        "sourceId" : "1",
-        "tags" : "Relationship"
-      }, {
-        "description" : "Uses",
-        "destinationId" : "19",
         "id" : "52",
         "sourceId" : "1",
         "tags" : "Relationship"
       }, {
         "description" : "Uses",
-        "destinationId" : "20",
+        "destinationId" : "15",
         "id" : "53",
+        "linkedRelationshipId" : "52",
+        "sourceId" : "1"
+      }, {
+        "description" : "Uses",
+        "destinationId" : "17",
+        "id" : "54",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Uses",
+        "destinationId" : "18",
+        "id" : "55",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Uses",
+        "destinationId" : "19",
+        "id" : "56",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Uses",
+        "destinationId" : "20",
+        "id" : "57",
         "sourceId" : "1",
         "tags" : "Relationship"
       }, {
         "description" : "Uses",
         "destinationId" : "21",
-        "id" : "54",
+        "id" : "58",
         "sourceId" : "1",
         "tags" : "Relationship"
       } ],
@@ -69,14 +88,14 @@
       "relationships" : [ {
         "description" : "Administers System",
         "destinationId" : "9",
-        "id" : "63",
+        "id" : "67",
         "sourceId" : "2",
         "tags" : "Relationship"
       }, {
         "description" : "Administers System",
         "destinationId" : "4",
-        "id" : "64",
-        "linkedRelationshipId" : "63",
+        "id" : "68",
+        "linkedRelationshipId" : "67",
         "sourceId" : "2"
       } ],
       "tags" : "Element,Person,Bitwarden Employee,Self-Host Admin"
@@ -92,14 +111,14 @@
       "relationships" : [ {
         "description" : "Inspects and supports",
         "destinationId" : "9",
-        "id" : "61",
+        "id" : "65",
         "sourceId" : "3",
         "tags" : "Relationship"
       }, {
         "description" : "Inspects and supports",
         "destinationId" : "4",
-        "id" : "62",
-        "linkedRelationshipId" : "61",
+        "id" : "66",
+        "linkedRelationshipId" : "65",
         "sourceId" : "3"
       } ],
       "tags" : "Element,Person,Bitwarden Employee"
@@ -114,14 +133,14 @@
       "relationships" : [ {
         "description" : "Administers Organizations",
         "destinationId" : "16",
-        "id" : "55",
+        "id" : "59",
         "sourceId" : "25",
         "tags" : "Relationship"
       }, {
         "description" : "Administers Organizations",
         "destinationId" : "15",
-        "id" : "56",
-        "linkedRelationshipId" : "55",
+        "id" : "60",
+        "linkedRelationshipId" : "59",
         "sourceId" : "25"
       } ],
       "tags" : "Element,Person,Admin"
@@ -136,26 +155,26 @@
       "relationships" : [ {
         "description" : "Completes Provider registration with",
         "destinationId" : "9",
-        "id" : "57",
+        "id" : "61",
         "sourceId" : "26",
         "tags" : "Relationship"
       }, {
         "description" : "Completes Provider registration with",
         "destinationId" : "4",
-        "id" : "58",
-        "linkedRelationshipId" : "57",
+        "id" : "62",
+        "linkedRelationshipId" : "61",
         "sourceId" : "26"
       }, {
         "description" : "Administers Providers and Organizations",
         "destinationId" : "16",
-        "id" : "59",
+        "id" : "63",
         "sourceId" : "26",
         "tags" : "Relationship"
       }, {
         "description" : "Administers Providers and Organizations",
         "destinationId" : "15",
-        "id" : "60",
-        "linkedRelationshipId" : "59",
+        "id" : "64",
+        "linkedRelationshipId" : "63",
         "sourceId" : "26"
       } ],
       "tags" : "Element,Person,MSP"
@@ -175,13 +194,13 @@
           "relationships" : [ {
             "description" : "Requests payments for customers",
             "destinationId" : "32",
-            "id" : "101",
+            "id" : "105",
             "sourceId" : "6",
             "tags" : "Relationship"
           }, {
             "description" : "Requests payments for customers",
             "destinationId" : "33",
-            "id" : "104",
+            "id" : "108",
             "sourceId" : "6",
             "tags" : "Relationship"
           } ],
@@ -196,45 +215,45 @@
         "relationships" : [ {
           "description" : "Validates JWTs with",
           "destinationId" : "30",
-          "id" : "85",
+          "id" : "89",
           "sourceId" : "5",
           "tags" : "Relationship",
           "url" : "https://bitwarden.com"
         }, {
           "description" : "Queries",
           "destinationId" : "11",
-          "id" : "87",
+          "id" : "91",
           "sourceId" : "5",
           "tags" : "Relationship"
         }, {
           "description" : "Sends events to",
           "destinationId" : "12",
-          "id" : "89",
+          "id" : "93",
           "sourceId" : "5",
           "tags" : "Relationship"
         }, {
           "description" : "Sends emails to",
           "destinationId" : "13",
-          "id" : "91",
+          "id" : "95",
           "sourceId" : "5",
           "tags" : "Relationship"
         }, {
           "description" : "Sends notifications to",
           "destinationId" : "14",
-          "id" : "92",
+          "id" : "96",
           "sourceId" : "5",
           "tags" : "Relationship"
         }, {
           "description" : "Requests payments for customers",
           "destinationId" : "32",
-          "id" : "102",
-          "linkedRelationshipId" : "101",
+          "id" : "106",
+          "linkedRelationshipId" : "105",
           "sourceId" : "5"
         }, {
           "description" : "Requests payments for customers",
           "destinationId" : "33",
-          "id" : "105",
-          "linkedRelationshipId" : "104",
+          "id" : "109",
+          "linkedRelationshipId" : "108",
           "sourceId" : "5"
         } ],
         "tags" : "Element,Container,API"
@@ -248,7 +267,7 @@
         "relationships" : [ {
           "description" : "Sends events to",
           "destinationId" : "12",
-          "id" : "90",
+          "id" : "94",
           "sourceId" : "7",
           "tags" : "Relationship"
         } ],
@@ -263,7 +282,7 @@
         "relationships" : [ {
           "description" : "Sends notifications to",
           "destinationId" : "14",
-          "id" : "93",
+          "id" : "97",
           "sourceId" : "8",
           "tags" : "Relationship"
         } ],
@@ -278,7 +297,7 @@
         "relationships" : [ {
           "description" : "Queries",
           "destinationId" : "11",
-          "id" : "88",
+          "id" : "92",
           "sourceId" : "9",
           "tags" : "Relationship"
         } ],
@@ -309,7 +328,7 @@
         "relationships" : [ {
           "description" : "Processes events from",
           "destinationId" : "10",
-          "id" : "94",
+          "id" : "98",
           "sourceId" : "12",
           "tags" : "Relationship"
         } ],
@@ -324,7 +343,7 @@
         "relationships" : [ {
           "description" : "Processes emails from",
           "destinationId" : "9",
-          "id" : "95",
+          "id" : "99",
           "sourceId" : "13",
           "tags" : "Relationship"
         } ],
@@ -347,7 +366,7 @@
         "relationships" : [ {
           "description" : "Queries",
           "destinationId" : "11",
-          "id" : "98",
+          "id" : "102",
           "sourceId" : "27",
           "tags" : "Relationship"
         } ],
@@ -362,7 +381,7 @@
         "relationships" : [ {
           "description" : "Queries",
           "destinationId" : "11",
-          "id" : "99",
+          "id" : "103",
           "sourceId" : "30",
           "tags" : "Relationship"
         } ],
@@ -377,7 +396,7 @@
         "relationships" : [ {
           "description" : "Queries",
           "destinationId" : "11",
-          "id" : "100",
+          "id" : "104",
           "sourceId" : "31",
           "tags" : "Relationship"
         } ],
@@ -401,6 +420,10 @@
             "description" : "Caches icons in",
             "destinationId" : "38",
             "id" : "43",
+            "perspectives" : [ {
+              "description" : "Icons 1.3.1 Aggregate vault content leak through timing attack on cache \n\n            Icons 1.3.2 Possible injection attack through cache key \n\n            Icons 1.3.3 & Icons 1.3.4 Cache bloat leading to DoS \n\n            Icons 1.3.5 Cache poisoning leading to incorrect icon storage",
+              "name" : "Security"
+            } ],
             "sourceId" : "35",
             "tags" : "Relationship"
           } ],
@@ -421,18 +444,19 @@
           "documentation" : { },
           "id" : "37",
           "name" : "IconDetermination",
-          "perspectives" : [ {
-            "description" : "Internal network exposure",
-            "name" : "Security",
-            "value" : "5"
-          } ],
           "properties" : {
-            "structurizr.dsl.identifier" : "server.icons.icon_retrieval"
+            "structurizr.dsl.identifier" : "server.icons.icon_determination"
           },
           "relationships" : [ {
-            "description" : "Retrieves icons from",
+            "description" : "Resolves IP addresses for domain names from",
             "destinationId" : "44",
             "id" : "45",
+            "sourceId" : "37",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Retrieves icons from",
+            "destinationId" : "48",
+            "id" : "49",
             "sourceId" : "37",
             "tags" : "Relationship"
           } ],
@@ -448,17 +472,30 @@
           "tags" : "Element,Component,Cache",
           "technology" : "C# MemoryCache"
         } ],
-        "documentation" : { },
+        "documentation" : {
+          "sections" : [ {
+            "content" : "## Threat Model\n\n### Example Model or Relationship\n\n#### Example Threat\n\n- **Type**: type\n- **Priority**: TBD/Low/Medium/High/Critical\n- **Likelihood**: TBD/Low/Medium/High/Critical\n- **Impact**: TBD/Low/Medium/High/Critical\n\ndescription of the threat.\n\n##### Example Threat Mitigations\ndescribe the mitigations for the threat.\n\n### Clients -> IconsController\nCommunication from clients to the icons component. This is an unauthenticated endpoint with minimal input validation.\n\n#### SSL termination exposes vault contents to network administrators\n\n- **Type**: Information Disclosure\n- **Priority**: TBD\n- **Likelihood**: TBD\n- **Impact**: TBD\n\nA machine with SSL terminating proxies cannot rely on encrypted query parameters hiding vault contents from network administrators.\n\n##### Mitigations\n- <span style=\"color:red\">Not Implemented</span>: Establish encrypted pipe communication with Icons service prior to requesting icon resolution\n\n#### Cleartext transmission of vault contents to Server\n\n- **Type**: Information Disclosure\n- **Priority**: TBD\n- **Likelihood**: TBD\n- **Impact**: TBD\n\nServer-side after TLS by necessity to lookup a favicon. However, to maintain our promises as a no-log proxy, we need to be sure not to maintain ip records for icon service requests\n\n##### Mitigations\n- <span style=\"color:red\">Unconfirmed</span>: Configure network edge and datadog to drop this identifying data.\n\n#### No SLA offered on Icons service\n\n- **Type**: Denial of Service\n- **Priority**: TBD\n- **Likelihood**: TBD\n- **Impact**: TBD\n\nWe do not offer SLA on up time of icons service. Clients may be unable to resolve icons, and we need to determine a graceful degradation strategy.\n\n##### Mitigations\n- <span style=\"color:green\">Done</span>: Default icon fallback (globe)\n- <span style=\"color:red\">Not Implemented, Not Prioritized</span>: Local cache of retrieved icons\n\n#### SSRF by proxied requests\n\n- **Type**: Elevation of Privilege / Information Disclosure\n- **Priority**: TBD\n- **Likelihood**: TBD\n- **Impact**: TBD\n\nThe service is designed to proxy requests to arbitrary URLs. This can be used to access internal network resources.\n\nIf a site redirects to an internal network address, the internal network topography may be exposed to the client.\n\n##### Mitigations\n- <span style=\"color:green\">Done</span>: Isolation of the icons component from the rest of the system intranet.\n- <span style=\"color:green\">Done</span>: Avoid fetching by domain name. All requests must be first resolved to an IP address and filtered against internal network ranges, defined as:\n  - `::1`, `::`, `::ffff:`\n  - IPv6 and starting with `fc`, `fd`, `fe`, or `ff`\n  - IPv4 and starting with `0.`, `10.`, `100.`, `127.`, `169.254`, `172.16-31`, or `192.168`\n\n  This is done in the `IconDetermination` component\n\n### IconsController -> IconCache\nCommunication from the icons controller to a mem cache of previously retrieved icons, keyed by original domain requested.\n\n#### Cache determination through timing measurements\n\n- **Type**: Information Disclosure\n- **Priority**: Low\n- **Likelihood**: Low\n- **Impact**: Low\n\nBy measuring the time it takes to retrieve an icon, an attacker may be able to determine if a domain has been previously requested by another user, revealing that some user on the service has that domain in their vault.\n\n##### Mitigations\n<span style=\"color:red\">None identified</span>\n\n#### Unescaped storage of user-input data in cache\n\n- **Type**: Tampering\n- **Priority**: Low\n- **Likelihood**: Low\n- **Impact**: Low\n\nUnescaped user input data may be stored as keys in the cache. This input data is not executed, but if the storage method is changed in the future, this may lead to some injection attack.\n\n##### Mitigations\n<span style=\"color:red\">None identified</span>\n\n#### Cache bloat through intentionally large icons\n\n- **Type**: Denial of Service\n- **Priority**: TBD\n- **Likelihood**: TBD\n- **Impact**: TBD\n\nUser request may intentionally resolve to very large icons, bloating the cache and increasing memory requirements.\n\n<span style=\"color:red\">Open question</span>: Should we also limit the size of icons fetched?\n\n##### Mitigations\n<span style=\"color:green\">Done</span>: Limit size of icons stored in cache\n\n#### Cache bloat through many unique domain requests\n\n- **Type**: Denial of Service\n- **Priority**: TBD\n- **Likelihood**: TBD\n- **Impact**: TBD\n\nUser request may intentionally resolve many unique domains to resolve that may or may not exist, bloating the cache and increasing memory requirements.\n\n##### Mitigations\n<span style=\"color:red\">Unconfirmed</span>: Rate limit requests to the icons service\n\n#### Storage of potentially sensitive data as keys or values in cache\n\n- **Type**: Information Disclosure\n- **Priority**: TBD\n- **Likelihood**: TBD\n- **Impact**: TBD\n\nUpload of urls is automatic to our icon service. If our filters for upload are incorrect, we may store sensitive data in our cache. For example, onion addresses.\n\n##### Mitigations\n<span style=\"color:green\">Done</span>: Avoid filter known sensitive urls\n<span style=\"color:red\">Not implemented, Not prioritized</span>: Add client-side setting to disable icon request for a given url or pattern\n\n#### Cache poisoning via dns poisoning\n\n- **Type**: Tampering\n- **Priority**: Low\n- **Likelihood**: Low\n- **Impact**: Low\n\nDNS poisoning would lead to incorrect icons being cached for a given domain.\n\n##### Mitigations\n<span style=\"color:red\">None Identified</span>\n",
+            "format" : "Markdown",
+            "order" : 1,
+            "title" : ""
+          } ]
+        },
         "id" : "34",
         "name" : "Icons",
         "properties" : {
           "structurizr.dsl.identifier" : "server.icons"
         },
         "relationships" : [ {
-          "description" : "Retrieves icons from",
+          "description" : "Resolves IP addresses for domain names from",
           "destinationId" : "44",
           "id" : "46",
           "linkedRelationshipId" : "45",
+          "sourceId" : "34"
+        }, {
+          "description" : "Retrieves icons from",
+          "destinationId" : "48",
+          "id" : "50",
+          "linkedRelationshipId" : "49",
           "sourceId" : "34"
         } ],
         "tags" : "Element,Container"
@@ -472,22 +509,28 @@
         "structurizr.dsl.identifier" : "server"
       },
       "relationships" : [ {
-        "description" : "Retrieves icons from",
+        "description" : "Resolves IP addresses for domain names from",
         "destinationId" : "44",
         "id" : "47",
         "linkedRelationshipId" : "45",
         "sourceId" : "4"
       }, {
+        "description" : "Retrieves icons from",
+        "destinationId" : "48",
+        "id" : "51",
+        "linkedRelationshipId" : "49",
+        "sourceId" : "4"
+      }, {
         "description" : "Requests payments for customers",
         "destinationId" : "32",
-        "id" : "103",
-        "linkedRelationshipId" : "101",
+        "id" : "107",
+        "linkedRelationshipId" : "105",
         "sourceId" : "4"
       }, {
         "description" : "Requests payments for customers",
         "destinationId" : "33",
-        "id" : "106",
-        "linkedRelationshipId" : "104",
+        "id" : "110",
+        "linkedRelationshipId" : "108",
         "sourceId" : "4"
       } ],
       "tags" : "Element,Software System"
@@ -502,19 +545,19 @@
         "relationships" : [ {
           "description" : "Makes requests to",
           "destinationId" : "5",
-          "id" : "65",
+          "id" : "69",
           "sourceId" : "16",
           "tags" : "Relationship"
         }, {
           "description" : "Makes requests to",
           "destinationId" : "4",
-          "id" : "66",
-          "linkedRelationshipId" : "65",
+          "id" : "70",
+          "linkedRelationshipId" : "69",
           "sourceId" : "16"
         }, {
           "description" : "Authenticates with",
           "destinationId" : "30",
-          "id" : "78",
+          "id" : "82",
           "sourceId" : "16",
           "tags" : "Relationship"
         } ],
@@ -529,19 +572,19 @@
         "relationships" : [ {
           "description" : "Makes requests to",
           "destinationId" : "5",
-          "id" : "68",
+          "id" : "72",
           "sourceId" : "17",
           "tags" : "Relationship"
         }, {
           "description" : "Makes requests to",
           "destinationId" : "4",
-          "id" : "69",
-          "linkedRelationshipId" : "68",
+          "id" : "73",
+          "linkedRelationshipId" : "72",
           "sourceId" : "17"
         }, {
           "description" : "Authenticates With",
           "destinationId" : "30",
-          "id" : "80",
+          "id" : "84",
           "sourceId" : "17",
           "tags" : "Relationship"
         } ],
@@ -556,19 +599,19 @@
         "relationships" : [ {
           "description" : "Makes requests to",
           "destinationId" : "5",
-          "id" : "70",
+          "id" : "74",
           "sourceId" : "18",
           "tags" : "Relationship"
         }, {
           "description" : "Makes requests to",
           "destinationId" : "4",
-          "id" : "71",
-          "linkedRelationshipId" : "70",
+          "id" : "75",
+          "linkedRelationshipId" : "74",
           "sourceId" : "18"
         }, {
           "description" : "Authenticates With",
           "destinationId" : "30",
-          "id" : "81",
+          "id" : "85",
           "sourceId" : "18",
           "tags" : "Relationship"
         } ],
@@ -583,19 +626,19 @@
         "relationships" : [ {
           "description" : "Makes requests to",
           "destinationId" : "5",
-          "id" : "72",
+          "id" : "76",
           "sourceId" : "19",
           "tags" : "Relationship"
         }, {
           "description" : "Makes requests to",
           "destinationId" : "4",
-          "id" : "73",
-          "linkedRelationshipId" : "72",
+          "id" : "77",
+          "linkedRelationshipId" : "76",
           "sourceId" : "19"
         }, {
           "description" : "Authenticates With",
           "destinationId" : "30",
-          "id" : "82",
+          "id" : "86",
           "sourceId" : "19",
           "tags" : "Relationship"
         } ],
@@ -610,19 +653,19 @@
         "relationships" : [ {
           "description" : "Makes requests to",
           "destinationId" : "5",
-          "id" : "74",
+          "id" : "78",
           "sourceId" : "20",
           "tags" : "Relationship"
         }, {
           "description" : "Makes requests to",
           "destinationId" : "4",
-          "id" : "75",
-          "linkedRelationshipId" : "74",
+          "id" : "79",
+          "linkedRelationshipId" : "78",
           "sourceId" : "20"
         }, {
           "description" : "Authenticates With",
           "destinationId" : "30",
-          "id" : "83",
+          "id" : "87",
           "sourceId" : "20",
           "tags" : "Relationship"
         } ],
@@ -637,19 +680,19 @@
         "relationships" : [ {
           "description" : "Makes requests to",
           "destinationId" : "5",
-          "id" : "76",
+          "id" : "80",
           "sourceId" : "21",
           "tags" : "Relationship"
         }, {
           "description" : "Makes requests to",
           "destinationId" : "4",
-          "id" : "77",
-          "linkedRelationshipId" : "76",
+          "id" : "81",
+          "linkedRelationshipId" : "80",
           "sourceId" : "21"
         }, {
           "description" : "Authenticates With",
           "destinationId" : "30",
-          "id" : "84",
+          "id" : "88",
           "sourceId" : "21",
           "tags" : "Relationship"
         } ],
@@ -667,6 +710,10 @@
         "description" : "Requests icons for cleartext urls from",
         "destinationId" : "35",
         "id" : "39",
+        "perspectives" : [ {
+          "description" : "Icons 1.2.1 Broken SSL communication exposes vault contents to network administrators \n\n            Icons 1.2.2 Tracking of user vault contents by ip correlation between identity and icons services \n\n            Icons 1.2.3 No SLA offered on Icons service, graceful degradation of features needed if it goes down \n\n            Icons 1.2.4 SSRF through crafted input resolving to a location the server has elevated privileges in",
+          "name" : "Security"
+        } ],
         "sourceId" : "15",
         "tags" : "Relationship"
       }, {
@@ -684,19 +731,19 @@
       }, {
         "description" : "Makes requests to",
         "destinationId" : "5",
-        "id" : "67",
-        "linkedRelationshipId" : "65",
+        "id" : "71",
+        "linkedRelationshipId" : "69",
         "sourceId" : "15"
       }, {
         "description" : "Authenticates with",
         "destinationId" : "30",
-        "id" : "79",
-        "linkedRelationshipId" : "78",
+        "id" : "83",
+        "linkedRelationshipId" : "82",
         "sourceId" : "15"
       }, {
         "description" : "Posts local usage events to",
         "destinationId" : "7",
-        "id" : "86",
+        "id" : "90",
         "sourceId" : "15",
         "tags" : "Relationship"
       } ],
@@ -736,14 +783,14 @@
       "relationships" : [ {
         "description" : "Validates JWTs with",
         "destinationId" : "30",
-        "id" : "110",
+        "id" : "114",
         "sourceId" : "23",
         "tags" : "Relationship"
       }, {
         "description" : "Validates JWTs with",
         "destinationId" : "4",
-        "id" : "111",
-        "linkedRelationshipId" : "110",
+        "id" : "115",
+        "linkedRelationshipId" : "114",
         "sourceId" : "23"
       } ],
       "tags" : "Element,Software System"
@@ -759,14 +806,14 @@
       "relationships" : [ {
         "description" : "Sends push notification proxy requests to",
         "destinationId" : "8",
-        "id" : "96",
+        "id" : "100",
         "sourceId" : "24",
         "tags" : "Relationship"
       }, {
         "description" : "Sends push notification proxy requests to",
         "destinationId" : "4",
-        "id" : "97",
-        "linkedRelationshipId" : "96",
+        "id" : "101",
+        "linkedRelationshipId" : "100",
         "sourceId" : "24"
       } ],
       "tags" : "Element,Software System,Self-Hosted,External"
@@ -783,20 +830,20 @@
       "relationships" : [ {
         "description" : "Sends subscription events to",
         "destinationId" : "6",
-        "id" : "107",
+        "id" : "111",
         "sourceId" : "32",
         "tags" : "Relationship"
       }, {
         "description" : "Sends subscription events to",
         "destinationId" : "5",
-        "id" : "108",
-        "linkedRelationshipId" : "107",
+        "id" : "112",
+        "linkedRelationshipId" : "111",
         "sourceId" : "32"
       }, {
         "description" : "Sends subscription events to",
         "destinationId" : "4",
-        "id" : "109",
-        "linkedRelationshipId" : "107",
+        "id" : "113",
+        "linkedRelationshipId" : "111",
         "sourceId" : "32"
       } ],
       "tags" : "Element,Software System,External,Billing"
@@ -815,6 +862,15 @@
       "documentation" : { },
       "id" : "44",
       "location" : "Unspecified",
+      "name" : "DNS",
+      "properties" : {
+        "structurizr.dsl.identifier" : "dns"
+      },
+      "tags" : "Element,Software System,External,Icons"
+    }, {
+      "documentation" : { },
+      "id" : "48",
+      "location" : "Unspecified",
       "name" : "External Websites",
       "properties" : {
         "structurizr.dsl.identifier" : "external_websites"
@@ -822,46 +878,45 @@
       "tags" : "Element,Software System,External,Icons"
     } ]
   },
-  "name" : "Bitwarden",
+  "name" : "Bitwarden Server System",
   "properties" : {
-    "structurizr.dsl" : "d29ya3NwYWNlICJCaXR3YXJkZW4iICJHZW5lcmFsIEJpdHdhcmRlbiBTeXN0ZW0iIHsKCiAgIWlkZW50aWZpZXJzIGhpZXJhcmNoaWNhbAoKICBtb2RlbCB7CiAgICBwcm9wZXJ0aWVzIHsKICAgICAgInN0cnVjdHVyaXpyLmdyb3VwU2VwYXJhdG9yIiAiLyIKICAgIH0KCiAgICAjIEluY2x1ZGUgc2hhcmVkIGxldmVsIG1vZGVscwogICAgIyBQZXJzb24gdHlwZXMKICAgIHVzZXIgPSBwZXJzb24gIkJpdHdhcmRlbiBVc2VyIiAiQW4gZW5kIHVzZXIgb2YgdGhlIEJpdHdhcmRlbiBTeXN0ZW0iCiAgICBzeXN0ZW1fYWRtaW4gPSBwZXJzb24gIlN5c3RlbSBBZG1pbiIgIkVpdGhlciBhIEJpdHdhcmRlbiBzaXRlLXJlbGlhYmlsaXR5IGVuZ2luZWVyIG9yIGFkbWluaXN0cmF0b3Igb2YgYSBzZWxmLWhvc3RlZCBpbnN0YW5jZSIgewogICAgICB0YWdzICJCaXR3YXJkZW4gRW1wbG95ZWUiICJTZWxmLUhvc3QgQWRtaW4iCiAgICB9CiAgICAKICAgIAogICAgYndfY29udHJvbGxlZCA9IGdyb3VwICJCaXR3YXJkZW4gQ29udHJvbGxlZCIgewogICAgICAjIEJpdHdhcmRlbiBzdGFmZgogICAgICBjdXN0b21lcl9zdWNjZXNzID0gcGVyc29uICJDdXN0b21lciBTdWNjZXNzIiAiQSBjdXN0b21lciBzdWNjZXNzIGVuZ2luZWVyLiBJbnNwZWN0cyBiaXR3YXJkZW4gc3RhdGUgdGhyb3VnaCB0aGUgYWRtaW4gcG9ydGFsIGFuZCBpbnRlcm5hbCB0b29scyIgewogICAgICAgIHRhZ3MgIkJpdHdhcmRlbiBFbXBsb3llZSIKICAgICAgfQogICAgICAKICAgICAgIyBSb290IHN5c3RlbXMKICAgICAgc2VydmVyID0gc29mdHdhcmVTeXN0ZW0gIkJpdHdhcmRlbiBTZXJ2ZXIiIHsKICAgICAgICBhcGkgPSBjb250YWluZXIgIkFQSSIgewogICAgICAgICAgYmlsbGluZyA9IGNvbXBvbmVudCAiQmlsbGluZyIgewogICAgICAgICAgICB0YWdzICJCaWxsaW5nIgogICAgICAgICAgfQogICAgICAgICAgdGFncyAiQVBJIgogICAgICAgIH0KICAgICAgICBldmVudHMgPSBjb250YWluZXIgIkV2ZW50cyIgewogICAgICAgICAgdGFncyAiRXZlbnRzIgogICAgICAgIH0KICAgICAgICBub3RpZmljYXRpb25zID0gY29udGFpbmVyICJOb3RpZmljYXRpb25zIgogICAgICAgIHBvcnRhbCA9IGNvbnRhaW5lciAiQml0d2FyZGVuIFBvcnRhbCIgewogICAgICAgICAgdGFncyAiV2ViIgogICAgICAgIH0KICAgICAgICBldmVudHNfcHJvY2Vzc29yID0gY29udGFpbmVyICJFdmVudHMgUHJvY2Vzc29yIiB7CiAgICAgICAgICB0YWdzICJFdmVudHMiCiAgICAgICAgfQogICAgCiAgICAgICAgIyBEYXRhIHN0b3JlcwogICAgICAgIGRhdGFiYXNlID0gY29udGFpbmVyICJEYXRhYmFzZSIgewogICAgICAgICAgdGFncyAiRGF0YWJhc2UiCiAgICAgICAgfQogICAgICAgIGV2ZW50c19xdWV1ZSA9IGNvbnRhaW5lciAiRXZlbnRzIFF1ZXVlIiB7CiAgICAgICAgICB0YWdzICJRdWV1ZSIKICAgICAgICAgIHRhZ3MgIkF6dXJlIgogICAgICAgIH0KICAgICAgICBtYWlsX3F1ZXVlID0gY29udGFpbmVyICJNYWlsIFF1ZXVlIiB7CiAgICAgICAgICB0YWdzICJRdWV1ZSIKICAgICAgICAgIHRhZ3MgIkF6dXJlIgogICAgICAgIH0KICAgICAgICBub3RpZmljYXRpb25zX3F1ZXVlID0gY29udGFpbmVyICJOb3RpZmljYXRpb25zIFF1ZXVlIiB7CiAgICAgICAgICB0YWdzICJRdWV1ZSIKICAgICAgICAgIHRhZ3MgIkF6dXJlIgogICAgICAgIH0KICAgICAgfQogICAgICBjbGllbnRzID0gc29mdHdhcmVTeXN0ZW0gIkNsaWVudHMiIHsKICAgICAgICB3ZWIgPSBjb250YWluZXIgIldlYiBBcHBsaWNhdGlvbiIgewogICAgICAgICAgdGFncyAiV2ViIgogICAgICAgIH0KICAgICAgICBpb3MgPSBjb250YWluZXIgImlPUyBBcHBsaWNhdGlvbiIgewogICAgICAgICAgdGFncyAiTW9iaWxlIgogICAgICAgIH0KICAgICAgICBhbmRyb2lkID0gY29udGFpbmVyICJBbmRyb2lkIEFwcGxpY2F0aW9uIiB7CiAgICAgICAgICB0YWdzICJNb2JpbGUiCiAgICAgICAgfQogICAgICAgIGJyb3dzZXJfZXh0ZW5zaW9uID0gY29udGFpbmVyICJCcm93c2VyIEV4dGVuc2lvbiIgewogICAgICAgICAgdGFncyAiQnJvd3NlciIKICAgICAgICB9CiAgICAgICAgY2xpID0gY29udGFpbmVyICJDTEkiIHsKICAgICAgICAgIHRhZ3MgIkNMSSIKICAgICAgICB9CiAgICAgICAgZGVza3RvcCA9IGNvbnRhaW5lciAiRGVza3RvcCBBcHBsaWNhdGlvbiIgewogICAgICAgICAgdGFncyAiRGVza3RvcCIKICAgICAgICB9CiAgICAgIH0KICAgICAgZGlyZWN0b3J5X2Nvbm5lY3RvciA9IHNvZnR3YXJlU3lzdGVtICJEaXJlY3RvcnkgQ29ubmVjdG9yIiB7CiAgICAgICAgdGFncyAiRGlyZWN0b3J5IgogICAgICAgIHRhZ3MgIkxEQVAiCiAgICAgICAgdGFncyAiU2VsZi1Ib3N0ZWQiCiAgICAgIH0KICAgICAga2V5X2Nvbm5lY3RvciA9IHNvZnR3YXJlU3lzdGVtICJLZXkgQ29ubmVjdG9yIiAKICAgIH0KICAgIAogICAgc2VsZl9ob3N0ZWRfaW5zdGFuY2VzID0gc29mdHdhcmVTeXN0ZW0gIlNlbGYtSG9zdGVkIEluc3RhbmNlcyIgewogICAgICB0YWdzICJTZWxmLUhvc3RlZCIKICAgICAgdGFncyAiRXh0ZXJuYWwiCiAgICAgIGRlc2NyaXB0aW9uICJTZWxmLWhvc3RlZCBpbnN0YW5jZXMgb2YgQml0d2FyZGVuIHNlcnZlcnMiCiAgICB9CgogICAgIyBJbmNsdWRlIHRlYW0gbGV2ZWwgbW9kZWxzCiAgICBhZG1pbiA9IHBlcnNvbiAiT3JnYW5pemF0aW9uIEFkbWluIiAiQW4gYWRtaW5pc3RyYXRvciBvZiBhbiBvcmdhbml6YXRpb24iIHsKICAgICAgdGFncyAiQWRtaW4iCiAgICB9CiAgICBwcm92aWRlciA9IHBlcnNvbiAiTVNQIiAiQW5kIGVtcGxveWVlIG9mIGEgbWFuYWdlZCBzZXJ2aWNlIHByb3ZpZGVyIiB7CiAgICAgIHRhZ3MgIk1TUCIKICAgIH0KICAgIAogICAgIWVsZW1lbnQgc2VydmVyIHsKICAgICAgc2NpbSA9IGNvbnRhaW5lciAiU0NJTSIgewogICAgICAgIHRhZ3MgIlNDSU0iCiAgICAgIH0KICAgIH0KICAgIAogICAgZGlyZWN0b3J5X2Nvbm5lY3RvciAtPiBzZXJ2ZXIuYXBpICJTeW5jcyB1c2VycyBhbmQgZ3JvdXBzIHRvIEJpdHdhcmRlbiIKICAgICFlbGVtZW50IHNlcnZlciB7CiAgICAgIGlkZW50aXR5ID0gY29udGFpbmVyICJJZGVudGl0eSIgewogICAgICAgIHRhZ3MgIkF1dGgiCiAgICAgIH0KICAgICAgc3NvID0gY29udGFpbmVyICJTU08iIHsKICAgICAgICB0YWdzICJBdXRoIgogICAgICB9CiAgICB9CiAgICAjIEV4dGVybmFsIHZlbmRvcnMKICAgIGdyb3VwICJQYXltZW50IFN5c3RlbXMiIHsKICAgICAgc3RyaXBlID0gc29mdHdhcmVTeXN0ZW0gIlN0cmlwZSIgewogICAgICAgIHRhZ3MgIkV4dGVybmFsIgogICAgICAgIHRhZ3MgIkJpbGxpbmciCiAgICAgICAgZGVzY3JpcHRpb24gIkhhbmRsZXMgY3JlZGl0IGNhcmRzIGFuZCBzdWJzY3JpcHRpb25zLiIKICAgICAgfQogICAgICBicmFpbnRyZWUgPSBzb2Z0d2FyZVN5c3RlbSAiQnJhaW50cmVlIiB7CiAgICAgICAgdGFncyAiRXh0ZXJuYWwiCiAgICAgICAgdGFncyAiQmlsbGluZyIKICAgICAgICBkZXNjcmlwdGlvbiAiSGFuZGxlcyBQYXlQYWwgYW5kIGNyeXB0b2N1cnJlbmN5LiIKICAgICAgfQogICAgfQogICAgCiAgICAhZWxlbWVudCBzZXJ2ZXIgewogICAgICBpY29ucyA9IGNvbnRhaW5lciAiSWNvbnMiIHsKICAgICAgICBpY29uc19jb250cm9sbGVyID0gY29tcG9uZW50ICJJY29uc0NvbnRyb2xsZXIiIHsKICAgICAgICAgIGRlc2NyaXB0aW9uICJJY29uc0NvbnRyb2xsZXIiCiAgICAgICAgICB0ZWNobm9sb2d5ICJDIyBBU1AuTkVUIENvcmUiCiAgICAgICAgICAKICAgICAgICB9CiAgICAgICAgaW5mb19jb250cm9sbGVyID0gY29tcG9uZW50ICJJbmZvQ29udHJvbGxlciIgewogICAgICAgICAgZGVzY3JpcHRpb24gIlByb3ZpZGVzIGluZm9ybWF0aW9uIGFib3V0IHRoZSBkZXBsb3llZCBpY29uIHNlcnZpY2UuIEFsbG93IGZvciBoZWFsdGggY2hlY2tzLiIKICAgICAgICAgIHRlY2hub2xvZ3kgIkMjIEFTUC5ORVQgQ29yZSIKICAgICAgICAgIHRhZ3MgIkluZm8iICJIZWFsdGhDaGVjayIKICAgICAgICB9CiAgICAgICAgaWNvbl9yZXRyaWV2YWwgPSBjb21wb25lbnQgIkljb25EZXRlcm1pbmF0aW9uIiB7CiAgICAgICAgICBkZXNjcmlwdGlvbiAiUmVzb2x2ZXMgYSBzaW5nbGUgc291cmNlIGZvciBhIHdlYnNpdGUgaWNvbiBhbmQgZG93bmxvYWRzIGl0LiIKICAgICAgICAgIHBlcnNwZWN0aXZlcyB7CiAgICAgICAgICAgICJTZWN1cml0eSIgIkludGVybmFsIG5ldHdvcmsgZXhwb3N1cmUiIDUKICAgICAgICAgIH0KICAgICAgICB9CiAgICAgICAgaWNvbl9jYWNoZSA9IGNvbXBvbmVudCAiSWNvbkNhY2hlIiB7CiAgICAgICAgICBkZXNjcmlwdGlvbiAiQ2FjaGVzIGljb25zIGZvciBhIGdpdmVuIGRvbWFpbiIKICAgICAgICAgIHRhZ3MgIkNhY2hlIgogICAgICAgICAgdGVjaG5vbG9neSAiQyMgTWVtb3J5Q2FjaGUiCiAgICAgICAgfQogICAgCiAgICAgICAgY2xpZW50cyAtPiBpY29uc19jb250cm9sbGVyICJSZXF1ZXN0cyBpY29ucyBmb3IgY2xlYXJ0ZXh0IHVybHMgZnJvbSIKICAgICAgICBpY29uc19jb250cm9sbGVyIC0+IGljb25fcmV0cmlldmFsICJSZXF1ZXN0cyBpY29ucyBmcm9tIgogICAgICAgIGljb25zX2NvbnRyb2xsZXIgLT4gaWNvbl9jYWNoZSAiQ2FjaGVzIGljb25zIGluIgogICAgICB9CiAgICB9CiAgICAKICAgIGV4dGVybmFsX3dlYnNpdGVzID0gc29mdHdhcmVTeXN0ZW0gIkV4dGVybmFsIFdlYnNpdGVzIiB7CiAgICAgIHRhZ3MgIkV4dGVybmFsIgogICAgICB0YWdzICJJY29ucyIKICAgIH0KICAgIAogICAgc2VydmVyLmljb25zLmljb25fcmV0cmlldmFsIC0+IGV4dGVybmFsX3dlYnNpdGVzICJSZXRyaWV2ZXMgaWNvbnMgZnJvbSIKCiAgICAjIEluY2x1ZGUgc2hhcmVkIGxldmVsIHJlbGF0aW9uc2hpcHMKICAgICMgVXNlciBSZWxhdGlvbnNoaXBzCiAgICB1c2VyIC0+IGNsaWVudHMud2ViICJVc2VzIgogICAgdXNlciAtPiBjbGllbnRzLmlvcyAiVXNlcyIKICAgIHVzZXIgLT4gY2xpZW50cy5hbmRyb2lkICJVc2VzIgogICAgdXNlciAtPiBjbGllbnRzLmJyb3dzZXJfZXh0ZW5zaW9uICJVc2VzIgogICAgdXNlciAtPiBjbGllbnRzLmNsaSAiVXNlcyIKICAgIHVzZXIgLT4gY2xpZW50cy5kZXNrdG9wICJVc2VzIgogICAgYWRtaW4gLT4gY2xpZW50cy53ZWIgIkFkbWluaXN0ZXJzIE9yZ2FuaXphdGlvbnMiCiAgICBwcm92aWRlciAtPiBzZXJ2ZXIucG9ydGFsICJDb21wbGV0ZXMgUHJvdmlkZXIgcmVnaXN0cmF0aW9uIHdpdGgiCiAgICBwcm92aWRlciAtPiBjbGllbnRzLndlYiAiQWRtaW5pc3RlcnMgUHJvdmlkZXJzIGFuZCBPcmdhbml6YXRpb25zIgogICAgY3VzdG9tZXJfc3VjY2VzcyAtPiBzZXJ2ZXIucG9ydGFsICJJbnNwZWN0cyBhbmQgc3VwcG9ydHMiCiAgICBzeXN0ZW1fYWRtaW4gLT4gc2VydmVyLnBvcnRhbCAiQWRtaW5pc3RlcnMgU3lzdGVtIgogICAgCiAgICAjIEhpZ2gtbGV2ZWwgQ2xpZW50IFJlbGF0aW9uc2hpcHMKICAgIGNsaWVudHMud2ViIC0+IHNlcnZlci5hcGkgIk1ha2VzIHJlcXVlc3RzIHRvIgogICAgY2xpZW50cy5pb3MgLT4gc2VydmVyLmFwaSAiTWFrZXMgcmVxdWVzdHMgdG8iCiAgICBjbGllbnRzLmFuZHJvaWQgLT4gc2VydmVyLmFwaSAiTWFrZXMgcmVxdWVzdHMgdG8iCiAgICBjbGllbnRzLmJyb3dzZXJfZXh0ZW5zaW9uIC0+IHNlcnZlci5hcGkgIk1ha2VzIHJlcXVlc3RzIHRvIgogICAgY2xpZW50cy5jbGkgLT4gc2VydmVyLmFwaSAiTWFrZXMgcmVxdWVzdHMgdG8iCiAgICBjbGllbnRzLmRlc2t0b3AgLT4gc2VydmVyLmFwaSAiTWFrZXMgcmVxdWVzdHMgdG8iCiAgICBjbGllbnRzLndlYiAtPiBzZXJ2ZXIuaWRlbnRpdHkgIkF1dGhlbnRpY2F0ZXMgd2l0aCIKICAgIGNsaWVudHMuaW9zIC0+IHNlcnZlci5pZGVudGl0eSAiQXV0aGVudGljYXRlcyBXaXRoIgogICAgY2xpZW50cy5hbmRyb2lkIC0+IHNlcnZlci5pZGVudGl0eSAiQXV0aGVudGljYXRlcyBXaXRoIgogICAgY2xpZW50cy5icm93c2VyX2V4dGVuc2lvbiAtPiBzZXJ2ZXIuaWRlbnRpdHkgIkF1dGhlbnRpY2F0ZXMgV2l0aCIKICAgIGNsaWVudHMuY2xpIC0+IHNlcnZlci5pZGVudGl0eSAiQXV0aGVudGljYXRlcyBXaXRoIgogICAgY2xpZW50cy5kZXNrdG9wIC0+IHNlcnZlci5pZGVudGl0eSAiQXV0aGVudGljYXRlcyBXaXRoIgogICAgc2VydmVyLmFwaSAtPiBzZXJ2ZXIuaWRlbnRpdHkgIlZhbGlkYXRlcyBKV1RzIHdpdGgiIHsKICAgICAgdXJsICJodHRwczovL2JpdHdhcmRlbi5jb20iCiAgICB9CiAgICBjbGllbnRzIC0+IHNlcnZlci5ldmVudHMgIlBvc3RzIGxvY2FsIHVzYWdlIGV2ZW50cyB0byIKICAgIAogICAgIyBEYXRhYmFzZSBSZWxhdGlvbnNoaXBzCiAgICAKICAgIHNlcnZlci5hcGkgLT4gc2VydmVyLmRhdGFiYXNlICJRdWVyaWVzIgogICAgc2VydmVyLnBvcnRhbCAtPiBzZXJ2ZXIuZGF0YWJhc2UgIlF1ZXJpZXMiCiAgICAKICAgICMgcXVldWUgUmVsYXRpb25zaGlwcwogICAgc2VydmVyLmFwaSAtPiBzZXJ2ZXIuZXZlbnRzX3F1ZXVlICJTZW5kcyBldmVudHMgdG8iCiAgICBzZXJ2ZXIuZXZlbnRzIC0+IHNlcnZlci5ldmVudHNfcXVldWUgIlNlbmRzIGV2ZW50cyB0byIKICAgIHNlcnZlci5hcGkgLT4gc2VydmVyLm1haWxfcXVldWUgIlNlbmRzIGVtYWlscyB0byIKICAgIHNlcnZlci5hcGkgLT4gc2VydmVyLm5vdGlmaWNhdGlvbnNfcXVldWUgIlNlbmRzIG5vdGlmaWNhdGlvbnMgdG8iCiAgICBzZXJ2ZXIubm90aWZpY2F0aW9ucyAtPiBzZXJ2ZXIubm90aWZpY2F0aW9uc19xdWV1ZSAiU2VuZHMgbm90aWZpY2F0aW9ucyB0byIKICAgIHNlcnZlci5ldmVudHNfcXVldWUgLT4gc2VydmVyLmV2ZW50c19wcm9jZXNzb3IgIlByb2Nlc3NlcyBldmVudHMgZnJvbSIKICAgIHNlcnZlci5tYWlsX3F1ZXVlIC0+IHNlcnZlci5wb3J0YWwgIlByb2Nlc3NlcyBlbWFpbHMgZnJvbSIKICAgIAogICAgIyBzZWxmIGhvc3QgcGhvbmUgaG9tZQogICAgc2VsZl9ob3N0ZWRfaW5zdGFuY2VzIC0+IHNlcnZlci5ub3RpZmljYXRpb25zICJTZW5kcyBwdXNoIG5vdGlmaWNhdGlvbiBwcm94eSByZXF1ZXN0cyB0byIKCgogICAgc2VydmVyLnNjaW0gLT4gc2VydmVyLmRhdGFiYXNlICJRdWVyaWVzIgogICAgc2VydmVyLmlkZW50aXR5IC0+IHNlcnZlci5kYXRhYmFzZSAiUXVlcmllcyIKICAgIHNlcnZlci5zc28gLT4gc2VydmVyLmRhdGFiYXNlICJRdWVyaWVzIgogICAgIyBIaWdoLWxldmVsIHByb3ZpZGVyIHJlbGF0aW9uc2hpcHMKICAgIHNlcnZlci5hcGkuYmlsbGluZyAtPiBzdHJpcGUgIlJlcXVlc3RzIHBheW1lbnRzIGZvciBjdXN0b21lcnMiCiAgICBzZXJ2ZXIuYXBpLmJpbGxpbmcgLT4gYnJhaW50cmVlICJSZXF1ZXN0cyBwYXltZW50cyBmb3IgY3VzdG9tZXJzIgogICAgc3RyaXBlIC0+IHNlcnZlci5hcGkuYmlsbGluZyAiU2VuZHMgc3Vic2NyaXB0aW9uIGV2ZW50cyB0byIKICAgIGtleV9jb25uZWN0b3IgLT4gc2VydmVyLmlkZW50aXR5ICJWYWxpZGF0ZXMgSldUcyB3aXRoIgogIH0KCiAgdmlld3MgewogICAgc3R5bGVzIHsKICAgICAgZWxlbWVudCAiUGVyc29uIiB7CiAgICAgICAgYmFja2dyb3VuZCAjMzEwN2QzCiAgICAgICAgc2hhcGUgcGVyc29uCiAgICAgIH0KICAgICAgZWxlbWVudCAiTVNQIiB7CiAgICAgICAgYmFja2dyb3VuZCAjMzEwN2QzCiAgICAgICAgc2hhcGUgcGVyc29uCiAgICAgIH0KICAgIH0KICAgIGNvbXBvbmVudCBzZXJ2ZXIuaWNvbnMgImljb25zX3NlcnZpY2UiIHsKICAgICAgaW5jbHVkZSAqCiAgICAgIGF1dG9sYXlvdXQgdGIKICAgIH0KCiAgICBzeXN0ZW1MYW5kc2NhcGUgIkJpdHdhcmRlbiIgewogICAgICBpbmNsdWRlICoKICAgIH0KCiAgICBjb250YWluZXIgc2VydmVyICJCaXR3YXJkZW5fU2VydmVyIiB7CiAgICAgIGluY2x1ZGUgKgogICAgfQoKICAgIC8vIFRoaXMgaXMgbGFzdCB0byBvdmVycmlkZSB0ZWFtIHN0eWxlcyB3aXRoIGNvbW1vbiBzdHlsZXMKICAgIHN0eWxlcyB7CiAgICAgIHRoZW1lIGRlZmF1bHQKICAgICAgZWxlbWVudCAiRWxlbWVudCIgewogICAgICAgIGNvbG9yICMzYzNiM2IKICAgICAgfQogICAgICBlbGVtZW50ICJQZXJzb24iIHsKICAgICAgICBiYWNrZ3JvdW5kICNkMzQ0MDcKICAgICAgICBzaGFwZSBwZXJzb24KICAgICAgfQogICAgICBlbGVtZW50ICJDb250YWluZXIiIHsKICAgICAgICBiYWNrZ3JvdW5kICNmODg3MjgKICAgICAgfQogICAgICBlbGVtZW50ICJNU1AiIHsKICAgICAgICBiYWNrZ3JvdW5kICMzMTA3ZDMKICAgICAgfQogICAgICBlbGVtZW50ICJRdWV1ZSIgewogICAgICAgIHNoYXBlIHBpcGUKICAgICAgfQogICAgICBlbGVtZW50ICJNb2JpbGUiIHsKICAgICAgICBzaGFwZSBtb2JpbGVEZXZpY2VQb3J0cmFpdAogICAgICB9CiAgICAgIGVsZW1lbnQgIldlYiIgewogICAgICAgIHNoYXBlIHdlYkJyb3dzZXIKICAgICAgfQogICAgICBlbGVtZW50ICJEYXRhYmFzZSIgewogICAgICAgIHNoYXBlIGN5bGluZGVyCiAgICAgIH0KICAgICAgZWxlbWVudCAiRXh0ZXJuYWwiIHsKICAgICAgICBjb2xvciAjMDAwMDAwCiAgICAgICAgYmFja2dyb3VuZCAjYjViNWI1CiAgICAgIH0KICAgIH0KICB9Cn0="
+    "structurizr.dsl" : "d29ya3NwYWNlICJCaXR3YXJkZW4gU2VydmVyIFN5c3RlbSIgewoKICAhaWRlbnRpZmllcnMgaGllcmFyY2hpY2FsCgogICFkb2NzICJ1c2FnZV9kb2NzIgogIG1vZGVsIHsKICAgIHByb3BlcnRpZXMgewogICAgICAic3RydWN0dXJpenIuZ3JvdXBTZXBhcmF0b3IiICIvIgogICAgfQoKICAgICMgSW5jbHVkZSBzaGFyZWQgbGV2ZWwgbW9kZWxzCiAgICAjIFBlcnNvbiB0eXBlcwogICAgdXNlciA9IHBlcnNvbiAiQml0d2FyZGVuIFVzZXIiICJBbiBlbmQgdXNlciBvZiB0aGUgQml0d2FyZGVuIFN5c3RlbSIKICAgIHN5c3RlbV9hZG1pbiA9IHBlcnNvbiAiU3lzdGVtIEFkbWluIiAiRWl0aGVyIGEgQml0d2FyZGVuIHNpdGUtcmVsaWFiaWxpdHkgZW5naW5lZXIgb3IgYWRtaW5pc3RyYXRvciBvZiBhIHNlbGYtaG9zdGVkIGluc3RhbmNlIiB7CiAgICAgIHRhZ3MgIkJpdHdhcmRlbiBFbXBsb3llZSIgIlNlbGYtSG9zdCBBZG1pbiIKICAgIH0KICAgIAogICAgCiAgICBid19jb250cm9sbGVkID0gZ3JvdXAgIkJpdHdhcmRlbiBDb250cm9sbGVkIiB7CiAgICAgICMgQml0d2FyZGVuIHN0YWZmCiAgICAgIGN1c3RvbWVyX3N1Y2Nlc3MgPSBwZXJzb24gIkN1c3RvbWVyIFN1Y2Nlc3MiICJBIGN1c3RvbWVyIHN1Y2Nlc3MgZW5naW5lZXIuIEluc3BlY3RzIGJpdHdhcmRlbiBzdGF0ZSB0aHJvdWdoIHRoZSBhZG1pbiBwb3J0YWwgYW5kIGludGVybmFsIHRvb2xzIiB7CiAgICAgICAgdGFncyAiQml0d2FyZGVuIEVtcGxveWVlIgogICAgICB9CiAgICAgIAogICAgICAjIFJvb3Qgc3lzdGVtcwogICAgICBzZXJ2ZXIgPSBzb2Z0d2FyZVN5c3RlbSAiQml0d2FyZGVuIFNlcnZlciIgewogICAgICAgIGFwaSA9IGNvbnRhaW5lciAiQVBJIiB7CiAgICAgICAgICBiaWxsaW5nID0gY29tcG9uZW50ICJCaWxsaW5nIiB7CiAgICAgICAgICAgIHRhZ3MgIkJpbGxpbmciCiAgICAgICAgICB9CiAgICAgICAgICB0YWdzICJBUEkiCiAgICAgICAgfQogICAgICAgIGV2ZW50cyA9IGNvbnRhaW5lciAiRXZlbnRzIiB7CiAgICAgICAgICB0YWdzICJFdmVudHMiCiAgICAgICAgfQogICAgICAgIG5vdGlmaWNhdGlvbnMgPSBjb250YWluZXIgIk5vdGlmaWNhdGlvbnMiCiAgICAgICAgcG9ydGFsID0gY29udGFpbmVyICJCaXR3YXJkZW4gUG9ydGFsIiB7CiAgICAgICAgICB0YWdzICJXZWIiCiAgICAgICAgfQogICAgICAgIGV2ZW50c19wcm9jZXNzb3IgPSBjb250YWluZXIgIkV2ZW50cyBQcm9jZXNzb3IiIHsKICAgICAgICAgIHRhZ3MgIkV2ZW50cyIKICAgICAgICB9CiAgICAKICAgICAgICAjIERhdGEgc3RvcmVzCiAgICAgICAgZGF0YWJhc2UgPSBjb250YWluZXIgIkRhdGFiYXNlIiB7CiAgICAgICAgICB0YWdzICJEYXRhYmFzZSIKICAgICAgICB9CiAgICAgICAgZXZlbnRzX3F1ZXVlID0gY29udGFpbmVyICJFdmVudHMgUXVldWUiIHsKICAgICAgICAgIHRhZ3MgIlF1ZXVlIgogICAgICAgICAgdGFncyAiQXp1cmUiCiAgICAgICAgfQogICAgICAgIG1haWxfcXVldWUgPSBjb250YWluZXIgIk1haWwgUXVldWUiIHsKICAgICAgICAgIHRhZ3MgIlF1ZXVlIgogICAgICAgICAgdGFncyAiQXp1cmUiCiAgICAgICAgfQogICAgICAgIG5vdGlmaWNhdGlvbnNfcXVldWUgPSBjb250YWluZXIgIk5vdGlmaWNhdGlvbnMgUXVldWUiIHsKICAgICAgICAgIHRhZ3MgIlF1ZXVlIgogICAgICAgICAgdGFncyAiQXp1cmUiCiAgICAgICAgfQogICAgICB9CiAgICAgIGNsaWVudHMgPSBzb2Z0d2FyZVN5c3RlbSAiQ2xpZW50cyIgewogICAgICAgIHdlYiA9IGNvbnRhaW5lciAiV2ViIEFwcGxpY2F0aW9uIiB7CiAgICAgICAgICB0YWdzICJXZWIiCiAgICAgICAgfQogICAgICAgIGlvcyA9IGNvbnRhaW5lciAiaU9TIEFwcGxpY2F0aW9uIiB7CiAgICAgICAgICB0YWdzICJNb2JpbGUiCiAgICAgICAgfQogICAgICAgIGFuZHJvaWQgPSBjb250YWluZXIgIkFuZHJvaWQgQXBwbGljYXRpb24iIHsKICAgICAgICAgIHRhZ3MgIk1vYmlsZSIKICAgICAgICB9CiAgICAgICAgYnJvd3Nlcl9leHRlbnNpb24gPSBjb250YWluZXIgIkJyb3dzZXIgRXh0ZW5zaW9uIiB7CiAgICAgICAgICB0YWdzICJCcm93c2VyIgogICAgICAgIH0KICAgICAgICBjbGkgPSBjb250YWluZXIgIkNMSSIgewogICAgICAgICAgdGFncyAiQ0xJIgogICAgICAgIH0KICAgICAgICBkZXNrdG9wID0gY29udGFpbmVyICJEZXNrdG9wIEFwcGxpY2F0aW9uIiB7CiAgICAgICAgICB0YWdzICJEZXNrdG9wIgogICAgICAgIH0KICAgICAgfQogICAgICBkaXJlY3RvcnlfY29ubmVjdG9yID0gc29mdHdhcmVTeXN0ZW0gIkRpcmVjdG9yeSBDb25uZWN0b3IiIHsKICAgICAgICB0YWdzICJEaXJlY3RvcnkiCiAgICAgICAgdGFncyAiTERBUCIKICAgICAgICB0YWdzICJTZWxmLUhvc3RlZCIKICAgICAgfQogICAgICBrZXlfY29ubmVjdG9yID0gc29mdHdhcmVTeXN0ZW0gIktleSBDb25uZWN0b3IiIAogICAgfQogICAgCiAgICBzZWxmX2hvc3RlZF9pbnN0YW5jZXMgPSBzb2Z0d2FyZVN5c3RlbSAiU2VsZi1Ib3N0ZWQgSW5zdGFuY2VzIiB7CiAgICAgIHRhZ3MgIlNlbGYtSG9zdGVkIgogICAgICB0YWdzICJFeHRlcm5hbCIKICAgICAgZGVzY3JpcHRpb24gIlNlbGYtaG9zdGVkIGluc3RhbmNlcyBvZiBCaXR3YXJkZW4gc2VydmVycyIKICAgIH0KCiAgICAjIEluY2x1ZGUgdGVhbSBsZXZlbCBtb2RlbHMKICAgIGFkbWluID0gcGVyc29uICJPcmdhbml6YXRpb24gQWRtaW4iICJBbiBhZG1pbmlzdHJhdG9yIG9mIGFuIG9yZ2FuaXphdGlvbiIgewogICAgICB0YWdzICJBZG1pbiIKICAgIH0KICAgIHByb3ZpZGVyID0gcGVyc29uICJNU1AiICJBbmQgZW1wbG95ZWUgb2YgYSBtYW5hZ2VkIHNlcnZpY2UgcHJvdmlkZXIiIHsKICAgICAgdGFncyAiTVNQIgogICAgfQogICAgCiAgICAhZWxlbWVudCBzZXJ2ZXIgewogICAgICBzY2ltID0gY29udGFpbmVyICJTQ0lNIiB7CiAgICAgICAgdGFncyAiU0NJTSIKICAgICAgfQogICAgfQogICAgCiAgICBkaXJlY3RvcnlfY29ubmVjdG9yIC0+IHNlcnZlci5hcGkgIlN5bmNzIHVzZXJzIGFuZCBncm91cHMgdG8gQml0d2FyZGVuIgogICAgIWVsZW1lbnQgc2VydmVyIHsKICAgICAgaWRlbnRpdHkgPSBjb250YWluZXIgIklkZW50aXR5IiB7CiAgICAgICAgdGFncyAiQXV0aCIKICAgICAgfQogICAgICBzc28gPSBjb250YWluZXIgIlNTTyIgewogICAgICAgIHRhZ3MgIkF1dGgiCiAgICAgIH0KICAgIH0KICAgICMgRXh0ZXJuYWwgdmVuZG9ycwogICAgZ3JvdXAgIlBheW1lbnQgU3lzdGVtcyIgewogICAgICBzdHJpcGUgPSBzb2Z0d2FyZVN5c3RlbSAiU3RyaXBlIiB7CiAgICAgICAgdGFncyAiRXh0ZXJuYWwiCiAgICAgICAgdGFncyAiQmlsbGluZyIKICAgICAgICBkZXNjcmlwdGlvbiAiSGFuZGxlcyBjcmVkaXQgY2FyZHMgYW5kIHN1YnNjcmlwdGlvbnMuIgogICAgICB9CiAgICAgIGJyYWludHJlZSA9IHNvZnR3YXJlU3lzdGVtICJCcmFpbnRyZWUiIHsKICAgICAgICB0YWdzICJFeHRlcm5hbCIKICAgICAgICB0YWdzICJCaWxsaW5nIgogICAgICAgIGRlc2NyaXB0aW9uICJIYW5kbGVzIFBheVBhbCBhbmQgY3J5cHRvY3VycmVuY3kuIgogICAgICB9CiAgICB9CiAgICAKICAgICFlbGVtZW50IHNlcnZlciB7CiAgICAgIGljb25zID0gY29udGFpbmVyICJJY29ucyIgewogICAgICAgICFkb2NzICJ0aHJlYXRfbW9kZWwubWQiCiAgICAgICAgaWNvbnNfY29udHJvbGxlciA9IGNvbXBvbmVudCAiSWNvbnNDb250cm9sbGVyIiB7CiAgICAgICAgICBkZXNjcmlwdGlvbiAiSWNvbnNDb250cm9sbGVyIgogICAgICAgICAgdGVjaG5vbG9neSAiQyMgQVNQLk5FVCBDb3JlIgogICAgICAgICAgCiAgICAgICAgfQogICAgICAgIGluZm9fY29udHJvbGxlciA9IGNvbXBvbmVudCAiSW5mb0NvbnRyb2xsZXIiIHsKICAgICAgICAgIGRlc2NyaXB0aW9uICJQcm92aWRlcyBpbmZvcm1hdGlvbiBhYm91dCB0aGUgZGVwbG95ZWQgaWNvbiBzZXJ2aWNlLiBBbGxvdyBmb3IgaGVhbHRoIGNoZWNrcy4iCiAgICAgICAgICB0ZWNobm9sb2d5ICJDIyBBU1AuTkVUIENvcmUiCiAgICAgICAgICB0YWdzICJJbmZvIiAiSGVhbHRoQ2hlY2siCiAgICAgICAgfQogICAgICAgIGljb25fZGV0ZXJtaW5hdGlvbiA9IGNvbXBvbmVudCAiSWNvbkRldGVybWluYXRpb24iIHsKICAgICAgICAgIGRlc2NyaXB0aW9uICJSZXNvbHZlcyBhIHNpbmdsZSBzb3VyY2UgZm9yIGEgd2Vic2l0ZSBpY29uIGFuZCBkb3dubG9hZHMgaXQuIgogICAgICAgIH0KICAgICAgICBpY29uX2NhY2hlID0gY29tcG9uZW50ICJJY29uQ2FjaGUiIHsKICAgICAgICAgIGRlc2NyaXB0aW9uICJDYWNoZXMgaWNvbnMgZm9yIGEgZ2l2ZW4gZG9tYWluIgogICAgICAgICAgdGFncyAiQ2FjaGUiCiAgICAgICAgICB0ZWNobm9sb2d5ICJDIyBNZW1vcnlDYWNoZSIKICAgICAgICB9CiAgICAKICAgICAgICBjbGllbnRzIC0+IGljb25zX2NvbnRyb2xsZXIgIlJlcXVlc3RzIGljb25zIGZvciBjbGVhcnRleHQgdXJscyBmcm9tIiB7CiAgICAgICAgICBwZXJzcGVjdGl2ZXMgewogICAgICAgICAgICAiU2VjdXJpdHkiICIgICAgICAgICAgICBJY29ucyAxLjIuMSBCcm9rZW4gU1NMIGNvbW11bmljYXRpb24gZXhwb3NlcyB2YXVsdCBjb250ZW50cyB0byBuZXR3b3JrIGFkbWluaXN0cmF0b3JzIFxuXG4gICAgICAgICAgICBJY29ucyAxLjIuMiBUcmFja2luZyBvZiB1c2VyIHZhdWx0IGNvbnRlbnRzIGJ5IGlwIGNvcnJlbGF0aW9uIGJldHdlZW4gaWRlbnRpdHkgYW5kIGljb25zIHNlcnZpY2VzIFxuXG4gICAgICAgICAgICBJY29ucyAxLjIuMyBObyBTTEEgb2ZmZXJlZCBvbiBJY29ucyBzZXJ2aWNlLCBncmFjZWZ1bCBkZWdyYWRhdGlvbiBvZiBmZWF0dXJlcyBuZWVkZWQgaWYgaXQgZ29lcyBkb3duIFxuXG4gICAgICAgICAgICBJY29ucyAxLjIuNCBTU1JGIHRocm91Z2ggY3JhZnRlZCBpbnB1dCByZXNvbHZpbmcgdG8gYSBsb2NhdGlvbiB0aGUgc2VydmVyIGhhcyBlbGV2YXRlZCBwcml2aWxlZ2VzIGluIgogICAgICAgICAgfQogICAgICAgIH0KICAgICAgICBpY29uc19jb250cm9sbGVyIC0+IGljb25fZGV0ZXJtaW5hdGlvbiAiUmVxdWVzdHMgaWNvbnMgZnJvbSIKICAgICAgICBpY29uc19jb250cm9sbGVyIC0+IGljb25fY2FjaGUgIkNhY2hlcyBpY29ucyBpbiIgewogICAgICAgICAgcGVyc3BlY3RpdmVzIHsKICAgICAgICAgICAgIlNlY3VyaXR5IiAiICAgICAgICAgICAgSWNvbnMgMS4zLjEgQWdncmVnYXRlIHZhdWx0IGNvbnRlbnQgbGVhayB0aHJvdWdoIHRpbWluZyBhdHRhY2sgb24gY2FjaGUgXG5cbiAgICAgICAgICAgIEljb25zIDEuMy4yIFBvc3NpYmxlIGluamVjdGlvbiBhdHRhY2sgdGhyb3VnaCBjYWNoZSBrZXkgXG5cbiAgICAgICAgICAgIEljb25zIDEuMy4zICYgSWNvbnMgMS4zLjQgQ2FjaGUgYmxvYXQgbGVhZGluZyB0byBEb1MgXG5cbiAgICAgICAgICAgIEljb25zIDEuMy41IENhY2hlIHBvaXNvbmluZyBsZWFkaW5nIHRvIGluY29ycmVjdCBpY29uIHN0b3JhZ2UgIgogICAgICAgICAgfQogICAgICAgIH0KICAgICAgfQogICAgfQogICAgCiAgICBkbnMgPSBzb2Z0d2FyZVN5c3RlbSAiRE5TIiB7CiAgICAgIHRhZ3MgIkV4dGVybmFsIgogICAgICB0YWdzICJJY29ucyIKICAgIH0KICAgIAogICAgc2VydmVyLmljb25zLmljb25fZGV0ZXJtaW5hdGlvbiAtPiBkbnMgIlJlc29sdmVzIElQIGFkZHJlc3NlcyBmb3IgZG9tYWluIG5hbWVzIGZyb20iCiAgICAKICAgIGV4dGVybmFsX3dlYnNpdGVzID0gc29mdHdhcmVTeXN0ZW0gIkV4dGVybmFsIFdlYnNpdGVzIiB7CiAgICAgIHRhZ3MgIkV4dGVybmFsIgogICAgICB0YWdzICJJY29ucyIKICAgIH0KICAgIAogICAgc2VydmVyLmljb25zLmljb25fZGV0ZXJtaW5hdGlvbiAtPiBleHRlcm5hbF93ZWJzaXRlcyAiUmV0cmlldmVzIGljb25zIGZyb20iCgogICAgIyBJbmNsdWRlIHNoYXJlZCBsZXZlbCByZWxhdGlvbnNoaXBzCiAgICAjIFVzZXIgUmVsYXRpb25zaGlwcwogICAgdXNlciAtPiBjbGllbnRzLndlYiAiVXNlcyIKICAgIHVzZXIgLT4gY2xpZW50cy5pb3MgIlVzZXMiCiAgICB1c2VyIC0+IGNsaWVudHMuYW5kcm9pZCAiVXNlcyIKICAgIHVzZXIgLT4gY2xpZW50cy5icm93c2VyX2V4dGVuc2lvbiAiVXNlcyIKICAgIHVzZXIgLT4gY2xpZW50cy5jbGkgIlVzZXMiCiAgICB1c2VyIC0+IGNsaWVudHMuZGVza3RvcCAiVXNlcyIKICAgIGFkbWluIC0+IGNsaWVudHMud2ViICJBZG1pbmlzdGVycyBPcmdhbml6YXRpb25zIgogICAgcHJvdmlkZXIgLT4gc2VydmVyLnBvcnRhbCAiQ29tcGxldGVzIFByb3ZpZGVyIHJlZ2lzdHJhdGlvbiB3aXRoIgogICAgcHJvdmlkZXIgLT4gY2xpZW50cy53ZWIgIkFkbWluaXN0ZXJzIFByb3ZpZGVycyBhbmQgT3JnYW5pemF0aW9ucyIKICAgIGN1c3RvbWVyX3N1Y2Nlc3MgLT4gc2VydmVyLnBvcnRhbCAiSW5zcGVjdHMgYW5kIHN1cHBvcnRzIgogICAgc3lzdGVtX2FkbWluIC0+IHNlcnZlci5wb3J0YWwgIkFkbWluaXN0ZXJzIFN5c3RlbSIKICAgIAogICAgIyBIaWdoLWxldmVsIENsaWVudCBSZWxhdGlvbnNoaXBzCiAgICBjbGllbnRzLndlYiAtPiBzZXJ2ZXIuYXBpICJNYWtlcyByZXF1ZXN0cyB0byIKICAgIGNsaWVudHMuaW9zIC0+IHNlcnZlci5hcGkgIk1ha2VzIHJlcXVlc3RzIHRvIgogICAgY2xpZW50cy5hbmRyb2lkIC0+IHNlcnZlci5hcGkgIk1ha2VzIHJlcXVlc3RzIHRvIgogICAgY2xpZW50cy5icm93c2VyX2V4dGVuc2lvbiAtPiBzZXJ2ZXIuYXBpICJNYWtlcyByZXF1ZXN0cyB0byIKICAgIGNsaWVudHMuY2xpIC0+IHNlcnZlci5hcGkgIk1ha2VzIHJlcXVlc3RzIHRvIgogICAgY2xpZW50cy5kZXNrdG9wIC0+IHNlcnZlci5hcGkgIk1ha2VzIHJlcXVlc3RzIHRvIgogICAgY2xpZW50cy53ZWIgLT4gc2VydmVyLmlkZW50aXR5ICJBdXRoZW50aWNhdGVzIHdpdGgiCiAgICBjbGllbnRzLmlvcyAtPiBzZXJ2ZXIuaWRlbnRpdHkgIkF1dGhlbnRpY2F0ZXMgV2l0aCIKICAgIGNsaWVudHMuYW5kcm9pZCAtPiBzZXJ2ZXIuaWRlbnRpdHkgIkF1dGhlbnRpY2F0ZXMgV2l0aCIKICAgIGNsaWVudHMuYnJvd3Nlcl9leHRlbnNpb24gLT4gc2VydmVyLmlkZW50aXR5ICJBdXRoZW50aWNhdGVzIFdpdGgiCiAgICBjbGllbnRzLmNsaSAtPiBzZXJ2ZXIuaWRlbnRpdHkgIkF1dGhlbnRpY2F0ZXMgV2l0aCIKICAgIGNsaWVudHMuZGVza3RvcCAtPiBzZXJ2ZXIuaWRlbnRpdHkgIkF1dGhlbnRpY2F0ZXMgV2l0aCIKICAgIHNlcnZlci5hcGkgLT4gc2VydmVyLmlkZW50aXR5ICJWYWxpZGF0ZXMgSldUcyB3aXRoIiB7CiAgICAgIHVybCAiaHR0cHM6Ly9iaXR3YXJkZW4uY29tIgogICAgfQogICAgY2xpZW50cyAtPiBzZXJ2ZXIuZXZlbnRzICJQb3N0cyBsb2NhbCB1c2FnZSBldmVudHMgdG8iCiAgICAKICAgICMgRGF0YWJhc2UgUmVsYXRpb25zaGlwcwogICAgCiAgICBzZXJ2ZXIuYXBpIC0+IHNlcnZlci5kYXRhYmFzZSAiUXVlcmllcyIKICAgIHNlcnZlci5wb3J0YWwgLT4gc2VydmVyLmRhdGFiYXNlICJRdWVyaWVzIgogICAgCiAgICAjIHF1ZXVlIFJlbGF0aW9uc2hpcHMKICAgIHNlcnZlci5hcGkgLT4gc2VydmVyLmV2ZW50c19xdWV1ZSAiU2VuZHMgZXZlbnRzIHRvIgogICAgc2VydmVyLmV2ZW50cyAtPiBzZXJ2ZXIuZXZlbnRzX3F1ZXVlICJTZW5kcyBldmVudHMgdG8iCiAgICBzZXJ2ZXIuYXBpIC0+IHNlcnZlci5tYWlsX3F1ZXVlICJTZW5kcyBlbWFpbHMgdG8iCiAgICBzZXJ2ZXIuYXBpIC0+IHNlcnZlci5ub3RpZmljYXRpb25zX3F1ZXVlICJTZW5kcyBub3RpZmljYXRpb25zIHRvIgogICAgc2VydmVyLm5vdGlmaWNhdGlvbnMgLT4gc2VydmVyLm5vdGlmaWNhdGlvbnNfcXVldWUgIlNlbmRzIG5vdGlmaWNhdGlvbnMgdG8iCiAgICBzZXJ2ZXIuZXZlbnRzX3F1ZXVlIC0+IHNlcnZlci5ldmVudHNfcHJvY2Vzc29yICJQcm9jZXNzZXMgZXZlbnRzIGZyb20iCiAgICBzZXJ2ZXIubWFpbF9xdWV1ZSAtPiBzZXJ2ZXIucG9ydGFsICJQcm9jZXNzZXMgZW1haWxzIGZyb20iCiAgICAKICAgICMgc2VsZiBob3N0IHBob25lIGhvbWUKICAgIHNlbGZfaG9zdGVkX2luc3RhbmNlcyAtPiBzZXJ2ZXIubm90aWZpY2F0aW9ucyAiU2VuZHMgcHVzaCBub3RpZmljYXRpb24gcHJveHkgcmVxdWVzdHMgdG8iCgoKICAgIHNlcnZlci5zY2ltIC0+IHNlcnZlci5kYXRhYmFzZSAiUXVlcmllcyIKICAgIHNlcnZlci5pZGVudGl0eSAtPiBzZXJ2ZXIuZGF0YWJhc2UgIlF1ZXJpZXMiCiAgICBzZXJ2ZXIuc3NvIC0+IHNlcnZlci5kYXRhYmFzZSAiUXVlcmllcyIKICAgICMgSGlnaC1sZXZlbCBwcm92aWRlciByZWxhdGlvbnNoaXBzCiAgICBzZXJ2ZXIuYXBpLmJpbGxpbmcgLT4gc3RyaXBlICJSZXF1ZXN0cyBwYXltZW50cyBmb3IgY3VzdG9tZXJzIgogICAgc2VydmVyLmFwaS5iaWxsaW5nIC0+IGJyYWludHJlZSAiUmVxdWVzdHMgcGF5bWVudHMgZm9yIGN1c3RvbWVycyIKICAgIHN0cmlwZSAtPiBzZXJ2ZXIuYXBpLmJpbGxpbmcgIlNlbmRzIHN1YnNjcmlwdGlvbiBldmVudHMgdG8iCiAgICBrZXlfY29ubmVjdG9yIC0+IHNlcnZlci5pZGVudGl0eSAiVmFsaWRhdGVzIEpXVHMgd2l0aCIKICB9CgogIHZpZXdzIHsKICAgIHN0eWxlcyB7CiAgICAgIGVsZW1lbnQgIlBlcnNvbiIgewogICAgICAgIGJhY2tncm91bmQgIzMxMDdkMwogICAgICAgIHNoYXBlIHBlcnNvbgogICAgICB9CiAgICAgIGVsZW1lbnQgIk1TUCIgewogICAgICAgIGJhY2tncm91bmQgIzMxMDdkMwogICAgICAgIHNoYXBlIHBlcnNvbgogICAgICB9CiAgICB9CiAgICBjb21wb25lbnQgc2VydmVyLmljb25zICJpY29uc19zZXJ2aWNlIiB7CiAgICAgIGluY2x1ZGUgKgogICAgfQoKICAgIHN5c3RlbUxhbmRzY2FwZSAiQml0d2FyZGVuIiB7CiAgICAgIGluY2x1ZGUgKgogICAgfQoKICAgIGNvbnRhaW5lciBzZXJ2ZXIgIkJpdHdhcmRlbl9TZXJ2ZXIiIHsKICAgICAgaW5jbHVkZSAqCiAgICB9CgogICAgLy8gVGhpcyBpcyBsYXN0IHRvIG92ZXJyaWRlIHRlYW0gc3R5bGVzIHdpdGggY29tbW9uIHN0eWxlcwogICAgc3R5bGVzIHsKICAgICAgdGhlbWUgZGVmYXVsdAogICAgICBlbGVtZW50ICJFbGVtZW50IiB7CiAgICAgICAgY29sb3IgIzNjM2IzYgogICAgICB9CiAgICAgIGVsZW1lbnQgIlBlcnNvbiIgewogICAgICAgIGJhY2tncm91bmQgI2QzNDQwNwogICAgICAgIHNoYXBlIHBlcnNvbgogICAgICB9CiAgICAgIGVsZW1lbnQgIkNvbnRhaW5lciIgewogICAgICAgIGJhY2tncm91bmQgI2Y4ODcyOAogICAgICB9CiAgICAgIGVsZW1lbnQgIk1TUCIgewogICAgICAgIGJhY2tncm91bmQgIzMxMDdkMwogICAgICB9CiAgICAgIGVsZW1lbnQgIlF1ZXVlIiB7CiAgICAgICAgc2hhcGUgcGlwZQogICAgICB9CiAgICAgIGVsZW1lbnQgIk1vYmlsZSIgewogICAgICAgIHNoYXBlIG1vYmlsZURldmljZVBvcnRyYWl0CiAgICAgIH0KICAgICAgZWxlbWVudCAiV2ViIiB7CiAgICAgICAgc2hhcGUgd2ViQnJvd3NlcgogICAgICB9CiAgICAgIGVsZW1lbnQgIkRhdGFiYXNlIiB7CiAgICAgICAgc2hhcGUgY3lsaW5kZXIKICAgICAgfQogICAgICBlbGVtZW50ICJFeHRlcm5hbCIgewogICAgICAgIGNvbG9yICMwMDAwMDAKICAgICAgICBiYWNrZ3JvdW5kICNiNWI1YjUKICAgICAgfQogICAgfQogIH0KfQ=="
   },
   "views" : {
     "componentViews" : [ {
-      "automaticLayout" : {
-        "applied" : false,
-        "edgeSeparation" : 0,
-        "implementation" : "Graphviz",
-        "nodeSeparation" : 300,
-        "rankDirection" : "TopBottom",
-        "rankSeparation" : 300,
-        "vertices" : false
-      },
       "containerId" : "34",
+      "dimensions" : {
+        "height" : 2510,
+        "width" : 1713
+      },
       "elements" : [ {
         "id" : "15",
-        "x" : 0,
-        "y" : 0
+        "x" : 1042,
+        "y" : 165
       }, {
         "id" : "35",
-        "x" : 0,
-        "y" : 0
+        "x" : 1042,
+        "y" : 765
       }, {
         "id" : "36",
-        "x" : 0,
-        "y" : 0
+        "x" : 292,
+        "y" : 765
       }, {
         "id" : "37",
-        "x" : 0,
-        "y" : 0
+        "x" : 292,
+        "y" : 1365
       }, {
         "id" : "38",
-        "x" : 0,
-        "y" : 0
+        "x" : 1042,
+        "y" : 1365
       }, {
         "id" : "44",
-        "x" : 0,
-        "y" : 0
+        "x" : 199,
+        "y" : 1975
+      }, {
+        "id" : "48",
+        "x" : 789,
+        "y" : 1975
       } ],
       "externalContainerBoundariesVisible" : false,
       "key" : "icons_service",
@@ -874,12 +929,13 @@
         "id" : "43"
       }, {
         "id" : "45"
+      }, {
+        "id" : "49"
       } ]
     } ],
     "configuration" : {
       "branding" : { },
-      "lastSavedView" : "Bitwarden_Server",
-      "metadataSymbols" : "SquareBrackets",
+      "lastSavedView" : "Bitwarden",
       "styles" : {
         "elements" : [ {
           "background" : "#d34407",
@@ -1013,6 +1069,10 @@
         "id" : "44",
         "x" : 5292,
         "y" : 2158
+      }, {
+        "id" : "48",
+        "x" : 5292,
+        "y" : 2158
       } ],
       "externalSoftwareSystemBoundariesVisible" : false,
       "key" : "Bitwarden_Server",
@@ -1021,13 +1081,26 @@
       "relationships" : [ {
         "id" : "100"
       }, {
-        "id" : "102",
+        "id" : "102"
+      }, {
+        "id" : "103",
+        "vertices" : [ {
+          "x" : 1175,
+          "y" : 2808
+        }, {
+          "x" : 1175,
+          "y" : 3108
+        } ]
+      }, {
+        "id" : "104"
+      }, {
+        "id" : "106",
         "vertices" : [ {
           "x" : 3076,
           "y" : 1475
         } ]
       }, {
-        "id" : "105",
+        "id" : "109",
         "vertices" : [ {
           "x" : 2983,
           "y" : 1808
@@ -1036,13 +1109,13 @@
           "y" : 2108
         } ]
       }, {
-        "id" : "108",
+        "id" : "112",
         "vertices" : [ {
           "x" : 2889,
           "y" : 1240
         } ]
       }, {
-        "id" : "110"
+        "id" : "114"
       }, {
         "id" : "28"
       }, {
@@ -1064,7 +1137,16 @@
           "y" : 2108
         } ]
       }, {
-        "id" : "57",
+        "id" : "50",
+        "vertices" : [ {
+          "x" : 3733,
+          "y" : 1808
+        }, {
+          "x" : 5142,
+          "y" : 2108
+        } ]
+      }, {
+        "id" : "61",
         "vertices" : [ {
           "x" : 5892,
           "y" : 2108
@@ -1073,19 +1155,19 @@
           "y" : 2508
         } ]
       }, {
-        "id" : "60",
+        "id" : "64",
         "vertices" : [ {
           "x" : 2233,
           "y" : 908
         } ]
       }, {
-        "id" : "61",
+        "id" : "65",
         "vertices" : [ {
           "x" : 6425,
           "y" : 2508
         } ]
       }, {
-        "id" : "63",
+        "id" : "67",
         "vertices" : [ {
           "x" : 837,
           "y" : 2508
@@ -1094,9 +1176,9 @@
           "y" : 2808
         } ]
       }, {
-        "id" : "67"
+        "id" : "71"
       }, {
-        "id" : "79",
+        "id" : "83",
         "vertices" : [ {
           "x" : 208,
           "y" : 1404
@@ -1108,15 +1190,15 @@
           "y" : 2108
         } ]
       }, {
-        "id" : "85",
+        "id" : "89",
         "vertices" : [ {
           "x" : 1617,
           "y" : 2108
         } ]
       }, {
-        "id" : "86"
+        "id" : "90"
       }, {
-        "id" : "87",
+        "id" : "91",
         "vertices" : [ {
           "x" : 2892,
           "y" : 2508
@@ -1128,19 +1210,7 @@
           "y" : 3108
         } ]
       }, {
-        "id" : "88"
-      }, {
-        "id" : "89"
-      }, {
-        "id" : "90"
-      }, {
-        "id" : "91"
-      }, {
-        "id" : "92",
-        "vertices" : [ {
-          "x" : 3642,
-          "y" : 2108
-        } ]
+        "id" : "92"
       }, {
         "id" : "93"
       }, {
@@ -1148,18 +1218,17 @@
       }, {
         "id" : "95"
       }, {
-        "id" : "96"
+        "id" : "96",
+        "vertices" : [ {
+          "x" : 3642,
+          "y" : 2108
+        } ]
+      }, {
+        "id" : "97"
       }, {
         "id" : "98"
       }, {
-        "id" : "99",
-        "vertices" : [ {
-          "x" : 1175,
-          "y" : 2808
-        }, {
-          "x" : 1175,
-          "y" : 3108
-        } ]
+        "id" : "99"
       } ],
       "softwareSystemId" : "4"
     } ],
@@ -1198,8 +1267,8 @@
         "y" : 958
       }, {
         "id" : "24",
-        "x" : 0,
-        "y" : 0
+        "x" : 3195,
+        "y" : 2210
       }, {
         "id" : "25",
         "x" : 3125,
@@ -1211,36 +1280,42 @@
       }, {
         "id" : "32",
         "x" : 1633,
-        "y" : 2208
+        "y" : 2210
       }, {
         "id" : "33",
         "x" : 883,
-        "y" : 2208
+        "y" : 2210
       }, {
         "id" : "44",
         "x" : 2383,
-        "y" : 2208
+        "y" : 2210
+      }, {
+        "id" : "48",
+        "x" : 2383,
+        "y" : 2210
       } ],
       "enterpriseBoundaryVisible" : true,
       "key" : "Bitwarden",
       "order" : 2,
       "paperSize" : "A3_Landscape",
       "relationships" : [ {
-        "id" : "103",
+        "id" : "101"
+      }, {
+        "id" : "107",
         "vertices" : [ {
           "x" : 1708,
           "y" : 2058
         } ]
       }, {
-        "id" : "106"
+        "id" : "110"
       }, {
-        "id" : "109",
+        "id" : "113",
         "vertices" : [ {
           "x" : 2008,
           "y" : 2058
         } ]
       }, {
-        "id" : "111"
+        "id" : "115"
       }, {
         "id" : "29"
       }, {
@@ -1252,27 +1327,27 @@
       }, {
         "id" : "47"
       }, {
-        "id" : "49"
+        "id" : "51"
       }, {
-        "id" : "56"
+        "id" : "53"
       }, {
-        "id" : "58",
+        "id" : "60"
+      }, {
+        "id" : "62",
         "vertices" : [ {
           "x" : 3708,
           "y" : 1308
         } ]
       }, {
-        "id" : "60"
+        "id" : "64"
       }, {
-        "id" : "62"
+        "id" : "66"
       }, {
-        "id" : "64",
+        "id" : "68",
         "vertices" : [ {
           "x" : 729,
           "y" : 1308
         } ]
-      }, {
-        "id" : "97"
       } ]
     } ]
   }
