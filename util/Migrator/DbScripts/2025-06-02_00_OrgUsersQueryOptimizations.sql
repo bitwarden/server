@@ -1,3 +1,19 @@
+CREATE OR ALTER VIEW [dbo].[UserEmailDomainView]
+WITH SCHEMABINDING
+AS
+SELECT 
+    Id,
+    Email,
+    SUBSTRING(Email, CHARINDEX('@', Email) + 1, LEN(Email)) AS EmailDomain
+FROM dbo.[User]
+WHERE Email IS NOT NULL 
+    AND CHARINDEX('@', Email) > 0
+GO
+
+CREATE UNIQUE CLUSTERED INDEX IX_UserEmailDomainView_Id 
+ON dbo.UserEmailDomainView (Id);
+GO
+
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationUserUserDetails_ReadByOrganizationId_V2]
     @OrganizationId UNIQUEIDENTIFIER,
     @IncludeGroups BIT = 0,
@@ -37,18 +53,30 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    WITH CTE_UserWithDomain AS (
-        SELECT
-            OU.*,
-            SUBSTRING(U.Email, CHARINDEX('@', U.Email) + 1, LEN(U.Email)) AS EmailDomain
-        FROM [dbo].[OrganizationUserView] OU
-        INNER JOIN [dbo].[UserView] U ON OU.[UserId] = U.[Id]
-        WHERE OU.[OrganizationId] = @OrganizationId
-    )
     SELECT OU.*
-    FROM CTE_UserWithDomain OU
+    FROM [dbo].[OrganizationUserView] OU
+    INNER JOIN [dbo].[UserEmailDomainView] U ON OU.[UserId] = U.[Id]
     INNER JOIN [dbo].[OrganizationDomainView] OD ON OU.[OrganizationId] = OD.[OrganizationId]
-    WHERE OD.[VerifiedDate] IS NOT NULL
-      AND OU.EmailDomain = OD.[DomainName]
+    WHERE OU.[OrganizationId] = @OrganizationId
+      AND OD.[VerifiedDate] IS NOT NULL
+      AND U.EmailDomain = OD.[DomainName]
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Organization_ReadByClaimedUserEmailDomain_V2]
+    @UserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT O.*
+    FROM dbo.[UserEmailDomainView] U
+    INNER JOIN dbo.[OrganizationUserView] OU ON U.[Id] = OU.[UserId]
+    INNER JOIN dbo.[OrganizationView] O ON OU.[OrganizationId] = O.[Id]
+    INNER JOIN dbo.[OrganizationDomainView] OD ON OU.[OrganizationId] = OD.[OrganizationId]
+    WHERE U.[Id] = @UserId
+      AND OD.[VerifiedDate] IS NOT NULL
+      AND U.EmailDomain = OD.[DomainName]
+      AND O.[Enabled] = 1
 END
 GO
