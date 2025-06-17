@@ -1,7 +1,8 @@
-workspace "Bitwarden" "General Bitwarden System" {
+workspace "Bitwarden Server System" {
 
   !identifiers hierarchical
 
+  !docs "usage_docs"
   model {
     properties {
       "structurizr.groupSeparator" "/"
