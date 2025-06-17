@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 
-public class MemberAccessCipherDetailsRequest
+public class RiskInsightsReportRequest
 {
     public Guid OrganizationId { get; set; }
 }
