@@ -14,6 +14,8 @@ jobs:
   check-run:
     name: Check PR run
     uses: bitwarden/gh-actions/.github/workflows/check-run.yml@main
+    permissions:
+      contents: read
 
   run-workflow:
     name: Run Build on PR Target
@@ -21,3 +23,8 @@ jobs:
     if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
     uses: ./.github/workflows/build.yml
     secrets: inherit
+
+    permissions:
+      contents: read
+      id-token: write
+      security-events: write
