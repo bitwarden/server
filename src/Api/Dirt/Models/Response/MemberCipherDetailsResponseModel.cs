@@ -1,4 +1,5 @@
-﻿namespace Bit.Api.Dirt.Models.Response;
+﻿using Bit.Core.Dirt.Reports.Models.Data;
+namespace Bit.Api.Dirt.Models.Response;
 
 public class MemberCipherDetailsResponseModel
 {

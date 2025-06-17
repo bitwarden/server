@@ -3,6 +3,7 @@ using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
