@@ -13,4 +13,4 @@ BEGIN
       AND OD.[VerifiedDate] IS NOT NULL
       AND U.EmailDomain = OD.[DomainName]
       AND O.[Enabled] = 1
-END 
+END
