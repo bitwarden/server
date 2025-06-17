@@ -19,7 +19,7 @@ jobs:
       migration_filename_prefix: ${{ steps.prefix.outputs.prefix }}
       copy_finalization_scripts: ${{ steps.check-finalization-scripts-existence.outputs.copy_finalization_scripts }}
     steps:
-      - name: Azure Login
+      - name: Log in to Azure
         id: azure-login
         uses: bitwarden/gh-actions/azure-login@main
         with:
@@ -34,7 +34,7 @@ jobs:
           keyvault: "bitwarden-ci"
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
 
-      - name: Azure Logout
+      - name: Log out from Azure
         uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Check out branch
@@ -106,7 +106,7 @@ jobs:
           done
           echo "moved_files=$moved_files" >> $GITHUB_OUTPUT
 
-      - name: Azure Login
+      - name: Log in to Azure
         id: azure-login
         uses: bitwarden/gh-actions/azure-login@main
         with:
@@ -123,7 +123,7 @@ jobs:
             github-gpg-private-key-passphrase,
             devops-alerts-slack-webhook-url"
 
-      - name: Azure Logout
+      - name: Log out from Azure
         uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Import GPG keys
