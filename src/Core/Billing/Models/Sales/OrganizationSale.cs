@@ -34,6 +34,7 @@ public class OrganizationSale
         var subscriptionSetup = GetSubscriptionSetup(signup);
 
         subscriptionSetup.SkipTrial = signup.SkipTrial;
+        subscriptionSetup.InitiationPath = organization.GatewayCustomerId;
 
         return new OrganizationSale
         {
@@ -87,29 +88,26 @@ public class OrganizationSale
 
     private static SubscriptionSetup GetSubscriptionSetup(OrganizationUpgrade upgrade)
     {
-        var subscriptionSetup = new SubscriptionSetup
+        var passwordManagerOptions = new SubscriptionSetup.PasswordManager
         {
-            PlanType = upgrade.Plan,
-            PasswordManagerOptions = new SubscriptionSetup.PasswordManager
-            {
-                Seats = upgrade.AdditionalSeats,
-                Storage = upgrade.AdditionalStorageGb,
-                PremiumAccess = upgrade.PremiumAccessAddon
-            },
-            SecretsManagerOptions = upgrade.UseSecretsManager
-                ? new SubscriptionSetup.SecretsManager
-                {
-                    Seats = upgrade.AdditionalSmSeats ?? 0,
-                    ServiceAccounts = upgrade.AdditionalServiceAccounts
-                }
-                : null
+            Seats = upgrade.AdditionalSeats,
+            Storage = upgrade.AdditionalStorageGb,
+            PremiumAccess = upgrade.PremiumAccessAddon
         };
 
-        if (upgrade is OrganizationSignup signup)
-        {
-            subscriptionSetup.InitiationPath = signup.InitiationPath;
-        }
+        var secretsManagerOptions = upgrade.UseSecretsManager
+            ? new SubscriptionSetup.SecretsManager
+            {
+                Seats = upgrade.AdditionalSmSeats ?? 0,
+                ServiceAccounts = upgrade.AdditionalServiceAccounts
+            }
+            : null;
 
-        return subscriptionSetup;
+        return new SubscriptionSetup
+        {
+            PlanType = upgrade.Plan,
+            PasswordManagerOptions = passwordManagerOptions,
+            SecretsManagerOptions = secretsManagerOptions
+        };
     }
 }
