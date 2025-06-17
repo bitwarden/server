@@ -489,9 +489,9 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             var ciphers = await cipherDetailsView.ToListAsync();
 
             return ciphers.GroupBy(c => c.Id)
-                .Select(g => g.OrderByDescending(c => c.Edit)
+                .Select(g => g.OrderByDescending(c => c.Manage)
+                    .ThenByDescending(c => c.Edit)
                     .ThenByDescending(c => c.ViewPassword)
-                    .ThenByDescending(c => c.Manage)
                     .First())
                 .ToList();
         }

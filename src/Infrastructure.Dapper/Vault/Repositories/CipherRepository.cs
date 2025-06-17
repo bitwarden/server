@@ -99,9 +99,9 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             return results
                 .GroupBy(c => c.Id)
                 .Select(g =>
-                    g.OrderByDescending(og => og.Edit)
-                        .ThenByDescending(og => og.ViewPassword)
-                        .ThenByDescending(og => og.Manage).First())
+                    g.OrderByDescending(og => og.Manage)
+                        .ThenByDescending(og => og.Edit)
+                        .ThenByDescending(og => og.ViewPassword).First())
                 .ToList();
         }
     }
