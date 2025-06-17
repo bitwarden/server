@@ -49,8 +49,8 @@ ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 EXPOSE 5000
 
-RUN apk add gosu \
-    curl \
+RUN apk add curl \
+    && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu \
     && rm -rf /var/cache/apk/*
 
 # Copy app from the build stage
