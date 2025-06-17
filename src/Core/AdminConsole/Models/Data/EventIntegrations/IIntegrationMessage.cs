@@ -2,7 +2,7 @@
 
 using Bit.Core.Enums;
 
-namespace Bit.Core.AdminConsole.Models.Data.Integrations;
+namespace Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
 public interface IIntegrationMessage
 {

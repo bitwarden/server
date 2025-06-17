@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
-using Bit.Core.AdminConsole.Models.Data.Integrations;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
 using Xunit;
 
