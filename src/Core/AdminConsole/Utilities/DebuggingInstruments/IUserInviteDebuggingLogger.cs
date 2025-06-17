@@ -8,6 +8,6 @@ namespace Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 /// </summary>
 public interface IUserInviteDebuggingLogger
 {
-    void Log(OrganizationUser allOrgUser);
+    void Log(OrganizationUser orgUser);
     void Log(IEnumerable<OrganizationUser> allOrgUsers);
 }

@@ -8,9 +8,9 @@ namespace Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 
 public class UserInviteDebuggingLogger(ILogger<UserInviteDebuggingLogger> logger) : IUserInviteDebuggingLogger
 {
-    public void Log(OrganizationUser allOrgUser)
+    public void Log(OrganizationUser orgUser)
     {
-        Log([allOrgUser]);
+        Log([orgUser]);
     }
 
     public void Log(IEnumerable<OrganizationUser> allOrgUsers)

@@ -23,6 +23,7 @@ using Bit.Infrastructure.Dapper.SecretsManager.Repositories;
 using Bit.Infrastructure.Dapper.Tools.Repositories;
 using Bit.Infrastructure.Dapper.Vault.Repositories;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Infrastructure.Dapper;
 
@@ -73,7 +74,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
 
         // Debugging instruments
-        services.AddSingleton<IUserInviteDebuggingLogger, UserInviteDebuggingLogger>();
+        services.TryAddSingleton<IUserInviteDebuggingLogger, UserInviteDebuggingLogger>();
 
         if (selfHosted)
         {
