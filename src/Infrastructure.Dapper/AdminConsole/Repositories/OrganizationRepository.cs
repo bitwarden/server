@@ -183,6 +183,19 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         }
     }
 
+    public async Task<ICollection<Organization>> GetByVerifiedUserEmailDomainAsync_vNext(Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QueryAsync<Organization>(
+                "[dbo].[Organization_ReadByClaimedUserEmailDomain_V2]",
+                new { UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return result.ToList();
+        }
+    }
+
     public async Task<ICollection<Organization>> GetAddableToProviderByUserIdAsync(
         Guid userId,
         ProviderType providerType)
