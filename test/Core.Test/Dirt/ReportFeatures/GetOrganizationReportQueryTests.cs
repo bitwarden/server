@@ -87,4 +87,102 @@ public class GetOrganizationReportQueryTests
         // Assert
         Assert.Equal("OrganizationId is required.", exception.Message);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetOrganizationReportAsync_WithNoReports_ShouldReturnEmptyList(
+        SutProvider<GetOrganizationReportQuery> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var organizationId = fixture.Create<Guid>();
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetByOrganizationIdAsync(Arg.Any<Guid>())
+            .Returns(new List<OrganizationReport>());
+
+        // Act
+        var result = await sutProvider.Sut.GetOrganizationReportAsync(organizationId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+    [Theory]
+    [BitAutoData]
+    public async Task GetLatestOrganizationReportAsync_WithNoReports_ShouldReturnNull(
+        SutProvider<GetOrganizationReportQuery> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var organizationId = fixture.Create<Guid>();
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetLatestByOrganizationIdAsync(Arg.Any<Guid>())
+            .Returns(default(OrganizationReport));
+
+        // Act
+        var result = await sutProvider.Sut.GetLatestOrganizationReportAsync(organizationId);
+
+        // Assert
+        Assert.Null(result);
+    }
+    [Theory]
+    [BitAutoData]
+    public async Task GetOrganizationReportAsync_WithNullOrganizationId_ShouldThrowException(
+        SutProvider<GetOrganizationReportQuery> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var organizationId = default(Guid);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.GetOrganizationReportAsync(organizationId));
+
+        // Assert
+        Assert.Equal("OrganizationId is required.", exception.Message);
+    }
+    [Theory]
+    [BitAutoData]
+    public async Task GetLatestOrganizationReportAsync_WithNullOrganizationId_ShouldThrowException(
+        SutProvider<GetOrganizationReportQuery> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var organizationId = default(Guid);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.GetLatestOrganizationReportAsync(organizationId));
+
+        // Assert
+        Assert.Equal("OrganizationId is required.", exception.Message);
+    }
+    [Theory]
+    [BitAutoData]
+    public async Task GetOrganizationReportAsync_WithInvalidOrganizationId_ShouldThrowException(
+        SutProvider<GetOrganizationReportQuery> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var organizationId = Guid.Empty;
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.GetOrganizationReportAsync(organizationId));
+
+        // Assert
+        Assert.Equal("OrganizationId is required.", exception.Message);
+    }
+    [Theory]
+    [BitAutoData]
+    public async Task GetLatestOrganizationReportAsync_WithInvalidOrganizationId_ShouldThrowException(
+        SutProvider<GetOrganizationReportQuery> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var organizationId = Guid.Empty;
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.GetLatestOrganizationReportAsync(organizationId));
+
+        // Assert
+        Assert.Equal("OrganizationId is required.", exception.Message);
+    }
 }

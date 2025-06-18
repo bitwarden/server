@@ -101,4 +101,94 @@ public class DeleteOrganizationReportCommandTests
             .Received(0)
             .DeleteAsync(Arg.Any<OrganizationReport>());
     }
+
+    [Theory, BitAutoData]
+    public async Task DropOrganizationReportAsync_withInvalidOrganizationId_ShouldThrowError(
+        SutProvider<DropOrganizationReportCommand> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var request = fixture.Create<DropOrganizationReportRequest>();
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetByOrganizationIdAsync(Arg.Any<Guid>())
+            .Returns(null as List<OrganizationReport>);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.DropOrganizationReportAsync(request));
+        Assert.Equal("Organization does not have any records.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DropOrganizationReportAsync_withInvalidOrganizationReportId_ShouldThrowError(
+        SutProvider<DropOrganizationReportCommand> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var request = fixture.Create<DropOrganizationReportRequest>();
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetByOrganizationIdAsync(Arg.Any<Guid>())
+            .Returns(new List<OrganizationReport>());
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.DropOrganizationReportAsync(request));
+        Assert.Equal("Organization does not have any records.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DropOrganizationReportAsync_withNullOrganizationId_ShouldThrowError(
+        SutProvider<DropOrganizationReportCommand> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var request = fixture.Build<DropOrganizationReportRequest>()
+            .With(x => x.OrganizationId, default(Guid))
+            .Create();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.DropOrganizationReportAsync(request));
+        Assert.Equal("Organization does not have any records.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DropOrganizationReportAsync_withNullOrganizationReportIds_ShouldThrowError(
+        SutProvider<DropOrganizationReportCommand> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var request = fixture.Build<DropOrganizationReportRequest>()
+            .With(x => x.OrganizationReportIds, default(List<Guid>))
+            .Create();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.DropOrganizationReportAsync(request));
+        Assert.Equal("Organization does not have any records.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DropOrganizationReportAsync_withEmptyOrganizationReportIds_ShouldThrowError(
+        SutProvider<DropOrganizationReportCommand> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var request = fixture.Build<DropOrganizationReportRequest>()
+            .With(x => x.OrganizationReportIds, new List<Guid>())
+            .Create();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.DropOrganizationReportAsync(request));
+        Assert.Equal("Organization does not have any records.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DropOrganizationReportAsync_withEmptyRequest_ShouldThrowError(
+        SutProvider<DropOrganizationReportCommand> sutProvider)
+    {
+        // Arrange
+        var request = new DropOrganizationReportRequest();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.DropOrganizationReportAsync(request));
+        Assert.Equal("Organization does not have any records.", exception.Message);
+    }
+
 }

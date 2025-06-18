@@ -7,25 +7,25 @@ namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
 public class DropOrganizationReportCommand : IDropOrganizationReportCommand
 {
-    private IOrganizationReportRepository _OrganizationReportRepo;
+    private IOrganizationReportRepository _organizationReportRepo;
 
     public DropOrganizationReportCommand(
-        IOrganizationReportRepository OrganizationReportRepository)
+        IOrganizationReportRepository organizationReportRepository)
     {
-        _OrganizationReportRepo = OrganizationReportRepository;
+        _organizationReportRepo = organizationReportRepository;
     }
 
     public async Task DropOrganizationReportAsync(DropOrganizationReportRequest request)
     {
-        var data = await _OrganizationReportRepo.GetByOrganizationIdAsync(request.OrganizationId);
-        if (data == null)
+        var data = await _organizationReportRepo.GetByOrganizationIdAsync(request.OrganizationId);
+        if (data == null || data.Count() == 0)
         {
             throw new BadRequestException("Organization does not have any records.");
         }
 
         data.Where(_ => request.OrganizationReportIds.Contains(_.Id)).ToList().ForEach(async _ =>
         {
-            await _OrganizationReportRepo.DeleteAsync(_);
+            await _organizationReportRepo.DeleteAsync(_);
         });
     }
 }
