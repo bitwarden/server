@@ -35,7 +35,6 @@ using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Tools.SendFeatures;
 
-
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
 using Bit.Commercial.Core.Utilities;
