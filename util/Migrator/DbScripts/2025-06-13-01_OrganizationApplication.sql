@@ -30,54 +30,69 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_Create]
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
-SET NOCOUNT ON;
+    SET NOCOUNT ON;
 
-INSERT INTO [dbo].[OrganizationApplication]
-    (
-    [Id],
-    [OrganizationId],
-    [Applications],
-    [CreationDate],
-    [RevisionDate]
-    )
-VALUES
-    (
-        @Id,
-        @OrganizationId,
-        @Applications,
-        @CreationDate,
-        @RevisionDate
-        );
+    INSERT INTO [dbo].[OrganizationApplication]
+        (
+        [Id],
+        [OrganizationId],
+        [Applications],
+        [CreationDate],
+        [RevisionDate]
+        )
+    VALUES
+        (
+            @Id,
+            @OrganizationId,
+            @Applications,
+            @CreationDate,
+            @RevisionDate
+            );
+
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_ReadByOrganizationId]
-    @OrganizationId UNIQUEIDENTIFIER
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_DeleteById]
+    @Id UNIQUEIDENTIFIER
 AS
-SET NOCOUNT ON;
+    SET NOCOUNT ON;
 
-SELECT
-    [Id],
-    [OrganizationId],
-    [Applications],
-    [CreationDate],
-    [RevisionDate]
-FROM [dbo].[OrganizationApplicationView]
-WHERE [OrganizationId] = @OrganizationId;
+    DELETE FROM
+        [dbo].[OrganizationApplication]
+    WHERE
+        [Id] = @Id;
+
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_ReadById]
     @Id UNIQUEIDENTIFIER
 AS
-SET NOCOUNT ON;
+    SET NOCOUNT ON;
 
-SELECT
-    [Id],
-    [OrganizationId],
-    [Applications],
-    [CreationDate],
-    [RevisionDate]
-FROM [dbo].[OrganizationApplicationView]
-WHERE [Id] = @Id;
+    SELECT
+        [Id],
+        [OrganizationId],
+        [Applications],
+        [CreationDate],
+        [RevisionDate]
+    FROM [dbo].[OrganizationApplicationView]
+    WHERE [Id] = @Id;
+
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_ReadByOrganizationId]
+    @OrganizationId UNIQUEIDENTIFIER
+AS
+    SET NOCOUNT ON;
+
+    SELECT
+        [Id],
+        [OrganizationId],
+        [Applications],
+        [CreationDate],
+        [RevisionDate]
+    FROM [dbo].[OrganizationApplicationView]
+    WHERE [OrganizationId] = @OrganizationId;
+
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_Update]
@@ -87,20 +102,12 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_Update]
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
-SET NOCOUNT ON;
-UPDATE [dbo].[OrganizationApplication]
+    SET NOCOUNT ON;
+    UPDATE [dbo].[OrganizationApplication]
     SET
         [OrganizationId] = @OrganizationId,
         [Applications] = @Applications,
         [RevisionDate] = @RevisionDate
     WHERE [Id] = @Id;
-GO
 
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_DeleteById]
-    @Id UNIQUEIDENTIFIER
-AS
-SET NOCOUNT ON;
-
-DELETE FROM [dbo].[OrganizationApplication]
-    WHERE [Id] = @Id;
 GO

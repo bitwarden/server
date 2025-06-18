@@ -13,4 +13,4 @@ AS
         [Date] = @Date,
         [ReportData] = @ReportData,
         [RevisionDate] = @RevisionDate
-    WHERE [Id] = @Id
+    WHERE [Id] = @Id;
