@@ -3,6 +3,7 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Update]
     @OrganizationId UNIQUEIDENTIFIER,
     @Date DATETIME2(7),
     @ReportData NVARCHAR(MAX),
+    @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
     SET NOCOUNT ON;
