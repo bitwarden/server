@@ -20,6 +20,7 @@ public class RabbitMqIntegrationListenerService : BackgroundService
     private readonly Lazy<Task<IChannel>> _lazyChannel;
     private readonly IRabbitMqService _rabbitMqService;
     private readonly ILogger<RabbitMqIntegrationListenerService> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public RabbitMqIntegrationListenerService(IIntegrationHandler handler,
         string routingKey,
@@ -27,7 +28,8 @@ public class RabbitMqIntegrationListenerService : BackgroundService
         string retryQueueName,
         int maxRetries,
         IRabbitMqService rabbitMqService,
-        ILogger<RabbitMqIntegrationListenerService> logger)
+        ILogger<RabbitMqIntegrationListenerService> logger,
+        TimeProvider timeProvider)
     {
         _handler = handler;
         _routingKey = routingKey;
@@ -35,6 +37,7 @@ public class RabbitMqIntegrationListenerService : BackgroundService
         _queueName = queueName;
         _rabbitMqService = rabbitMqService;
         _logger = logger;
+        _timeProvider = timeProvider;
         _maxRetries = maxRetries;
         _lazyChannel = new Lazy<Task<IChannel>>(() => _rabbitMqService.CreateChannelAsync());
     }
@@ -74,7 +77,7 @@ public class RabbitMqIntegrationListenerService : BackgroundService
             var integrationMessage = JsonSerializer.Deserialize<IntegrationMessage>(json);
             if (integrationMessage is not null &&
                 integrationMessage.DelayUntilDate.HasValue &&
-                integrationMessage.DelayUntilDate.Value > DateTime.UtcNow)
+                integrationMessage.DelayUntilDate.Value > _timeProvider.GetUtcNow().UtcDateTime)
             {
                 await _rabbitMqService.RepublishToRetryQueueAsync(channel, ea);
                 await channel.BasicAckAsync(ea.DeliveryTag, false, cancellationToken);

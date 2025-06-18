@@ -431,6 +431,7 @@ public class GlobalSettings : IGlobalSettings
         public SmtpSettings Smtp { get; set; } = new SmtpSettings();
         public string SendGridApiKey { get; set; }
         public int? SendGridPercentage { get; set; }
+        public string SendGridApiHost { get; set; } = "https://api.sendgrid.com";
 
         public class SmtpSettings
         {
