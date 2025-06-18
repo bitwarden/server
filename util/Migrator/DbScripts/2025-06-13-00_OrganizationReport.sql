@@ -26,7 +26,7 @@ CREATE OR ALTER VIEW [dbo].[OrganizationReportView] AS
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Date DATETIME2(7),
     @ReportData NVARCHAR(MAX),

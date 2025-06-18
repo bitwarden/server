@@ -1,5 +1,5 @@
 CREATE PROCEDURE [dbo].[OrganizationApplication_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Applications NVARCHAR(MAX),
     @CreationDate DATETIME2(7),

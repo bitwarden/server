@@ -1,5 +1,5 @@
 CREATE PROCEDURE [dbo].[OrganizationReport_Create]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Date DATETIME2(7),
     @ReportData NVARCHAR(MAX),
