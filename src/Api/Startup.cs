@@ -186,7 +186,6 @@ public class Startup
         services.AddPhishingDomainServices(globalSettings);
 
         services.AddBillingQueries();
-        services.AddKeyManagementQueries();
         services.AddSendServices();
 
         // Authorization Handlers
