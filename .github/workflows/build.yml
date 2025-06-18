@@ -596,7 +596,9 @@ jobs:
       project: server
       pull_request_number: ${{ github.event.number || 0 }}
     secrets: inherit
-    permissions: read-all
+    permissions:
+      contents: read
+      id-token: write
 
   check-failures:
     name: Check for failures
