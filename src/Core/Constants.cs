@@ -206,6 +206,7 @@ public static class FeatureFlagKeys
     public const string EndUserNotifications = "pm-10609-end-user-notifications";
     public const string PhishingDetection = "phishing-detection";
     public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
+    public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
 
     public static List<string> GetAllKeys()
     {
