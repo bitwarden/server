@@ -142,14 +142,14 @@ BEGIN
     FROM
         [dbo].[OrganizationApplication]
     WHERE
-        [Id] = @Id
+        [OrganizationId] = @Id
 
     -- Delete Organization Report
     DELETE
     FROM
         [dbo].[OrganizationReport]
     WHERE
-        [Id] = @Id
+        [OrganizationId] = @Id
 
     DELETE
     FROM
