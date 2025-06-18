@@ -6,7 +6,5 @@ public enum IntegrationFilterOperation
     Equals,
     NotEquals,
     In,
-    NotIn,
-    DateAfter,
-    DateBefore
+    NotIn
 }

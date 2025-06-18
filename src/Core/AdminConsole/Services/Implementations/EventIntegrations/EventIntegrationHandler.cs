@@ -71,7 +71,7 @@ public class EventIntegrationHandler<T>(
             {
                 logger.LogError(
                     exception,
-                    "Failed to publish Integration Message for {Type}, check record Id {RecordId} for error in Configuration or Filters",
+                    "Failed to publish Integration Message for {Type}, check Id {RecordId} for error in Configuration or Filters",
                     typeof(T).Name,
                     configuration.Id);
             }

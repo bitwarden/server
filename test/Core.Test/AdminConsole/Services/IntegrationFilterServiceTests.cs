@@ -244,49 +244,12 @@ public class IntegrationFilterServiceTests
     }
 
     [Theory, BitAutoData]
-    public void EvaluateFilterGroup_DateBeforeAndAfter_WorksCorrectly(EventMessage eventMessage)
-    {
-        var now = DateTime.UtcNow;
-        eventMessage.Date = now.AddHours(-1);
-
-        var beforeGroup = new IntegrationFilterGroup
-        {
-            AndOperator = true,
-            Rules =
-            [
-                new() { Property = "Date", Operation = IntegrationFilterOperation.DateBefore, Value = now }
-            ]
-        };
-
-        var afterGroup = new IntegrationFilterGroup
-        {
-            AndOperator = true,
-            Rules =
-            [
-                new() { Property = "Date", Operation = IntegrationFilterOperation.DateAfter, Value = now }
-            ]
-        };
-
-        Assert.True(_service.EvaluateFilterGroup(beforeGroup, eventMessage));
-        Assert.False(_service.EvaluateFilterGroup(afterGroup, eventMessage));
-
-        var jsonBeforeGroup = JsonSerializer.Serialize(beforeGroup);
-        var rtBeforeGroup = JsonSerializer.Deserialize<IntegrationFilterGroup>(jsonBeforeGroup);
-        Assert.NotNull(rtBeforeGroup);
-        Assert.True(_service.EvaluateFilterGroup(rtBeforeGroup, eventMessage));
-
-        var jsonAfterGroup = JsonSerializer.Serialize(afterGroup);
-        var rtAfterGroup = JsonSerializer.Deserialize<IntegrationFilterGroup>(jsonAfterGroup);
-        Assert.NotNull(rtAfterGroup);
-        Assert.False(_service.EvaluateFilterGroup(rtAfterGroup, eventMessage));
-    }
-
-    [Theory, BitAutoData]
     public void EvaluateFilterGroup_NestedGroups_AllMatch(EventMessage eventMessage)
     {
         var id = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
         eventMessage.UserId = id;
-        eventMessage.Date = DateTime.UtcNow.AddMinutes(-10);
+        eventMessage.CollectionId = collectionId;
 
         var nestedGroup = new IntegrationFilterGroup
         {
@@ -294,7 +257,12 @@ public class IntegrationFilterServiceTests
             Rules =
             [
                 new() { Property = "UserId", Operation = IntegrationFilterOperation.Equals, Value = id },
-                new() { Property = "Date", Operation = IntegrationFilterOperation.DateBefore, Value = DateTime.UtcNow }
+                new()
+                {
+                    Property = "CollectionId",
+                    Operation = IntegrationFilterOperation.In,
+                    Value = new Guid?[] { collectionId, Guid.NewGuid() }
+                }
             ]
         };
 

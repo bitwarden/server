@@ -13,8 +13,6 @@ public class IntegrationFilterService : IIntegrationFilterService
 
     private readonly Dictionary<string, CompiledFilter> _equalsFilters = new();
     private readonly Dictionary<string, CompiledFilter> _inFilters = new();
-    private readonly Dictionary<string, CompiledFilter> _dateBeforeFilters = new();
-    private readonly Dictionary<string, CompiledFilter> _dateAfterFilters = new();
 
     public IntegrationFilterService()
     {
@@ -47,10 +45,6 @@ public class IntegrationFilterService : IIntegrationFilterService
                                              inList(message, ToGuidList(rule.Value)),
             IntegrationFilterOperation.NotIn => !(_inFilters.TryGetValue(key, out var inList) &&
                                                 inList(message, ToGuidList(rule.Value))),
-            IntegrationFilterOperation.DateBefore => _dateBeforeFilters.TryGetValue(key, out var dateBefore) &&
-                                                     dateBefore(message, ToDateTime(rule.Value)),
-            IntegrationFilterOperation.DateAfter => _dateAfterFilters.TryGetValue(key, out var dateAfter) &&
-                                                    dateAfter(message, ToDateTime(rule.Value)),
             _ => false
         };
     }
@@ -84,10 +78,8 @@ public class IntegrationFilterService : IIntegrationFilterService
         AddInFilter<Guid?>("ActingUserId");
         AddInFilter<Guid?>("SecretId");
         AddInFilter<Guid?>("ServiceAccountId");
-
-        AddDateFilter("Date", before: true);
-        AddDateFilter("Date", before: false);
     }
+
     private void AddEqualityFilter<T>(string propertyName)
     {
         var param = Expression.Parameter(typeof(EventMessage), "m");
@@ -128,26 +120,6 @@ public class IntegrationFilterService : IIntegrationFilterService
         _inFilters[propertyName] = new CompiledFilter(lambda.Compile());
     }
 
-    private void AddDateFilter(string propertyName, bool before)
-    {
-        var param = Expression.Parameter(typeof(EventMessage), "m");
-        var valueParam = Expression.Parameter(typeof(object), "val");
-
-        var property = Expression.PropertyOrField(param, propertyName); // DateTime
-        var typedVal = Expression.Convert(valueParam, typeof(DateTime));
-
-        var comparison = before
-            ? Expression.LessThan(property, typedVal)
-            : Expression.GreaterThan(property, typedVal);
-
-        var lambda = Expression.Lambda<Func<EventMessage, object?, bool>>(comparison, param, valueParam);
-
-        if (before)
-            _dateBeforeFilters[propertyName] = new CompiledFilter(lambda.Compile());
-        else
-            _dateAfterFilters[propertyName] = new CompiledFilter(lambda.Compile());
-    }
-
     private static Guid? ToGuid(object? value)
     {
         if (value is Guid guid)
@@ -183,22 +155,5 @@ public class IntegrationFilterService : IIntegrationFilterService
         }
 
         throw new InvalidCastException("Could not convert value to Guid[]");
-    }
-
-    private static DateTime? ToDateTime(object? value)
-    {
-        if (value is DateTime dateTime)
-        {
-            return dateTime;
-        }
-        if (value is string stringValue)
-        {
-            return DateTime.Parse(stringValue);
-        }
-        if (value is JsonElement jsonElement && jsonElement.TryGetDateTime(out var toDateTime))
-        {
-            return toDateTime;
-        }
-        throw new InvalidCastException("Could not convert value to DateTime");
     }
 }
