@@ -1,15 +1,19 @@
-FROM --platform=$BUILDPLATFORM nginx:stable
+FROM --platform=$BUILDPLATFORM nginx:stable-alpine
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
 
 ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    gosu \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# RUN apt-get update \
+#     && apt-get install -y --no-install-recommends \
+#     gosu \
+#     curl \
+#     && rm -rf /var/lib/apt/lists/*
+
+RUN apk add curl \
+    && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu \
+    && rm -rf /var/cache/apk/*
 
 COPY util/Nginx/nginx.conf /etc/nginx
 COPY util/Nginx/proxy.conf /etc/nginx

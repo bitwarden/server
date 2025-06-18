@@ -1,15 +1,19 @@
-FROM nginx:stable
+FROM nginx:stable-alpine
 
 LABEL com.bitwarden.product="bitwarden"
 
 ENV USERNAME="bitwarden"
 ENV GROUPNAME="bitwarden"
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        gosu \
-        curl && \
-    rm -rf /var/lib/apt/lists/*
+# RUN apt-get update && \
+#     apt-get install -y --no-install-recommends \
+#         gosu \
+#         curl && \
+#     rm -rf /var/lib/apt/lists/*
+
+RUN apk add curl \
+    && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu \
+    && rm -rf /var/cache/apk/*
 
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY proxy.conf /etc/nginx/proxy.conf
