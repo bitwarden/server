@@ -22,10 +22,13 @@ public class CollectionService : ICollectionService
         _collectionRepository = collectionRepository;
     }
 
-
-
     public async Task DeleteUserAsync(Collection collection, Guid organizationUserId)
     {
+        if (collection.Type == Enums.CollectionType.DefaultUserCollection)
+        {
+            throw new BadRequestException("You cannot modify member access for collections with the type as DefaultUserCollection.");
+        }
+
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null || orgUser.OrganizationId != collection.OrganizationId)
         {

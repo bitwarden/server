@@ -49,4 +49,22 @@ public class CollectionServiceTest
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
             .LogOrganizationUserEventAsync<OrganizationUser>(default, default);
     }
+
+    [Theory, BitAutoData]
+    public async Task DeleteUserAsync_WithDefaultUserCollectionType_ThrowsBadRequest(Collection collection,
+        Organization organization, OrganizationUser organizationUser, SutProvider<CollectionService> sutProvider)
+    {
+        collection.Type = CollectionType.DefaultUserCollection;
+        collection.OrganizationId = organization.Id;
+        organizationUser.OrganizationId = organization.Id;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.DeleteUserAsync(collection, organizationUser.Id));
+        Assert.Contains("You cannot modify member access for collections with the type as DefaultUserCollection.", exception.Message);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync<OrganizationUser>(default, default);
+    }
 }
