@@ -20,24 +20,12 @@ ARG TARGETPLATFORM
 # Determine proper runtime value for .NET
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     RID=linux-musl-x64 ; \
-    #RID=linux-x64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
     RID=linux-musl-arm64 ; \
-    #RID=linux-arm64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
     RID=linux-musl-arm ; \
-    #RID=linux-arm ; \
     fi \
     && echo "RID=$RID" > /tmp/rid.txt
-
-# Set up Node
-# ARG NODE_VERSION=20
-# RUN apk add --no-cache "nodejs~${NODE_VERSION}" "npm"
-# RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
-#     && apt-get update \
-#     && apt-get install -y nodejs \
-#     && npm install -g npm@latest && \
-#     rm -rf /var/lib/apt/lists/*
 
 # Copy required project files
 WORKDIR /source

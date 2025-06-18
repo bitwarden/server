@@ -10,13 +10,10 @@ ARG TARGETPLATFORM
 # We put the value in a file to be read by later layers.
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     RID=linux-musl-x64 ; \
-    #RID=linux-x64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
     RID=linux-musl-arm64 ; \
-    #RID=linux-arm64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
     RID=linux-musl-arm ; \
-    #RID=linux-arm ; \
     fi \
     && echo "RID=$RID" > /tmp/rid.txt
 

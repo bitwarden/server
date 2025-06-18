@@ -10,13 +10,10 @@ ARG TARGETPLATFORM
 # We put the value in a file to be read by later layers.
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     RID=linux-musl-x64 ; \
-    #RID=linux-x64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
     RID=linux-musl-arm64 ; \
-    #RID=linux-arm64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
     RID=linux-musl-arm ; \
-    #RID=linux-arm ; \
     fi \
     && echo "RID=$RID" > /tmp/rid.txt
 
@@ -45,14 +42,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden" com.bitwarden.project="setup"
-
 ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
-
-# RUN apt-get update \
-#     && apt-get install -y --no-install-recommends \
-#     openssl \
-#     gosu \
-#     && rm -rf /var/lib/apt/lists/*
 
 RUN apk add curl \
     openssl \
