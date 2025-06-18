@@ -34,7 +34,6 @@ using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Tools.SendFeatures;
-using Bit.Api.KeyManagement;
 
 
 #if !OSS
