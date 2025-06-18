@@ -10,7 +10,9 @@ using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
 namespace Bit.Core.Services;
 
-public class WebhookIntegrationHandler(IHttpClientFactory httpClientFactory)
+public class WebhookIntegrationHandler(
+    IHttpClientFactory httpClientFactory,
+    TimeProvider timeProvider)
     : IntegrationHandlerBase<WebhookIntegrationConfigurationDetails>
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(HttpClientName);
@@ -48,7 +50,7 @@ public class WebhookIntegrationHandler(IHttpClientFactory httpClientFactory)
                     if (int.TryParse(value, out var seconds))
                     {
                         // Retry-after was specified in seconds. Adjust DelayUntilDate by the requested number of seconds.
-                        result.DelayUntilDate = DateTime.UtcNow.AddSeconds(seconds);
+                        result.DelayUntilDate = timeProvider.GetUtcNow().AddSeconds(seconds).UtcDateTime;
                     }
                     else if (DateTimeOffset.TryParseExact(value,
                                  "r", // "r" is the round-trip format: RFC1123
