@@ -3,10 +3,13 @@ using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Core.SecretsManager.Models.Data;
 
+#nullable enable
+
 public class ApiKeyDetails : ApiKey
 {
     protected ApiKeyDetails() { }
 
+    [SetsRequiredMembers]
     protected ApiKeyDetails(ApiKey apiKey)
     {
         Id = apiKey.Id;
