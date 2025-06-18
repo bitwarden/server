@@ -7,6 +7,7 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Update]
     @RevisionDate DATETIME2(7)
 AS
     SET NOCOUNT ON;
+    
     UPDATE [dbo].[OrganizationReport]
     SET [OrganizationId] = @OrganizationId,
         [Date] = @Date,

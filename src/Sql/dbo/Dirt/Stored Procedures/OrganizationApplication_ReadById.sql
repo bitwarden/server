@@ -3,14 +3,11 @@ CREATE PROCEDURE [dbo].[OrganizationApplication_ReadById]
 AS
     SET NOCOUNT ON;
 
-    IF @Id IS NULL
-       THROW 50000, 'Id cannot be null', 1;
-
     SELECT
         [Id],
         [OrganizationId],
         [Applications],
         [CreationDate],
         [RevisionDate]
-    FROM [dbo].[OrganizationApplication]
+    FROM [dbo].[OrganizationApplicationView]
     WHERE [Id] = @Id;

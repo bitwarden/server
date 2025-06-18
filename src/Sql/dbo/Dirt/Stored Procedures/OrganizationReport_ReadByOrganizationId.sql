@@ -3,9 +3,6 @@ CREATE PROCEDURE [dbo].[OrganizationReport_ReadByOrganizationId]
 AS
     SET NOCOUNT ON;
 
-    IF @OrganizationId IS NULL
-       THROW 50000, 'OrganizationId cannot be null', 1;
-
     SELECT
         [Id],
         [OrganizationId],
