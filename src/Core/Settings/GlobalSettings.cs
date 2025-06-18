@@ -87,6 +87,8 @@ public class GlobalSettings : IGlobalSettings
     public virtual IPhishingDomainSettings PhishingDomain { get; set; } = new PhishingDomainSettings();
 
     public virtual bool EnableEmailVerification { get; set; }
+
+    public virtual int SendAccessTokenLifetimeInMinutes { get; set; } = 5;
     public virtual string KdfDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }
 
