@@ -240,35 +240,24 @@ level.
 
 ### `IntegrationFilterGroup`
 
-- Logical AND / OR grouping of a number of rules and other subgroups.
-- `AndOperator` indicates if they all must be true or if it should be true if any of them are
-  true.
-  - This applies to _both_ the inner group and the list of rules; for instance, if this group
-    contained Rule1 and Rule2 and then Group1 and Group2:
-    - `true` would mean: `Rule1 && Rule2 && Group1 && Group2`.
-    - `false` would mean `Rule1 || Rule2 || Group1 || Group2`.
-- `Rules` is a list of `IntegrationFlterRule`.
-  - This can be null or empty, in which case it would provide only `true` in any calculations.
-- `Groups` is a list of additional `IntegrationFlterGroup`.
-    - This can be null or empty, in which case it would provide only `true` in any calculations.
+Logical AND / OR grouping of a number of rules and other subgroups.
+
+| Property      | Description                                                                                                                                                                                                                                                                                                                                                      |
+|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `AndOperator` | Indicates whether **all** (`true`) or **any** (`false`) of the `Rules` and `Groups` must be true. This applies to _both_ the inner group and the list of rules; for instance, if this group contained Rule1 and Rule2 as well as Group1 and Group2:<br/><br/>`true`: `Rule1 && Rule2 && Group1 && Group2`<br>`false`: `Rule1 \|\| Rule2 \|\| Group1 \|\| Group2` |
+| `Rules`       | A list of `IntegrationFilterRule`. Can be null or empty, in which case it will return `true`.                                                                                                                                                                                                                                                                    |
+| `Groups`      | A list of nested `IntegrationFilterGroup`. Can be null or empty, in which case it will return `true`.                                                                                                                                                                                                                                                            |
 
 ### `IntegrationFilterRule`
 
-- The core of the filtering framework to determine if the data in this specific `EventMessage`
-  matches the data for which the filter is searching.
-- `Property` is the specific property on `EventMessage` that will be evaluated (e.g. `CollectionId`).
-- `Operation` is the type of comparison to perform on the property and value.
-  - Supported operations:
-    - `Equals`: the `Value` matches the property on the `EventMessage`.
-      - Assumes the `Value` and the property are a `Guid`.
-    - `NotEquals`: identical to `Equals` but the logical inverse.
-    - `In`: the property on the `EventMessage` is in the list in `Value`.
-      - Assumes the `Value` a list of `Guid` and the property is a `Guid`.
-    - `NotIn`: identical to `In` but the logical inverse.
-- `Value` is the value(s) to compare against.
-  - As mentioned above, the operation implies what type the value should be:
-    - `Equals` is a `Guid`.
-    - `In` is a list of `Guid`.
+The core of the filtering framework to determine if the data in this specific EventMessage
+matches the data for which the filter is searching.
+
+| Property    | Description                                                                                                                                                                                                                                                 |
+|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `Property`  | The property on `EventMessage` to evaluate (e.g., `CollectionId`).                                                                                                                                                                                          |
+| `Operation` | The comparison to perform between the property and `Value`. <br><br>**Supported operations:**<br>• `Equals`: `Guid` equals `Value`<br>• `NotEquals`: logical inverse of `Equals`<br>• `In`: `Guid` is in `Value` list<br>• `NotIn`: logical inverse of `In` |
+| `Value`     | The comparison value. Type depends on `Operation`: <br>• `Equals`, `NotEquals`: `Guid`<br>• `In`, `NotIn`: list of `Guid`                                                                                                                                   |
 
 ```mermaid
 graph TD
