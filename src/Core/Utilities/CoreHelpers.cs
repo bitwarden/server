@@ -637,9 +637,9 @@ public static class CoreHelpers
             return null;
         }
 
-        if (!globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(RealConnectingIp))
+        if (!globalSettings.SelfHosted && httpContext.Request.Headers.TryGetValue(RealConnectingIp, out var realConnectingIp))
         {
-            return httpContext.Request.Headers[RealConnectingIp].ToString();
+            return realConnectingIp.ToString();
         }
 
         return httpContext.Connection?.RemoteIpAddress?.ToString();
@@ -660,9 +660,9 @@ public static class CoreHelpers
     {
         if (globalSettings.SelfHosted &&
             SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
-            && File.Exists("identity.pfx"))
+            && File.Exists(globalSettings.IdentityServer.CertificateLocation))
         {
-            return GetCertificate("identity.pfx",
+            return GetCertificate(globalSettings.IdentityServer.CertificateLocation,
                 globalSettings.IdentityServer.CertificatePassword);
         }
         else if (SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))

@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Models.Data.Integrations;
+﻿using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Xunit;
@@ -15,6 +15,7 @@ public class IntegrationHandlerTests
         var expected = new IntegrationMessage<WebhookIntegrationConfigurationDetails>()
         {
             Configuration = new WebhookIntegrationConfigurationDetails("https://localhost"),
+            MessageId = "TestMessageId",
             IntegrationType = IntegrationType.Webhook,
             RenderedTemplate = "Template",
             DelayUntilDate = null,

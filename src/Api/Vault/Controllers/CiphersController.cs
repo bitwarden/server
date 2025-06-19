@@ -42,7 +42,6 @@ public class CiphersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
-    private readonly IFeatureService _featureService;
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ICollectionRepository _collectionRepository;
@@ -57,7 +56,6 @@ public class CiphersController : Controller
         ICurrentContext currentContext,
         ILogger<CiphersController> logger,
         GlobalSettings globalSettings,
-        IFeatureService featureService,
         IOrganizationCiphersQuery organizationCiphersQuery,
         IApplicationCacheService applicationCacheService,
         ICollectionRepository collectionRepository)
@@ -71,7 +69,6 @@ public class CiphersController : Controller
         _currentContext = currentContext;
         _logger = logger;
         _globalSettings = globalSettings;
-        _featureService = featureService;
         _organizationCiphersQuery = organizationCiphersQuery;
         _applicationCacheService = applicationCacheService;
         _collectionRepository = collectionRepository;
@@ -375,11 +372,6 @@ public class CiphersController : Controller
 
     private async Task<bool> CanDeleteOrRestoreCipherAsAdminAsync(Guid organizationId, IEnumerable<Guid> cipherIds)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.LimitItemDeletion))
-        {
-            return await CanEditCipherAsAdminAsync(organizationId, cipherIds);
-        }
-
         var org = _currentContext.GetOrganization(organizationId);
 
         // If we're not an "admin" or if we're a provider user we don't need to check the ciphers
@@ -1064,7 +1056,7 @@ public class CiphersController : Controller
 
     [HttpPut("share")]
     [HttpPost("share")]
-    public async Task PutShareMany([FromBody] CipherBulkShareRequestModel model)
+    public async Task<ListResponseModel<CipherMiniResponseModel>> PutShareMany([FromBody] CipherBulkShareRequestModel model)
     {
         var organizationId = new Guid(model.Ciphers.First().OrganizationId);
         if (!await _currentContext.OrganizationUser(organizationId))
@@ -1073,38 +1065,41 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
+
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: false);
         var ciphersDict = ciphers.ToDictionary(c => c.Id);
 
         // Validate the model was encrypted for the posting user
         foreach (var cipher in model.Ciphers)
         {
-            if (cipher.EncryptedFor != null)
+            if (cipher.EncryptedFor.HasValue && cipher.EncryptedFor.Value != userId)
             {
-                if (cipher.EncryptedFor != userId)
-                {
-                    throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
-                }
+                throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }
 
-        var shareCiphers = new List<(Cipher, DateTime?)>();
+        var shareCiphers = new List<(CipherDetails, DateTime?)>();
         foreach (var cipher in model.Ciphers)
         {
-            if (!ciphersDict.ContainsKey(cipher.Id.Value))
+            if (!ciphersDict.TryGetValue(cipher.Id.Value, out var existingCipher))
             {
-                throw new BadRequestException("Trying to move ciphers that you do not own.");
+                throw new BadRequestException("Trying to share ciphers that you do not own.");
             }
-
-            var existingCipher = ciphersDict[cipher.Id.Value];
 
             ValidateClientVersionForFido2CredentialSupport(existingCipher);
 
-            shareCiphers.Add((cipher.ToCipher(existingCipher), cipher.LastKnownRevisionDate));
+            shareCiphers.Add((cipher.ToCipherDetails(existingCipher), cipher.LastKnownRevisionDate));
         }
 
-        await _cipherService.ShareManyAsync(shareCiphers, organizationId,
-            model.CollectionIds.Select(c => new Guid(c)), userId);
+        var updated = await _cipherService.ShareManyAsync(
+            shareCiphers,
+            organizationId,
+            model.CollectionIds.Select(Guid.Parse),
+            userId
+        );
+
+        var response = updated.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        return new ListResponseModel<CipherMiniResponseModel>(response);
     }
 
     [HttpPost("purge")]
@@ -1186,14 +1181,14 @@ public class CiphersController : Controller
         var cipher = await GetByIdAsync(id, userId);
         var attachments = cipher?.GetAttachments();
 
-        if (attachments == null || !attachments.ContainsKey(attachmentId) || attachments[attachmentId].Validated)
+        if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachment) || attachment.Validated)
         {
             throw new NotFoundException();
         }
 
         return new AttachmentUploadDataResponseModel
         {
-            Url = await _attachmentStorageService.GetAttachmentUploadUrlAsync(cipher, attachments[attachmentId]),
+            Url = await _attachmentStorageService.GetAttachmentUploadUrlAsync(cipher, attachment),
             FileUploadType = _attachmentStorageService.FileUploadType,
         };
     }
@@ -1212,11 +1207,10 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
         var attachments = cipher?.GetAttachments();
-        if (attachments == null || !attachments.ContainsKey(attachmentId))
+        if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachmentData))
         {
             throw new NotFoundException();
         }
-        var attachmentData = attachments[attachmentId];
 
         await Request.GetFileAsync(async (stream) =>
         {
@@ -1366,7 +1360,7 @@ public class CiphersController : Controller
                         var cipher = await _cipherRepository.GetByIdAsync(new Guid(cipherId));
                         var attachments = cipher?.GetAttachments() ?? new Dictionary<string, CipherAttachment.MetaData>();
 
-                        if (cipher == null || !attachments.ContainsKey(attachmentId) || attachments[attachmentId].Validated)
+                        if (cipher == null || !attachments.TryGetValue(attachmentId, out var attachment) || attachment.Validated)
                         {
                             if (_attachmentStorageService is AzureSendFileStorageService azureFileStorageService)
                             {
@@ -1376,7 +1370,7 @@ public class CiphersController : Controller
                             return;
                         }
 
-                        await _cipherService.ValidateCipherAttachmentFile(cipher, attachments[attachmentId]);
+                        await _cipherService.ValidateCipherAttachmentFile(cipher, attachment);
                     }
                     catch (Exception e)
                     {

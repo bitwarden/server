@@ -20,9 +20,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -44,7 +41,6 @@ public class OrganizationsController(
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
     IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
-    IReferenceEventService referenceEventService,
     ISubscriberService subscriberService,
     IOrganizationInstallationRepository organizationInstallationRepository,
     IPricingClient pricingClient)
@@ -246,14 +242,6 @@ public class OrganizationsController(
                 Feedback = request.Feedback
             },
             organization.IsExpired());
-
-        await referenceEventService.RaiseEventAsync(new ReferenceEvent(
-            ReferenceEventType.CancelSubscription,
-            organization,
-            currentContext)
-        {
-            EndOfPeriod = organization.IsExpired()
-        });
     }
 
     [HttpPost("{id:guid}/reinstate")]

@@ -327,6 +327,7 @@ public class GlobalSettings : IGlobalSettings
 
             public int MaxRetries { get; set; } = 3;
             public int RetryTiming { get; set; } = 30000; // 30s
+            public bool UseDelayPlugin { get; set; } = false;
             public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
             public virtual string IntegrationDeadLetterQueueName { get; set; } = "integration-dead-letter-queue";
             public virtual string SlackEventsQueueName { get; set; } = "events-slack-queue";
@@ -430,6 +431,7 @@ public class GlobalSettings : IGlobalSettings
         public SmtpSettings Smtp { get; set; } = new SmtpSettings();
         public string SendGridApiKey { get; set; }
         public int? SendGridPercentage { get; set; }
+        public string SendGridApiHost { get; set; } = "https://api.sendgrid.com";
 
         public class SmtpSettings
         {
@@ -446,6 +448,7 @@ public class GlobalSettings : IGlobalSettings
 
     public class IdentityServerSettings
     {
+        public string CertificateLocation { get; set; } = "identity.pfx";
         public string CertificateThumbprint { get; set; }
         public string CertificatePassword { get; set; }
         public string RedisConnectionString { get; set; }

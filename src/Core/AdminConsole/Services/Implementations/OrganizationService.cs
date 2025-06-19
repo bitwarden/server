@@ -29,9 +29,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -56,7 +53,6 @@ public class OrganizationService : IOrganizationService
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
     private readonly ISsoUserRepository _ssoUserRepository;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly ICurrentContext _currentContext;
@@ -88,7 +84,6 @@ public class OrganizationService : IOrganizationService
         IPolicyRepository policyRepository,
         IPolicyService policyService,
         ISsoUserRepository ssoUserRepository,
-        IReferenceEventService referenceEventService,
         IGlobalSettings globalSettings,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         ICurrentContext currentContext,
@@ -120,7 +115,6 @@ public class OrganizationService : IOrganizationService
         _policyRepository = policyRepository;
         _policyService = policyService;
         _ssoUserRepository = ssoUserRepository;
-        _referenceEventService = referenceEventService;
         _globalSettings = globalSettings;
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _currentContext = currentContext;
@@ -153,11 +147,6 @@ public class OrganizationService : IOrganizationService
         }
 
         await _paymentService.CancelSubscriptionAsync(organization, eop);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.CancelSubscription, organization, _currentContext)
-            {
-                EndOfPeriod = endOfPeriod,
-            });
     }
 
     public async Task ReinstateSubscriptionAsync(Guid organizationId)
@@ -169,8 +158,6 @@ public class OrganizationService : IOrganizationService
         }
 
         await _paymentService.ReinstateSubscriptionAsync(organization);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.ReinstateSubscription, organization, _currentContext));
     }
 
     public async Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
@@ -190,13 +177,6 @@ public class OrganizationService : IOrganizationService
 
         var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, organization, storageAdjustmentGb,
             plan.PasswordManager.StripeStoragePlanId);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustStorage, organization, _currentContext)
-            {
-                PlanName = plan.Name,
-                PlanType = plan.Type,
-                Storage = storageAdjustmentGb,
-            });
         await ReplaceAndUpdateCacheAsync(organization);
         return secret;
     }
@@ -314,11 +294,20 @@ public class OrganizationService : IOrganizationService
 
         if (!organization.Seats.HasValue || organization.Seats.Value > newSeatTotal)
         {
-            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            if (occupiedSeats > newSeatTotal)
+            var seatCounts = await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+
+            if (seatCounts.Total > newSeatTotal)
             {
-                throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
-                    $"Your new plan only has ({newSeatTotal}) seats. Remove some users.");
+                if (organization.UseAdminSponsoredFamilies || seatCounts.Sponsored > 0)
+                {
+                    throw new BadRequestException($"Your organization has {seatCounts.Users} members and {seatCounts.Sponsored} sponsored families. " +
+                                                  $"To decrease the seat count below {seatCounts.Total}, you must remove members or sponsorships.");
+                }
+                else
+                {
+                    throw new BadRequestException($"Your organization currently has {seatCounts.Total} seats filled. " +
+                                                  $"Your new plan only has ({newSeatTotal}) seats. Remove some users.");
+                }
             }
         }
 
@@ -328,14 +317,6 @@ public class OrganizationService : IOrganizationService
         }
 
         var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, _currentContext)
-            {
-                PlanName = plan.Name,
-                PlanType = plan.Type,
-                Seats = newSeatTotal,
-                PreviousSeats = organization.Seats
-            });
         organization.Seats = (short?)newSeatTotal;
         await ReplaceAndUpdateCacheAsync(organization);
 
@@ -640,12 +621,12 @@ public class OrganizationService : IOrganizationService
         }
 
         var providers = organization.GetTwoFactorProviders();
-        if (!providers?.ContainsKey(type) ?? true)
+        if (providers is null || !providers.TryGetValue(type, out var provider))
         {
             return;
         }
 
-        providers[type].Enabled = true;
+        provider.Enabled = true;
         organization.SetTwoFactorProviders(providers);
         await UpdateAsync(organization);
     }
@@ -754,8 +735,8 @@ public class OrganizationService : IOrganizationService
         var newSeatsRequired = 0;
         if (organization.Seats.HasValue)
         {
-            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            var availableSeats = organization.Seats.Value - occupiedSeats;
+            var seatCounts = await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            var availableSeats = organization.Seats.Value - seatCounts.Total;
             newSeatsRequired = invites.Sum(i => i.invite.Emails.Count()) - existingEmails.Count() - availableSeats;
         }
 
@@ -886,12 +867,6 @@ public class OrganizationService : IOrganizationService
             }
 
             await SendInvitesAsync(allOrgUsers, organization);
-
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.InvitedUsers, organization, _currentContext)
-                {
-                    Users = orgUserInvitedCount
-                });
         }
         catch (Exception e)
         {
@@ -1149,7 +1124,7 @@ public class OrganizationService : IOrganizationService
             var existingUsersDict = existingExternalUsers.ToDictionary(u => u.ExternalId);
             var removeUsersSet = new HashSet<string>(removeUserExternalIds)
                 .Except(newUsersSet)
-                .Where(u => existingUsersDict.ContainsKey(u) && existingUsersDict[u].Type != OrganizationUserType.Owner)
+                .Where(u => existingUsersDict.TryGetValue(u, out var existingUser) && existingUser.Type != OrganizationUserType.Owner)
                 .Select(u => existingUsersDict[u]);
 
             await _organizationUserRepository.DeleteManyAsync(removeUsersSet.Select(u => u.Id));
@@ -1211,8 +1186,8 @@ public class OrganizationService : IOrganizationService
             var enoughSeatsAvailable = true;
             if (organization.Seats.HasValue)
             {
-                var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-                seatsAvailable = organization.Seats.Value - occupiedSeats;
+                var seatCounts = await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+                seatsAvailable = organization.Seats.Value - seatCounts.Total;
                 enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
             }
 
@@ -1317,8 +1292,6 @@ public class OrganizationService : IOrganizationService
         }
 
         await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.ou, e.e, eventSystemUser, e.d)));
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.DirectorySynced, organization, _currentContext));
     }
 
     public async Task DeleteSsoUserAsync(Guid userId, Guid? organizationId)
@@ -1754,11 +1727,5 @@ public class OrganizationService : IOrganizationService
 
         await SendInviteAsync(ownerOrganizationUser, organization, true);
         await _eventService.LogOrganizationUserEventAsync(ownerOrganizationUser, EventType.OrganizationUser_Invited);
-
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationCreatedByAdmin, organization, _currentContext)
-        {
-            EventRaisedByUser = userService.GetUserName(user),
-            SalesAssistedTrialStarted = salesAssistedTrialStarted,
-        });
     }
 }
