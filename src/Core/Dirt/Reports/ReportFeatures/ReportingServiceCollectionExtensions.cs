@@ -15,5 +15,6 @@ public static class ReportingServiceCollectionExtensions
         services.AddScoped<IDropPasswordHealthReportApplicationCommand, DropPasswordHealthReportApplicationCommand>();
         services.AddScoped<IAddOrganizationReportCommand, AddOrganizationReportCommand>();
         services.AddScoped<IDropOrganizationReportCommand, DropOrganizationReportCommand>();
+        services.AddScoped<IGetOrganizationReportQuery, GetOrganizationReportQuery>();
     }
 }

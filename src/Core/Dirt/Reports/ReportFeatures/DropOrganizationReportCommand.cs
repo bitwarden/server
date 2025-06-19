@@ -23,9 +23,12 @@ public class DropOrganizationReportCommand : IDropOrganizationReportCommand
             throw new BadRequestException("Organization does not have any records.");
         }
 
-        data.Where(_ => request.OrganizationReportIds.Contains(_.Id)).ToList().ForEach(async _ =>
-        {
-            await _organizationReportRepo.DeleteAsync(_);
-        });
+        data
+            .Where(_ => request.OrganizationReportIds.Contains(_.Id))
+            .ToList()
+            .ForEach(async reportId =>
+                {
+                    await _organizationReportRepo.DeleteAsync(reportId);
+                });
     }
 }
