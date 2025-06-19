@@ -14,6 +14,10 @@ namespace Bit.Api.KeyManagement.Models.Response;
 /// </summary>
 public class PrivateKeysResponseModel : ResponseModel
 {
+    // Not all accounts have signature keys, but all accounts have public encryption keys.
+    public SignatureKeyPairResponseModel? SignatureKeyPair { get; set; }
+    public required PublicKeyEncryptionKeyPairModel PublicKeyEncryptionKeyPair { get; set; }
+
     [System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute]
     public PrivateKeysResponseModel(UserAccountKeysData accountKeys) : base("privateKeys")
     {
@@ -33,9 +37,4 @@ public class PrivateKeysResponseModel : ResponseModel
         SignatureKeyPair = signatureKeyPair;
         PublicKeyEncryptionKeyPair = publicKeyEncryptionKeyPair ?? throw new ArgumentNullException(nameof(publicKeyEncryptionKeyPair));
     }
-
-    // Not all accounts have signature keys, but all accounts have public encryption keys.
-    public SignatureKeyPairResponseModel? SignatureKeyPair { get; set; }
-    public required PublicKeyEncryptionKeyPairModel PublicKeyEncryptionKeyPair { get; set; }
-
 }

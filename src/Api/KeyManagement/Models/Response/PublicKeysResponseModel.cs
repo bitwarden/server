@@ -15,8 +15,8 @@ public class PublicKeysResponseModel : ResponseModel
     public PublicKeysResponseModel(UserAccountKeysData accountKeys)
         : base("publicKeys")
     {
-        PublicKey = accountKeys.PublicKeyEncryptionKeyPairData.PublicKey;
         ArgumentNullException.ThrowIfNull(accountKeys);
+        PublicKey = accountKeys.PublicKeyEncryptionKeyPairData.PublicKey;
 
         if (accountKeys.SignatureKeyPairData != null)
         {
