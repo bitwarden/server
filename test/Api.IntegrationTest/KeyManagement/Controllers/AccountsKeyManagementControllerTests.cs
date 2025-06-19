@@ -404,7 +404,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         };
         request.AccountKeys.SignatureKeyPair = new SignatureKeyPairRequestModel
         {
-            SignatureAlgorithm = SignatureAlgorithm.Ed25519,
+            SignatureAlgorithm = "ed25519",
             WrappedSigningKey = _mockEncryptedType7String,
             VerifyingKey = "verifyingKey",
         };
@@ -494,7 +494,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         };
         request.AccountKeys.SignatureKeyPair = new SignatureKeyPairRequestModel
         {
-            SignatureAlgorithm = SignatureAlgorithm.Ed25519,
+            SignatureAlgorithm = "ed25519",
             WrappedSigningKey = _mockEncryptedType7String,
             VerifyingKey = "verifyingKey",
         };
