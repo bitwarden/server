@@ -8,8 +8,8 @@ namespace Bit.Api.KeyManagement.Models.Response;
 
 public class SignatureKeyPairResponseModel : ResponseModel
 {
-    public required string WrappedSigningKey;
-    public required string VerifyingKey;
+    public required string WrappedSigningKey { get; set; }
+    public required string VerifyingKey { get; set; }
 
     [System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute]
     public SignatureKeyPairResponseModel(SignatureKeyPairData signatureKeyPair)
