@@ -25,7 +25,7 @@ public class UsersControllerTests
         SutProvider<UsersController> sutProvider)
     {
         sutProvider.GetDependency<IUserRepository>().GetPublicKeyAsync(Arg.Any<Guid>()).ReturnsNull();
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetPublicKeyAsync(new Guid());
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetPublicKeyAsync(new Guid()));
     }
 
     [Theory]
