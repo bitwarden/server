@@ -9,14 +9,14 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements
 public enum OrganizationDataOwnershipState
 {
     /// <summary>
-    /// Organization Data Ownership is not enforced- users can save items to their personal vault.
-    /// </summary>
-    Allowed,
-
-    /// <summary>
     /// Organization Data Ownership is enforced- members are required to save items to an organization.
     /// </summary>
-    Restricted
+    Enabled = 1,
+
+    /// <summary>
+    /// Organization Data Ownership is not enforced- users can save items to their personal vault.
+    /// </summary>
+    Disabled = 2
 }
 
 /// <summary>
@@ -61,8 +61,8 @@ public class OrganizationDataOwnershipPolicyRequirementFactory : BasePolicyRequi
     public override OrganizationDataOwnershipPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
         var organizationDataOwnershipState = policyDetails.Any()
-            ? OrganizationDataOwnershipState.Restricted
-            : OrganizationDataOwnershipState.Allowed;
+            ? OrganizationDataOwnershipState.Enabled
+            : OrganizationDataOwnershipState.Disabled;
         var organizationIdsWithPolicyEnabled = policyDetails.Select(p => p.OrganizationId).ToHashSet();
 
         return new OrganizationDataOwnershipPolicyRequirement(

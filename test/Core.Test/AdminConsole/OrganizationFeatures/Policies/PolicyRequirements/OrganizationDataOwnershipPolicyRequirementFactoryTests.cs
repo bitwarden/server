@@ -16,7 +16,7 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
     {
         var actual = sutProvider.Sut.Create([]);
 
-        Assert.Equal(OrganizationDataOwnershipState.Allowed, actual.State);
+        Assert.Equal(OrganizationDataOwnershipState.Disabled, actual.State);
     }
 
     [Theory, BitAutoData]
@@ -26,7 +26,7 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
     {
         var actual = sutProvider.Sut.Create(policies);
 
-        Assert.Equal(OrganizationDataOwnershipState.Restricted, actual.State);
+        Assert.Equal(OrganizationDataOwnershipState.Enabled, actual.State);
     }
 
     [Theory, BitAutoData]

@@ -63,7 +63,7 @@ public class ImportCiphersAsyncCommandTests
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(importingUserId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
-                OrganizationDataOwnershipState.Allowed,
+                OrganizationDataOwnershipState.Disabled,
                 []));
 
         sutProvider.GetDependency<IFolderRepository>()
@@ -119,7 +119,7 @@ public class ImportCiphersAsyncCommandTests
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
-                OrganizationDataOwnershipState.Restricted,
+                OrganizationDataOwnershipState.Enabled,
                 [Guid.NewGuid()]));
 
         var folderRelationships = new List<KeyValuePair<int, int>>();

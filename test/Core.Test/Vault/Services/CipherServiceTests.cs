@@ -172,7 +172,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
-                OrganizationDataOwnershipState.Restricted,
+                OrganizationDataOwnershipState.Enabled,
                 [Guid.NewGuid()]));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -198,7 +198,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
-                OrganizationDataOwnershipState.Allowed,
+                OrganizationDataOwnershipState.Disabled,
                 []));
 
         await sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null);
