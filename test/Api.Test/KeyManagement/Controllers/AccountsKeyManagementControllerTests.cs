@@ -110,6 +110,7 @@ public class AccountsKeyManagementControllerTests
     public async Task RotateUserAccountKeysSuccess(SutProvider<AccountsKeyManagementController> sutProvider,
         RotateUserAccountKeysAndDataRequestModel data, User user)
     {
+        data.AccountKeys.SignatureKeyPair = null;
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IRotateUserAccountKeysCommand>().RotateUserAccountKeysAsync(Arg.Any<User>(), Arg.Any<RotateUserAccountKeysData>())
             .Returns(IdentityResult.Success);
@@ -153,6 +154,7 @@ public class AccountsKeyManagementControllerTests
     public async Task RotateUserKeyNoUser_Throws(SutProvider<AccountsKeyManagementController> sutProvider,
         RotateUserAccountKeysAndDataRequestModel data)
     {
+        data.AccountKeys.SignatureKeyPair = null;
         User? user = null;
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IRotateUserAccountKeysCommand>().RotateUserAccountKeysAsync(Arg.Any<User>(), Arg.Any<RotateUserAccountKeysData>())
@@ -165,6 +167,7 @@ public class AccountsKeyManagementControllerTests
     public async Task RotateUserKeyWrongData_Throws(SutProvider<AccountsKeyManagementController> sutProvider,
         RotateUserAccountKeysAndDataRequestModel data, User user, IdentityErrorDescriber _identityErrorDescriber)
     {
+        data.AccountKeys.SignatureKeyPair = null;
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IRotateUserAccountKeysCommand>().RotateUserAccountKeysAsync(Arg.Any<User>(), Arg.Any<RotateUserAccountKeysData>())
             .Returns(IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch()));
