@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 
 #nullable enable
@@ -21,5 +22,10 @@ public class UserSignatureKeyPair : ITableObject<Guid>, IRevisable
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();
+    }
+
+    public SignatureKeyPairData ToSignatureKeyPairData()
+    {
+        return new SignatureKeyPairData(SignatureAlgorithm, SigningKey, VerifyingKey);
     }
 }
