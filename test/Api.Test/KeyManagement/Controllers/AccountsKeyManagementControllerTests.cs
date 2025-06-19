@@ -148,6 +148,60 @@ public class AccountsKeyManagementControllerTests
             ));
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserAccountKeys_UserCryptoV2_Success_Async(SutProvider<AccountsKeyManagementController> sutProvider,
+    RotateUserAccountKeysAndDataRequestModel data, User user)
+    {
+        data.AccountKeys.SignatureKeyPair = new SignatureKeyPairRequestModel
+        {
+            SignatureAlgorithm = "ed25519",
+            WrappedSigningKey = "wrappedSigningKey",
+            VerifyingKey = "verifyingKey"
+        };
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        sutProvider.GetDependency<IRotateUserAccountKeysCommand>().RotateUserAccountKeysAsync(Arg.Any<User>(), Arg.Any<RotateUserAccountKeysData>())
+            .Returns(IdentityResult.Success);
+        await sutProvider.Sut.RotateUserAccountKeysAsync(data);
+
+        await sutProvider.GetDependency<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>>().Received(1)
+            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountUnlockData.EmergencyAccessUnlockData));
+        await sutProvider.GetDependency<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>>().Received(1)
+            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountUnlockData.OrganizationAccountRecoveryUnlockData));
+        await sutProvider.GetDependency<IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>>().Received(1)
+            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountUnlockData.PasskeyUnlockData));
+
+        await sutProvider.GetDependency<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>>().Received(1)
+            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountData.Ciphers));
+        await sutProvider.GetDependency<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>>().Received(1)
+            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountData.Folders));
+        await sutProvider.GetDependency<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>>().Received(1)
+            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountData.Sends));
+
+        await sutProvider.GetDependency<IRotateUserAccountKeysCommand>().Received(1)
+            .RotateUserAccountKeysAsync(Arg.Is(user), Arg.Is<RotateUserAccountKeysData>(d =>
+                d.OldMasterKeyAuthenticationHash == data.OldMasterKeyAuthenticationHash
+
+                && d.MasterPasswordUnlockData.KdfType == data.AccountUnlockData.MasterPasswordUnlockData.KdfType
+                && d.MasterPasswordUnlockData.KdfIterations == data.AccountUnlockData.MasterPasswordUnlockData.KdfIterations
+                && d.MasterPasswordUnlockData.KdfMemory == data.AccountUnlockData.MasterPasswordUnlockData.KdfMemory
+                && d.MasterPasswordUnlockData.KdfParallelism == data.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism
+                && d.MasterPasswordUnlockData.Email == data.AccountUnlockData.MasterPasswordUnlockData.Email
+
+                && d.MasterPasswordUnlockData.MasterKeyAuthenticationHash == data.AccountUnlockData.MasterPasswordUnlockData.MasterKeyAuthenticationHash
+                && d.MasterPasswordUnlockData.MasterKeyEncryptedUserKey == data.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey
+
+                && d.AccountPublicKey == data.AccountKeys.AccountPublicKey
+                && d.UserKeyEncryptedAccountPrivateKey == data.AccountKeys.UserKeyEncryptedAccountPrivateKey
+
+                && d.AccountKeys!.PublicKeyEncryptionKeyPairData.PublicKey == data.AccountKeys.PublicKeyEncryptionKeyPair!.PublicKey
+                && d.AccountKeys!.PublicKeyEncryptionKeyPairData.SignedPublicKey == data.AccountKeys.PublicKeyEncryptionKeyPair!.SignedPublicKey
+                && d.AccountKeys!.SignatureKeyPairData!.SignatureAlgorithm == Core.KeyManagement.Enums.SignatureAlgorithm.Ed25519
+                && d.AccountKeys!.SignatureKeyPairData.WrappedSigningKey == data.AccountKeys.SignatureKeyPair!.WrappedSigningKey
+                && d.AccountKeys!.SignatureKeyPairData.VerifyingKey == data.AccountKeys.SignatureKeyPair!.VerifyingKey
+            ));
+    }
+
 
     [Theory]
     [BitAutoData]
