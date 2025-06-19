@@ -56,16 +56,13 @@ public interface ISendFileStorageService
     /// </summary>
     /// <param name="send"><see cref="Send" /> used to help validate file</param>
     /// <param name="fileId">File id to identify which file to validate</param>
-    /// <param name="expectedFileSize">Expected file size of the file</param>
-    /// <param name="leeway">
-    /// Send file size tolerance in bytes. When an uploaded file's `expectedFileSize`
-    /// is outside of the leeway, the storage operation fails.
-    /// </param>
-    /// <throws>
-    /// ❌ Fill this in with an explanation of the error thrown when `leeway` is incorrect
-    /// </throws>
-    /// <returns>Task object for async operations with Tuple of boolean that determines if file was valid and long that
-    /// the actual file size of the file.
+    /// <param name="minimum">The minimum allowed length of the stored file in bytes.</param>
+    /// <param name="maximum">The maximuim allowed length of the stored file in bytes</param>
+    /// <returns>
+    /// A task that completes when validation is finished. The first element of the tuple is
+    /// <see langword="true" /> when validation succeeded, and false otherwise. The second element
+    /// of the tuple contains the observed file length in bytes. If an error occurs during validation,
+    /// this returns `-1`.
     /// </returns>
-    Task<(bool, long?)> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway);
+    Task<(bool valid, long length)> ValidateFileAsync(Send send, string fileId, long minimum, long maximum);
 }
