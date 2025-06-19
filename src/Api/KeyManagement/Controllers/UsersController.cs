@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UserKeyResponseModel = Bit.Api.Models.Response.UserKeyResponseModel;
 
+#nullable enable
+
 namespace Bit.Api.KeyManagement.Controllers;
 
 [Route("users")]
@@ -22,11 +24,10 @@ public class UsersController : Controller
     }
 
     [HttpGet("{id}/public-key")]
-    public async Task<UserKeyResponseModel> GetPublicKeyAsync(string id)
+    public async Task<UserKeyResponseModel> GetPublicKeyAsync([FromRoute] Guid id)
     {
-        var guidId = new Guid(id);
-        var key = await _userRepository.GetPublicKeyAsync(guidId) ?? throw new NotFoundException();
-        return new UserKeyResponseModel(guidId, key);
+        var key = await _userRepository.GetPublicKeyAsync(id) ?? throw new NotFoundException();
+        return new UserKeyResponseModel(id, key);
     }
 
     [HttpGet("{id}/keys")]
