@@ -8,5 +8,19 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Create]
 AS
     SET NOCOUNT ON;
 
-    INSERT INTO [dbo].[OrganizationReport]( [Id],[OrganizationId],[Date],[ReportData],[CreationDate],[RevisionDate] )
-    VALUES ( @Id,@OrganizationId,@Date,@ReportData,@CreationDate,@RevisionDate);
+    INSERT INTO [dbo].[OrganizationReport]( 
+        [Id],
+        [OrganizationId],
+        [Date],
+        [ReportData],
+        [CreationDate],
+        [RevisionDate] 
+    )
+    VALUES ( 
+        @Id,
+        @OrganizationId,
+        @Date,
+        @ReportData,
+        @CreationDate,
+        @RevisionDate
+    );

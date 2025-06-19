@@ -3,8 +3,7 @@ CREATE PROCEDURE [dbo].[OrganizationApplication_DeleteById]
 AS
     SET NOCOUNT ON;
 
-    IF @Id IS NULL
-       THROW 50000, 'Id cannot be null', 1;
-
-    DELETE FROM [dbo].[OrganizationApplication]
-    WHERE [Id] = @Id
+    DELETE FROM
+        [dbo].[OrganizationApplication]
+    WHERE
+        [Id] = @Id;
