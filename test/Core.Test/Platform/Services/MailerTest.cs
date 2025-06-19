@@ -1,11 +1,11 @@
 ﻿using Bit.Core.Models.Mail;
 using Bit.Core.Platform.Services;
 using Bit.Core.Services;
-using Bit.Core.Test.Platform.TestMail;
+using Bit.Core.Test.Platform.Services.TestMail;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Platform;
+namespace Bit.Core.Test.Platform.Services;
 
 public class MailerTest
 {
@@ -18,7 +18,7 @@ public class MailerTest
         var mail = new TestMail.TestMail()
         {
             ToEmails = ["test@bw.com"],
-            View = new TestMailView() { Token = "", Email = "", WebVaultUrl = "" }
+            View = new TestMailView() { Name = "John Smith" }
         };
 
         MailMessage? sentMessage = null;
@@ -31,9 +31,7 @@ public class MailerTest
         Assert.NotNull(sentMessage);
         Assert.Contains("test@bw.com", sentMessage.ToEmails);
         Assert.Equal("Test Email", sentMessage.Subject);
-        Assert.Equivalent("Test Email\n\n/redirect-connector.html#finish-signup?token=&email=&fromEmail=true\n",
-            sentMessage.TextContent);
-        Assert.Equivalent("Test <b>Email</b>\n\n<a href=\"/redirect-connector.html#finish-signup?token=&email=&fromEmail=true\">Test</a>\n",
-            sentMessage.HtmlContent);
+        Assert.Equivalent("Hello John Smith", sentMessage.TextContent.Trim());
+        Assert.Equivalent("Hello <b>John Smith</b>",  sentMessage.HtmlContent.Trim());
     }
 }

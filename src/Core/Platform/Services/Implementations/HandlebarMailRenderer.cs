@@ -88,6 +88,7 @@ public class HandlebarMailRenderer : IMailRenderer
     {
         var handlebars = Handlebars.Create();
 
+        // TODO: Do we still need layouts with MJML?
         var assembly = typeof(HandlebarMailRenderer).Assembly;
         var layoutSource = await ReadSourceAsync(assembly, "Bit.Core.MailTemplates.Handlebars.Layouts.Full.html.hbs");
         handlebars.RegisterTemplate("FullHtmlLayout", layoutSource);
