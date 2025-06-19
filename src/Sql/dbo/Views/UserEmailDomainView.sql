@@ -10,5 +10,5 @@ WHERE Email IS NOT NULL
     AND CHARINDEX('@', Email) > 0
 GO
 
-CREATE UNIQUE CLUSTERED INDEX IX_UserEmailDomainView_Id 
-ON dbo.UserEmailDomainView (Id);
+CREATE UNIQUE CLUSTERED INDEX [IX_UserEmailDomainView_Id] 
+    ON [dbo].[UserEmailDomainView] ([Id]);
