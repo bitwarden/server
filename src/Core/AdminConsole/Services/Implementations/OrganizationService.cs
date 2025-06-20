@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -1704,28 +1703,5 @@ public class OrganizationService : IOrganizationService
         }
 
         return status;
-    }
-
-    public async Task CreatePendingOrganization(Organization organization, string ownerEmail, ClaimsPrincipal user, IUserService userService, bool salesAssistedTrialStarted)
-    {
-        organization.Id = CoreHelpers.GenerateComb();
-        organization.Enabled = false;
-        organization.Status = OrganizationStatusType.Pending;
-
-        await SignUpAsync(organization, default, null, null, true);
-
-        var ownerOrganizationUser = new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = null,
-            Email = ownerEmail,
-            Key = null,
-            Type = OrganizationUserType.Owner,
-            Status = OrganizationUserStatusType.Invited,
-        };
-        await _organizationUserRepository.CreateAsync(ownerOrganizationUser);
-
-        await SendInviteAsync(ownerOrganizationUser, organization, true);
-        await _eventService.LogOrganizationUserEventAsync(ownerOrganizationUser, EventType.OrganizationUser_Invited);
     }
 }
