@@ -17,10 +17,10 @@ BEGIN
         [OrganizationIntegrationId] = @OrganizationIntegrationId,
         [EventType] = @EventType,
         [Configuration] = @Configuration,
-        [Filters] = @Filters,
         [Template] = @Template,
         [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate
+        [RevisionDate] = @RevisionDate,
+        [Filters] = @Filters
     WHERE
         [Id] = @Id
 END

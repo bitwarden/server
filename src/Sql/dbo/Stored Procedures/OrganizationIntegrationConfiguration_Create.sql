@@ -17,10 +17,10 @@ BEGIN
         [OrganizationIntegrationId],
         [EventType],
         [Configuration],
-        [Filters],
         [Template],
         [CreationDate],
-        [RevisionDate]
+        [RevisionDate],
+        [Filters]
         )
     VALUES
         (
@@ -28,9 +28,9 @@ BEGIN
             @OrganizationIntegrationId,
             @EventType,
             @Configuration,
-            @Filters,
             @Template,
             @CreationDate,
-            @RevisionDate
+            @RevisionDate,
+            @Filters
         )
 END

@@ -4,10 +4,10 @@ AS
         oi.[OrganizationId],
         oi.[Type] AS [IntegrationType],
         oic.[EventType],
-        oic.[Filters],
         oic.[Configuration],
         oi.[Configuration] AS [IntegrationConfiguration],
-        oic.[Template]
+        oic.[Template],
+        oic.[Filters]
     FROM
         [dbo].[OrganizationIntegrationConfiguration] oic
         INNER JOIN

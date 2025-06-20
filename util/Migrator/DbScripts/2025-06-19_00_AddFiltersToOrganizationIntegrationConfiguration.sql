@@ -9,21 +9,30 @@ IF COL_LENGTH('[dbo].[OrganizationIntegrationConfiguration]', 'Filters') IS NULL
     END
 GO
 
-/* add column "Filters" to OrganizationIntegrationConfigurationView */
+/* add column "Filters" to OrganizationIntegrationConfigurationDetailsView */
 CREATE OR ALTER VIEW [dbo].[OrganizationIntegrationConfigurationDetailsView]
 AS
 SELECT
     oi.[OrganizationId],
     oi.[Type] AS [IntegrationType],
     oic.[EventType],
-    oic.[Filters],
     oic.[Configuration],
     oi.[Configuration] AS [IntegrationConfiguration],
-    oic.[Template]
+    oic.[Template],
+    oic.[Filters]
 FROM
     [dbo].[OrganizationIntegrationConfiguration] oic
         INNER JOIN
     [dbo].[OrganizationIntegration] oi ON oi.[Id] = oic.[OrganizationIntegrationId]
+GO
+
+/* add column "Filters" to OrganizationIntegrationConfigurationView */
+CREATE OR ALTER VIEW [dbo].[OrganizationIntegrationConfigurationView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[OrganizationIntegrationConfiguration]
 GO
 
 /* add column to OrganizationIntegrationConfiguration_Create */
@@ -32,10 +41,10 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegrationConfiguration_Create]
     @OrganizationIntegrationId UNIQUEIDENTIFIER,
     @EventType SMALLINT,
     @Configuration VARCHAR(MAX),
-    @Filters VARCHAR(MAX),
     @Template VARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @Filters VARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -46,10 +55,10 @@ BEGIN
         [OrganizationIntegrationId],
         [EventType],
         [Configuration],
-        [Filters],
         [Template],
         [CreationDate],
-        [RevisionDate]
+        [RevisionDate],
+        [Filters]
         )
     VALUES
         (
@@ -57,10 +66,10 @@ BEGIN
             @OrganizationIntegrationId,
             @EventType,
             @Configuration,
-            @Filters,
             @Template,
             @CreationDate,
-            @RevisionDate
+            @RevisionDate,
+            @Filters
         )
 END
 GO
@@ -71,10 +80,10 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegrationConfiguration_Update]
     @OrganizationIntegrationId UNIQUEIDENTIFIER,
     @EventType SMALLINT,
     @Configuration VARCHAR(MAX),
-    @Filters VARCHAR(MAX),
     @Template VARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @Filters VARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -85,10 +94,10 @@ SET
     [OrganizationIntegrationId] = @OrganizationIntegrationId,
     [EventType] = @EventType,
     [Configuration] = @Configuration,
-    [Filters] = @Filters,
     [Template] = @Template,
     [CreationDate] = @CreationDate,
-    [RevisionDate] = @RevisionDate
+    [RevisionDate] = @RevisionDate,
+    [Filters] = @Filters
 WHERE
     [Id] = @Id
 END
