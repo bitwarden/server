@@ -45,6 +45,7 @@ public class CiphersController : Controller
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ICollectionRepository _collectionRepository;
+    private readonly IFeatureService _featureService;
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -58,7 +59,8 @@ public class CiphersController : Controller
         GlobalSettings globalSettings,
         IOrganizationCiphersQuery organizationCiphersQuery,
         IApplicationCacheService applicationCacheService,
-        ICollectionRepository collectionRepository)
+        ICollectionRepository collectionRepository,
+        IFeatureService featureService)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -72,6 +74,7 @@ public class CiphersController : Controller
         _organizationCiphersQuery = organizationCiphersQuery;
         _applicationCacheService = applicationCacheService;
         _collectionRepository = collectionRepository;
+        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
@@ -306,8 +309,11 @@ public class CiphersController : Controller
         {
             throw new NotFoundException();
         }
-
-        var allOrganizationCiphers = await _organizationCiphersQuery.GetAllOrganizationCiphers(organizationId);
+        var allOrganizationCiphers = _featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+        ?
+            await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(organizationId)
+        :
+            await _organizationCiphersQuery.GetAllOrganizationCiphers(organizationId);
 
         var allOrganizationCipherResponses =
             allOrganizationCiphers.Select(c =>

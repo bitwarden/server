@@ -1,5 +1,6 @@
 ﻿using AutoFixture;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
@@ -88,5 +89,40 @@ public class OrganizationCiphersQueryTests
             c.CollectionIds.Count() == 2 &&
             c.CollectionIds.Any(cId => cId == targetCollectionId) &&
             c.CollectionIds.Any(cId => cId == otherCollectionId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAllOrganizationCiphersExcludingDefaultUserCollections_ExcludesCiphersInDefaultCollections(
+        Guid organizationId, SutProvider<OrganizationCiphersQuery> sutProvider)
+    {
+        var defaultColId = Guid.NewGuid();
+        var otherColId = Guid.NewGuid();
+        var cipherDefault = new CipherOrganizationDetails { Id = Guid.NewGuid(), OrganizationId = organizationId, OrganizationUseTotp = false };
+        var cipherOther = new CipherOrganizationDetails { Id = Guid.NewGuid(), OrganizationId = organizationId, OrganizationUseTotp = false };
+        var ciphers = new[] { cipherDefault, cipherOther };
+
+        var collections = new[] {
+                new Collection { Id = defaultColId, OrganizationId = organizationId, Type = CollectionType.DefaultUserCollection },
+                new Collection { Id = otherColId, OrganizationId = organizationId, Type = CollectionType.SharedCollection }
+            };
+
+        var collectionsCiphers = new[] {
+                new CollectionCipher { CollectionId = defaultColId, CipherId = cipherDefault.Id },
+                new CollectionCipher { CollectionId = otherColId,   CipherId = cipherOther.Id }
+            };
+
+        sutProvider.GetDependency<ICipherRepository>().GetManyOrganizationDetailsByOrganizationIdAsync(organizationId)
+            .Returns(ciphers);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByOrganizationIdAsync(organizationId)
+            .Returns(collections);
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByOrganizationIdAsync(organizationId)
+            .Returns(collectionsCiphers);
+
+        var result = (await sutProvider.Sut
+            .GetAllOrganizationCiphersExcludingDefaultUserCollections(organizationId))
+            .ToList();
+
+        Assert.Single(result);
+        Assert.Equal(cipherOther.Id, result.Single().Id);
     }
 }
