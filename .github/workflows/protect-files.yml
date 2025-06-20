@@ -16,6 +16,9 @@ jobs:
   changed-files:
     name: Check for file changes
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: write
     outputs:
       changes: ${{steps.check-changes.outputs.changes_detected}}
 
