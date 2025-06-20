@@ -44,13 +44,13 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegrationConfiguration_Create]
     @Template VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @Filters VARCHAR(MAX)
+    @Filters VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
     INSERT INTO [dbo].[OrganizationIntegrationConfiguration]
-        (
+    (
         [Id],
         [OrganizationIntegrationId],
         [EventType],
@@ -59,7 +59,7 @@ BEGIN
         [CreationDate],
         [RevisionDate],
         [Filters]
-        )
+    )
     VALUES
         (
             @Id,
@@ -83,7 +83,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegrationConfiguration_Update]
     @Template VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @Filters VARCHAR(MAX)
+    @Filters VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
