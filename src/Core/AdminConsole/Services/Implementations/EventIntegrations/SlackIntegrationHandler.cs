@@ -11,9 +11,9 @@ public class SlackIntegrationHandler(
     public override async Task<IntegrationHandlerResult> HandleAsync(IntegrationMessage<SlackIntegrationConfigurationDetails> message)
     {
         await slackService.SendSlackMessageByChannelIdAsync(
-            message.Configuration.token,
+            message.Configuration.Token,
             message.RenderedTemplate,
-            message.Configuration.channelId
+            message.Configuration.ChannelId
         );
 
         return new IntegrationHandlerResult(success: true, message: message);

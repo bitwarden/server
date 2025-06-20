@@ -2,4 +2,4 @@
 
 namespace Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
-public record SlackIntegrationConfiguration(string channelId);
+public record SlackIntegrationConfiguration(string ChannelId);
