@@ -34,6 +34,7 @@ public class OrganizationSale
         var subscriptionSetup = GetSubscriptionSetup(signup);
 
         subscriptionSetup.SkipTrial = signup.SkipTrial;
+        subscriptionSetup.InitiationPath = signup.InitiationPath;
 
         return new OrganizationSale
         {
