@@ -3,8 +3,8 @@ namespace Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
 public enum IntegrationFilterOperation
 {
-    Equals,
-    NotEquals,
-    In,
-    NotIn
+    Equals = 0,
+    NotEquals = 1,
+    In = 2,
+    NotIn = 3
 }
