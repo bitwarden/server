@@ -9,30 +9,30 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
 [SutProviderCustomize]
-public class PersonalOwnershipPolicyRequirementFactoryTests
+public class OrganizationDataOwnershipPolicyRequirementFactoryTests
 {
     [Theory, BitAutoData]
-    public void State_WithNoPolicies_ReturnsAllowed(SutProvider<PersonalOwnershipPolicyRequirementFactory> sutProvider)
+    public void State_WithNoPolicies_ReturnsAllowed(SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create([]);
 
-        Assert.Equal(PersonalOwnershipState.Allowed, actual.State);
+        Assert.Equal(OrganizationDataOwnershipState.Disabled, actual.State);
     }
 
     [Theory, BitAutoData]
-    public void State_WithPersonalOwnershipPolicies_ReturnsRestricted(
-        [PolicyDetails(PolicyType.PersonalOwnership)] PolicyDetails[] policies,
-        SutProvider<PersonalOwnershipPolicyRequirementFactory> sutProvider)
+    public void State_WithOrganizationDataOwnershipPolicies_ReturnsRestricted(
+        [PolicyDetails(PolicyType.OrganizationDataOwnership)] PolicyDetails[] policies,
+        SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create(policies);
 
-        Assert.Equal(PersonalOwnershipState.Restricted, actual.State);
+        Assert.Equal(OrganizationDataOwnershipState.Enabled, actual.State);
     }
 
     [Theory, BitAutoData]
     public void RequiresDefaultCollection_WithNoPolicies_ReturnsFalse(
         Guid organizationId,
-        SutProvider<PersonalOwnershipPolicyRequirementFactory> sutProvider)
+        SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create([]);
 
@@ -40,10 +40,10 @@ public class PersonalOwnershipPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void RequiresDefaultCollection_WithPersonalOwnershipPolicies_ReturnsCorrectResult(
-        [PolicyDetails(PolicyType.PersonalOwnership)] PolicyDetails[] policies,
+    public void RequiresDefaultCollection_WithOrganizationDataOwnershipPolicies_ReturnsCorrectResult(
+        [PolicyDetails(PolicyType.OrganizationDataOwnership)] PolicyDetails[] policies,
         Guid nonPolicyOrganizationId,
-        SutProvider<PersonalOwnershipPolicyRequirementFactory> sutProvider)
+        SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
     {
         var actual = sutProvider.Sut.Create(policies);
 

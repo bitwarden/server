@@ -142,11 +142,11 @@ public class CipherService : ICipherService
             }
             else
             {
-                var isPersonalVaultRestricted = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-                    ? (await _policyRequirementQuery.GetAsync<PersonalOwnershipPolicyRequirement>(savingUserId)).State == PersonalOwnershipState.Restricted
-                    : await _policyService.AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership);
+                var organizationDataOwnershipEnabled = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+                    ? (await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)).State == OrganizationDataOwnershipState.Enabled
+                    : await _policyService.AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.OrganizationDataOwnership);
 
-                if (isPersonalVaultRestricted)
+                if (organizationDataOwnershipEnabled)
                 {
                     throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
                 }
