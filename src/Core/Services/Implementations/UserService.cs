@@ -14,6 +14,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Services;
@@ -1163,30 +1164,6 @@ public class UserService : UserManager<User>, IUserService
             user.RevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
         }
-    }
-
-    public async Task<UserLicense> GenerateLicenseAsync(
-        User user,
-        SubscriptionInfo subscriptionInfo = null,
-        int? version = null)
-    {
-        if (user == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (subscriptionInfo == null && user.Gateway != null)
-        {
-            subscriptionInfo = await _paymentService.GetSubscriptionAsync(user);
-        }
-
-        var userLicense = subscriptionInfo == null
-            ? new UserLicense(user, _licenseService)
-            : new UserLicense(user, subscriptionInfo, _licenseService);
-
-        userLicense.Token = await _licenseService.CreateUserTokenAsync(user, subscriptionInfo);
-
-        return userLicense;
     }
 
     public override async Task<bool> CheckPasswordAsync(User user, string password)
