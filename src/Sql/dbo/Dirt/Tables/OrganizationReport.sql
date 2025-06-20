@@ -4,7 +4,6 @@ CREATE TABLE [dbo].[OrganizationReport] (
     [Date]                     DATETIME2 (7)    NOT NULL,
     [ReportData]               NVARCHAR(MAX)    NOT NULL,
     [CreationDate]             DATETIME2 (7)    NOT NULL,
-    [RevisionDate]             DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_OrganizationReport] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationReport_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
     );
