@@ -78,6 +78,7 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
 
             if (organization.Id != default)
             {
+                // Deletes the organization and all related data, including its owner user
                 await _organizationRepository.DeleteAsync(organization);
                 await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
             }
