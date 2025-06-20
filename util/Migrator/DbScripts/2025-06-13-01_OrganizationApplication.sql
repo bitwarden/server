@@ -51,9 +51,6 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_ReadByOrganizationId]
 AS
     SET NOCOUNT ON;
 
-    IF @OrganizationId IS NULL
-       THROW 50000, 'OrganizationId cannot be null', 1;
-
     SELECT
         *
     FROM [dbo].[OrganizationApplicationView]
@@ -64,9 +61,6 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_ReadById]
     @Id UNIQUEIDENTIFIER
 AS
     SET NOCOUNT ON;
-
-    IF @Id IS NULL
-       THROW 50000, 'Id cannot be null', 1;
 
     SELECT
         *
@@ -82,6 +76,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_Update]
     @RevisionDate DATETIME2(7)
 AS
     SET NOCOUNT ON;
+    
     UPDATE [dbo].[OrganizationApplication]
     SET
         [OrganizationId] = @OrganizationId,
@@ -94,9 +89,6 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
     SET NOCOUNT ON;
-
-    IF @Id IS NULL
-       THROW 50000, 'Id cannot be null', 1;
 
     DELETE FROM [dbo].[OrganizationApplication]
     WHERE [Id] = @Id;
