@@ -28,6 +28,9 @@
     <None Remove="Utilities\data\embeddedResource.txt" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Email templates uses .hbs extension, they must be included for emails to work -->
+    <EmbeddedResource Include="**\*.hbs" />
+    
     <EmbeddedResource Include="Utilities\data\embeddedResource.txt" />
   </ItemGroup>
 </Project>
