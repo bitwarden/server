@@ -10,8 +10,7 @@ namespace Bit.Core.Dirt.Reports.ReportFeatures;
 public class MemberAccessReportQuery(
     IOrganizationMemberBaseDetailRepository organizationMemberBaseDetailRepository,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-    IApplicationCacheService applicationCacheService)
-    : IMemberAccessReportQuery
+    IApplicationCacheService applicationCacheService) : IMemberAccessReportQuery
 {
     public async Task<IEnumerable<MemberAccessReportDetail>> GetMemberAccessReportsAsync(
         MemberAccessReportRequest request)

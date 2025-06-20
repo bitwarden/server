@@ -1,7 +1,7 @@
 ﻿using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Dirt.Reports.Entities;
-using Bit.Core.Dirt.Reports.Repositories;
+using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.Dapper.Dirt;
