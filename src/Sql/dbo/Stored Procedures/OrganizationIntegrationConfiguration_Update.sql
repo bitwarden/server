@@ -3,6 +3,7 @@
     @OrganizationIntegrationId UNIQUEIDENTIFIER,
     @EventType SMALLINT,
     @Configuration VARCHAR(MAX),
+    @Filters VARCHAR(MAX),
     @Template VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
@@ -16,6 +17,7 @@ BEGIN
         [OrganizationIntegrationId] = @OrganizationIntegrationId,
         [EventType] = @EventType,
         [Configuration] = @Configuration,
+        [Filters] = @Filters,
         [Template] = @Template,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate

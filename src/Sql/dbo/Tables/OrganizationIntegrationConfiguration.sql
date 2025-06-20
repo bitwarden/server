@@ -4,6 +4,7 @@ CREATE TABLE [dbo].[OrganizationIntegrationConfiguration]
     [OrganizationIntegrationId] UNIQUEIDENTIFIER NOT NULL,
     [EventType] SMALLINT NOT NULL,
     [Configuration] VARCHAR (MAX) NULL,
+    [Filters] VARCHAR (MAX) NULL,
     [Template] VARCHAR (MAX) NULL,
     [CreationDate] DATETIME2 (7) NOT NULL,
     [RevisionDate] DATETIME2 (7) NOT NULL,

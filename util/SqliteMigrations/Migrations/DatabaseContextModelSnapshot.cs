@@ -311,6 +311,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<int>("EventType")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Filters")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("OrganizationIntegrationId")
                         .HasColumnType("TEXT");
 
