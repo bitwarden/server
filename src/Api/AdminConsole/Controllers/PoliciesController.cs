@@ -2,15 +2,18 @@
 using Bit.Api.AdminConsole.Models.Response.Helpers;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -36,6 +39,7 @@ public class PoliciesController : Controller
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IPolicyRepository _policyRepository;
     private readonly IUserService _userService;
+    private readonly IPolicyService _policyService;
 
     private readonly ISavePolicyCommand _savePolicyCommand;
 
@@ -49,7 +53,8 @@ public class PoliciesController : Controller
         IFeatureService featureService,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
         IOrganizationRepository organizationRepository,
-        ISavePolicyCommand savePolicyCommand)
+        ISavePolicyCommand savePolicyCommand,
+        IPolicyService policyService)
     {
         _policyRepository = policyRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -63,6 +68,7 @@ public class PoliciesController : Controller
         _featureService = featureService;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
         _savePolicyCommand = savePolicyCommand;
+        _policyService = policyService;
     }
 
     [HttpGet("{type}")]
@@ -190,6 +196,15 @@ public class PoliciesController : Controller
         }
 
         return new PolicyResponseModel(policy);
+    }
+
+    [HttpGet("~/policies/master-password")]
+    [RequireFeature(FeatureFlagKeys.ChangeExistingPasswordRefactor)]
+    public async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicy()
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+
+        return new MasterPasswordPolicyResponseModel(await _policyService.GetMasterPasswordPolicyForUserAsync(new Guid(userId.ToString()), true));
     }
 
     [HttpPut("{type}")]
