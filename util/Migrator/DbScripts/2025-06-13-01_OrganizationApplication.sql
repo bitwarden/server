@@ -92,13 +92,3 @@ AS
     DELETE FROM [dbo].[OrganizationApplication]
     WHERE [Id] = @Id;
 GO
-
-
-
-
-
-
-
-
-
-
