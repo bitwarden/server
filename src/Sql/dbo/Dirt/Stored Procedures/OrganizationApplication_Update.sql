@@ -12,3 +12,4 @@ AS
         [Applications] = @Applications,
         [RevisionDate] = @RevisionDate
     WHERE [Id] = @Id;
+    
