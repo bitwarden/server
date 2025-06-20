@@ -7,7 +7,6 @@ BEGIN
         [Date] DATETIME2 (7) NOT NULL,
         [ReportData] NVARCHAR(MAX) NOT NULL,
         [CreationDate] DATETIME2 (7) NOT NULL,
-        [RevisionDate] DATETIME2 (7) NOT NULL,
         CONSTRAINT [PK_OrganizationReport] PRIMARY KEY CLUSTERED ([Id] ASC),
         CONSTRAINT [FK_OrganizationReport_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
     );
@@ -32,8 +31,7 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Create]
     @OrganizationId UNIQUEIDENTIFIER,
     @Date DATETIME2(7),
     @ReportData NVARCHAR(MAX),
-    @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @CreationDate DATETIME2(7)
 AS
     SET NOCOUNT ON;
 
@@ -42,16 +40,14 @@ AS
         [OrganizationId],
         [Date],
         [ReportData],
-        [CreationDate],
-        [RevisionDate] 
+        [CreationDate]
     )
     VALUES ( 
         @Id,
         @OrganizationId,
         @Date,
         @ReportData,
-        @CreationDate,
-        @RevisionDate
+        @CreationDate
     );
 GO
 
@@ -71,13 +67,8 @@ AS
     SET NOCOUNT ON;
 
     SELECT
-        [Id],
-        [OrganizationId],
-        [Date],
-        [ReportData],
-        [CreationDate],
-        [RevisionDate]
-    FROM [dbo].[OrganizationReport]
+        *
+    FROM [dbo].[OrganizationReportView]
     WHERE [Id] = @Id;
 
 GO
@@ -88,31 +79,7 @@ AS
     SET NOCOUNT ON;
 
     SELECT
-        [Id],
-        [OrganizationId],
-        [Date],
-        [ReportData],
-        [CreationDate],
-        [RevisionDate]
-    FROM [dbo].[OrganizationReport]
+        *
+    FROM [dbo].[OrganizationReportView]
     WHERE [OrganizationId] = @OrganizationId;
-GO
-
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Update]
-    @Id UNIQUEIDENTIFIER OUTPUT,
-    @OrganizationId UNIQUEIDENTIFIER,
-    @Date DATETIME2(7),
-    @ReportData NVARCHAR(MAX),
-    @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
-AS
-    SET NOCOUNT ON;
-    
-    UPDATE [dbo].[OrganizationReport]
-    SET [OrganizationId] = @OrganizationId,
-        [Date] = @Date,
-        [ReportData] = @ReportData,
-        [RevisionDate] = @RevisionDate
-    WHERE [Id] = @Id;
-
 GO

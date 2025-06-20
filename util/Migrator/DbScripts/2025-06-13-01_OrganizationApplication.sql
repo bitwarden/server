@@ -6,7 +6,6 @@ BEGIN
         [OrganizationId] UNIQUEIDENTIFIER NOT NULL,
         [Applications] NVARCHAR(MAX) NOT NULL,
         [CreationDate] DATETIME2 (7) NOT NULL,
-        [RevisionDate] DATETIME2 (7) NOT NULL,
         CONSTRAINT [PK_OrganizationApplication] PRIMARY KEY CLUSTERED ([Id] ASC),
         CONSTRAINT [FK_OrganizationApplication_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
     );
@@ -27,8 +26,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Applications NVARCHAR(MAX),
-    @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @CreationDate DATETIME2(7)
 AS
     SET NOCOUNT ON;
 
@@ -37,17 +35,15 @@ AS
         [Id],
         [OrganizationId],
         [Applications],
-        [CreationDate],
-        [RevisionDate]
+        [CreationDate]
         )
     VALUES
         (
             @Id,
             @OrganizationId,
             @Applications,
-            @CreationDate,
-            @RevisionDate
-            );
+            @CreationDate
+        );
 
 GO
 
@@ -69,11 +65,7 @@ AS
     SET NOCOUNT ON;
 
     SELECT
-        [Id],
-        [OrganizationId],
-        [Applications],
-        [CreationDate],
-        [RevisionDate]
+        *
     FROM [dbo].[OrganizationApplicationView]
     WHERE [Id] = @Id;
 
@@ -85,29 +77,9 @@ AS
     SET NOCOUNT ON;
 
     SELECT
-        [Id],
-        [OrganizationId],
-        [Applications],
-        [CreationDate],
-        [RevisionDate]
+        *
     FROM [dbo].[OrganizationApplicationView]
     WHERE [OrganizationId] = @OrganizationId;
 
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_Update]
-    @Id UNIQUEIDENTIFIER OUTPUT,
-    @OrganizationId UNIQUEIDENTIFIER,
-    @Applications NVARCHAR(MAX),
-    @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
-AS
-    SET NOCOUNT ON;
-    UPDATE [dbo].[OrganizationApplication]
-    SET
-        [OrganizationId] = @OrganizationId,
-        [Applications] = @Applications,
-        [RevisionDate] = @RevisionDate
-    WHERE [Id] = @Id;
-
-GO
