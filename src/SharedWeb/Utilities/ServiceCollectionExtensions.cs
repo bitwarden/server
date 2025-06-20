@@ -614,9 +614,11 @@ public static class ServiceCollectionExtensions
             new EventIntegrationHandler<TConfig>(
                 integrationType,
                 provider.GetRequiredService<IEventIntegrationPublisher>(),
+                provider.GetRequiredService<IIntegrationFilterService>(),
                 provider.GetRequiredService<IOrganizationIntegrationConfigurationRepository>(),
                 provider.GetRequiredService<IUserRepository>(),
-                provider.GetRequiredService<IOrganizationRepository>()));
+                provider.GetRequiredService<IOrganizationRepository>(),
+                provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()));
 
         services.AddSingleton<IHostedService>(provider =>
             new AzureServiceBusEventListenerService(
@@ -647,6 +649,7 @@ public static class ServiceCollectionExtensions
             !CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.EventTopicName))
             return services;
 
+        services.AddSingleton<IIntegrationFilterService, IntegrationFilterService>();
         services.AddSingleton<IAzureServiceBusService, AzureServiceBusService>();
         services.AddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
         services.AddAzureServiceBusEventRepositoryListener(globalSettings);
@@ -697,9 +700,11 @@ public static class ServiceCollectionExtensions
             new EventIntegrationHandler<TConfig>(
                 integrationType,
                 provider.GetRequiredService<IEventIntegrationPublisher>(),
+                provider.GetRequiredService<IIntegrationFilterService>(),
                 provider.GetRequiredService<IOrganizationIntegrationConfigurationRepository>(),
                 provider.GetRequiredService<IUserRepository>(),
-                provider.GetRequiredService<IOrganizationRepository>()));
+                provider.GetRequiredService<IOrganizationRepository>(),
+                provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()));
 
         services.AddSingleton<IHostedService>(provider =>
             new RabbitMqEventListenerService(
@@ -730,6 +735,7 @@ public static class ServiceCollectionExtensions
             return services;
         }
 
+        services.AddSingleton<IIntegrationFilterService, IntegrationFilterService>();
         services.AddSingleton<IRabbitMqService, RabbitMqService>();
         services.AddSingleton<IEventIntegrationPublisher, RabbitMqService>();
         services.AddRabbitMqEventRepositoryListener(globalSettings);

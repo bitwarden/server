@@ -6,15 +6,18 @@ using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
 public class EventIntegrationHandler<T>(
     IntegrationType integrationType,
     IEventIntegrationPublisher eventIntegrationPublisher,
+    IIntegrationFilterService integrationFilterService,
     IOrganizationIntegrationConfigurationRepository configurationRepository,
     IUserRepository userRepository,
-    IOrganizationRepository organizationRepository)
+    IOrganizationRepository organizationRepository,
+    ILogger<EventIntegrationHandler<T>> logger)
     : IEventMessageHandler
 {
     public async Task HandleEventAsync(EventMessage eventMessage)
@@ -31,25 +34,47 @@ public class EventIntegrationHandler<T>(
 
         foreach (var configuration in configurations)
         {
-            var template = configuration.Template ?? string.Empty;
-            var context = await BuildContextAsync(eventMessage, template);
-            var renderedTemplate = IntegrationTemplateProcessor.ReplaceTokens(template, context);
-            var messageId = eventMessage.IdempotencyId ?? Guid.NewGuid();
-
-            var config = configuration.MergedConfiguration.Deserialize<T>()
-                         ?? throw new InvalidOperationException($"Failed to deserialize to {typeof(T).Name}");
-
-            var message = new IntegrationMessage<T>
+            try
             {
-                IntegrationType = integrationType,
-                MessageId = messageId.ToString(),
-                Configuration = config,
-                RenderedTemplate = renderedTemplate,
-                RetryCount = 0,
-                DelayUntilDate = null
-            };
+                if (configuration.Filters is string filterJson)
+                {
+                    // Evaluate filters - if false, then discard and do not process
+                    var filters = JsonSerializer.Deserialize<IntegrationFilterGroup>(filterJson)
+                        ?? throw new InvalidOperationException($"Failed to deserialize Filters to FilterGroup");
+                    if (!integrationFilterService.EvaluateFilterGroup(filters, eventMessage))
+                    {
+                        continue;
+                    }
+                }
 
-            await eventIntegrationPublisher.PublishAsync(message);
+                // Valid filter - assemble message and publish to Integration topic/exchange
+                var template = configuration.Template ?? string.Empty;
+                var context = await BuildContextAsync(eventMessage, template);
+                var renderedTemplate = IntegrationTemplateProcessor.ReplaceTokens(template, context);
+                var messageId = eventMessage.IdempotencyId ?? Guid.NewGuid();
+                var config = configuration.MergedConfiguration.Deserialize<T>()
+                    ?? throw new InvalidOperationException($"Failed to deserialize to {typeof(T).Name} - bad Configuration");
+
+                var message = new IntegrationMessage<T>
+                {
+                    IntegrationType = integrationType,
+                    MessageId = messageId.ToString(),
+                    Configuration = config,
+                    RenderedTemplate = renderedTemplate,
+                    RetryCount = 0,
+                    DelayUntilDate = null
+                };
+
+                await eventIntegrationPublisher.PublishAsync(message);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "Failed to publish Integration Message for {Type}, check Id {RecordId} for error in Configuration or Filters",
+                    typeof(T).Name,
+                    configuration.Id);
+            }
         }
     }
 

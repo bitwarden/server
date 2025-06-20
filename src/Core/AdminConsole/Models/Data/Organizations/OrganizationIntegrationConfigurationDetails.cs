@@ -12,6 +12,7 @@ public class OrganizationIntegrationConfigurationDetails
     public IntegrationType IntegrationType { get; set; }
     public EventType EventType { get; set; }
     public string? Configuration { get; set; }
+    public string? Filters { get; set; }
     public string? IntegrationConfiguration { get; set; }
     public string? Template { get; set; }
 

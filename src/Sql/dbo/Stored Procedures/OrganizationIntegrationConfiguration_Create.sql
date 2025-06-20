@@ -5,7 +5,8 @@
     @Configuration VARCHAR(MAX),
     @Template VARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @Filters VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -18,7 +19,8 @@ BEGIN
         [Configuration],
         [Template],
         [CreationDate],
-        [RevisionDate]
+        [RevisionDate],
+        [Filters]
         )
     VALUES
         (
@@ -28,6 +30,7 @@ BEGIN
             @Configuration,
             @Template,
             @CreationDate,
-            @RevisionDate
+            @RevisionDate,
+            @Filters
         )
 END

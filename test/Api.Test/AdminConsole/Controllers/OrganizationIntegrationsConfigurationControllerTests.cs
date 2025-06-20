@@ -154,6 +154,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         var slackConfig = new SlackIntegrationConfiguration(channelId: "C123456");
         model.Configuration = JsonSerializer.Serialize(slackConfig);
         model.Template = "Template String";
+        model.Filters = null;
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(organizationIntegrationConfiguration);
 
@@ -191,6 +192,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
+        model.Filters = null;
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(organizationIntegrationConfiguration);
 
@@ -396,6 +398,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         var slackConfig = new SlackIntegrationConfiguration(channelId: "C123456");
         model.Configuration = JsonSerializer.Serialize(slackConfig);
         model.Template = "Template String";
+        model.Filters = null;
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(model.ToOrganizationIntegrationConfiguration(organizationIntegrationConfiguration));
 
@@ -439,6 +442,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
+        model.Filters = null;
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(model.ToOrganizationIntegrationConfiguration(organizationIntegrationConfiguration));
 
@@ -479,6 +483,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
+        model.Filters = null;
 
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.GetDependency<ICurrentContext>()

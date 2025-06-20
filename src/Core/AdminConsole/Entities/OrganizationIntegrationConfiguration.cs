@@ -15,5 +15,6 @@ public class OrganizationIntegrationConfiguration : ITableObject<Guid>
     public string? Template { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
+    public string? Filters { get; set; }
     public void SetNewId() => Id = CoreHelpers.GenerateComb();
 }

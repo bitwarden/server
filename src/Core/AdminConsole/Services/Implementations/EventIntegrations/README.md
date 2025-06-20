@@ -228,6 +228,52 @@ Currently, there are integrations / handlers for Slack and webhooks (as mentione
 - An array of `OrganizationIntegrationConfigurationDetails` is what the `EventIntegrationHandler` fetches from
   the database to determine what to publish at the integration level.
 
+## Filtering
+
+In addition to the ability to configure integrations mentioned above, organization admins can
+also add `Filters` stored in the `OrganizationIntegrationConfiguration`. Filters are completely
+optional and as simple or complex as organization admins want to make them. These are stored in
+the database as JSON and serialized into an `IntegrationFilterGroup`. This is then passed to
+the `IntegrationFilterService`, which evaluates it to a `bool`. If it's `true`, the integration
+proceeds as above. If it's `false`, we ignore this event and do not route it to the integration
+level.
+
+### `IntegrationFilterGroup`
+
+Logical AND / OR grouping of a number of rules and other subgroups.
+
+| Property      | Description                                                                                                                                                                                                                                                                                                                                                      |
+|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `AndOperator` | Indicates whether **all** (`true`) or **any** (`false`) of the `Rules` and `Groups` must be true. This applies to _both_ the inner group and the list of rules; for instance, if this group contained Rule1 and Rule2 as well as Group1 and Group2:<br/><br/>`true`: `Rule1 && Rule2 && Group1 && Group2`<br>`false`: `Rule1 \|\| Rule2 \|\| Group1 \|\| Group2` |
+| `Rules`       | A list of `IntegrationFilterRule`. Can be null or empty, in which case it will return `true`.                                                                                                                                                                                                                                                                    |
+| `Groups`      | A list of nested `IntegrationFilterGroup`. Can be null or empty, in which case it will return `true`.                                                                                                                                                                                                                                                            |
+
+### `IntegrationFilterRule`
+
+The core of the filtering framework to determine if the data in this specific EventMessage
+matches the data for which the filter is searching.
+
+| Property    | Description                                                                                                                                                                                                                                                 |
+|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `Property`  | The property on `EventMessage` to evaluate (e.g., `CollectionId`).                                                                                                                                                                                          |
+| `Operation` | The comparison to perform between the property and `Value`. <br><br>**Supported operations:**<br>• `Equals`: `Guid` equals `Value`<br>• `NotEquals`: logical inverse of `Equals`<br>• `In`: `Guid` is in `Value` list<br>• `NotIn`: logical inverse of `In` |
+| `Value`     | The comparison value. Type depends on `Operation`: <br>• `Equals`, `NotEquals`: `Guid`<br>• `In`, `NotIn`: list of `Guid`                                                                                                                                   |
+
+```mermaid
+graph TD
+    A[IntegrationFilterGroup]
+    A -->|Has 0..many| B1[IntegrationFilterRule]
+    A --> D1[And Operator]
+    A -->|Has 0..many| C1[Nested IntegrationFilterGroup]
+
+    B1 --> B2[Property: string]
+    B1 --> B3[Operation: Equals/In/DateBefore/DateAfter]
+    B1 --> B4[Value: object?]
+
+    C1 -->|Has many| B1_2[IntegrationFilterRule]
+    C1 -->|Can contain| C2[IntegrationFilterGroup...]
+```
+
 # Building a new integration
 
 These are all the pieces required in the process of building out a new integration. For

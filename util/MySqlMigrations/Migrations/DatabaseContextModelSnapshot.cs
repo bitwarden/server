@@ -316,6 +316,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int>("EventType")
                         .HasColumnType("int");
 
+                    b.Property<string>("Filters")
+                        .HasColumnType("longtext");
+
                     b.Property<Guid>("OrganizationIntegrationId")
                         .HasColumnType("char(36)");
 

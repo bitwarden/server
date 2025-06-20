@@ -31,6 +31,7 @@ public class OrganizationIntegrationConfigurationDetailsReadManyByEventTypeOrgan
                         IntegrationType = oi.Type,
                         EventType = oic.EventType,
                         Configuration = oic.Configuration,
+                        Filters = oic.Filters,
                         IntegrationConfiguration = oi.Configuration,
                         Template = oic.Template
                     };
