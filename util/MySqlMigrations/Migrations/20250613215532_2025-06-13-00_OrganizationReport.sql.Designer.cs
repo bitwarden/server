@@ -985,6 +985,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
 
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Id")

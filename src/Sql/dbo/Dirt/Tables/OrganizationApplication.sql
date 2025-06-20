@@ -3,6 +3,7 @@ CREATE TABLE [dbo].[OrganizationApplication] (
     [OrganizationId]           UNIQUEIDENTIFIER NOT NULL,
     [Applications]             NVARCHAR(MAX)    NOT NULL,
     [CreationDate]             DATETIME2 (7)    NOT NULL,
+    [RevisionDate]             DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_OrganizationApplication] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationApplication_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
     );

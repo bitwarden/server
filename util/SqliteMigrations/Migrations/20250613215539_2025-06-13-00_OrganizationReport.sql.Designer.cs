@@ -974,6 +974,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Id")

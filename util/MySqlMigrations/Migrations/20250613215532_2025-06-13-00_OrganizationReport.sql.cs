@@ -18,7 +18,8 @@ public partial class _2025061300_OrganizationReportsql : Migration
                 OrganizationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                 Applications = table.Column<string>(type: "longtext", nullable: false)
                     .Annotation("MySql:CharSet", "utf8mb4"),
-                CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
             },
             constraints: table =>
             {

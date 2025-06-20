@@ -17,7 +17,8 @@ public partial class _2025061300_OrganizationReportsql : Migration
                 Id = table.Column<Guid>(type: "uuid", nullable: false),
                 OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
                 Applications = table.Column<string>(type: "text", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
