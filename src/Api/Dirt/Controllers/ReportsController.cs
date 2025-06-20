@@ -185,4 +185,86 @@ public class ReportsController : Controller
 
         await _dropPwdHealthReportAppCommand.DropPasswordHealthReportApplicationAsync(request);
     }
+
+    /// <summary>
+    /// Gets the latest generated organization report (Risk Insight Report 1st tab)
+    /// </summary>
+    /// <param name="request">A OrganizationReportRequest with organizationId within it to pull report</param>
+    /// <returns>A single instance of OrganizationReport</returns>
+    /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
+    /// <exception cref="NotFoundException">If the user lacks access</exception>
+    [HttpGet("organization-report/{orgId}")]
+    public async Task<OrganizationReport> GetOrganizationReportByOrgId(OrganizationReportRequest request)
+    {
+        if (!await _currentContext.AccessReports(request.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        return OrganizationReportQuery(); // Placeholder return, replace with actual implementation
+    }
+
+    /// <summary>
+    /// Saves a new generated organization report (Risk Insight Report first tab)
+    /// </summary>
+    /// <param name="request">A single instance of OrganizationReport mocdel</param>
+    /// <returns>A single instance of OrganizationReport</returns>
+    /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
+    /// <exception cref="NotFoundException">If the user lacks access</exception>
+    [HttpPost("organization-report")]
+    public async Task SaveOrganizationReport([FromBody] OrganizationReport request)
+    {
+        if (!await _currentContext.AccessReports(model.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        // Implementation for creating an organization report
+        // This method is currently empty and needs to be implemented
+
+        return OrganizationReportSaveCommand(); // Placeholder return, replace with actual implementation
+    }
+
+    /// <summary>
+    /// Gets the latest generated organization application report (Risk Insight Report second tab)
+    /// </summary>
+    /// <param name="request">A OrganizationApplicationRequest with organizationId within it to pull report</param>
+    /// <returns>A single instance of OrganizationApplication</returns>
+    /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
+    /// <exception cref="NotFoundException">If the user lacks access</exception>
+    [HttpGet("organization-application/{orgId}")]
+    public async Task<OrganizationApplication> GetOrganizationApplicationByOrgId(OrganizationApplicationRequest request)
+    {
+        if (!await _currentContext.AccessReports(request.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        // Implementation for getting organization application by orgId
+        // This method is currently empty and needs to be implemented
+
+        return OrganizationApplicationQuery(); // Placeholder return, replace with actual implementation
+    }
+
+
+    /// <summary>
+    /// Saves a new generated organization application report (Risk Insight Report)
+    /// </summary>
+    /// <param name="request">A single instance of OrganizationApplication model</param>
+    /// <returns>A single instance of OrganizationApplication</returns>
+    /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
+    /// <exception cref="NotFoundException">If the user lacks access</exception>
+    [HttpPost("organization-application")]
+    public async Task SaveOrganizationApplication([FromBody] OrganizationApplication request)
+    {
+        if (!await _currentContext.AccessReports(request.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        // Implementation for creating an organization application
+        // This method is currently empty and needs to be implemented
+
+        return OrganizationApplicationSaveCommand(); // Placeholder return, replace with actual implementation
+    }
 }
