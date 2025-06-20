@@ -1,5 +1,5 @@
 CREATE PROCEDURE [dbo].[OrganizationApplication_Update]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Applications NVARCHAR(MAX),
     @RevisionDate DATETIME2(7)
