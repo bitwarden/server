@@ -3,10 +3,10 @@
     @OrganizationIntegrationId UNIQUEIDENTIFIER,
     @EventType SMALLINT,
     @Configuration VARCHAR(MAX),
-    @Filters VARCHAR(MAX),
     @Template VARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @Filters VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON

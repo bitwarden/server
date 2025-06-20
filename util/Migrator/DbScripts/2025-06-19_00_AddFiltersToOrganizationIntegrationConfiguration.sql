@@ -1,19 +1,16 @@
 /* add new column "Filters", nullable to OrganizationIntegrationConfiguration */
 
-ALTER TABLE [dbo].[OrganizationIntegrationConfiguration] ADD [Filters] VARCHAR (MAX) NULL
-GO
-
-/* add column "Filters" to OrganizationIntegrationConfigurationView */
-
-IF EXISTS(SELECT *
-          FROM sys.views
-          WHERE [Name] = 'OrganizationIntegrationConfigurationDetailsView')
+IF COL_LENGTH('[dbo].[OrganizationIntegrationConfiguration]', 'Filters') IS NULL
     BEGIN
-        DROP VIEW [dbo].[OrganizationIntegrationConfigurationDetailsView];
+        ALTER TABLE
+            [dbo].[OrganizationIntegrationConfiguration]
+            ADD
+                [Filters] VARCHAR (MAX) NULL
     END
 GO
 
-CREATE VIEW [dbo].[OrganizationIntegrationConfigurationDetailsView]
+/* add column "Filters" to OrganizationIntegrationConfigurationView */
+CREATE OR ALTER VIEW [dbo].[OrganizationIntegrationConfigurationDetailsView]
 AS
 SELECT
     oi.[OrganizationId],

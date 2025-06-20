@@ -81,7 +81,7 @@ public class OrganizationIntegrationConfigurationRequestModel
 
     private bool IsFiltersValid()
     {
-        if (string.IsNullOrWhiteSpace(Filters))
+        if (Filters is null)
         {
             return true;
         }
