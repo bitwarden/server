@@ -4,6 +4,7 @@ using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.WebAuthn;
+using Bit.Api.KeyManagement.Queries.Interfaces;
 using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
@@ -54,7 +55,7 @@ public class AccountsControllerTests : IDisposable
         _resetPasswordValidator;
     private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
         _webauthnKeyRotationValidator;
-
+    private readonly IUserAccountKeysQuery _userAccountKeysQuery;
 
     public AccountsControllerTests()
     {
@@ -79,6 +80,7 @@ public class AccountsControllerTests : IDisposable
         _resetPasswordValidator = Substitute
             .For<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
                 IReadOnlyList<OrganizationUser>>>();
+        _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
 
         _sut = new AccountsController(
             _organizationService,
@@ -96,7 +98,8 @@ public class AccountsControllerTests : IDisposable
             _sendValidator,
             _emergencyAccessValidator,
             _resetPasswordValidator,
-            _webauthnKeyRotationValidator
+            _webauthnKeyRotationValidator,
+            _userAccountKeysQuery
         );
     }
 
