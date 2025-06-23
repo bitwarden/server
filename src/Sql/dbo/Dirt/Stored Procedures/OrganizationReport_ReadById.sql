@@ -4,11 +4,6 @@ AS
     SET NOCOUNT ON;
 
     SELECT
-        [Id],
-        [OrganizationId],
-        [Date],
-        [ReportData],
-        [CreationDate],
-        [RevisionDate]
-    FROM [dbo].[OrganizationReport]
+        *
+    FROM [dbo].[OrganizationReportView]
     WHERE [Id] = @Id;

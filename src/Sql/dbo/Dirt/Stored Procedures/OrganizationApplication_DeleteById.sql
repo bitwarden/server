@@ -3,7 +3,5 @@ CREATE PROCEDURE [dbo].[OrganizationApplication_DeleteById]
 AS
     SET NOCOUNT ON;
 
-    DELETE FROM
-        [dbo].[OrganizationApplication]
-    WHERE
-        [Id] = @Id;
+    DELETE FROM [dbo].[OrganizationApplication]
+    WHERE [Id] = @Id;

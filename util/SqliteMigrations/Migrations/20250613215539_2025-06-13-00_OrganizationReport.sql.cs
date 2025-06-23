@@ -39,8 +39,7 @@ public partial class _2025061300_OrganizationReportsql : Migration
                 OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
                 Date = table.Column<DateTime>(type: "TEXT", nullable: false),
                 ReportData = table.Column<string>(type: "TEXT", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false)
             },
             constraints: table =>
             {
