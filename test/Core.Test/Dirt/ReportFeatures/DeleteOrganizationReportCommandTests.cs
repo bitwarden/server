@@ -115,7 +115,7 @@ public class DeleteOrganizationReportCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.DropOrganizationReportAsync(request));
-        Assert.Equal("Organization does not have any records.", exception.Message);
+        Assert.Equal("No data found.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -131,7 +131,7 @@ public class DeleteOrganizationReportCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.DropOrganizationReportAsync(request));
-        Assert.Equal("Organization does not have any records.", exception.Message);
+        Assert.Equal("No data found.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -146,7 +146,7 @@ public class DeleteOrganizationReportCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.DropOrganizationReportAsync(request));
-        Assert.Equal("Organization does not have any records.", exception.Message);
+        Assert.Equal("No data found.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -161,7 +161,7 @@ public class DeleteOrganizationReportCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.DropOrganizationReportAsync(request));
-        Assert.Equal("Organization does not have any records.", exception.Message);
+        Assert.Equal("No data found.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -176,7 +176,7 @@ public class DeleteOrganizationReportCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.DropOrganizationReportAsync(request));
-        Assert.Equal("Organization does not have any records.", exception.Message);
+        Assert.Equal("No data found.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -188,7 +188,7 @@ public class DeleteOrganizationReportCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.DropOrganizationReportAsync(request));
-        Assert.Equal("Organization does not have any records.", exception.Message);
+        Assert.Equal("No data found.", exception.Message);
     }
 
 }

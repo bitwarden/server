@@ -4,6 +4,7 @@ using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
@@ -11,20 +12,26 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
 {
     private readonly IOrganizationRepository _organizationRepo;
     private readonly IOrganizationReportRepository _organizationReportRepo;
+    private ILogger<AddOrganizationReportCommand> _logger;
 
     public AddOrganizationReportCommand(
         IOrganizationRepository organizationRepository,
-        IOrganizationReportRepository organizationReportRepository)
+        IOrganizationReportRepository organizationReportRepository,
+        ILogger<AddOrganizationReportCommand> logger)
     {
         _organizationRepo = organizationRepository;
         _organizationReportRepo = organizationReportRepository;
+        _logger = logger;
     }
 
     public async Task<OrganizationReport> AddOrganizationReportAsync(AddOrganizationReportRequest request)
     {
-        var (req, IsValid, errorMessage) = await ValidateRequestAsync(request);
-        if (!IsValid)
+        _logger.LogInformation("Adding organization report for organization {organizationId}", request.OrganizationId);
+
+        var (isValid, errorMessage) = await ValidateRequestAsync(request);
+        if (!isValid)
         {
+            _logger.LogInformation("Failed to add organization {organizationId} report: {errorMessage}", request.OrganizationId, errorMessage);
             throw new BadRequestException(errorMessage);
         }
 
@@ -40,25 +47,29 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
         organizationReport.SetNewId();
 
         var data = await _organizationReportRepo.CreateAsync(organizationReport);
+
+        _logger.LogInformation("Successfully added organization report for organization {organizationId}, {organizationReportId}",
+                request.OrganizationId, data.Id);
+
         return data;
     }
 
-    private async Task<Tuple<AddOrganizationReportRequest, bool, string>> ValidateRequestAsync(
+    private async Task<(bool IsValid, string errorMessage)> ValidateRequestAsync(
         AddOrganizationReportRequest request)
     {
         // verify that the organization exists
         var organization = await _organizationRepo.GetByIdAsync(request.OrganizationId);
         if (organization == null)
         {
-            return new Tuple<AddOrganizationReportRequest, bool, string>(request, false, "Invalid Organization");
+            return (false, "Invalid Organization");
         }
 
-        // ensure that we have a URL
+        // ensure that we have report data
         if (string.IsNullOrWhiteSpace(request.ReportData))
         {
-            return new Tuple<AddOrganizationReportRequest, bool, string>(request, false, "Report Data is required");
+            return (false, "Report Data is required");
         }
 
-        return new Tuple<AddOrganizationReportRequest, bool, string>(request, true, string.Empty);
+        return (true, string.Empty);
     }
 }
