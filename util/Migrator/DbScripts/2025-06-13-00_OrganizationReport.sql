@@ -26,7 +26,7 @@ AS
         [dbo].[OrganizationReport];
 GO
 
-CREATE PROCEDURE [dbo].[OrganizationReport_Create]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Date DATETIME2(7),
