@@ -138,6 +138,7 @@ public static class FeatureFlagKeys
     public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string InlineMenuTotp = "inline-menu-totp";
+    public const string WindowsDesktopAutotype = "windows-desktop-autotype";
 
     /* Billing Team */
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
@@ -206,6 +207,7 @@ public static class FeatureFlagKeys
     public const string EndUserNotifications = "pm-10609-end-user-notifications";
     public const string PhishingDetection = "phishing-detection";
     public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
+    public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
 
     public static List<string> GetAllKeys()
     {
