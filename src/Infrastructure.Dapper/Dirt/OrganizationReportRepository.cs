@@ -8,22 +8,24 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Dirt;
 
-public class PasswordHealthReportApplicationRepository : Repository<PasswordHealthReportApplication, Guid>, IPasswordHealthReportApplicationRepository
+public class OrganizationReportRepository : Repository<OrganizationReport, Guid>, IOrganizationReportRepository
 {
-    public PasswordHealthReportApplicationRepository(GlobalSettings globalSettings)
+    public OrganizationReportRepository(GlobalSettings globalSettings)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+    {
+    }
 
-    public PasswordHealthReportApplicationRepository(string connectionString, string readOnlyConnectionString)
+    public OrganizationReportRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
-    { }
+    {
+    }
 
-    public async Task<ICollection<PasswordHealthReportApplication>> GetByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<OrganizationReport>> GetByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
-            var results = await connection.QueryAsync<PasswordHealthReportApplication>(
-                $"[{Schema}].[PasswordHealthReportApplication_ReadByOrganizationId]",
+            var results = await connection.QueryAsync<OrganizationReport>(
+                $"[{Schema}].[OrganizationReport_ReadByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 

@@ -30,6 +30,7 @@
 
     <ItemGroup>
       <Folder Include="AutoFixture" />
+      <Folder Include="Tools\Repositories\" />
     </ItemGroup>
 
 </Project>
