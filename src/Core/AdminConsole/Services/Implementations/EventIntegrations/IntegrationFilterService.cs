@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using System.Linq.Expressions;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Models.Data;
@@ -9,10 +8,8 @@ namespace Bit.Core.Services;
 
 public class IntegrationFilterService : IIntegrationFilterService
 {
-    private delegate bool CompiledFilter(EventMessage message, object? value);
-
-    private readonly Dictionary<string, CompiledFilter> _equalsFilters = new();
-    private readonly Dictionary<string, CompiledFilter> _inFilters = new();
+    private readonly Dictionary<string, IntegrationFilter> _equalsFilters = new();
+    private readonly Dictionary<string, IntegrationFilter> _inFilters = new();
 
     public IntegrationFilterService()
     {
@@ -51,73 +48,28 @@ public class IntegrationFilterService : IIntegrationFilterService
 
     private void BuildFilters()
     {
-        AddEqualityFilter<Guid?>("UserId");
-        AddEqualityFilter<Guid?>("InstallationId");
-        AddEqualityFilter<Guid?>("ProviderId");
-        AddEqualityFilter<Guid?>("CipherId");
-        AddEqualityFilter<Guid?>("CollectionId");
-        AddEqualityFilter<Guid?>("GroupId");
-        AddEqualityFilter<Guid?>("PolicyId");
-        AddEqualityFilter<Guid?>("OrganizationUserId");
-        AddEqualityFilter<Guid?>("ProviderUserId");
-        AddEqualityFilter<Guid?>("ProviderOrganizationId");
-        AddEqualityFilter<Guid?>("ActingUserId");
-        AddEqualityFilter<Guid?>("SecretId");
-        AddEqualityFilter<Guid?>("ServiceAccountId");
-
-        AddInFilter<Guid?>("UserId");
-        AddInFilter<Guid?>("InstallationId");
-        AddInFilter<Guid?>("ProviderId");
-        AddInFilter<Guid?>("CipherId");
-        AddInFilter<Guid?>("CollectionId");
-        AddInFilter<Guid?>("GroupId");
-        AddInFilter<Guid?>("PolicyId");
-        AddInFilter<Guid?>("OrganizationUserId");
-        AddInFilter<Guid?>("ProviderUserId");
-        AddInFilter<Guid?>("ProviderOrganizationId");
-        AddInFilter<Guid?>("ActingUserId");
-        AddInFilter<Guid?>("SecretId");
-        AddInFilter<Guid?>("ServiceAccountId");
-    }
-
-    private void AddEqualityFilter<T>(string propertyName)
-    {
-        var param = Expression.Parameter(typeof(EventMessage), "m");
-        var valueParam = Expression.Parameter(typeof(object), "val");
-
-        var property = Expression.PropertyOrField(param, propertyName);
-        var typedVal = Expression.Convert(valueParam, typeof(T));
-        var body = Expression.Equal(property, typedVal);
-
-        var lambda = Expression.Lambda<Func<EventMessage, object?, bool>>(body, param, valueParam);
-        _equalsFilters[propertyName] = new CompiledFilter(lambda.Compile());
-    }
-
-    private void AddInFilter<T>(string propertyName)
-    {
-        var param = Expression.Parameter(typeof(EventMessage), "m");
-        var valueParam = Expression.Parameter(typeof(object), "val");
-
-        var property = Expression.PropertyOrField(param, propertyName);
-
-        var method = typeof(Enumerable)
-            .GetMethods()
-            .FirstOrDefault(m =>
-                m.Name == "Contains"
-                && m.GetParameters().Length == 2)
-            ?.MakeGenericMethod(typeof(T));
-        if (method is null)
+        var properties = new[]
         {
-            throw new InvalidOperationException("Could not find Contains method.");
+            "UserId",
+            "InstallationId",
+            "ProviderId",
+            "CipherId",
+            "CollectionId",
+            "GroupId",
+            "PolicyId",
+            "OrganizationUserId",
+            "ProviderUserId",
+            "ProviderOrganizationId",
+            "ActingUserId",
+            "SecretId",
+            "ServiceAccountId"
+        };
+
+        foreach (var property in properties)
+        {
+            _equalsFilters[property] = IntegrationFilterFactory.BuildEqualityFilter<Guid?>(property);
+            _inFilters[property] = IntegrationFilterFactory.BuildInFilter<Guid?>(property);
         }
-
-        var listType = typeof(IEnumerable<T>);
-        var castedList = Expression.Convert(valueParam, listType);
-
-        var containsCall = Expression.Call(method, castedList, property);
-
-        var lambda = Expression.Lambda<Func<EventMessage, object?, bool>>(containsCall, param, valueParam);
-        _inFilters[propertyName] = new CompiledFilter(lambda.Compile());
     }
 
     private static Guid? ToGuid(object? value)
