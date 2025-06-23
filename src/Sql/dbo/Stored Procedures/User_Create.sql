@@ -42,7 +42,7 @@
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
-    @SignedPublicKey NVARCHAR(MAX) = NULL
+    @SignedPublicKey NVARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL,
     @SecurityState NVARCHAR(MAX) = NULL
 AS
