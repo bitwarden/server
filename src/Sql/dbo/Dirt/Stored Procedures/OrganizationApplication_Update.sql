@@ -6,9 +6,11 @@ CREATE PROCEDURE [dbo].[OrganizationApplication_Update]
     @RevisionDate DATETIME2(7)
 AS
     SET NOCOUNT ON;
+    
     UPDATE [dbo].[OrganizationApplication]
     SET
         [OrganizationId] = @OrganizationId,
         [Applications] = @Applications,
+        [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE [Id] = @Id;

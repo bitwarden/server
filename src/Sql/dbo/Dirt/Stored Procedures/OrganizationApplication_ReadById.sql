@@ -4,10 +4,6 @@ AS
     SET NOCOUNT ON;
 
     SELECT
-        [Id],
-        [OrganizationId],
-        [Applications],
-        [CreationDate],
-        [RevisionDate]
+        *
     FROM [dbo].[OrganizationApplicationView]
     WHERE [Id] = @Id;

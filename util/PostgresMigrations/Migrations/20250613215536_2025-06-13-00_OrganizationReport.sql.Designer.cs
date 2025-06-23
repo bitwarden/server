@@ -26,6 +26,53 @@ namespace Bit.PostgresMigrations.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Bit.Core.Dirt.Reports.Models.Data.OrganizationMemberBaseDetail", b =>
+                {
+                    b.Property<Guid>("CipherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CollectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CollectionName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("GroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("GroupName")
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("HidePasswords")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("Manage")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("ReadOnly")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ResetPasswordKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TwoFactorProviders")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("UserGuid")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserName")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("UsesKeyConnector")
+                        .HasColumnType("boolean");
+
+                    b.ToTable("OrganizationMemberBaseDetails");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
                 {
                     b.Property<Guid>("Id")
@@ -974,9 +1021,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("ReportData")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 

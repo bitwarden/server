@@ -8,18 +8,18 @@ AS
     SET NOCOUNT ON;
 
     INSERT INTO [dbo].[OrganizationApplication]
-        (
+    (
         [Id],
         [OrganizationId],
         [Applications],
         [CreationDate],
         [RevisionDate]
-        )
+    )
     VALUES
         (
-            @Id,
-            @OrganizationId,
-            @Applications,
-            @CreationDate,
-            @RevisionDate
-            );
+        @Id,
+        @OrganizationId,
+        @Applications,
+        @CreationDate,
+        @RevisionDate
+        );
