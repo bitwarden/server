@@ -120,7 +120,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         throw new InvalidOperationException("User is in an invalid state for key rotation. User has a signature key pair, but the private key is not in v2 format, or vice versa.");
     }
 
-    public async Task ValidateRotationModelSignatureKeyPairForV2UserAndRotate(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    public async Task RotateV2Keys(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
         var currentSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id);
         if (model.AccountKeys == null || model.AccountKeys.SignatureKeyPairData == null)
@@ -146,7 +146,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         user.SecurityVersion = model.AccountKeys.SecurityStateData.SecurityVersion;
     }
 
-    public void ValidateRotationModelSignatureKeyPairForV1UserAndUpgradeToV2(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    public void UpgradeKeysToV2(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
         if (model.AccountKeys.SignatureKeyPairData != null)
         {
@@ -187,11 +187,11 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
         if (isV2User)
         {
-            await ValidateRotationModelSignatureKeyPairForV2UserAndRotate(model, user, saveEncryptedDataActions);
+            await RotateV2Keys(model, user, saveEncryptedDataActions);
         }
         else if (model.AccountKeys.SignatureKeyPairData != null)
         {
-            ValidateRotationModelSignatureKeyPairForV1UserAndUpgradeToV2(model, user, saveEncryptedDataActions);
+            UpgradeKeysToV2(model, user, saveEncryptedDataActions);
         }
     }
 
