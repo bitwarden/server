@@ -1,10 +1,11 @@
 ﻿using System.Net;
-using Bit.Core.AdminConsole.Models.Data.Integrations;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Bit.Test.Common.MockedHttpClient;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -33,6 +34,7 @@ public class WebhookIntegrationHandlerTests
 
         return new SutProvider<WebhookIntegrationHandler>()
             .SetDependency(clientFactory)
+            .WithFakeTimeProvider()
             .Create();
     }
 
@@ -62,9 +64,13 @@ public class WebhookIntegrationHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_TooManyRequests_ReturnsFailureSetsNotBeforUtc(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_TooManyRequests_ReturnsFailureSetsDelayUntilDate(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
+        var now = new DateTime(2014, 3, 2, 1, 0, 0, DateTimeKind.Utc);
+        var retryAfter = now.AddSeconds(60);
+
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
         message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl);
 
         _handler.Fallback
@@ -78,19 +84,21 @@ public class WebhookIntegrationHandlerTests
         Assert.True(result.Retryable);
         Assert.Equal(result.Message, message);
         Assert.True(result.DelayUntilDate.HasValue);
-        Assert.InRange(result.DelayUntilDate.Value, DateTime.UtcNow.AddSeconds(59), DateTime.UtcNow.AddSeconds(61));
+        Assert.Equal(retryAfter, result.DelayUntilDate.Value);
         Assert.Equal("Too Many Requests", result.FailureReason);
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_TooManyRequestsWithDate_ReturnsFailureSetsNotBeforUtc(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_TooManyRequestsWithDate_ReturnsFailureSetsDelayUntilDate(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
+        var now = new DateTime(2014, 3, 2, 1, 0, 0, DateTimeKind.Utc);
+        var retryAfter = now.AddSeconds(60);
         message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl);
 
         _handler.Fallback
             .WithStatusCode(HttpStatusCode.TooManyRequests)
-            .WithHeader("Retry-After", DateTime.UtcNow.AddSeconds(60).ToString("r")) // "r" is the round-trip format: RFC1123
+            .WithHeader("Retry-After", retryAfter.ToString("r"))
             .WithContent(new StringContent("<html><head><title>test</title></head><body>test</body></html>"));
 
         var result = await sutProvider.Sut.HandleAsync(message);
@@ -99,7 +107,7 @@ public class WebhookIntegrationHandlerTests
         Assert.True(result.Retryable);
         Assert.Equal(result.Message, message);
         Assert.True(result.DelayUntilDate.HasValue);
-        Assert.InRange(result.DelayUntilDate.Value, DateTime.UtcNow.AddSeconds(59), DateTime.UtcNow.AddSeconds(61));
+        Assert.Equal(retryAfter, result.DelayUntilDate.Value);
         Assert.Equal("Too Many Requests", result.FailureReason);
     }
 
