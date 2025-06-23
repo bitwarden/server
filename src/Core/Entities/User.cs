@@ -201,6 +201,12 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return Premium;
     }
 
+    public int GetSecurityVersion()
+    {
+        // If no security version is set, it is version 1. The minimum initialized version is 2.
+        return SecurityVersion ?? 1;
+    }
+
     /// <summary>
     /// Serializes the C# object to the User.TwoFactorProviders property in JSON format.
     /// </summary>

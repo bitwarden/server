@@ -16,4 +16,13 @@ public class SecurityStateModel
             SecurityVersion = SecurityVersion
         };
     }
+
+    public static SecurityStateModel FromSecurityStateData(SecurityStateData data)
+    {
+        return new SecurityStateModel
+        {
+            SecurityState = data.SecurityState,
+            SecurityVersion = data.SecurityVersion
+        };
+    }
 }

@@ -26,9 +26,10 @@ public class PrivateKeysResponseModel : ResponseModel
         PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairModel(accountKeys.PublicKeyEncryptionKeyPairData);
         ArgumentNullException.ThrowIfNull(accountKeys);
 
-        if (accountKeys.SignatureKeyPairData != null)
+        if (accountKeys.SignatureKeyPairData != null && accountKeys.SecurityStateData != null)
         {
             SignatureKeyPair = new SignatureKeyPairResponseModel(accountKeys.SignatureKeyPairData);
+            SecurityState = SecurityStateModel.FromSecurityStateData(accountKeys.SecurityStateData!);
         }
     }
 

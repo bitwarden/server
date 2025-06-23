@@ -269,3 +269,6 @@ BEGIN
         [Id] = @Id
 END
 GO
+
+EXECUTE sp_refreshview 'dbo.UserView'
+GO
