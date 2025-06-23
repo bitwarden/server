@@ -1,10 +1,11 @@
 ﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Models.Mail;
+using Bit.Core.Platform.MailDelivery;
 using Bit.Core.Platform.X509ChainCustomization;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using MailKit.Security;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -105,7 +106,8 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(new X509ChainOptions())
+            Options.Create(new X509ChainOptions()),
+            Options.Create(new Platform.MailDelivery.SmtpMailOptions())
         );
 
         await Assert.ThrowsAsync<SslHandshakeException>(
@@ -146,7 +148,8 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(x509ChainOptions)
+            Options.Create(x509ChainOptions),
+            Options.Create(new Platform.MailDelivery.SmtpMailOptions())
         );
 
         var tcs = new TaskCompletionSource();
@@ -202,7 +205,8 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(x509ChainOptions)
+            Options.Create(x509ChainOptions),
+            Options.Create(new Platform.MailDelivery.SmtpMailOptions())
         );
 
         var tcs = new TaskCompletionSource();
@@ -250,7 +254,8 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(new X509ChainOptions())
+            Options.Create(new X509ChainOptions()),
+            Options.Create(new Platform.MailDelivery.SmtpMailOptions())
         );
 
         var tcs = new TaskCompletionSource();
@@ -297,7 +302,8 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(new X509ChainOptions())
+            Options.Create(new X509ChainOptions()),
+            Options.Create(new Platform.MailDelivery.SmtpMailOptions())
         );
 
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -333,7 +339,8 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(new X509ChainOptions())
+            Options.Create(new X509ChainOptions()),
+            Options.Create(new SmtpMailOptions())
         );
 
         var tcs = new TaskCompletionSource();
@@ -400,7 +407,8 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(new X509ChainOptions())
+            Options.Create(new X509ChainOptions()),
+            Options.Create(new Platform.MailDelivery.SmtpMailOptions())
         );
 
         var tcs = new TaskCompletionSource();
@@ -425,5 +433,95 @@ public class MailKitSmtpMailDeliveryServiceTests
 
         // Wait for email
         await tcs.Task;
+    }
+
+    [Fact]
+    public async Task TestMicrosoftSmtpWithOAuth()
+    {
+        var sendToEmail = Environment.GetEnvironmentVariable("TEST_MAILBOX");
+        var tenantId = Environment.GetEnvironmentVariable("MICROSOFT_TENANT_ID");
+        var clientId = Environment.GetEnvironmentVariable("MICROSOFT_CLIENT_ID"); ;
+        var clientSecret = Environment.GetEnvironmentVariable("MICROSOFT_CLIENT_SECRET");
+        var username = Environment.GetEnvironmentVariable("MICROSOFT_USERNAME");
+
+        if (string.IsNullOrEmpty(sendToEmail)
+            || string.IsNullOrEmpty(tenantId)
+            || string.IsNullOrEmpty(clientId)
+            || string.IsNullOrEmpty(clientSecret)
+            || string.IsNullOrEmpty(username)
+        )
+        {
+            // Skip test if not setup
+            return;
+        }
+
+        var provider = BuildProvider(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Mail:Smtp:Host", "smtp.office365.com" },
+            { "GlobalSettings:Mail:ReplyToEmail", sendToEmail },
+            { "GlobalSettings:Mail:Smtp:Port", "587" },
+            { "GlobalSettings:Mail:Smtp:AuthType", "MicrosoftOAuth" },
+            { "GlobalSettings:Mail:Smtp:Username", username },
+            { "GlobalSettings:Mail:Smtp:TenantId", tenantId },
+            { "GlobalSettings:Mail:Smtp:ClientId", clientId },
+            { "GlobalSettings:Mail:Smtp:ClientSecret", clientSecret },
+        });
+
+        var mailDelieveryService = provider.GetRequiredService<IMailDeliveryService>();
+        Assert.IsType<MailKitSmtpMailDeliveryService>(mailDelieveryService);
+
+        await mailDelieveryService.SendEmailAsync(new MailMessage
+        {
+            ToEmails = [sendToEmail],
+            Subject = "Test Microsoft SMTP",
+            TextContent = "This is a test email.",
+        });
+    }
+
+    [Fact]
+    public async Task TestGoogleSmtpWithOAuth()
+    {
+        var sendToEmail = Environment.GetEnvironmentVariable("TEST_MAILBOX");
+        var serviceAccountEmail = Environment.GetEnvironmentVariable("GOOGLE_ACCOUNT_EMAIL");
+        var serviceAccountPrivateKey = Environment.GetEnvironmentVariable("GOOGLE_ACCOUNT_KEY");
+
+        if (string.IsNullOrEmpty(sendToEmail)
+            || string.IsNullOrEmpty(serviceAccountEmail)
+            || string.IsNullOrEmpty(serviceAccountPrivateKey))
+        {
+            // Skip test if not setup
+            return;
+        }
+
+        var provider = BuildProvider(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Mail:Smtp:Host", "smtp.gmail.com" },
+            { "GlobalSettings:Mail:ReplyToEmail", sendToEmail },
+            { "GlobalSettings:Mail:Smtp:AuthType", "GoogleOAuth" },
+            { "GlobalSettings:Mail:Smtp:Port", "587" },
+            { "GlobalSettings:Mail:Smtp:Username", serviceAccountEmail },
+            { "GlobalSettings:Mail:Smtp:ServiceAccountEmail", serviceAccountEmail },
+            { "GlobalSettings:Mail:Smtp:ServiceAccountPrivateKey", serviceAccountPrivateKey },
+        });
+
+        var mailDelieveryService = provider.GetRequiredService<IMailDeliveryService>();
+        var smtpMailService = Assert.IsType<MailKitSmtpMailDeliveryService>(mailDelieveryService);
+
+        await smtpMailService.SendEmailAsync(new MailMessage
+        {
+            ToEmails = [sendToEmail],
+            Subject = "Test Google SMTP",
+            TextContent = "This is a test email.",
+        });
+    }
+    
+    private static IServiceProvider BuildProvider(Dictionary<string, string?> data)
+    {
+        var services = new ServiceCollection();
+        services.AddTestHostServices(data);
+
+        // Thing being tested:
+        services.AddMailDelivery();
+        return services.BuildServiceProvider();
     }
 }

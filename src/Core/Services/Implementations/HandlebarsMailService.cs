@@ -17,6 +17,7 @@ using Bit.Core.Models.Mail;
 using Bit.Core.Models.Mail.Billing;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
+using Bit.Core.Platform.MailDelivery;
 using Bit.Core.SecretsManager.Models.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;

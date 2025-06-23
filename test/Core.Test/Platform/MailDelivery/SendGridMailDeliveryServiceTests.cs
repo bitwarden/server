@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Models.Mail;
-using Bit.Core.Services;
+using Bit.Core.Platform.MailDelivery;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Bit.Core.Test.Services;
 
-public class SendGridMailDeliveryServiceTests : IDisposable
+public class SendGridMailDeliveryServiceTests
 {
     private readonly SendGridMailDeliveryService _sut;
 
@@ -26,7 +26,7 @@ public class SendGridMailDeliveryServiceTests : IDisposable
             Mail =
             {
                 SendGridApiKey = "SendGridApiKey",
-                SendGridApiHost = "https://api.sendgrid.com"
+                SendGridApiHost = "https://api.sendgrid.com",
             }
         };
 
@@ -40,11 +40,6 @@ public class SendGridMailDeliveryServiceTests : IDisposable
             _hostingEnvironment,
             _logger
         );
-    }
-
-    public void Dispose()
-    {
-        _sut?.Dispose();
     }
 
     [Fact]

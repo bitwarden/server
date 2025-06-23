@@ -7,20 +7,22 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Platform.MailDelivery;
 
-public class MailKitSmtpMailDeliveryService : IMailDeliveryService
+internal class MailKitSmtpMailDeliveryService : IMailDeliveryService
 {
     private readonly GlobalSettings _globalSettings;
     private readonly ILogger<MailKitSmtpMailDeliveryService> _logger;
     private readonly X509ChainOptions _x509ChainOptions;
+    private readonly SmtpMailOptions _smtpMailOptions;
     private readonly string _replyDomain;
     private readonly string _replyEmail;
 
     public MailKitSmtpMailDeliveryService(
         GlobalSettings globalSettings,
         ILogger<MailKitSmtpMailDeliveryService> logger,
-        IOptions<X509ChainOptions> x509ChainOptions)
+        IOptions<X509ChainOptions> x509ChainOptions,
+        IOptions<SmtpMailOptions> mailOptions)
     {
         if (globalSettings.Mail.Smtp?.Host == null)
         {
@@ -42,6 +44,7 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
         _globalSettings = globalSettings;
         _logger = logger;
         _x509ChainOptions = x509ChainOptions.Value;
+        _smtpMailOptions = mailOptions.Value;
     }
 
     public async Task SendEmailAsync(Models.Mail.MailMessage message)
@@ -116,12 +119,17 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
                 );
             }
 
-            if (CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Username) &&
-                CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Password))
+            var credentials = await _smtpMailOptions.RetrieveCredentials(cancellationToken);
+
+            if (credentials != null)
             {
+                if (!client.AuthenticationMechanisms.Contains(credentials.MechanismName))
+                {
+                    // TODO: Warn
+                }
+
                 await client.AuthenticateAsync(
-                    _globalSettings.Mail.Smtp.Username,
-                    _globalSettings.Mail.Smtp.Password,
+                    credentials,
                     cancellationToken
                 );
             }
