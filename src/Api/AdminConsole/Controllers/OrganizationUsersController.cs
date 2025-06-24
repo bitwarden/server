@@ -1,4 +1,5 @@
-﻿using Bit.Api.AdminConsole.Authorization.Requirements;
+﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
@@ -146,6 +147,7 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("mini-details")]
+    [Authorize<ReadAllOrganizationUsersBasicInformationRequirement>]
     public async Task<ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>> GetMiniDetails(Guid orgId)
     {
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId),
