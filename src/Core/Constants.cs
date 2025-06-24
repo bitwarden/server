@@ -109,7 +109,6 @@ public static class FeatureFlagKeys
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
-    public const string OptimizeNestedTraverseTypescript = "pm-21695-optimize-nested-traverse-typescript";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
 
