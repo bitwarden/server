@@ -55,11 +55,11 @@ public class ImportCiphersCommand : IImportCiphersCommand
         Guid importingUserId)
     {
         // Make sure the user can save new ciphers to their personal vault
-        var isPersonalVaultRestricted = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            ? (await _policyRequirementQuery.GetAsync<PersonalOwnershipPolicyRequirement>(importingUserId)).State == PersonalOwnershipState.Restricted
-            : await _policyService.AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.PersonalOwnership);
+        var organizationDataOwnershipEnabled = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            ? (await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(importingUserId)).State == OrganizationDataOwnershipState.Enabled
+            : await _policyService.AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.OrganizationDataOwnership);
 
-        if (isPersonalVaultRestricted)
+        if (organizationDataOwnershipEnabled)
         {
             throw new BadRequestException("You cannot import items into your personal vault because you are " +
                 "a member of an organization which forbids it.");

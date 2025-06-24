@@ -223,7 +223,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 
     private async Task HandleConfirmationSideEffectsAsync(Guid organizationId, OrganizationUser organizationUser, string defaultUserCollectionName)
     {
-        // Create DefaultUserCollection type collection for the user if the PersonalOwnership policy is enabled for the organization
+        // Create DefaultUserCollection type collection for the user if the OrganizationDataOwnership policy is enabled for the organization
         var requiresDefaultCollection = await OrganizationRequiresDefaultCollectionAsync(organizationId, organizationUser.UserId.Value, defaultUserCollectionName);
         if (requiresDefaultCollection)
         {
@@ -244,8 +244,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return false;
         }
 
-        var personalOwnershipRequirement = await _policyRequirementQuery.GetAsync<PersonalOwnershipPolicyRequirement>(userId);
-        return personalOwnershipRequirement.RequiresDefaultCollection(organizationId);
+        var organizationDataOwnershipRequirement = await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId);
+        return organizationDataOwnershipRequirement.RequiresDefaultCollection(organizationId);
     }
 
     private async Task CreateDefaultCollectionAsync(Guid organizationId, Guid organizationUserId, string defaultCollectionName)
