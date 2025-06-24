@@ -27,4 +27,22 @@ public class OrganizationReportRepository :
             return Mapper.Map<ICollection<OrganizationReport>>(results);
         }
     }
+
+    public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var result = await dbContext.OrganizationReports
+                .Where(p => p.OrganizationId == organizationId)
+                .OrderByDescending(p => p.Date)
+                .Take(1)
+                .FirstOrDefaultAsync();
+
+            if (result == null)
+                return default;
+
+            return Mapper.Map<OrganizationReport>(result);
+        }
+    }
 }

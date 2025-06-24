@@ -32,4 +32,14 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
             return results.ToList();
         }
     }
+
+    public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId)
+    {
+        return await GetByOrganizationIdAsync(organizationId)
+        .ContinueWith(task =>
+        {
+            var reports = task.Result;
+            return reports.OrderByDescending(r => r.CreationDate).FirstOrDefault();
+        });
+    }
 }
