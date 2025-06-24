@@ -7,7 +7,7 @@ namespace Bit.Core.Auth.Models.Data;
 
 public class PendingAuthRequestDetails : AuthRequest
 {
-    public Guid? DeviceId { get; set; }
+    public Guid? RequestDeviceId { get; set; }
 
     /**
      * Constructor for EF response.
@@ -35,16 +35,17 @@ public class PendingAuthRequestDetails : AuthRequest
         CreationDate = authRequest.CreationDate;
         ResponseDate = authRequest.ResponseDate;
         AuthenticationDate = authRequest.AuthenticationDate;
-        DeviceId = deviceId;
+        RequestDeviceId = deviceId;
     }
 
     /**
      * Constructor for dapper response.
      * Note: if the DeviceId is null it comes back as an empty guid That could change if the stored
-     * procedure runs on a different kind of db.
-     * In order to maintain the flexibility of the wildcard * in SQL the constrctor accepts a long "row number rn"
-     * parameter that was used to order the results in the SQL query. Also SQL complains about the constructor not
-     * having the same parameters as the SELECT statement.
+     * procedure runs on a different database provider.
+     * In order to maintain the flexibility of the wildcard (*) in SQL, the constructor accepts a"row number" rn of type long
+     * parameter. 'rn' was used to order the results in the SQL query. Also, SQL complains about the constructor not
+     * having the same parameters as the SELECT statement and since the SELECT uses the wildcard we need to include everything.
+     * Order matters when mapping from the Stored Procedure, so the columns are in the order they come back from the query.
      */
     public PendingAuthRequestDetails(
         Guid id,
@@ -69,12 +70,10 @@ public class PendingAuthRequestDetails : AuthRequest
     {
         Id = id;
         UserId = userId;
-        OrganizationId = organizationId;
         Type = (AuthRequestType)type;
         RequestDeviceIdentifier = requestDeviceIdentifier;
         RequestDeviceType = (DeviceType)requestDeviceType;
         RequestIpAddress = requestIpAddress;
-        RequestCountryName = requestCountryName;
         ResponseDeviceId = responseDeviceId;
         AccessCode = accessCode;
         PublicKey = publicKey;
@@ -84,6 +83,8 @@ public class PendingAuthRequestDetails : AuthRequest
         CreationDate = creationDate;
         ResponseDate = responseDate;
         AuthenticationDate = authenticationDate;
-        DeviceId = deviceId;
+        OrganizationId = organizationId;
+        RequestCountryName = requestCountryName;
+        RequestDeviceId = deviceId;
     }
 }

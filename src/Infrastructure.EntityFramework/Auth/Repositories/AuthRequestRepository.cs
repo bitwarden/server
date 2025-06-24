@@ -77,7 +77,7 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
              select
                  (from r in groupedAuthRequests
                   join d in dbContext.Devices on r.RequestDeviceIdentifier equals d.Identifier into deviceJoin
-                  from dj in deviceJoin.DefaultIfEmpty() // This accomplishes a left join allowing nulld for devices
+                  from dj in deviceJoin.DefaultIfEmpty() // This creates a left join allowing null for devices
                   orderby r.CreationDate descending
                   select new PendingAuthRequestDetails(r, dj.Id)).First()
              ).ToListAsync();

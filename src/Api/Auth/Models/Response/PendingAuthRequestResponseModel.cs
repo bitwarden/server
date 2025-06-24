@@ -8,8 +8,8 @@ public class PendingAuthRequestResponseModel : AuthRequestResponseModel
         : base(authRequest, vaultUri, obj)
     {
         ArgumentNullException.ThrowIfNull(authRequest);
-        RequestingDeviceId = authRequest.DeviceId;
+        RequestDeviceId = authRequest.RequestDeviceId;
     }
 
-    public Guid? RequestingDeviceId { get; set; }
+    public Guid? RequestDeviceId { get; set; }
 }
