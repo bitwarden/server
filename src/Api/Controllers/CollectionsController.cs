@@ -20,6 +20,8 @@ public class CollectionsController : Controller
 {
     private readonly ICollectionRepository _collectionRepository;
     private readonly ICollectionService _collectionService;
+    private readonly ICreateCollectionCommand _createCollectionCommand;
+    private readonly IUpdateCollectionCommand _updateCollectionCommand;
     private readonly IDeleteCollectionCommand _deleteCollectionCommand;
     private readonly IUserService _userService;
     private readonly IAuthorizationService _authorizationService;
@@ -29,6 +31,8 @@ public class CollectionsController : Controller
     public CollectionsController(
         ICollectionRepository collectionRepository,
         ICollectionService collectionService,
+        ICreateCollectionCommand createCollectionCommand,
+        IUpdateCollectionCommand updateCollectionCommand,
         IDeleteCollectionCommand deleteCollectionCommand,
         IUserService userService,
         IAuthorizationService authorizationService,
@@ -37,6 +41,8 @@ public class CollectionsController : Controller
     {
         _collectionRepository = collectionRepository;
         _collectionService = collectionService;
+        _createCollectionCommand = createCollectionCommand;
+        _updateCollectionCommand = updateCollectionCommand;
         _deleteCollectionCommand = deleteCollectionCommand;
         _userService = userService;
         _authorizationService = authorizationService;
@@ -153,7 +159,7 @@ public class CollectionsController : Controller
         var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
         var users = model.Users?.Select(g => g.ToSelectionReadOnly()).ToList() ?? new List<CollectionAccessSelection>();
 
-        await _collectionService.SaveAsync(collection, groups, users);
+        await _createCollectionCommand.CreateAsync(collection, groups, users);
 
         if (!_currentContext.UserId.HasValue || (_currentContext.GetOrganization(orgId) == null && await _currentContext.ProviderUserForOrgAsync(orgId)))
         {
@@ -179,7 +185,7 @@ public class CollectionsController : Controller
 
         var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
         var users = model.Users?.Select(g => g.ToSelectionReadOnly());
-        await _collectionService.SaveAsync(model.ToCollection(collection), groups, users);
+        await _updateCollectionCommand.UpdateAsync(model.ToCollection(collection), groups, users);
 
         if (!_currentContext.UserId.HasValue || (_currentContext.GetOrganization(collection.OrganizationId) == null && await _currentContext.ProviderUserForOrgAsync(collection.OrganizationId)))
         {
@@ -190,19 +196,6 @@ public class CollectionsController : Controller
         var collectionWithPermissions = await _collectionRepository.GetByIdWithPermissionsAsync(collection.Id, _currentContext.UserId.Value, false);
 
         return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
-    }
-
-    [HttpPut("{id}/users")]
-    public async Task PutUsers(Guid orgId, Guid id, [FromBody] IEnumerable<SelectionReadOnlyRequestModel> model)
-    {
-        var collection = await _collectionRepository.GetByIdAsync(id);
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyUserAccess)).Succeeded;
-        if (!authorized)
-        {
-            throw new NotFoundException();
-        }
-
-        await _collectionRepository.UpdateUsersAsync(collection.Id, model?.Select(g => g.ToSelectionReadOnly()));
     }
 
     [HttpPost("bulk-access")]
@@ -254,19 +247,5 @@ public class CollectionsController : Controller
         }
 
         await _deleteCollectionCommand.DeleteManyAsync(collections);
-    }
-
-    [HttpDelete("{id}/user/{orgUserId}")]
-    [HttpPost("{id}/delete-user/{orgUserId}")]
-    public async Task DeleteUser(Guid orgId, Guid id, Guid orgUserId)
-    {
-        var collection = await _collectionRepository.GetByIdAsync(id);
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyUserAccess)).Succeeded;
-        if (!authorized)
-        {
-            throw new NotFoundException();
-        }
-
-        await _collectionService.DeleteUserAsync(collection, orgUserId);
     }
 }
