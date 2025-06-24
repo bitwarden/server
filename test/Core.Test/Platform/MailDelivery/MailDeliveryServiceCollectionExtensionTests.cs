@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Bit.Core.Platform.MailDelivery;
 using Microsoft.Extensions.DependencyInjection;

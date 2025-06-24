@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
@@ -53,7 +53,7 @@ public static class TestHostUtilities
 
         return services;
     }
-    
+
     private class TestEnvironment : IHostEnvironment, IWebHostEnvironment
     {
         public string ApplicationName { get; set; } = "Test";

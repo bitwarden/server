@@ -514,7 +514,7 @@ public class MailKitSmtpMailDeliveryServiceTests
             TextContent = "This is a test email.",
         });
     }
-    
+
     private static IServiceProvider BuildProvider(Dictionary<string, string?> data)
     {
         var services = new ServiceCollection();

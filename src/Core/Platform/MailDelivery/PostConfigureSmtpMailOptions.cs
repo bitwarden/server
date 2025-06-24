@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Bit.Core.Utilities;
 using IdentityModel;
@@ -178,7 +178,7 @@ internal class PostConfigureSmtpMailOptions : IPostConfigureOptions<SmtpMailOpti
         return new OptionsValidationException(
             // We don't currently customize any options other than the default one, 
             // if that changes we'll need to take the name as a parameter.
-            Options.DefaultName, 
+            Options.DefaultName,
             typeof(SmtpMailOptions),
             [error]
         );

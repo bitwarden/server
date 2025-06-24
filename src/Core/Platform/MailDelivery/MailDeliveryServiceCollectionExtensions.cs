@@ -1,4 +1,4 @@
-using Amazon;
+﻿using Amazon;
 using Amazon.SimpleEmail;
 using Bit.Core.Platform.MailDelivery;
 using Bit.Core.Settings;

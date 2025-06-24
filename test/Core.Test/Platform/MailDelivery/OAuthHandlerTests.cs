@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Bit.Core.Platform.MailDelivery;
 using Microsoft.Extensions.Time.Testing;
