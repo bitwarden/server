@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
-using Bit.Core.Dirt.Reports.Repositories;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
