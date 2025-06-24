@@ -193,7 +193,7 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
             new OrganizationImportRequestModel.OrganizationImportGroupRequestModel
             {
                 Name = group.Name,
-                ExternalId = group.ExternalId,
+                ExternalId = Guid.NewGuid().ToString(),
                 MemberExternalIds = []
             }
         ];
@@ -267,13 +267,13 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
             new OrganizationImportRequestModel.OrganizationImportGroupRequestModel
             {
                 Name = existingGroup.Name,
-                ExternalId = existingGroup.ExternalId,
+                ExternalId = Guid.NewGuid().ToString(),
                 MemberExternalIds = []
             },
             new OrganizationImportRequestModel.OrganizationImportGroupRequestModel
             {
                 Name = newGroup.Name,
-                ExternalId = newGroup.ExternalId,
+                ExternalId = Guid.NewGuid().ToString(),
                 MemberExternalIds = []
             }
         ];

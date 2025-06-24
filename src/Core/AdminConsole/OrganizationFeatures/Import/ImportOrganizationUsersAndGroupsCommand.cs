@@ -196,19 +196,8 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             OrganizationUserImportData importUserData)
     {
         // Determine which users are already in the organization
-        var existingUsersSet = new HashSet<string>(importUserData.ExistingExternalUsersIdDict.Keys).ToList();
+        var existingUsersSet = new HashSet<string>(importUserData.ExistingExternalUsersIdDict.Keys);
         var usersToAdd = importUserData.ImportedExternalIds.Except(existingUsersSet).ToList();
-
-        var seatsAvailable = int.MaxValue;
-        var enoughSeatsAvailable = true;
-
-        if (organization.Seats.HasValue)
-        {
-            var occupiedSeats = await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            seatsAvailable = organization.Seats.Value - occupiedSeats.Total;
-            enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
-        }
-
         var userInvites = new List<(OrganizationUserInvite, string)>();
         var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
 

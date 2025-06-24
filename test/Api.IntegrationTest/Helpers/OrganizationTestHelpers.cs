@@ -141,7 +141,7 @@ public static class OrganizationTestHelpers
         {
             OrganizationId = organizationId,
             Id = new Guid(),
-            ExternalId = new Guid().ToString(),
+            ExternalId = Guid.NewGuid().ToString(),
             Name = "bwtest"
         };
 
