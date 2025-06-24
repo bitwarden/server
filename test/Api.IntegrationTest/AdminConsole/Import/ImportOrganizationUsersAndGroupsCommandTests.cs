@@ -273,7 +273,7 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
             new OrganizationImportRequestModel.OrganizationImportGroupRequestModel
             {
                 Name = newGroup.Name,
-                ExternalId = Guid.NewGuid().ToString(),
+                ExternalId = newGroup.ExternalId,
                 MemberExternalIds = []
             }
         ];
