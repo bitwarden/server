@@ -92,6 +92,8 @@ public class SecretsControllerTests
     [BitAutoData]
     public async Task GetSecret_NotFound(SutProvider<SecretsController> sutProvider)
     {
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(Guid.NewGuid()));
     }
 
@@ -105,7 +107,7 @@ public class SecretsControllerTests
         mockProject.OrganizationId = organizationId;
         resultSecret.Projects = new List<Project>() { mockProject };
         resultSecret.OrganizationId = organizationId;
-
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(default).ReturnsForAnyArgs(resultSecret);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(default, default, default)
             .ReturnsForAnyArgs(Task.FromResult((true, true)));
@@ -140,7 +142,8 @@ public class SecretsControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToSecret(organizationId),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
-
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
         await sutProvider.GetDependency<ICreateSecretCommand>().DidNotReceiveWithAnyArgs()
             .CreateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>());
@@ -152,7 +155,8 @@ public class SecretsControllerTests
         SecretCreateRequestModel data, Guid organizationId)
     {
         data = SetupSecretCreateRequest(sutProvider, data, organizationId);
-
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         await sutProvider.Sut.CreateAsync(organizationId, data);
 
         await sutProvider.GetDependency<ICreateSecretCommand>().Received(1)
@@ -169,7 +173,8 @@ public class SecretsControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<SecretAccessPoliciesUpdates>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Failed());
-
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
         await sutProvider.GetDependency<ICreateSecretCommand>().DidNotReceiveWithAnyArgs()
             .CreateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>());
@@ -186,7 +191,8 @@ public class SecretsControllerTests
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<SecretAccessPoliciesUpdates>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
 
-
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         await sutProvider.Sut.CreateAsync(organizationId, data);
 
         await sutProvider.GetDependency<ICreateSecretCommand>().Received(1)
@@ -199,6 +205,8 @@ public class SecretsControllerTests
         SecretUpdateRequestModel data, Secret currentSecret)
     {
         data = SetupSecretUpdateRequest(data);
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
@@ -219,7 +227,8 @@ public class SecretsControllerTests
         SecretUpdateRequestModel data, Secret currentSecret)
     {
         data = SetupSecretUpdateRequest(data);
-
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
@@ -239,7 +248,8 @@ public class SecretsControllerTests
         SecretUpdateRequestModel data, Secret currentSecret)
     {
         data = SetupSecretUpdateRequest(data);
-
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
@@ -260,7 +270,8 @@ public class SecretsControllerTests
         SecretUpdateRequestModel data, Secret currentSecret, SecretAccessPoliciesUpdates accessPoliciesUpdates)
     {
         data = SetupSecretUpdateAccessPoliciesRequest(sutProvider, data, currentSecret, accessPoliciesUpdates);
-
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<SecretAccessPoliciesUpdates>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Failed());
@@ -276,7 +287,8 @@ public class SecretsControllerTests
         SecretUpdateRequestModel data, Secret currentSecret, SecretAccessPoliciesUpdates accessPoliciesUpdates)
     {
         data = SetupSecretUpdateAccessPoliciesRequest(sutProvider, data, currentSecret, accessPoliciesUpdates);
-
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<SecretAccessPoliciesUpdates>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
@@ -291,6 +303,8 @@ public class SecretsControllerTests
     public async Task BulkDelete_NoSecretsFound_ThrowsNotFound(SutProvider<SecretsController> sutProvider, List<Secret> data)
     {
         var ids = data.Select(s => s.Id).ToList();
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(new List<Secret>());
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
         await sutProvider.GetDependency<IDeleteSecretCommand>().DidNotReceiveWithAnyArgs().DeleteSecrets(Arg.Any<List<Secret>>());
@@ -302,6 +316,8 @@ public class SecretsControllerTests
     {
         data.Add(mockSecret);
         var ids = data.Select(s => s.Id).ToList();
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(new List<Secret> { mockSecret });
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
         await sutProvider.GetDependency<IDeleteSecretCommand>().DidNotReceiveWithAnyArgs().DeleteSecrets(Arg.Any<List<Secret>>());
@@ -313,6 +329,8 @@ public class SecretsControllerTests
     {
         var ids = data.Select(s => s.Id).ToList();
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
         await sutProvider.GetDependency<IDeleteSecretCommand>().DidNotReceiveWithAnyArgs().DeleteSecrets(Arg.Any<List<Secret>>());
     }
@@ -327,6 +345,8 @@ public class SecretsControllerTests
         {
             s.OrganizationId = organizationId;
         }
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(false);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
@@ -351,7 +371,8 @@ public class SecretsControllerTests
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Failed());
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
-
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         var results = await sutProvider.Sut.BulkDeleteAsync(ids);
 
         Assert.Equal(data.Count, results.Data.Count());
@@ -378,7 +399,8 @@ public class SecretsControllerTests
 
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
-
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         var results = await sutProvider.Sut.BulkDeleteAsync(ids);
 
         await sutProvider.GetDependency<IDeleteSecretCommand>().Received(1)
@@ -396,6 +418,8 @@ public class SecretsControllerTests
         List<Secret> data)
     {
         var (ids, request) = BuildGetSecretsRequestModel(data);
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(new List<Secret>());
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSecretsByIdsAsync(request));
     }
@@ -407,6 +431,8 @@ public class SecretsControllerTests
     {
         var (ids, request) = BuildGetSecretsRequestModel(data);
         ids.Add(mockSecret.Id);
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids))
             .ReturnsForAnyArgs(new List<Secret> { mockSecret });
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSecretsByIdsAsync(request));
@@ -419,7 +445,8 @@ public class SecretsControllerTests
     {
         var (ids, request) = BuildGetSecretsRequestModel(data);
         var organizationId = SetOrganizations(ref data);
-
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data,
@@ -434,7 +461,9 @@ public class SecretsControllerTests
     {
         var (ids, request) = BuildGetSecretsRequestModel(data);
         var organizationId = SetOrganizations(ref data);
+        var userId = Guid.NewGuid();
 
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data,
@@ -537,6 +566,8 @@ public class SecretsControllerTests
         SutProvider<SecretsController> sutProvider, Guid organizationId)
     {
         var lastSyncedDate = GetLastSyncedDate(nullLastSyncedDate);
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
 
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
             .ReturnsForAnyArgs(true);
@@ -596,7 +627,8 @@ public class SecretsControllerTests
     private static SecretUpdateRequestModel SetupSecretUpdateAccessPoliciesRequest(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Secret currentSecret, SecretAccessPoliciesUpdates accessPoliciesUpdates)
     {
         data = SetupSecretUpdateRequest(data, true);
-
+        var userId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
