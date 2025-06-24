@@ -208,9 +208,9 @@ internal class TestOAuthHandler(IHttpClientFactory httpClientFactory, TimeProvid
 {
     public int BuildContentCallCount { get; private set; }
 
-    protected override FormUrlEncodedContent BuildContent()
+    protected override Dictionary<string, string> BuildContent()
     {
         BuildContentCallCount++;
-        return new FormUrlEncodedContent([]);
+        return [];
     }
 }

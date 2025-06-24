@@ -74,7 +74,7 @@ internal class PostConfigureSmtpMailOptions : IPostConfigureOptions<SmtpMailOpti
                     // Format tenant into default url
                     options.OAuth.TokenEndpoint = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token";
                 }
-                options.OAuth.GrantType ??= "client_credentials";
+                options.OAuth.GrantType ??= ClientCredentialsHandler.GrantType;
                 // Default to known scope
                 options.OAuth.Scope ??= "https://outlook.office365.com/.default";
                 // Allow Shortened options
@@ -93,7 +93,7 @@ internal class PostConfigureSmtpMailOptions : IPostConfigureOptions<SmtpMailOpti
                 // Default the Google URL
                 options.OAuth.TokenEndpoint ??= "https://oauth2.googleapis.com/token";
                 // Default to known default grant type for Google
-                options.OAuth.GrantType ??= "urn:ietf:params:oauth:grant-type:jwt-bearer";
+                options.OAuth.GrantType ??= JwtBearerCredentials.GrantType;
                 // Default the algorithm
                 options.OAuth.Algorithm ??= SecurityAlgorithms.RsaSha256;
                 // Allow shortened path and more recognizable name for signing key
@@ -134,7 +134,7 @@ internal class PostConfigureSmtpMailOptions : IPostConfigureOptions<SmtpMailOpti
             return;
         }
 
-        if (options.OAuth.GrantType == "client_credentials")
+        if (options.OAuth.GrantType == ClientCredentialsHandler.GrantType)
         {
             // TODO: Final validation
             var clientCredentialsHandler = new ClientCredentialsHandler(
@@ -149,7 +149,7 @@ internal class PostConfigureSmtpMailOptions : IPostConfigureOptions<SmtpMailOpti
 
             options.RetrieveCredentials = clientCredentialsHandler.GetAsync;
         }
-        else if (options.OAuth.GrantType == "urn:ietf:params:oauth:grant-type:jwt-bearer")
+        else if (options.OAuth.GrantType == JwtBearerCredentials.GrantType)
         {
             // TODO: Final validation
             var jwtBearer = new JwtBearerCredentials(

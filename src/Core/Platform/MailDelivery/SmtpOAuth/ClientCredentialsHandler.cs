@@ -4,6 +4,7 @@ namespace Bit.Core.Platform.MailDelivery;
 
 internal class ClientCredentialsHandler : OAuthHandler
 {
+    public const string GrantType = "client_credentials";
     private readonly string _clientId;
     private readonly string _clientSecret;
     private readonly string _scope;
@@ -23,14 +24,14 @@ internal class ClientCredentialsHandler : OAuthHandler
         _scope = scope;
     }
 
-    protected override FormUrlEncodedContent BuildContent()
+    protected override Dictionary<string, string> BuildContent()
     {
-        return new FormUrlEncodedContent(new Dictionary<string, string>
+        return new Dictionary<string, string>
         {
-            { "grant_type", "client_credentials" },
+            { "grant_type", GrantType },
             { "client_id", _clientId },
             { "client_secret", _clientSecret },
             { "scope", _scope },
-        });
+        };
     }
 }

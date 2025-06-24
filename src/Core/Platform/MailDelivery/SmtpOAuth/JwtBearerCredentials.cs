@@ -10,9 +10,11 @@ namespace Bit.Core.Platform.MailDelivery;
 
 internal class JwtBearerCredentials : OAuthHandler
 {
+    public const string GrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer";
+
     private readonly string _algorithm;
     private readonly string _signingKey;
-    private readonly IEnumerable<KeyValuePair<string, string?>> _claims;
+    private readonly Dictionary<string, string?> _claims;
 
     public JwtBearerCredentials(
         IHttpClientFactory httpClientFactory,
@@ -21,7 +23,7 @@ internal class JwtBearerCredentials : OAuthHandler
         string username,
         string algorithm,
         string signingKey,
-        IEnumerable<KeyValuePair<string, string?>> claims)
+        Dictionary<string, string?> claims)
         : base(httpClientFactory, timeProvider, tokenEndpoint, username)
     {
         _algorithm = algorithm;
@@ -29,7 +31,7 @@ internal class JwtBearerCredentials : OAuthHandler
         _claims = claims;
     }
 
-    protected override FormUrlEncodedContent BuildContent()
+    protected override Dictionary<string, string> BuildContent()
     {
         var tokenHandler = new JwtSecurityTokenHandler();
 
@@ -79,11 +81,11 @@ internal class JwtBearerCredentials : OAuthHandler
                 signingCredentials
             );
 
-            return new FormUrlEncodedContent(new Dictionary<string, string>
+            return new Dictionary<string, string>
             {
-                { "grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer" },
+                { "grant_type", GrantType },
                 { "assertion", tokenHandler.WriteToken(token) },
-            });
+            };
         }
         finally
         {

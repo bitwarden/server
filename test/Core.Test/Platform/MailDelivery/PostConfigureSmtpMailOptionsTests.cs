@@ -216,7 +216,7 @@ public class PostConfigureSmtpMailOptionsTests
             { "GlobalSettings:Mail:Smtp:OAuth:Claims:iss", "custom@example.com" },
             { "GlobalSettings:Mail:Smtp:OAuth:Claims:scope", "custom_scope" },
             { "GlobalSettings:Mail:Smtp:OAuth:Claims:aud", "custom_audience" },
-        });
+        }, out var provider);
 
         Assert.Equal("https://example.com/token", options.OAuth.TokenEndpoint);
         Assert.Equal("urn:ietf:params:oauth:grant-type:jwt-bearer", options.OAuth.GrantType);
@@ -226,7 +226,11 @@ public class PostConfigureSmtpMailOptionsTests
         Assert.Single(options.OAuth.Claims, (claim) => claim.Key == "scope" && claim.Value == "custom_scope");
         Assert.Single(options.OAuth.Claims, (claim) => claim.Key == "aud" && claim.Value == "custom_audience");
 
-        // TODO: Assert no bad grant_type warning
+        var logs = provider.GetFakeLogCollector().GetSnapshot();
+
+        Assert.DoesNotContain(logs,
+            l => l.Level == LogLevel.Warning && l.Message.Contains("Grant type 'something' is not one of the supported values")
+        );
     }
 
     [Fact]
@@ -244,7 +248,7 @@ public class PostConfigureSmtpMailOptionsTests
 
             // Should respect custom grant_type
             { "GlobalSettings:Mail:Smtp:OAuth:GrantType", "client_credentials" },
-        });
+        }, out var provider);
 
         Assert.Equal("https://example.com/token", options.OAuth.TokenEndpoint);
         Assert.Equal("client_credentials", options.OAuth.GrantType);
@@ -252,7 +256,26 @@ public class PostConfigureSmtpMailOptionsTests
         Assert.Equal("test_client_id", options.OAuth.ClientId);
         Assert.Equal("test_client_secret", options.OAuth.ClientSecret);
 
-        // TODO: Assert no bad grant_type warning
+        var logs = provider.GetFakeLogCollector().GetSnapshot();
+
+        Assert.DoesNotContain(logs,
+            l => l.Level == LogLevel.Warning && l.Message.Contains("Grant type 'something' is not one of the supported values")
+        );
+    }
+
+    [Fact]
+    public void NamedOptions_DoesNotConfigure()
+    {
+        Build(new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Mail:Smtp:AuthType", "CustomOAuth" },
+        }, out var provider);
+
+        var options = provider.GetRequiredService<IOptionsSnapshot<SmtpMailOptions>>().Get("SomeName");
+
+        // It should be the default value of password since named options aren't
+        // configured in the post configure step.
+        Assert.Equal(AuthType.Password, options.AuthType);
     }
 
 

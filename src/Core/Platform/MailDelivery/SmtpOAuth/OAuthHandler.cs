@@ -31,7 +31,7 @@ internal abstract class OAuthHandler
         _username = username;
     }
 
-    protected abstract FormUrlEncodedContent BuildContent();
+    protected abstract Dictionary<string, string> BuildContent();
 
     public async Task<SaslMechanism?> GetAsync(CancellationToken cancellationToken)
     {
@@ -47,7 +47,7 @@ internal abstract class OAuthHandler
 
             var content = BuildContent();
 
-            var response = await _httpClient.PostAsync(_tokenEndpoint, content, cancellationToken);
+            var response = await _httpClient.PostAsync(_tokenEndpoint, new FormUrlEncodedContent(content), cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
