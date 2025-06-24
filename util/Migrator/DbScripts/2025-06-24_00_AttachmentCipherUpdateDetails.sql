@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[CipherDetails_Update]
+CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Update]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
