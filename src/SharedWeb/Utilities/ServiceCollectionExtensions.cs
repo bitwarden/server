@@ -717,7 +717,8 @@ public static class ServiceCollectionExtensions
                 retryQueueName: integrationRetryQueueName,
                 maxRetries: maxRetries,
                 rabbitMqService: provider.GetRequiredService<IRabbitMqService>(),
-                logger: provider.GetRequiredService<ILogger<RabbitMqIntegrationListenerService>>()));
+                logger: provider.GetRequiredService<ILogger<RabbitMqIntegrationListenerService>>(),
+                timeProvider: provider.GetRequiredService<TimeProvider>()));
 
         return services;
     }

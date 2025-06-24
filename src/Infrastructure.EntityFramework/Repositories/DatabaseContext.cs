@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using DP = Microsoft.AspNetCore.DataProtection;
 
+
 #nullable enable
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
@@ -84,6 +85,8 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationMemberBaseDetail> OrganizationMemberBaseDetails { get; set; }
     public DbSet<SecurityTask> SecurityTasks { get; set; }
     public DbSet<OrganizationInstallation> OrganizationInstallations { get; set; }
+    public DbSet<OrganizationReport> OrganizationReports { get; set; }
+    public DbSet<OrganizationApplication> OrganizationApplications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
