@@ -1,4 +1,4 @@
-﻿using Bit.Core.Dirt.Reports.Entities;
+﻿using Bit.Core.Dirt.Entities;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 
