@@ -1,11 +1,15 @@
 ﻿using Bit.Api.Models.Request.Organizations;
+using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
+using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -31,6 +35,8 @@ public class OrganizationSponsorshipsController : Controller
     private readonly ICloudSyncSponsorshipsCommand _syncSponsorshipsCommand;
     private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
+    private readonly IPolicyRepository _policyRepository;
+    private readonly IFeatureService _featureService;
 
     public OrganizationSponsorshipsController(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
@@ -45,7 +51,9 @@ public class OrganizationSponsorshipsController : Controller
         IRemoveSponsorshipCommand removeSponsorshipCommand,
         ICloudSyncSponsorshipsCommand syncSponsorshipsCommand,
         IUserService userService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IPolicyRepository policyRepository,
+        IFeatureService featureService)
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
         _organizationRepository = organizationRepository;
@@ -60,6 +68,8 @@ public class OrganizationSponsorshipsController : Controller
         _syncSponsorshipsCommand = syncSponsorshipsCommand;
         _userService = userService;
         _currentContext = currentContext;
+        _policyRepository = policyRepository;
+        _featureService = featureService;
     }
 
     [Authorize("Application")]
@@ -68,35 +78,84 @@ public class OrganizationSponsorshipsController : Controller
     public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipCreateRequestModel model)
     {
         var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
+        var freeFamiliesSponsorshipPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(sponsoringOrgId,
+            PolicyType.FreeFamiliesSponsorshipPolicy);
+
+        if (freeFamiliesSponsorshipPolicy?.Enabled == true)
+        {
+            throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
+        }
+
+        if (!_featureService.IsEnabled(Bit.Core.FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
+        {
+            if (model.IsAdminInitiated.GetValueOrDefault())
+            {
+                throw new BadRequestException();
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.Notes))
+            {
+                model.Notes = null;
+            }
+        }
 
         var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
             sponsoringOrg,
             await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
-            model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
-        await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
+            model.PlanSponsorshipType,
+            model.SponsoredEmail,
+            model.FriendlyName,
+            model.IsAdminInitiated.GetValueOrDefault(),
+            model.Notes);
+        if (sponsorship.OfferedToEmail != null)
+        {
+            await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
+        }
     }
 
     [Authorize("Application")]
     [HttpPost("{sponsoringOrgId}/families-for-enterprise/resend")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task ResendSponsorshipOffer(Guid sponsoringOrgId)
+    public async Task ResendSponsorshipOffer(Guid sponsoringOrgId, [FromQuery] string sponsoredFriendlyName)
     {
+        var freeFamiliesSponsorshipPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(sponsoringOrgId,
+            PolicyType.FreeFamiliesSponsorshipPolicy);
+
+        if (freeFamiliesSponsorshipPolicy?.Enabled == true)
+        {
+            throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
+        }
+
         var sponsoringOrgUser = await _organizationUserRepository
             .GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
 
-        await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(
-            await _organizationRepository.GetByIdAsync(sponsoringOrgId),
-            sponsoringOrgUser,
-            await _organizationSponsorshipRepository
-                .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id));
+        var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
+        var filteredSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
+        if (filteredSponsorship != null)
+        {
+            await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(
+                await _organizationRepository.GetByIdAsync(sponsoringOrgId),
+                sponsoringOrgUser, filteredSponsorship);
+        }
     }
 
     [Authorize("Application")]
     [HttpPost("validate-token")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<bool> PreValidateSponsorshipToken([FromQuery] string sponsorshipToken)
+    public async Task<PreValidateSponsorshipResponseModel> PreValidateSponsorshipToken([FromQuery] string sponsorshipToken)
     {
-        return (await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email)).valid;
+        var isFreeFamilyPolicyEnabled = false;
+        var (isValid, sponsorship) = await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email);
+        if (isValid && sponsorship.SponsoringOrganizationId.HasValue)
+        {
+            var policy = await _policyRepository.GetByOrganizationIdTypeAsync(sponsorship.SponsoringOrganizationId.Value,
+                PolicyType.FreeFamiliesSponsorshipPolicy);
+            isFreeFamilyPolicyEnabled = policy?.Enabled ?? false;
+        }
+
+        var response = PreValidateSponsorshipResponseModel.From(isValid, isFreeFamilyPolicyEnabled);
+
+        return response;
     }
 
     [Authorize("Application")]
@@ -114,6 +173,14 @@ public class OrganizationSponsorshipsController : Controller
         if (!await _currentContext.OrganizationOwner(model.SponsoredOrganizationId))
         {
             throw new BadRequestException("Can only redeem sponsorship for an organization you own.");
+        }
+
+        var freeFamiliesSponsorshipPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(
+            model.SponsoredOrganizationId, PolicyType.FreeFamiliesSponsorshipPolicy);
+
+        if (freeFamiliesSponsorshipPolicy?.Enabled == true)
+        {
+            throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
         }
 
         await _setUpSponsorshipCommand.SetUpSponsorshipAsync(
@@ -156,6 +223,20 @@ public class OrganizationSponsorshipsController : Controller
     }
 
     [Authorize("Application")]
+    [HttpDelete("{sponsoringOrgId}/{sponsoredFriendlyName}/revoke")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task AdminInitiatedRevokeSponsorshipAsync(Guid sponsoringOrgId, string sponsoredFriendlyName)
+    {
+        var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
+        var existingOrgSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
+        if (existingOrgSponsorship == null)
+        {
+            throw new BadRequestException("The specified sponsored organization could not be found under the given sponsoring organization.");
+        }
+        await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
+    }
+
+    [Authorize("Application")]
     [HttpDelete("sponsored/{sponsoredOrgId}")]
     [HttpPost("sponsored/{sponsoredOrgId}/remove")]
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -185,6 +266,31 @@ public class OrganizationSponsorshipsController : Controller
 
         var lastSyncDate = await _organizationSponsorshipRepository.GetLatestSyncDateBySponsoringOrganizationIdAsync(sponsoringOrg.Id);
         return new OrganizationSponsorshipSyncStatusResponseModel(lastSyncDate);
+    }
+
+    [Authorize("Application")]
+    [HttpGet("{sponsoringOrgId}/sponsored")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<ListResponseModel<OrganizationSponsorshipInvitesResponseModel>> GetSponsoredOrganizations(Guid sponsoringOrgId)
+    {
+        var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
+        if (sponsoringOrg == null)
+        {
+            throw new NotFoundException();
+        }
+        var organization = _currentContext.Organizations.First(x => x.Id == sponsoringOrg.Id);
+        if (!await _currentContext.OrganizationOwner(sponsoringOrg.Id) && !await _currentContext.OrganizationAdmin(sponsoringOrg.Id) && !organization.Permissions.ManageUsers)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
+        return new ListResponseModel<OrganizationSponsorshipInvitesResponseModel>(
+            sponsorships
+                .Where(s => s.IsAdminInitiated)
+                .Select(s => new OrganizationSponsorshipInvitesResponseModel(new OrganizationSponsorshipData(s)))
+        );
+
     }
 
     private Task<User> CurrentUser => _userService.GetUserByIdAsync(_currentContext.UserId.Value);

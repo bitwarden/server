@@ -8,14 +8,13 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Services;
-using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 
 #nullable enable
 
 namespace Bit.Core.AdminConsole.Entities;
 
-public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable, IReferenceable
+public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
 {
     private Dictionary<TwoFactorProviderType, TwoFactorProvider>? _twoFactorProviders;
 
@@ -96,24 +95,33 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// </summary>
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
-    // Deprecated by https://bitwarden.atlassian.net/browse/PM-10863. This
-    // was replaced with `LimitCollectionCreation` and
-    // `LimitCollectionDeletion`.
-    public bool LimitCollectionCreationDeletion
-    {
-        get => LimitCollectionCreation || LimitCollectionDeletion;
-        set
-        {
-            LimitCollectionCreation = value;
-            LimitCollectionDeletion = value;
-        }
-    }
 
     /// <summary>
     /// If set to true, admins, owners, and some custom users can read/write all collections and items in the Admin Console.
     /// If set to false, users generally need collection-level permissions to read/write a collection or its items.
     /// </summary>
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+
+    /// <summary>
+    /// If set to true, members can only delete items when they have a Can Manage permission over the collection.
+    /// If set to false, members can delete items when they have a Can Manage OR Can Edit permission over the collection.
+    /// </summary>
+    public bool LimitItemDeletion { get; set; }
+
+    /// <summary>
+    /// Risk Insights is a reporting feature that provides insights into the security of an organization's vault.
+    /// </summary>
+    public bool UseRiskInsights { get; set; }
+
+    /// <summary>
+    /// If true, the organization can claim domains, which unlocks additional enterprise features
+    /// </summary>
+    public bool UseOrganizationDomains { get; set; }
+
+    /// <summary>
+    /// If set to true, admins can initiate organization-issued sponsorships.
+    /// </summary>
+    public bool UseAdminSponsoredFamilies { get; set; }
 
     public void SetNewId()
     {
@@ -249,12 +257,12 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public bool TwoFactorProviderIsEnabled(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.ContainsKey(provider))
+        if (providers == null || !providers.TryGetValue(provider, out var twoFactorProvider))
         {
             return false;
         }
 
-        return providers[provider].Enabled && Use2fa;
+        return twoFactorProvider.Enabled && Use2fa;
     }
 
     public bool TwoFactorIsEnabled()
@@ -271,12 +279,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public TwoFactorProvider? GetTwoFactorProvider(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.ContainsKey(provider))
-        {
-            return null;
-        }
-
-        return providers[provider];
+        return providers?.GetValueOrDefault(provider);
     }
 
     public void UpdateFromLicense(OrganizationLicense license, IFeatureService featureService)
@@ -314,11 +317,8 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
-
-        if (!featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit))
-        {
-            LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
-            AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
-        }
+        UseRiskInsights = license.UseRiskInsights;
+        UseOrganizationDomains = license.UseOrganizationDomains;
+        UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies;
     }
 }

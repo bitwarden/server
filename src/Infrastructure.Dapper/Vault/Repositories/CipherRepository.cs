@@ -1,7 +1,7 @@
 ﻿using System.Data;
 using System.Text.Json;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -98,7 +98,10 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
             return results
                 .GroupBy(c => c.Id)
-                .Select(g => g.OrderByDescending(og => og.Edit).First())
+                .Select(g =>
+                    g.OrderByDescending(og => og.Manage)
+                        .ThenByDescending(og => og.Edit)
+                        .ThenByDescending(og => og.ViewPassword).First())
                 .ToList();
         }
     }
@@ -309,6 +312,42 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
+    public async Task<ICollection<OrganizationCipherPermission>> GetCipherPermissionsForOrganizationAsync(
+        Guid organizationId, Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationCipherPermission>(
+                $"[{Schema}].[CipherOrganizationPermissions_GetManyByOrganizationId]",
+                new { OrganizationId = organizationId, UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<ICollection<UserSecurityTaskCipher>> GetUserSecurityTasksByCipherIdsAsync(
+        Guid organizationId, IEnumerable<SecurityTask> tasks)
+    {
+        var cipherIds = tasks.Where(t => t.CipherId.HasValue).Select(t => t.CipherId.Value).Distinct().ToList();
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+
+            var results = await connection.QueryAsync<UserCipherForTask>(
+                $"[{Schema}].[UserSecurityTasks_GetManyByCipherIds]",
+                new { OrganizationId = organizationId, CipherIds = cipherIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.Select(r => new UserSecurityTaskCipher
+            {
+                UserId = r.UserId,
+                Email = r.Email,
+                CipherId = r.CipherId,
+                TaskId = tasks.First(t => t.CipherId == r.CipherId).Id
+            }).ToList();
+        }
+    }
+
     /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
         Guid userId, IEnumerable<Cipher> ciphers)
@@ -448,7 +487,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
+    public async Task CreateAsync(Guid userId, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
     {
         if (!ciphers.Any())
         {
@@ -482,7 +521,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
                     await connection.ExecuteAsync(
                             $"[{Schema}].[User_BumpAccountRevisionDate]",
-                            new { Id = ciphers.First().UserId },
+                            new { Id = userId },
                             commandType: CommandType.StoredProcedure, transaction: transaction);
 
                     transaction.Commit();
@@ -675,7 +714,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             row[creationDateColumn] = cipher.CreationDate;
             row[revisionDateColumn] = cipher.RevisionDate;
             row[deletedDateColumn] = cipher.DeletedDate.HasValue ? (object)cipher.DeletedDate : DBNull.Value;
-            row[repromptColumn] = cipher.Reprompt;
+            row[repromptColumn] = cipher.Reprompt.HasValue ? cipher.Reprompt.Value : DBNull.Value;
             row[keyColummn] = cipher.Key;
 
             ciphersTable.Rows.Add(row);

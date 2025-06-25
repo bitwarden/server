@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoMapper;
-using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
@@ -142,8 +142,10 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Vault.Entities.Folder> folders)
+    public async Task CreateAsync(Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers,
+        IEnumerable<Core.Vault.Entities.Folder> folders)
     {
+        ciphers = ciphers.ToList();
         if (!ciphers.Any())
         {
             return;
@@ -156,7 +158,8 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
             var cipherEntities = Mapper.Map<List<Cipher>>(ciphers);
             await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
-            await dbContext.UserBumpAccountRevisionDateAsync(ciphers.First().UserId.GetValueOrDefault());
+            await dbContext.UserBumpAccountRevisionDateAsync(userId);
+
             await dbContext.SaveChangesAsync();
         }
     }
@@ -302,6 +305,97 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
+    public async Task<ICollection<OrganizationCipherPermission>>
+        GetCipherPermissionsForOrganizationAsync(Guid organizationId, Guid userId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new CipherOrganizationPermissionsQuery(organizationId, userId).Run(dbContext);
+
+            ICollection<OrganizationCipherPermission> permissions;
+
+            // SQLite does not support the GROUP BY clause
+            if (dbContext.Database.IsSqlite())
+            {
+                permissions = (await query.ToListAsync())
+                    .GroupBy(c => new { c.Id, c.OrganizationId })
+                    .Select(g => new OrganizationCipherPermission
+                    {
+                        Id = g.Key.Id,
+                        OrganizationId = g.Key.OrganizationId,
+                        Read = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Read))),
+                        ViewPassword = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.ViewPassword))),
+                        Edit = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
+                        Manage = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Manage))),
+                    }).ToList();
+            }
+            else
+            {
+                var groupByQuery = from p in query
+                                   group p by new { p.Id, p.OrganizationId }
+                    into g
+                                   select new OrganizationCipherPermission
+                                   {
+                                       Id = g.Key.Id,
+                                       OrganizationId = g.Key.OrganizationId,
+                                       Read = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Read))),
+                                       ViewPassword = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.ViewPassword))),
+                                       Edit = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
+                                       Manage = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Manage))),
+                                   };
+                permissions = await groupByQuery.ToListAsync();
+            }
+
+            return permissions;
+        }
+    }
+
+    public async Task<ICollection<UserSecurityTaskCipher>> GetUserSecurityTasksByCipherIdsAsync(Guid organizationId, IEnumerable<Core.Vault.Entities.SecurityTask> tasks)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var cipherIds = tasks.Where(t => t.CipherId.HasValue).Select(t => t.CipherId.Value);
+            var dbContext = GetDatabaseContext(scope);
+            var query = new UserSecurityTasksByCipherIdsQuery(organizationId, cipherIds).Run(dbContext);
+
+            ICollection<UserSecurityTaskCipher> userTaskCiphers;
+
+            // SQLite does not support the GROUP BY clause
+            if (dbContext.Database.IsSqlite())
+            {
+                userTaskCiphers = (await query.ToListAsync())
+                    .GroupBy(c => new { c.UserId, c.Email, c.CipherId })
+                    .Select(g => new UserSecurityTaskCipher
+                    {
+                        UserId = g.Key.UserId,
+                        Email = g.Key.Email,
+                        CipherId = g.Key.CipherId,
+                    }).ToList();
+            }
+            else
+            {
+                var groupByQuery = from p in query
+                                   group p by new { p.UserId, p.Email, p.CipherId }
+                    into g
+                                   select new UserSecurityTaskCipher
+                                   {
+                                       UserId = g.Key.UserId,
+                                       CipherId = g.Key.CipherId,
+                                       Email = g.Key.Email,
+                                   };
+                userTaskCiphers = await groupByQuery.ToListAsync();
+            }
+
+            foreach (var userTaskCipher in userTaskCiphers)
+            {
+                userTaskCipher.TaskId = tasks.First(t => t.CipherId == userTaskCipher.CipherId).Id;
+            }
+
+            return userTaskCiphers;
+        }
+    }
+
     public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -363,7 +457,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            IQueryable<CipherDetails> cipherDetailsView = withOrganizations ?
+            var cipherDetailsView = withOrganizations ?
                 new UserCipherDetailsQuery(userId).Run(dbContext) :
                 new CipherDetailsQuery(userId).Run(dbContext);
             if (!withOrganizations)
@@ -386,12 +480,20 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                         Edit = true,
                                         Reprompt = c.Reprompt,
                                         ViewPassword = true,
+                                        Manage = true,
                                         OrganizationUseTotp = false,
                                         Key = c.Key
                                     };
             }
+
             var ciphers = await cipherDetailsView.ToListAsync();
-            return ciphers;
+
+            return ciphers.GroupBy(c => c.Id)
+                .Select(g => g.OrderByDescending(c => c.Manage)
+                    .ThenByDescending(c => c.Edit)
+                    .ThenByDescending(c => c.ViewPassword)
+                    .First())
+                .ToList();
         }
     }
 
@@ -771,8 +873,30 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var entities = Mapper.Map<List<Cipher>>(ciphers);
-            await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, entities);
+            var ciphersToUpdate = ciphers.ToDictionary(c => c.Id);
+
+            var existingCiphers = await dbContext.Ciphers
+                .Where(c => c.UserId == userId && ciphersToUpdate.Keys.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id);
+
+            foreach (var (cipherId, cipher) in ciphersToUpdate)
+            {
+                if (!existingCiphers.TryGetValue(cipherId, out var existingCipher))
+                {
+                    // The Dapper version does not validate that the same amount of items given where updated.
+                    continue;
+                }
+
+                existingCipher.UserId = cipher.UserId;
+                existingCipher.OrganizationId = cipher.OrganizationId;
+                existingCipher.Type = cipher.Type;
+                existingCipher.Data = cipher.Data;
+                existingCipher.Attachments = cipher.Attachments;
+                existingCipher.RevisionDate = cipher.RevisionDate;
+                existingCipher.DeletedDate = cipher.DeletedDate;
+                existingCipher.Key = cipher.Key;
+            }
+
             await dbContext.UserBumpAccountRevisionDateAsync(userId);
             await dbContext.SaveChangesAsync();
         }

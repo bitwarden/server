@@ -1,7 +1,8 @@
-﻿using Bit.Core;
+﻿using System.Reflection;
+using System.Text;
+using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Context;
@@ -11,10 +12,8 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Identity.Controllers;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -35,13 +34,12 @@ public class AccountsControllerTests : IDisposable
     private readonly ILogger<AccountsController> _logger;
     private readonly IUserRepository _userRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
-    private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
+    private readonly GlobalSettings _globalSettings;
 
 
     public AccountsControllerTests()
@@ -50,26 +48,24 @@ public class AccountsControllerTests : IDisposable
         _logger = Substitute.For<ILogger<AccountsController>>();
         _userRepository = Substitute.For<IUserRepository>();
         _registerUserCommand = Substitute.For<IRegisterUserCommand>();
-        _captchaValidationService = Substitute.For<ICaptchaValidationService>();
         _assertionOptionsDataProtector = Substitute.For<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>();
         _getWebAuthnLoginCredentialAssertionOptionsCommand = Substitute.For<IGetWebAuthnLoginCredentialAssertionOptionsCommand>();
         _sendVerificationEmailForRegistrationCommand = Substitute.For<ISendVerificationEmailForRegistrationCommand>();
-        _referenceEventService = Substitute.For<IReferenceEventService>();
         _featureService = Substitute.For<IFeatureService>();
         _registrationEmailVerificationTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>();
+        _globalSettings = Substitute.For<GlobalSettings>();
 
         _sut = new AccountsController(
             _currentContext,
             _logger,
             _userRepository,
             _registerUserCommand,
-            _captchaValidationService,
             _assertionOptionsDataProtector,
             _getWebAuthnLoginCredentialAssertionOptionsCommand,
             _sendVerificationEmailForRegistrationCommand,
-            _referenceEventService,
             _featureService,
-            _registrationEmailVerificationTokenDataFactory
+            _registrationEmailVerificationTokenDataFactory,
+            _globalSettings
         );
     }
 
@@ -95,8 +91,9 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task PostPrelogin_WhenUserDoesNotExist_ShouldDefaultToPBKDF()
+    public async Task PostPrelogin_WhenUserDoesNotExistAndNoDefaultKdfHmacKeySet_ShouldDefaultToPBKDF()
     {
+        SetDefaultKdfHmacKey(null);
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
 
         var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
@@ -105,48 +102,36 @@ public class AccountsControllerTests : IDisposable
         Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, response.KdfIterations);
     }
 
-    [Fact]
-    public async Task PostRegister_ShouldRegisterUser()
+    [Theory]
+    [BitAutoData]
+    public async Task PostPrelogin_WhenUserDoesNotExistAndDefaultKdfHmacKeyIsSet_ShouldComputeHmacAndReturnExpectedKdf(string email)
     {
-        var passwordHash = "abcdef";
-        var token = "123456";
-        var userGuid = new Guid();
-        _registerUserCommand.RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), passwordHash, token, userGuid)
-                    .Returns(Task.FromResult(IdentityResult.Success));
-        var request = new RegisterRequestModel
+        // Arrange:
+        var defaultKey = Encoding.UTF8.GetBytes("my-secret-key");
+        SetDefaultKdfHmacKey(defaultKey);
+
+        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
+
+        var fieldInfo = typeof(AccountsController).GetField("_defaultKdfResults", BindingFlags.NonPublic | BindingFlags.Static);
+        if (fieldInfo == null)
+            throw new InvalidOperationException("Field '_defaultKdfResults' not found.");
+
+        var defaultKdfResults = (List<UserKdfInformation>)fieldInfo.GetValue(null)!;
+
+        var expectedIndex = GetExpectedKdfIndex(email, defaultKey, defaultKdfResults);
+        var expectedKdf = defaultKdfResults[expectedIndex];
+
+        // Act
+        var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = email });
+
+        // Assert: Ensure the returned KDF matches the expected one from the computed hash
+        Assert.Equal(expectedKdf.Kdf, response.Kdf);
+        Assert.Equal(expectedKdf.KdfIterations, response.KdfIterations);
+        if (expectedKdf.Kdf == KdfType.Argon2id)
         {
-            Name = "Example User",
-            Email = "user@example.com",
-            MasterPasswordHash = passwordHash,
-            MasterPasswordHint = "example",
-            Token = token,
-            OrganizationUserId = userGuid
-        };
-
-        await _sut.PostRegister(request);
-
-        await _registerUserCommand.Received(1).RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), passwordHash, token, userGuid);
-    }
-
-    [Fact]
-    public async Task PostRegister_WhenUserServiceFails_ShouldThrowBadRequestException()
-    {
-        var passwordHash = "abcdef";
-        var token = "123456";
-        var userGuid = new Guid();
-        _registerUserCommand.RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), passwordHash, token, userGuid)
-                    .Returns(Task.FromResult(IdentityResult.Failed()));
-        var request = new RegisterRequestModel
-        {
-            Name = "Example User",
-            Email = "user@example.com",
-            MasterPasswordHash = passwordHash,
-            MasterPasswordHint = "example",
-            Token = token,
-            OrganizationUserId = userGuid
-        };
-
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegister(request));
+            Assert.Equal(expectedKdf.KdfMemory, response.KdfMemory);
+            Assert.Equal(expectedKdf.KdfParallelism, response.KdfParallelism);
+        }
     }
 
     [Theory]
@@ -172,8 +157,6 @@ public class AccountsControllerTests : IDisposable
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(200, okResult.StatusCode);
         Assert.Equal(token, okResult.Value);
-
-        await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e => e.Type == ReferenceEventType.SignupEmailSubmit));
     }
 
     [Theory]
@@ -196,7 +179,6 @@ public class AccountsControllerTests : IDisposable
         // Assert
         var noContentResult = Assert.IsType<NoContentResult>(result);
         Assert.Equal(204, noContentResult.StatusCode);
-        await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e => e.Type == ReferenceEventType.SignupEmailSubmit));
     }
 
     [Theory, BitAutoData]
@@ -413,12 +395,6 @@ public class AccountsControllerTests : IDisposable
         // Assert
         var okResult = Assert.IsType<OkResult>(result);
         Assert.Equal(200, okResult.StatusCode);
-
-        await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
-            e.Type == ReferenceEventType.SignupEmailClicked
-            && e.EmailVerificationTokenValid == true
-            && e.UserAlreadyExists == false
-            ));
     }
 
     [Theory, BitAutoData]
@@ -444,12 +420,6 @@ public class AccountsControllerTests : IDisposable
 
         // Act & assert
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterVerificationEmailClicked(requestModel));
-
-        await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
-            e.Type == ReferenceEventType.SignupEmailClicked
-            && e.EmailVerificationTokenValid == false
-            && e.UserAlreadyExists == false
-        ));
     }
 
 
@@ -476,14 +446,30 @@ public class AccountsControllerTests : IDisposable
 
         // Act & assert
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterVerificationEmailClicked(requestModel));
-
-        await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
-            e.Type == ReferenceEventType.SignupEmailClicked
-            && e.EmailVerificationTokenValid == true
-            && e.UserAlreadyExists == true
-        ));
     }
 
+    private void SetDefaultKdfHmacKey(byte[]? newKey)
+    {
+        var fieldInfo = typeof(AccountsController).GetField("_defaultKdfHmacKey", BindingFlags.NonPublic | BindingFlags.Instance);
+        if (fieldInfo == null)
+        {
+            throw new InvalidOperationException("Field '_defaultKdfHmacKey' not found.");
+        }
 
+        fieldInfo.SetValue(_sut, newKey);
+    }
 
+    private int GetExpectedKdfIndex(string email, byte[] defaultKey, List<UserKdfInformation> defaultKdfResults)
+    {
+        // Compute the HMAC hash of the email
+        var hmacMessage = Encoding.UTF8.GetBytes(email.Trim().ToLowerInvariant());
+        using var hmac = new System.Security.Cryptography.HMACSHA256(defaultKey);
+        var hmacHash = hmac.ComputeHash(hmacMessage);
+
+        // Convert the hash to a number and calculate the index
+        var hashHex = BitConverter.ToString(hmacHash).Replace("-", string.Empty).ToLowerInvariant();
+        var hashFirst8Bytes = hashHex.Substring(0, 16);
+        var hashNumber = long.Parse(hashFirst8Bytes, System.Globalization.NumberStyles.HexNumber);
+        return (int)(Math.Abs(hashNumber) % defaultKdfResults.Count);
+    }
 }

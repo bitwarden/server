@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bit.Core.Exceptions;
+
+#nullable enable
 
 public class BadRequestException : Exception
 {
@@ -29,5 +32,16 @@ public class BadRequestException : Exception
         ModelState = modelState;
     }
 
-    public ModelStateDictionary ModelState { get; set; }
+    public BadRequestException(IEnumerable<IdentityError> identityErrors)
+    : base("The model state is invalid.")
+    {
+        ModelState = new ModelStateDictionary();
+
+        foreach (var error in identityErrors)
+        {
+            ModelState.AddModelError(error.Code, error.Description);
+        }
+    }
+
+    public ModelStateDictionary? ModelState { get; set; }
 }

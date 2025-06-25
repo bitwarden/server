@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <UserSecretsId>6570f288-5c2c-47ad-8978-f3da255079c2</UserSecretsId>
   </PropertyGroup>

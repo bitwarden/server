@@ -1,8 +1,15 @@
-﻿using Bit.Core.Billing.Caches;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Tax.Models;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -19,10 +26,12 @@ namespace Bit.Core.Billing.Services.Implementations;
 
 public class SubscriberService(
     IBraintreeGateway braintreeGateway,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
     ISetupIntentCache setupIntentCache,
-    IStripeAdapter stripeAdapter) : ISubscriberService
+    IStripeAdapter stripeAdapter,
+    ITaxService taxService) : ISubscriberService
 {
     public async Task CancelSubscription(
         ISubscriber subscriber,
@@ -121,7 +130,7 @@ public class SubscriberService(
                 [subscriber.BraintreeCloudRegionField()] = globalSettings.BaseServiceUri.CloudRegion
             },
             Email = subscriber.BillingEmailAddress(),
-            PaymentMethodNonce = paymentMethodNonce,
+            PaymentMethodNonce = paymentMethodNonce
         });
 
         if (customerResult.IsSuccess())
@@ -436,7 +445,8 @@ public class SubscriberService(
         ArgumentNullException.ThrowIfNull(subscriber);
         ArgumentNullException.ThrowIfNull(tokenizedPaymentSource);
 
-        var customer = await GetCustomerOrThrow(subscriber);
+        var customerGetOptions = new CustomerGetOptions { Expand = ["tax", "tax_ids"] };
+        var customer = await GetCustomerOrThrow(subscriber, customerGetOptions);
 
         var (type, token) = tokenizedPaymentSource;
 
@@ -474,7 +484,7 @@ public class SubscriberService(
 
                     var matchingSetupIntent = setupIntentsForUpdatedPaymentMethod.First();
 
-                    // Find the customer's existing setup intents that should be cancelled.
+                    // Find the customer's existing setup intents that should be canceled.
                     var existingSetupIntentsForCustomer = (await getExistingSetupIntentsForCustomer)
                         .Where(si =>
                             si.Status is "requires_payment_method" or "requires_confirmation" or "requires_action");
@@ -511,7 +521,7 @@ public class SubscriberService(
                     await stripeAdapter.PaymentMethodAttachAsync(token,
                         new PaymentMethodAttachOptions { Customer = subscriber.GatewayCustomerId });
 
-                    // Find the customer's existing setup intents that should be cancelled.
+                    // Find the customer's existing setup intents that should be canceled.
                     var existingSetupIntentsForCustomer = (await getExistingSetupIntentsForCustomer)
                         .Where(si =>
                             si.Status is "requires_payment_method" or "requires_confirmation" or "requires_action");
@@ -523,8 +533,9 @@ public class SubscriberService(
 
                     var metadata = customer.Metadata;
 
-                    if (metadata.ContainsKey(BraintreeCustomerIdKey))
+                    if (metadata.TryGetValue(BraintreeCustomerIdKey, out var value))
                     {
+                        metadata[BraintreeCustomerIdOldKey] = value;
                         metadata[BraintreeCustomerIdKey] = null;
                     }
 
@@ -594,7 +605,7 @@ public class SubscriberService(
             Expand = ["subscriptions", "tax", "tax_ids"]
         });
 
-        await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+        customer = await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
         {
             Address = new AddressOptions
             {
@@ -604,86 +615,184 @@ public class SubscriberService(
                 Line2 = taxInformation.Line2,
                 City = taxInformation.City,
                 State = taxInformation.State
-            }
+            },
+            Expand = ["subscriptions", "tax", "tax_ids"]
         });
 
-        if (!subscriber.IsUser())
-        {
-            var taxId = customer.TaxIds?.FirstOrDefault();
+        var taxId = customer.TaxIds?.FirstOrDefault();
 
-            if (taxId != null)
+        if (taxId != null)
+        {
+            await stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id);
+        }
+
+        if (!string.IsNullOrWhiteSpace(taxInformation.TaxId))
+        {
+            var taxIdType = taxInformation.TaxIdType;
+            if (string.IsNullOrWhiteSpace(taxIdType))
             {
-                await stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id);
+                taxIdType = taxService.GetStripeTaxCode(taxInformation.Country,
+                    taxInformation.TaxId);
+
+                if (taxIdType == null)
+                {
+                    logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
+                        taxInformation.Country,
+                        taxInformation.TaxId);
+
+                    throw new BadRequestException("billingTaxIdTypeInferenceError");
+                }
             }
 
-            var taxIdType = taxInformation.GetTaxIdType();
-
-            if (!string.IsNullOrWhiteSpace(taxInformation.TaxId) &&
-                !string.IsNullOrWhiteSpace(taxIdType))
+            try
             {
-                await stripeAdapter.TaxIdCreateAsync(customer.Id, new TaxIdCreateOptions
+                await stripeAdapter.TaxIdCreateAsync(customer.Id,
+                    new TaxIdCreateOptions { Type = taxIdType, Value = taxInformation.TaxId });
+
+                if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
                 {
-                    Type = taxIdType,
-                    Value = taxInformation.TaxId,
-                });
+                    await stripeAdapter.TaxIdCreateAsync(customer.Id,
+                        new TaxIdCreateOptions { Type = StripeConstants.TaxIdType.EUVAT, Value = $"ES{taxInformation.TaxId}" });
+                }
+            }
+            catch (StripeException e)
+            {
+                switch (e.StripeError.Code)
+                {
+                    case StripeConstants.ErrorCodes.TaxIdInvalid:
+                        logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
+                            taxInformation.TaxId,
+                            taxInformation.Country);
+
+                        throw new BadRequestException("billingInvalidTaxIdError");
+
+                    default:
+                        logger.LogError(e,
+                            "Error creating tax ID '{TaxId}' in country '{Country}' for customer '{CustomerID}'.",
+                            taxInformation.TaxId,
+                            taxInformation.Country,
+                            customer.Id);
+
+                        throw new BadRequestException("billingTaxIdCreationError");
+                }
             }
         }
 
-        if (SubscriberIsEligibleForAutomaticTax(subscriber, customer))
+        var subscription =
+            customer.Subscriptions.First(subscription => subscription.Id == subscriber.GatewaySubscriptionId);
+
+        var isBusinessUseSubscriber = subscriber switch
         {
-            await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
-                new SubscriptionUpdateOptions
+            Organization organization => organization.PlanType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families,
+            Provider => true,
+            _ => false
+        };
+
+        var setNonUSBusinessUseToReverseCharge =
+            featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+        if (setNonUSBusinessUseToReverseCharge && isBusinessUseSubscriber)
+        {
+            switch (customer)
+            {
+                case
                 {
-                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
-                    DefaultTaxRates = []
-                });
+                    Address.Country: not "US",
+                    TaxExempt: not StripeConstants.TaxExempt.Reverse
+                }:
+                    await stripeAdapter.CustomerUpdateAsync(customer.Id,
+                        new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
+                    break;
+                case
+                {
+                    Address.Country: "US",
+                    TaxExempt: StripeConstants.TaxExempt.Reverse
+                }:
+                    await stripeAdapter.CustomerUpdateAsync(customer.Id,
+                        new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.None });
+                    break;
+            }
+
+            if (!subscription.AutomaticTax.Enabled)
+            {
+                await stripeAdapter.SubscriptionUpdateAsync(subscription.Id,
+                    new SubscriptionUpdateOptions
+                    {
+                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+                    });
+            }
         }
+        else
+        {
+            var automaticTaxShouldBeEnabled = subscriber switch
+            {
+                User => true,
+                Organization organization => organization.PlanType.GetProductTier() == ProductTierType.Families ||
+                                             customer.Address.Country == "US" || (customer.TaxIds?.Any() ?? false),
+                Provider => customer.Address.Country == "US" || (customer.TaxIds?.Any() ?? false),
+                _ => false
+            };
 
-        return;
-
-        bool SubscriberIsEligibleForAutomaticTax(ISubscriber localSubscriber, Customer localCustomer)
-            => !string.IsNullOrEmpty(localSubscriber.GatewaySubscriptionId) &&
-               (localCustomer.Subscriptions?.Any(sub => sub.Id == localSubscriber.GatewaySubscriptionId && !sub.AutomaticTax.Enabled) ?? false) &&
-               localCustomer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
+            if (automaticTaxShouldBeEnabled && !subscription.AutomaticTax.Enabled)
+            {
+                await stripeAdapter.SubscriptionUpdateAsync(subscription.Id,
+                    new SubscriptionUpdateOptions
+                    {
+                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+                    });
+            }
+        }
     }
 
     public async Task VerifyBankAccount(
         ISubscriber subscriber,
-        (long, long) microdeposits)
+        string descriptorCode)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
         var setupIntentId = await setupIntentCache.Get(subscriber.Id);
 
         if (string.IsNullOrEmpty(setupIntentId))
         {
             logger.LogError("No setup intent ID exists to verify for subscriber with ID ({SubscriberID})", subscriber.Id);
-
             throw new BillingException();
         }
 
-        var (amount1, amount2) = microdeposits;
-
-        await stripeAdapter.SetupIntentVerifyMicroDeposit(setupIntentId, new SetupIntentVerifyMicrodepositsOptions
+        try
         {
-            Amounts = [amount1, amount2]
-        });
+            await stripeAdapter.SetupIntentVerifyMicroDeposit(setupIntentId,
+                new SetupIntentVerifyMicrodepositsOptions { DescriptorCode = descriptorCode });
 
-        var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId);
+            var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId);
 
-        await stripeAdapter.PaymentMethodAttachAsync(setupIntent.PaymentMethodId, new PaymentMethodAttachOptions
-        {
-            Customer = subscriber.GatewayCustomerId
-        });
+            await stripeAdapter.PaymentMethodAttachAsync(setupIntent.PaymentMethodId,
+                new PaymentMethodAttachOptions { Customer = subscriber.GatewayCustomerId });
 
-        await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
-            new CustomerUpdateOptions
-            {
-                InvoiceSettings = new CustomerInvoiceSettingsOptions
+            await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
+                new CustomerUpdateOptions
                 {
-                    DefaultPaymentMethod = setupIntent.PaymentMethodId
-                }
-            });
+                    InvoiceSettings = new CustomerInvoiceSettingsOptions
+                    {
+                        DefaultPaymentMethod = setupIntent.PaymentMethodId
+                    }
+                });
+        }
+        catch (StripeException stripeException)
+        {
+            if (!string.IsNullOrEmpty(stripeException.StripeError?.Code))
+            {
+                var message = stripeException.StripeError.Code switch
+                {
+                    StripeConstants.ErrorCodes.PaymentMethodMicroDepositVerificationAttemptsExceeded => "You have exceeded the number of allowed verification attempts. Please contact support.",
+                    StripeConstants.ErrorCodes.PaymentMethodMicroDepositVerificationDescriptorCodeMismatch => "The verification code you provided does not match the one sent to your bank account. Please try again.",
+                    StripeConstants.ErrorCodes.PaymentMethodMicroDepositVerificationTimeout => "Your bank account was not verified within the required time period. Please contact support.",
+                    _ => BillingException.DefaultMessage
+                };
+
+                throw new BadRequestException(message);
+            }
+
+            logger.LogError(stripeException, "An unhandled Stripe exception was thrown while verifying subscriber's ({SubscriberID}) bank account", subscriber.Id);
+            throw new BillingException();
+        }
     }
 
     #region Shared Utilities
@@ -756,6 +865,7 @@ public class SubscriberService(
             customer.Address.Country,
             customer.Address.PostalCode,
             customer.TaxIds?.FirstOrDefault()?.Value,
+            customer.TaxIds?.FirstOrDefault()?.Type,
             customer.Address.Line1,
             customer.Address.Line2,
             customer.Address.City,
@@ -767,8 +877,9 @@ public class SubscriberService(
     {
         var metadata = customer.Metadata ?? new Dictionary<string, string>();
 
-        if (metadata.ContainsKey(BraintreeCustomerIdKey))
+        if (metadata.TryGetValue(BraintreeCustomerIdKey, out var value))
         {
+            metadata[BraintreeCustomerIdOldKey] = value;
             metadata[BraintreeCustomerIdKey] = null;
 
             await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions

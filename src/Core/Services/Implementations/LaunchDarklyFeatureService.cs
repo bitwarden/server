@@ -16,10 +16,12 @@ public class LaunchDarklyFeatureService : IFeatureService
     private readonly ICurrentContext _currentContext;
     private const string _anonymousUser = "25a15cac-58cf-4ac0-ad0f-b17c4bd92294";
 
+    private const string _contextKindDevice = "device";
     private const string _contextKindOrganization = "organization";
     private const string _contextKindServiceAccount = "service-account";
 
     private const string _contextAttributeClientVersion = "client-version";
+    private const string _contextAttributeClientVersionIsPrerelease = "client-version-is-prerelease";
     private const string _contextAttributeDeviceType = "device-type";
     private const string _contextAttributeClientType = "client-type";
     private const string _contextAttributeOrganizations = "organizations";
@@ -145,6 +147,7 @@ public class LaunchDarklyFeatureService : IFeatureService
             if (_currentContext.ClientVersion != null)
             {
                 builder.Set(_contextAttributeClientVersion, _currentContext.ClientVersion.ToString());
+                builder.Set(_contextAttributeClientVersionIsPrerelease, _currentContext.ClientVersionIsPrerelease);
             }
 
             if (_currentContext.DeviceType.HasValue)
@@ -155,6 +158,16 @@ public class LaunchDarklyFeatureService : IFeatureService
         }
 
         var builder = LaunchDarkly.Sdk.Context.MultiBuilder();
+
+        if (!string.IsNullOrWhiteSpace(_currentContext.DeviceIdentifier))
+        {
+            var ldDevice = LaunchDarkly.Sdk.Context.Builder(_currentContext.DeviceIdentifier);
+
+            ldDevice.Kind(_contextKindDevice);
+            SetCommonContextAttributes(ldDevice);
+
+            builder.Add(ldDevice.Build());
+        }
 
         switch (_currentContext.IdentityClientType)
         {

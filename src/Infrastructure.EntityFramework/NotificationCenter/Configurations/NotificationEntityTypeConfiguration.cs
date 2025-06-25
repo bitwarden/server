@@ -30,6 +30,16 @@ public class NotificationEntityTypeConfiguration : IEntityTypeConfiguration<Noti
             .HasIndex(n => n.UserId)
             .IsClustered(false);
 
+        builder
+            .HasIndex(n => n.TaskId)
+            .IsClustered(false);
+
+        builder
+            .HasOne(n => n.Task)
+            .WithMany()
+            .HasForeignKey(n => n.TaskId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.ToTable(nameof(Notification));
     }
 }

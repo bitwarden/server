@@ -32,10 +32,14 @@ SELECT
     PU.[Id] ProviderUserId,
     P.[Name] ProviderName,
     O.[PlanType],
-    O.[LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
     O.[LimitCollectionCreation],
     O.[LimitCollectionDeletion],
-    O.[AllowAdminAccessToAllCollectionItems]
+    O.[AllowAdminAccessToAllCollectionItems],
+    O.[UseRiskInsights],
+    O.[UseAdminSponsoredFamilies],
+    P.[Type] ProviderType,
+    O.[LimitItemDeletion],
+    O.[UseOrganizationDomains]
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN

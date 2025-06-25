@@ -1,8 +1,10 @@
-﻿using Bit.Core.Auth.UserFeatures.UserKey;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Queries;
+
 
 namespace Bit.Core.Vault.Repositories;
 
@@ -30,7 +32,10 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task DeleteByUserIdAsync(Guid userId);
     Task DeleteByOrganizationIdAsync(Guid organizationId);
     Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers);
-    Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
+    /// <summary>
+    /// Create ciphers and folders for the specified UserId. Must not be used to create organization owned items.
+    /// </summary>
+    Task CreateAsync(Guid userId, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
     Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
         IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers);
     Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId);
@@ -38,6 +43,23 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId);
     Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
     Task DeleteDeletedAsync(DateTime deletedDateBefore);
+
+    /// <summary>
+    /// Low-level query to get all cipher permissions for a user in an organization. DOES NOT consider the user's
+    /// organization role, any collection management settings on the organization, or special unassigned cipher
+    /// permissions.
+    ///
+    /// Recommended to use <see cref="IGetCipherPermissionsForUserQuery"/> instead to handle those cases.
+    /// </summary>
+    Task<ICollection<OrganizationCipherPermission>> GetCipherPermissionsForOrganizationAsync(Guid organizationId,
+        Guid userId);
+
+    /// <summary>
+    /// Returns the users and the cipher ids for security tawsks that are applicable to them.
+    ///
+    /// Security tasks are actionable when a user has manage access to the associated cipher.
+    /// </summary>
+    Task<ICollection<UserSecurityTaskCipher>> GetUserSecurityTasksByCipherIdsAsync(Guid organizationId, IEnumerable<SecurityTask> tasks);
 
     /// <summary>
     /// Updates encrypted data for ciphers during a key rotation

@@ -24,7 +24,7 @@ public class OrganizationUserRepositoryTests
 {
     [CiSkippedTheory, EfOrganizationUserAutoData]
     public async Task CreateAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org,
-        OrganizationUserCompare equalityComparer, List<EfRepo.OrganizationUserRepository> suts,
+        OrganizationUserCompare equalityComparer, List<EfAdminConsoleRepo.OrganizationUserRepository> suts,
         List<EfRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
         SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
         SqlRepo.OrganizationRepository sqlOrgRepo)
@@ -67,7 +67,7 @@ public class OrganizationUserRepositoryTests
         User user,
         Organization org,
         OrganizationUserCompare equalityComparer,
-        List<EfRepo.OrganizationUserRepository> suts,
+        List<EfAdminConsoleRepo.OrganizationUserRepository> suts,
         List<EfRepo.UserRepository> efUserRepos,
         List<EfRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.OrganizationUserRepository sqlOrgUserRepo,
@@ -113,7 +113,7 @@ public class OrganizationUserRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationUserAutoData]
-    public async Task DeleteAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org, List<EfRepo.OrganizationUserRepository> suts,
+    public async Task DeleteAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org, List<EfAdminConsoleRepo.OrganizationUserRepository> suts,
         List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
         SqlRepo.OrganizationRepository sqlOrgRepo)
@@ -188,7 +188,7 @@ public class OrganizationUserRepositoryTests
         List<EfAdminConsoleRepo.PolicyRepository> efPolicyRepository,
         List<EfRepo.UserRepository> efUserRepository,
         List<EfRepo.OrganizationRepository> efOrganizationRepository,
-        List<EfRepo.OrganizationUserRepository> suts,
+        List<EfAdminConsoleRepo.OrganizationUserRepository> suts,
         List<EfAdminConsoleRepo.ProviderRepository> efProviderRepository,
         List<EfAdminConsoleRepo.ProviderOrganizationRepository> efProviderOrganizationRepository,
         List<EfAdminConsoleRepo.ProviderUserRepository> efProviderUserRepository,

@@ -1,8 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -62,7 +64,7 @@ public class SingleOrgPolicyValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task OnSaveSideEffectsAsync_RemovesNonCompliantUsers(
+    public async Task OnSaveSideEffectsAsync_RevokesNonCompliantUsers(
         [PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg, false)] Policy policy,
         Guid savingUserId,
@@ -73,6 +75,7 @@ public class SingleOrgPolicyValidatorTests
 
         var compliantUser1 = new OrganizationUserUserDetails
         {
+            Id = Guid.NewGuid(),
             OrganizationId = organization.Id,
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Confirmed,
@@ -82,6 +85,7 @@ public class SingleOrgPolicyValidatorTests
 
         var compliantUser2 = new OrganizationUserUserDetails
         {
+            Id = Guid.NewGuid(),
             OrganizationId = organization.Id,
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Confirmed,
@@ -91,6 +95,7 @@ public class SingleOrgPolicyValidatorTests
 
         var nonCompliantUser = new OrganizationUserUserDetails
         {
+            Id = Guid.NewGuid(),
             OrganizationId = organization.Id,
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Confirmed,
@@ -104,6 +109,7 @@ public class SingleOrgPolicyValidatorTests
 
         var otherOrganizationUser = new OrganizationUser
         {
+            Id = Guid.NewGuid(),
             OrganizationId = new Guid(),
             UserId = nonCompliantUserId,
             Status = OrganizationUserStatusType.Confirmed
@@ -116,14 +122,27 @@ public class SingleOrgPolicyValidatorTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(savingUserId);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(policyUpdate.OrganizationId).Returns(organization);
 
+        sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
+            .Returns(new CommandResult());
+
         await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
 
-        await sutProvider.GetDependency<IRemoveOrganizationUserCommand>()
+        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .Received(1)
-            .RemoveUserAsync(policyUpdate.OrganizationId, nonCompliantUser.Id, savingUserId);
+            .RevokeNonCompliantOrganizationUsersAsync(
+                Arg.Is<RevokeOrganizationUsersRequest>(r =>
+                    r.OrganizationId == organization.Id &&
+                    r.OrganizationUsers.Count() == 1 &&
+                    r.OrganizationUsers.First().Id == nonCompliantUser.Id));
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(), compliantUser1.Email);
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(), compliantUser2.Email);
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(organization.DisplayName(),
-                "user3@example.com");
+            .SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(), nonCompliantUser.Email);
     }
 }

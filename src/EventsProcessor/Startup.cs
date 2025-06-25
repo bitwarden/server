@@ -24,9 +24,16 @@ public class Startup
         services.AddOptions();
 
         // Settings
-        services.AddGlobalSettingsServices(Configuration, Environment);
+        var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
+
+        // Data Protection
+        services.AddCustomDataProtectionServices(Environment, globalSettings);
+
+        // Repositories
+        services.AddDatabaseRepositories(globalSettings);
 
         // Hosted Services
+        services.AddAzureServiceBusListeners(globalSettings);
         services.AddHostedService<AzureQueueHostedService>();
     }
 

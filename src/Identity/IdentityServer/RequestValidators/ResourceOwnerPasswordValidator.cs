@@ -1,8 +1,8 @@
 ﻿using System.Security.Claims;
 using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
@@ -20,7 +20,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
 {
     private UserManager<User> _userManager;
     private readonly ICurrentContext _currentContext;
-    private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IDeviceValidator _deviceValidator;
     public ResourceOwnerPasswordValidator(
@@ -30,17 +29,16 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        ICaptchaValidationService captchaValidationService,
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IPolicyRequirementQuery policyRequirementQuery)
         : base(
             userManager,
             userService,
@@ -48,7 +46,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             deviceValidator,
             twoFactorAuthenticationValidator,
             organizationUserRepository,
-            mailService,
             logger,
             currentContext,
             globalSettings,
@@ -56,61 +53,30 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             policyService,
             featureService,
             ssoConfigRepository,
-            userDecryptionOptionsBuilder)
+            userDecryptionOptionsBuilder,
+            policyRequirementQuery)
     {
         _userManager = userManager;
         _currentContext = currentContext;
-        _captchaValidationService = captchaValidationService;
         _authRequestRepository = authRequestRepository;
         _deviceValidator = deviceValidator;
     }
 
     public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
     {
-        if (!AuthEmailHeaderIsValid(context))
-        {
-            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
-                "Auth-Email header invalid.");
-            return;
-        }
 
         var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
+        // We want to keep this device around incase the device is new for the user
+        var requestDevice = DeviceValidator.GetDeviceFromRequest(context.Request);
+        var knownDevice = await _deviceValidator.GetKnownDeviceAsync(user, requestDevice);
         var validatorContext = new CustomValidatorRequestContext
         {
             User = user,
-            KnownDevice = await _deviceValidator.KnownDeviceAsync(user, context.Request),
+            KnownDevice = knownDevice != null,
+            Device = knownDevice ?? requestDevice,
         };
-        string bypassToken = null;
-        if (!validatorContext.KnownDevice &&
-            _captchaValidationService.RequireCaptchaValidation(_currentContext, user))
-        {
-            var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
-
-            if (string.IsNullOrWhiteSpace(captchaResponse))
-            {
-                context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Captcha required.",
-                    new Dictionary<string, object>
-                    {
-                        { _captchaValidationService.SiteKeyResponseKeyName, _captchaValidationService.SiteKey },
-                    });
-                return;
-            }
-
-            validatorContext.CaptchaResponse = await _captchaValidationService.ValidateCaptchaResponseAsync(
-                captchaResponse, _currentContext.IpAddress, user);
-            if (!validatorContext.CaptchaResponse.Success)
-            {
-                await BuildErrorResultAsync("Captcha is invalid. Please refresh and try again", false, context, null);
-                return;
-            }
-            bypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
-        }
 
         await ValidateAsync(context, context.Request, validatorContext);
-        if (context.Result.CustomResponse != null && bypassToken != null)
-        {
-            context.Result.CustomResponse["CaptchaBypassToken"] = bypassToken;
-        }
     }
 
     protected async override Task<bool> ValidateContextAsync(ResourceOwnerPasswordValidationContext context,
@@ -156,6 +122,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         return Task.CompletedTask;
     }
 
+    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected override void SetTwoFactorResult(ResourceOwnerPasswordValidationContext context,
         Dictionary<string, object> customResponse)
     {
@@ -163,6 +130,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             customResponse);
     }
 
+    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected override void SetSsoResult(ResourceOwnerPasswordValidationContext context,
         Dictionary<string, object> customResponse)
     {
@@ -170,10 +138,23 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             customResponse);
     }
 
+    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected override void SetErrorResult(ResourceOwnerPasswordValidationContext context,
         Dictionary<string, object> customResponse)
     {
         context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
+    }
+
+    protected override void SetValidationErrorResult(
+        ResourceOwnerPasswordValidationContext context, CustomValidatorRequestContext requestContext)
+    {
+        context.Result = new GrantValidationResult
+        {
+            Error = requestContext.ValidationErrorResult.Error,
+            ErrorDescription = requestContext.ValidationErrorResult.ErrorDescription,
+            IsError = true,
+            CustomResponse = requestContext.CustomResponse
+        };
     }
 
     protected override ClaimsPrincipal GetSubject(ResourceOwnerPasswordValidationContext context)
@@ -181,31 +162,4 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         return context.Result.Subject;
     }
 
-    private bool AuthEmailHeaderIsValid(ResourceOwnerPasswordValidationContext context)
-    {
-        if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Auth-Email"))
-        {
-            return false;
-        }
-        else
-        {
-            try
-            {
-                var authEmailHeader = _currentContext.HttpContext.Request.Headers["Auth-Email"];
-                var authEmailDecoded = CoreHelpers.Base64UrlDecodeString(authEmailHeader);
-
-                if (authEmailDecoded != context.UserName)
-                {
-                    return false;
-                }
-            }
-            catch (System.Exception e) when (e is System.InvalidOperationException || e is System.FormatException)
-            {
-                // Invalid B64 encoding
-                return false;
-            }
-        }
-
-        return true;
-    }
 }

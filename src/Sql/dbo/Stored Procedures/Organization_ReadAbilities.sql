@@ -21,10 +21,13 @@ BEGIN
         [UseResetPassword],
         [UsePolicies],
         [Enabled],
-        [LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
         [LimitCollectionCreation],
         [LimitCollectionDeletion],
-        [AllowAdminAccessToAllCollectionItems]
+        [AllowAdminAccessToAllCollectionItems],
+        [UseRiskInsights],
+        [LimitItemDeletion],
+        [UseOrganizationDomains],
+        [UseAdminSponsoredFamilies]
     FROM
         [dbo].[Organization]
 END

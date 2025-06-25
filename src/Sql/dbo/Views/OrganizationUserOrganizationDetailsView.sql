@@ -46,10 +46,14 @@ SELECT
     O.[UsePasswordManager],
     O.[SmSeats],
     O.[SmServiceAccounts],
-    O.[LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
     O.[LimitCollectionCreation],
     O.[LimitCollectionDeletion],
-    O.[AllowAdminAccessToAllCollectionItems]
+    O.[AllowAdminAccessToAllCollectionItems],
+    O.[UseRiskInsights],
+    O.[LimitItemDeletion],
+    O.[UseAdminSponsoredFamilies],
+    O.[UseOrganizationDomains],
+    OS.[IsAdminInitiated]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

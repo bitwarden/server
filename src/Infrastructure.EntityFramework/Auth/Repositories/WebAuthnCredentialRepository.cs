@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -68,12 +68,11 @@ public class WebAuthnCredentialRepository : Repository<Core.Auth.Entities.WebAut
             var newCreds = credentials.ToList();
             using var scope = ServiceScopeFactory.CreateScope();
             var dbContext = GetDatabaseContext(scope);
-            var userWebauthnCredentials = await GetDbSet(dbContext)
-                .Where(wc => wc.Id == wc.Id)
+
+            var newCredIds = newCreds.Select(nwc => nwc.Id).ToList();
+            var validUserWebauthnCredentials = await GetDbSet(dbContext)
+                .Where(wc => wc.UserId == userId && newCredIds.Contains(wc.Id))
                 .ToListAsync();
-            var validUserWebauthnCredentials = userWebauthnCredentials
-                .Where(wc => newCreds.Any(nwc => nwc.Id == wc.Id))
-                .Where(wc => wc.UserId == userId);
 
             foreach (var wc in validUserWebauthnCredentials)
             {

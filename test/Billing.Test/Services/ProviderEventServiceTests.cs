@@ -1,15 +1,16 @@
 ﻿using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Billing.Test.Utilities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Entities;
+using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Bit.Core.Utilities;
-using FluentAssertions;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -18,6 +19,12 @@ namespace Bit.Billing.Test.Services;
 
 public class ProviderEventServiceTests
 {
+    private readonly IOrganizationRepository _organizationRepository =
+        Substitute.For<IOrganizationRepository>();
+
+    private readonly IPricingClient _pricingClient =
+        Substitute.For<IPricingClient>();
+
     private readonly IProviderInvoiceItemRepository _providerInvoiceItemRepository =
         Substitute.For<IProviderInvoiceItemRepository>();
 
@@ -38,7 +45,8 @@ public class ProviderEventServiceTests
     public ProviderEventServiceTests()
     {
         _providerEventService = new ProviderEventService(
-            Substitute.For<ILogger<ProviderEventService>>(),
+            _organizationRepository,
+            _pricingClient,
             _providerInvoiceItemRepository,
             _providerOrganizationRepository,
             _providerPlanRepository,
@@ -87,54 +95,6 @@ public class ProviderEventServiceTests
 
         // Assert
         await _providerOrganizationRepository.DidNotReceiveWithAnyArgs().GetManyDetailsByProviderAsync(Arg.Any<Guid>());
-    }
-
-    [Fact]
-    public async Task TryRecordInvoiceLineItems_InvoiceCreated_MisconfiguredProviderPlans_ThrowsException()
-    {
-        // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.InvoiceCreated);
-
-        const string subscriptionId = "sub_1";
-        var providerId = Guid.NewGuid();
-
-        var invoice = new Invoice
-        {
-            SubscriptionId = subscriptionId
-        };
-
-        _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
-
-        var subscription = new Subscription
-        {
-            Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } }
-        };
-
-        _stripeFacade.GetSubscription(subscriptionId).Returns(subscription);
-
-        var providerPlans = new List<ProviderPlan>
-        {
-            new ()
-            {
-                Id = Guid.NewGuid(),
-                ProviderId = providerId,
-                PlanType = PlanType.TeamsMonthly,
-                AllocatedSeats = 0,
-                PurchasedSeats = 0,
-                SeatMinimum = 100
-            }
-        };
-
-        _providerPlanRepository.GetByProviderId(providerId).Returns(providerPlans);
-
-        // Act
-        var function = async () => await _providerEventService.TryRecordInvoiceLineItems(stripeEvent);
-
-        // Assert
-        await function
-            .Should()
-            .ThrowAsync<Exception>()
-            .WithMessage("Cannot record invoice line items for Provider with missing or misconfigured provider plans");
     }
 
     [Fact]
@@ -196,6 +156,12 @@ public class ProviderEventServiceTests
 
         _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId).Returns(clients);
 
+        _organizationRepository.GetByIdAsync(client1Id)
+            .Returns(new Organization { PlanType = PlanType.TeamsMonthly });
+
+        _organizationRepository.GetByIdAsync(client2Id)
+            .Returns(new Organization { PlanType = PlanType.EnterpriseMonthly });
+
         var providerPlans = new List<ProviderPlan>
         {
             new ()
@@ -217,6 +183,11 @@ public class ProviderEventServiceTests
                 SeatMinimum = 100
             }
         };
+
+        foreach (var providerPlan in providerPlans)
+        {
+            _pricingClient.GetPlanOrThrow(providerPlan.PlanType).Returns(StaticStore.GetPlan(providerPlan.PlanType));
+        }
 
         _providerPlanRepository.GetByProviderId(providerId).Returns(providerPlans);
 

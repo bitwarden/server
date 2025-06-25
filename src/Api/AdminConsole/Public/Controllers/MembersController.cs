@@ -76,7 +76,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        var response = new MemberResponseModel(orgUser, await _userService.TwoFactorIsEnabledAsync(orgUser),
+        var response = new MemberResponseModel(orgUser, await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUser),
             collections);
         return new JsonResult(response);
     }
@@ -177,15 +177,16 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
+        var existingUserType = existingUser.Type;
         var updatedUser = model.ToOrganizationUser(existingUser);
         var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
-        await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, null, associations, model.Groups);
+        await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, existingUserType, null, associations, model.Groups);
         MemberResponseModel response = null;
         if (existingUser.UserId.HasValue)
         {
             var existingUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
             response = new MemberResponseModel(existingUserDetails,
-                await _userService.TwoFactorIsEnabledAsync(existingUserDetails), associations);
+                await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(existingUserDetails), associations);
         }
         else
         {
@@ -213,7 +214,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        await _updateOrganizationUserGroupsCommand.UpdateUserGroupsAsync(existingUser, model.GroupIds, null);
+        await _updateOrganizationUserGroupsCommand.UpdateUserGroupsAsync(existingUser, model.GroupIds);
         return new OkResult();
     }
 
@@ -221,8 +222,7 @@ public class MembersController : Controller
     /// Remove a member.
     /// </summary>
     /// <remarks>
-    /// Permanently removes a member from the organization. This cannot be undone.
-    /// The user account will still remain. The user is only removed from the organization.
+    /// Removes a member from the organization. This cannot be undone. The user account will still remain.
     /// </remarks>
     /// <param name="id">The identifier of the member to be removed.</param>
     [HttpDelete("{id}")]

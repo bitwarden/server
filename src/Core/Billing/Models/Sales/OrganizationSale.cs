@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.Billing.Models.Sales;
@@ -26,12 +27,21 @@ public class OrganizationSale
 
     public static OrganizationSale From(
         Organization organization,
-        OrganizationSignup signup) => new()
+        OrganizationSignup signup)
+    {
+        var customerSetup = string.IsNullOrEmpty(organization.GatewayCustomerId) ? GetCustomerSetup(signup) : null;
+
+        var subscriptionSetup = GetSubscriptionSetup(signup);
+
+        subscriptionSetup.SkipTrial = signup.SkipTrial;
+
+        return new OrganizationSale
         {
             Organization = organization,
-            CustomerSetup = string.IsNullOrEmpty(organization.GatewayCustomerId) ? GetCustomerSetup(signup) : null,
-            SubscriptionSetup = GetSubscriptionSetup(signup)
+            CustomerSetup = customerSetup,
+            SubscriptionSetup = subscriptionSetup
         };
+    }
 
     public static OrganizationSale From(
         Organization organization,
@@ -46,7 +56,8 @@ public class OrganizationSale
         var customerSetup = new CustomerSetup
         {
             Coupon = signup.IsFromProvider
-            ? StripeConstants.CouponIDs.MSPDiscount35
+            // TODO: Remove when last of the legacy providers has been migrated.
+            ? StripeConstants.CouponIDs.LegacyMSPDiscount
             : signup.IsFromSecretsManagerTrial
                 ? StripeConstants.CouponIDs.SecretsManagerStandalone
                 : null
@@ -65,6 +76,7 @@ public class OrganizationSale
             signup.TaxInfo.BillingAddressCountry,
             signup.TaxInfo.BillingAddressPostalCode,
             signup.TaxInfo.TaxIdNumber,
+            signup.TaxInfo.TaxIdType,
             signup.TaxInfo.BillingAddressLine1,
             signup.TaxInfo.BillingAddressLine2,
             signup.TaxInfo.BillingAddressCity,
@@ -75,8 +87,6 @@ public class OrganizationSale
 
     private static SubscriptionSetup GetSubscriptionSetup(OrganizationUpgrade upgrade)
     {
-        var plan = Core.Utilities.StaticStore.GetPlan(upgrade.Plan);
-
         var passwordManagerOptions = new SubscriptionSetup.PasswordManager
         {
             Seats = upgrade.AdditionalSeats,
@@ -94,7 +104,7 @@ public class OrganizationSale
 
         return new SubscriptionSetup
         {
-            Plan = plan,
+            PlanType = upgrade.Plan,
             PasswordManagerOptions = passwordManagerOptions,
             SecretsManagerOptions = secretsManagerOptions
         };

@@ -42,7 +42,7 @@ public class SavePolicyCommand : ISavePolicyCommand
         _policyValidators = policyValidatorsDict;
     }
 
-    public async Task SaveAsync(PolicyUpdate policyUpdate)
+    public async Task<Policy> SaveAsync(PolicyUpdate policyUpdate)
     {
         var org = await _applicationCacheService.GetOrganizationAbilityAsync(policyUpdate.OrganizationId);
         if (org == null)
@@ -74,6 +74,8 @@ public class SavePolicyCommand : ISavePolicyCommand
 
         await _policyRepository.UpsertAsync(policy);
         await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
+
+        return policy;
     }
 
     private async Task RunValidatorAsync(IPolicyValidator validator, PolicyUpdate policyUpdate)
@@ -87,8 +89,7 @@ public class SavePolicyCommand : ISavePolicyCommand
         if (currentPolicy is not { Enabled: true } && policyUpdate.Enabled)
         {
             var missingRequiredPolicyTypes = validator.RequiredPolicies
-                .Where(requiredPolicyType =>
-                    savedPoliciesDict.GetValueOrDefault(requiredPolicyType) is not { Enabled: true })
+                .Where(requiredPolicyType => savedPoliciesDict.GetValueOrDefault(requiredPolicyType) is not { Enabled: true })
                 .ToList();
 
             if (missingRequiredPolicyTypes.Count != 0)
@@ -103,8 +104,8 @@ public class SavePolicyCommand : ISavePolicyCommand
             var dependentPolicyTypes = _policyValidators.Values
                 .Where(otherValidator => otherValidator.RequiredPolicies.Contains(policyUpdate.Type))
                 .Select(otherValidator => otherValidator.Type)
-                .Where(otherPolicyType => savedPoliciesDict.ContainsKey(otherPolicyType) &&
-                    savedPoliciesDict[otherPolicyType].Enabled)
+                .Where(otherPolicyType => savedPoliciesDict.TryGetValue(otherPolicyType, out var savedPolicy) &&
+                                          savedPolicy.Enabled)
                 .ToList();
 
             switch (dependentPolicyTypes)

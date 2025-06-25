@@ -16,6 +16,12 @@ public interface IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
 
+    Task<Customer> UpdateCustomer(
+        string customerId,
+        CustomerUpdateOptions customerUpdateOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
+
     Task<Event> GetEvent(
         string eventId,
         EventGetOptions eventGetOptions = null,
@@ -77,12 +83,6 @@ public interface IStripeFacade
     Task<Subscription> CancelSubscription(
         string subscriptionId,
         SubscriptionCancelOptions options = null,
-        RequestOptions requestOptions = null,
-        CancellationToken cancellationToken = default);
-
-    Task<TaxRate> GetTaxRate(
-        string taxRateId,
-        TaxRateGetOptions options = null,
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
 

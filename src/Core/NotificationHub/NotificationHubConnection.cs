@@ -1,18 +1,30 @@
-﻿using Bit.Core.Settings;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
+using System.Text;
+using System.Web;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Azure.NotificationHubs;
 
-class NotificationHubConnection
+namespace Bit.Core.NotificationHub;
+
+#nullable enable
+
+public class NotificationHubConnection
 {
-    public string HubName { get; init; }
-    public string ConnectionString { get; init; }
+    public string? HubName { get; init; }
+    public string? ConnectionString { get; init; }
+    private Lazy<NotificationHubConnectionStringBuilder> _parsedConnectionString;
+    public Uri Endpoint => _parsedConnectionString.Value.Endpoint;
+    private string SasKey => _parsedConnectionString.Value.SharedAccessKey;
+    private string SasKeyName => _parsedConnectionString.Value.SharedAccessKeyName;
     public bool EnableSendTracing { get; init; }
-    private NotificationHubClient _hubClient;
+    private NotificationHubClient? _hubClient;
     /// <summary>
     /// Gets the NotificationHubClient for this connection.
-    /// 
+    ///
     /// If the client is null, it will be initialized.
-    /// 
+    ///
     /// <throws>Exception</throws> if the connection is invalid.
     /// </summary>
     public NotificationHubClient HubClient
@@ -36,13 +48,13 @@ class NotificationHubConnection
     }
     /// <summary>
     /// Gets the start date for registration.
-    /// 
+    ///
     /// If null, registration is always disabled.
     /// </summary>
     public DateTime? RegistrationStartDate { get; init; }
     /// <summary>
     /// Gets the end date for registration.
-    /// 
+    ///
     /// If null, registration has no end date.
     /// </summary>
     public DateTime? RegistrationEndDate { get; init; }
@@ -95,7 +107,38 @@ class NotificationHubConnection
         return RegistrationStartDate < queryTime;
     }
 
-    private NotificationHubConnection() { }
+    public HttpRequestMessage CreateRequest(HttpMethod method, string pathUri, params string[] queryParameters)
+    {
+        var uriBuilder = new UriBuilder(Endpoint)
+        {
+            Scheme = "https",
+            Path = $"{HubName}/{pathUri.TrimStart('/')}",
+            Query = string.Join('&', [.. queryParameters, "api-version=2015-01"]),
+        };
+
+        var result = new HttpRequestMessage(method, uriBuilder.Uri);
+        result.Headers.Add("Authorization", GenerateSasToken(uriBuilder.Uri));
+        result.Headers.Add("TrackingId", Guid.NewGuid().ToString());
+        return result;
+    }
+
+    private string GenerateSasToken(Uri uri)
+    {
+        string targetUri = Uri.EscapeDataString(uri.ToString().ToLower()).ToLower();
+        long expires = DateTime.UtcNow.AddMinutes(1).Ticks / TimeSpan.TicksPerSecond;
+        string stringToSign = targetUri + "\n" + expires;
+
+        using (var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(SasKey)))
+        {
+            var signature = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(stringToSign)));
+            return $"SharedAccessSignature sr={targetUri}&sig={HttpUtility.UrlEncode(signature)}&se={expires}&skn={SasKeyName}";
+        }
+    }
+
+    private NotificationHubConnection()
+    {
+        _parsedConnectionString = new(() => new NotificationHubConnectionStringBuilder(ConnectionString));
+    }
 
     /// <summary>
     /// Creates a new NotificationHubConnection from the given settings.
@@ -115,9 +158,10 @@ class NotificationHubConnection
         };
     }
 
+    [MemberNotNull(nameof(_hubClient))]
     private NotificationHubConnection Init()
     {
-        HubClient = NotificationHubClient.CreateClientFromConnectionString(ConnectionString, HubName, EnableSendTracing);
+        _hubClient = NotificationHubClient.CreateClientFromConnectionString(ConnectionString, HubName, EnableSendTracing);
         return this;
     }
 

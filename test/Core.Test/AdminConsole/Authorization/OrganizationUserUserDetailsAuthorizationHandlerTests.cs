@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
+using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Test.AdminConsole.AutoFixture;

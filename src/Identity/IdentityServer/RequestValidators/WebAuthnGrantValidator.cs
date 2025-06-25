@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -34,7 +35,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
         ILogger<CustomTokenRequestValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
@@ -44,8 +44,8 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IFeatureService featureService,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
-        IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand
-        )
+        IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand,
+        IPolicyRequirementQuery policyRequirementQuery)
         : base(
             userManager,
             userService,
@@ -53,7 +53,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             deviceValidator,
             twoFactorAuthenticationValidator,
             organizationUserRepository,
-            mailService,
             logger,
             currentContext,
             globalSettings,
@@ -61,7 +60,8 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             policyService,
             featureService,
             ssoConfigRepository,
-            userDecryptionOptionsBuilder)
+            userDecryptionOptionsBuilder,
+            policyRequirementQuery)
     {
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;
@@ -91,15 +91,9 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         }
 
         var (user, credential) = await _assertWebAuthnLoginCredentialCommand.AssertWebAuthnLoginCredential(token.Options, deviceResponse);
-        var validatorContext = new CustomValidatorRequestContext
-        {
-            User = user,
-            KnownDevice = await _deviceValidator.KnownDeviceAsync(user, context.Request)
-        };
-
         UserDecryptionOptionsBuilder.WithWebAuthnLoginCredential(credential);
 
-        await ValidateAsync(context, context.Request, validatorContext);
+        await ValidateAsync(context, context.Request, new CustomValidatorRequestContext { User = user });
     }
 
     protected override Task<bool> ValidateContextAsync(ExtensionGrantValidationContext context,
@@ -128,6 +122,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         return context.Result.Subject;
     }
 
+    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected override void SetTwoFactorResult(ExtensionGrantValidationContext context,
         Dictionary<string, object> customResponse)
     {
@@ -135,6 +130,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             customResponse);
     }
 
+    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected override void SetSsoResult(ExtensionGrantValidationContext context,
         Dictionary<string, object> customResponse)
     {
@@ -142,9 +138,21 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             customResponse);
     }
 
-    protected override void SetErrorResult(ExtensionGrantValidationContext context,
-        Dictionary<string, object> customResponse)
+    [Obsolete("Consider using SetValidationErrorResult instead.")]
+    protected override void SetErrorResult(ExtensionGrantValidationContext context, Dictionary<string, object> customResponse)
     {
         context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
+    }
+
+    protected override void SetValidationErrorResult(
+        ExtensionGrantValidationContext context, CustomValidatorRequestContext requestContext)
+    {
+        context.Result = new GrantValidationResult
+        {
+            Error = requestContext.ValidationErrorResult.Error,
+            ErrorDescription = requestContext.ValidationErrorResult.ErrorDescription,
+            IsError = true,
+            CustomResponse = requestContext.CustomResponse
+        };
     }
 }

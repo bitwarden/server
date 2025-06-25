@@ -3,13 +3,15 @@ using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Services;
-using Bit.Core.Context;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -17,9 +19,6 @@ using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
@@ -42,19 +41,17 @@ public class OrganizationsController : Controller
     private readonly IPaymentService _paymentService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly GlobalSettings _globalSettings;
-    private readonly IReferenceEventService _referenceEventService;
-    private readonly IUserService _userService;
     private readonly IProviderRepository _providerRepository;
     private readonly ILogger<OrganizationsController> _logger;
     private readonly IAccessControlService _accessControlService;
-    private readonly ICurrentContext _currentContext;
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
-    private readonly IFeatureService _featureService;
     private readonly IProviderBillingService _providerBillingService;
+    private readonly IOrganizationInitiateDeleteCommand _organizationInitiateDeleteCommand;
+    private readonly IPricingClient _pricingClient;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -69,19 +66,17 @@ public class OrganizationsController : Controller
         IPaymentService paymentService,
         IApplicationCacheService applicationCacheService,
         GlobalSettings globalSettings,
-        IReferenceEventService referenceEventService,
-        IUserService userService,
         IProviderRepository providerRepository,
         ILogger<OrganizationsController> logger,
         IAccessControlService accessControlService,
-        ICurrentContext currentContext,
         ISecretRepository secretRepository,
         IProjectRepository projectRepository,
         IServiceAccountRepository serviceAccountRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
-        IFeatureService featureService,
-        IProviderBillingService providerBillingService)
+        IProviderBillingService providerBillingService,
+        IOrganizationInitiateDeleteCommand organizationInitiateDeleteCommand,
+        IPricingClient pricingClient)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -95,19 +90,17 @@ public class OrganizationsController : Controller
         _paymentService = paymentService;
         _applicationCacheService = applicationCacheService;
         _globalSettings = globalSettings;
-        _referenceEventService = referenceEventService;
-        _userService = userService;
         _providerRepository = providerRepository;
         _logger = logger;
         _accessControlService = accessControlService;
-        _currentContext = currentContext;
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
         _serviceAccountRepository = serviceAccountRepository;
         _providerOrganizationRepository = providerOrganizationRepository;
         _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
-        _featureService = featureService;
         _providerBillingService = providerBillingService;
+        _organizationInitiateDeleteCommand = organizationInitiateDeleteCommand;
+        _pricingClient = pricingClient;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -207,6 +200,8 @@ public class OrganizationsController : Controller
             ? await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
             : -1;
 
+        var plans = await _pricingClient.ListPlans();
+
         return View(new OrganizationEditModel(
             organization,
             provider,
@@ -219,6 +214,7 @@ public class OrganizationsController : Controller
             billingHistoryInfo,
             billingSyncConnection,
             _globalSettings,
+            plans,
             secrets,
             projects,
             serviceAccounts,
@@ -230,22 +226,61 @@ public class OrganizationsController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> Edit(Guid id, OrganizationEditModel model)
     {
-        var organization = await GetOrganization(id, model);
+        var organization = await _organizationRepository.GetByIdAsync(id);
 
-        if (organization.UseSecretsManager &&
-            !StaticStore.GetPlan(organization.PlanType).SupportsSecretsManager)
+        if (organization == null)
+        {
+            TempData["Error"] = "Could not find organization to update.";
+            return RedirectToAction("Index");
+        }
+
+        var existingOrganizationData = new Organization
+        {
+            Id = organization.Id,
+            Status = organization.Status,
+            PlanType = organization.PlanType,
+            Seats = organization.Seats
+        };
+
+        if (model.PlanType.HasValue)
+        {
+            var freePlan = await _pricingClient.GetPlanOrThrow(model.PlanType.Value);
+            var isDowngradingToFree = organization.PlanType != PlanType.Free && model.PlanType.Value == PlanType.Free;
+            if (isDowngradingToFree)
+            {
+                if (model.Seats.HasValue && model.Seats.Value > freePlan.PasswordManager.MaxSeats)
+                {
+                    TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxSeats} seats cannot be downgraded to the Free plan";
+                    return RedirectToAction("Edit", new { id });
+                }
+
+                if (model.MaxCollections > freePlan.PasswordManager.MaxCollections)
+                {
+                    TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxCollections} collections cannot be downgraded to the Free plan. Your organization currently has {organization.MaxCollections} collections.";
+                    return RedirectToAction("Edit", new { id });
+                }
+
+                model.MaxStorageGb = null;
+                model.ExpirationDate = null;
+                model.Enabled = true;
+            }
+        }
+
+        UpdateOrganization(organization, model);
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+        if (organization.UseSecretsManager && !plan.SupportsSecretsManager)
         {
             TempData["Error"] = "Plan does not support Secrets Manager";
             return RedirectToAction("Edit", new { id });
         }
 
+        await HandlePotentialProviderSeatScalingAsync(
+            existingOrganizationData,
+            model);
+
         await _organizationRepository.ReplaceAsync(organization);
+
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationEditedByAdmin, organization, _currentContext)
-        {
-            EventRaisedByUser = _userService.GetUserName(User),
-            SalesAssistedTrialStarted = model.SalesAssistedTrialStarted,
-        });
 
         return RedirectToAction("Edit", new { id });
     }
@@ -262,9 +297,7 @@ public class OrganizationsController : Controller
             return RedirectToAction("Index");
         }
 
-        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (consolidatedBillingEnabled && organization.IsValidClient())
+        if (organization.IsValidClient())
         {
             var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
 
@@ -285,7 +318,7 @@ public class OrganizationsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [RequirePermission(Permission.Org_Delete)]
+    [RequirePermission(Permission.Org_RequestDelete)]
     public async Task<IActionResult> DeleteInitiation(Guid id, OrganizationInitiateDeleteModel model)
     {
         if (!ModelState.IsValid)
@@ -299,7 +332,7 @@ public class OrganizationsController : Controller
                 var organization = await _organizationRepository.GetByIdAsync(id);
                 if (organization != null)
                 {
-                    await _organizationService.InitiateDeleteAsync(organization, model.AdminEmail);
+                    await _organizationInitiateDeleteCommand.InitiateDeleteAsync(organization, model.AdminEmail);
                     TempData["Success"] = "The request to initiate deletion of the organization has been sent.";
                 }
             }
@@ -394,9 +427,13 @@ public class OrganizationsController : Controller
 
         return Json(null);
     }
-    private async Task<Organization> GetOrganization(Guid id, OrganizationEditModel model)
+
+    private void UpdateOrganization(Organization organization, OrganizationEditModel model)
     {
-        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (_accessControlService.UserHasPermission(Permission.Org_Name_Edit))
+        {
+            organization.Name = WebUtility.HtmlEncode(model.Name);
+        }
 
         if (_accessControlService.UserHasPermission(Permission.Org_CheckEnabledBox))
         {
@@ -428,6 +465,9 @@ public class OrganizationsController : Controller
             organization.UseTotp = model.UseTotp;
             organization.UsersGetPremium = model.UsersGetPremium;
             organization.UseSecretsManager = model.UseSecretsManager;
+            organization.UseRiskInsights = model.UseRiskInsights;
+            organization.UseOrganizationDomains = model.UseOrganizationDomains;
+            organization.UseAdminSponsoredFamilies = model.UseAdminSponsoredFamilies;
 
             //secrets
             organization.SmSeats = model.SmSeats;
@@ -449,7 +489,54 @@ public class OrganizationsController : Controller
             organization.GatewayCustomerId = model.GatewayCustomerId;
             organization.GatewaySubscriptionId = model.GatewaySubscriptionId;
         }
+    }
 
-        return organization;
+    private async Task HandlePotentialProviderSeatScalingAsync(
+        Organization organization,
+        OrganizationEditModel update)
+    {
+        var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
+
+        // No scaling required
+        if (provider is not { Type: ProviderType.Msp, Status: ProviderStatusType.Billable } ||
+            organization is not { Status: OrganizationStatusType.Managed } ||
+            !organization.Seats.HasValue ||
+            update is { Seats: null, PlanType: null } ||
+            update is { PlanType: not PlanType.TeamsMonthly and not PlanType.EnterpriseMonthly } ||
+            (PlanTypesMatch() && SeatsMatch()))
+        {
+            return;
+        }
+
+        // Only scale the plan
+        if (!PlanTypesMatch() && SeatsMatch())
+        {
+            await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats.Value);
+            await _providerBillingService.ScaleSeats(provider, update.PlanType!.Value, organization.Seats.Value);
+        }
+        // Only scale the seats
+        else if (PlanTypesMatch() && !SeatsMatch())
+        {
+            var seatAdjustment = update.Seats!.Value - organization.Seats.Value;
+            await _providerBillingService.ScaleSeats(provider, organization.PlanType, seatAdjustment);
+        }
+        // Scale both
+        else if (!PlanTypesMatch() && !SeatsMatch())
+        {
+            var seatAdjustment = update.Seats!.Value - organization.Seats.Value;
+            var planTypeAdjustment = organization.Seats.Value;
+            var totalAdjustment = seatAdjustment + planTypeAdjustment;
+
+            await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats.Value);
+            await _providerBillingService.ScaleSeats(provider, update.PlanType!.Value, totalAdjustment);
+        }
+
+        return;
+
+        bool PlanTypesMatch()
+            => update.PlanType.HasValue && update.PlanType.Value == organization.PlanType;
+
+        bool SeatsMatch()
+            => update.Seats.HasValue && update.Seats.Value == organization.Seats;
     }
 }

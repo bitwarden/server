@@ -17,6 +17,7 @@ public class OrganizationDomainService : IOrganizationDomainService
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<OrganizationDomainService> _logger;
     private readonly IGlobalSettings _globalSettings;
+    private readonly IFeatureService _featureService;
 
     public OrganizationDomainService(
         IOrganizationDomainRepository domainRepository,
@@ -26,7 +27,8 @@ public class OrganizationDomainService : IOrganizationDomainService
         IVerifyOrganizationDomainCommand verifyOrganizationDomainCommand,
         TimeProvider timeProvider,
         ILogger<OrganizationDomainService> logger,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        IFeatureService featureService)
     {
         _domainRepository = domainRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -36,6 +38,7 @@ public class OrganizationDomainService : IOrganizationDomainService
         _timeProvider = timeProvider;
         _logger = logger;
         _globalSettings = globalSettings;
+        _featureService = featureService;
     }
 
     public async Task ValidateOrganizationsDomainAsync()
@@ -90,7 +93,7 @@ public class OrganizationDomainService : IOrganizationDomainService
                 //Send email to administrators
                 if (adminEmails.Count > 0)
                 {
-                    await _mailService.SendUnverifiedOrganizationDomainEmailAsync(adminEmails,
+                    await _mailService.SendUnclaimedOrganizationDomainEmailAsync(adminEmails,
                         domain.OrganizationId.ToString(), domain.DomainName);
                 }
 

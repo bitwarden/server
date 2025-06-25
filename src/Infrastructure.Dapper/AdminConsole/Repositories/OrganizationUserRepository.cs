@@ -2,9 +2,10 @@
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -81,19 +82,6 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var result = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[OrganizationUser_ReadCountByOrganizationIdEmail]",
                 new { OrganizationId = organizationId, Email = email, OnlyUsers = onlyRegisteredUsers },
-                commandType: CommandType.StoredProcedure);
-
-            return result;
-        }
-    }
-
-    public async Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var result = await connection.ExecuteScalarAsync<int>(
-                "[dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]",
-                new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
             return result;
@@ -556,5 +544,56 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
             return results.ToList();
         }
+    }
+
+    public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync(
+            "[dbo].[OrganizationUser_SetStatusForUsersByGuidIdArray]",
+            new { OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(), Status = OrganizationUserStatusType.Revoked },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUserUserDetails>(
+                "[dbo].[OrganizationUser_ReadManyDetailsByRole]",
+                new { OrganizationId = organizationId, Role = role },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task CreateManyAsync(IEnumerable<CreateOrganizationUser> organizationUserCollection)
+    {
+        await using var connection = new SqlConnection(_marsConnectionString);
+
+        await connection.ExecuteAsync(
+            $"[{Schema}].[OrganizationUser_CreateManyWithCollectionsAndGroups]",
+            new
+            {
+                OrganizationUserData = JsonSerializer.Serialize(organizationUserCollection.Select(x => x.OrganizationUser)),
+                CollectionData = JsonSerializer.Serialize(organizationUserCollection
+                    .SelectMany(x => x.Collections, (user, collection) => new CollectionUser
+                    {
+                        CollectionId = collection.Id,
+                        OrganizationUserId = user.OrganizationUser.Id,
+                        ReadOnly = collection.ReadOnly,
+                        HidePasswords = collection.HidePasswords,
+                        Manage = collection.Manage
+                    })),
+                GroupData = JsonSerializer.Serialize(organizationUserCollection
+                    .SelectMany(x => x.Groups, (user, group) => new GroupUser
+                    {
+                        GroupId = group,
+                        OrganizationUserId = user.OrganizationUser.Id
+                    }))
+            },
+            commandType: CommandType.StoredProcedure);
     }
 }

@@ -31,9 +31,6 @@ public class Configuration
         "Learn more: https://docs.docker.com/compose/compose-file/#ports")]
     public string HttpsPort { get; set; } = "443";
 
-    [Description("Configure Nginx for Captcha.")]
-    public bool Captcha { get; set; } = false;
-
     [Description("Configure Nginx for SSL.")]
     public bool Ssl { get; set; } = true;
 

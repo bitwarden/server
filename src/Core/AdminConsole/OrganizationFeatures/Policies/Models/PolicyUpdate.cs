@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.Utilities;
 
@@ -15,6 +16,7 @@ public record PolicyUpdate
     public PolicyType Type { get; set; }
     public string? Data { get; set; }
     public bool Enabled { get; set; }
+    public IActingUser? PerformedBy { get; set; }
 
     public T GetDataModel<T>() where T : IPolicyDataModel, new()
     {

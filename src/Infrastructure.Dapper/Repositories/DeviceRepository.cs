@@ -1,7 +1,10 @@
 ﻿using System.Data;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
@@ -11,13 +14,13 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
 {
-    public DeviceRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+    private readonly IGlobalSettings _globalSettings;
 
-    public DeviceRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+    public DeviceRepository(GlobalSettings globalSettings)
+        : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+    {
+        _globalSettings = globalSettings;
+    }
 
     public async Task<Device?> GetByIdAsync(Guid id, Guid userId)
     {
@@ -76,6 +79,24 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         }
     }
 
+    public async Task<ICollection<DeviceAuthDetails>> GetManyByUserIdWithDeviceAuth(Guid userId)
+    {
+        var expirationMinutes = _globalSettings.PasswordlessAuth.UserRequestExpiration.TotalMinutes;
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<DeviceAuthDetails>(
+                $"[{Schema}].[{Table}_ReadActiveWithPendingAuthRequestsByUserId]",
+                new
+                {
+                    UserId = userId,
+                    ExpirationMinutes = expirationMinutes
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task ClearPushTokenAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -85,5 +106,36 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
                 new { Id = id },
                 commandType: CommandType.StoredProcedure);
         }
+    }
+
+    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<Device> devices)
+    {
+        return async (SqlConnection connection, SqlTransaction transaction) =>
+        {
+            const string sql = @"
+                UPDATE D
+                SET
+                    D.[EncryptedPublicKey] = UD.[encryptedPublicKey],
+                    D.[EncryptedUserKey] = UD.[encryptedUserKey]
+                FROM
+                    [dbo].[Device] D
+                INNER JOIN
+                    OPENJSON(@DeviceCredentials)
+                    WITH (
+                        id UNIQUEIDENTIFIER,
+                        encryptedPublicKey NVARCHAR(MAX),
+                        encryptedUserKey NVARCHAR(MAX)
+                    ) UD
+                    ON UD.[id] = D.[Id]
+                WHERE
+                    D.[UserId] = @UserId";
+            var deviceCredentials = CoreHelpers.ClassToJsonData(devices);
+
+            await connection.ExecuteAsync(
+                sql,
+                new { UserId = userId, DeviceCredentials = deviceCredentials },
+                transaction: transaction,
+                commandType: CommandType.Text);
+        };
     }
 }

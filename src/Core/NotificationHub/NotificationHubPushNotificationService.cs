@@ -1,20 +1,28 @@
-﻿using System.Text.Json;
+﻿#nullable enable
+using System.Text.Json;
 using System.Text.RegularExpressions;
-using Bit.Core.Auth.Entities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
+using Bit.Core.Platform.Push;
+using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using Bit.Core.Tools.Entities;
+using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.NotificationHub;
 
-public class NotificationHubPushNotificationService : IPushNotificationService
+#nullable enable
+
+/// <summary>
+/// Sends mobile push notifications to the Azure Notification Hub.
+/// Used by Cloud-Hosted environments.
+/// Received by Firebase for Android or APNS for iOS.
+/// </summary>
+public class NotificationHubPushNotificationService : IPushEngine, IPushRelayer
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -26,30 +34,20 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         IInstallationDeviceRepository installationDeviceRepository,
         INotificationHubPool notificationHubPool,
         IHttpContextAccessor httpContextAccessor,
-        ILogger<NotificationsApiPushNotificationService> logger)
+        ILogger<NotificationHubPushNotificationService> logger,
+        IGlobalSettings globalSettings)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _httpContextAccessor = httpContextAccessor;
         _notificationHubPool = notificationHubPool;
         _logger = logger;
+        if (globalSettings.Installation.Id == Guid.Empty)
+        {
+            logger.LogWarning("Installation ID is not set. Push notifications for installations will not work.");
+        }
     }
 
-    public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
-    {
-        await PushCipherAsync(cipher, PushType.SyncCipherCreate, collectionIds);
-    }
-
-    public async Task PushSyncCipherUpdateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
-    {
-        await PushCipherAsync(cipher, PushType.SyncCipherUpdate, collectionIds);
-    }
-
-    public async Task PushSyncCipherDeleteAsync(Cipher cipher)
-    {
-        await PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
-    }
-
-    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
+    public async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
     {
         if (cipher.OrganizationId.HasValue)
         {
@@ -71,191 +69,111 @@ public class NotificationHubPushNotificationService : IPushNotificationService
                 CollectionIds = collectionIds,
             };
 
-            await SendPayloadToUserAsync(cipher.UserId.Value, type, message, true);
-        }
-    }
-
-    public async Task PushSyncFolderCreateAsync(Folder folder)
-    {
-        await PushFolderAsync(folder, PushType.SyncFolderCreate);
-    }
-
-    public async Task PushSyncFolderUpdateAsync(Folder folder)
-    {
-        await PushFolderAsync(folder, PushType.SyncFolderUpdate);
-    }
-
-    public async Task PushSyncFolderDeleteAsync(Folder folder)
-    {
-        await PushFolderAsync(folder, PushType.SyncFolderDelete);
-    }
-
-    private async Task PushFolderAsync(Folder folder, PushType type)
-    {
-        var message = new SyncFolderPushNotification
-        {
-            Id = folder.Id,
-            UserId = folder.UserId,
-            RevisionDate = folder.RevisionDate
-        };
-
-        await SendPayloadToUserAsync(folder.UserId, type, message, true);
-    }
-
-    public async Task PushSyncCiphersAsync(Guid userId)
-    {
-        await PushUserAsync(userId, PushType.SyncCiphers);
-    }
-
-    public async Task PushSyncVaultAsync(Guid userId)
-    {
-        await PushUserAsync(userId, PushType.SyncVault);
-    }
-
-    public async Task PushSyncOrganizationsAsync(Guid userId)
-    {
-        await PushUserAsync(userId, PushType.SyncOrganizations);
-    }
-
-    public async Task PushSyncOrgKeysAsync(Guid userId)
-    {
-        await PushUserAsync(userId, PushType.SyncOrgKeys);
-    }
-
-    public async Task PushSyncSettingsAsync(Guid userId)
-    {
-        await PushUserAsync(userId, PushType.SyncSettings);
-    }
-
-    public async Task PushLogOutAsync(Guid userId, bool excludeCurrentContext = false)
-    {
-        await PushUserAsync(userId, PushType.LogOut, excludeCurrentContext);
-    }
-
-    private async Task PushUserAsync(Guid userId, PushType type, bool excludeCurrentContext = false)
-    {
-        var message = new UserPushNotification
-        {
-            UserId = userId,
-            Date = DateTime.UtcNow
-        };
-
-        await SendPayloadToUserAsync(userId, type, message, excludeCurrentContext);
-    }
-
-    public async Task PushSyncSendCreateAsync(Send send)
-    {
-        await PushSendAsync(send, PushType.SyncSendCreate);
-    }
-
-    public async Task PushSyncSendUpdateAsync(Send send)
-    {
-        await PushSendAsync(send, PushType.SyncSendUpdate);
-    }
-
-    public async Task PushSyncSendDeleteAsync(Send send)
-    {
-        await PushSendAsync(send, PushType.SyncSendDelete);
-    }
-
-    private async Task PushSendAsync(Send send, PushType type)
-    {
-        if (send.UserId.HasValue)
-        {
-            var message = new SyncSendPushNotification
+            await PushAsync(new PushNotification<SyncCipherPushNotification>
             {
-                Id = send.Id,
-                UserId = send.UserId.Value,
-                RevisionDate = send.RevisionDate
-            };
-
-            await SendPayloadToUserAsync(message.UserId, type, message, true);
+                Type = type,
+                Target = NotificationTarget.User,
+                TargetId = cipher.UserId.Value,
+                Payload = message,
+                ExcludeCurrentContext = true,
+            });
         }
     }
 
-    public async Task PushAuthRequestAsync(AuthRequest authRequest)
-    {
-        await PushAuthRequestAsync(authRequest, PushType.AuthRequest);
-    }
-
-    public async Task PushAuthRequestResponseAsync(AuthRequest authRequest)
-    {
-        await PushAuthRequestAsync(authRequest, PushType.AuthRequestResponse);
-    }
-
-    private async Task PushAuthRequestAsync(AuthRequest authRequest, PushType type)
-    {
-        var message = new AuthRequestPushNotification
-        {
-            Id = authRequest.Id,
-            UserId = authRequest.UserId
-        };
-
-        await SendPayloadToUserAsync(authRequest.UserId, type, message, true);
-    }
-
-    private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext)
-    {
-        await SendPayloadToUserAsync(userId.ToString(), type, payload, GetContextIdentifier(excludeCurrentContext));
-    }
-
-    private async Task SendPayloadToOrganizationAsync(Guid orgId, PushType type, object payload, bool excludeCurrentContext)
-    {
-        await SendPayloadToUserAsync(orgId.ToString(), type, payload, GetContextIdentifier(excludeCurrentContext));
-    }
-
-    public async Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
-    {
-        var tag = BuildTag($"template:payload_userId:{SanitizeTagInput(userId)}", identifier);
-        await SendPayloadAsync(tag, type, payload);
-        if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
-        {
-            await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
-        }
-    }
-
-    public async Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
-    {
-        var tag = BuildTag($"template:payload && organizationId:{SanitizeTagInput(orgId)}", identifier);
-        await SendPayloadAsync(tag, type, payload);
-        if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
-        {
-            await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
-        }
-    }
-
-    private string GetContextIdentifier(bool excludeCurrentContext)
+    private string? GetContextIdentifier(bool excludeCurrentContext)
     {
         if (!excludeCurrentContext)
         {
             return null;
         }
 
-        var currentContext = _httpContextAccessor?.HttpContext?.
-            RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
+        var currentContext =
+            _httpContextAccessor.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
         return currentContext?.DeviceIdentifier;
     }
 
-    private string BuildTag(string tag, string identifier)
+    private string BuildTag(string tag, string? identifier, ClientType? clientType)
     {
         if (!string.IsNullOrWhiteSpace(identifier))
         {
             tag += $" && !deviceIdentifier:{SanitizeTagInput(identifier)}";
         }
 
+        if (clientType.HasValue && clientType.Value != ClientType.All)
+        {
+            tag += $" && clientType:{clientType}";
+        }
+
         return $"({tag})";
     }
 
-    private async Task SendPayloadAsync(string tag, PushType type, object payload)
+    public async Task PushAsync<T>(PushNotification<T> pushNotification)
+        where T : class
     {
+        var initialTag = pushNotification.Target switch
+        {
+            NotificationTarget.User => $"template:payload_userId:{pushNotification.TargetId}",
+            NotificationTarget.Organization => $"template:payload && organizationId:{pushNotification.TargetId}",
+            NotificationTarget.Installation => $"template:payload && installationId:{pushNotification.TargetId}",
+            _ => throw new InvalidOperationException($"Push notification target '{pushNotification.Target}' is not valid."),
+        };
+
+        await PushCoreAsync(
+            initialTag,
+            GetContextIdentifier(pushNotification.ExcludeCurrentContext),
+            pushNotification.Type,
+            pushNotification.ClientType,
+            pushNotification.Payload
+        );
+    }
+
+    public async Task RelayAsync(Guid fromInstallation, RelayedNotification relayedNotification)
+    {
+        // Relayed notifications need identifiers prefixed with the installation they are from and a underscore
+        var initialTag = relayedNotification.Target switch
+        {
+            NotificationTarget.User => $"template:payload_userId:{fromInstallation}_{relayedNotification.TargetId}",
+            NotificationTarget.Organization => $"template:payload && organizationId:{fromInstallation}_{relayedNotification.TargetId}",
+            NotificationTarget.Installation => $"template:payload && installationId:{fromInstallation}",
+            _ => throw new InvalidOperationException($"Invalid Notification target {relayedNotification.Target}"),
+        };
+
+        await PushCoreAsync(
+            initialTag,
+            relayedNotification.Identifier,
+            relayedNotification.Type,
+            relayedNotification.ClientType,
+            relayedNotification.Payload
+        );
+
+        if (relayedNotification.DeviceId.HasValue)
+        {
+            await _installationDeviceRepository.UpsertAsync(
+                new InstallationDeviceEntity(fromInstallation, relayedNotification.DeviceId.Value)
+            );
+        }
+        else
+        {
+            _logger.LogWarning(
+                "A related notification of type '{Type}' came through without a device id from installation {Installation}",
+                relayedNotification.Type,
+                fromInstallation
+            );
+        }
+    }
+
+    private async Task PushCoreAsync<T>(string initialTag, string? contextId, PushType pushType, ClientType? clientType, T payload)
+    {
+        var finalTag = BuildTag(initialTag, contextId, clientType);
+
         var results = await _notificationHubPool.AllClients.SendTemplateNotificationAsync(
             new Dictionary<string, string>
             {
-                { "type",  ((byte)type).ToString() },
-                { "payload", JsonSerializer.Serialize(payload) }
-            }, tag);
+                { "type", ((byte)pushType).ToString() },
+                { "payload", JsonSerializer.Serialize(payload) },
+            },
+            finalTag
+        );
 
         if (_enableTracing)
         {
@@ -265,8 +183,10 @@ public class NotificationHubPushNotificationService : IPushNotificationService
                 {
                     continue;
                 }
-                _logger.LogInformation("Azure Notification Hub Tracking ID: {Id} | {Type} push notification with {Success} successes and {Failure} failures with a payload of {@Payload} and result of {@Results}",
-                    outcome.TrackingId, type, outcome.Success, outcome.Failure, payload, outcome.Results);
+
+                _logger.LogInformation(
+                    "Azure Notification Hub Tracking ID: {Id} | {Type} push notification with {Success} successes and {Failure} failures with a payload of {@Payload} and result of {@Results}",
+                    outcome.TrackingId, pushType, outcome.Success, outcome.Failure, payload, outcome.Results);
             }
         }
     }

@@ -15,31 +15,43 @@
 
 ## These are shared workflows ##
 .github/workflows/_move_finalization_db_scripts.yml
-.github/workflows/build.yml
-.github/workflows/cleanup-after-pr.yml
-.github/workflows/cleanup-rc-branch.yml
 .github/workflows/release.yml
-.github/workflows/repository-management.yml
 
 # Database Operations for database changes
 src/Sql/** @bitwarden/dept-dbops
 util/EfShared/** @bitwarden/dept-dbops
-util/Migrator/** @bitwarden/dept-dbops
+util/Migrator/** @bitwarden/team-platform-dev # The Platform team owns the Migrator project code
+util/Migrator/DbScripts/** @bitwarden/dept-dbops
+util/Migrator/DbScripts_finalization/** @bitwarden/dept-dbops
+util/Migrator/DbScripts_transition/** @bitwarden/dept-dbops
+util/Migrator/MySql/** @bitwarden/dept-dbops
 util/MySqlMigrations/** @bitwarden/dept-dbops
 util/PostgresMigrations/** @bitwarden/dept-dbops
 util/SqlServerEFScaffold/** @bitwarden/dept-dbops
 util/SqliteMigrations/** @bitwarden/dept-dbops
 
+# Shared util projects
+util/Setup/** @bitwarden/dept-bre @bitwarden/team-platform-dev
+
 # Auth team
 **/Auth @bitwarden/team-auth-dev
 bitwarden_license/src/Sso @bitwarden/team-auth-dev
 src/Identity @bitwarden/team-auth-dev
+src/Core/Identity @bitwarden/team-auth-dev
+src/Core/IdentityServer @bitwarden/team-auth-dev
 
 # Key Management team
 **/KeyManagement @bitwarden/team-key-management-dev
 
-**/SecretsManager @bitwarden/team-secrets-manager-dev
+# Tools team
 **/Tools @bitwarden/team-tools-dev
+
+# Dirt (Data Insights & Reporting) team
+src/Api/Controllers/Dirt @bitwarden/team-data-insights-and-reporting-dev
+src/Core/Dirt @bitwarden/team-data-insights-and-reporting-dev
+src/Infrastructure.Dapper/Dirt @bitwarden/team-data-insights-and-reporting-dev
+test/Api.Test/Dirt @bitwarden/team-data-insights-and-reporting-dev
+test/Core.Test/Dirt @bitwarden/team-data-insights-and-reporting-dev
 
 # Vault team
 **/Vault @bitwarden/team-vault-dev
@@ -68,6 +80,19 @@ src/EventsProcessor @bitwarden/team-admin-console-dev
 **/Billing @bitwarden/team-billing-dev
 src/Admin/Controllers/ToolsController.cs @bitwarden/team-billing-dev
 src/Admin/Views/Tools @bitwarden/team-billing-dev
+
+# Platform team
+.github/workflows/build.yml @bitwarden/team-platform-dev
+.github/workflows/build_target.yml @bitwarden/team-platform-dev
+.github/workflows/cleanup-after-pr.yml @bitwarden/team-platform-dev
+.github/workflows/cleanup-rc-branch.yml @bitwarden/team-platform-dev
+.github/workflows/repository-management.yml @bitwarden/team-platform-dev
+.github/workflows/test-database.yml @bitwarden/team-platform-dev
+.github/workflows/test.yml @bitwarden/team-platform-dev
+**/*Platform* @bitwarden/team-platform-dev
+**/.dockerignore @bitwarden/team-platform-dev
+**/Dockerfile @bitwarden/team-platform-dev
+**/entrypoint.sh @bitwarden/team-platform-dev
 
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json

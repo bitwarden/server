@@ -46,27 +46,17 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var domains = await dbContext.OrganizationDomains
-            .Where(x => x.VerifiedDate == null
-                        && x.JobRunCount != 3
-                        && x.NextRunDate.Year == date.Year
-                        && x.NextRunDate.Month == date.Month
-                        && x.NextRunDate.Day == date.Day
-                        && x.NextRunDate.Hour == date.Hour)
-            .AsNoTracking()
+        var start36HoursWindow = date.AddHours(-36);
+        var end36HoursWindow = date;
+
+        var pastDomains = await dbContext.OrganizationDomains
+            .Where(x => x.NextRunDate >= start36HoursWindow
+                       && x.NextRunDate <= end36HoursWindow
+                       && x.VerifiedDate == null
+                       && x.JobRunCount != 3)
             .ToListAsync();
 
-        //Get records that have ignored/failed by the background service
-        var pastDomains = dbContext.OrganizationDomains
-            .AsEnumerable()
-            .Where(x => (date - x.NextRunDate).TotalHours > 36
-                        && x.VerifiedDate == null
-                        && x.JobRunCount != 3)
-            .ToList();
-
-        var results = domains.Union(pastDomains);
-
-        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(results);
+        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(pastDomains);
     }
 
     public async Task<OrganizationDomainSsoDetailsData?> GetOrganizationDomainSsoDetailsAsync(string email)
@@ -147,14 +137,13 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        //Get domains that have not been verified after 72 hours
-        var domains = await dbContext.OrganizationDomains
-            .Where(x => (DateTime.UtcNow - x.CreationDate).Days == 4
-                        && x.VerifiedDate == null)
+        var threeDaysOldUnverifiedDomains = await dbContext.OrganizationDomains
+            .Where(x => x.CreationDate.Date == DateTime.UtcNow.AddDays(-4).Date
+                      && x.VerifiedDate == null)
             .AsNoTracking()
             .ToListAsync();
 
-        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(domains);
+        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(threeDaysOldUnverifiedDomains);
     }
 
     public async Task<bool> DeleteExpiredAsync(int expirationPeriod)
@@ -168,4 +157,25 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         dbContext.OrganizationDomains.RemoveRange(expiredDomains);
         return await dbContext.SaveChangesAsync() > 0;
     }
+
+    public async Task<IEnumerable<Core.Entities.OrganizationDomain>> GetVerifiedDomainsByOrganizationIdsAsync(
+        IEnumerable<Guid> organizationIds)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var verifiedDomains = await (from d in dbContext.OrganizationDomains
+                                     where organizationIds.Contains(d.OrganizationId) && d.VerifiedDate != null
+                                     select new OrganizationDomain
+                                     {
+                                         OrganizationId = d.OrganizationId,
+                                         DomainName = d.DomainName
+                                     })
+            .AsNoTracking()
+            .ToListAsync();
+
+        return Mapper.Map<List<OrganizationDomain>>(verifiedDomains);
+    }
+
 }
+

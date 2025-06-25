@@ -31,6 +31,7 @@ public interface IStripeAdapter
     Task<Stripe.Invoice> InvoiceUpcomingAsync(Stripe.UpcomingInvoiceOptions options);
     Task<Stripe.Invoice> InvoiceGetAsync(string id, Stripe.InvoiceGetOptions options);
     Task<List<Stripe.Invoice>> InvoiceListAsync(StripeInvoiceListOptions options);
+    Task<Stripe.Invoice> InvoiceCreatePreviewAsync(InvoiceCreatePreviewOptions options);
     Task<List<Stripe.Invoice>> InvoiceSearchAsync(InvoiceSearchOptions options);
     Task<Stripe.Invoice> InvoiceUpdateAsync(string id, Stripe.InvoiceUpdateOptions options);
     Task<Stripe.Invoice> InvoiceFinalizeInvoiceAsync(string id, Stripe.InvoiceFinalizeOptions options);
@@ -42,8 +43,6 @@ public interface IStripeAdapter
     IAsyncEnumerable<Stripe.PaymentMethod> PaymentMethodListAutoPagingAsync(Stripe.PaymentMethodListOptions options);
     Task<Stripe.PaymentMethod> PaymentMethodAttachAsync(string id, Stripe.PaymentMethodAttachOptions options = null);
     Task<Stripe.PaymentMethod> PaymentMethodDetachAsync(string id, Stripe.PaymentMethodDetachOptions options = null);
-    Task<Stripe.TaxRate> TaxRateCreateAsync(Stripe.TaxRateCreateOptions options);
-    Task<Stripe.TaxRate> TaxRateUpdateAsync(string id, Stripe.TaxRateUpdateOptions options);
     Task<Stripe.TaxId> TaxIdCreateAsync(string id, Stripe.TaxIdCreateOptions options);
     Task<Stripe.TaxId> TaxIdDeleteAsync(string customerId, string taxIdId, Stripe.TaxIdDeleteOptions options = null);
     Task<Stripe.StripeList<Stripe.Charge>> ChargeListAsync(Stripe.ChargeListOptions options);
@@ -58,4 +57,5 @@ public interface IStripeAdapter
     Task<SetupIntent> SetupIntentGet(string id, SetupIntentGetOptions options = null);
     Task SetupIntentVerifyMicroDeposit(string id, SetupIntentVerifyMicrodepositsOptions options);
     Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync();
+    Task<Price> PriceGetAsync(string id, PriceGetOptions options = null);
 }

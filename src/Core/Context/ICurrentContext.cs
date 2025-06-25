@@ -20,6 +20,7 @@ public interface ICurrentContext
     string DeviceIdentifier { get; set; }
     DeviceType? DeviceType { get; set; }
     string IpAddress { get; set; }
+    string CountryName { get; set; }
     List<CurrentContextOrganization> Organizations { get; set; }
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }
@@ -29,11 +30,12 @@ public interface ICurrentContext
     int? BotScore { get; set; }
     string ClientId { get; set; }
     Version ClientVersion { get; set; }
+    bool ClientVersionIsPrerelease { get; set; }
+
     Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings);
     Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings);
 
     Task SetContextAsync(ClaimsPrincipal user);
-
 
     Task<bool> OrganizationUser(Guid orgId);
     Task<bool> OrganizationAdmin(Guid orgId);
@@ -42,7 +44,9 @@ public interface ICurrentContext
     Task<bool> AccessEventLogs(Guid orgId);
     Task<bool> AccessImportExport(Guid orgId);
     Task<bool> AccessReports(Guid orgId);
+    [Obsolete("Deprecated. Use an authorization handler checking the specific permissions required instead.")]
     Task<bool> EditAnyCollection(Guid orgId);
+    [Obsolete("Deprecated. Use an authorization handler checking the specific permissions required instead.")]
     Task<bool> ViewAllCollections(Guid orgId);
     Task<bool> ManageGroups(Guid orgId);
     Task<bool> ManagePolicies(Guid orgId);

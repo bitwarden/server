@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
@@ -103,8 +104,6 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
             return false;
         }
 
-        var sponsoringOrgPlan = Utilities.StaticStore.GetPlan(sponsoringOrganization.PlanType);
-
         if (OrgDisabledForMoreThanGracePeriod(sponsoringOrganization))
         {
             _logger.LogWarning("Sponsoring Organization {SponsoringOrganizationId} is disabled for more than 3 months.", sponsoringOrganization.Id);
@@ -113,7 +112,16 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
             return false;
         }
 
-        if (sponsoredPlan.SponsoringProductTierType != sponsoringOrgPlan.ProductTier)
+        if (existingSponsorship.IsAdminInitiated && !sponsoringOrganization.UseAdminSponsoredFamilies)
+        {
+            _logger.LogWarning("Admin initiated sponsorship for sponsored Organization {SponsoredOrganizationId} is not allowed because sponsoring organization does not have UseAdminSponsoredFamilies enabled", sponsoredOrganizationId);
+            await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);
+            return false;
+        }
+
+        var sponsoringOrgProductTier = sponsoringOrganization.PlanType.GetProductTier();
+
+        if (sponsoredPlan.SponsoringProductTierType != sponsoringOrgProductTier)
         {
             _logger.LogWarning("Sponsoring Organization {SponsoringOrganizationId} is not on the required product type.", sponsoringOrganization.Id);
             await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);

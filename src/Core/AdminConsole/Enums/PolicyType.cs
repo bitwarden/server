@@ -7,7 +7,7 @@ public enum PolicyType : byte
     PasswordGenerator = 2,
     SingleOrg = 3,
     RequireSso = 4,
-    PersonalOwnership = 5,
+    OrganizationDataOwnership = 5,
     DisableSend = 6,
     SendOptions = 7,
     ResetPassword = 8,
@@ -15,6 +15,9 @@ public enum PolicyType : byte
     DisablePersonalVaultExport = 10,
     ActivateAutofill = 11,
     AutomaticAppLogIn = 12,
+    FreeFamiliesSponsorshipPolicy = 13,
+    RemoveUnlockWithPin = 14,
+    RestrictedItemTypesPolicy = 15,
 }
 
 public static class PolicyTypeExtensions
@@ -32,7 +35,7 @@ public static class PolicyTypeExtensions
             PolicyType.PasswordGenerator => "Password generator",
             PolicyType.SingleOrg => "Single organization",
             PolicyType.RequireSso => "Require single sign-on authentication",
-            PolicyType.PersonalOwnership => "Remove individual vault",
+            PolicyType.OrganizationDataOwnership => "Enforce organization data ownership",
             PolicyType.DisableSend => "Remove Send",
             PolicyType.SendOptions => "Send options",
             PolicyType.ResetPassword => "Account recovery administration",
@@ -40,6 +43,9 @@ public static class PolicyTypeExtensions
             PolicyType.DisablePersonalVaultExport => "Remove individual vault export",
             PolicyType.ActivateAutofill => "Active auto-fill",
             PolicyType.AutomaticAppLogIn => "Automatically log in users for allowed applications",
+            PolicyType.FreeFamiliesSponsorshipPolicy => "Remove Free Bitwarden Families sponsorship",
+            PolicyType.RemoveUnlockWithPin => "Remove unlock with PIN",
+            PolicyType.RestrictedItemTypesPolicy => "Restricted item types",
         };
     }
 }

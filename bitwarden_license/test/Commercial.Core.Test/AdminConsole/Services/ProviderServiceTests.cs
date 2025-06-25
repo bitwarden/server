@@ -6,9 +6,12 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -38,7 +41,7 @@ public class ProviderServiceTests
     public async Task CompleteSetupAsync_UserIdIsInvalid_Throws(SutProvider<ProviderService> sutProvider)
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CompleteSetupAsync(default, default, default, default));
+            () => sutProvider.Sut.CompleteSetupAsync(default, default, default, default, null));
         Assert.Contains("Invalid owner.", exception.Message);
     }
 
@@ -50,13 +53,18 @@ public class ProviderServiceTests
         userService.GetUserByIdAsync(user.Id).Returns(user);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CompleteSetupAsync(provider, user.Id, default, default));
+            () => sutProvider.Sut.CompleteSetupAsync(provider, user.Id, default, default, null));
         Assert.Contains("Invalid token.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task CompleteSetupAsync_Success(User user, Provider provider, string key,
-        [ProviderUser(ProviderUserStatusType.Confirmed, ProviderUserType.ProviderAdmin)] ProviderUser providerUser,
+    public async Task CompleteSetupAsync_InvalidTaxInfo_ThrowsBadRequestException(
+        User user,
+        Provider provider,
+        string key,
+        TaxInfo taxInfo,
+        TokenizedPaymentSource tokenizedPaymentSource,
+        [ProviderUser] ProviderUser providerUser,
         SutProvider<ProviderService> sutProvider)
     {
         providerUser.ProviderId = provider.Id;
@@ -71,20 +79,60 @@ public class ProviderServiceTests
         var protector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
         sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector("ProviderServiceDataProtector")
             .Returns(protector);
+
         sutProvider.Create();
 
         var token = protector.Protect($"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
 
-        await sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key);
+        taxInfo.BillingAddressCountry = null;
 
-        await sutProvider.GetDependency<IProviderRepository>().Received().UpsertAsync(provider);
-        await sutProvider.GetDependency<IProviderUserRepository>().Received()
-            .ReplaceAsync(Arg.Is<ProviderUser>(pu => pu.UserId == user.Id && pu.ProviderId == provider.Id && pu.Key == key));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key, taxInfo, tokenizedPaymentSource));
+
+        Assert.Equal("Both address and postal code are required to set up your provider.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task CompleteSetupAsync_ConsolidatedBilling_Success(User user, Provider provider, string key, TaxInfo taxInfo,
-            [ProviderUser(ProviderUserStatusType.Confirmed, ProviderUserType.ProviderAdmin)] ProviderUser providerUser,
+    public async Task CompleteSetupAsync_InvalidTokenizedPaymentSource_ThrowsBadRequestException(
+        User user,
+        Provider provider,
+        string key,
+        TaxInfo taxInfo,
+        TokenizedPaymentSource tokenizedPaymentSource,
+        [ProviderUser] ProviderUser providerUser,
+        SutProvider<ProviderService> sutProvider)
+    {
+        providerUser.ProviderId = provider.Id;
+        providerUser.UserId = user.Id;
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByIdAsync(user.Id).Returns(user);
+
+        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+        providerUserRepository.GetByProviderUserAsync(provider.Id, user.Id).Returns(providerUser);
+
+        var dataProtectionProvider = DataProtectionProvider.Create("ApplicationName");
+        var protector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
+        sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector("ProviderServiceDataProtector")
+            .Returns(protector);
+
+        sutProvider.Create();
+
+        var token = protector.Protect($"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
+
+        tokenizedPaymentSource = tokenizedPaymentSource with { Type = PaymentMethodType.BitPay };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key, taxInfo, tokenizedPaymentSource));
+
+        Assert.Equal("A payment method is required to set up your provider.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CompleteSetupAsync_Success(User user, Provider provider, string key, TaxInfo taxInfo, TokenizedPaymentSource tokenizedPaymentSource,
+            [ProviderUser] ProviderUser providerUser,
             SutProvider<ProviderService> sutProvider)
     {
         providerUser.ProviderId = provider.Id;
@@ -100,13 +148,10 @@ public class ProviderServiceTests
         sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector("ProviderServiceDataProtector")
             .Returns(protector);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(true);
-
         var providerBillingService = sutProvider.GetDependency<IProviderBillingService>();
 
         var customer = new Customer { Id = "customer_id" };
-        providerBillingService.SetupCustomer(provider, taxInfo).Returns(customer);
+        providerBillingService.SetupCustomer(provider, taxInfo, tokenizedPaymentSource).Returns(customer);
 
         var subscription = new Subscription { Id = "subscription_id" };
         providerBillingService.SetupSubscription(provider).Returns(subscription);
@@ -115,7 +160,7 @@ public class ProviderServiceTests
 
         var token = protector.Protect($"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
 
-        await sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key, taxInfo);
+        await sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key, taxInfo, tokenizedPaymentSource);
 
         await sutProvider.GetDependency<IProviderRepository>().Received().UpsertAsync(Arg.Is<Provider>(
             p =>
@@ -489,7 +534,7 @@ public class ProviderServiceTests
     public async Task AddOrganization_OrganizationHasSecretsManager_Throws(Provider provider, Organization organization, string key,
         SutProvider<ProviderService> sutProvider)
     {
-        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.PlanType = PlanType.EnterpriseMonthly;
         organization.UseSecretsManager = true;
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
@@ -506,7 +551,7 @@ public class ProviderServiceTests
     public async Task AddOrganization_Success(Provider provider, Organization organization, string key,
         SutProvider<ProviderService> sutProvider)
     {
-        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.PlanType = PlanType.EnterpriseMonthly;
 
         var providerRepository = sutProvider.GetDependency<IProviderRepository>();
         providerRepository.GetByIdAsync(provider.Id).Returns(provider);
@@ -549,8 +594,8 @@ public class ProviderServiceTests
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
 
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        var expectedPlanType = PlanType.EnterpriseAnnually;
-        organization.PlanType = PlanType.EnterpriseAnnually;
+        var expectedPlanType = PlanType.EnterpriseMonthly;
+        organization.PlanType = PlanType.EnterpriseMonthly;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
@@ -579,12 +624,18 @@ public class ProviderServiceTests
         BackdateProviderCreationDate(provider, newCreationDate);
         provider.Type = ProviderType.Msp;
 
-        organization.PlanType = PlanType.EnterpriseAnnually;
-        organization.Plan = "Enterprise (Annually)";
+        organization.PlanType = PlanType.EnterpriseMonthly;
+        organization.Plan = "Enterprise (Monthly)";
 
-        var expectedPlanType = PlanType.EnterpriseAnnually2020;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
+            .Returns(StaticStore.GetPlan(organization.PlanType));
 
-        var expectedPlanId = "2020-enterprise-org-seat-annually";
+        var expectedPlanType = PlanType.EnterpriseMonthly2020;
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(expectedPlanType)
+            .Returns(StaticStore.GetPlan(expectedPlanType));
+
+        var expectedPlanId = "2020-enterprise-org-seat-monthly";
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
@@ -663,12 +714,12 @@ public class ProviderServiceTests
     public async Task CreateOrganizationAsync_Success(Provider provider, OrganizationSignup organizationSignup,
         Organization organization, string clientOwnerEmail, User user, SutProvider<ProviderService> sutProvider)
     {
-        organizationSignup.Plan = PlanType.EnterpriseAnnually;
+        organizationSignup.Plan = PlanType.EnterpriseMonthly;
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        sutProvider.GetDependency<IOrganizationService>().SignUpAsync(organizationSignup)
-            .Returns((organization, null as OrganizationUser, new Collection()));
+        sutProvider.GetDependency<IProviderClientOrganizationSignUpCommand>().SignUpClientOrganizationAsync(organizationSignup)
+            .Returns(new ProviderClientOrganizationSignUpResponse(organization, new Collection()));
 
         var providerOrganization =
             await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);
@@ -688,7 +739,7 @@ public class ProviderServiceTests
     }
 
     [Theory, OrganizationCustomize, BitAutoData]
-    public async Task CreateOrganizationAsync_ConsolidatedBillingEnabled_InvalidPlanType_ThrowsBadRequestException(
+    public async Task CreateOrganizationAsync_InvalidPlanType_ThrowsBadRequestException(
         Provider provider,
         OrganizationSignup organizationSignup,
         Organization organization,
@@ -696,8 +747,6 @@ public class ProviderServiceTests
         User user,
         SutProvider<ProviderService> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
-
         provider.Type = ProviderType.Msp;
         provider.Status = ProviderStatusType.Billable;
 
@@ -707,8 +756,8 @@ public class ProviderServiceTests
 
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
 
-        sutProvider.GetDependency<IOrganizationService>().SignupClientAsync(organizationSignup)
-            .Returns((organization, null as OrganizationUser, new Collection()));
+        sutProvider.GetDependency<IProviderClientOrganizationSignUpCommand>().SignUpClientOrganizationAsync(organizationSignup)
+            .Returns(new ProviderClientOrganizationSignUpResponse(organization, new Collection()));
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user));
@@ -717,7 +766,7 @@ public class ProviderServiceTests
     }
 
     [Theory, OrganizationCustomize, BitAutoData]
-    public async Task CreateOrganizationAsync_ConsolidatedBillingEnabled_InvokeSignupClientAsync(
+    public async Task CreateOrganizationAsync_InvokeSignupClientAsync(
         Provider provider,
         OrganizationSignup organizationSignup,
         Organization organization,
@@ -725,8 +774,6 @@ public class ProviderServiceTests
         User user,
         SutProvider<ProviderService> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
-
         provider.Type = ProviderType.Msp;
         provider.Status = ProviderStatusType.Billable;
 
@@ -736,8 +783,8 @@ public class ProviderServiceTests
 
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
 
-        sutProvider.GetDependency<IOrganizationService>().SignupClientAsync(organizationSignup)
-            .Returns((organization, null as OrganizationUser, new Collection()));
+        sutProvider.GetDependency<IProviderClientOrganizationSignUpCommand>().SignUpClientOrganizationAsync(organizationSignup)
+            .Returns(new ProviderClientOrganizationSignUpResponse(organization, new Collection()));
 
         var providerOrganization = await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);
 
@@ -771,12 +818,12 @@ public class ProviderServiceTests
         (Provider provider, OrganizationSignup organizationSignup, Organization organization, string clientOwnerEmail,
             User user, SutProvider<ProviderService> sutProvider, Collection defaultCollection)
     {
-        organizationSignup.Plan = PlanType.EnterpriseAnnually;
+        organizationSignup.Plan = PlanType.EnterpriseMonthly;
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        sutProvider.GetDependency<IOrganizationService>().SignUpAsync(organizationSignup)
-            .Returns((organization, null as OrganizationUser, defaultCollection));
+        sutProvider.GetDependency<IProviderClientOrganizationSignUpCommand>().SignUpClientOrganizationAsync(organizationSignup)
+            .Returns(new ProviderClientOrganizationSignUpResponse(organization, defaultCollection));
 
         var providerOrganization =
             await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);

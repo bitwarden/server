@@ -11,6 +11,10 @@ namespace Bit.Api.Vault.Models.Request;
 
 public class CipherRequestModel
 {
+    /// <summary>
+    /// The Id of the user that encrypted the cipher. It should always represent a UserId.
+    /// </summary>
+    public Guid? EncryptedFor { get; set; }
     public CipherType Type { get; set; }
 
     [StringLength(36)]
@@ -37,6 +41,7 @@ public class CipherRequestModel
     public CipherCardModel Card { get; set; }
     public CipherIdentityModel Identity { get; set; }
     public CipherSecureNoteModel SecureNote { get; set; }
+    public CipherSSHKeyModel SSHKey { get; set; }
     public DateTime? LastKnownRevisionDate { get; set; } = null;
 
     public CipherDetails ToCipherDetails(Guid userId, bool allowOrgIdSet = true)
@@ -82,6 +87,9 @@ public class CipherRequestModel
             case CipherType.SecureNote:
                 existingCipher.Data = JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
                 break;
+            case CipherType.SSHKey:
+                existingCipher.Data = JsonSerializer.Serialize(ToCipherSSHKeyData(), JsonHelpers.IgnoreWritingNull);
+                break;
             default:
                 throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
         }
@@ -105,18 +113,25 @@ public class CipherRequestModel
 
         if (hasAttachments2)
         {
-            foreach (var attachment in attachments.Where(a => Attachments2.ContainsKey(a.Key)))
+            foreach (var attachment in attachments)
             {
-                var attachment2 = Attachments2[attachment.Key];
+                if (!Attachments2.TryGetValue(attachment.Key, out var attachment2))
+                {
+                    continue;
+                }
                 attachment.Value.FileName = attachment2.FileName;
                 attachment.Value.Key = attachment2.Key;
             }
         }
         else if (hasAttachments)
         {
-            foreach (var attachment in attachments.Where(a => Attachments.ContainsKey(a.Key)))
+            foreach (var attachment in attachments)
             {
-                attachment.Value.FileName = Attachments[attachment.Key];
+                if (!Attachments.TryGetValue(attachment.Key, out var attachmentForKey))
+                {
+                    continue;
+                }
+                attachment.Value.FileName = attachmentForKey;
                 attachment.Value.Key = null;
             }
         }
@@ -228,6 +243,21 @@ public class CipherRequestModel
             PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
 
             Type = SecureNote.Type,
+        };
+    }
+
+    private CipherSSHKeyData ToCipherSSHKeyData()
+    {
+        return new CipherSSHKeyData
+        {
+            Name = Name,
+            Notes = Notes,
+            Fields = Fields?.Select(f => f.ToCipherFieldData()),
+            PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
+
+            PrivateKey = SSHKey.PrivateKey,
+            PublicKey = SSHKey.PublicKey,
+            KeyFingerprint = SSHKey.KeyFingerprint,
         };
     }
 }

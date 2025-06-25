@@ -1,16 +1,18 @@
 ﻿using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 
 public class OrganizationUserRepository : Repository<Core.Entities.OrganizationUser, OrganizationUser, Guid>, IOrganizationUserRepository
 {
@@ -46,6 +48,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
     {
+        organizationUsers = organizationUsers.ToList();
         if (!organizationUsers.Any())
         {
             return new List<Guid>();
@@ -225,12 +228,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         return await GetCountFromQuery(query);
     }
 
-    public async Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
-    {
-        var query = new OrganizationUserReadOccupiedSeatCountByOrganizationIdQuery(organizationId);
-        return await GetCountFromQuery(query);
-    }
-
     public async Task<int> GetCountByOrganizationIdAsync(Guid organizationId)
     {
         var query = new OrganizationUserReadCountByOrganizationIdQuery(organizationId);
@@ -248,6 +245,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
+#nullable enable
     public async Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id)
     {
         var organizationUserUserDetails = await GetDetailsByIdAsync(id);
@@ -268,6 +266,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             return (organizationUserUserDetails, collections);
         }
     }
+#nullable disable
 
     public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, Guid organizationId, OrganizationUserStatusType? status = null)
     {
@@ -436,15 +435,20 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async override Task ReplaceAsync(Core.Entities.OrganizationUser organizationUser)
+    public override async Task ReplaceAsync(Core.Entities.OrganizationUser organizationUser)
     {
         await base.ReplaceAsync(organizationUser);
-        using (var scope = ServiceScopeFactory.CreateScope())
+
+        // Only bump the account revision date if linked to a user account
+        if (!organizationUser.UserId.HasValue)
         {
-            var dbContext = GetDatabaseContext(scope);
-            await dbContext.UserBumpAccountRevisionDateAsync(organizationUser.UserId.GetValueOrDefault());
-            await dbContext.SaveChangesAsync();
+            return;
         }
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        await dbContext.UserBumpAccountRevisionDateAsync(organizationUser.UserId.Value);
+        await dbContext.SaveChangesAsync();
     }
 
     public async Task ReplaceAsync(Core.Entities.OrganizationUser obj, IEnumerable<CollectionAccessSelection> requestedCollections)
@@ -720,5 +724,62 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var data = await query.Run(dbContext).ToListAsync();
             return data;
         }
+    }
+
+    public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        await dbContext.OrganizationUsers.Where(x => organizationUserIds.Contains(x.Id))
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, OrganizationUserStatusType.Revoked));
+
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
+    }
+
+    public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from ou in dbContext.OrganizationUsers
+                        join u in dbContext.Users
+                            on ou.UserId equals u.Id
+                        where ou.OrganizationId == organizationId &&
+                            ou.Type == role &&
+                            ou.Status == OrganizationUserStatusType.Confirmed
+                        select new OrganizationUserUserDetails
+                        {
+                            Id = ou.Id,
+                            Email = ou.Email ?? u.Email,
+                            Permissions = ou.Permissions
+                        };
+            return await query.ToListAsync();
+        }
+    }
+
+    public async Task CreateManyAsync(IEnumerable<CreateOrganizationUser> organizationUserCollection)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        await using var dbContext = GetDatabaseContext(scope);
+
+        dbContext.OrganizationUsers.AddRange(Mapper.Map<List<OrganizationUser>>(organizationUserCollection.Select(x => x.OrganizationUser)));
+        dbContext.CollectionUsers.AddRange(organizationUserCollection.SelectMany(x => x.Collections, (user, collection) => new CollectionUser
+        {
+            CollectionId = collection.Id,
+            HidePasswords = collection.HidePasswords,
+            OrganizationUserId = user.OrganizationUser.Id,
+            Manage = collection.Manage,
+            ReadOnly = collection.ReadOnly
+        }));
+        dbContext.GroupUsers.AddRange(organizationUserCollection.SelectMany(x => x.Groups, (user, group) => new GroupUser
+        {
+            GroupId = group,
+            OrganizationUserId = user.OrganizationUser.Id
+        }));
+
+        await dbContext.SaveChangesAsync();
     }
 }

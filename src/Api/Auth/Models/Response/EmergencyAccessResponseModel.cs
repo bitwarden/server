@@ -90,6 +90,13 @@ public class EmergencyAccessGrantorDetailsResponseModel : EmergencyAccessRespons
 
 public class EmergencyAccessTakeoverResponseModel : ResponseModel
 {
+    /// <summary>
+    /// Creates a new instance of the <see cref="EmergencyAccessTakeoverResponseModel"/> class.
+    /// </summary>
+    /// <param name="emergencyAccess">Consumed for the Encrypted Key value</param>
+    /// <param name="grantor">consumed for the KDF configuration</param>
+    /// <param name="obj">name of the object</param>
+    /// <exception cref="ArgumentNullException">emergencyAccess cannot be null</exception>
     public EmergencyAccessTakeoverResponseModel(EmergencyAccess emergencyAccess, User grantor, string obj = "emergencyAccessTakeover") : base(obj)
     {
         if (emergencyAccess == null)
@@ -116,11 +123,17 @@ public class EmergencyAccessViewResponseModel : ResponseModel
     public EmergencyAccessViewResponseModel(
         IGlobalSettings globalSettings,
         EmergencyAccess emergencyAccess,
-        IEnumerable<CipherDetails> ciphers)
+        IEnumerable<CipherDetails> ciphers,
+        User user)
         : base("emergencyAccessView")
     {
         KeyEncrypted = emergencyAccess.KeyEncrypted;
-        Ciphers = ciphers.Select(c => new CipherResponseModel(c, globalSettings));
+        Ciphers = ciphers.Select(cipher =>
+            new CipherResponseModel(
+                cipher,
+                user,
+                organizationAbilities: null, // Emergency access only retrieves personal ciphers so organizationAbilities is not needed
+                globalSettings));
     }
 
     public string KeyEncrypted { get; set; }

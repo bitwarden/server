@@ -16,6 +16,12 @@ public class LoginHelper
         _client = client;
     }
 
+    public async Task LoginAsync(string email)
+    {
+        var tokens = await _factory.LoginAsync(email);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+    }
+
     public async Task LoginWithOrganizationApiKeyAsync(Guid organizationId)
     {
         var (clientId, apiKey) = await GetOrganizationApiKey(_factory, organizationId);

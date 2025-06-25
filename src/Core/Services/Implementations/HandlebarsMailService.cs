@@ -1,18 +1,26 @@
-﻿using System.Net;
+﻿#nullable enable
+
+using System.Diagnostics;
+using System.Net;
 using System.Reflection;
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Models.Mail;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Mail;
 using Bit.Core.Entities;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
+using Bit.Core.Models.Mail.Billing;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
 using Bit.Core.SecretsManager.Models.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Models.Data;
 using HandlebarsDotNet;
 
 namespace Bit.Core.Services;
@@ -25,8 +33,7 @@ public class HandlebarsMailService : IMailService
     private readonly GlobalSettings _globalSettings;
     private readonly IMailDeliveryService _mailDeliveryService;
     private readonly IMailEnqueuingService _mailEnqueuingService;
-    private readonly Dictionary<string, HandlebarsTemplate<object, object>> _templateCache =
-        new Dictionary<string, HandlebarsTemplate<object, object>>();
+    private readonly Dictionary<string, HandlebarsTemplate<object, object>> _templateCache = new();
 
     private bool _registeredHelpersAndPartials = false;
 
@@ -73,20 +80,24 @@ public class HandlebarsMailService : IMailService
     }
 
     public async Task SendTrialInitiationSignupEmailAsync(
+        bool isExistingUser,
         string email,
         string token,
         ProductTierType productTier,
-        IEnumerable<ProductType> products)
+        IEnumerable<ProductType> products,
+        int trialLength)
     {
         var message = CreateDefaultMessage("Verify your email", email);
         var model = new TrialInitiationVerifyEmail
         {
+            IsExistingUser = isExistingUser,
             Token = WebUtility.UrlEncode(token),
             Email = WebUtility.UrlEncode(email),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
             ProductTier = productTier,
-            Product = products
+            Product = products,
+            TrialLength = trialLength
         };
         await AddMessageContentAsync(message, "Billing.TrialInitiationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
@@ -112,6 +123,19 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendCannotDeleteClaimedAccountEmailAsync(string email)
+    {
+        var message = CreateDefaultMessage("Delete Your Account", email);
+        var model = new CannotDeleteClaimedAccountViewModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+        };
+        await AddMessageContentAsync(message, "AdminConsole.CannotDeleteClaimedAccount", model);
+        message.Category = "CannotDeleteClaimedAccount";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail)
     {
         var message = CreateDefaultMessage("Your Email Change", toEmail);
@@ -130,7 +154,7 @@ public class HandlebarsMailService : IMailService
     public async Task SendChangeEmailEmailAsync(string newEmailAddress, string token)
     {
         var message = CreateDefaultMessage("Your Email Change", newEmailAddress);
-        var model = new EmailTokenViewModel
+        var model = new UserVerificationEmailTokenViewModel
         {
             Token = token,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
@@ -142,14 +166,22 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendTwoFactorEmailAsync(string email, string token)
+    public async Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true)
     {
-        var message = CreateDefaultMessage("Your Two-step Login Verification Code", email);
-        var model = new EmailTokenViewModel
+        var message = CreateDefaultMessage("Your Bitwarden Verification Code", email);
+        var requestDateTime = DateTime.UtcNow;
+        var model = new TwoFactorEmailTokenViewModel
         {
             Token = token,
+            EmailTotpAction = authentication ? "logging in" : "setting up two-step login",
+            AccountEmail = accountEmail,
+            TheDate = requestDateTime.ToLongDateString(),
+            TheTime = requestDateTime.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+            DeviceIp = deviceIp,
+            DeviceType = deviceType,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-            SiteName = _globalSettings.SiteName
+            SiteName = _globalSettings.SiteName,
         };
         await AddMessageContentAsync(message, "Auth.TwoFactorEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
@@ -186,12 +218,13 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails)
     {
+        Debug.Assert(organization.Seats.HasValue, "Organization is expected to have a non-null value for seats at the time of sending this email");
         var message = CreateDefaultMessage($"{organization.DisplayName()} Seat Count Has Increased", ownerEmails);
         var model = new OrganizationSeatsAutoscaledViewModel
         {
-            OrganizationId = organization.Id,
             InitialSeatCount = initialSeatCount,
             CurrentSeatCount = organization.Seats.Value,
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSeatsAutoscaled", model);
@@ -204,8 +237,8 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{organization.DisplayName()} Seat Limit Reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
-            OrganizationId = organization.Id,
             MaxSeatCount = maxSeatCount,
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSeatsMaxReached", model);
@@ -259,7 +292,7 @@ public class HandlebarsMailService : IMailService
 
         var messageModels = orgInvitesInfo.OrgUserTokenPairs.Select(orgUserTokenPair =>
         {
-
+            Debug.Assert(orgUserTokenPair.OrgUser.Email is not null);
             var orgUserInviteViewModel = OrganizationUserInvitedViewModel.CreateFromInviteInfo(
                 orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token, _globalSettings);
             return CreateMessage(orgUserTokenPair.OrgUser.Email, orgUserInviteViewModel);
@@ -268,17 +301,17 @@ public class HandlebarsMailService : IMailService
         await EnqueueMailAsync(messageModels);
     }
 
-    public async Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
+    public async Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email)
     {
-        var message = CreateDefaultMessage($"You have been removed from {organizationName}", email);
-        var model = new OrganizationUserRemovedForPolicyTwoStepViewModel
+        var message = CreateDefaultMessage($"You have been revoked from {organizationName}", email);
+        var model = new OrganizationUserRevokedForPolicyTwoFactorViewModel
         {
             OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "OrganizationUserRemovedForPolicyTwoStep", model);
-        message.Category = "OrganizationUserRemovedForPolicyTwoStep";
+        await AddMessageContentAsync(message, "AdminConsole.OrganizationUserRevokedForTwoFactorPolicy", model);
+        message.Category = "OrganizationUserRevokedForTwoFactorPolicy";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
@@ -317,7 +350,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
             ProviderId = provider.Id,
-            ProviderName = CoreHelpers.SanitizeForEmail(provider.DisplayName(), false),
+            ProviderName = CoreHelpers.SanitizeForEmail(provider.DisplayName()!, false),
             ProviderNameUrlEncoded = WebUtility.UrlEncode(provider.Name),
             ProviderBillingEmail = provider.BillingEmail,
             ProviderCreationDate = provider.CreationDate.ToLongDateString(),
@@ -407,7 +440,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendLicenseExpiredAsync(IEnumerable<string> emails, string organizationName = null)
+    public async Task SendLicenseExpiredAsync(IEnumerable<string> emails, string? organizationName = null)
     {
         var message = CreateDefaultMessage("License Expired", emails);
         var model = new LicenseExpiredViewModel();
@@ -432,6 +465,22 @@ public class HandlebarsMailService : IMailService
         await AddMessageContentAsync(message, "SecretsManagerAccessRequest", model);
         message.Category = "SecretsManagerAccessRequest";
         await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList)
+    {
+        await EnqueueMailAsync(emailList.EmailList.Select(email =>
+            CreateMessage(email, emailList.Organization)));
+        return;
+
+        MailQueueMessage CreateMessage(string emailAddress, Organization org) =>
+            new(CreateDefaultMessage($"Your Bitwarden account is claimed by {org.DisplayName()}", emailAddress),
+                "AdminConsole.DomainClaimedByOrganization",
+                new ClaimedDomainUserNotificationViewModel
+                {
+                    TitleFirst = $"Your Bitwarden account is claimed by {org.DisplayName()}",
+                    OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false)
+                });
     }
 
     public async Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip)
@@ -469,17 +518,17 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email)
+    public async Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email)
     {
-        var message = CreateDefaultMessage($"You have been removed from {organizationName}", email);
-        var model = new OrganizationUserRemovedForPolicySingleOrgViewModel
+        var message = CreateDefaultMessage($"You have been revoked from {organizationName}", email);
+        var model = new OrganizationUserRevokedForPolicySingleOrgViewModel
         {
             OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "OrganizationUserRemovedForPolicySingleOrg", model);
-        message.Category = "OrganizationUserRemovedForPolicySingleOrg";
+        await AddMessageContentAsync(message, "AdminConsole.OrganizationUserRevokedForSingleOrgPolicy", model);
+        message.Category = "OrganizationUserRevokedForSingleOrgPolicy";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
@@ -527,12 +576,14 @@ public class HandlebarsMailService : IMailService
     }
 
     private async Task AddMessageContentAsync<T>(MailMessage message, string templateName, T model)
+        where T : notnull
     {
         message.HtmlContent = await RenderAsync($"{templateName}.html", model);
         message.TextContent = await RenderAsync($"{templateName}.text", model);
     }
 
-    private async Task<string> RenderAsync<T>(string templateName, T model)
+    private async Task<string?> RenderAsync<T>(string templateName, T model)
+        where T : notnull
     {
         await RegisterHelpersAndPartialsAsync();
         if (!_templateCache.TryGetValue(templateName, out var template))
@@ -547,7 +598,7 @@ public class HandlebarsMailService : IMailService
         return template != null ? template(model) : null;
     }
 
-    private async Task<string> ReadSourceAsync(string templateName)
+    private async Task<string?> ReadSourceAsync(string templateName)
     {
         var assembly = typeof(HandlebarsMailService).GetTypeInfo().Assembly;
         var fullTemplateName = $"{Namespace}.{templateName}.hbs";
@@ -555,7 +606,7 @@ public class HandlebarsMailService : IMailService
         {
             return null;
         }
-        using (var s = assembly.GetManifestResourceStream(fullTemplateName))
+        using (var s = assembly.GetManifestResourceStream(fullTemplateName)!)
         using (var sr = new StreamReader(s))
         {
             return await sr.ReadToEndAsync();
@@ -586,6 +637,10 @@ public class HandlebarsMailService : IMailService
         Handlebars.RegisterTemplate("TitleContactUsHtmlLayout", titleContactUsHtmlLayoutSource);
         var titleContactUsTextLayoutSource = await ReadSourceAsync("Layouts.TitleContactUs.text");
         Handlebars.RegisterTemplate("TitleContactUsTextLayout", titleContactUsTextLayoutSource);
+        var securityTasksHtmlLayoutSource = await ReadSourceAsync("Layouts.SecurityTasks.html");
+        Handlebars.RegisterTemplate("SecurityTasksHtmlLayout", securityTasksHtmlLayoutSource);
+        var securityTasksTextLayoutSource = await ReadSourceAsync("Layouts.SecurityTasks.text");
+        Handlebars.RegisterTemplate("SecurityTasksTextLayout", securityTasksTextLayoutSource);
 
         Handlebars.RegisterHelper("date", (writer, context, parameters) =>
         {
@@ -666,6 +721,80 @@ public class HandlebarsMailService : IMailService
 
             var clickTrackingText = (clickTrackingOff ? "clicktracking=off" : string.Empty);
             writer.WriteSafeString($"<a href=\"{href}\" target=\"_blank\" {clickTrackingText}>{text}</a>");
+        });
+
+        // Construct markup for admin and owner email addresses.
+        // Using conditionals within the handlebar syntax was including extra spaces around
+        // concatenated strings, which this helper avoids.
+        Handlebars.RegisterHelper("formatAdminOwnerEmails", (writer, context, parameters) =>
+        {
+            if (parameters.Length == 0)
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+
+            var emailList = new List<string>();
+            if (parameters[0] is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Array)
+            {
+                emailList = jsonElement.EnumerateArray().Select(e => e.GetString()!).ToList();
+            }
+            else if (parameters[0] is IEnumerable<string> emails)
+            {
+                emailList = emails.ToList();
+            }
+            else
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+
+            if (emailList.Count == 0)
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+
+            string constructAnchorElement(string email)
+            {
+                return $"<a style=\"color: #175DDC\" href=\"mailto:{email}\">{email}</a>";
+            }
+
+            var outputMessage = "This request was initiated by ";
+
+            if (emailList.Count == 1)
+            {
+                outputMessage += $"{constructAnchorElement(emailList[0])}.";
+            }
+            else
+            {
+                outputMessage += string.Join(", ", emailList.Take(emailList.Count - 1)
+                    .Select(email => constructAnchorElement(email)));
+                outputMessage += $" and {constructAnchorElement(emailList.Last())}.";
+            }
+
+            writer.WriteSafeString($"{outputMessage}");
+        });
+
+        // Returns the singular or plural form of a word based on the provided numeric value.
+        Handlebars.RegisterHelper("plurality", (writer, context, parameters) =>
+        {
+            if (parameters.Length != 3)
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+
+            if (int.TryParse(parameters[0].ToString(), out var number))
+            {
+                var singularText = parameters[1].ToString();
+                var pluralText = parameters[2].ToString();
+                writer.WriteSafeString(number == 1 ? singularText : pluralText);
+            }
+            else
+            {
+                writer.WriteSafeString(string.Empty);
+            }
         });
     }
 
@@ -801,12 +930,28 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendBusinessUnitConversionInviteAsync(Organization organization, string token, string email)
+    {
+        var message = CreateDefaultMessage("Set Up Business Unit", email);
+        var model = new BusinessUnitConversionInviteModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+            OrganizationId = organization.Id.ToString(),
+            Email = WebUtility.UrlEncode(email),
+            Token = WebUtility.UrlEncode(token)
+        };
+        await AddMessageContentAsync(message, "Billing.BusinessUnitConversionInvite", model);
+        message.Category = "BusinessUnitConversionInvite";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email)
     {
         var message = CreateDefaultMessage($"Join {providerName}", email);
         var model = new ProviderUserInvitedViewModel
         {
-            ProviderName = CoreHelpers.SanitizeForEmail(providerName),
+            ProviderName = CoreHelpers.SanitizeForEmail(providerName, false),
             Email = WebUtility.UrlEncode(providerUser.Email),
             ProviderId = providerUser.ProviderId.ToString(),
             ProviderUserId = providerUser.Id.ToString(),
@@ -952,7 +1097,7 @@ public class HandlebarsMailService : IMailService
     public async Task SendOTPEmailAsync(string email, string token)
     {
         var message = CreateDefaultMessage("Your Bitwarden Verification Code", email);
-        var model = new EmailTokenViewModel
+        var model = new UserVerificationEmailTokenViewModel
         {
             Token = token,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
@@ -964,50 +1109,16 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip)
+    public async Task SendUnclaimedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
     {
-        var message = CreateDefaultMessage("Failed login attempts detected", email);
-        var model = new FailedAuthAttemptsModel()
-        {
-            TheDate = utcNow.ToLongDateString(),
-            TheTime = utcNow.ToShortTimeString(),
-            TimeZone = _utcTimeZoneDisplay,
-            IpAddress = ip,
-            AffectedEmail = email
-
-        };
-        await AddMessageContentAsync(message, "Auth.FailedLoginAttempts", model);
-        message.Category = "FailedLoginAttempts";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
-    public async Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        var message = CreateDefaultMessage("Failed login attempts detected", email);
-        var model = new FailedAuthAttemptsModel()
-        {
-            TheDate = utcNow.ToLongDateString(),
-            TheTime = utcNow.ToShortTimeString(),
-            TimeZone = _utcTimeZoneDisplay,
-            IpAddress = ip,
-            AffectedEmail = email
-
-        };
-        await AddMessageContentAsync(message, "Auth.FailedTwoFactorAttempts", model);
-        message.Category = "FailedTwoFactorAttempts";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
-    public async Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
-    {
-        var message = CreateDefaultMessage("Domain not verified", adminEmails);
+        var message = CreateDefaultMessage("Domain not claimed", adminEmails);
         var model = new OrganizationDomainUnverifiedViewModel
         {
             Url = $"{_globalSettings.BaseServiceUri.VaultWithHash}/organizations/{organizationId}/settings/domain-verification",
             DomainName = domainName
         };
-        await AddMessageContentAsync(message, "OrganizationDomainUnverified", model);
-        message.Category = "UnverifiedOrganizationDomain";
+        await AddMessageContentAsync(message, "OrganizationDomainUnclaimed", model);
+        message.Category = "UnclaimedOrganizationDomain";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
@@ -1017,8 +1128,8 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Seat Limit Reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
-            OrganizationId = organization.Id,
             MaxSeatCount = maxSeatCount,
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSmSeatsMaxReached", model);
@@ -1032,8 +1143,8 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Machine Accounts Limit Reached", ownerEmails);
         var model = new OrganizationServiceAccountsMaxReachedViewModel
         {
-            OrganizationId = organization.Id,
             MaxServiceAccountsCount = maxSeatCount,
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSmServiceAccountsMaxReached", model);
@@ -1082,9 +1193,68 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    private static string GetUserIdentifier(string email, string userName)
+    public async Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate, string organizationId,
+        string organizationName)
+    {
+        var message = CreateDefaultMessage("Removal of Free Bitwarden Families plan", email);
+        var model = new FamiliesForEnterpriseRemoveOfferViewModel
+        {
+            SponsoredOrganizationId = organizationId,
+            SponsoringOrgName = CoreHelpers.SanitizeForEmail(organizationName),
+            OfferAcceptanceDate = offerAcceptanceDate,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
+        };
+        await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRemovedFromFamilyUser", model);
+        message.Category = "FamiliesForEnterpriseRemovedFromFamilyUser";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string? userName)
+    {
+        var templateName = _globalSettings.SelfHosted ?
+            "AdminConsole.SelfHostNotifyAdminDeviceApprovalRequested" :
+            "AdminConsole.NotifyAdminDeviceApprovalRequested";
+        var message = CreateDefaultMessage("Review SSO login request for new device", adminEmails);
+        var model = new DeviceApprovalRequestedViewModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            UserNameRequestingAccess = GetUserIdentifier(email, userName),
+            OrganizationId = organizationId,
+        };
+        await AddMessageContentAsync(message, templateName, model);
+        message.Category = "DeviceApprovalRequested";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotifications, IEnumerable<string> adminOwnerEmails)
+    {
+        MailQueueMessage CreateMessage(UserSecurityTasksCount notification)
+        {
+            var sanitizedOrgName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false);
+            var message = CreateDefaultMessage($"{sanitizedOrgName} has identified {notification.TaskCount} at-risk password{(notification.TaskCount.Equals(1) ? "" : "s")}", notification.Email);
+            var model = new SecurityTaskNotificationViewModel
+            {
+                OrgName = CoreHelpers.SanitizeForEmail(sanitizedOrgName, false),
+                TaskCount = notification.TaskCount,
+                AdminOwnerEmails = adminOwnerEmails.ToList(),
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            };
+            message.Category = "SecurityTasksNotification";
+            return new MailQueueMessage(message, "SecurityTasksNotification", model);
+        }
+        var messageModels = securityTaskNotifications.Select(CreateMessage);
+        await EnqueueMailAsync(messageModels.ToList());
+    }
+
+    private static string GetUserIdentifier(string email, string? userName)
     {
         return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
     }
-}
 
+    private string GetCloudVaultSubscriptionUrl(Guid organizationId)
+        => _globalSettings.BaseServiceUri.CloudRegion?.ToLower() switch
+        {
+            "eu" => $"https://vault.bitwarden.eu/#/organizations/{organizationId}/billing/subscription",
+            _ => $"https://vault.bitwarden.com/#/organizations/{organizationId}/billing/subscription"
+        };
+}

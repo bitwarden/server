@@ -60,15 +60,9 @@ public class Startup
         {
             services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
         }
+
+        services.AddEventWriteServices(globalSettings);
         services.AddScoped<IEventService, EventService>();
-        if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
-        {
-            services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
-        }
-        else
-        {
-            services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
-        }
 
         services.AddOptionality();
 
@@ -82,6 +76,8 @@ public class Startup
         {
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
+
+        services.AddRabbitMqListeners(globalSettings);
     }
 
     public void Configure(
