@@ -73,6 +73,7 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<ICloudOrganizationSignUpCommand, CloudOrganizationSignUpCommand>();
         services.AddScoped<IProviderClientOrganizationSignUpCommand, ProviderClientOrganizationSignUpCommand>();
+        services.AddScoped<IResellerClientOrganizationSignUpCommand, ResellerClientOrganizationSignUpCommand>();
     }
 
     private static void AddOrganizationDeleteCommands(this IServiceCollection services)
