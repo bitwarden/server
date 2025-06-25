@@ -1,37 +1,41 @@
-﻿using Bit.Api.Tools.Models;
+﻿using Bit.Api.Dirt.Models;
+using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.Context;
+using Bit.Core.Dirt.Reports.Entities;
+using Bit.Core.Dirt.Reports.Models.Data;
+using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
+using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
+using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Exceptions;
-using Bit.Core.Tools.Entities;
-using Bit.Core.Tools.Models.Data;
-using Bit.Core.Tools.ReportFeatures.Interfaces;
-using Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
-using Bit.Core.Tools.ReportFeatures.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Tools.Controllers;
+namespace Bit.Api.Dirt.Controllers;
 
 [Route("reports")]
 [Authorize("Application")]
 public class ReportsController : Controller
 {
     private readonly ICurrentContext _currentContext;
-    private readonly IMemberAccessCipherDetailsQuery _memberAccessCipherDetailsQuery;
+    private readonly IMemberAccessReportQuery _memberAccessReportQuery;
+    private readonly IRiskInsightsReportQuery _riskInsightsReportQuery;
     private readonly IAddPasswordHealthReportApplicationCommand _addPwdHealthReportAppCommand;
     private readonly IGetPasswordHealthReportApplicationQuery _getPwdHealthReportAppQuery;
     private readonly IDropPasswordHealthReportApplicationCommand _dropPwdHealthReportAppCommand;
 
     public ReportsController(
         ICurrentContext currentContext,
-        IMemberAccessCipherDetailsQuery memberAccessCipherDetailsQuery,
+        IMemberAccessReportQuery memberAccessReportQuery,
+        IRiskInsightsReportQuery riskInsightsReportQuery,
         IAddPasswordHealthReportApplicationCommand addPasswordHealthReportApplicationCommand,
         IGetPasswordHealthReportApplicationQuery getPasswordHealthReportApplicationQuery,
         IDropPasswordHealthReportApplicationCommand dropPwdHealthReportAppCommand
     )
     {
         _currentContext = currentContext;
-        _memberAccessCipherDetailsQuery = memberAccessCipherDetailsQuery;
+        _memberAccessReportQuery = memberAccessReportQuery;
+        _riskInsightsReportQuery = riskInsightsReportQuery;
         _addPwdHealthReportAppCommand = addPasswordHealthReportApplicationCommand;
         _getPwdHealthReportAppQuery = getPasswordHealthReportApplicationQuery;
         _dropPwdHealthReportAppCommand = dropPwdHealthReportAppCommand;
@@ -47,16 +51,16 @@ public class ReportsController : Controller
     [HttpGet("member-cipher-details/{orgId}")]
     public async Task<IEnumerable<MemberCipherDetailsResponseModel>> GetMemberCipherDetails(Guid orgId)
     {
-        // Using the AccessReports permission here until new permissions  
+        // Using the AccessReports permission here until new permissions
         // are needed for more control over reports
         if (!await _currentContext.AccessReports(orgId))
         {
             throw new NotFoundException();
         }
 
-        var memberCipherDetails = await GetMemberCipherDetails(new MemberAccessCipherDetailsRequest { OrganizationId = orgId });
+        var riskDetails = await GetRiskInsightsReportDetails(new RiskInsightsReportRequest { OrganizationId = orgId });
 
-        var responses = memberCipherDetails.Select(x => new MemberCipherDetailsResponseModel(x));
+        var responses = riskDetails.Select(x => new MemberCipherDetailsResponseModel(x));
 
         return responses;
     }
@@ -69,31 +73,46 @@ public class ReportsController : Controller
     /// <returns>IEnumerable of MemberAccessReportResponseModel</returns>
     /// <exception cref="NotFoundException">If Access reports permission is not assigned</exception>
     [HttpGet("member-access/{orgId}")]
-    public async Task<IEnumerable<MemberAccessReportResponseModel>> GetMemberAccessReport(Guid orgId)
+    public async Task<IEnumerable<MemberAccessDetailReportResponseModel>> GetMemberAccessReport(Guid orgId)
     {
         if (!await _currentContext.AccessReports(orgId))
         {
             throw new NotFoundException();
         }
 
-        var memberCipherDetails = await GetMemberCipherDetails(new MemberAccessCipherDetailsRequest { OrganizationId = orgId });
+        var accessDetails = await GetMemberAccessDetails(new MemberAccessReportRequest { OrganizationId = orgId });
 
-        var responses = memberCipherDetails.Select(x => new MemberAccessReportResponseModel(x));
+        var responses = accessDetails.Select(x => new MemberAccessDetailReportResponseModel(x));
 
         return responses;
     }
 
     /// <summary>
-    /// Contains the organization member info, the cipher ids associated with the member, 
+    /// Contains the organization member info, the cipher ids associated with the member,
     /// and details on their collections, groups, and permissions
     /// </summary>
-    /// <param name="request">Request to the MemberAccessCipherDetailsQuery</param>
-    /// <returns>IEnumerable of MemberAccessCipherDetails</returns>
-    private async Task<IEnumerable<MemberAccessCipherDetails>> GetMemberCipherDetails(MemberAccessCipherDetailsRequest request)
+    /// <param name="request">Request parameters</param>
+    /// <returns>
+    ///     List of a user's permissions at a group and collection level as well as the number of ciphers
+    ///     associated with that group/collection
+    /// </returns>
+    private async Task<IEnumerable<MemberAccessReportDetail>> GetMemberAccessDetails(
+        MemberAccessReportRequest request)
     {
-        var memberCipherDetails =
-            await _memberAccessCipherDetailsQuery.GetMemberAccessCipherDetails(request);
-        return memberCipherDetails;
+        var accessDetails = await _memberAccessReportQuery.GetMemberAccessReportsAsync(request);
+        return accessDetails;
+    }
+
+    /// <summary>
+    /// Gets the risk insights report details from the risk insights query. Associates a user to their cipher ids
+    /// </summary>
+    /// <param name="request">Request parameters</param>
+    /// <returns>A list of risk insights data associating the user to cipher ids</returns>
+    private async Task<IEnumerable<RiskInsightsReportDetail>> GetRiskInsightsReportDetails(
+        RiskInsightsReportRequest request)
+    {
+        var riskDetails = await _riskInsightsReportQuery.GetRiskInsightsReportDetails(request);
+        return riskDetails;
     }
 
     /// <summary>

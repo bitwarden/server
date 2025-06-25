@@ -107,11 +107,11 @@ public static class FeatureFlagKeys
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string LimitItemDeletion = "pm-15493-restrict-item-deletion-to-can-manage-permission";
     public const string PolicyRequirements = "pm-14439-policy-requirements";
-    public const string SsoExternalIdVisibility = "pm-18630-sso-external-id-visibility";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
     public const string OptimizeNestedTraverseTypescript = "pm-21695-optimize-nested-traverse-typescript";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
+    public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string MembersGetEndpointOptimization = "pm-21031-members-get-endpoint-optimization";
 
     /* Auth Team */
@@ -182,6 +182,9 @@ public static class FeatureFlagKeys
     public const string EnablePMFlightRecorder = "enable-pm-flight-recorder";
     public const string MobileErrorReporting = "mobile-error-reporting";
     public const string AndroidChromeAutofill = "android-chrome-autofill";
+    public const string UserManagedPrivilegedApps = "pm-18970-user-managed-privileged-apps";
+    public const string EnablePMPreloginSettings = "enable-pm-prelogin-settings";
+    public const string AppIntents = "app-intents";
 
     /* Platform Team */
     public const string PersistPopupView = "persist-popup-view";
@@ -204,6 +207,7 @@ public static class FeatureFlagKeys
     public const string EndUserNotifications = "pm-10609-end-user-notifications";
     public const string PhishingDetection = "phishing-detection";
     public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
+    public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
 
     public static List<string> GetAllKeys()
     {
