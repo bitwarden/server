@@ -114,7 +114,7 @@ public class CipherServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task SaveDetailsAsync_PersonalVault_WithDisablePersonalOwnershipPolicyEnabled_Throws(
+    public async Task SaveDetailsAsync_PersonalVault_WithOrganizationDataOwnershipPolicyEnabled_Throws(
         SutProvider<CipherService> sutProvider,
         CipherDetails cipher,
         Guid savingUserId)
@@ -124,7 +124,7 @@ public class CipherServiceTests
         cipher.OrganizationId = null;
 
         sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership)
+            .AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.OrganizationDataOwnership)
             .Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -134,7 +134,7 @@ public class CipherServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task SaveDetailsAsync_PersonalVault_WithDisablePersonalOwnershipPolicyDisabled_Succeeds(
+    public async Task SaveDetailsAsync_PersonalVault_WithOrganizationDataOwnershipPolicyDisabled_Succeeds(
         SutProvider<CipherService> sutProvider,
         CipherDetails cipher,
         Guid savingUserId)
@@ -144,7 +144,7 @@ public class CipherServiceTests
         cipher.OrganizationId = null;
 
         sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership)
+            .AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.OrganizationDataOwnership)
             .Returns(false);
 
         await sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null);
@@ -156,7 +156,7 @@ public class CipherServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task SaveDetailsAsync_PersonalVault_WithPolicyRequirementsEnabled_WithDisablePersonalOwnershipPolicyEnabled_Throws(
+    public async Task SaveDetailsAsync_PersonalVault_WithPolicyRequirementsEnabled_WithOrganizationDataOwnershipPolicyEnabled_Throws(
         SutProvider<CipherService> sutProvider,
         CipherDetails cipher,
         Guid savingUserId)
@@ -170,8 +170,10 @@ public class CipherServiceTests
             .Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<PersonalOwnershipPolicyRequirement>(savingUserId)
-            .Returns(new PersonalOwnershipPolicyRequirement { DisablePersonalOwnership = true });
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(
+                OrganizationDataOwnershipState.Enabled,
+                [Guid.NewGuid()]));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null));
@@ -180,7 +182,7 @@ public class CipherServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task SaveDetailsAsync_PersonalVault_WithPolicyRequirementsEnabled_WithDisablePersonalOwnershipPolicyDisabled_Succeeds(
+    public async Task SaveDetailsAsync_PersonalVault_WithPolicyRequirementsEnabled_WithOrganizationDataOwnershipPolicyDisabled_Succeeds(
         SutProvider<CipherService> sutProvider,
         CipherDetails cipher,
         Guid savingUserId)
@@ -194,8 +196,10 @@ public class CipherServiceTests
             .Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<PersonalOwnershipPolicyRequirement>(savingUserId)
-            .Returns(new PersonalOwnershipPolicyRequirement { DisablePersonalOwnership = false });
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(
+                OrganizationDataOwnershipState.Disabled,
+                []));
 
         await sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null);
 
