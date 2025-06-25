@@ -571,6 +571,65 @@ public class CipherRepositoryTests
         Assert.True(personalDetails.Manage, "Personal ciphers should always have Manage permission");
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByUserIdAsync_WhenOneCipherIsAssignedToTwoCollectionsWithDifferentPermissions_MostPrivilegedAccessIsReturnedOnTheCipher(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        //Arrange
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+
+        var cipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        var managedPermissionsCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Managed",
+            OrganizationId = organization.Id
+        });
+
+        var unmanagedPermissionsCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Unmanaged",
+            OrganizationId = organization.Id
+        });
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id, organization.Id,
+            [managedPermissionsCollection.Id, unmanagedPermissionsCollection.Id]);
+
+        await collectionRepository.UpdateUsersAsync(managedPermissionsCollection.Id, new List<CollectionAccessSelection>
+        {
+            new() { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }
+        });
+
+        await collectionRepository.UpdateUsersAsync(unmanagedPermissionsCollection.Id, new List<CollectionAccessSelection>
+        {
+            new() { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = false }
+        });
+
+        // Act
+        var ciphers = await cipherRepository.GetManyByUserIdAsync(user.Id);
+
+        // Assert
+        Assert.Single(ciphers);
+        var deletableCipher = ciphers.SingleOrDefault(x => x.Id == cipher.Id);
+        Assert.NotNull(deletableCipher);
+        Assert.True(deletableCipher.Manage);
+
+        // Annul
+        await cipherRepository.DeleteAsync(cipher);
+        await organizationUserRepository.DeleteAsync(orgUser);
+        await organizationRepository.DeleteAsync(organization);
+        await userRepository.DeleteAsync(user);
+    }
+
     private async Task<(User user, Organization org, OrganizationUser orgUser)> CreateTestUserAndOrganization(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
