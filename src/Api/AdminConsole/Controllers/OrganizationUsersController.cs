@@ -226,9 +226,9 @@ public class OrganizationUsersController : Controller
 
     [HttpGet("{id}/groups")]
     [Authorize<ManageGroupsOrUsersRequirement>]
-    public async Task<IEnumerable<string>> GetGroups(string id)
+    public async Task<IEnumerable<string>> GetGroups(Guid id)
     {
-        var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
 
         var groupIds = await _groupRepository.GetManyIdsByUserIdAsync(organizationUser.Id);
 
@@ -238,12 +238,10 @@ public class OrganizationUsersController : Controller
 
     [HttpGet("{id}/reset-password-details")]
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(string orgId, string id)
+    public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(Guid orgId, Guid id)
     {
-        var orgGuidId = new Guid(orgId);
-
-        var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
-        if (organizationUser == null || !organizationUser.UserId.HasValue)
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (organizationUser is not { UserId: not null })
         {
             throw new NotFoundException();
         }
@@ -257,7 +255,7 @@ public class OrganizationUsersController : Controller
         }
 
         // Retrieve Encrypted Private Key from organization
-        var org = await _organizationRepository.GetByIdAsync(orgGuidId);
+        var org = await _organizationRepository.GetByIdAsync(orgId);
         if (org == null)
         {
             throw new NotFoundException();
@@ -298,24 +296,20 @@ public class OrganizationUsersController : Controller
 
     [HttpPost("reinvite")]
     [Authorize<ManageUsersRequirement>]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkReinvite(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkReinvite(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
-        var orgGuidId = new Guid(orgId);
-
         var userId = _userService.GetProperUserId(User);
-        var result = await _organizationService.ResendInvitesAsync(orgGuidId, userId.Value, model.Ids);
+        var result = await _organizationService.ResendInvitesAsync(orgId, userId.Value, model.Ids);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(
             result.Select(t => new OrganizationUserBulkResponseModel(t.Item1.Id, t.Item2)));
     }
 
     [HttpPost("{id}/reinvite")]
     [Authorize<ManageUsersRequirement>]
-    public async Task Reinvite(string orgId, string id)
+    public async Task Reinvite(Guid orgId, Guid id)
     {
-        var orgGuidId = new Guid(orgId);
-
         var userId = _userService.GetProperUserId(User);
-        await _organizationService.ResendInviteAsync(orgGuidId, userId.Value, new Guid(id));
+        await _organizationService.ResendInviteAsync(orgId, userId.Value, id);
     }
 
     [HttpPost("{organizationUserId}/accept-init")]
@@ -385,13 +379,11 @@ public class OrganizationUsersController : Controller
 
     [HttpPost("confirm")]
     [Authorize<ManageUsersRequirement>]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkConfirm(string orgId,
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkConfirm(Guid orgId,
         [FromBody] OrganizationUserBulkConfirmRequestModel model)
     {
-        var orgGuidId = new Guid(orgId);
-
         var userId = _userService.GetProperUserId(User);
-        var results = await _confirmOrganizationUserCommand.ConfirmUsersAsync(orgGuidId, model.ToDictionary(), userId.Value);
+        var results = await _confirmOrganizationUserCommand.ConfirmUsersAsync(orgId, model.ToDictionary(), userId.Value);
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
@@ -399,11 +391,9 @@ public class OrganizationUsersController : Controller
 
     [HttpPost("public-keys")]
     [Authorize<ManageUsersRequirement>]
-    public async Task<ListResponseModel<OrganizationUserPublicKeyResponseModel>> UserPublicKeys(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    public async Task<ListResponseModel<OrganizationUserPublicKeyResponseModel>> UserPublicKeys(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
-        var orgGuidId = new Guid(orgId);
-
-        var result = await _organizationUserRepository.GetManyPublicKeysByOrganizationUserAsync(orgGuidId, model.Ids);
+        var result = await _organizationUserRepository.GetManyPublicKeysByOrganizationUserAsync(orgId, model.Ids);
         var responses = result.Select(r => new OrganizationUserPublicKeyResponseModel(r.Id, r.UserId, r.PublicKey)).ToList();
         return new ListResponseModel<OrganizationUserPublicKeyResponseModel>(responses);
     }
@@ -514,20 +504,18 @@ public class OrganizationUsersController : Controller
 
     [HttpPut("{id}/reset-password")]
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task PutResetPassword(string orgId, string id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+    public async Task PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
     {
-        var orgGuidId = new Guid(orgId);
-
         // Get the users role, since provider users aren't a member of the organization we use the owner check
-        var orgUserType = await _currentContext.OrganizationOwner(orgGuidId)
+        var orgUserType = await _currentContext.OrganizationOwner(orgId)
             ? OrganizationUserType.Owner
-            : _currentContext.Organizations?.FirstOrDefault(o => o.Id == orgGuidId)?.Type;
+            : _currentContext.Organizations?.FirstOrDefault(o => o.Id == orgId)?.Type;
         if (orgUserType == null)
         {
             throw new NotFoundException();
         }
 
-        var result = await _userService.AdminResetPasswordAsync(orgUserType.Value, orgGuidId, new Guid(id), model.NewMasterPasswordHash, model.Key);
+        var result = await _userService.AdminResetPasswordAsync(orgUserType.Value, orgId, id, model.NewMasterPasswordHash, model.Key);
         if (result.Succeeded)
         {
             return;
