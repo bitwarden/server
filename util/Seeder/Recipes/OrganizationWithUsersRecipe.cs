@@ -1,7 +1,4 @@
-﻿using Bit.Core.Enums;
-using Bit.Core.Models.Data;
-using Bit.Core.Utilities;
-using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Factories;
 using LinqToDB.Data;
@@ -14,185 +11,35 @@ public class OrganizationWithUsersRecipe(DatabaseContext db)
     public Guid Seed(string name, int users, string domain)
     {
         var organization = OrganizationSeeder.CreateEnterprise(name, domain, users);
-        var user = UserSeeder.CreateUser($"admin@{domain}");
-        var orgUser = organization.CreateOrganizationUser(user);
+        var adminUser = UserSeeder.CreateUser($"admin@{domain}");
+        var adminOrgUser = organization.CreateOrganizationUser(adminUser);
 
-        var additionalUsers = new List<User>();
-        var additionalOrgUsers = new List<OrganizationUser>();
+        // Create users with domain distribution (80% claimed, 20% unclaimed)
+        var (additionalUsers, additionalOrgUsers) = organization.CreateUsersWithDomainDistribution(users);
 
-        // Create sample custom permissions for Custom user types
-        var customPermissions = new Permissions
-        {
-            AccessEventLogs = true,
-            AccessImportExport = false,
-            AccessReports = true,
-            CreateNewCollections = true,
-            EditAnyCollection = false,
-            DeleteAnyCollection = false,
-            ManageGroups = false,
-            ManagePolicies = false,
-            ManageSso = false,
-            ManageUsers = false,
-            ManageResetPassword = false,
-            ManageScim = false
-        };
+        // Create organization domains for claimed domains
+        var organizationDomains = organization.CreateOrganizationDomains();
 
-        var customPermissionsJson = CoreHelpers.ClassToJsonData(customPermissions);
+        // Create collections and groups for the organization
+        var collections = organization.CreateCollections();
+        var groups = organization.CreateGroups();
 
-        // Define claimed and unclaimed domains for testing
-        var claimedDomains = new[] { "example1.com", "example2.com", "example3.com" };
-        var unclaimedDomains = new[] { "example4.com", "example5.com", "example6.com" };
-
-        for (var i = 0; i < users; i++)
-        {
-            // 80% users have claimed domains, 20% have unclaimed domains
-            var useClaimedDomain = i < (users * 0.8);
-            string userDomain;
-
-            if (useClaimedDomain)
-            {
-                userDomain = claimedDomains[i % claimedDomains.Length];
-            }
-            else
-            {
-                userDomain = unclaimedDomains[i % unclaimedDomains.Length];
-            }
-
-            var additionalUser = UserSeeder.CreateUser($"user{i}@{userDomain}");
-            additionalUsers.Add(additionalUser);
-
-            // Create OrganizationUser with mixed types to test the optimization
-            var additionalOrgUser = organization.CreateOrganizationUser(additionalUser);
-
-            // Set permissions for ALL users to test the optimization
-            additionalOrgUser.Permissions = customPermissionsJson;
-
-            // Distribute user types to test the optimization:
-            // - 50% Custom users (with serialized permissions) - these should have permissions processed after optimization
-            // - 50% mixed other types (Admin/User/Owner with serialized permissions) - these should be skipped after optimization
-            var userTypeDistribution = i % 2;
-
-            if (userTypeDistribution == 0) // 50% Custom users
-            {
-                additionalOrgUser.Type = OrganizationUserType.Custom;
-            }
-            else // 50% other types
-            {
-                var otherTypeDistribution = i % 6;
-                if (otherTypeDistribution < 2) // ~17% Admin users
-                {
-                    additionalOrgUser.Type = OrganizationUserType.Admin;
-                }
-                else if (otherTypeDistribution < 5) // ~25% User type
-                {
-                    additionalOrgUser.Type = OrganizationUserType.User;
-                }
-                else // ~8% Owner type
-                {
-                    additionalOrgUser.Type = OrganizationUserType.Owner;
-                }
-            }
-
-            additionalOrgUsers.Add(additionalOrgUser);
-        }
-
-        // Create organization domains - claimed domains will be verified, unclaimed ones won't
-        var organizationDomains = new List<OrganizationDomain>();
-
-        foreach (var claimedDomain in claimedDomains)
-        {
-            var orgDomain = new OrganizationDomain
-            {
-                Id = Guid.NewGuid(),
-                OrganizationId = organization.Id,
-                DomainName = claimedDomain,
-                Txt = $"bw={CoreHelpers.RandomString(44)}",
-                CreationDate = DateTime.UtcNow
-            };
-            orgDomain.SetNextRunDate(12);
-            orgDomain.SetVerifiedDate(); // Mark as claimed/verified
-            orgDomain.SetJobRunCount();
-            organizationDomains.Add(orgDomain);
-        }
-
-        // Create collections for the organization
-        var collections = CreateCollections(organization.Id);
-
-        // Create groups for the organization  
-        var groups = CreateGroups(organization.Id);
-
-        db.Add(organization);
-        db.Add(user);
-        db.Add(orgUser);
-
-        // Add organization domains, collections and groups
-        db.AddRange(organizationDomains);
-        db.AddRange(collections);
-        db.AddRange(groups);
-
-        db.SaveChanges();
-
-        // Use LinqToDB's BulkCopy for significant better performance
+        // Use BulkCopy for everything - much better performance
+        db.BulkCopy(new[] { organization });
+        db.BulkCopy(new[] { adminUser });
         db.BulkCopy(additionalUsers);
+        db.BulkCopy(new[] { adminOrgUser });
         db.BulkCopy(additionalOrgUsers);
+        db.BulkCopy(organizationDomains);
+        db.BulkCopy(collections);
+        db.BulkCopy(groups);
 
-        // Create associations between users, groups, and collections
-        // Assign to all additional users (not the admin)
+        // Create and bulk insert user associations
         var (collectionUsers, groupUsers) = CreateUserAssociations(additionalOrgUsers, collections, groups);
-
-        // Bulk insert associations
         db.BulkCopy(new BulkCopyOptions { TableName = "CollectionUser" }, collectionUsers);
         db.BulkCopy(new BulkCopyOptions { TableName = "GroupUser" }, groupUsers);
 
         return organization.Id;
-    }
-
-    private List<Collection> CreateCollections(Guid organizationId)
-    {
-        var collectionNames = new[]
-        {
-            "Engineering",
-            "Marketing",
-            "Sales",
-            "HR",
-            "Finance",
-            "Legal",
-            "Operations",
-            "Customer Support",
-            "Product",
-            "Design"
-        };
-
-        return collectionNames.Select(name => new Collection
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organizationId,
-            Name = name,
-            CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow
-        }).ToList();
-    }
-
-    private List<Group> CreateGroups(Guid organizationId)
-    {
-        var groupNames = new[]
-        {
-            "Administrators",
-            "Team Leads",
-            "Senior Engineers",
-            "Junior Engineers",
-            "Marketing Team",
-            "Sales Team",
-            "HR Team",
-            "Finance Team"
-        };
-
-        return groupNames.Select(name => new Group
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organizationId,
-            Name = name
-        }).ToList();
     }
 
     private (List<CollectionUser>, List<GroupUser>) CreateUserAssociations(
