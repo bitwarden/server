@@ -39,9 +39,26 @@ public class OrganizationWithUsersRecipe(DatabaseContext db)
 
         var customPermissionsJson = CoreHelpers.ClassToJsonData(customPermissions);
 
+        // Define claimed and unclaimed domains for testing
+        var claimedDomains = new[] { "example1.com", "example2.com", "example3.com" };
+        var unclaimedDomains = new[] { "example4.com", "example5.com", "example6.com" };
+
         for (var i = 0; i < users; i++)
         {
-            var additionalUser = UserSeeder.CreateUser($"user{i}@{domain}");
+            // 80% users have claimed domains, 20% have unclaimed domains
+            var useClaimedDomain = i < (users * 0.8);
+            string userDomain;
+
+            if (useClaimedDomain)
+            {
+                userDomain = claimedDomains[i % claimedDomains.Length];
+            }
+            else
+            {
+                userDomain = unclaimedDomains[i % unclaimedDomains.Length];
+            }
+
+            var additionalUser = UserSeeder.CreateUser($"user{i}@{userDomain}");
             additionalUsers.Add(additionalUser);
 
             // Create OrganizationUser with mixed types to test the optimization
@@ -79,6 +96,25 @@ public class OrganizationWithUsersRecipe(DatabaseContext db)
             additionalOrgUsers.Add(additionalOrgUser);
         }
 
+        // Create organization domains - claimed domains will be verified, unclaimed ones won't
+        var organizationDomains = new List<OrganizationDomain>();
+
+        foreach (var claimedDomain in claimedDomains)
+        {
+            var orgDomain = new OrganizationDomain
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = organization.Id,
+                DomainName = claimedDomain,
+                Txt = $"bw={CoreHelpers.RandomString(44)}",
+                CreationDate = DateTime.UtcNow
+            };
+            orgDomain.SetNextRunDate(12);
+            orgDomain.SetVerifiedDate(); // Mark as claimed/verified
+            orgDomain.SetJobRunCount();
+            organizationDomains.Add(orgDomain);
+        }
+
         // Create collections for the organization
         var collections = CreateCollections(organization.Id);
 
@@ -89,7 +125,8 @@ public class OrganizationWithUsersRecipe(DatabaseContext db)
         db.Add(user);
         db.Add(orgUser);
 
-        // Add collections and groups
+        // Add organization domains, collections and groups
+        db.AddRange(organizationDomains);
         db.AddRange(collections);
         db.AddRange(groups);
 
