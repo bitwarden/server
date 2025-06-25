@@ -10,10 +10,9 @@ namespace Bit.Core.Test.AdminConsole.Utilities.DebuggingInstruments;
 public class UserInviteDebuggingLoggerTests
 {
     [Fact]
-    public void Log_WhenInvitedUserHasNoEmail_LogsWarning()
+    public void LogUserInviteStateDiagnostics_WhenInvitedUserHasNoEmail_LogsWarning()
     {
         // Arrange
-
         var organizationUser = new OrganizationUser
         {
             OrganizationId = Guid.Parse("3e1f2196-9ad6-4ba7-b69d-ba33bc25f774"),
@@ -23,14 +22,12 @@ public class UserInviteDebuggingLoggerTests
             Id = Guid.Parse("326f043f-afdc-47e5-9646-a76ab709b69a"),
         };
 
-        var logger = Substitute.For<ILogger<UserInviteDebuggingLogger>>();
-        var sut = new UserInviteDebuggingLogger(logger);
+        var logger = Substitute.For<ILogger>();
 
         // Act
-        sut.Log(organizationUser);
+        logger.LogUserInviteStateDiagnostics(organizationUser);
 
         // Assert
-
         logger.Received(1).Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
@@ -53,7 +50,7 @@ public class UserInviteDebuggingLoggerTests
 
     [Theory]
     [MemberData(nameof(ConfirmedOrAcceptedTestCases))]
-    public void Log_WhenNonInvitedUserHasEmail_LogsWarning(OrganizationUserStatusType userStatusType)
+    public void LogUserInviteStateDiagnostics_WhenNonInvitedUserHasEmail_LogsWarning(OrganizationUserStatusType userStatusType)
     {
         // Arrange
         var organizationUser = new OrganizationUser
@@ -65,14 +62,12 @@ public class UserInviteDebuggingLoggerTests
             Id = Guid.Parse("326f043f-afdc-47e5-9646-a76ab709b69a"),
         };
 
-        var logger = Substitute.For<ILogger<UserInviteDebuggingLogger>>();
-        var sut = new UserInviteDebuggingLogger(logger);
+        var logger = Substitute.For<ILogger>();
 
         // Act
-        sut.Log(organizationUser);
+        logger.LogUserInviteStateDiagnostics(organizationUser);
 
         // Assert
-
         logger.Received(1).Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
@@ -100,14 +95,12 @@ public class UserInviteDebuggingLoggerTests
 
     [Theory]
     [MemberData(nameof(ShouldNotLogTestCases))]
-    public void Log_WhenStateAreValid_ShouldNotLog(OrganizationUser user)
+    public void LogUserInviteStateDiagnostics_WhenStateAreValid_ShouldNotLog(OrganizationUser user)
     {
-        // Arrange
-        var logger = Substitute.For<ILogger<UserInviteDebuggingLogger>>();
-        var sut = new UserInviteDebuggingLogger(logger);
+        var logger = Substitute.For<ILogger>();
 
         // Act
-        sut.Log(user);
+        logger.LogUserInviteStateDiagnostics(user);
 
         // Assert
         logger.DidNotReceive().Log(
@@ -116,6 +109,5 @@ public class UserInviteDebuggingLoggerTests
             Arg.Any<object>(),
             Arg.Any<Exception>(),
             Arg.Any<Func<object, Exception, string>>());
-
     }
 }

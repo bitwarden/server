@@ -6,14 +6,14 @@ using Quartz.Util;
 
 namespace Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 
-public class UserInviteDebuggingLogger(ILogger<UserInviteDebuggingLogger> logger) : IUserInviteDebuggingLogger
+public static class UserInviteDebuggingLogger
 {
-    public void Log(OrganizationUser orgUser)
+    public static void LogUserInviteStateDiagnostics(this ILogger logger, OrganizationUser orgUser)
     {
-        Log([orgUser]);
+        LogUserInviteStateDiagnostics(logger, [orgUser]);
     }
 
-    public void Log(IEnumerable<OrganizationUser> allOrgUsers)
+    public static void LogUserInviteStateDiagnostics(this ILogger logger, IEnumerable<OrganizationUser> allOrgUsers)
     {
         try
         {
@@ -41,7 +41,7 @@ public class UserInviteDebuggingLogger(ILogger<UserInviteDebuggingLogger> logger
         }
     }
 
-    private string MapObjectDataToLog(IEnumerable<OrganizationUser> allOrgUsers)
+    private static string MapObjectDataToLog(IEnumerable<OrganizationUser> allOrgUsers)
     {
         var log = allOrgUsers.Select(allOrgUser => new
         {

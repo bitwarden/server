@@ -13,6 +13,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 
@@ -26,9 +27,9 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     /// https://github.com/dotnet/SqlClient/issues/54
     /// </summary>
     private string _marsConnectionString;
-    private readonly IUserInviteDebuggingLogger _userInviteDebuggingLogger;
+    private readonly ILogger<OrganizationUserRepository> _logger;
 
-    public OrganizationUserRepository(GlobalSettings globalSettings, IUserInviteDebuggingLogger _UserInviteDebuggingLogger)
+    public OrganizationUserRepository(GlobalSettings globalSettings, ILogger<OrganizationUserRepository> logger)
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
         var builder = new SqlConnectionStringBuilder(ConnectionString)
@@ -36,7 +37,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             MultipleActiveResultSets = true,
         };
         _marsConnectionString = builder.ToString();
-        _userInviteDebuggingLogger = _UserInviteDebuggingLogger;
+        _logger = logger;
     }
 
     public async Task<int> GetCountByOrganizationIdAsync(Guid organizationId)
@@ -308,7 +309,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     public async Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections)
     {
-        _userInviteDebuggingLogger.Log(obj);
+        _logger.LogUserInviteStateDiagnostics(obj);
 
         obj.SetNewId();
         var objWithCollections = JsonSerializer.Deserialize<OrganizationUserWithCollections>(
@@ -328,7 +329,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     public async Task ReplaceAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections)
     {
-        _userInviteDebuggingLogger.Log(obj);
+        _logger.LogUserInviteStateDiagnostics(obj);
 
         var objWithCollections = JsonSerializer.Deserialize<OrganizationUserWithCollections>(
             JsonSerializer.Serialize(obj))!;
@@ -413,8 +414,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     public async Task<ICollection<Guid>?> CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
     {
-
-        _userInviteDebuggingLogger.Log(organizationUsers);
+        _logger.LogUserInviteStateDiagnostics(organizationUsers);
 
         organizationUsers = organizationUsers.ToList();
         if (!organizationUsers.Any())
@@ -440,7 +440,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     public async Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers)
     {
-        _userInviteDebuggingLogger.Log(organizationUsers);
+        _logger.LogUserInviteStateDiagnostics(organizationUsers);
 
         organizationUsers = organizationUsers.ToList();
         if (!organizationUsers.Any())

@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Repositories;
@@ -23,7 +22,6 @@ using Bit.Infrastructure.Dapper.SecretsManager.Repositories;
 using Bit.Infrastructure.Dapper.Tools.Repositories;
 using Bit.Infrastructure.Dapper.Vault.Repositories;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Infrastructure.Dapper;
 
@@ -72,10 +70,9 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<ISecurityTaskRepository, SecurityTaskRepository>();
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
         services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
+        services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
+        services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
-
-        // Debugging instruments
-        services.TryAddSingleton<IUserInviteDebuggingLogger, UserInviteDebuggingLogger>();
 
         if (selfHosted)
         {

@@ -67,7 +67,6 @@ public class OrganizationService : IOrganizationService
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
-    private readonly IUserInviteDebuggingLogger _userInviteDebuggingLogger;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
 
     public OrganizationService(
@@ -99,7 +98,6 @@ public class OrganizationService : IOrganizationService
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         IPolicyRequirementQuery policyRequirementQuery,
-        IUserInviteDebuggingLogger userInviteDebuggingLogger,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand
         )
     {
@@ -131,7 +129,6 @@ public class OrganizationService : IOrganizationService
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
         _policyRequirementQuery = policyRequirementQuery;
-        _userInviteDebuggingLogger = userInviteDebuggingLogger;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
     }
 
@@ -912,7 +909,7 @@ public class OrganizationService : IOrganizationService
         IEnumerable<Guid> organizationUsersId)
     {
         var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
-        _userInviteDebuggingLogger.Log(orgUsers);
+        _logger.LogUserInviteStateDiagnostics(orgUsers);
 
         var org = await GetOrgById(organizationId);
 
@@ -941,7 +938,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("User invalid.");
         }
 
-        _userInviteDebuggingLogger.Log(orgUser);
+        _logger.LogUserInviteStateDiagnostics(orgUser);
 
         var org = await GetOrgById(orgUser.OrganizationId);
         await SendInviteAsync(orgUser, org, initOrganization);
