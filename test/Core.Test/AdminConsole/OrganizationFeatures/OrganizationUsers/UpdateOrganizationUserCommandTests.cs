@@ -258,7 +258,7 @@ public class UpdateOrganizationUserCommandTests
                 .Select(guid => new Collection { Id = guid, OrganizationId = user.OrganizationId, Type = CollectionType.DefaultUserCollection }).ToList());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collectionAccess, null));
+            () => sutProvider.Sut.UpdateUserAsync(user, OrganizationUserType.User, savingUserId, collectionAccess, null));
         Assert.Contains("You cannot modify member access for collections with the type as DefaultUserCollection.", exception.Message);
     }
 
