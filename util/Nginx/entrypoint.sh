@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Setup
 
@@ -21,11 +21,10 @@ fi
 
 # Create user and group
 
-groupadd -o -g $LGID $GROUPNAME >/dev/null 2>&1 ||
-groupmod -o -g $LGID $GROUPNAME >/dev/null 2>&1
-useradd -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1 ||
-usermod -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1
-mkhomedir_helper $USERNAME
+addgroup -g "$LGID" -S "$GROUPNAME" 2>/dev/null || true
+adduser -u "$LUID" -G "$GROUPNAME" -S -D -H "$USERNAME" 2>/dev/null || true
+mkdir -p /home/$USERNAME
+chown $USERNAME:$GROUPNAME /home/$USERNAME
 
 # The rest...
 
