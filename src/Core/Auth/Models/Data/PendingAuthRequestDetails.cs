@@ -40,40 +40,35 @@ public class PendingAuthRequestDetails : AuthRequest
 
     /**
      * Constructor for dapper response.
-     * Note: if the DeviceId is null it comes back as an empty guid That could change if the stored
-     * procedure runs on a different database provider.
-     * In order to maintain the flexibility of the wildcard (*) in SQL, the constructor accepts a"row number" rn of type long
-     * parameter. 'rn' was used to order the results in the SQL query. Also, SQL complains about the constructor not
-     * having the same parameters as the SELECT statement and since the SELECT uses the wildcard we need to include everything.
-     * Order matters when mapping from the Stored Procedure, so the columns are in the order they come back from the query.
      */
     public PendingAuthRequestDetails(
         Guid id,
         Guid userId,
+        Guid organizationId,
         short type,
         string requestDeviceIdentifier,
         short requestDeviceType,
         string requestIpAddress,
+        string requestCountryName,
         Guid? responseDeviceId,
         string accessCode,
         string publicKey,
         string key,
         string masterPasswordHash,
+        bool? approved,
         DateTime creationDate,
         DateTime? responseDate,
         DateTime? authenticationDate,
-        bool? approved,
-        Guid organizationId,
-        string requestCountryName,
-        Guid deviceId,
-        long rn) // see comment above about rn parameter
+        Guid deviceId)
     {
         Id = id;
         UserId = userId;
+        OrganizationId = organizationId;
         Type = (AuthRequestType)type;
         RequestDeviceIdentifier = requestDeviceIdentifier;
         RequestDeviceType = (DeviceType)requestDeviceType;
         RequestIpAddress = requestIpAddress;
+        RequestCountryName = requestCountryName;
         ResponseDeviceId = responseDeviceId;
         AccessCode = accessCode;
         PublicKey = publicKey;
@@ -83,8 +78,6 @@ public class PendingAuthRequestDetails : AuthRequest
         CreationDate = creationDate;
         ResponseDate = responseDate;
         AuthenticationDate = authenticationDate;
-        OrganizationId = organizationId;
-        RequestCountryName = requestCountryName;
         RequestDeviceId = deviceId;
     }
 }
