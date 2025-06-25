@@ -6,6 +6,10 @@ using Quartz.Util;
 
 namespace Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 
+/// <summary>
+/// Temporary code: Log warning when OrganizationUser is in an invalid state,
+/// so we can identify which flow is causing the issue through Datadog.
+/// </summary>
 public static class UserInviteDebuggingLogger
 {
     public static void LogUserInviteStateDiagnostics(this ILogger logger, OrganizationUser orgUser)
