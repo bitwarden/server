@@ -142,4 +142,142 @@ public class ReportsControllerTests
                 _.OrganizationId == request.OrganizationId &&
                 _.PasswordHealthReportApplicationIds == request.PasswordHealthReportApplicationIds));
     }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganizationReportAsync_withAccess_success(SutProvider<ReportsController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(true);
+
+        // Act
+        var request = new AddOrganizationReportRequest
+        {
+            OrganizationId = Guid.NewGuid(),
+            ReportData = "Report Data",
+            Date = DateTime.UtcNow
+        };
+        await sutProvider.Sut.AddOrganizationReport(request);
+
+        // Assert
+        _ = sutProvider.GetDependency<IAddOrganizationReportCommand>()
+            .Received(1)
+            .AddOrganizationReportAsync(Arg.Is<AddOrganizationReportRequest>(_ =>
+                _.OrganizationId == request.OrganizationId &&
+                _.ReportData == request.ReportData &&
+                _.Date == request.Date));
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganizationReportAsync_withoutAccess(SutProvider<ReportsController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(false);
+        // Act
+        var request = new AddOrganizationReportRequest
+        {
+            OrganizationId = Guid.NewGuid(),
+            ReportData = "Report Data",
+            Date = DateTime.UtcNow
+        };
+        await Assert.ThrowsAsync<NotFoundException>(async () =>
+            await sutProvider.Sut.AddOrganizationReport(request));
+        // Assert
+        _ = sutProvider.GetDependency<IAddOrganizationReportCommand>()
+            .Received(0);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DropOrganizationReportAsync_withAccess_success(SutProvider<ReportsController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(true);
+        // Act
+        var request = new DropOrganizationReportRequest
+        {
+            OrganizationId = Guid.NewGuid(),
+            OrganizationReportIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() }
+        };
+        await sutProvider.Sut.DropOrganizationReport(request);
+        // Assert
+        _ = sutProvider.GetDependency<IDropOrganizationReportCommand>()
+            .Received(1)
+            .DropOrganizationReportAsync(Arg.Is<DropOrganizationReportRequest>(_ =>
+                _.OrganizationId == request.OrganizationId &&
+                _.OrganizationReportIds.SequenceEqual(request.OrganizationReportIds)));
+    }
+    [Theory, BitAutoData]
+    public async Task DropOrganizationReportAsync_withoutAccess(SutProvider<ReportsController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(false);
+        // Act
+        var request = new DropOrganizationReportRequest
+        {
+            OrganizationId = Guid.NewGuid(),
+            OrganizationReportIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() }
+        };
+        await Assert.ThrowsAsync<NotFoundException>(async () =>
+            await sutProvider.Sut.DropOrganizationReport(request));
+        // Assert
+        _ = sutProvider.GetDependency<IDropOrganizationReportCommand>()
+            .Received(0);
+    }
+    [Theory, BitAutoData]
+    public async Task GetOrganizationReportAsync_withAccess_success(SutProvider<ReportsController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(true);
+        // Act
+        var orgId = Guid.NewGuid();
+        var result = await sutProvider.Sut.GetOrganizationReports(orgId);
+        // Assert
+        _ = sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .Received(1)
+            .GetOrganizationReportAsync(Arg.Is<Guid>(_ => _ == orgId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationReportAsync_withoutAccess(SutProvider<ReportsController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(false);
+        // Act
+        var orgId = Guid.NewGuid();
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetOrganizationReports(orgId));
+        // Assert
+        _ = sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .Received(0);
+
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetLastestOrganizationReportAsync_withAccess_success(SutProvider<ReportsController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(true);
+
+        // Act
+        var orgId = Guid.NewGuid();
+        var result = await sutProvider.Sut.GetLatestOrganizationReport(orgId);
+
+        // Assert
+        _ = sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .Received(1)
+            .GetLatestOrganizationReportAsync(Arg.Is<Guid>(_ => _ == orgId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetLastestOrganizationReportAsync_withoutAccess(SutProvider<ReportsController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(false);
+
+        // Act
+        var orgId = Guid.NewGuid();
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetLatestOrganizationReport(orgId));
+
+        // Assert
+        _ = sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .Received(0);
+    }
 }
