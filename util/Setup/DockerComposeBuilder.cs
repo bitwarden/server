@@ -62,7 +62,7 @@ public class DockerComposeBuilder
             }
         }
 
-        public bool? EnableBuiltInMsSql { get; set; }
+        public bool EnableBuiltInMsSql { get; set; }
         public bool MssqlDataDockerVolume { get; set; }
         public bool EnableKeyConnector { get; set; }
         public bool EnableScim { get; set; }
