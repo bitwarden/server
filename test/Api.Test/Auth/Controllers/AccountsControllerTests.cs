@@ -32,7 +32,7 @@ public class AccountsControllerTests : IDisposable
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IFeatureService _featureService;
-        private readonly ITwoFactorEmailService _twoFactorEmailService;
+    private readonly ITwoFactorEmailService _twoFactorEmailService;
 
 
     public AccountsControllerTests()

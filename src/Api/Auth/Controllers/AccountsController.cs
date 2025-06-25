@@ -35,7 +35,7 @@ public class AccountsController : Controller
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
-        private readonly ITwoFactorEmailService _twoFactorEmailService;
+    private readonly ITwoFactorEmailService _twoFactorEmailService;
 
 
     public AccountsController(
