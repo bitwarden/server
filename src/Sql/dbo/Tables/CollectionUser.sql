@@ -15,8 +15,16 @@ CREATE NONCLUSTERED INDEX IX_CollectionUser_OrganizationUserId
     INCLUDE (ReadOnly, HidePasswords, Manage)
 
 GO
-CREATE NONCLUSTERED INDEX IX_CollectionUser_OrganizationUserId_ReadOnly
-  ON dbo.CollectionUser (OrganizationUserId, ReadOnly)
-  INCLUDE (CollectionId);
 
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID('dbo.CollectionUser')
+        AND name = 'IX_CollectionUser_OrganizationUserId_ReadOnly'
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_CollectionUser_OrganizationUserId_ReadOnly
+      ON dbo.CollectionUser (OrganizationUserId, ReadOnly)
+      INCLUDE (CollectionId);
+END
 GO

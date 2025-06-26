@@ -16,7 +16,14 @@ CREATE NONCLUSTERED INDEX IX_CollectionGroup_GroupId
 
 GO
 
-CREATE NONCLUSTERED INDEX IX_CollectionGroup_GroupId_ReadOnly
-  ON dbo.CollectionGroup (GroupId, ReadOnly)
-  INCLUDE (CollectionId);
-GO
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID('dbo.CollectionGroup')
+        AND name = 'IX_CollectionGroup_GroupId_ReadOnly'
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_CollectionGroup_GroupId_ReadOnly
+      ON dbo.CollectionGroup (GroupId, ReadOnly)
+      INCLUDE (CollectionId);
+END
