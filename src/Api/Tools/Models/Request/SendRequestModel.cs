@@ -217,19 +217,23 @@ public class SendRequestModel
         existingSend.ExpirationDate = ExpirationDate;
         existingSend.DeletionDate = DeletionDate.Value;
         existingSend.MaxAccessCount = MaxAccessCount;
-        if (!string.IsNullOrWhiteSpace(Password))
-        {
-            existingSend.Password = authorizationService.HashPassword(Password);
-        }
-        else if (!string.IsNullOrWhiteSpace(Emails))
+
+        if (!string.IsNullOrWhiteSpace(Emails))
         {
             // normalize encoding
             var emails = Emails.Split(',', RemoveEmptyEntries | TrimEntries);
             existingSend.Emails = string.Join(", ", emails);
+            existingSend.Password = null;
+        }
+        else if (!string.IsNullOrWhiteSpace(Password))
+        {
+            existingSend.Password = authorizationService.HashPassword(Password);
+            existingSend.Emails = null;
         }
 
         existingSend.Disabled = Disabled.GetValueOrDefault();
         existingSend.HideEmail = HideEmail.GetValueOrDefault();
+
         return existingSend;
     }
 
