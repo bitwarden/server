@@ -1,7 +1,7 @@
 ALTER TABLE
     [dbo].[OrganizationReport]
 ADD
-    [ReportKey] NVARCHAR(MAX) NULL;
+    [ReportKey] NVARCHAR(MAX) NOT NULL;
 GO
 
 CREATE OR ALTER VIEW [dbo].[OrganizationReportView]
