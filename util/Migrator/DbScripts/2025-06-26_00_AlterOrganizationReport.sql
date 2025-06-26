@@ -1,6 +1,6 @@
 ALTER TABLE
     [dbo].[OrganizationReport]
-    ADD
+ADD
     [ReportKey] NVARCHAR(MAX) NULL;
 GO
 
