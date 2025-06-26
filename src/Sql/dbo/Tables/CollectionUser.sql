@@ -16,15 +16,8 @@ CREATE NONCLUSTERED INDEX IX_CollectionUser_OrganizationUserId
 
 GO
 
-IF NOT EXISTS (
-    SELECT 1
-    FROM sys.indexes
-    WHERE object_id = OBJECT_ID('dbo.CollectionUser')
-        AND name = 'IX_CollectionUser_OrganizationUserId_ReadOnly'
-)
-BEGIN
-    CREATE NONCLUSTERED INDEX IX_CollectionUser_OrganizationUserId_ReadOnly
-      ON dbo.CollectionUser (OrganizationUserId, ReadOnly)
-      INCLUDE (CollectionId);
-END
+CREATE NONCLUSTERED INDEX IX_CollectionUser_OrganizationUserId_ReadOnly
+    ON dbo.CollectionUser (OrganizationUserId, ReadOnly)
+    INCLUDE (CollectionId);
+
 GO
