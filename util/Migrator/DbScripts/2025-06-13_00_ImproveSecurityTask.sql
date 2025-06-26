@@ -89,17 +89,41 @@ BEGIN
 END
 GO
 
-CREATE NONCLUSTERED INDEX IX_CollectionGroup_GroupId_ReadOnly
-  ON dbo.CollectionGroup (GroupId, ReadOnly)
-  INCLUDE (CollectionId);
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID('dbo.CollectionGroup')
+        AND name = 'IX_CollectionGroup_GroupId_ReadOnly'
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_CollectionGroup_GroupId_ReadOnly
+      ON dbo.CollectionGroup (GroupId, ReadOnly)
+      INCLUDE (CollectionId);
+END
 GO
 
-CREATE NONCLUSTERED INDEX IX_CollectionUser_OrganizationUserId_ReadOnly
-  ON dbo.CollectionUser (OrganizationUserId, ReadOnly)
-  INCLUDE (CollectionId);
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID('dbo.CollectionUser')
+        AND name = 'IX_CollectionUser_OrganizationUserId_ReadOnly'
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_CollectionUser_OrganizationUserId_ReadOnly
+      ON dbo.CollectionUser (OrganizationUserId, ReadOnly)
+      INCLUDE (CollectionId);
+END
 GO
 
-CREATE NONCLUSTERED INDEX IX_SecurityTask_Status_OrgId_CreationDateDesc
-  ON dbo.SecurityTask (Status, OrganizationId, CreationDate DESC)
-  INCLUDE (CipherId, [Type], RevisionDate);
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID('dbo.SecurityTask')
+        AND name = 'IX_SecurityTask_Status_OrgId_CreationDateDesc'
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_SecurityTask_Status_OrgId_CreationDateDesc
+      ON dbo.SecurityTask (Status, OrganizationId, CreationDate DESC)
+      INCLUDE (CipherId, [Type], RevisionDate);
+END
 GO

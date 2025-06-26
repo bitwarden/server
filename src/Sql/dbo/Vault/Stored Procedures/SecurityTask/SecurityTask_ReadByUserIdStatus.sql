@@ -62,7 +62,7 @@ BEGIN
         SELECT
             ST.*
         FROM
-            dbo.SecurityTask ST
+            dbo.[SecurityTaskView] ST
         WHERE
             @Status IS NULL
             OR ST.Status = @Status
