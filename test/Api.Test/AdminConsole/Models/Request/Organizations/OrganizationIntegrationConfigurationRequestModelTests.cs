@@ -97,6 +97,21 @@ public class OrganizationIntegrationConfigurationRequestModelTests
         Assert.False(condition: model.IsValidForType(IntegrationType.Hec));
     }
 
+
+    [Fact]
+    public void IsValidForType_InvalidJsonFilters_ReturnsFalse()
+    {
+        var config = JsonSerializer.Serialize(new WebhookIntegrationConfiguration(Uri: new Uri("https://example.com")));
+        var model = new OrganizationIntegrationConfigurationRequestModel
+        {
+            Configuration = config,
+            Filters = "{Not valid json",
+            Template = "template"
+        };
+
+        Assert.False(model.IsValidForType(IntegrationType.Webhook));
+    }
+
     [Fact]
     public void IsValidForType_ScimIntegration_ReturnsFalse()
     {
@@ -121,6 +136,33 @@ public class OrganizationIntegrationConfigurationRequestModelTests
         };
 
         Assert.True(condition: model.IsValidForType(IntegrationType.Slack));
+    }
+
+    [Fact]
+    public void IsValidForType_ValidSlackConfigurationWithFilters_ReturnsTrue()
+    {
+        var config = JsonSerializer.Serialize(new SlackIntegrationConfiguration("C12345"));
+        var filters = JsonSerializer.Serialize(new IntegrationFilterGroup()
+        {
+            AndOperator = true,
+            Rules = [
+                new IntegrationFilterRule()
+                {
+                    Operation = IntegrationFilterOperation.Equals,
+                    Property = "CollectionId",
+                    Value = Guid.NewGuid()
+                }
+            ],
+            Groups = []
+        });
+        var model = new OrganizationIntegrationConfigurationRequestModel
+        {
+            Configuration = config,
+            Filters = filters,
+            Template = "template"
+        };
+
+        Assert.True(model.IsValidForType(IntegrationType.Slack));
     }
 
     [Fact]
@@ -150,6 +192,36 @@ public class OrganizationIntegrationConfigurationRequestModelTests
         };
 
         Assert.True(condition: model.IsValidForType(IntegrationType.Webhook));
+    }
+
+    [Fact]
+    public void IsValidForType_ValidWebhookConfigurationWithFilters_ReturnsTrue()
+    {
+        var config = JsonSerializer.Serialize(new WebhookIntegrationConfiguration(
+            Uri: new Uri("https://example.com"),
+            Scheme: "Bearer",
+            Token: "AUTH-TOKEN"));
+        var filters = JsonSerializer.Serialize(new IntegrationFilterGroup()
+        {
+            AndOperator = true,
+            Rules = [
+                new IntegrationFilterRule()
+                {
+                    Operation = IntegrationFilterOperation.Equals,
+                    Property = "CollectionId",
+                    Value = Guid.NewGuid()
+                }
+            ],
+            Groups = []
+        });
+        var model = new OrganizationIntegrationConfigurationRequestModel
+        {
+            Configuration = config,
+            Filters = filters,
+            Template = "template"
+        };
+
+        Assert.True(model.IsValidForType(IntegrationType.Webhook));
     }
 
     [Fact]
