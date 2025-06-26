@@ -10,6 +10,22 @@ public class IntegrationFilterService : IIntegrationFilterService
 {
     private readonly Dictionary<string, IntegrationFilter> _equalsFilters = new();
     private readonly Dictionary<string, IntegrationFilter> _inFilters = new();
+    private static readonly string[] _filterableProperties = new[]
+    {
+        "UserId",
+        "InstallationId",
+        "ProviderId",
+        "CipherId",
+        "CollectionId",
+        "GroupId",
+        "PolicyId",
+        "OrganizationUserId",
+        "ProviderUserId",
+        "ProviderOrganizationId",
+        "ActingUserId",
+        "SecretId",
+        "ServiceAccountId"
+    };
 
     public IntegrationFilterService()
     {
@@ -48,24 +64,7 @@ public class IntegrationFilterService : IIntegrationFilterService
 
     private void BuildFilters()
     {
-        var properties = new[]
-        {
-            "UserId",
-            "InstallationId",
-            "ProviderId",
-            "CipherId",
-            "CollectionId",
-            "GroupId",
-            "PolicyId",
-            "OrganizationUserId",
-            "ProviderUserId",
-            "ProviderOrganizationId",
-            "ActingUserId",
-            "SecretId",
-            "ServiceAccountId"
-        };
-
-        foreach (var property in properties)
+        foreach (var property in _filterableProperties)
         {
             _equalsFilters[property] = IntegrationFilterFactory.BuildEqualityFilter<Guid?>(property);
             _inFilters[property] = IntegrationFilterFactory.BuildInFilter<Guid?>(property);
