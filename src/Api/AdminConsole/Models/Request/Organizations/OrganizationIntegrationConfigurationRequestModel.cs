@@ -27,6 +27,8 @@ public class OrganizationIntegrationConfigurationRequestModel
                 return !string.IsNullOrWhiteSpace(Template) && IsConfigurationValid<SlackIntegrationConfiguration>();
             case IntegrationType.Webhook:
                 return !string.IsNullOrWhiteSpace(Template) && IsConfigurationValid<WebhookIntegrationConfiguration>();
+            case IntegrationType.Hec:
+                return !string.IsNullOrWhiteSpace(Template) && Configuration is null;
             default:
                 return false;
 

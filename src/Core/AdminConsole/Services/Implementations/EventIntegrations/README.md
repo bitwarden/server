@@ -197,22 +197,37 @@ interface and therefore can also handle directly all the message publishing func
 
 Organizations can configure integration configurations to send events to different endpoints -- each
 handler maps to a specific integration and checks for the configuration when it receives an event.
-Currently, there are integrations / handlers for Slack and webhooks (as mentioned above).
+Currently, there are integrations / handlers for Slack, webhooks, and HTTP Event Collector (HEC).
 
 ### `OrganizationIntegration`
 
 - The top-level object that enables a specific integration for the organization.
 - Includes any properties that apply to the entire integration across all events.
-    - For Slack, it consists of the token: `{ "token": "xoxb-token-from-slack" }`
-    - For webhooks, it is `null`. However, even though there is no configuration, an organization must
-      have a webhook `OrganizationIntegration` to enable configuration via `OrganizationIntegrationConfiguration`.
+    - For Slack, it consists of the token: `{ "Token": "xoxb-token-from-slack" }`.
+    - For webhooks, it is optional. Webhooks can either be configured at this level or the configuration level,
+      but the configuration level takes precedence. However, even though it is optional, an organization must
+      have a webhook `OrganizationIntegration` (even will a `null` `Configuration`) to enable configuration
+      via `OrganizationIntegrationConfiguration`.
+    - For HEC, it consists of the scheme, token, and URI:
+
+```json
+    {
+      "Scheme": "Bearer",
+      "Token": "Auth-token-from-HEC-service",
+      "Uri": "https://example.com/api"
+    }
+```
 
 ### `OrganizationIntegrationConfiguration`
 
 - This contains the configurations specific to each `EventType` for the integration.
 - `Configuration` contains the event-specific configuration.
     - For Slack, this would contain what channel to send the message to: `{ "channelId": "C123456" }`
-    - For Webhook, this is the URL the request should be sent to: `{ "url": "https://api.example.com" }`
+    - For webhooks, this is the URL the request should be sent to: `{ "url": "https://api.example.com" }`
+      - Optionally this also can include a `Scheme` and `Token` if this webhook needs Authentication.
+      - As stated above, all of this information can be specified here or at the `OrganizationIntegration`
+        level, but any properties declared here will take precedence over the ones above.
+    - for HEC, this must be null. HEC is configured only at the `OrganizationIntegration` level.
 - `Template` contains a template string that is expected to be filled in with the contents of the actual event.
     - The tokens in the string are wrapped in `#` characters. For instance, the UserId would be `#UserId#`.
     - The `IntegrationTemplateProcessor` does the actual work of replacing these tokens with introspected values from
@@ -225,6 +240,8 @@ Currently, there are integrations / handlers for Slack and webhooks (as mentione
 - This is the combination of both the `OrganizationIntegration` and `OrganizationIntegrationConfiguration` into
   a single object. The combined contents tell the integration's handler all the details needed to send to an
   external service.
+- `OrganizationIntegrationConfiguration` takes precedence over `OrganizationIntegration` - any keys present in
+  both will receive the value declared in `OrganizationIntegrationConfiguration`.
 - An array of `OrganizationIntegrationConfigurationDetails` is what the `EventIntegrationHandler` fetches from
   the database to determine what to publish at the integration level.
 

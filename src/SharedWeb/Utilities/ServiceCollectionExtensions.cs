@@ -664,6 +664,13 @@ public static class ServiceCollectionExtensions
             integrationSubscriptionName: globalSettings.EventLogging.AzureServiceBus.WebhookIntegrationSubscriptionName,
             integrationType: IntegrationType.Webhook,
             globalSettings: globalSettings);
+
+        services.AddAzureServiceBusIntegration<WebhookIntegrationConfigurationDetails, WebhookIntegrationHandler>(
+            eventSubscriptionName: globalSettings.EventLogging.AzureServiceBus.HecEventSubscriptionName,
+            integrationSubscriptionName: globalSettings.EventLogging.AzureServiceBus.HecIntegrationSubscriptionName,
+            integrationType: IntegrationType.Hec,
+            globalSettings: globalSettings);
+
         return services;
     }
 
@@ -749,6 +756,13 @@ public static class ServiceCollectionExtensions
             globalSettings.EventLogging.RabbitMq.WebhookIntegrationRetryQueueName,
             globalSettings.EventLogging.RabbitMq.MaxRetries,
             IntegrationType.Webhook);
+
+        services.AddRabbitMqIntegration<WebhookIntegrationConfigurationDetails, WebhookIntegrationHandler>(
+            globalSettings.EventLogging.RabbitMq.HecEventsQueueName,
+            globalSettings.EventLogging.RabbitMq.HecIntegrationQueueName,
+            globalSettings.EventLogging.RabbitMq.HecIntegrationRetryQueueName,
+            globalSettings.EventLogging.RabbitMq.MaxRetries,
+            IntegrationType.Hec);
 
         return services;
     }

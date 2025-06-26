@@ -22,8 +22,8 @@ public class EventIntegrationHandlerTests
     private const string _templateWithOrganization = "Org: #OrganizationName#";
     private const string _templateWithUser = "#UserName#, #UserEmail#";
     private const string _templateWithActingUser = "#ActingUserName#, #ActingUserEmail#";
-    private const string _url = "https://localhost";
-    private const string _url2 = "https://example.com";
+    private static readonly Uri _uri = new Uri("https://localhost");
+    private static readonly Uri _uri2 = new Uri("https://example.com");
     private readonly IEventIntegrationPublisher _eventIntegrationPublisher = Substitute.For<IEventIntegrationPublisher>();
 
     private SutProvider<EventIntegrationHandler<WebhookIntegrationConfigurationDetails>> GetSutProvider(
@@ -46,7 +46,7 @@ public class EventIntegrationHandlerTests
         {
             IntegrationType = IntegrationType.Webhook,
             MessageId = "TestMessageId",
-            Configuration = new WebhookIntegrationConfigurationDetails(_url),
+            Configuration = new WebhookIntegrationConfigurationDetails(_uri),
             RenderedTemplate = template,
             RetryCount = 0,
             DelayUntilDate = null
@@ -62,7 +62,7 @@ public class EventIntegrationHandlerTests
     {
         var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
         config.Configuration = null;
-        config.IntegrationConfiguration = JsonSerializer.Serialize(new { Url = _url });
+        config.IntegrationConfiguration = JsonSerializer.Serialize(new { Uri = _uri });
         config.Template = template;
 
         return [config];
@@ -72,11 +72,11 @@ public class EventIntegrationHandlerTests
     {
         var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
         config.Configuration = null;
-        config.IntegrationConfiguration = JsonSerializer.Serialize(new { Url = _url });
+        config.IntegrationConfiguration = JsonSerializer.Serialize(new { Uri = _uri });
         config.Template = template;
         var config2 = Substitute.For<OrganizationIntegrationConfigurationDetails>();
         config2.Configuration = null;
-        config2.IntegrationConfiguration = JsonSerializer.Serialize(new { Url = _url2 });
+        config2.IntegrationConfiguration = JsonSerializer.Serialize(new { Uri = _uri2 });
         config2.Template = template;
 
         return [config, config2];
@@ -212,7 +212,7 @@ public class EventIntegrationHandlerTests
             await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(
                 AssertHelper.AssertPropertyEqual(expectedMessage, new[] { "MessageId" })));
 
-            expectedMessage.Configuration = new WebhookIntegrationConfigurationDetails(_url2);
+            expectedMessage.Configuration = new WebhookIntegrationConfigurationDetails(_uri2);
             await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(
                 AssertHelper.AssertPropertyEqual(expectedMessage, new[] { "MessageId" })));
         }
