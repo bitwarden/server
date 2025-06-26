@@ -1,7 +1,8 @@
-ALTER TABLE
-    [dbo].[OrganizationReport]
-ADD
-    [ReportKey] NVARCHAR(MAX) NOT NULL;
+IF COL_LENGTH('[dbo].[OrganizationReport]', 'ReportKey') IS NULL
+BEGIN
+    ALTER TABLE [dbo].[OrganizationReport]
+    ADD [ReportKey] NVARCHAR(MAX) NOT NULL;
+END
 GO
 
 CREATE OR ALTER VIEW [dbo].[OrganizationReportView]
@@ -12,7 +13,7 @@ FROM
     [dbo].[OrganizationReport]
 GO
 
-ALTER PROCEDURE [dbo].[OrganizationReport_Create]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Date DATETIME2(7),
