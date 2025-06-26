@@ -184,7 +184,7 @@ public class AuthRequestRepositoryTests
     /// Test to determine that when no valid authRequest exists in the database the return value is null.
     /// </summary>
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyPendingAuthRequestByUserId_AuthRequstsInvalid_ReturnsEmptyEnumerable_Success(
+    public async Task GetManyPendingAuthRequestByUserId_AuthRequestsInvalid_ReturnsEmptyEnumerable_Success(
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository)
     {
@@ -227,7 +227,7 @@ public class AuthRequestRepositoryTests
         Assert.NotNull(result);
         Assert.Empty(result);
 
-        // Verify that there are authrequest associated with the user.
+        // Verify that there are authRequests associated with the user.
         Assert.NotEmpty(await authRequestRepository.GetManyByUserIdAsync(user.Id));
 
         await CleanupTestAsync(authRequests, authRequestRepository);
@@ -269,7 +269,7 @@ public class AuthRequestRepositoryTests
 
         var result = await authRequestRepository.GetManyPendingAuthRequestByUserId(user.Id);
         Assert.NotNull(result);
-        // since we group by device there should only be a sinlge return since the device Id is the same
+        // since we group by device there should only be a single return since the device Id is the same
         Assert.Single(result);
         var resultAuthRequest = result.First();
         Assert.Equal(oneMinuteOldAuthRequest.Id, resultAuthRequest.Id);
