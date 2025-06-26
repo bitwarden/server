@@ -25,12 +25,12 @@ BEGIN
 
     INSERT INTO [dbo].[OrganizationReport]
         (
-        [Id],
-        [OrganizationId],
-        [Date],
-        [ReportKey],
-        [ReportData],
-        [CreationDate]
+            [Id],
+            [OrganizationId],
+            [Date],
+            [ReportData],
+            [CreationDate],
+            [ReportKey]
         )
     VALUES
         (
@@ -39,7 +39,7 @@ BEGIN
             @Date,
             @ReportData,
             @CreationDate,
-            @ReportKey,
+            @ReportKey
         );
 END
 GO
