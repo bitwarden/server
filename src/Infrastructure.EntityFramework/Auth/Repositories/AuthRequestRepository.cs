@@ -72,11 +72,12 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
              where authRequest.Type == AuthRequestType.AuthenticateAndUnlock
                 || authRequest.Type == AuthRequestType.Unlock
              where authRequest.UserId == userId
-             where authRequest.CreationDate.AddMinutes(expirationMinutes) > DateTime.UtcNow
+             where authRequest.CreationDate.AddMinutes(expirationMinutes) >= DateTime.UtcNow
              group authRequest by authRequest.RequestDeviceIdentifier into groupedAuthRequests
              select
                  (from r in groupedAuthRequests
-                  join d in dbContext.Devices on r.RequestDeviceIdentifier equals d.Identifier into deviceJoin
+                  join d in dbContext.Devices on new { r.RequestDeviceIdentifier, r.UserId }
+                                            equals new { RequestDeviceIdentifier = d.Identifier, d.UserId } into deviceJoin
                   from dj in deviceJoin.DefaultIfEmpty() // This creates a left join allowing null for devices
                   orderby r.CreationDate descending
                   select new PendingAuthRequestDetails(r, dj.Id)).First()
