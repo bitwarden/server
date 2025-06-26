@@ -12,7 +12,7 @@ FROM
     [dbo].[OrganizationReport]
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
+ALTER PROCEDURE [dbo].[OrganizationReport_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Date DATETIME2(7),
