@@ -192,6 +192,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         var webhookConfig = new WebhookIntegrationConfiguration(Url: "https://localhost", Scheme: "Bearer", Token: "AUTH-TOKEN");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
+        model.Filters = null;
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(organizationIntegrationConfiguration);
 
@@ -479,6 +480,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         var webhookConfig = new WebhookIntegrationConfiguration(Url: "https://localhost", Scheme: "Bearer", Token: "AUTH-TOKEN");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
+        model.Filters = null;
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(model.ToOrganizationIntegrationConfiguration(organizationIntegrationConfiguration));
 

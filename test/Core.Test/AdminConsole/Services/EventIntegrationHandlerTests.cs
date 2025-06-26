@@ -90,7 +90,7 @@ public class EventIntegrationHandlerTests
     {
         var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
         config.Configuration = null;
-        config.IntegrationConfiguration = JsonSerializer.Serialize(new { url = _url });
+        config.IntegrationConfiguration = JsonSerializer.Serialize(new { Url = _url });
         config.Template = _templateBase;
         config.Filters = "Invalid Configuration!";
 
@@ -101,7 +101,7 @@ public class EventIntegrationHandlerTests
     {
         var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
         config.Configuration = null;
-        config.IntegrationConfiguration = JsonSerializer.Serialize(new { url = _url });
+        config.IntegrationConfiguration = JsonSerializer.Serialize(new { Url = _url });
         config.Template = _templateBase;
         config.Filters = JsonSerializer.Serialize(new IntegrationFilterGroup() { });
 
