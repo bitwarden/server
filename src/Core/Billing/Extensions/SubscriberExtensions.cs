@@ -1,4 +1,8 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Entities;
 
 namespace Bit.Core.Billing.Extensions;
 
@@ -23,4 +27,14 @@ public static class SubscriberExtensions
             ? subscriberName
             : subscriberName[..30];
     }
+
+    public static ProductUsageType GetProductUsageType(this ISubscriber subscriber)
+        => subscriber switch
+        {
+            User => ProductUsageType.Personal,
+            Organization organization when organization.PlanType.GetProductTier() is ProductTierType.Free or ProductTierType.Families => ProductUsageType.Personal,
+            Organization => ProductUsageType.Business,
+            Provider => ProductUsageType.Business,
+            _ => throw new ArgumentOutOfRangeException(nameof(subscriber))
+        };
 }
