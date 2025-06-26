@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
+CREATE PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
     @UserId UNIQUEIDENTIFIER,
     @Status TINYINT = NULL
 AS
@@ -62,7 +62,7 @@ BEGIN
         SELECT
             ST.*
         FROM
-            dbo.SecurityTask ST
+            dbo.[SecurityTaskView] ST
         WHERE
             @Status IS NULL
             OR ST.Status = @Status
@@ -87,43 +87,3 @@ BEGIN
     ORDER BY
         ST.CreationDate DESC;
 END
-GO
-
-IF NOT EXISTS (
-    SELECT 1
-    FROM sys.indexes
-    WHERE object_id = OBJECT_ID('dbo.CollectionGroup')
-        AND name = 'IX_CollectionGroup_GroupId_ReadOnly'
-)
-BEGIN
-    CREATE NONCLUSTERED INDEX IX_CollectionGroup_GroupId_ReadOnly
-      ON dbo.CollectionGroup (GroupId, ReadOnly)
-      INCLUDE (CollectionId);
-END
-GO
-
-IF NOT EXISTS (
-    SELECT 1
-    FROM sys.indexes
-    WHERE object_id = OBJECT_ID('dbo.CollectionUser')
-        AND name = 'IX_CollectionUser_OrganizationUserId_ReadOnly'
-)
-BEGIN
-    CREATE NONCLUSTERED INDEX IX_CollectionUser_OrganizationUserId_ReadOnly
-      ON dbo.CollectionUser (OrganizationUserId, ReadOnly)
-      INCLUDE (CollectionId);
-END
-GO
-
-IF NOT EXISTS (
-    SELECT 1
-    FROM sys.indexes
-    WHERE object_id = OBJECT_ID('dbo.SecurityTask')
-        AND name = 'IX_SecurityTask_Status_OrgId_CreationDateDesc'
-)
-BEGIN
-    CREATE NONCLUSTERED INDEX IX_SecurityTask_Status_OrgId_CreationDateDesc
-      ON dbo.SecurityTask (Status, OrganizationId, CreationDate DESC)
-      INCLUDE (CipherId, [Type], RevisionDate);
-END
-GO
