@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Dirt.Reports.Models.Data;
+﻿namespace Bit.Core.Dirt.Models.Data;
 
 public class RiskInsightsReportDetail
 {
