@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Tax.Commands;
 using Bit.Core.Billing.Tax.Services;
@@ -8,7 +7,6 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using Stripe;
 using Xunit;
 using static Bit.Core.Billing.Tax.Commands.OrganizationTrialParameters;
@@ -273,74 +271,6 @@ public class PreviewTaxAmountCommandTests
         // Assert
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
-        Assert.Equal(BillingErrorTranslationKeys.UnknownTaxIdType, badRequest.TranslationKey);
-    }
-
-    [Fact]
-    public async Task Run_CustomerTaxLocationInvalid_BadRequest()
-    {
-        // Arrange
-        var parameters = new OrganizationTrialParameters
-        {
-            PlanType = PlanType.EnterpriseAnnually,
-            ProductType = ProductType.PasswordManager,
-            TaxInformation = new TaxInformationDTO
-            {
-                Country = "US",
-                PostalCode = "12345"
-            }
-        };
-
-        var plan = StaticStore.GetPlan(parameters.PlanType);
-
-        _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
-
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
-            .Throws(new StripeException
-            {
-                StripeError = new StripeError { Code = StripeConstants.ErrorCodes.CustomerTaxLocationInvalid }
-            });
-
-        // Act
-        var result = await _command.Run(parameters);
-
-        // Assert
-        Assert.True(result.IsT1);
-        var badRequest = result.AsT1;
-        Assert.Equal(BillingErrorTranslationKeys.CustomerTaxLocationInvalid, badRequest.TranslationKey);
-    }
-
-    [Fact]
-    public async Task Run_TaxIdInvalid_BadRequest()
-    {
-        // Arrange
-        var parameters = new OrganizationTrialParameters
-        {
-            PlanType = PlanType.EnterpriseAnnually,
-            ProductType = ProductType.PasswordManager,
-            TaxInformation = new TaxInformationDTO
-            {
-                Country = "US",
-                PostalCode = "12345"
-            }
-        };
-
-        var plan = StaticStore.GetPlan(parameters.PlanType);
-
-        _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
-
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
-            .Throws(new StripeException
-            {
-                StripeError = new StripeError { Code = StripeConstants.ErrorCodes.TaxIdInvalid }
-            });
-
-        // Act
-        var result = await _command.Run(parameters);
-
-        // Assert
-        Assert.True(result.IsT1);
-        var badRequest = result.AsT1;
-        Assert.Equal(BillingErrorTranslationKeys.TaxIdInvalid, badRequest.TranslationKey);
+        Assert.Equal("We couldn't find a corresponding tax ID type for the tax ID you provided. Please try again or contact support for assistance.", badRequest.Response);
     }
 }

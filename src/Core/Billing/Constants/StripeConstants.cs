@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Billing.Constants;
+﻿using System.Reflection;
+
+namespace Bit.Core.Billing.Constants;
 
 public static class StripeConstants
 {
@@ -36,6 +38,13 @@ public static class StripeConstants
         public const string PaymentMethodMicroDepositVerificationDescriptorCodeMismatch = "payment_method_microdeposit_verification_descriptor_code_mismatch";
         public const string PaymentMethodMicroDepositVerificationTimeout = "payment_method_microdeposit_verification_timeout";
         public const string TaxIdInvalid = "tax_id_invalid";
+
+        public static string[] Get() =>
+            typeof(ErrorCodes)
+                .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+                .Where(fi => fi.IsLiteral && !fi.IsInitOnly && fi.FieldType == typeof(string))
+                .Select(fi => (string)fi.GetValue(null))
+                .ToArray();
     }
 
     public static class InvoiceStatus

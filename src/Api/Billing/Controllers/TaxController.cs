@@ -28,9 +28,6 @@ public class TaxController(
 
         var result = await previewTaxAmountCommand.Run(parameters);
 
-        return result.Match<IResult>(
-            taxAmount => TypedResults.Ok(new { TaxAmount = taxAmount }),
-            badRequest => Error.BadRequest(badRequest.TranslationKey),
-            unhandled => Error.ServerError(unhandled.TranslationKey));
+        return Handle(result);
     }
 }
