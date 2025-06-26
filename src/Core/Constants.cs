@@ -194,7 +194,6 @@ public static class FeatureFlagKeys
     public const string IpcChannelFramework = "ipc-channel-framework";
 
     /* Tools Team */
-    public const string ItemShare = "item-share";
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
 
     /* Vault Team */
