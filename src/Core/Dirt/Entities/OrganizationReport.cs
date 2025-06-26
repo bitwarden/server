@@ -10,10 +10,9 @@ public class OrganizationReport : ITableObject<Guid>
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
     public DateTime Date { get; set; }
-
-    public string ReportKey { get; set; } = string.Empty;
     public string ReportData { get; set; } = string.Empty;
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
+    public string ReportKey { get; set; } = string.Empty;
 
     public void SetNewId()
     {

@@ -16,9 +16,9 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Date DATETIME2(7),
-    @ReportKey NVARCHAR(MAX),
     @ReportData NVARCHAR(MAX),
-    @CreationDate DATETIME2(7)
+    @CreationDate DATETIME2(7),
+    @ReportKey NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -37,9 +37,9 @@ BEGIN
             @Id,
             @OrganizationId,
             @Date,
-            @ReportKey,
             @ReportData,
-            @CreationDate
+            @CreationDate,
+            @ReportKey,
         );
 END
 GO

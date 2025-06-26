@@ -600,11 +600,11 @@ public partial class _20250626_00_AlterOrganizationReportsql : Migration
                 Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                 OrganizationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                 Date = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                ReportKey = table.Column<string>(type: "longtext", nullable: false)
-                    .Annotation("MySql:CharSet", "utf8mb4"),
                 ReportData = table.Column<string>(type: "longtext", nullable: false)
                     .Annotation("MySql:CharSet", "utf8mb4"),
-                CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                ReportKey = table.Column<string>(type: "longtext", nullable: false)
+                    .Annotation("MySql:CharSet", "utf8mb4")
             },
             constraints: table =>
             {
