@@ -14,7 +14,7 @@ AS
         [OrganizationId],
         [Applications],
         [CreationDate],
-        [RevisionDate]
+        [RevisionDate],
         [ReportKey]
     )
     VALUES
