@@ -10,7 +10,7 @@ SELECT
     *
 FROM
     [dbo].[OrganizationReport]
-    GO
+GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
