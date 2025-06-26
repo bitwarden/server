@@ -2,7 +2,7 @@
 using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.Context;
-using Bit.Core.Dirt.Reports.Entities;
+using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
@@ -23,6 +23,9 @@ public class ReportsController : Controller
     private readonly IAddPasswordHealthReportApplicationCommand _addPwdHealthReportAppCommand;
     private readonly IGetPasswordHealthReportApplicationQuery _getPwdHealthReportAppQuery;
     private readonly IDropPasswordHealthReportApplicationCommand _dropPwdHealthReportAppCommand;
+    private readonly IAddOrganizationReportCommand _addOrganizationReportCommand;
+    private readonly IDropOrganizationReportCommand _dropOrganizationReportCommand;
+    private readonly IGetOrganizationReportQuery _getOrganizationReportQuery;
 
     public ReportsController(
         ICurrentContext currentContext,
@@ -30,7 +33,10 @@ public class ReportsController : Controller
         IRiskInsightsReportQuery riskInsightsReportQuery,
         IAddPasswordHealthReportApplicationCommand addPasswordHealthReportApplicationCommand,
         IGetPasswordHealthReportApplicationQuery getPasswordHealthReportApplicationQuery,
-        IDropPasswordHealthReportApplicationCommand dropPwdHealthReportAppCommand
+        IDropPasswordHealthReportApplicationCommand dropPwdHealthReportAppCommand,
+        IGetOrganizationReportQuery getOrganizationReportQuery,
+        IAddOrganizationReportCommand addOrganizationReportCommand,
+        IDropOrganizationReportCommand dropOrganizationReportCommand
     )
     {
         _currentContext = currentContext;
@@ -39,6 +45,9 @@ public class ReportsController : Controller
         _addPwdHealthReportAppCommand = addPasswordHealthReportApplicationCommand;
         _getPwdHealthReportAppQuery = getPasswordHealthReportApplicationQuery;
         _dropPwdHealthReportAppCommand = dropPwdHealthReportAppCommand;
+        _getOrganizationReportQuery = getOrganizationReportQuery;
+        _addOrganizationReportCommand = addOrganizationReportCommand;
+        _dropOrganizationReportCommand = dropOrganizationReportCommand;
     }
 
     /// <summary>
@@ -203,5 +212,73 @@ public class ReportsController : Controller
         }
 
         await _dropPwdHealthReportAppCommand.DropPasswordHealthReportApplicationAsync(request);
+    }
+
+    /// <summary>
+    /// Adds a new organization report
+    /// </summary>
+    /// <param name="request">A single instance of AddOrganizationReportRequest</param>
+    /// <returns>A single instance of OrganizationReport</returns>
+    /// <exception cref="NotFoundException">If user does not have access to the organization</exception>
+    /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
+    [HttpPost("organization-reports")]
+    public async Task<OrganizationReport> AddOrganizationReport([FromBody] AddOrganizationReportRequest request)
+    {
+        if (!await _currentContext.AccessReports(request.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+        return await _addOrganizationReportCommand.AddOrganizationReportAsync(request);
+    }
+
+    /// <summary>
+    /// Drops organization reports for an organization
+    /// </summary>
+    /// <param name="request">A single instance of DropOrganizationReportRequest</param>
+    /// <returns></returns>
+    /// <exception cref="NotFoundException">If user does not have access to the organization</exception>
+    /// <exception cref="BadRequestException">If the organization does not have any records</exception>
+    [HttpDelete("organization-reports")]
+    public async Task DropOrganizationReport([FromBody] DropOrganizationReportRequest request)
+    {
+        if (!await _currentContext.AccessReports(request.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+        await _dropOrganizationReportCommand.DropOrganizationReportAsync(request);
+    }
+
+    /// <summary>
+    /// Gets organization reports for an organization
+    /// </summary>
+    /// <param name="orgId">A valid Organization Id</param>
+    /// <returns>An Enumerable of OrganizationReport</returns>
+    /// <exception cref="NotFoundException">If user does not have access to the organization</exception>
+    /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
+    [HttpGet("organization-reports/{orgId}")]
+    public async Task<IEnumerable<OrganizationReport>> GetOrganizationReports(Guid orgId)
+    {
+        if (!await _currentContext.AccessReports(orgId))
+        {
+            throw new NotFoundException();
+        }
+        return await _getOrganizationReportQuery.GetOrganizationReportAsync(orgId);
+    }
+
+    /// <summary>
+    /// Gets the latest organization report for an organization
+    /// </summary>
+    /// <param name="orgId">A valid Organization Id</param>
+    /// <returns>A single instance of OrganizationReport</returns>
+    /// <exception cref="NotFoundException">If user does not have access to the organization</exception>
+    /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
+    [HttpGet("organization-reports/latest/{orgId}")]
+    public async Task<OrganizationReport> GetLatestOrganizationReport(Guid orgId)
+    {
+        if (!await _currentContext.AccessReports(orgId))
+        {
+            throw new NotFoundException();
+        }
+        return await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(orgId);
     }
 }
