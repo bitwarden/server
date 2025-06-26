@@ -10,15 +10,7 @@ public abstract class BaseLicense : ILicense
     public Guid Id { get; set; }
 
     [LicenseVersion(1)]
-    [LicenseIgnore(includeInSignature: true)]
-    public DateTime Issued { get; set; }
-
-    [LicenseVersion(1)]
     public DateTime? Expires { get; set; }
-
-    [LicenseVersion(1)]
-    [LicenseIgnore(includeInSignature: true)]
-    public DateTime? Refresh { get; set; }
 
     [LicenseVersion(1)]
     public int Version { get; set; }
@@ -32,11 +24,6 @@ public abstract class BaseLicense : ILicense
     [LicenseVersion(1)]
     public string Name { get; set; }
 
-    [LicenseVersion(1)]
-    [LicenseIgnore(includeInSignature: true)]
-    public string Hash { get; set; }
-
-    [LicenseVersion(1)]
     [LicenseIgnore]
     public string Signature { get; set; }
 
@@ -49,4 +36,13 @@ public abstract class BaseLicense : ILicense
     [LicenseIgnore]
     [JsonIgnore]
     public abstract bool ValidLicenseVersion { get; }
+
+    [LicenseIgnore(includeInSignature: true)]
+    public DateTime? Refresh { get; set; }
+
+    [LicenseIgnore(includeInSignature: true)]
+    public DateTime Issued { get; set; }
+
+    [LicenseIgnore(includeInSignature: true)]
+    public string Hash { get; set; }
 }

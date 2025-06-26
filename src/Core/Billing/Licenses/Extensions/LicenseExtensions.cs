@@ -51,19 +51,19 @@ public static class LicenseExtensions
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p =>
             {
-                var versionAttr = p.GetCustomAttribute<LicenseVersionAttribute>();
-                if (versionAttr is null || versionAttr.Version > license.Version)
-                {
-                    return false;
-                }
-
                 var ignoreAttr = p.GetCustomAttribute<LicenseIgnoreAttribute>();
-                if (ignoreAttr is null)
+                if (ignoreAttr is not null)
                 {
-                    return true;
+                    return !forHash && ignoreAttr.IncludeInSignature;
                 }
 
-                return !forHash && ignoreAttr.IncludeInSignature;
+                var versionAttr = p.GetCustomAttribute<LicenseVersionAttribute>();
+                if (versionAttr is not null)
+                {
+                    return versionAttr.Version <= license.Version;
+                }
+
+                return true;
             })
             .OrderBy(p => p.Name)
             .Select(p => $"{p.Name}:{CoreHelpers.FormatLicenseSignatureValue(p.GetValue(license, null))}")
