@@ -89,12 +89,12 @@ public class TwoFactorEmailServiceTests
             }
         });
 
-        await sutProvider.Sut.SendTwoFactorEmailAsync(user);
+        await sutProvider.Sut.SendTwoFactorSetupEmailAsync(user);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendTwoFactorEmailAsync(email, user.Email, token, IpAddress, deviceType.ToString(),
-                TwoFactorEmailPurpose.Login);
+                TwoFactorEmailPurpose.Setup);
     }
 
     [Theory, BitAutoData]
