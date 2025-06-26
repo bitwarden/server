@@ -3,7 +3,8 @@ CREATE PROCEDURE [dbo].[OrganizationApplication_Create]
     @OrganizationId UNIQUEIDENTIFIER,
     @Applications NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @ReportKey NVARCHAR(MAX)
 AS
     SET NOCOUNT ON;
 
@@ -14,12 +15,14 @@ AS
         [Applications],
         [CreationDate],
         [RevisionDate]
+        [ReportKey]
     )
     VALUES
-        (
+    (
         @Id,
         @OrganizationId,
         @Applications,
         @CreationDate,
-        @RevisionDate
-        );
+        @RevisionDate,
+        @ReportKey
+    );
