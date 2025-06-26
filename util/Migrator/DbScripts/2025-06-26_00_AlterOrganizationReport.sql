@@ -16,6 +16,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Date DATETIME2(7),
+    @ReportKey NVARCHAR(MAX),
     @ReportData NVARCHAR(MAX),
     @CreationDate DATETIME2(7)
 AS
