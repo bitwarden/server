@@ -1,4 +1,7 @@
-﻿using Bit.Core.Context;
+﻿#nullable enable
+
+using System.ComponentModel.DataAnnotations;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Data;
@@ -14,8 +17,10 @@ public class EventMessage : IEvent
         DeviceType = currentContext.DeviceType;
     }
 
-    public DateTime Date { get; set; }
-    public EventType Type { get; set; }
+    [Required]
+    public DateTime Date { get; set; } = DateTime.Now;
+    [Required]
+    public EventType Type { get; set; } = EventType.Cipher_Created;
     public Guid? UserId { get; set; }
     public Guid? OrganizationId { get; set; }
     public Guid? InstallationId { get; set; }
@@ -29,10 +34,14 @@ public class EventMessage : IEvent
     public Guid? ProviderOrganizationId { get; set; }
     public Guid? ActingUserId { get; set; }
     public DeviceType? DeviceType { get; set; }
-    public string IpAddress { get; set; }
+    [Required]
+    public string IpAddress { get; set; } = string.Empty;
+
     public Guid? IdempotencyId { get; private set; } = Guid.NewGuid();
     public EventSystemUser? SystemUser { get; set; }
-    public string DomainName { get; set; }
+    [Required]
+    public string DomainName { get; set; } = string.Empty;
     public Guid? SecretId { get; set; }
+    public string? SecretIds { get; set; }
     public Guid? ServiceAccountId { get; set; }
 }
