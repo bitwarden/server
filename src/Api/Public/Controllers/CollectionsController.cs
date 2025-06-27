@@ -2,6 +2,8 @@
 using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
+using Bit.Core.Enums;
+using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -14,18 +16,18 @@ namespace Bit.Api.Public.Controllers;
 public class CollectionsController : Controller
 {
     private readonly ICollectionRepository _collectionRepository;
-    private readonly ICollectionService _collectionService;
+    private readonly IUpdateCollectionCommand _updateCollectionCommand;
     private readonly ICurrentContext _currentContext;
     private readonly IApplicationCacheService _applicationCacheService;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
-        ICollectionService collectionService,
+        IUpdateCollectionCommand updateCollectionCommand,
         ICurrentContext currentContext,
         IApplicationCacheService applicationCacheService)
     {
         _collectionRepository = collectionRepository;
-        _collectionService = collectionService;
+        _updateCollectionCommand = updateCollectionCommand;
         _currentContext = currentContext;
         _applicationCacheService = applicationCacheService;
     }
@@ -93,7 +95,7 @@ public class CollectionsController : Controller
         }
         var updatedCollection = model.ToCollection(existingCollection);
         var associations = model.Groups?.Select(c => c.ToCollectionAccessSelection()).ToList();
-        await _collectionService.SaveAsync(updatedCollection, associations);
+        await _updateCollectionCommand.UpdateAsync(updatedCollection, associations, null);
         var response = new CollectionResponseModel(updatedCollection, associations);
         return new JsonResult(response);
     }
@@ -115,6 +117,12 @@ public class CollectionsController : Controller
         {
             return new NotFoundResult();
         }
+
+        if (collection.Type == CollectionType.DefaultUserCollection)
+        {
+            return new BadRequestObjectResult(new ErrorResponseModel("You cannot delete a collection with the type as DefaultUserCollection."));
+        }
+
         await _collectionRepository.DeleteAsync(collection);
         return new OkResult();
     }

@@ -5,7 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
 using Azure.Storage.Queues;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
-using Bit.Core.AdminConsole.Models.Data.Integrations;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
@@ -288,7 +288,7 @@ public static class ServiceCollectionExtensions
             if (CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
                 CoreHelpers.SettingHasValue(globalSettings.Installation.Key))
             {
-                services.AddKeyedSingleton<IPushNotificationService, RelayPushNotificationService>("implementation");
+                services.TryAddEnumerable(ServiceDescriptor.Singleton<IPushEngine, RelayPushNotificationService>());
                 services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
             }
             else
@@ -299,20 +299,20 @@ public static class ServiceCollectionExtensions
             if (CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
                 CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
             {
-                services.AddKeyedSingleton<IPushNotificationService, NotificationsApiPushNotificationService>("implementation");
+                services.TryAddEnumerable(ServiceDescriptor.Singleton<IPushEngine, NotificationsApiPushNotificationService>());
             }
         }
         else
         {
             services.AddSingleton<INotificationHubPool, NotificationHubPool>();
             services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
-            services.AddKeyedSingleton<IPushNotificationService, NotificationHubPushNotificationService>("implementation");
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IPushEngine, NotificationHubPushNotificationService>());
+            services.TryAddSingleton<IPushRelayer, NotificationHubPushNotificationService>();
             if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
             {
                 services.AddKeyedSingleton("notifications",
                     (_, _) => new QueueClient(globalSettings.Notifications.ConnectionString, "notifications"));
-                services.AddKeyedSingleton<IPushNotificationService, AzureQueuePushNotificationService>(
-                    "implementation");
+                services.TryAddEnumerable(ServiceDescriptor.Singleton<IPushEngine, AzureQueuePushNotificationService>());
             }
         }
 
@@ -366,7 +366,6 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<IMailService, NoopMailService>();
         services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
-        services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
         services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
         services.AddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
         services.AddSingleton<ILicensingService, NoopLicensingService>();
@@ -615,9 +614,11 @@ public static class ServiceCollectionExtensions
             new EventIntegrationHandler<TConfig>(
                 integrationType,
                 provider.GetRequiredService<IEventIntegrationPublisher>(),
+                provider.GetRequiredService<IIntegrationFilterService>(),
                 provider.GetRequiredService<IOrganizationIntegrationConfigurationRepository>(),
                 provider.GetRequiredService<IUserRepository>(),
-                provider.GetRequiredService<IOrganizationRepository>()));
+                provider.GetRequiredService<IOrganizationRepository>(),
+                provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()));
 
         services.AddSingleton<IHostedService>(provider =>
             new AzureServiceBusEventListenerService(
@@ -648,6 +649,7 @@ public static class ServiceCollectionExtensions
             !CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.EventTopicName))
             return services;
 
+        services.AddSingleton<IIntegrationFilterService, IntegrationFilterService>();
         services.AddSingleton<IAzureServiceBusService, AzureServiceBusService>();
         services.AddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
         services.AddAzureServiceBusEventRepositoryListener(globalSettings);
@@ -698,9 +700,11 @@ public static class ServiceCollectionExtensions
             new EventIntegrationHandler<TConfig>(
                 integrationType,
                 provider.GetRequiredService<IEventIntegrationPublisher>(),
+                provider.GetRequiredService<IIntegrationFilterService>(),
                 provider.GetRequiredService<IOrganizationIntegrationConfigurationRepository>(),
                 provider.GetRequiredService<IUserRepository>(),
-                provider.GetRequiredService<IOrganizationRepository>()));
+                provider.GetRequiredService<IOrganizationRepository>(),
+                provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()));
 
         services.AddSingleton<IHostedService>(provider =>
             new RabbitMqEventListenerService(
@@ -718,7 +722,8 @@ public static class ServiceCollectionExtensions
                 retryQueueName: integrationRetryQueueName,
                 maxRetries: maxRetries,
                 rabbitMqService: provider.GetRequiredService<IRabbitMqService>(),
-                logger: provider.GetRequiredService<ILogger<RabbitMqIntegrationListenerService>>()));
+                logger: provider.GetRequiredService<ILogger<RabbitMqIntegrationListenerService>>(),
+                timeProvider: provider.GetRequiredService<TimeProvider>()));
 
         return services;
     }
@@ -730,6 +735,7 @@ public static class ServiceCollectionExtensions
             return services;
         }
 
+        services.AddSingleton<IIntegrationFilterService, IntegrationFilterService>();
         services.AddSingleton<IRabbitMqService, RabbitMqService>();
         services.AddSingleton<IEventIntegrationPublisher, RabbitMqService>();
         services.AddRabbitMqEventRepositoryListener(globalSettings);

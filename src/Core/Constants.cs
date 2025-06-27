@@ -107,11 +107,11 @@ public static class FeatureFlagKeys
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string LimitItemDeletion = "pm-15493-restrict-item-deletion-to-can-manage-permission";
     public const string PolicyRequirements = "pm-14439-policy-requirements";
-    public const string SsoExternalIdVisibility = "pm-18630-sso-external-id-visibility";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
     public const string OptimizeNestedTraverseTypescript = "pm-21695-optimize-nested-traverse-typescript";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
+    public const string CreateDefaultLocation = "pm-19467-create-default-location";
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
@@ -138,6 +138,7 @@ public static class FeatureFlagKeys
     public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string InlineMenuTotp = "inline-menu-totp";
+    public const string WindowsDesktopAutotype = "windows-desktop-autotype";
 
     /* Billing Team */
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
@@ -181,6 +182,7 @@ public static class FeatureFlagKeys
     public const string EnablePMFlightRecorder = "enable-pm-flight-recorder";
     public const string MobileErrorReporting = "mobile-error-reporting";
     public const string AndroidChromeAutofill = "android-chrome-autofill";
+    public const string UserManagedPrivilegedApps = "pm-18970-user-managed-privileged-apps";
     public const string EnablePMPreloginSettings = "enable-pm-prelogin-settings";
     public const string AppIntents = "app-intents";
 
@@ -192,7 +194,6 @@ public static class FeatureFlagKeys
     public const string IpcChannelFramework = "ipc-channel-framework";
 
     /* Tools Team */
-    public const string ItemShare = "item-share";
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
 
     /* Vault Team */
@@ -205,6 +206,8 @@ public static class FeatureFlagKeys
     public const string EndUserNotifications = "pm-10609-end-user-notifications";
     public const string PhishingDetection = "phishing-detection";
     public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
+    public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
+    public const string PM19315EndUserActivationMvp = "pm-19315-end-user-activation-mvp";
 
     public static List<string> GetAllKeys()
     {
