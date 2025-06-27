@@ -189,7 +189,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(Url: "https://localhost", Scheme: "Bearer", Token: "AUTH-TOKEN");
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"), Scheme: "Bearer", Token: "AUTH-TOKEN");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
         model.Filters = null;
@@ -227,7 +227,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(Url: "https://localhost");
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"));
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
         model.Filters = null;
@@ -390,7 +390,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(Url: "https://localhost", Scheme: "Bearer", Token: "AUTH-TOKEN");
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"), Scheme: "Bearer", Token: "AUTH-TOKEN");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = null;
 
@@ -477,7 +477,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(Url: "https://localhost", Scheme: "Bearer", Token: "AUTH-TOKEN");
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"), Scheme: "Bearer", Token: "AUTH-TOKEN");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
         model.Filters = null;
@@ -520,7 +520,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(Url: "https://localhost");
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"));
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
         model.Filters = null;
@@ -561,7 +561,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(Url: "https://localhost", Scheme: "Bearer", Token: "AUTH-TOKEN");
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"), Scheme: "Bearer", Token: "AUTH-TOKEN");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
         model.Filters = null;

@@ -23,6 +23,22 @@ public class OrganizationIntegrationConfigurationDetailsTests
     }
 
     [Fact]
+    public void MergedConfiguration_WithSameKeyIndConfigAndIntegration_GivesPrecedenceToConfiguration()
+    {
+        var config = new { config = "A new config value" };
+        var integration = new { config = "An integration value" };
+        var expectedObj = new { config = "A new config value" };
+        var expected = JsonSerializer.Serialize(expectedObj);
+
+        var sut = new OrganizationIntegrationConfigurationDetails();
+        sut.Configuration = JsonSerializer.Serialize(config);
+        sut.IntegrationConfiguration = JsonSerializer.Serialize(integration);
+
+        var result = sut.MergedConfiguration;
+        Assert.Equal(expected, result.ToJsonString());
+    }
+
+    [Fact]
     public void MergedConfiguration_WithInvalidJsonConfigAndIntegration_ReturnsEmptyJson()
     {
         var expectedObj = new { };

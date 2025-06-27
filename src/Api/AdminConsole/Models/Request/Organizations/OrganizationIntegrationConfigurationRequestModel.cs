@@ -33,6 +33,10 @@ public class OrganizationIntegrationConfigurationRequestModel
                 return !string.IsNullOrWhiteSpace(Template) &&
                        IsConfigurationValid<WebhookIntegrationConfiguration>() &&
                        IsFiltersValid();
+            case IntegrationType.Hec:
+                return !string.IsNullOrWhiteSpace(Template) &&
+                       Configuration is null &&
+                       IsFiltersValid();
             default:
                 return false;
 
