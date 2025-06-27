@@ -1,5 +1,4 @@
-
-CREATE OR ALTER PROCEDURE [dbo].[AuthRequest_ReadPendingByUserId]
+CREATE PROCEDURE [dbo].[AuthRequest_ReadPendingByUserId]
     @UserId UNIQUEIDENTIFIER,
     @ExpirationMinutes INT
 AS
