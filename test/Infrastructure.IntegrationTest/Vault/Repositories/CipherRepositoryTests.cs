@@ -978,6 +978,7 @@ public class CipherRepositoryTests
     [DatabaseTheory, DatabaseData]
     public async Task DeleteCipherWithSecurityTaskAsync_Works(
         IOrganizationRepository organizationRepository,
+        IUserRepository userRepository,
         ICipherRepository cipherRepository,
         ISecurityTaskRepository securityTaskRepository,
         INotificationRepository notificationRepository,
@@ -989,6 +990,14 @@ public class CipherRepositoryTests
             PlanType = PlanType.EnterpriseAnnually,
             Plan = "Test Plan",
             BillingEmail = ""
+        });
+
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
         });
 
         var cipher1 = new Cipher { Type = CipherType.Login, OrganizationId = organization.Id, Data = "", };
@@ -1019,11 +1028,13 @@ public class CipherRepositoryTests
         var notification = await notificationRepository.CreateAsync(new Notification
         {
             OrganizationId = organization.Id,
+            UserId = user.Id,
             TaskId = tasks[1].Id,
         });
         await notificationStatusRepository.CreateAsync(new NotificationStatus
         {
             NotificationId = notification.Id,
+            UserId = user.Id,
             ReadDate = DateTime.UtcNow,
         });
 
