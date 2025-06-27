@@ -23,7 +23,20 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id);
     Task<OrganizationUserUserDetails?> GetDetailsByIdAsync(Guid id);
     Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id);
+    /// <summary>
+    /// Fetches all OrganizationUsers for an organization, including their details.
+    /// </summary>
+    /// <param name="organizationId">The ID of the organization to fetch OrganizationUsers for.</param>
+    /// <param name="includeGroups">Whether to include group details.</param>
+    /// <param name="includeCollections">Whether to include collection details.</param>
+    /// <returns>A collection of OrganizationUserUserDetails.</returns>
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
+    /// <inheritdoc cref="GetManyDetailsByOrganizationAsync"/>
+    /// <remarks>
+    /// This method is optimized for performance.
+    /// Reduces database round trips by fetching all data in fewer queries.
+    /// </remarks>
+    Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null);
     Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId, Guid organizationId,
@@ -58,7 +71,10 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// Returns a list of OrganizationUsers with email domains that match one of the Organization's claimed domains.
     /// </summary>
     Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId);
-
+    /// <summary>
+    /// Optimized version of <see cref="GetManyByOrganizationWithClaimedDomainsAsync"/> with better performance.
+    /// </summary>
+    Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync_vNext(Guid organizationId);
     Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds);
 
     /// <summary>
