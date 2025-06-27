@@ -1,6 +1,6 @@
-﻿
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationCollections;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -34,6 +34,7 @@ public class DeleteCollectionCommandTests
     {
         // Arrange
         var collectionIds = new[] { collection.Id, collection2.Id };
+        collection.Type = collection2.Type = CollectionType.SharedCollection;
 
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(collectionIds)
@@ -51,5 +52,42 @@ public class DeleteCollectionCommandTests
             a.All(c => collectionIds.Contains(c.Item1.Id) && c.Item2 == EventType.Collection_Deleted)));
     }
 
+    [Theory, BitAutoData]
+    [OrganizationCustomize]
+    public async Task DeleteAsync_WithDefaultUserCollectionType_ThrowsBadRequest(Collection collection, SutProvider<DeleteCollectionCommand> sutProvider)
+    {
+        // Arrange
+        collection.Type = CollectionType.DefaultUserCollection;
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteAsync(collection));
+        Assert.Contains("You cannot delete a collection with the type as DefaultUserCollection.", ex.Message);
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogCollectionEventAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    [OrganizationCustomize]
+    public async Task DeleteManyAsync_WithDefaultUserCollectionType_ThrowsBadRequest(Collection collection, Collection collection2, SutProvider<DeleteCollectionCommand> sutProvider)
+    {
+        // Arrange
+        collection.Type = CollectionType.DefaultUserCollection;
+        collection2.Type = CollectionType.SharedCollection;
+        var collections = new List<Collection> { collection, collection2 };
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.DeleteManyAsync(collections));
+        Assert.Contains("You cannot delete collections with the type as DefaultUserCollection.", ex.Message);
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteManyAsync(default);
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogCollectionEventsAsync(default);
+    }
 
 }
