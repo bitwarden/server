@@ -16,10 +16,10 @@ AS
         [RevisionDate]
     )
     VALUES
-        (
+    (
         @Id,
         @OrganizationId,
         @Applications,
         @CreationDate,
         @RevisionDate
-        );
+    );
