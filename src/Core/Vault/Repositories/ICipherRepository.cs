@@ -55,7 +55,7 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
         Guid userId);
 
     /// <summary>
-    /// Returns the users and the cipher ids for security tawsks that are applicable to them.
+    /// Returns the users and the cipher ids for security tasks that are applicable to them.
     ///
     /// Security tasks are actionable when a user has manage access to the associated cipher.
     /// </summary>

@@ -166,4 +166,26 @@ public class UpdateCollectionCommandTests
             .DidNotReceiveWithAnyArgs()
             .LogCollectionEventAsync(default, default);
     }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WithDefaultUserCollectionType_ThrowsBadRequest(
+        Organization organization, Collection collection, SutProvider<UpdateCollectionCommand> sutProvider)
+    {
+        collection.Type = CollectionType.DefaultUserCollection;
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(collection));
+        Assert.Contains("You cannot edit a collection with the type as DefaultUserCollection.", ex.Message);
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default);
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default, default, default);
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogCollectionEventAsync(default, default);
+    }
 }
