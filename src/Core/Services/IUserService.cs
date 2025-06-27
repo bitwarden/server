@@ -68,8 +68,7 @@ public interface IUserService
     Task EnablePremiumAsync(Guid userId, DateTime? expirationDate);
     Task DisablePremiumAsync(Guid userId, DateTime? expirationDate);
     Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate);
-    Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null,
-        int? version = null);
+
     Task<bool> CheckPasswordAsync(User user, string password);
     /// <summary>
     /// Checks if the user has access to premium features, either through a personal subscription or through an organization.
