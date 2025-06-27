@@ -21,7 +21,6 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
     @CreationDate DATETIME2(7),
     @ReportKey NVARCHAR(MAX)
 AS
-BEGIN
     SET NOCOUNT ON;
 
     INSERT INTO [dbo].[OrganizationReport]
@@ -42,5 +41,4 @@ BEGIN
         @CreationDate,
         @ReportKey
     );
-END
 GO
