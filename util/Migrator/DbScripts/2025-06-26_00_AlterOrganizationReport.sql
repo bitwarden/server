@@ -1,7 +1,7 @@
 IF COL_LENGTH('[dbo].[OrganizationReport]', 'ReportKey') IS NULL
 BEGIN
     ALTER TABLE [dbo].[OrganizationReport]
-    ADD [ReportKey] NVARCHAR(MAX) NOT NULL;
+    ADD [ReportKey] VARCHAR(MAX) NOT NULL;
 END
 GO
 
@@ -19,7 +19,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
     @Date DATETIME2(7),
     @ReportData NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @ReportKey NVARCHAR(MAX)
+    @ReportKey VARCHAR(MAX)
 AS
     SET NOCOUNT ON;
 

@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250626214813_2025-06-26_00_AlterOrganizationReport.sql")]
+    [Migration("20250627184927_2025-06-26_00_AlterOrganizationReport.sql")]
     partial class _20250626_00_AlterOrganizationReportsql
     {
         /// <inheritdoc />

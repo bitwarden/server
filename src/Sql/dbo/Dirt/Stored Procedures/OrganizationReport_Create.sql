@@ -4,7 +4,7 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Create]
     @Date DATETIME2(7),
     @ReportData NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @ReportKey NVARCHAR(MAX)
+    @ReportKey VARCHAR(MAX)
 AS
     SET NOCOUNT ON;
 
