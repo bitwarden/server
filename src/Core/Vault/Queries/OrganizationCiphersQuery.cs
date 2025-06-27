@@ -1,4 +1,5 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 
@@ -8,11 +9,13 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
 {
     private readonly ICipherRepository _cipherRepository;
     private readonly ICollectionCipherRepository _collectionCipherRepository;
+    private readonly ICollectionRepository _collectionRepository;
 
-    public OrganizationCiphersQuery(ICipherRepository cipherRepository, ICollectionCipherRepository collectionCipherRepository)
+    public OrganizationCiphersQuery(ICipherRepository cipherRepository, ICollectionCipherRepository collectionCipherRepository, ICollectionRepository collectionRepository)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
+        _collectionRepository = collectionRepository;
     }
 
     /// <summary>
@@ -60,5 +63,29 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
         var managedCollectionIds = collectionIds.ToHashSet();
         var allOrganizationCiphers = await GetAllOrganizationCiphers(organizationId);
         return allOrganizationCiphers.Where(c => c.CollectionIds.Intersect(managedCollectionIds).Any());
+    }
+
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetAllOrganizationCiphersExcludingDefaultUserCollections(Guid orgId)
+    {
+        var defaultCollIds = (await _collectionRepository
+            .GetManyByOrganizationIdAsync(orgId))
+        .Where(col => col.Type == CollectionType.DefaultUserCollection)
+        .Select(col => col.Id)
+        .ToHashSet();
+
+        var cipherGroups = (await _collectionCipherRepository
+             .GetManyByOrganizationIdAsync(orgId))
+         .GroupBy(cc => cc.CipherId)
+         .ToDictionary(g => g.Key, g => g);
+
+        return (await _cipherRepository
+                .GetManyOrganizationDetailsByOrganizationIdAsync(orgId))
+            .Where(c =>
+                // select ciphers with no collections or none of its collections are default
+                !cipherGroups.TryGetValue(c.Id, out var grp)
+                || !grp.Any(cc => defaultCollIds.Contains(cc.CollectionId))
+            )
+            .Select(c => new CipherOrganizationDetailsWithCollections(c, cipherGroups));
     }
 }
