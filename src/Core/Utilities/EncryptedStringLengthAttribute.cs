@@ -2,6 +2,8 @@
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public class EncryptedStringLengthAttribute : StringLengthAttribute
 {
     public EncryptedStringLengthAttribute(int maximumLength)
