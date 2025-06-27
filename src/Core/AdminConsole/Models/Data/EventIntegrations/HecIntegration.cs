@@ -2,4 +2,4 @@
 
 namespace Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
-public record HecIntegration(string Scheme, string Token, Uri Uri);
+public record HecIntegration(Uri Uri, string Scheme, string Token);

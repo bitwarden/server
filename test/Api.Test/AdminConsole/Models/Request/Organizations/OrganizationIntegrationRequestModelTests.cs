@@ -139,7 +139,7 @@ public class OrganizationIntegrationRequestModelTests
         var model = new OrganizationIntegrationRequestModel
         {
             Type = IntegrationType.Hec,
-            Configuration = JsonSerializer.Serialize(new HecIntegration("Bearer", Token: "Token", Uri: new Uri("http://localhost")))
+            Configuration = JsonSerializer.Serialize(new HecIntegration(Uri: new Uri("http://localhost"), Scheme: "Bearer", Token: "Token"))
         };
 
         var results = model.Validate(new ValidationContext(model)).ToList();
