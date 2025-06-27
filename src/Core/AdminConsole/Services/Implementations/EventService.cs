@@ -414,25 +414,59 @@ public class EventService : IEventService
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
 
-        foreach (var secret in secrets)
+        if (IsBulkEventType(type))
         {
-            if (!CanUseEvents(orgAbilities, secret.OrganizationId))
-            {
-                continue;
-            }
+            var secretsByOrg = secrets.GroupBy(s => s.OrganizationId);
 
-            var e = new EventMessage(_currentContext)
+            foreach (var group in secretsByOrg)
             {
-                OrganizationId = secret.OrganizationId,
-                Type = type,
-                SecretId = secret.Id,
-                UserId = userId,
-                Date = date.GetValueOrDefault(DateTime.UtcNow)
-            };
-            eventMessages.Add(e);
+                var orgId = group.Key;
+
+                if (!CanUseEvents(orgAbilities, orgId))
+                {
+                    continue;
+                }
+
+                IEnumerable<Guid> secretIds = group.Select(s => s.Id);
+
+                var e = new EventMessage(_currentContext)
+                {
+                    OrganizationId = orgId,
+                    Type = type,
+                    SecretIds = string.Join(",", secretIds.Select(id => id.ToString())),
+                    UserId = userId,
+                    Date = date.GetValueOrDefault(DateTime.UtcNow)
+                };
+                eventMessages.Add(e);
+            }
+        }
+        else
+        {
+            foreach (var secret in secrets)
+            {
+                if (!CanUseEvents(orgAbilities, secret.OrganizationId))
+                {
+                    continue;
+                }
+
+                var e = new EventMessage(_currentContext)
+                {
+                    OrganizationId = secret.OrganizationId,
+                    Type = type,
+                    SecretId = secret.Id,
+                    UserId = userId,
+                    Date = date.GetValueOrDefault(DateTime.UtcNow)
+                };
+                eventMessages.Add(e);
+            }
         }
 
         await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+    public bool IsBulkEventType(EventType type)
+    {
+        return type == EventType.Secrets_Retrieved_Bulk || type == EventType.Secrets_Deleted_Bulk;
     }
 
     public async Task LogServiceAccountSecretsEventAsync(Guid serviceAccountId, IEnumerable<Secret> secrets, EventType type, DateTime? date = null)
@@ -440,22 +474,51 @@ public class EventService : IEventService
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
 
-        foreach (var secret in secrets)
+        if (IsBulkEventType(type))
         {
-            if (!CanUseEvents(orgAbilities, secret.OrganizationId))
-            {
-                continue;
-            }
+            var secretsByOrg = secrets.GroupBy(s => s.OrganizationId);
 
-            var e = new EventMessage(_currentContext)
+            foreach (var group in secretsByOrg)
             {
-                OrganizationId = secret.OrganizationId,
-                Type = type,
-                SecretId = secret.Id,
-                ServiceAccountId = serviceAccountId,
-                Date = date.GetValueOrDefault(DateTime.UtcNow)
-            };
-            eventMessages.Add(e);
+                var orgId = group.Key;
+
+                if (!CanUseEvents(orgAbilities, orgId))
+                {
+                    continue;
+                }
+
+                IEnumerable<Guid> secretIds = group.Select(s => s.Id);
+
+                var e = new EventMessage(_currentContext)
+                {
+                    OrganizationId = orgId,
+                    Type = type,
+                    SecretIds = string.Join(",", secretIds.Select(id => id.ToString())),
+                    UserId = serviceAccountId,
+                    Date = date.GetValueOrDefault(DateTime.UtcNow)
+                };
+                eventMessages.Add(e);
+            }
+        }
+        else
+        {
+            foreach (var secret in secrets)
+            {
+                if (!CanUseEvents(orgAbilities, secret.OrganizationId))
+                {
+                    continue;
+                }
+
+                var e = new EventMessage(_currentContext)
+                {
+                    OrganizationId = secret.OrganizationId,
+                    Type = type,
+                    SecretId = secret.Id,
+                    ServiceAccountId = serviceAccountId,
+                    Date = date.GetValueOrDefault(DateTime.UtcNow)
+                };
+                eventMessages.Add(e);
+            }
         }
 
         await _eventWriteService.CreateManyAsync(eventMessages);

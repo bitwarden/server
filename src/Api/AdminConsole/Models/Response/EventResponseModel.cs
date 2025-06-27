@@ -1,4 +1,6 @@
-﻿using Bit.Core.Enums;
+﻿#nullable enable
+
+using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 
@@ -34,6 +36,7 @@ public class EventResponseModel : ResponseModel
         DomainName = ev.DomainName;
         SecretId = ev.SecretId;
         ServiceAccountId = ev.ServiceAccountId;
+        SecretIds = ev.SecretIds;
     }
 
     public EventType Type { get; set; }
@@ -56,4 +59,5 @@ public class EventResponseModel : ResponseModel
     public string DomainName { get; set; }
     public Guid? SecretId { get; set; }
     public Guid? ServiceAccountId { get; set; }
+    public string? SecretIds { get; set; }
 }

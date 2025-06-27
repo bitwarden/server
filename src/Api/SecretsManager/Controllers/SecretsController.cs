@@ -231,7 +231,7 @@ public class SecretsController : Controller
 
         await _deleteSecretCommand.DeleteSecrets(secretsToDelete);
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Secret.Id, r.Error));
-        await LogSecretsEventAsync(secretsToDelete, EventType.Secret_Deleted);
+        await LogSecretsEventAsync(secretsToDelete, EventType.Secrets_Deleted_Bulk);
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 
@@ -251,7 +251,7 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        await LogSecretsEventAsync(secrets, EventType.Secret_Retrieved);
+        await LogSecretsEventAsync(secrets, EventType.Secrets_Retrieved_Bulk);
 
         var responses = secrets.Select(s => new BaseSecretResponseModel(s));
         return new ListResponseModel<BaseSecretResponseModel>(responses);

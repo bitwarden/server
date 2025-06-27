@@ -24,4 +24,5 @@ public interface IEvent
     string DomainName { get; set; }
     Guid? SecretId { get; set; }
     Guid? ServiceAccountId { get; set; }
+    string SecretIds { get; set; }
 }

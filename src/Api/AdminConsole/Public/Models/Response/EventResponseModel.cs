@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿#nullable enable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 
@@ -29,6 +31,7 @@ public class EventResponseModel : IResponseModel
         InstallationId = ev.InstallationId;
         SecretId = ev.SecretId;
         ServiceAccountId = ev.ServiceAccountId;
+        SecretIds = ev.SecretIds;
     }
 
     /// <summary>
@@ -101,4 +104,6 @@ public class EventResponseModel : IResponseModel
     /// </summary>
     /// <example>e68b8629-85eb-4929-92c0-b84464976ba4</example>
     public Guid? ServiceAccountId { get; set; }
+
+    public string? SecretIds { get; set; }
 }
