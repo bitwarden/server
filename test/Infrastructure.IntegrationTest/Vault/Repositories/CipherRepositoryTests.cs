@@ -5,6 +5,8 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
@@ -977,7 +979,9 @@ public class CipherRepositoryTests
     public async Task DeleteCipherWithSecurityTaskAsync_Works(
         IOrganizationRepository organizationRepository,
         ICipherRepository cipherRepository,
-        ISecurityTaskRepository securityTaskRepository)
+        ISecurityTaskRepository securityTaskRepository,
+        INotificationRepository notificationRepository,
+        INotificationStatusRepository notificationStatusRepository)
     {
         var organization = await organizationRepository.CreateAsync(new Organization
         {
@@ -1012,6 +1016,16 @@ public class CipherRepositoryTests
         };
 
         await securityTaskRepository.CreateManyAsync(tasks);
+        var notification = await notificationRepository.CreateAsync(new Notification
+        {
+            OrganizationId = organization.Id,
+            TaskId = tasks[1].Id,
+        });
+        await notificationStatusRepository.CreateAsync(new NotificationStatus
+        {
+            NotificationId = notification.Id,
+            ReadDate = DateTime.UtcNow,
+        });
 
         // Delete cipher with pending security task
         await cipherRepository.DeleteAsync(cipher1);
