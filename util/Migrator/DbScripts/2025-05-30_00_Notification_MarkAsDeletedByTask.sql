@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Notification_MarkAsDeletedByTask]
+CREATE OR ALTER PROCEDURE [dbo].[Notification_MarkAsDeletedByTask]
     @TaskId UNIQUEIDENTIFIER
 AS
 BEGIN
