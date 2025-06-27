@@ -1030,6 +1030,8 @@ public class CipherRepositoryTests
             OrganizationId = organization.Id,
             UserId = user.Id,
             TaskId = tasks[1].Id,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
         });
         await notificationStatusRepository.CreateAsync(new NotificationStatus
         {
