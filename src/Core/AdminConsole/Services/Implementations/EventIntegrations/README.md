@@ -227,7 +227,7 @@ Currently, there are integrations / handlers for Slack, webhooks, and HTTP Event
       - Optionally this also can include a `Scheme` and `Token` if this webhook needs Authentication.
       - As stated above, all of this information can be specified here or at the `OrganizationIntegration`
         level, but any properties declared here will take precedence over the ones above.
-    - for HEC, this must be null. HEC is configured only at the `OrganizationIntegration` level.
+    - For HEC, this must be null. HEC is configured only at the `OrganizationIntegration` level.
 - `Template` contains a template string that is expected to be filled in with the contents of the actual event.
     - The tokens in the string are wrapped in `#` characters. For instance, the UserId would be `#UserId#`.
     - The `IntegrationTemplateProcessor` does the actual work of replacing these tokens with introspected values from
