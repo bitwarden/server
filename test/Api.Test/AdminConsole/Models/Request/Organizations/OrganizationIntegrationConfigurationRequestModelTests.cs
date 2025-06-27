@@ -43,7 +43,7 @@ public class OrganizationIntegrationConfigurationRequestModelTests
     [InlineData("    ")]
     public void IsValidForType_EmptyTemplate_ReturnsFalse(string? template)
     {
-        var config = JsonSerializer.Serialize(new WebhookIntegrationConfiguration("https://example.com"));
+        var config = JsonSerializer.Serialize(new WebhookIntegrationConfiguration("https://example.com", "Bearer", "AUTH-TOKEN"));
         var model = new OrganizationIntegrationConfigurationRequestModel
         {
             Configuration = config,
@@ -59,6 +59,21 @@ public class OrganizationIntegrationConfigurationRequestModelTests
         var model = new OrganizationIntegrationConfigurationRequestModel
         {
             Configuration = "{not valid json}",
+            Template = "template"
+        };
+
+        Assert.False(model.IsValidForType(IntegrationType.Webhook));
+    }
+
+
+    [Fact]
+    public void IsValidForType_InvalidJsonFilters_ReturnsFalse()
+    {
+        var config = JsonSerializer.Serialize(new WebhookIntegrationConfiguration("https://example.com"));
+        var model = new OrganizationIntegrationConfigurationRequestModel
+        {
+            Configuration = config,
+            Filters = "{Not valid json",
             Template = "template"
         };
 
@@ -92,12 +107,79 @@ public class OrganizationIntegrationConfigurationRequestModelTests
     }
 
     [Fact]
-    public void IsValidForType_ValidWebhookConfiguration_ReturnsTrue()
+    public void IsValidForType_ValidSlackConfigurationWithFilters_ReturnsTrue()
+    {
+        var config = JsonSerializer.Serialize(new SlackIntegrationConfiguration("C12345"));
+        var filters = JsonSerializer.Serialize(new IntegrationFilterGroup()
+        {
+            AndOperator = true,
+            Rules = [
+                new IntegrationFilterRule()
+                {
+                    Operation = IntegrationFilterOperation.Equals,
+                    Property = "CollectionId",
+                    Value = Guid.NewGuid()
+                }
+            ],
+            Groups = []
+        });
+        var model = new OrganizationIntegrationConfigurationRequestModel
+        {
+            Configuration = config,
+            Filters = filters,
+            Template = "template"
+        };
+
+        Assert.True(model.IsValidForType(IntegrationType.Slack));
+    }
+
+    [Fact]
+    public void IsValidForType_ValidNoAuthWebhookConfiguration_ReturnsTrue()
     {
         var config = JsonSerializer.Serialize(new WebhookIntegrationConfiguration("https://example.com"));
         var model = new OrganizationIntegrationConfigurationRequestModel
         {
             Configuration = config,
+            Template = "template"
+        };
+
+        Assert.True(model.IsValidForType(IntegrationType.Webhook));
+    }
+
+    [Fact]
+    public void IsValidForType_ValidWebhookConfiguration_ReturnsTrue()
+    {
+        var config = JsonSerializer.Serialize(new WebhookIntegrationConfiguration("https://example.com", "Bearer", "AUTH-TOKEN"));
+        var model = new OrganizationIntegrationConfigurationRequestModel
+        {
+            Configuration = config,
+            Template = "template"
+        };
+
+        Assert.True(model.IsValidForType(IntegrationType.Webhook));
+    }
+
+    [Fact]
+    public void IsValidForType_ValidWebhookConfigurationWithFilters_ReturnsTrue()
+    {
+        var config = JsonSerializer.Serialize(new WebhookIntegrationConfiguration("https://example.com", "Bearer", "AUTH-TOKEN"));
+        var filters = JsonSerializer.Serialize(new IntegrationFilterGroup()
+        {
+            AndOperator = true,
+            Rules = [
+                new IntegrationFilterRule()
+                {
+                    Operation = IntegrationFilterOperation.Equals,
+                    Property = "CollectionId",
+                    Value = Guid.NewGuid()
+                }
+            ],
+            Groups = []
+        });
+        var model = new OrganizationIntegrationConfigurationRequestModel
+        {
+            Configuration = config,
+            Filters = filters,
             Template = "template"
         };
 

@@ -319,6 +319,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int>("EventType")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Filters")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("OrganizationIntegrationId")
                         .HasColumnType("uuid");
 
