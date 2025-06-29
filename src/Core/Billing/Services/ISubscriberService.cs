@@ -133,6 +133,21 @@ public interface ISubscriberService
         TokenizedPaymentSource tokenizedPaymentSource);
 
     /// <summary>
+    /// Updates the subscription with new plan frequencies and changes the collection method to charge_automatically if a valid payment method exists.
+    /// Validates that the customer has a payment method attached before switching to automatic charging.
+    /// Handles both Password Manager and Secrets Manager subscription items separately to ensure billing interval compatibility.
+    /// </summary>
+    /// <param name="subscriber">The subscriber whose subscription to update.</param>
+    /// <param name="newPasswordManagerStripePlanId">The Stripe price/plan ID for the new Password Manager plan frequency (can be null to keep existing).</param>
+    /// <param name="newSecretsManagerStripePlanId">The Stripe price/plan ID for the new Secrets Manager plan frequency (can be null to keep existing).</param>
+    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
+    /// <exception cref="BillingException">Thrown when no payment method is found for the customer, no plan IDs are provided, or subscription update fails.</exception>
+    Task UpdateSubscriptionPlanFrequency(
+        ISubscriber subscriber,
+        string newPasswordManagerStripePlanId,
+        string newSecretsManagerStripePlanId);
+
+    /// <summary>
     /// Updates the tax information for the provided <paramref name="subscriber"/>.
     /// </summary>
     /// <param name="subscriber">The <paramref name="subscriber"/> to update the tax information for.</param>
