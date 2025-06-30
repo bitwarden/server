@@ -57,6 +57,7 @@ public class RotateUserAccountKeysCommandTests
 
         model.AccountPublicKey = user.PublicKey;
         model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey = user.PublicKey;
+        model.AccountKeys.SignatureKeyPairData = null;
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
@@ -168,11 +169,11 @@ public class RotateUserAccountKeysCommandTests
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
-        Assert.Equal("The provided user key encrypted account private key was not wrapped with XChaCha20-Poly1305", ex.Message);
+        Assert.Equal("The provided signing key data is null, but the user already has signing keys.", ex.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DoesNotThrowWhenSignatureKeyPairPresentForV2User(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+    public async Task UpgradesToV2User(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
     {
         user.Kdf = Enums.KdfType.Argon2id;
@@ -192,8 +193,10 @@ public class RotateUserAccountKeysCommandTests
         model.MasterPasswordUnlockData.KdfMemory = 64;
         model.MasterPasswordUnlockData.KdfParallelism = 4;
         model.AccountPublicKey = user.PublicKey;
-        model.UserKeyEncryptedAccountPrivateKey = "2.xxx";
+        model.UserKeyEncryptedAccountPrivateKey = "7.xxx";
         model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey = user.PublicKey;
+        model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = model.UserKeyEncryptedAccountPrivateKey;
+        model.AccountKeys.SignatureKeyPairData.WrappedSigningKey = "7.xxx";
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
         var result = await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
@@ -255,11 +258,15 @@ public class RotateUserAccountKeysCommandTests
             .GetByUserIdAsync(user.Id)
             .ReturnsNull(); ;
         user.PublicKey = "public";
-        model.AccountPublicKey = "public";
+        model.AccountPublicKey = user.PublicKey;
+        model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey = user.PublicKey;
+        model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = model.UserKeyEncryptedAccountPrivateKey;
+        model.AccountKeys.SignatureKeyPairData = null;
         model.UserKeyEncryptedAccountPrivateKey = "2.xxx";
         var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
         await sutProvider.Sut.UpdateAccountKeys(model, user, saveEncryptedDataActions);
-        Assert.NotEmpty(saveEncryptedDataActions);
+        Assert.Equal(user.PrivateKey, model.UserKeyEncryptedAccountPrivateKey);
+        Assert.Empty(saveEncryptedDataActions);
     }
 
 
