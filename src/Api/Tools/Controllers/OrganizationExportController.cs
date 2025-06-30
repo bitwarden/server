@@ -19,7 +19,6 @@ public class OrganizationExportController : Controller
 {
     private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
-    private readonly ICollectionService _collectionService;
     private readonly ICipherService _cipherService;
     private readonly GlobalSettings _globalSettings;
     private readonly IFeatureService _featureService;
@@ -30,7 +29,6 @@ public class OrganizationExportController : Controller
     public OrganizationExportController(
         ICurrentContext currentContext,
         ICipherService cipherService,
-        ICollectionService collectionService,
         IUserService userService,
         GlobalSettings globalSettings,
         IFeatureService featureService,
@@ -40,7 +38,6 @@ public class OrganizationExportController : Controller
     {
         _currentContext = currentContext;
         _cipherService = cipherService;
-        _collectionService = collectionService;
         _userService = userService;
         _globalSettings = globalSettings;
         _featureService = featureService;
