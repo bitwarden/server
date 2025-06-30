@@ -30,6 +30,7 @@ public class OrganizationUserControllerPutTests
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
+        // Arrange
         Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: []);
 
         // Authorize all changes for basic happy path test
@@ -41,15 +42,18 @@ public class OrganizationUserControllerPutTests
         // Save these for later - organizationUser object will be mutated
         var orgUserId = organizationUser.Id;
         var orgUserEmail = organizationUser.Email;
+        var existingUserType = organizationUser.Type;
 
+        // Act
         await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
 
+        // Assert
         await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(Arg.Is<OrganizationUser>(ou =>
                 ou.Type == model.Type &&
                 ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
                 ou.AccessSecretsManager == model.AccessSecretsManager &&
                 ou.Id == orgUserId &&
-                ou.Email == orgUserEmail),
+                ou.Email == orgUserEmail), existingUserType,
             savingUserId,
             Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.All(c => model.Collections.Any(m => m.Id == c.Id))),
@@ -77,6 +81,7 @@ public class OrganizationUserControllerPutTests
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
+        // Arrange
         // Updating self
         organizationUser.UserId = savingUserId;
         organizationAbility.AllowAdminAccessToAllCollectionItems = false;
@@ -88,15 +93,18 @@ public class OrganizationUserControllerPutTests
 
         var orgUserId = organizationUser.Id;
         var orgUserEmail = organizationUser.Email;
+        var existingUserType = organizationUser.Type;
 
+        // Act
         await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
 
+        // Assert
         await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(Arg.Is<OrganizationUser>(ou =>
-            ou.Type == model.Type &&
-            ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
-            ou.AccessSecretsManager == model.AccessSecretsManager &&
-            ou.Id == orgUserId &&
-            ou.Email == orgUserEmail),
+                ou.Type == model.Type &&
+                ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
+                ou.AccessSecretsManager == model.AccessSecretsManager &&
+                ou.Id == orgUserId &&
+                ou.Email == orgUserEmail), existingUserType,
             savingUserId,
             Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.All(c => model.Collections.Any(m => m.Id == c.Id))),
@@ -110,6 +118,7 @@ public class OrganizationUserControllerPutTests
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
+        // Arrange
         // Updating self
         organizationUser.UserId = savingUserId;
         organizationAbility.AllowAdminAccessToAllCollectionItems = true;
@@ -121,15 +130,18 @@ public class OrganizationUserControllerPutTests
 
         var orgUserId = organizationUser.Id;
         var orgUserEmail = organizationUser.Email;
+        var existingUserType = organizationUser.Type;
 
+        // Act
         await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
 
+        // Assert
         await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(Arg.Is<OrganizationUser>(ou =>
-            ou.Type == model.Type &&
-            ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
-            ou.AccessSecretsManager == model.AccessSecretsManager &&
-            ou.Id == orgUserId &&
-            ou.Email == orgUserEmail),
+                ou.Type == model.Type &&
+                ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
+                ou.AccessSecretsManager == model.AccessSecretsManager &&
+                ou.Id == orgUserId &&
+                ou.Email == orgUserEmail), existingUserType,
             savingUserId,
             Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.All(c => model.Collections.Any(m => m.Id == c.Id))),
@@ -142,6 +154,7 @@ public class OrganizationUserControllerPutTests
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
+        // Arrange
         var editedCollectionId = CoreHelpers.GenerateComb();
         var readonlyCollectionId1 = CoreHelpers.GenerateComb();
         var readonlyCollectionId2 = CoreHelpers.GenerateComb();
@@ -194,16 +207,19 @@ public class OrganizationUserControllerPutTests
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Is<Collection>(c => c.Id == readonlyCollectionId1 || c.Id == readonlyCollectionId2),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.ModifyUserAccess)))
             .Returns(AuthorizationResult.Failed());
+        var existingUserType = organizationUser.Type;
 
+        // Act
         await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
 
+        // Assert
         // Expect all collection access (modified and unmodified) to be saved
         await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(Arg.Is<OrganizationUser>(ou =>
-            ou.Type == model.Type &&
-            ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
-            ou.AccessSecretsManager == model.AccessSecretsManager &&
-            ou.Id == orgUserId &&
-            ou.Email == orgUserEmail),
+                ou.Type == model.Type &&
+                ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
+                ou.AccessSecretsManager == model.AccessSecretsManager &&
+                ou.Id == orgUserId &&
+                ou.Email == orgUserEmail), existingUserType,
             savingUserId,
             Arg.Is<List<CollectionAccessSelection>>(cas =>
                 cas.Select(c => c.Id).SequenceEqual(currentCollectionAccess.Select(c => c.Id)) &&
