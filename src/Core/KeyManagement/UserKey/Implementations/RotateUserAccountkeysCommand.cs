@@ -149,6 +149,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         }
 
         saveEncryptedDataActions.Add(_userSignatureKeyPairRepository.UpdateForKeyRotation(user.Id, model.AccountKeys.SignatureKeyPairData));
+        user.PrivateKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey;
         user.SignedPublicKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey;
         user.SecurityState = model.AccountKeys.SecurityStateData.SecurityState;
         user.SecurityVersion = model.AccountKeys.SecurityStateData.SecurityVersion;
@@ -190,6 +191,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         }
 
         saveEncryptedDataActions.Add(_userSignatureKeyPairRepository.SetUserSignatureKeyPair(user.Id, model.AccountKeys.SignatureKeyPairData));
+        user.PrivateKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey;
         user.SignedPublicKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey;
         user.SecurityState = model.AccountKeys.SecurityStateData.SecurityState;
         user.SecurityVersion = model.AccountKeys.SecurityStateData.SecurityVersion;
