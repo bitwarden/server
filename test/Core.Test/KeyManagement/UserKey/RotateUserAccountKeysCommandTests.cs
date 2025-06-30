@@ -343,4 +343,40 @@ public class RotateUserAccountKeysCommandTests
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
         Assert.Equal("The provided signing key data is not wrapped with XChaCha20-Poly1305.", ex.Message);
     }
+
+    [Theory, BitAutoData]
+    public void RotateV1Keys_ThrowsIfPublicKeyChanges(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        user.PublicKey = "old-public";
+        model.AccountPublicKey = "new-public";
+        model.UserKeyEncryptedAccountPrivateKey = "2.xxx";
+        var ex = Assert.Throws<InvalidOperationException>(() => sutProvider.Sut.RotateV1Keys(model, user));
+        Assert.Equal("The provided account public key does not match the user's current public key, and changing the account asymmetric keypair is currently not supported during key rotation.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public void RotateV1Keys_ThrowsIfPrivateKeyNotAesCbcHmac(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        user.PrivateKey = "7.xxx";
+        sutProvider.GetDependency<IUserSignatureKeyPairRepository>()
+            .GetByUserIdAsync(user.Id)
+            .ReturnsNull();
+        user.PublicKey = "public";
+        model.UserKeyEncryptedAccountPrivateKey = "7.xxx";
+        model.AccountPublicKey = "public";
+        model.AccountKeys.PublicKeyEncryptionKeyPairData = null;
+        model.AccountKeys.SignatureKeyPairData = null;
+        var ex = Assert.Throws<InvalidOperationException>(() => sutProvider.Sut.RotateV1Keys(model, user));
+        Assert.Equal("The provided user key encrypted account private key was not wrapped with AES-256-CBC-HMAC", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public void RotateV1Keys_SetsPrivateKeyOnSuccess(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        user.PublicKey = "public";
+        model.AccountPublicKey = "public";
+        model.UserKeyEncryptedAccountPrivateKey = "2.xxx";
+        sutProvider.Sut.RotateV1Keys(model, user);
+        Assert.Equal("2.xxx", user.PrivateKey);
+    }
 }
