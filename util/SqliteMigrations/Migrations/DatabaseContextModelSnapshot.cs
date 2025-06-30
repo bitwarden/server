@@ -1775,6 +1775,13 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SecurityState")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("SecurityVersion")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("SignedPublicKey")
                         .HasColumnType("TEXT");
 
