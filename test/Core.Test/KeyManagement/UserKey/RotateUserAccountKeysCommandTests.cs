@@ -215,7 +215,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAccountKeys_ThrowsIfPrivateKeyWrappedWithNotXchacha20ForV2UserAsync(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateAccountKeys_ThrowsIfPrivateKeyWrappedWithNotXChaCha20ForV2UserAsync(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         user.PrivateKey = "7.xxx";
         sutProvider.GetDependency<IUserSignatureKeyPairRepository>()
@@ -330,8 +330,16 @@ public class RotateUserAccountKeysCommandTests
         var keyPair = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "2.xxx", "verifying-key");
         model.AccountKeys.SignatureKeyPairData = keyPair;
         model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("7.xxx", user.PublicKey, "signed-public-key");
+        model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey = user.PublicKey;
+        model.AccountPublicKey = user.PublicKey;
+        model.MasterPasswordUnlockData.KdfIterations = user.KdfIterations;
+        model.MasterPasswordUnlockData.KdfMemory = user.KdfMemory;
+        model.MasterPasswordUnlockData.KdfParallelism = user.KdfParallelism;
+        model.MasterPasswordUnlockData.Email = user.Email;
         sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(user.Id)
-            .Returns(keyPair);
+            .ReturnsNull();
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
         Assert.Equal("The provided signing key data is not wrapped with XChaCha20-Poly1305.", ex.Message);
     }
