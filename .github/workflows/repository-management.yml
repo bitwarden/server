@@ -22,7 +22,9 @@ on:
         required: false
         type: string
 
-permissions: {}
+permissions:
+  pull-requests: write
+  contents: write
 
 jobs:
   setup:
