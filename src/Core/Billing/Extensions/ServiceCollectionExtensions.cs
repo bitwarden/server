@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Caches.Implementations;
 using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Payment;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
@@ -27,5 +28,6 @@ public static class ServiceCollectionExtensions
         services.AddLicenseServices();
         services.AddPricingClient();
         services.AddTransient<IPreviewTaxAmountCommand, PreviewTaxAmountCommand>();
+        services.AddPaymentOperations();
     }
 }
