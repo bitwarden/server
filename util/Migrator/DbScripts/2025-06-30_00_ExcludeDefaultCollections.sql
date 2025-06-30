@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Collection_ReadByOrganizationIdWithPermissions]
+CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadByOrganizationIdWithPermissions]
     @OrganizationId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @IncludeAccessRelationships BIT
@@ -84,3 +84,4 @@ BEGIN
         EXEC [dbo].[CollectionUser_ReadByOrganizationId] @OrganizationId
     END
 END
+GO

@@ -296,9 +296,28 @@ public class CollectionRepositoryTests
             }
         }, null);
 
+        // Create a default user collection (should be excluded from admin console results)
+        var defaultCollection = new Collection
+        {
+            Name = "My Items Collection",
+            OrganizationId = organization.Id,
+            Type = CollectionType.DefaultUserCollection
+        };
+
+        await collectionRepository.CreateAsync(defaultCollection, null, users: new[]
+        {
+            new CollectionAccessSelection()
+            {
+                Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true
+            }
+        });
+
         var collections = await collectionRepository.GetManyByOrganizationIdWithPermissionsAsync(organization.Id, user.Id, true);
 
         Assert.NotNull(collections);
+
+        // Should return only 3 collections (excluding the default user collection)
+        Assert.Equal(3, collections.Count);
 
         collections = collections.OrderBy(c => c.Name).ToList();
 
