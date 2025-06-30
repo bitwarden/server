@@ -41,7 +41,11 @@ public class OrganizationIntegrationRequestModel : IValidatableObject
                 yield return new ValidationResult($"{nameof(Type)} integrations cannot be created directly.", new[] { nameof(Type) });
                 break;
             case IntegrationType.Webhook:
-                if (!string.IsNullOrWhiteSpace(Configuration) && !IsIntegrationValid<WebhookIntegration>())
+                if (string.IsNullOrWhiteSpace(Configuration))
+                {
+                    break;
+                }
+                if (!IsIntegrationValid<WebhookIntegration>())
                 {
                     yield return new ValidationResult(
                         "Webhook integrations must include valid configuration.",
