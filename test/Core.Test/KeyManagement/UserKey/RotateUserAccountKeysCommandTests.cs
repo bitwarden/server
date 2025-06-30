@@ -379,4 +379,62 @@ public class RotateUserAccountKeysCommandTests
         sutProvider.Sut.RotateV1Keys(model, user);
         Assert.Equal("2.xxx", user.PrivateKey);
     }
+
+    [Theory, BitAutoData]
+    public void UpgradeKeysToV2_ThrowsIfSignedPublicKeyNull(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        model.AccountKeys.SignatureKeyPairData = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "7.xxx", "verifying-key");
+        model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("7.xxx", user.PublicKey, null);
+        var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
+        var ex = Assert.Throws<InvalidOperationException>(() => sutProvider.Sut.UpgradeKeysToV2(model, user, saveEncryptedDataActions));
+        Assert.Equal("The provided public key encryption key pair data does not contain a valid signed public key.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public void UpgradeKeysToV2_ThrowsIfPublicKeyMismatch(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        model.AccountKeys.SignatureKeyPairData = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "7.xxx", "verifying-key");
+        model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("7.xxx", "different-public-key", "signed-public-key");
+        var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
+        var ex = Assert.Throws<InvalidOperationException>(() => sutProvider.Sut.UpgradeKeysToV2(model, user, saveEncryptedDataActions));
+        Assert.Equal("The provided public key encryption key pair data does not match the user's current public key.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public void UpgradeKeysToV2_ThrowsIfWrappedSigningKeyNotXChaCha20(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        user.PublicKey = "public-key";
+        model.AccountKeys.SignatureKeyPairData = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "2.xxx", "verifying-key");
+        model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("7.xxx", user.PublicKey, "signed-public-key");
+        var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
+        var ex = Assert.Throws<InvalidOperationException>(() => sutProvider.Sut.UpgradeKeysToV2(model, user, saveEncryptedDataActions));
+        Assert.Equal("The provided signing key data is not wrapped with XChaCha20-Poly1305.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public void UpgradeKeysToV2_ThrowsIfWrappedPrivateKeyNotXChaCha20(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        user.PublicKey = "public-key";
+        model.AccountKeys.SignatureKeyPairData = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "7.xxx", "verifying-key");
+        model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("2.xxx", user.PublicKey, "signed-public-key");
+        var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
+        var ex = Assert.Throws<InvalidOperationException>(() => sutProvider.Sut.UpgradeKeysToV2(model, user, saveEncryptedDataActions));
+        Assert.Equal("The provided public key encryption private key data is not wrapped with XChaCha20-Poly1305.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public void UpgradeKeysToV2_Success(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        user.PublicKey = "public-key";
+        model.AccountKeys.SignatureKeyPairData = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "7.xxx", "verifying-key");
+        model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("7.xxx", user.PublicKey, "signed-public-key");
+        model.AccountKeys.SecurityStateData = new SecurityStateData { SecurityState = "state", SecurityVersion = 2 };
+        var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
+        sutProvider.Sut.UpgradeKeysToV2(model, user, saveEncryptedDataActions);
+        Assert.Equal("7.xxx", user.PrivateKey);
+        Assert.Equal("signed-public-key", user.SignedPublicKey);
+        Assert.Equal("state", user.SecurityState);
+        Assert.Equal(2, user.SecurityVersion);
+        Assert.NotEmpty(saveEncryptedDataActions);
+    }
 }
