@@ -144,8 +144,103 @@ public class OrganizationBillingService(
         }
         else
         {
+            var subscription = await subscriberService.GetSubscriptionOrThrow(organization);
+            if (subscription.TrialSettings?.EndBehavior?.MissingPaymentMethod == StripeConstants.MissingPaymentMethodBehaviorOptions.Cancel)
+            {
+                var options = new SubscriptionUpdateOptions
+                {
+                    TrialSettings = new SubscriptionTrialSettingsOptions
+                    {
+                        EndBehavior = new SubscriptionTrialSettingsEndBehaviorOptions
+                        {
+                            MissingPaymentMethod = StripeConstants.MissingPaymentMethodBehaviorOptions.CreateInvoice
+                        }
+                    }
+                };
+                await stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, options);
+            }
             await subscriberService.UpdatePaymentSource(organization, tokenizedPaymentSource);
             await subscriberService.UpdateTaxInformation(organization, taxInformation);
+        }
+    }
+
+    public async Task UpdateSubscriptionPlanFrequency(
+        Organization organization, PlanType newPlanType)
+    {
+        ArgumentNullException.ThrowIfNull(organization);
+
+        // Get customer and subscription with expanded payment information
+        var customer = await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions
+        {
+            Expand = ["invoice_settings.default_payment_method", "default_source", "subscriptions"]
+        });
+
+        var subscription = await subscriberService.GetSubscriptionOrThrow(organization);
+        var subscriptionItems = subscription.Items.Data;
+
+        var newPlan = await pricingClient.GetPlanOrThrow(newPlanType);
+
+        // Build the subscription update options
+        var subscriptionItemOptions = new List<SubscriptionItemOptions>();
+        foreach (var item in subscriptionItems)
+        {
+            var subscriptionItemOption = new SubscriptionItemOptions { Id = item.Id, Quantity = item.Quantity };
+
+            if (item.Price.Id == newPlan.SecretsManager.StripeSeatPlanId)
+            {
+                if (newPlan.SecretsManager.StripeSeatPlanId == null)
+                {
+                    throw new BillingException("Secrets Manager plan ID is required for existing secrets manager subscription items.");
+                }
+                subscriptionItemOption.Price = newPlan.SecretsManager.StripeSeatPlanId;
+            }
+            else
+            {
+                if (newPlan.PasswordManager.StripeSeatPlanId == null)
+                {
+                    throw new BillingException("Password Manager plan ID is required for existing password manager subscription items.");
+                }
+                subscriptionItemOption.Price = newPlan.PasswordManager.StripeSeatPlanId;
+            }
+
+            subscriptionItemOptions.Add(subscriptionItemOption);
+        }
+        var updateOptions = new SubscriptionUpdateOptions
+        {
+
+            Items = subscriptionItemOptions,
+            ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations
+        };
+
+        // Update trial settings since payment method is now available
+        // Previously it was set to "cancel" when no payment method existed
+        // Now we can change it to "create_invoice" or remove the restriction
+        if (subscription.Status == StripeConstants.SubscriptionStatus.Trialing)
+        {
+            updateOptions.TrialSettings = new SubscriptionTrialSettingsOptions
+            {
+                EndBehavior = new SubscriptionTrialSettingsEndBehaviorOptions
+                {
+                    MissingPaymentMethod = StripeConstants.MissingPaymentMethodBehaviorOptions.CreateInvoice
+                }
+            };
+        }
+
+        try
+        {
+            // Update the subscription in Stripe
+            await stripeAdapter.SubscriptionUpdateAsync(subscription.Id, updateOptions);
+            organization.PlanType = newPlan.Type;
+            await organizationRepository.ReplaceAsync(organization);
+        }
+        catch (StripeException stripeException)
+        {
+            logger.LogError(stripeException, "Failed to update subscription plan for subscriber ({SubscriberID}): {Error}",
+                organization.Id, stripeException.Message);
+
+            throw new BillingException(
+                message: "An error occurred while updating the subscription plan",
+                innerException: stripeException);
         }
     }
 

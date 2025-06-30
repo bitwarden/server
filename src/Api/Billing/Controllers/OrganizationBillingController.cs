@@ -401,25 +401,15 @@ public class OrganizationBillingController(
             return Error.NotFound();
         }
 
-        // Validate plan type
-        if (!Enum.IsDefined(typeof(PlanType), request.NewPlanType))
-        {
-            return Error.BadRequest("Invalid plan type.");
-        }
-
         if (organization.PlanType == request.NewPlanType)
         {
             return Error.BadRequest("Organization is already on the requested plan frequency.");
         }
-        var newPlan = await pricingClient.GetPlanOrThrow(request.NewPlanType);
 
-        await subscriberService.UpdateSubscriptionPlanFrequency(
+        await organizationBillingService.UpdateSubscriptionPlanFrequency(
             organization,
-            newPlan.PasswordManager.StripeSeatPlanId,
-            newPlan.SecretsManager.StripeSeatPlanId);
+            request.NewPlanType);
 
-        organization.PlanType = newPlan.Type;
-        await organizationRepository.ReplaceAsync(organization);
         return TypedResults.Ok();
     }
 }
