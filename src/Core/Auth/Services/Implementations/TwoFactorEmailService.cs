@@ -1,4 +1,14 @@
-﻿namespace Bit.Core.Auth.Services;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Reflection;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Context;
+using Bit.Core.Entities;
+using Bit.Core.Services;
+using Bit.Core.Utilities;
+using Core.Auth.Enums;
+using Microsoft.AspNetCore.Identity;
+
+namespace Bit.Core.Auth.Services;
 
 public class TwoFactorEmailService : ITwoFactorEmailService
 {
