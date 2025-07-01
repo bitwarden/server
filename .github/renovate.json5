@@ -122,8 +122,8 @@
       reviewers: ["team:dept-dbops"],
     },
     {
-      matchPackageNames: ["CommandDotNet", "YamlDotNet"],
-      description: "DevOps owned dependencies",
+      matchPackageNames: ["YamlDotNet"],
+      description: "BRE owned dependencies",
       commitMessagePrefix: "[deps] BRE:",
       reviewers: ["team:dept-bre"],
     },

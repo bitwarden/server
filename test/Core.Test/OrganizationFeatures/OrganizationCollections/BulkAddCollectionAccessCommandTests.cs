@@ -27,6 +27,8 @@ public class BulkAddCollectionAccessCommandTests
         IEnumerable<CollectionUser> collectionUsers,
         IEnumerable<CollectionGroup> collectionGroups)
     {
+        SetCollectionsToSharedType(collections);
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyAsync(
                 Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
@@ -107,6 +109,8 @@ public class BulkAddCollectionAccessCommandTests
         IEnumerable<CollectionUser> collectionUsers,
         IEnumerable<CollectionGroup> collectionGroups)
     {
+        SetCollectionsToSharedType(collections);
+
         collections.First().OrganizationId = Guid.NewGuid();
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
@@ -127,6 +131,8 @@ public class BulkAddCollectionAccessCommandTests
         IEnumerable<CollectionUser> collectionUsers,
         IEnumerable<CollectionGroup> collectionGroups)
     {
+        SetCollectionsToSharedType(collections);
+
         organizationUsers.RemoveAt(0);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -155,6 +161,8 @@ public class BulkAddCollectionAccessCommandTests
         IEnumerable<CollectionUser> collectionUsers,
         IEnumerable<CollectionGroup> collectionGroups)
     {
+        SetCollectionsToSharedType(collections);
+
         organizationUsers.First().OrganizationId = Guid.NewGuid();
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -184,6 +192,8 @@ public class BulkAddCollectionAccessCommandTests
         IEnumerable<CollectionUser> collectionUsers,
         IEnumerable<CollectionGroup> collectionGroups)
     {
+        SetCollectionsToSharedType(collections);
+
         groups.RemoveAt(0);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -221,6 +231,8 @@ public class BulkAddCollectionAccessCommandTests
         IEnumerable<CollectionUser> collectionUsers,
         IEnumerable<CollectionGroup> collectionGroups)
     {
+        SetCollectionsToSharedType(collections);
+
         groups.First().OrganizationId = Guid.NewGuid();
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -248,6 +260,37 @@ public class BulkAddCollectionAccessCommandTests
         await sutProvider.GetDependency<IGroupRepository>().Received().GetManyByManyIds(
             Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionGroups.Select(u => u.GroupId)))
         );
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task AddAccessAsync_WithDefaultUserCollectionType_ThrowsBadRequest(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
+        IList<Collection> collections,
+        IEnumerable<CollectionUser> collectionUsers,
+        IEnumerable<CollectionGroup> collectionGroups)
+    {
+        // Arrange
+        collections.First().Type = CollectionType.DefaultUserCollection;
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
+            ToAccessSelection(collectionUsers),
+            ToAccessSelection(collectionGroups)
+        ));
+
+        Assert.Contains("You cannot add access to collections with the type as DefaultUserCollection.", exception.Message);
+
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateOrUpdateAccessForManyAsync(default, default, default, default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCollectionEventsAsync(default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().GetManyAsync(default);
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyByManyIds(default);
+    }
+
+    private static void SetCollectionsToSharedType(IEnumerable<Collection> collections)
+    {
+        foreach (var collection in collections)
+        {
+            collection.Type = CollectionType.SharedCollection;
+        }
     }
 
     private static ICollection<CollectionAccessSelection> ToAccessSelection(IEnumerable<CollectionUser> collectionUsers)

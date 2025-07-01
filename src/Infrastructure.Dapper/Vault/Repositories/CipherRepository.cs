@@ -98,7 +98,10 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
             return results
                 .GroupBy(c => c.Id)
-                .Select(g => g.OrderByDescending(og => og.Edit).ThenByDescending(og => og.ViewPassword).First())
+                .Select(g =>
+                    g.OrderByDescending(og => og.Manage)
+                        .ThenByDescending(og => og.Edit)
+                        .ThenByDescending(og => og.ViewPassword).First())
                 .ToList();
         }
     }
@@ -484,7 +487,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
+    public async Task CreateAsync(Guid userId, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
     {
         if (!ciphers.Any())
         {
@@ -518,7 +521,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
                     await connection.ExecuteAsync(
                             $"[{Schema}].[User_BumpAccountRevisionDate]",
-                            new { Id = ciphers.First().UserId },
+                            new { Id = userId },
                             commandType: CommandType.StoredProcedure, transaction: transaction);
 
                     transaction.Commit();

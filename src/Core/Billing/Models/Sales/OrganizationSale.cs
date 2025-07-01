@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.Billing.Models.Sales;
@@ -26,12 +27,22 @@ public class OrganizationSale
 
     public static OrganizationSale From(
         Organization organization,
-        OrganizationSignup signup) => new()
+        OrganizationSignup signup)
+    {
+        var customerSetup = string.IsNullOrEmpty(organization.GatewayCustomerId) ? GetCustomerSetup(signup) : null;
+
+        var subscriptionSetup = GetSubscriptionSetup(signup);
+
+        subscriptionSetup.SkipTrial = signup.SkipTrial;
+        subscriptionSetup.InitiationPath = signup.InitiationPath;
+
+        return new OrganizationSale
         {
             Organization = organization,
-            CustomerSetup = string.IsNullOrEmpty(organization.GatewayCustomerId) ? GetCustomerSetup(signup) : null,
-            SubscriptionSetup = GetSubscriptionSetup(signup)
+            CustomerSetup = customerSetup,
+            SubscriptionSetup = subscriptionSetup
         };
+    }
 
     public static OrganizationSale From(
         Organization organization,

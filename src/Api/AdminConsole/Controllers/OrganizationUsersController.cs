@@ -403,16 +403,15 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpPost("{id}/confirm")]
-    public async Task Confirm(string orgId, string id, [FromBody] OrganizationUserConfirmRequestModel model)
+    public async Task Confirm(Guid orgId, Guid id, [FromBody] OrganizationUserConfirmRequestModel model)
     {
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ManageUsers(orgGuidId))
+        if (!await _currentContext.ManageUsers(orgId))
         {
             throw new NotFoundException();
         }
 
         var userId = _userService.GetProperUserId(User);
-        var result = await _confirmOrganizationUserCommand.ConfirmUserAsync(orgGuidId, new Guid(id), model.Key, userId.Value);
+        var result = await _confirmOrganizationUserCommand.ConfirmUserAsync(orgId, id, model.Key, userId.Value, model.DefaultUserCollectionName);
     }
 
     [HttpPost("confirm")]
@@ -521,7 +520,9 @@ public class OrganizationUsersController : Controller
             .Concat(readonlyCollectionAccess)
             .ToList();
 
-        await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), userId,
+        var existingUserType = organizationUser.Type;
+
+        await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), existingUserType, userId,
             collectionsToSave, groupsToSave);
     }
 
@@ -616,7 +617,6 @@ public class OrganizationUsersController : Controller
             new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.ErrorMessage)));
     }
 
-    [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]
     [HttpDelete("{id}/delete-account")]
     [HttpPost("{id}/delete-account")]
     public async Task DeleteAccount(Guid orgId, Guid id)
@@ -635,7 +635,6 @@ public class OrganizationUsersController : Controller
         await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
     }
 
-    [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]
     [HttpDelete("delete-account")]
     [HttpPost("delete-account")]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccount(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
@@ -760,11 +759,6 @@ public class OrganizationUsersController : Controller
 
     private async Task<IDictionary<Guid, bool>> GetClaimedByOrganizationStatusAsync(Guid orgId, IEnumerable<Guid> userIds)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
-        {
-            return userIds.ToDictionary(kvp => kvp, kvp => false);
-        }
-
         var usersOrganizationClaimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(orgId, userIds);
         return usersOrganizationClaimedStatus;
     }

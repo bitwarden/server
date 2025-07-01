@@ -157,6 +157,24 @@ public class UpdateGroupCommandTests
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task UpdateGroup_WithDefaultUserCollectionType_Throws(SutProvider<UpdateGroupCommand> sutProvider,
+        Group group, Group oldGroup, Organization organization, List<CollectionAccessSelection> collectionAccess)
+    {
+        ArrangeGroup(sutProvider, group, oldGroup);
+        ArrangeUsers(sutProvider, group);
+
+        // Return collections with DefaultUserCollection type
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
+                .Select(guid => new Collection { Id = guid, OrganizationId = group.OrganizationId, Type = CollectionType.DefaultUserCollection }).ToList());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateGroupAsync(group, organization, collectionAccess));
+        Assert.Contains("You cannot modify group access for collections with the type as DefaultUserCollection.", exception.Message);
+    }
+
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
     public async Task UpdateGroup_MemberBelongsToDifferentOrganization_Throws(SutProvider<UpdateGroupCommand> sutProvider,
         Group group, Group oldGroup, Organization organization, IEnumerable<Guid> userAccess)
     {

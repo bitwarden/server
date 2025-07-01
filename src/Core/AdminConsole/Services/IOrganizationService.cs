@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
@@ -11,8 +10,6 @@ namespace Bit.Core.Services;
 
 public interface IOrganizationService
 {
-    Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken, PaymentMethodType paymentMethodType,
-        TaxInfo taxInfo);
     Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null);
     Task ReinstateSubscriptionAsync(Guid organizationId);
     Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb);
@@ -20,9 +17,6 @@ public interface IOrganizationService
     Task AutoAddSeatsAsync(Organization organization, int seatsToAdd);
     Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
     Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
-#nullable enable
-    Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup);
-#nullable disable
     /// <summary>
     /// Create a new organization on a self-hosted instance
     /// </summary>
@@ -47,7 +41,6 @@ public interface IOrganizationService
     Task RevokeUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser);
     Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? revokingUserId);
-    Task CreatePendingOrganization(Organization organization, string ownerEmail, ClaimsPrincipal user, IUserService userService, bool salesAssistedTrialStarted);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
     Task<(bool canScale, string failureReason)> CanScaleAsync(Organization organization, int seatsToAdd);
 

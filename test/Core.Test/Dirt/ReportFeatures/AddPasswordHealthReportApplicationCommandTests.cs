@@ -1,17 +1,17 @@
 ﻿using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Reports.ReportFeatures;
+using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Tools.Entities;
-using Bit.Core.Tools.ReportFeatures;
-using Bit.Core.Tools.ReportFeatures.Requests;
-using Bit.Core.Tools.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Tools.ReportFeatures;
+namespace Bit.Core.Test.Dirt.ReportFeatures;
 
 [SutProviderCustomize]
 public class AddPasswordHealthReportApplicationCommandTests

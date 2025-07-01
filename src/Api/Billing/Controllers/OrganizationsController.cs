@@ -20,9 +20,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -44,7 +41,6 @@ public class OrganizationsController(
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
     IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
-    IReferenceEventService referenceEventService,
     ISubscriberService subscriberService,
     IOrganizationInstallationRepository organizationInstallationRepository,
     IPricingClient pricingClient)
@@ -107,28 +103,6 @@ public class OrganizationsController(
         await SaveOrganizationInstallationAsync(id, installationId);
 
         return license;
-    }
-
-    [HttpPost("{id:guid}/payment")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostPayment(Guid id, [FromBody] PaymentRequestModel model)
-    {
-        if (!await currentContext.EditPaymentMethods(id))
-        {
-            throw new NotFoundException();
-        }
-
-        await organizationService.ReplacePaymentMethodAsync(id, model.PaymentToken,
-            model.PaymentMethodType.Value, new TaxInfo
-            {
-                BillingAddressLine1 = model.Line1,
-                BillingAddressLine2 = model.Line2,
-                BillingAddressState = model.State,
-                BillingAddressCity = model.City,
-                BillingAddressPostalCode = model.PostalCode,
-                BillingAddressCountry = model.Country,
-                TaxIdNumber = model.TaxId,
-            });
     }
 
     [HttpPost("{id:guid}/upgrade")]
@@ -268,14 +242,6 @@ public class OrganizationsController(
                 Feedback = request.Feedback
             },
             organization.IsExpired());
-
-        await referenceEventService.RaiseEventAsync(new ReferenceEvent(
-            ReferenceEventType.CancelSubscription,
-            organization,
-            currentContext)
-        {
-            EndOfPeriod = organization.IsExpired()
-        });
     }
 
     [HttpPost("{id:guid}/reinstate")]

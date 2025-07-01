@@ -69,8 +69,12 @@ public static class OrganizationServiceCollectionExtensions
         services.AddBaseOrganizationSubscriptionCommandsQueries();
     }
 
-    private static IServiceCollection AddOrganizationSignUpCommands(this IServiceCollection services) =>
+    private static void AddOrganizationSignUpCommands(this IServiceCollection services)
+    {
         services.AddScoped<ICloudOrganizationSignUpCommand, CloudOrganizationSignUpCommand>();
+        services.AddScoped<IProviderClientOrganizationSignUpCommand, ProviderClientOrganizationSignUpCommand>();
+        services.AddScoped<IResellerClientOrganizationSignUpCommand, ResellerClientOrganizationSignUpCommand>();
+    }
 
     private static void AddOrganizationDeleteCommands(this IServiceCollection services)
     {
@@ -140,6 +144,8 @@ public static class OrganizationServiceCollectionExtensions
 
     public static void AddOrganizationCollectionCommands(this IServiceCollection services)
     {
+        services.AddScoped<ICreateCollectionCommand, CreateCollectionCommand>();
+        services.AddScoped<IUpdateCollectionCommand, UpdateCollectionCommand>();
         services.AddScoped<IDeleteCollectionCommand, DeleteCollectionCommand>();
         services.AddScoped<IBulkAddCollectionAccessCommand, BulkAddCollectionAccessCommand>();
     }
