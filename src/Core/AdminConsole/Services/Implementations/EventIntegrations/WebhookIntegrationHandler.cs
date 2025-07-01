@@ -6,8 +6,6 @@ using System.Net.Http.Headers;
 using System.Text;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
-#nullable enable
-
 namespace Bit.Core.Services;
 
 public class WebhookIntegrationHandler(
@@ -21,7 +19,7 @@ public class WebhookIntegrationHandler(
 
     public override async Task<IntegrationHandlerResult> HandleAsync(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, message.Configuration.Url);
+        var request = new HttpRequestMessage(HttpMethod.Post, message.Configuration.Uri);
         request.Content = new StringContent(message.RenderedTemplate, Encoding.UTF8, "application/json");
         if (!string.IsNullOrEmpty(message.Configuration.Scheme))
         {

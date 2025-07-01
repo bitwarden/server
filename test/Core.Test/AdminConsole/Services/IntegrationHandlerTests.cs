@@ -14,7 +14,7 @@ public class IntegrationHandlerTests
         var sut = new TestIntegrationHandler();
         var expected = new IntegrationMessage<WebhookIntegrationConfigurationDetails>()
         {
-            Configuration = new WebhookIntegrationConfigurationDetails("https://localhost", "Bearer", "AUTH-TOKEN"),
+            Configuration = new WebhookIntegrationConfigurationDetails(new Uri("https://localhost"), "Bearer", "AUTH-TOKEN"),
             MessageId = "TestMessageId",
             IntegrationType = IntegrationType.Webhook,
             RenderedTemplate = "Template",
