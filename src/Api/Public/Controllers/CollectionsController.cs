@@ -46,7 +46,8 @@ public class CollectionsController : Controller
     public async Task<IActionResult> Get(Guid id)
     {
         (var collection, var access) = await _collectionRepository.GetByIdWithAccessAsync(id);
-        if (collection == null || collection.OrganizationId != _currentContext.OrganizationId)
+        if (collection == null || collection.OrganizationId != _currentContext.OrganizationId ||
+            collection.Type == CollectionType.DefaultUserCollection)
         {
             return new NotFoundResult();
         }
