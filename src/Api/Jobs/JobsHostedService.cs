@@ -1,4 +1,5 @@
-﻿using Bit.Api.Auth.Jobs;
+﻿using Bit.Api.AdminConsole.Jobs;
+using Bit.Api.Auth.Jobs;
 using Bit.Core.Jobs;
 using Bit.Core.Settings;
 using Quartz;
@@ -65,6 +66,13 @@ public class JobsHostedService : BaseJobsHostedService
                 .WithIntervalInHours(24)
                 .RepeatForever())
             .Build();
+        var updateOrgSubscriptionsTrigger = TriggerBuilder.Create()
+            .WithIdentity("UpdateOrgSubscriptionsTrigger")
+            .StartNow()
+            .WithSimpleSchedule(x => x
+                .WithIntervalInHours(24)
+                .RepeatForever())
+            .Build();
 
 
         var jobs = new List<Tuple<Type, ITrigger>>
@@ -76,6 +84,7 @@ public class JobsHostedService : BaseJobsHostedService
             new Tuple<Type, ITrigger>(typeof(ValidateOrganizationsJob), everyTwelfthHourAndThirtyMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(ValidateOrganizationDomainJob), validateOrganizationDomainTrigger),
             new Tuple<Type, ITrigger>(typeof(UpdatePhishingDomainsJob), updatePhishingDomainsTrigger),
+            new (typeof(OrganizationSubscriptionUpdateJob), updateOrgSubscriptionsTrigger),
         };
 
         if (_globalSettings.SelfHosted && _globalSettings.EnableCloudCommunication)
@@ -105,6 +114,7 @@ public class JobsHostedService : BaseJobsHostedService
         services.AddTransient<ValidateOrganizationsJob>();
         services.AddTransient<ValidateOrganizationDomainJob>();
         services.AddTransient<UpdatePhishingDomainsJob>();
+        services.AddTransient<OrganizationSubscriptionUpdateJob>();
     }
 
     public static void AddCommercialSecretsManagerJobServices(IServiceCollection services)

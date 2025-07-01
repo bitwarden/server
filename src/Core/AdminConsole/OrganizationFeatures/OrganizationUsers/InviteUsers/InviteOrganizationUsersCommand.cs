@@ -30,7 +30,8 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
     IProviderOrganizationRepository providerOrganizationRepository,
-    IProviderUserRepository providerUserRepository
+    IProviderUserRepository providerUserRepository,
+    IOrganizationSubscriptionUpdateRepository organizationSubscriptionUpdateRepository
     ) : IInviteOrganizationUsersCommand
 {
 
@@ -153,8 +154,6 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     {
         if (validatedResult.Value.PasswordManagerSubscriptionUpdate is { Seats: > 0, SeatsRequiredToAdd: > 0 })
         {
-
-
             await paymentService.AdjustSeatsAsync(organization,
                 validatedResult.Value.InviteOrganization.Plan,
                 validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats.Value);
@@ -260,13 +259,10 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     {
         if (validatedResult.Value.PasswordManagerSubscriptionUpdate is { SeatsRequiredToAdd: > 0, UpdatedSeatTotal: > 0 })
         {
-            await paymentService.AdjustSeatsAsync(organization,
-                validatedResult.Value.InviteOrganization.Plan,
-                validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal.Value);
+            await organizationRepository.IncrementSeatCountAsync(organization.Id, validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd);
 
-            organization.Seats = (short?)validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal;
+            await organizationSubscriptionUpdateRepository.SetToUpdateSubscriptionAsync(organization.Id, validatedResult.Value.PerformedAt.UtcDateTime);
 
-            await organizationRepository.ReplaceAsync(organization); // could optimize this with only a property update
             await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
         }
     }
