@@ -26,6 +26,7 @@ public class SendAccessResponseModel : ResponseModel
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="send" /> has an invalid <see cref="Send.Type"/>.
     /// </exception>
+    // FIXME: remove `globalSettings` variable
     public SendAccessResponseModel(Send send, GlobalSettings globalSettings)
         : base("send-access")
     {
