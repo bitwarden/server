@@ -9,5 +9,6 @@ BEGIN
     FROM
         [dbo].[CollectionView]
     WHERE
-        [OrganizationId] = @OrganizationId
+        [OrganizationId] = @OrganizationId AND
+        [Type] != 1 -- Exclude DefaultUserCollection
 END
