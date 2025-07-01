@@ -109,6 +109,12 @@ public class SendRequestModel
     /// </summary>
     public bool? HideEmail { get; set; }
 
+    /// <summary>
+    /// Transforms the request into a send object.
+    /// </summary>
+    /// <param name="userId">The user that owns the send.</param>
+    /// <param name="sendAuthorizationService">Hashes the send password.</param>
+    /// <returns>The send object</returns>
     public Send ToSend(Guid userId, ISendAuthorizationService sendAuthorizationService)
     {
         var send = new Send
@@ -120,8 +126,17 @@ public class SendRequestModel
         return send;
     }
 
+    /// <summary>
+    /// Transforms the request into a send object and file data.
+    /// </summary>
+    /// <param name="userId">The user that owns the send.</param>
+    /// <param name="fileName">Name of the file uploaded with the send.</param>
+    /// <param name="sendAuthorizationService">Hashes the send password.</param>
+    /// <returns>The send object and file data.</returns>
     public (Send, SendFileData) ToSend(Guid userId, string fileName, ISendAuthorizationService sendAuthorizationService)
     {
+        // FIXME: This method does two things: creates a send and a send file data.
+        //        It should only do one thing.
         var send = ToSendBase(new Send
         {
             Type = Type,
@@ -131,6 +146,13 @@ public class SendRequestModel
         return (send, data);
     }
 
+    /// <summary>
+    /// Update a send object with request content
+    /// </summary>
+    /// <param name="existingSend">The send to update</param>
+    /// <param name="sendAuthorizationService">Hashes the send password.</param>
+    /// <returns>The send object</returns>
+    // FIXME: rename to `UpdateSend`
     public Send ToSend(Send existingSend, ISendAuthorizationService sendAuthorizationService)
     {
         existingSend = ToSendBase(existingSend, sendAuthorizationService);
