@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Bit.Core.Models.Api;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
@@ -10,7 +9,7 @@ namespace Bit.Api.Tools.Models.Response;
 
 public class SendResponseModel : ResponseModel
 {
-    public SendResponseModel(Send send, GlobalSettings globalSettings)
+    public SendResponseModel(Send send)
         : base("send")
     {
         if (send == null)
