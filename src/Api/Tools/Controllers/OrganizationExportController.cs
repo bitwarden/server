@@ -1,13 +1,11 @@
 ﻿using Bit.Api.Tools.Authorization;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
-using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Queries;
-using Bit.Core.Vault.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,30 +15,21 @@ namespace Bit.Api.Tools.Controllers;
 [Authorize("Application")]
 public class OrganizationExportController : Controller
 {
-    private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
-    private readonly ICipherService _cipherService;
     private readonly GlobalSettings _globalSettings;
-    private readonly IFeatureService _featureService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
     private readonly ICollectionRepository _collectionRepository;
 
     public OrganizationExportController(
-        ICurrentContext currentContext,
-        ICipherService cipherService,
         IUserService userService,
         GlobalSettings globalSettings,
-        IFeatureService featureService,
         IAuthorizationService authorizationService,
         IOrganizationCiphersQuery organizationCiphersQuery,
         ICollectionRepository collectionRepository)
     {
-        _currentContext = currentContext;
-        _cipherService = cipherService;
         _userService = userService;
         _globalSettings = globalSettings;
-        _featureService = featureService;
         _authorizationService = authorizationService;
         _organizationCiphersQuery = organizationCiphersQuery;
         _collectionRepository = collectionRepository;
