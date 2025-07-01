@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.RustSDK;
 
 namespace Bit.Seeder.Factories;
 
@@ -7,6 +8,7 @@ public class UserSeeder
 {
     public static User CreateUser(string email)
     {
+        Console.WriteLine(NativeMethods.my_add(2, 3));
         return new User
         {
             Id = Guid.NewGuid(),
