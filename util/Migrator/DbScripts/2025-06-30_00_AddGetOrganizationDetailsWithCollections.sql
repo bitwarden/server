@@ -4,7 +4,7 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE [dbo].[CipherOrgDetailsWithCollections_ReadByOrganizationId]
+CREATE PROCEDURE [dbo].[CipherOrganizationDetailsWithCollections_ReadByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
