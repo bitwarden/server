@@ -958,6 +958,38 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         };
     }
 
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetManyOrganizationDetailsWithCollectionsByOrganizationIdAsync(Guid orgId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var baseList = await new CipherOrganizationDetailsReadByOrganizationIdQuery(orgId)
+            .Run(dbContext)
+            .ToListAsync();
+
+        var efCcs = await dbContext.CollectionCiphers
+            .Where(cc => cc.Collection.OrganizationId == orgId)
+            .ToListAsync();
+
+        var coreCcs = efCcs
+            .Select(e => new Core.Entities.CollectionCipher
+            {
+                CipherId = e.CipherId,
+                CollectionId = e.CollectionId
+            });
+
+        var ccGroups = coreCcs
+            .GroupBy(cc => cc.CipherId)
+            .ToDictionary(g => g.Key, g => g);
+
+        return baseList
+            .Select(c => new CipherOrganizationDetailsWithCollections(c, ccGroups))
+            .ToList();
+    }
+
+
+
     public async Task UpsertAsync(CipherDetails cipher)
     {
         if (cipher.Id.Equals(default))

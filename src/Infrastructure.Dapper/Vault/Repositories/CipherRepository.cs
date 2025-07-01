@@ -650,6 +650,30 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetManyOrganizationDetailsWithCollectionsByOrganizationIdAsync(Guid orgId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        using var multi = await connection.QueryMultipleAsync(
+            $"[{Schema}].[CipherOrgDetailsWithCollections_ReadByOrganizationId]",
+            new { OrganizationId = orgId },
+            commandType: CommandType.StoredProcedure);
+
+        var ciphers = (await multi
+            .ReadAsync<CipherOrganizationDetails>())
+            .ToList();
+
+        var ccGroups = (await multi
+            .ReadAsync<CollectionCipher>())
+            .GroupBy(cc => cc.CipherId)
+            .ToDictionary(g => g.Key, g => g);
+
+        return ciphers
+            .Select(c => new CipherOrganizationDetailsWithCollections(c, ccGroups))
+            .ToList();
+    }
+
     private DataTable BuildCiphersTable(SqlBulkCopy bulkCopy, IEnumerable<Cipher> ciphers)
     {
         var c = ciphers.FirstOrDefault();

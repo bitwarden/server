@@ -68,4 +68,12 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     /// <param name="ciphers">A list of ciphers with updated data</param>
     UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
         IEnumerable<Cipher> ciphers);
+
+    /// <summary>
+    /// Loads every CipherOrganizationDetails and its CollectionIds in one go.
+    /// </summary>
+    Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetManyOrganizationDetailsWithCollectionsByOrganizationIdAsync(Guid organizationId);
+
+
 }
