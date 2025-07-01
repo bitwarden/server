@@ -3,6 +3,7 @@ using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Queries;
 
 
 namespace Bit.Core.Vault.Repositories;
@@ -24,7 +25,7 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds);
     Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite);
     Task UpdateAttachmentAsync(CipherAttachment attachment);
-    Task ArchiveAsync(IEnumerable<Guid> ids, Guid userId);
+    Task<DateTime> ArchiveAsync(IEnumerable<Guid> ids, Guid userId);
     Task DeleteAttachmentAsync(Guid cipherId, string attachmentId);
     Task DeleteAsync(IEnumerable<Guid> ids, Guid userId);
     Task DeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
@@ -32,7 +33,10 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task DeleteByUserIdAsync(Guid userId);
     Task DeleteByOrganizationIdAsync(Guid organizationId);
     Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers);
-    Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
+    /// <summary>
+    /// Create ciphers and folders for the specified UserId. Must not be used to create organization owned items.
+    /// </summary>
+    Task CreateAsync(Guid userId, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
     Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
         IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers);
     Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId);

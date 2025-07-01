@@ -24,6 +24,7 @@ public abstract record Plan
     public bool Has2fa { get; protected init; }
     public bool HasApi { get; protected init; }
     public bool HasSso { get; protected init; }
+    public bool HasOrganizationDomains { get; protected init; }
     public bool HasKeyConnector { get; protected init; }
     public bool HasScim { get; protected init; }
     public bool HasResetPassword { get; protected init; }
@@ -75,6 +76,7 @@ public abstract record Plan
         // Seats
         public string StripePlanId { get; init; }
         public string StripeSeatPlanId { get; init; }
+        [Obsolete("No longer used to retrieve a provider's price ID. Use ProviderPriceAdapter instead.")]
         public string StripeProviderPortalSeatPlanId { get; init; }
         public decimal BasePrice { get; init; }
         public decimal SeatPrice { get; init; }

@@ -148,7 +148,9 @@ public class SelfHostedOrganizationDetails : Organization
             LimitCollectionDeletion = LimitCollectionDeletion,
             LimitItemDeletion = LimitItemDeletion,
             AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems,
-            Status = Status
+            Status = Status,
+            UseRiskInsights = UseRiskInsights,
+            UseAdminSponsoredFamilies = UseAdminSponsoredFamilies,
         };
     }
 }

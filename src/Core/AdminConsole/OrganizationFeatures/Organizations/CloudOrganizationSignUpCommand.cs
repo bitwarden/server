@@ -104,7 +104,8 @@ public class CloudOrganizationSignUpCommand(
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
-            UseSecretsManager = signup.UseSecretsManager
+            UseSecretsManager = signup.UseSecretsManager,
+            UseOrganizationDomains = plan.HasOrganizationDomains,
         };
 
         if (signup.UseSecretsManager)

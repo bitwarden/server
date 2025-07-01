@@ -1,7 +1,9 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 
 namespace Bit.Core.Vault.Commands.Interfaces;
@@ -23,30 +25,36 @@ public class ArchiveCiphersCommand : IArchiveCiphersCommand
         _pushService = pushService;
     }
 
-    public async Task ArchiveManyAsync(IEnumerable<Guid> cipherIds, Guid archivingUserId)
+    public async Task<ICollection<CipherOrganizationDetails>> ArchiveManyAsync(IEnumerable<Guid> cipherIds, Guid archivingUserId)
     {
-        if (cipherIds == null || !cipherIds.Any())
+        var cipherIdEnumerable = cipherIds as Guid[] ?? cipherIds.ToArray();
+        if (cipherIds == null || cipherIdEnumerable.Length == 0)
         {
-            return;
+            throw new BadRequestException("No cipher ids provided.");
         }
 
-        var cipherIdsSet = new HashSet<Guid>(cipherIds);
+        var cipherIdsSet = new HashSet<Guid>(cipherIdEnumerable);
 
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(archivingUserId);
         var archivingCiphers = ciphers
-            .Where(c => cipherIdsSet.Contains(c.Id) && c.Edit && c.OrganizationId == null)
-            .Select(x => (Cipher)x).ToList();
+            .Where(c => cipherIdsSet.Contains(c.Id) && c.Edit && !c.OrganizationId.HasValue)
+            .Select(CipherOrganizationDetails (c) => c).ToList();
 
-        await _cipherRepository.ArchiveAsync(archivingCiphers.Select(c => c.Id), archivingUserId);
+        var revisionDate = await _cipherRepository.ArchiveAsync(archivingCiphers.Select(c => c.Id), archivingUserId);
 
         var events = archivingCiphers.Select(c =>
-            new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Archived, null));
+        {
+            c.RevisionDate = revisionDate;
+            c.ArchivedDate = revisionDate;
+            return new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Unarchived, null);
+        });
         foreach (var eventsBatch in events.Chunk(100))
         {
             await _eventService.LogCipherEventsAsync(eventsBatch);
         }
 
-        // push
         await _pushService.PushSyncCiphersAsync(archivingUserId);
+
+        return archivingCiphers;
     }
 }

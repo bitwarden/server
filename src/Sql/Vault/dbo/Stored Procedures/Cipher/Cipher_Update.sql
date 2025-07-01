@@ -6,7 +6,7 @@
     @Data NVARCHAR(MAX),
     @Favorites NVARCHAR(MAX),
     @Folders NVARCHAR(MAX),
-    @Attachments NVARCHAR(MAX),
+    @Attachments NVARCHAR(MAX), -- not used
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @DeletedDate DATETIME2(7),
@@ -26,7 +26,6 @@ BEGIN
         [Data] = @Data,
         [Favorites] = @Favorites,
         [Folders] = @Folders,
-        [Attachments] = @Attachments,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [DeletedDate] = @DeletedDate,

@@ -13,7 +13,6 @@ env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
 
 jobs:
-
   testing:
     name: Run tests
     if: ${{ startsWith(github.head_ref, 'version_bump_') == false }}
@@ -50,7 +49,7 @@ jobs:
         run: dotnet test ./bitwarden_license/test --configuration Debug --logger "trx;LogFileName=bw-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
 
       - name: Report test results
-        uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
+        uses: dorny/test-reporter@6e6a65b7a0bd2c9197df7d0ae36ac5cee784230c # v2.0.0
         if: ${{ github.event.pull_request.head.repo.full_name == github.repository && !cancelled() }}
         with:
           name: Test Results

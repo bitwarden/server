@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Vault.Entities;
@@ -24,25 +25,26 @@ public class UnarchiveCiphersCommand : IUnarchiveCiphersCommand
         _pushService = pushService;
     }
 
-    public async Task UnarchiveManyAsync(IEnumerable<Guid> cipherIds, Guid unarchivingUserId)
+    public async Task<ICollection<CipherOrganizationDetails>> UnarchiveManyAsync(IEnumerable<Guid> cipherIds, Guid unarchivingUserId)
     {
-        if (cipherIds == null || !cipherIds.Any())
+        var cipherIdEnumerable = cipherIds as Guid[] ?? cipherIds.ToArray();
+        if (cipherIds == null || cipherIdEnumerable.Length == 0)
         {
-            return;
+            throw new BadRequestException("No cipher ids provided.");
         }
 
-        var cipherIdsSet = new HashSet<Guid>(cipherIds);
+        var cipherIdsSet = new HashSet<Guid>(cipherIdEnumerable);
 
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(unarchivingUserId);
         var unarchivingCiphers = ciphers
             .Where(c => cipherIdsSet.Contains(c.Id) && c.Edit)
-            .Select(c => (CipherOrganizationDetails)c).ToList();
+            .Select(CipherOrganizationDetails (c) => c).ToList();
 
-        DateTime? revisionDate = await _cipherRepository.UnarchiveAsync(unarchivingCiphers.Select(c => c.Id), unarchivingUserId);
+        var revisionDate = await _cipherRepository.UnarchiveAsync(unarchivingCiphers.Select(c => c.Id), unarchivingUserId);
 
         var events = unarchivingCiphers.Select(c =>
         {
-            c.RevisionDate = revisionDate.Value;
+            c.RevisionDate = revisionDate;
             c.ArchivedDate = null;
             return new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Unarchived, null);
         });
@@ -51,7 +53,8 @@ public class UnarchiveCiphersCommand : IUnarchiveCiphersCommand
             await _eventService.LogCipherEventsAsync(eventsBatch);
         }
 
-        // push
         await _pushService.PushSyncCiphersAsync(unarchivingUserId);
+
+        return unarchivingCiphers;
     }
 }

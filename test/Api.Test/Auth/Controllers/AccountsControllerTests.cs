@@ -7,13 +7,13 @@ using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
-using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -40,6 +40,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IFeatureService _featureService;
 
@@ -64,6 +65,7 @@ public class AccountsControllerTests : IDisposable
         _policyService = Substitute.For<IPolicyService>();
         _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
         _rotateUserKeyCommand = Substitute.For<IRotateUserKeyCommand>();
+        _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
         _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _cipherValidator =
@@ -87,6 +89,7 @@ public class AccountsControllerTests : IDisposable
             _setInitialMasterPasswordCommand,
             _tdeOffboardingPasswordCommand,
             _rotateUserKeyCommand,
+            _twoFactorIsEnabledQuery,
             _featureService,
             _cipherValidator,
             _folderValidator,
@@ -120,7 +123,7 @@ public class AccountsControllerTests : IDisposable
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
         const string newEmail = "example@user.com";
-        _userService.ValidateManagedUserDomainAsync(user, newEmail).Returns(IdentityResult.Success);
+        _userService.ValidateClaimedUserDomainAsync(user, newEmail).Returns(IdentityResult.Success);
 
         // Act
         await _sut.PostEmailToken(new EmailTokenRequestModel { NewEmail = newEmail });
@@ -130,7 +133,7 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task PostEmailToken_WhenValidateManagedUserDomainAsyncFails_ShouldReturnError()
+    public async Task PostEmailToken_WhenValidateClaimedUserDomainAsyncFails_ShouldReturnError()
     {
         // Arrange
         var user = GenerateExampleUser();
@@ -139,7 +142,7 @@ public class AccountsControllerTests : IDisposable
 
         const string newEmail = "example@user.com";
 
-        _userService.ValidateManagedUserDomainAsync(user, newEmail)
+        _userService.ValidateClaimedUserDomainAsync(user, newEmail)
             .Returns(IdentityResult.Failed(new IdentityError
             {
                 Code = "TestFailure",
@@ -183,21 +186,6 @@ public class AccountsControllerTests : IDisposable
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         _userService.ChangeEmailAsync(user, default, default, default, default, default)
                     .Returns(Task.FromResult(IdentityResult.Success));
-
-        await _sut.PostEmail(new EmailRequestModel());
-
-        await _userService.Received(1).ChangeEmailAsync(user, default, default, default, default, default);
-    }
-
-    [Fact]
-    public async Task PostEmail_WithAccountDeprovisioningEnabled_WhenUserIsNotManagedByAnOrganization_ShouldChangeUserEmail()
-    {
-        var user = GenerateExampleUser();
-        ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.ChangeEmailAsync(user, default, default, default, default, default)
-                    .Returns(Task.FromResult(IdentityResult.Success));
-        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
-        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(false);
 
         await _sut.PostEmail(new EmailRequestModel());
 
@@ -533,13 +521,12 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Delete_WhenAccountDeprovisioningIsEnabled_WithUserManagedByAnOrganization_ThrowsBadRequestException()
+    public async Task Delete_WithUserManagedByAnOrganization_ThrowsBadRequestException()
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
-        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
-        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(true);
+        _userService.IsClaimedByAnyOrganizationAsync(user.Id).Returns(true);
 
         var result = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Delete(new SecretVerificationRequestModel()));
 
@@ -547,13 +534,12 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Delete_WhenAccountDeprovisioningIsEnabled_WithUserNotManagedByAnOrganization_ShouldSucceed()
+    public async Task Delete_WithUserNotManagedByAnOrganization_ShouldSucceed()
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
-        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
-        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(false);
+        _userService.IsClaimedByAnyOrganizationAsync(user.Id).Returns(false);
         _userService.DeleteAsync(user).Returns(IdentityResult.Success);
 
         await _sut.Delete(new SecretVerificationRequestModel());
