@@ -74,4 +74,53 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
             ContinuationToken = results.Count < pageOptions.PageSize ? null : (pageNumber + 1).ToString()
         };
     }
+
+    public async Task<IEnumerable<Guid>> MarkNotificationsAsDeletedByTask(Guid taskId)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var notifications = await dbContext.Notifications
+            .Where(n => n.TaskId == taskId)
+            .ToListAsync();
+
+        var notificationIds = notifications.Select(n => n.Id).ToList();
+
+        var statuses = await dbContext.Set<NotificationStatus>()
+            .Where(ns => notificationIds.Contains(ns.NotificationId))
+            .ToListAsync();
+
+        var now = DateTime.UtcNow;
+
+        // Update existing statuses and add missing ones
+        foreach (var notification in notifications)
+        {
+            var status = statuses.FirstOrDefault(s => s.NotificationId == notification.Id);
+            if (status != null)
+            {
+                if (status.DeletedDate == null)
+                {
+                    status.DeletedDate = now;
+                }
+            }
+            else if (notification.UserId.HasValue)
+            {
+                dbContext.Set<NotificationStatus>().Add(new NotificationStatus
+                {
+                    NotificationId = notification.Id,
+                    UserId = (Guid)notification.UserId,
+                    DeletedDate = now
+                });
+            }
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        var userIds = notifications
+            .Select(n => n.UserId)
+            .Where(u => u.HasValue)
+            .ToList();
+
+        return (IEnumerable<Guid>)userIds;
+    }
 }

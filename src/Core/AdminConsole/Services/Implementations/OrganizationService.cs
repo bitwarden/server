@@ -11,6 +11,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Constants;
@@ -901,6 +902,8 @@ public class OrganizationService : IOrganizationService
         IEnumerable<Guid> organizationUsersId)
     {
         var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
+        _logger.LogUserInviteStateDiagnostics(orgUsers);
+
         var org = await GetOrgById(organizationId);
 
         var result = new List<Tuple<OrganizationUser, string>>();
@@ -928,6 +931,8 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("User invalid.");
         }
+
+        _logger.LogUserInviteStateDiagnostics(orgUser);
 
         var org = await GetOrgById(orgUser.OrganizationId);
         await SendInviteAsync(orgUser, org, initOrganization);

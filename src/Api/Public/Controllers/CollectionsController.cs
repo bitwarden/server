@@ -2,6 +2,7 @@
 using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -116,6 +117,12 @@ public class CollectionsController : Controller
         {
             return new NotFoundResult();
         }
+
+        if (collection.Type == CollectionType.DefaultUserCollection)
+        {
+            return new BadRequestObjectResult(new ErrorResponseModel("You cannot delete a collection with the type as DefaultUserCollection."));
+        }
+
         await _collectionRepository.DeleteAsync(collection);
         return new OkResult();
     }
