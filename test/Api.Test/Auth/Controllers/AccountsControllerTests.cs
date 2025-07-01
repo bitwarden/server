@@ -566,7 +566,7 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Theory, BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_WHenSecretNotValid_ShouldFail(
+    public async Task ResendNewDeviceVerificationEmail_WhenSecretNotValid_ShouldFail(
         User user,
         UnauthenticatedSecretVerificationRequestModel model)
     {

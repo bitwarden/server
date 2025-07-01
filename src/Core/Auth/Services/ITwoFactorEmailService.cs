@@ -7,5 +7,5 @@ public interface ITwoFactorEmailService
     Task SendTwoFactorEmailAsync(User user);
     Task SendTwoFactorSetupEmailAsync(User user);
     Task SendNewDeviceVerificationEmailAsync(User user);
-    Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
+    Task<bool> VerifyTwoFactorTokenAsync(User user, string token);
 }

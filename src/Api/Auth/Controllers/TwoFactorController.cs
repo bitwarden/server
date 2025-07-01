@@ -301,6 +301,7 @@ public class TwoFactorController : Controller
     public async Task SendEmail([FromBody] TwoFactorEmailRequestModel model)
     {
         var user = await CheckAsync(model, false, true);
+        // Add email to the user's 2FA providers, with the email address they've provided.
         model.ToUser(user);
         await _twoFactorEmailService.SendTwoFactorSetupEmailAsync(user);
     }
