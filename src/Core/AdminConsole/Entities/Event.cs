@@ -33,6 +33,7 @@ public class Event : ITableObject<Guid>, IEvent
         DomainName = e.DomainName;
         SecretId = e.SecretId;
         ServiceAccountId = e.ServiceAccountId;
+        SecretIds = e.SecretIds;
     }
 
     public Guid Id { get; set; }
@@ -57,6 +58,7 @@ public class Event : ITableObject<Guid>, IEvent
     public string? DomainName { get; set; }
     public Guid? SecretId { get; set; }
     public Guid? ServiceAccountId { get; set; }
+    public string? SecretIds { get; set; }
 
     public void SetNewId()
     {

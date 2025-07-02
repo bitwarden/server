@@ -90,4 +90,9 @@ public enum EventType : int
     OrganizationDomain_NotVerified = 2003,
 
     Secret_Retrieved = 2100,
+    Secret_Created = 2101,
+    Secret_Edited = 2102,
+    Secret_Deleted = 2103,
+    Secrets_Retrieved_Bulk = 2104,
+    Secrets_Deleted_Bulk = 2105,
 }

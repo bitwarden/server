@@ -33,6 +33,7 @@ public class AzureEvent : ITableEntity
     public string DomainName { get; set; }
     public Guid? SecretId { get; set; }
     public Guid? ServiceAccountId { get; set; }
+    public string SecretIds { get; set; }
 
     public EventTableEntity ToEventTableEntity()
     {
@@ -62,7 +63,8 @@ public class AzureEvent : ITableEntity
             SystemUser = SystemUser.HasValue ? (EventSystemUser)SystemUser.Value : null,
             DomainName = DomainName,
             SecretId = SecretId,
-            ServiceAccountId = ServiceAccountId
+            ServiceAccountId = ServiceAccountId,
+            SecretIds = SecretIds,
         };
     }
 }
@@ -93,6 +95,7 @@ public class EventTableEntity : IEvent
         DomainName = e.DomainName;
         SecretId = e.SecretId;
         ServiceAccountId = e.ServiceAccountId;
+        SecretIds = e.SecretIds;
     }
 
     public string PartitionKey { get; set; }
@@ -120,6 +123,7 @@ public class EventTableEntity : IEvent
     public string DomainName { get; set; }
     public Guid? SecretId { get; set; }
     public Guid? ServiceAccountId { get; set; }
+    public string SecretIds { get; set; }
 
     public AzureEvent ToAzureEvent()
     {
@@ -149,7 +153,8 @@ public class EventTableEntity : IEvent
             SystemUser = SystemUser.HasValue ? (int)SystemUser.Value : null,
             DomainName = DomainName,
             SecretId = SecretId,
-            ServiceAccountId = ServiceAccountId
+            ServiceAccountId = ServiceAccountId,
+            SecretIds = SecretIds
         };
     }
 
@@ -212,6 +217,15 @@ public class EventTableEntity : IEvent
             {
                 PartitionKey = pKey,
                 RowKey = $"SecretId={e.SecretId}__Date={dateKey}__Uniquifier={uniquifier}"
+            });
+        }
+
+        if (e.SecretIds != null)
+        {
+            entities.Add(new EventTableEntity(e)
+            {
+                PartitionKey = pKey,
+                RowKey = $"SecretIds={e.SecretIds}__Date={dateKey}__Uniquifier={uniquifier}"
             });
         }
 

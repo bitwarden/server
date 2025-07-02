@@ -19,6 +19,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using Xunit;
 
@@ -152,6 +153,7 @@ public class SecretsControllerTests
         SecretCreateRequestModel data, Guid organizationId)
     {
         data = SetupSecretCreateRequest(sutProvider, data, organizationId);
+        SetControllerUser(sutProvider, new Guid());
 
         await sutProvider.Sut.CreateAsync(organizationId, data);
 
@@ -186,6 +188,7 @@ public class SecretsControllerTests
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<SecretAccessPoliciesUpdates>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
 
+        SetControllerUser(sutProvider, new Guid());
 
         await sutProvider.Sut.CreateAsync(organizationId, data);
 
@@ -199,6 +202,7 @@ public class SecretsControllerTests
         SecretUpdateRequestModel data, Secret currentSecret)
     {
         data = SetupSecretUpdateRequest(data);
+
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
@@ -239,7 +243,7 @@ public class SecretsControllerTests
         SecretUpdateRequestModel data, Secret currentSecret)
     {
         data = SetupSecretUpdateRequest(data);
-
+        SetControllerUser(sutProvider, new Guid());
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
@@ -260,7 +264,6 @@ public class SecretsControllerTests
         SecretUpdateRequestModel data, Secret currentSecret, SecretAccessPoliciesUpdates accessPoliciesUpdates)
     {
         data = SetupSecretUpdateAccessPoliciesRequest(sutProvider, data, currentSecret, accessPoliciesUpdates);
-
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<SecretAccessPoliciesUpdates>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Failed());
@@ -339,6 +342,8 @@ public class SecretsControllerTests
     {
         var ids = data.Select(s => s.Id).ToList();
         var organizationId = data.First().OrganizationId;
+        SetControllerUser(sutProvider, new Guid());
+
         foreach (var secret in data)
         {
             secret.OrganizationId = organizationId;
@@ -378,7 +383,7 @@ public class SecretsControllerTests
 
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
-
+        SetControllerUser(sutProvider, new Guid());
         var results = await sutProvider.Sut.BulkDeleteAsync(ids);
 
         await sutProvider.GetDependency<IDeleteSecretCommand>().Received(1)
@@ -434,7 +439,7 @@ public class SecretsControllerTests
     {
         var (ids, request) = BuildGetSecretsRequestModel(data);
         var organizationId = SetOrganizations(ref data);
-
+        SetControllerUser(sutProvider, new Guid());
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data,
@@ -507,7 +512,7 @@ public class SecretsControllerTests
         SutProvider<SecretsController> sutProvider, Guid organizationId)
     {
         var lastSyncedDate = SetupSecretsSyncRequest(nullLastSyncedDate, secrets, sutProvider, organizationId);
-
+        SetControllerUser(sutProvider, new Guid());
         var result = await sutProvider.Sut.GetSecretsSyncAsync(organizationId, lastSyncedDate);
         Assert.True(result.HasChanges);
         Assert.NotNull(result.Secrets);
@@ -610,4 +615,19 @@ public class SecretsControllerTests
             .ReturnsForAnyArgs(data.ToSecret(currentSecret));
         return data;
     }
+
+    private static void SetControllerUser(SutProvider<SecretsController> sutProvider, Guid userId)
+    {
+        var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) };
+        var identity = new ClaimsIdentity(claims, "Test");
+        var principal = new ClaimsPrincipal(identity);
+
+        sutProvider.Sut.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = principal }
+        };
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(principal).Returns(userId);
+    }
+
 }
