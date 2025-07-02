@@ -14,7 +14,7 @@ public class IntegrationMessageTests
     {
         var message = new IntegrationMessage<WebhookIntegrationConfigurationDetails>
         {
-            Configuration = new WebhookIntegrationConfigurationDetails("https://localhost", "Bearer", "AUTH-TOKEN"),
+            Configuration = new WebhookIntegrationConfigurationDetails(new Uri("https://localhost"), "Bearer", "AUTH-TOKEN"),
             MessageId = _messageId,
             RetryCount = 2,
             RenderedTemplate = string.Empty,
@@ -34,7 +34,7 @@ public class IntegrationMessageTests
     {
         var message = new IntegrationMessage<WebhookIntegrationConfigurationDetails>
         {
-            Configuration = new WebhookIntegrationConfigurationDetails("https://localhost", "Bearer", "AUTH-TOKEN"),
+            Configuration = new WebhookIntegrationConfigurationDetails(new Uri("https://localhost"), "Bearer", "AUTH-TOKEN"),
             MessageId = _messageId,
             RenderedTemplate = "This is the message",
             IntegrationType = IntegrationType.Webhook,
