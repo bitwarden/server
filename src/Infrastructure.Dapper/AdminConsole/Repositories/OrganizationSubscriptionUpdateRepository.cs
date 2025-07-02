@@ -23,7 +23,7 @@ public class OrganizationSubscriptionUpdateRepository(string connectionString, s
         await using var connection = new SqlConnection(ConnectionString);
 
         await connection.ExecuteAsync("[dbo].[OrganizationSubscriptionUpdate_SetToUpdateSubscription]",
-            new { OrganzationId = organizationId, SeatsLastUpdated = seatsUpdatedAt },
+            new { OrganizationId = organizationId, SeatsLastUpdated = seatsUpdatedAt },
             commandType: CommandType.StoredProcedure);
     }
 

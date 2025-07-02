@@ -1,7 +1,6 @@
 CREATE PROCEDURE [dbo].[OrganizationSubscriptionUpdate_SetToUpdateSubscription]
     @OrganizationId UNIQUEIDENTIFIER,
-    @SeatsLastUpdated DATETIME2,
-    @SyncAttempts INT
+    @SeatsLastUpdated DATETIME2
 AS
 BEGIN
     SET NOCOUNT ON
@@ -11,10 +10,10 @@ BEGIN
             [dbo].[OrganizationSubscriptionUpdate]
         SET
             [SeatsLastUpdated] = @SeatsLastUpdated,
-            [SyncAttempts] = @SyncAttempts
+            [SyncAttempts] = 1
         WHERE
             [OrganizationId] = @OrganizationId
     ELSE
         INSERT INTO [dbo].[OrganizationSubscriptionUpdate] (Id, OrganizationId, SeatsLastUpdated, SyncAttempts)
-        VALUES (NEWID(), @OrganizationId, @SeatsLastUpdated, @SyncAttempts)
+        VALUES (NEWID(), @OrganizationId, @SeatsLastUpdated, 1)
 END
