@@ -990,6 +990,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ReportKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
 
