@@ -697,7 +697,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<IEnumerable<Guid>> GetDefaultUserCollectionIdsByOrganizationIdAsync(Guid organizationId)
+    public async Task<IEnumerable<Guid>> GetDefaultCollectionIdsByOrganizationIdAsync(Guid organizationId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);

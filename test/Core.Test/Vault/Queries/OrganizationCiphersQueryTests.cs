@@ -81,7 +81,7 @@ public class OrganizationCiphersQueryTests
 
         // stub just the default‐ID lookup
         sutProvider.GetDependency<ICollectionRepository>()
-            .GetDefaultUserCollectionIdsByOrganizationIdAsync(organizationId)
+            .GetDefaultCollectionIdsByOrganizationIdAsync(organizationId)
             .Returns(new[] { defaultColId });
 
         sutProvider.GetDependency<ICipherRepository>()

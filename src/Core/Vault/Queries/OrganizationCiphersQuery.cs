@@ -66,7 +66,7 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
         GetAllOrganizationCiphersExcludingDefaultUserCollections(Guid orgId)
     {
         var defaultCollIds = (await _collectionRepository
-                .GetDefaultUserCollectionIdsByOrganizationIdAsync(orgId))
+                .GetDefaultCollectionIdsByOrganizationIdAsync(orgId))
             .ToHashSet();
 
         var all = await _cipherRepository

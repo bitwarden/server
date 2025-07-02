@@ -55,5 +55,5 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task DeleteManyAsync(IEnumerable<Guid> collectionIds);
     Task CreateOrUpdateAccessForManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
         IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups);
-    Task<IEnumerable<Guid>> GetDefaultUserCollectionIdsByOrganizationIdAsync(Guid organizationId);
+    Task<IEnumerable<Guid>> GetDefaultCollectionIdsByOrganizationIdAsync(Guid organizationId);
 }
