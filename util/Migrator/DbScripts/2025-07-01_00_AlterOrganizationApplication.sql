@@ -1,4 +1,19 @@
-CREATE PROCEDURE [dbo].[OrganizationApplication_Create]
+IF COL_LENGTH('[dbo].[OrganizationApplication]', 'ContentEncryptionKey') IS NULL
+BEGIN
+ALTER TABLE [dbo].[OrganizationApplication]
+    ADD [ContentEncryptionKey] VARCHAR(MAX) NOT NULL;
+END
+GO
+
+CREATE OR ALTER VIEW [dbo].[OrganizationApplicationView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[OrganizationApplication]
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationApplication_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Applications NVARCHAR(MAX),
@@ -26,3 +41,4 @@ AS
         @RevisionDate,
         @ContentEncryptionKey
     );
+GO

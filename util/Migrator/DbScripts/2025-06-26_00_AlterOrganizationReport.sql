@@ -1,4 +1,19 @@
-CREATE PROCEDURE [dbo].[OrganizationReport_Create]
+IF COL_LENGTH('[dbo].[OrganizationReport]', 'ContentEncryptionKey') IS NULL
+BEGIN
+    ALTER TABLE [dbo].[OrganizationReport]
+    ADD [ContentEncryptionKey] VARCHAR(MAX) NOT NULL;
+END
+GO
+
+CREATE OR ALTER VIEW [dbo].[OrganizationReportView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[OrganizationReport]
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Date DATETIME2(7),
@@ -8,7 +23,8 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Create]
 AS
     SET NOCOUNT ON;
 
-    INSERT INTO [dbo].[OrganizationReport](
+    INSERT INTO [dbo].[OrganizationReport]
+    (
         [Id],
         [OrganizationId],
         [Date],
@@ -16,7 +32,8 @@ AS
         [CreationDate],
         [ContentEncryptionKey]
     )
-    VALUES (
+    VALUES
+    (
         @Id,
         @OrganizationId,
         @Date,
@@ -24,3 +41,4 @@ AS
         @CreationDate,
         @ContentEncryptionKey
     );
+GO
