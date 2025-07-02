@@ -1,5 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
 
 #nullable enable
@@ -39,10 +41,22 @@ public class OrganizationIntegrationRequestModel : IValidatableObject
                 yield return new ValidationResult($"{nameof(Type)} integrations cannot be created directly.", new[] { nameof(Type) });
                 break;
             case IntegrationType.Webhook:
-                if (Configuration is not null)
+                if (string.IsNullOrWhiteSpace(Configuration))
+                {
+                    break;
+                }
+                if (!IsIntegrationValid<WebhookIntegration>())
                 {
                     yield return new ValidationResult(
-                        "Webhook integrations must not include configuration.",
+                        "Webhook integrations must include valid configuration.",
+                        new[] { nameof(Configuration) });
+                }
+                break;
+            case IntegrationType.Hec:
+                if (!IsIntegrationValid<HecIntegration>())
+                {
+                    yield return new ValidationResult(
+                        "HEC integrations must include valid configuration.",
                         new[] { nameof(Configuration) });
                 }
                 break;
@@ -51,6 +65,24 @@ public class OrganizationIntegrationRequestModel : IValidatableObject
                     $"Integration type '{Type}' is not recognized.",
                     new[] { nameof(Type) });
                 break;
+        }
+    }
+
+    private bool IsIntegrationValid<T>()
+    {
+        if (string.IsNullOrWhiteSpace(Configuration))
+        {
+            return false;
+        }
+
+        try
+        {
+            var config = JsonSerializer.Deserialize<T>(Configuration);
+            return config is not null;
+        }
+        catch
+        {
+            return false;
         }
     }
 }

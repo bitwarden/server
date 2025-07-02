@@ -244,6 +244,24 @@ public class UpdateOrganizationUserCommandTests
         Assert.Contains("User can only be an admin of one free organization.", exception.Message);
     }
 
+    [Theory, BitAutoData]
+    public async Task UpdateUserAsync_WithDefaultUserCollectionType_Throws(OrganizationUser user, OrganizationUser originalUser,
+        List<CollectionAccessSelection> collectionAccess, Guid? savingUserId, SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization)
+    {
+        Setup(sutProvider, organization, user, originalUser);
+
+        // Return collections with DefaultUserCollection type
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
+                .Select(guid => new Collection { Id = guid, OrganizationId = user.OrganizationId, Type = CollectionType.DefaultUserCollection }).ToList());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateUserAsync(user, OrganizationUserType.User, savingUserId, collectionAccess, null));
+        Assert.Contains("You cannot modify member access for collections with the type as DefaultUserCollection.", exception.Message);
+    }
+
     private void Setup(SutProvider<UpdateOrganizationUserCommand> sutProvider, Organization organization,
         OrganizationUser newUser, OrganizationUser oldUser)
     {
