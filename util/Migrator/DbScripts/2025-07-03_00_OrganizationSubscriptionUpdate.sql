@@ -36,6 +36,7 @@ BEGIN
         INSERT INTO [dbo].[OrganizationSubscriptionUpdate] (Id, OrganizationId, SeatsLastUpdated, SyncAttempts)
         VALUES (NEWID(), @OrganizationId, @SeatsLastUpdated, @SyncAttempts)
 END
+GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationSubscriptionUpdate_GetUpdatesToSubscription]
 AS
@@ -44,22 +45,23 @@ BEGIN
     FROM [dbo].[OrganizationSubscriptionUpdate]
     WHERE [SeatsLastUpdated] IS NOT NULL
 END
+GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationSubscriptionUpdate_UpdateSubscriptionStatus]
     @SuccessfulOrganizations NVARCHAR(MAX),
     @FailedOrganizations NVARCHAR(MAX)
 AS
 BEGIN
-   SET NOCOUNT ON
+    SET NOCOUNT ON
 
-   DECLARE @SuccessfulOrgIds TABLE (Id UNIQUEIDENTIFIER)
-   DECLARE @FailedOrgIds TABLE (Id UNIQUEIDENTIFIER)
+    DECLARE @SuccessfulOrgIds TABLE (Id UNIQUEIDENTIFIER)
+    DECLARE @FailedOrgIds TABLE (Id UNIQUEIDENTIFIER)
 
-   INSERT INTO @SuccessfulOrgIds (Id)
-   SELECT [value] FROM OPENJSON(@SuccessfulOrganizations)
+    INSERT INTO @SuccessfulOrgIds (Id)
+    SELECT [value] FROM OPENJSON(@SuccessfulOrganizations)
 
-   INSERT INTO @FailedOrgIds (Id)
-   SELECT [value] FROM OPENJSON(@FailedOrganizations)
+    INSERT INTO @FailedOrgIds (Id)
+    SELECT [value] FROM OPENJSON(@FailedOrganizations)
 
     UPDATE [dbo].[OrganizationSubscriptionUpdate]
     SET
@@ -72,3 +74,4 @@ BEGIN
         [SyncAttempts] = [SyncAttempts] + 1
     WHERE [OrganizationId] IN (SELECT Id FROM @FailedOrgIds)
 END
+GO
