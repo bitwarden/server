@@ -338,6 +338,28 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("OrganizationIntegrationConfiguration", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationSubscriptionUpdate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("SeatsLastUpdated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SyncAttempts")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("OrganizationSubscriptionUpdates");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2477,6 +2499,17 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("OrganizationIntegration");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationSubscriptionUpdate", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>

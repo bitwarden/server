@@ -335,6 +335,28 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("OrganizationIntegrationConfiguration", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationSubscriptionUpdate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("SeatsLastUpdated")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("SyncAttempts")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("OrganizationSubscriptionUpdates");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2471,6 +2493,17 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("OrganizationIntegration");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationSubscriptionUpdate", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>
