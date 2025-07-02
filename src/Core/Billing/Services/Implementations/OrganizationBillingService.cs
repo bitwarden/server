@@ -147,7 +147,6 @@ public class OrganizationBillingService(
             await subscriberService.UpdatePaymentSource(organization, tokenizedPaymentSource);
             await subscriberService.UpdateTaxInformation(organization, taxInformation);
             await UpdateMissingPaymentMethodBehaviourAsync(organization);
-
         }
     }
 
@@ -156,62 +155,30 @@ public class OrganizationBillingService(
     {
         ArgumentNullException.ThrowIfNull(organization);
 
-        // Get customer and subscription with expanded payment information
-        var customer = await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions
-        {
-            Expand = ["invoice_settings.default_payment_method", "default_source", "subscriptions"]
-        });
-
         var subscription = await subscriberService.GetSubscriptionOrThrow(organization);
         var subscriptionItems = subscription.Items.Data;
 
         var newPlan = await pricingClient.GetPlanOrThrow(newPlanType);
+        var oldPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
         // Build the subscription update options
         var subscriptionItemOptions = new List<SubscriptionItemOptions>();
         foreach (var item in subscriptionItems)
         {
-            var subscriptionItemOption = new SubscriptionItemOptions { Id = item.Id, Quantity = item.Quantity };
-
-            if (item.Price.Id == newPlan.SecretsManager.StripeSeatPlanId)
+            var subscriptionItemOption = new SubscriptionItemOptions
             {
-                if (newPlan.SecretsManager.StripeSeatPlanId == null)
-                {
-                    throw new BillingException("Secrets Manager plan ID is required for existing secrets manager subscription items.");
-                }
-                subscriptionItemOption.Price = newPlan.SecretsManager.StripeSeatPlanId;
-            }
-            else
-            {
-                if (newPlan.PasswordManager.StripeSeatPlanId == null)
-                {
-                    throw new BillingException("Password Manager plan ID is required for existing password manager subscription items.");
-                }
-                subscriptionItemOption.Price = newPlan.PasswordManager.StripeSeatPlanId;
-            }
+                Id = item.Id,
+                Quantity = item.Quantity,
+                Price = item.Price.Id == oldPlan.SecretsManager.StripeSeatPlanId ? newPlan.SecretsManager.StripeSeatPlanId : newPlan.PasswordManager.StripeSeatPlanId
+            };
 
             subscriptionItemOptions.Add(subscriptionItemOption);
         }
         var updateOptions = new SubscriptionUpdateOptions
         {
-
             Items = subscriptionItemOptions,
             ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations
         };
-
-        // Update trial settings since payment method is now available
-        // Previously it was set to "cancel" when no payment method existed
-        // Now we can change it to "create_invoice" or remove the restriction
-        if (subscription.Status == StripeConstants.SubscriptionStatus.Trialing)
-        {
-            updateOptions.TrialSettings = new SubscriptionTrialSettingsOptions
-            {
-                EndBehavior = new SubscriptionTrialSettingsEndBehaviorOptions
-                {
-                    MissingPaymentMethod = StripeConstants.MissingPaymentMethodBehaviorOptions.CreateInvoice
-                }
-            };
-        }
 
         try
         {
