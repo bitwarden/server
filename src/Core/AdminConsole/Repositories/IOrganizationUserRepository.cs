@@ -22,6 +22,11 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<OrganizationUser?> GetByOrganizationAsync(Guid organizationId, Guid userId);
     Task<Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id);
     Task<OrganizationUserUserDetails?> GetDetailsByIdAsync(Guid id);
+    /// <summary>
+    /// Returns the OrganizationUser and its associated collections (excluding DefaultUserCollections).
+    /// </summary>
+    /// <param name="id">The id of the OrganizationUser</param>
+    /// <returns>A tuple containing the OrganizationUser and its associated collections</returns>
     Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id);
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
