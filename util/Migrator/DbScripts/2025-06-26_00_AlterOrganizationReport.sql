@@ -1,7 +1,7 @@
-IF COL_LENGTH('[dbo].[OrganizationReport]', 'ReportKey') IS NULL
+IF COL_LENGTH('[dbo].[OrganizationReport]', 'ContentEncryptionKey') IS NULL
 BEGIN
     ALTER TABLE [dbo].[OrganizationReport]
-    ADD [ReportKey] VARCHAR(MAX) NOT NULL;
+    ADD [ContentEncryptionKey] VARCHAR(MAX) NOT NULL;
 END
 GO
 
@@ -19,7 +19,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
     @Date DATETIME2(7),
     @ReportData NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @ReportKey VARCHAR(MAX)
+    @ContentEncryptionKey VARCHAR(MAX)
 AS
     SET NOCOUNT ON;
 
@@ -30,7 +30,7 @@ AS
         [Date],
         [ReportData],
         [CreationDate],
-        [ReportKey]
+        [ContentEncryptionKey]
     )
     VALUES
     (
@@ -39,6 +39,6 @@ AS
         @Date,
         @ReportData,
         @CreationDate,
-        @ReportKey
+        @ContentEncryptionKey
     );
 GO

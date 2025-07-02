@@ -11,8 +11,15 @@ public partial class _20250626_00_AlterOrganizationReportsql : Migration
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.AddColumn<string>(
-            name: "ReportKey",
+            name: "ContentEncryptionKey",
             table: "OrganizationReport",
+            type: "text",
+            nullable: false,
+            defaultValue: "");
+
+        migrationBuilder.AddColumn<string>(
+            name: "ContentEncryptionKey",
+            table: "OrganizationApplication",
             type: "text",
             nullable: false,
             defaultValue: "");
@@ -22,7 +29,11 @@ public partial class _20250626_00_AlterOrganizationReportsql : Migration
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropColumn(
-            name: "ReportKey",
+            name: "ContentEncryptionKey",
             table: "OrganizationReport");
+
+        migrationBuilder.DropColumn(
+            name: "ContentEncryptionKey",
+            table: "OrganizationApplication");
     }
 }

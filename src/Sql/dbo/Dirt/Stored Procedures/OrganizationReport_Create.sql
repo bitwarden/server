@@ -4,7 +4,7 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Create]
     @Date DATETIME2(7),
     @ReportData NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @ReportKey VARCHAR(MAX)
+    @ContentEncryptionKey VARCHAR(MAX)
 AS
     SET NOCOUNT ON;
 
@@ -14,7 +14,7 @@ AS
         [Date],
         [ReportData],
         [CreationDate],
-        [ReportKey]
+        [ContentEncryptionKey]
     )
     VALUES (
         @Id,
@@ -22,5 +22,5 @@ AS
         @Date,
         @ReportData,
         @CreationDate,
-        @ReportKey
+        @ContentEncryptionKey
     );

@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations;
+namespace Bit.MySqlMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class _20250701_00_AlterOrganizationApplicationsql : Migration
@@ -10,19 +10,12 @@ public partial class _20250701_00_AlterOrganizationApplicationsql : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<string>(
-            name: "ReportKey",
-            table: "OrganizationApplication",
-            type: "TEXT",
-            nullable: false,
-            defaultValue: "");
+
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "ReportKey",
-            table: "OrganizationApplication");
+
     }
 }
