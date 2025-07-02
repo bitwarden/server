@@ -164,9 +164,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 from ou in dbContext.OrganizationUsers
                 join cu in dbContext.CollectionUsers
                     on ou.Id equals cu.OrganizationUserId
-                join c in dbContext.Collections
-                    on cu.CollectionId equals c.Id
-                where ou.Id == id && c.Type != CollectionType.DefaultUserCollection
+                where ou.Id == id
                 select cu).ToListAsync();
             var collections = query.Select(cu => new CollectionAccessSelection
             {
