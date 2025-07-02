@@ -1,6 +1,5 @@
 ﻿using AutoFixture;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
@@ -77,17 +76,13 @@ public class OrganizationCiphersQueryTests
             OrganizationUseTotp = false
         };
 
-        var collections = new[] {
-            new Collection { Id = defaultColId, OrganizationId = organizationId, Type = CollectionType.DefaultUserCollection },
-            new Collection { Id = otherColId,   OrganizationId = organizationId, Type = CollectionType.SharedCollection }
-        };
-
         var defaultItem = MakeWith(cipherDefault, defaultColId);
         var otherItem = MakeWith(cipherOther, otherColId);
 
+        // stub just the default‐ID lookup
         sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByOrganizationIdAsync(organizationId)
-            .Returns(collections);
+            .GetDefaultUserCollectionIdsByOrganizationIdAsync(organizationId)
+            .Returns(new[] { defaultColId });
 
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyOrganizationDetailsWithCollectionsByOrganizationIdAsync(organizationId)
@@ -100,7 +95,6 @@ public class OrganizationCiphersQueryTests
         Assert.Single(result);
         Assert.Equal(cipherOther.Id, result.Single().Id);
     }
-
 
     private CipherOrganizationDetailsWithCollections MakeWith(
         CipherOrganizationDetails baseCipher,

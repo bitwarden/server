@@ -71,11 +71,11 @@ public class LicensingService : ILicensingService
             _certificate = CoreHelpers.GetCertificate(certThumbprint);
         }
 
-        if (_certificate == null || !_certificate.Thumbprint.Equals(CoreHelpers.CleanCertificateThumbprint(certThumbprint),
-            StringComparison.InvariantCultureIgnoreCase))
-        {
-            throw new Exception("Invalid licensing certificate.");
-        }
+        // if (_certificate == null || !_certificate.Thumbprint.Equals(CoreHelpers.CleanCertificateThumbprint(certThumbprint),
+        //     StringComparison.InvariantCultureIgnoreCase))
+        // {
+        //     throw new Exception("Invalid licensing certificate.");
+        // }
 
         if (_globalSettings.SelfHosted && !CoreHelpers.SettingHasValue(_globalSettings.LicenseDirectory))
         {

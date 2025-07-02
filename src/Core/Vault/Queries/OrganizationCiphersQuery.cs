@@ -1,5 +1,4 @@
-﻿using Bit.Core.Enums;
-using Bit.Core.Repositories;
+﻿using Bit.Core.Repositories;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 
@@ -67,9 +66,7 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
         GetAllOrganizationCiphersExcludingDefaultUserCollections(Guid orgId)
     {
         var defaultCollIds = (await _collectionRepository
-                .GetManyByOrganizationIdAsync(orgId))
-            .Where(col => col.Type == CollectionType.DefaultUserCollection)
-            .Select(col => col.Id)
+                .GetDefaultUserCollectionIdsByOrganizationIdAsync(orgId))
             .ToHashSet();
 
         var all = await _cipherRepository
