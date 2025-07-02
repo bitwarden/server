@@ -28,6 +28,13 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// <param name="id">The id of the OrganizationUser</param>
     /// <returns>A tuple containing the OrganizationUser and its associated collections</returns>
     Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id);
+    /// <summary>
+    /// Returns the OrganizationUsers and their associated collections (excluding DefaultUserCollections).
+    /// </summary>
+    /// <param name="organizationId">The id of the organization</param>
+    /// <param name="includeGroups">Whether to include groups</param>
+    /// <param name="includeCollections">Whether to include collections</param>
+    /// <returns>A list of OrganizationUserUserDetails</returns>
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null);
