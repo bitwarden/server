@@ -223,14 +223,10 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
 
     public async Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount = 1)
     {
-        using var connection = new SqlConnection(ConnectionString);
+        await using var connection = new SqlConnection(ConnectionString);
 
-        const string sql = """
-                           UPDATE [dbo].[Organization]
-                           SET [Seats] = [Seats] + @IncreaseAmount
-                           WHERE Id = @OrganizationId
-                           """;
-
-        await connection.ExecuteAsync(sql, new { OrganizationId = organizationId, IncreaseAmount = increaseAmount });
+        await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
+            new { OrganizationId = organizationId, SeatsToAdd = increaseAmount },
+            commandType: CommandType.StoredProcedure);
     }
 }

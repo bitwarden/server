@@ -75,3 +75,16 @@ BEGIN
     WHERE [OrganizationId] IN (SELECT Id FROM @FailedOrgIds)
 END
 GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Organization_IncrementSeatCount]
+    @OrganizationId UNIQUEIDENTIFIER,
+    @SeatsToAdd INT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE [dbo].[Organization]
+    SET [Seats] = [Seats] + @SeatsToAdd
+    WHERE Id = @OrganizationId
+END
+GO

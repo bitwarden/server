@@ -18,7 +18,6 @@ public class OrganizationSubscriptionUpdateRepository(string connectionString, s
     {
     }
 
-
     public async Task SetToUpdateSubscriptionAsync(Guid organizationId, DateTime seatsUpdatedAt)
     {
         await using var connection = new SqlConnection(ConnectionString);

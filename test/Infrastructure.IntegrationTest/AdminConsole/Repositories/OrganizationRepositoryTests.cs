@@ -423,4 +423,17 @@ public class OrganizationRepositoryTests
         Assert.Equal(0, result.Sponsored);
         Assert.Equal(0, result.Total);
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task IncrementSeatCountAsync_IncrementsSeatCount(IOrganizationRepository organizationRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        organization.Seats = 5;
+        await organizationRepository.ReplaceAsync(organization);
+
+        await organizationRepository.IncrementSeatCountAsync(organization.Id, 3);
+
+        var result = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.Equal(8, result.Seats);
+    }
 }
