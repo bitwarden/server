@@ -1,40 +1,26 @@
 ﻿using Bit.Core.Models.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Platform.MailDelivery;
 
-public class SendGridMailDeliveryService : IMailDeliveryService, IDisposable
+public class SendGridMailDeliveryService : IMailDeliveryService
 {
     private readonly GlobalSettings _globalSettings;
-    private readonly IWebHostEnvironment _hostingEnvironment;
+    private readonly IHostEnvironment _hostEnvironment;
     private readonly ILogger<SendGridMailDeliveryService> _logger;
     private readonly ISendGridClient _client;
     private readonly string _senderTag;
     private readonly string _replyToEmail;
 
     public SendGridMailDeliveryService(
-        GlobalSettings globalSettings,
-        IWebHostEnvironment hostingEnvironment,
-        ILogger<SendGridMailDeliveryService> logger)
-        : this(new SendGridClient(globalSettings.Mail.SendGridApiKey, globalSettings.Mail.SendGridApiHost),
-             globalSettings, hostingEnvironment, logger)
-    {
-    }
-
-    public void Dispose()
-    {
-        // TODO: nothing to dispose
-    }
-
-    public SendGridMailDeliveryService(
         ISendGridClient client,
         GlobalSettings globalSettings,
-        IWebHostEnvironment hostingEnvironment,
+        IHostEnvironment hostEnvironment,
         ILogger<SendGridMailDeliveryService> logger)
     {
         if (string.IsNullOrWhiteSpace(globalSettings.Mail?.SendGridApiKey))
@@ -43,7 +29,7 @@ public class SendGridMailDeliveryService : IMailDeliveryService, IDisposable
         }
 
         _globalSettings = globalSettings;
-        _hostingEnvironment = hostingEnvironment;
+        _hostEnvironment = hostEnvironment;
         _logger = logger;
         _client = client;
         _senderTag = $"Server_{globalSettings.ProjectName?.Replace(' ', '_')}";
@@ -65,7 +51,7 @@ public class SendGridMailDeliveryService : IMailDeliveryService, IDisposable
         msg.AddContent(MimeType.Html, message.HtmlContent);
 
         msg.AddCategory($"type:{message.Category}");
-        msg.AddCategory($"env:{_hostingEnvironment.EnvironmentName}");
+        msg.AddCategory($"env:{_hostEnvironment.EnvironmentName}");
         msg.AddCategory($"sender:{_senderTag}");
 
         msg.SetClickTracking(false, false);

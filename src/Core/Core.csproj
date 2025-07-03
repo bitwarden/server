@@ -78,5 +78,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Infrastructure.IntegrationTest" />
+    <InternalsVisibleTo Include="Core.Test" />
+    <InternalsVisibleTo Include="Core.IntegrationTest" />
   </ItemGroup>
 </Project>

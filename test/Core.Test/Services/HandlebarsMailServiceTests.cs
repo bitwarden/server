@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Entities;
+using Bit.Core.Platform.MailDelivery;
 using Bit.Core.Platform.X509ChainCustomization;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -138,7 +139,12 @@ public class HandlebarsMailServiceTests
             SiteName = "Bitwarden",
         };
 
-        var mailDeliveryService = new MailKitSmtpMailDeliveryService(globalSettings, Substitute.For<ILogger<MailKitSmtpMailDeliveryService>>(), Options.Create(new X509ChainOptions()));
+        var mailDeliveryService = new MailKitSmtpMailDeliveryService(
+            globalSettings,
+            Substitute.For<ILogger<MailKitSmtpMailDeliveryService>>(),
+            Options.Create(new X509ChainOptions()),
+            Options.Create(new SmtpMailOptions())
+        );
 
         var handlebarsService = new HandlebarsMailService(globalSettings, mailDeliveryService, new BlockingMailEnqueuingService());
 
