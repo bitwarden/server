@@ -111,6 +111,7 @@ public static class FeatureFlagKeys
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
+    public const string MembersGetEndpointOptimization = "pm-21031-members-get-endpoint-optimization";
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
