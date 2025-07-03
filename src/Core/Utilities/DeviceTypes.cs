@@ -2,6 +2,8 @@
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public static class DeviceTypes
 {
     public static IReadOnlyCollection<DeviceType> MobileTypes { get; } =

@@ -3,6 +3,8 @@ using Bit.Core.SecretsManager.Models.Data;
 
 namespace Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
 
+#nullable enable
+
 public interface IServiceAccountSecretsDetailsQuery
 {
     public Task<IEnumerable<ServiceAccountSecretsDetails>> GetManyByOrganizationIdAsync(

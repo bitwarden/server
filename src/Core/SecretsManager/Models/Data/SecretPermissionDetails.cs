@@ -2,9 +2,11 @@
 
 namespace Bit.Core.SecretsManager.Models.Data;
 
+#nullable enable
+
 public class SecretPermissionDetails
 {
-    public Secret Secret { get; set; }
+    public required Secret Secret { get; set; }
     public bool Read { get; set; }
     public bool Write { get; set; }
 }

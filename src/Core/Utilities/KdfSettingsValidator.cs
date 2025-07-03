@@ -3,6 +3,8 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public static class KdfSettingsValidator
 {
     public static IEnumerable<ValidationResult> Validate(KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism)

@@ -2,18 +2,20 @@
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public static class AssemblyHelpers
 {
-    private static readonly IEnumerable<AssemblyMetadataAttribute> _assemblyMetadataAttributes;
+    private static readonly IEnumerable<AssemblyMetadataAttribute>? _assemblyMetadataAttributes;
     private static readonly AssemblyInformationalVersionAttribute _assemblyInformationalVersionAttributes;
     private const string GIT_HASH_ASSEMBLY_KEY = "GitHash";
-    private static string _version;
-    private static string _gitHash;
+    private static string? _version;
+    private static string? _gitHash;
 
     static AssemblyHelpers()
     {
-        _assemblyMetadataAttributes = Assembly.GetEntryAssembly().GetCustomAttributes<AssemblyMetadataAttribute>();
-        _assemblyInformationalVersionAttributes = Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        _assemblyMetadataAttributes = Assembly.GetEntryAssembly()!.GetCustomAttributes<AssemblyMetadataAttribute>();
+        _assemblyInformationalVersionAttributes = Assembly.GetEntryAssembly()!.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!;
     }
 
     public static string GetVersion()
@@ -26,13 +28,13 @@ public static class AssemblyHelpers
         return _version;
     }
 
-    public static string GetGitHash()
+    public static string? GetGitHash()
     {
         if (string.IsNullOrWhiteSpace(_gitHash))
         {
             try
             {
-                _gitHash = _assemblyMetadataAttributes.Where(i => i.Key == GIT_HASH_ASSEMBLY_KEY).First().Value;
+                _gitHash = _assemblyMetadataAttributes?.Where(i => i.Key == GIT_HASH_ASSEMBLY_KEY).First().Value;
             }
             catch (Exception)
             { }

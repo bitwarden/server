@@ -2,6 +2,8 @@
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public static class ModelStateExtensions
 {
     public static string GetErrorMessage(this ModelStateDictionary modelState)

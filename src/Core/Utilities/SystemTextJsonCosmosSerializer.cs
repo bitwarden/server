@@ -4,6 +4,8 @@ using Microsoft.Azure.Cosmos;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 // ref: https://github.com/Azure/azure-cosmos-dotnet-v3/blob/master/Microsoft.Azure.Cosmos.Samples/Usage/SystemTextJson/CosmosSystemTextJsonSerializer.cs
 public class SystemTextJsonCosmosSerializer : CosmosSerializer
 {
@@ -14,7 +16,7 @@ public class SystemTextJsonCosmosSerializer : CosmosSerializer
         _systemTextJsonSerializer = new JsonObjectSerializer(jsonSerializerOptions);
     }
 
-    public override T FromStream<T>(Stream stream)
+    public override T? FromStream<T>(Stream stream) where T : default
     {
         using (stream)
         {
@@ -26,7 +28,7 @@ public class SystemTextJsonCosmosSerializer : CosmosSerializer
             {
                 return (T)(object)stream;
             }
-            return (T)_systemTextJsonSerializer.Deserialize(stream, typeof(T), default);
+            return (T?)_systemTextJsonSerializer.Deserialize(stream, typeof(T), default);
         }
     }
 

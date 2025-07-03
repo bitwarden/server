@@ -3,6 +3,8 @@ using Microsoft.Extensions.Primitives;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public sealed class SecurityHeadersMiddleware
 {
     private readonly RequestDelegate _next;

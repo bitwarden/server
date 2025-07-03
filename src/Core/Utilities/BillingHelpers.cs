@@ -4,6 +4,8 @@ using Bit.Core.Services;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public static class BillingHelpers
 {
     internal static async Task<string> AdjustStorageAsync(IPaymentService paymentService, IStorableSubscriber storableSubscriber,

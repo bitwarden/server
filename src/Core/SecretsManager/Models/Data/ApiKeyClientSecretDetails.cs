@@ -2,8 +2,10 @@
 
 namespace Bit.Core.SecretsManager.Models.Data;
 
+#nullable enable
+
 public class ApiKeyClientSecretDetails
 {
-    public ApiKey ApiKey { get; set; }
-    public string ClientSecret { get; set; }
+    public required ApiKey ApiKey { get; set; }
+    public required string ClientSecret { get; set; }
 }

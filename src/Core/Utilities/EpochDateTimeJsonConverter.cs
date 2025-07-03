@@ -3,6 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public class EpochDateTimeJsonConverter : JsonConverter<DateTime>
 {
     public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

@@ -2,6 +2,8 @@
 
 namespace Bit.Core.SecretsManager.AuthorizationRequirements;
 
+#nullable enable
+
 public class ServiceAccountOperationRequirement : OperationAuthorizationRequirement
 {
 }

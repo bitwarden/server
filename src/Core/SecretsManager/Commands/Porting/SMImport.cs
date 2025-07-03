@@ -1,9 +1,11 @@
 ﻿namespace Bit.Core.SecretsManager.Commands.Porting;
 
+#nullable enable
+
 public class SMImport
 {
-    public IEnumerable<InnerProject> Projects { get; set; }
-    public IEnumerable<InnerSecret> Secrets { get; set; }
+    public IEnumerable<InnerProject>? Projects { get; set; }
+    public IEnumerable<InnerSecret>? Secrets { get; set; }
 
     public class InnerProject
     {
@@ -16,7 +18,7 @@ public class SMImport
         }
 
         public Guid Id { get; set; }
-        public string Name { get; set; }
+        public string? Name { get; set; }
     }
 
     public class InnerSecret
@@ -33,9 +35,9 @@ public class SMImport
         }
 
         public Guid Id { get; set; }
-        public string Key { get; set; }
-        public string Value { get; set; }
-        public string Note { get; set; }
-        public IEnumerable<Guid> ProjectIds { get; set; }
+        public string? Key { get; set; }
+        public string? Value { get; set; }
+        public string? Note { get; set; }
+        public IEnumerable<Guid>? ProjectIds { get; set; }
     }
 }
