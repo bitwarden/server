@@ -309,7 +309,8 @@ public class CiphersController : Controller
         {
             throw new NotFoundException();
         }
-        var allOrganizationCiphers = _featureService.IsEnabled(FeatureFlagKeys.ExcludeDefaultUserCollections)
+        var allOrganizationCiphers = true
+        // _featureService.IsEnabled(FeatureFlagKeys.ExcludeDefaultUserCollections)
         ?
             await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(organizationId)
         :

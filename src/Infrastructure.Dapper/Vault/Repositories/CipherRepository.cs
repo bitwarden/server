@@ -654,28 +654,45 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
     }
 
     public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
-        GetManyOrganizationDetailsWithCollectionsByOrganizationIdAsync(Guid orgId)
+        GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(Guid orgId)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
-        using var multi = await connection.QueryMultipleAsync(
-            $"[{Schema}].[CipherOrgDetailsWithCollections_ReadByOrganizationId]",
+        var dict = new Dictionary<Guid, CipherOrganizationDetailsWithCollections>();
+        var tempCollections = new Dictionary<Guid, List<Guid>>();
+
+        await connection.QueryAsync<CipherOrganizationDetailsWithCollections, CollectionCipher, CipherOrganizationDetailsWithCollections>(
+            $"[{Schema}].[CipherOrganizationDetails_ReadByOrganizationIdExcludingDefaultCollections]",
+            (cipher, cc) =>
+            {
+                if (!dict.TryGetValue(cipher.Id, out var details))
+                {
+                    details = new CipherOrganizationDetailsWithCollections(cipher, /*dummy*/null);
+                    dict.Add(cipher.Id, details);
+                    tempCollections[cipher.Id] = new List<Guid>();
+                }
+
+                if (cc?.CollectionId != null)
+                {
+                    var list = tempCollections[cipher.Id];
+                    if (!list.Contains(cc.CollectionId))
+                        list.Add(cc.CollectionId);
+                }
+
+                return details;
+            },
             new { OrganizationId = orgId },
-            commandType: CommandType.StoredProcedure);
+            splitOn: "CollectionId",
+            commandType: CommandType.StoredProcedure
+        );
 
-        var ciphers = (await multi
-            .ReadAsync<CipherOrganizationDetails>())
-            .ToList();
+        // now assign each List<Guid> back to the array property in one shot
+        foreach (var kv in dict)
+            kv.Value.CollectionIds = tempCollections[kv.Key].ToArray();
 
-        var ccGroups = (await multi
-            .ReadAsync<CollectionCipher>())
-            .GroupBy(cc => cc.CipherId)
-            .ToDictionary(g => g.Key, g => g);
-
-        return ciphers
-            .Select(c => new CipherOrganizationDetailsWithCollections(c, ccGroups))
-            .ToList();
+        return dict.Values.ToList();
     }
+
 
     private DataTable BuildCiphersTable(SqlBulkCopy bulkCopy, IEnumerable<Cipher> ciphers)
     {

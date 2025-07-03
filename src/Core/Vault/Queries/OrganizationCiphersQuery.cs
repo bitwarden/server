@@ -38,11 +38,13 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
     /// Returns all ciphers belonging to the organization.
     /// </summary>
     /// <param name="organizationId"></param>
-    public Task<IEnumerable<CipherOrganizationDetailsWithCollections>> GetAllOrganizationCiphers(Guid organizationId)
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>> GetAllOrganizationCiphers(Guid organizationId)
     {
-        // single call returns each cipher plus its .CollectionIds
-        return _cipherRepository
-            .GetManyOrganizationDetailsWithCollectionsByOrganizationIdAsync(organizationId);
+        var orgCiphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(organizationId);
+        var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
+        var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
+
+        return orgCiphers.Select(c => new CipherOrganizationDetailsWithCollections(c, collectionCiphersGroupDict));
     }
 
     /// <summary>
@@ -65,19 +67,6 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
     public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
         GetAllOrganizationCiphersExcludingDefaultUserCollections(Guid orgId)
     {
-        var defaultCollIds = (await _collectionRepository
-                .GetDefaultCollectionIdsByOrganizationIdAsync(orgId))
-            .ToHashSet();
-
-        var all = await _cipherRepository
-            .GetManyOrganizationDetailsWithCollectionsByOrganizationIdAsync(orgId);
-
-        return all
-            .Where(c =>
-                !c.CollectionIds.Any()
-                ||
-                c.CollectionIds.Any(id => !defaultCollIds.Contains(id))
-            )
-            .ToList();
+        return (await _cipherRepository.GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(orgId)).ToList();
     }
 }

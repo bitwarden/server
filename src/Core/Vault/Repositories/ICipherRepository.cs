@@ -70,10 +70,8 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
         IEnumerable<Cipher> ciphers);
 
     /// <summary>
-    /// Loads every CipherOrganizationDetails and its CollectionIds in one go.
+    /// Returns all ciphers belonging to the organization excluding those with default collections
     /// </summary>
     Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
-        GetManyOrganizationDetailsWithCollectionsByOrganizationIdAsync(Guid organizationId);
-
-
+    GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(Guid organizationId);
 }

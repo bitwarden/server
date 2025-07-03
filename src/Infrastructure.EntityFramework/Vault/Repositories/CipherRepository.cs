@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
@@ -966,36 +967,51 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
     }
 
     public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
-        GetManyOrganizationDetailsWithCollectionsByOrganizationIdAsync(Guid orgId)
+        GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(Guid organizationId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var baseList = await new CipherOrganizationDetailsReadByOrganizationIdQuery(orgId)
-            .Run(dbContext)
-            .ToListAsync();
+        var defaultTypeInt = (int)CollectionType.DefaultUserCollection;
 
-        var efCcs = await dbContext.CollectionCiphers
-            .Where(cc => cc.Collection.OrganizationId == orgId)
-            .ToListAsync();
+        // 1) filter out any cipher that belongs *only* to default collections
+        //    i.e. keep ciphers with no collections, or with ≥1 non-default collection
+        var query = from c in dbContext.Ciphers.AsNoTracking()
+                    where c.UserId == null
+                       && c.OrganizationId == organizationId
+                       && (
+                            !c.CollectionCiphers.Any()
+                            || c.CollectionCiphers.Any(cc => (int)cc.Collection.Type != defaultTypeInt)
+                          )
+                    select new CipherOrganizationDetailsWithCollections(
+                        new CipherOrganizationDetails
+                        {
+                            Id = c.Id,
+                            UserId = c.UserId,
+                            OrganizationId = c.OrganizationId,
+                            Type = c.Type,
+                            Data = c.Data,
+                            Attachments = c.Attachments,
+                            CreationDate = c.CreationDate,
+                            RevisionDate = c.RevisionDate,
+                            DeletedDate = c.DeletedDate,
+                            Reprompt = c.Reprompt,
+                            Key = c.Key,
+                            OrganizationUseTotp = c.Organization.UseTotp
+                        },
+                        new Dictionary<Guid, IGrouping<Guid, Bit.Core.Entities.CollectionCipher>>()
+                    )
+                    {
+                        // populate your CollectionIds array in one shot
+                        CollectionIds = c.CollectionCiphers
+                            .Where(cc => (int)cc.Collection.Type != defaultTypeInt)
+                            .Select(cc => cc.CollectionId)
+                            .ToArray()
+                    };
 
-        var coreCcs = efCcs
-            .Select(e => new Core.Entities.CollectionCipher
-            {
-                CipherId = e.CipherId,
-                CollectionId = e.CollectionId
-            });
-
-        var ccGroups = coreCcs
-            .GroupBy(cc => cc.CipherId)
-            .ToDictionary(g => g.Key, g => g);
-
-        return baseList
-            .Select(c => new CipherOrganizationDetailsWithCollections(c, ccGroups))
-            .ToList();
+        var result = await query.ToListAsync();
+        return result;
     }
-
-
 
     public async Task UpsertAsync(CipherDetails cipher)
     {

@@ -19,6 +19,7 @@ public class OrganizationCiphersQueryTests
         Guid organizationId, SutProvider<OrganizationCiphersQuery> sutProvider)
     {
         var fixture = new Fixture();
+
         var otherCollectionId = Guid.NewGuid();
         var targetCollectionId = Guid.NewGuid();
 
@@ -27,73 +28,97 @@ public class OrganizationCiphersQueryTests
         var bothCipher = fixture.Create<CipherOrganizationDetails>();
         var noCipher = fixture.Create<CipherOrganizationDetails>();
 
-        foreach (var c in new[] { otherCipher, targetCipher, bothCipher, noCipher })
+        var ciphers = new List<CipherOrganizationDetails>
+        {
+            otherCipher,    // not in the target collection
+            targetCipher,   // in the target collection
+            bothCipher,     // in both collections
+            noCipher        // not in any collection
+        };
+        ciphers.ForEach(c =>
         {
             c.OrganizationId = organizationId;
             c.UserId = null;
-        }
+        });
 
-        var otherItem = MakeWith(otherCipher);
-        var targetItem = MakeWith(targetCipher, targetCollectionId);
-        var bothItem = MakeWith(bothCipher, targetCollectionId, otherCollectionId);
-        var noItem = MakeWith(noCipher);
+        var otherCollectionCipher = new CollectionCipher
+        {
+            CollectionId = otherCollectionId,
+            CipherId = otherCipher.Id
+        };
+        var targetCollectionCipher = new CollectionCipher
+        {
+            CollectionId = targetCollectionId,
+            CipherId = targetCipher.Id
+        };
+        var bothCollectionCipher1 = new CollectionCipher
+        {
+            CollectionId = targetCollectionId,
+            CipherId = bothCipher.Id
+        };
+        var bothCollectionCipher2 = new CollectionCipher
+        {
+            CollectionId = otherCollectionId,
+            CipherId = bothCipher.Id
+        };
 
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetManyOrganizationDetailsWithCollectionsByOrganizationIdAsync(organizationId)
-            .Returns(new[] { otherItem, targetItem, bothItem, noItem });
+        sutProvider.GetDependency<ICipherRepository>().GetManyOrganizationDetailsByOrganizationIdAsync(organizationId)
+            .Returns(ciphers);
 
-        var result = (await sutProvider.Sut
-            .GetOrganizationCiphersByCollectionIds(organizationId, new[] { targetCollectionId }))
-            .ToList();
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByOrganizationIdAsync(organizationId).Returns(
+        [
+            targetCollectionCipher,
+            otherCollectionCipher,
+            bothCollectionCipher1,
+            bothCollectionCipher2
+        ]);
 
-        Assert.Equal(2, result.Count);
+        var result = await sutProvider
+            .Sut
+            .GetOrganizationCiphersByCollectionIds(organizationId, [targetCollectionId]);
+        result = result.ToList();
+
+        Assert.Equal(2, result.Count());
         Assert.Contains(result, c =>
             c.Id == targetCipher.Id &&
-            c.CollectionIds.SequenceEqual(new[] { targetCollectionId }));
+            c.CollectionIds.Count() == 1 &&
+            c.CollectionIds.Any(cId => cId == targetCollectionId));
         Assert.Contains(result, c =>
             c.Id == bothCipher.Id &&
-            c.CollectionIds.OrderBy(x => x).SequenceEqual(
-                new[] { otherCollectionId, targetCollectionId }.OrderBy(x => x)));
+            c.CollectionIds.Count() == 2 &&
+            c.CollectionIds.Any(cId => cId == targetCollectionId) &&
+            c.CollectionIds.Any(cId => cId == otherCollectionId));
     }
 
+
     [Theory, BitAutoData]
-    public async Task GetAllOrganizationCiphersExcludingDefaultUserCollections_ExcludesCiphersInDefaultCollections(
-        Guid organizationId, SutProvider<OrganizationCiphersQuery> sutProvider)
+    public async Task GetAllOrganizationCiphersExcludingDefaultUserCollections_DelegatesToRepository(
+         Guid organizationId,
+         SutProvider<OrganizationCiphersQuery> sutProvider)
     {
-        var defaultColId = Guid.NewGuid();
-        var otherColId = Guid.NewGuid();
+        var item1 = new CipherOrganizationDetailsWithCollections(
+            new CipherOrganizationDetails { Id = Guid.NewGuid(), OrganizationId = organizationId },
+            new Dictionary<Guid, IGrouping<Guid, CollectionCipher>>());
+        var item2 = new CipherOrganizationDetailsWithCollections(
+            new CipherOrganizationDetails { Id = Guid.NewGuid(), OrganizationId = organizationId },
+            new Dictionary<Guid, IGrouping<Guid, CollectionCipher>>());
 
-        var cipherDefault = new CipherOrganizationDetails
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organizationId,
-            OrganizationUseTotp = false
-        };
-        var cipherOther = new CipherOrganizationDetails
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organizationId,
-            OrganizationUseTotp = false
-        };
+        var repo = sutProvider.GetDependency<ICipherRepository>();
+        repo.GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(organizationId)
+            .Returns(Task.FromResult<IEnumerable<CipherOrganizationDetailsWithCollections>>(
+                new[] { item1, item2 }));
 
-        var defaultItem = MakeWith(cipherDefault, defaultColId);
-        var otherItem = MakeWith(cipherOther, otherColId);
-
-        // stub just the default‐ID lookup
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetDefaultCollectionIdsByOrganizationIdAsync(organizationId)
-            .Returns(new[] { defaultColId });
-
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetManyOrganizationDetailsWithCollectionsByOrganizationIdAsync(organizationId)
-            .Returns(new[] { defaultItem, otherItem });
-
-        var result = (await sutProvider.Sut
+        var actual = (await sutProvider.Sut
             .GetAllOrganizationCiphersExcludingDefaultUserCollections(organizationId))
             .ToList();
 
-        Assert.Single(result);
-        Assert.Equal(cipherOther.Id, result.Single().Id);
+        Assert.Equal(2, actual.Count);
+        Assert.Same(item1, actual[0]);
+        Assert.Same(item2, actual[1]);
+
+        // and we indeed called the repo once
+        await repo.Received(1)
+            .GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(organizationId);
     }
 
     private CipherOrganizationDetailsWithCollections MakeWith(
