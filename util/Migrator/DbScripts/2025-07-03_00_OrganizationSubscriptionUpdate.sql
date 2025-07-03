@@ -28,7 +28,7 @@ BEGIN
             [dbo].[OrganizationSubscriptionUpdate]
         SET
             [SeatsLastUpdated] = @SeatsLastUpdated,
-            [SyncAttempts] = 1
+            [SyncAttempts] = 0
         WHERE
             [OrganizationId] = @OrganizationId
     ELSE
@@ -84,6 +84,6 @@ BEGIN
 
     UPDATE [dbo].[Organization]
     SET [Seats] = [Seats] + @SeatsToAdd
-    WHERE Id = @OrganizationId
+    WHERE [Id] = @OrganizationId
 END
 GO
