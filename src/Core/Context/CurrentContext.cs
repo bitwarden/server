@@ -32,6 +32,7 @@ public class CurrentContext : ICurrentContext
     public virtual string IpAddress { get; set; }
     public virtual string CountryName { get; set; }
     public virtual List<CurrentContextOrganization> Organizations { get; set; }
+    public virtual List<CurrentContextOrganization> OrganizationsConfirmedOrAccepted { get; set; }
     public virtual List<CurrentContextProvider> Providers { get; set; }
     public virtual Guid? InstallationId { get; set; }
     public virtual Guid? OrganizationId { get; set; }
@@ -479,6 +480,22 @@ public class CurrentContext : ICurrentContext
                 .Select(ou => new CurrentContextOrganization(ou)).ToList();
         }
         return Organizations;
+    }
+
+    public async Task<ICollection<CurrentContextOrganization>> OrganizationAcceptedOrConfirmedAsync(
+        IOrganizationUserRepository organizationUserRepository, Guid userId)
+    {
+        if (OrganizationsConfirmedOrAccepted == null)
+        {
+            // If we haven't had our user id set, take the one passed in since we are about to get information
+            // for them anyways.
+            UserId ??= userId;
+
+            var userOrgs = await organizationUserRepository.GetManyDetailsByUserAsync(userId);
+            OrganizationsConfirmedOrAccepted = userOrgs.Where(ou => ou.Status == OrganizationUserStatusType.Confirmed || ou.Status == OrganizationUserStatusType.Accepted)
+                .Select(ou => new CurrentContextOrganization(ou)).ToList();
+        }
+        return OrganizationsConfirmedOrAccepted;
     }
 
     public async Task<ICollection<CurrentContextProvider>> ProviderMembershipAsync(

@@ -4,7 +4,6 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -32,9 +31,16 @@ public class PolicyService : IPolicyService
         _globalSettings = globalSettings;
     }
 
-    public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
+    // Reuse this in the policies controller
+    public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(
+        Guid userId,
+        bool getConfirmedOrAccepted = false)
     {
-        var policies = (await _policyRepository.GetManyByUserIdAsync(user.Id))
+        var policies = getConfirmedOrAccepted ?
+            (await _policyRepository.GetManyAcceptedOrConfirmedByUserIdAsync(userId))
+            .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
+            .ToList()
+            : (await _policyRepository.GetManyByUserIdAsync(userId))
             .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
             .ToList();
 
