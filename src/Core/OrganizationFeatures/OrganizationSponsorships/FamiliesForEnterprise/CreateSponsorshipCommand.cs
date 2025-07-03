@@ -16,7 +16,7 @@ public class CreateSponsorshipCommand(
     IOrganizationSponsorshipRepository organizationSponsorshipRepository,
     IUserService userService,
     IOrganizationService organizationService,
-    IOrganizationUserRepository organizationUserRepository) : ICreateSponsorshipCommand
+    IOrganizationRepository organizationRepository) : ICreateSponsorshipCommand
 {
     public async Task<OrganizationSponsorship> CreateSponsorshipAsync(
         Organization sponsoringOrganization,
@@ -89,8 +89,8 @@ public class CreateSponsorshipCommand(
 
         if (isAdminInitiated && sponsoringOrganization.Seats.HasValue)
         {
-            var occupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrganization.Id);
-            var availableSeats = sponsoringOrganization.Seats.Value - occupiedSeats;
+            var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrganization.Id);
+            var availableSeats = sponsoringOrganization.Seats.Value - seatCounts.Total;
 
             if (availableSeats <= 0)
             {

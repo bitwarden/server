@@ -350,14 +350,6 @@ jobs:
           cd docker-stub/US; zip -r ../../docker-stub-US.zip *; cd ../..
           cd docker-stub/EU; zip -r ../../docker-stub-EU.zip *; cd ../..
 
-      - name: Make Docker stub checksums
-        if: |
-          github.event_name != 'pull_request'
-          && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
-        run: |
-          sha256sum docker-stub-US.zip > docker-stub-US-sha256.txt
-          sha256sum docker-stub-EU.zip > docker-stub-EU-sha256.txt
-
       - name: Upload Docker stub US artifact
         if: |
           github.event_name != 'pull_request'
@@ -376,26 +368,6 @@ jobs:
         with:
           name: docker-stub-EU.zip
           path: docker-stub-EU.zip
-          if-no-files-found: error
-
-      - name: Upload Docker stub US checksum artifact
-        if: |
-          github.event_name != 'pull_request'
-          && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-        with:
-          name: docker-stub-US-sha256.txt
-          path: docker-stub-US-sha256.txt
-          if-no-files-found: error
-
-      - name: Upload Docker stub EU checksum artifact
-        if: |
-          github.event_name != 'pull_request'
-          && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-        with:
-          name: docker-stub-EU-sha256.txt
-          path: docker-stub-EU-sha256.txt
           if-no-files-found: error
 
       - name: Build Public API Swagger
@@ -598,7 +570,7 @@ jobs:
     uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
     with:
       project: server
-      pull_request_number: ${{ github.event.number }}
+      pull_request_number: ${{ github.event.number || 0 }}
     secrets: inherit
     permissions: read-all
 

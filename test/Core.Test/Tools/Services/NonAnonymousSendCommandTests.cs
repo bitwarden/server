@@ -10,10 +10,10 @@ using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
-using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Tools.SendFeatures.Commands;
 using Bit.Core.Tools.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
@@ -35,6 +35,8 @@ public class NonAnonymousSendCommandTests
     private readonly ISendCoreHelperService _sendCoreHelperService;
     private readonly NonAnonymousSendCommand _nonAnonymousSendCommand;
 
+    private readonly ILogger<NonAnonymousSendCommand> _logger;
+
     public NonAnonymousSendCommandTests()
     {
         _sendRepository = Substitute.For<ISendRepository>();
@@ -45,6 +47,7 @@ public class NonAnonymousSendCommandTests
         _sendValidationService = Substitute.For<ISendValidationService>();
         _currentContext = Substitute.For<ICurrentContext>();
         _sendCoreHelperService = Substitute.For<ISendCoreHelperService>();
+        _logger = Substitute.For<ILogger<NonAnonymousSendCommand>>();
 
         _nonAnonymousSendCommand = new NonAnonymousSendCommand(
             _sendRepository,
@@ -52,7 +55,8 @@ public class NonAnonymousSendCommandTests
             _pushNotificationService,
             _sendAuthorizationService,
             _sendValidationService,
-            _sendCoreHelperService
+            _sendCoreHelperService,
+            _logger
         );
     }
 
@@ -652,11 +656,11 @@ public class NonAnonymousSendCommandTests
             UserId = userId
         };
         var fileData = new SendFileData();
-        var fileLength = 15L * 1024L * 1024L * 1024L; // 15GB
+        var fileLength = 15L * 1024L * 1024L; // 15 MB
 
-        // Configure validation service to return large but insufficient storage (10GB for self-hosted non-premium)
+        // Configure validation service to return insufficient storage
         _sendValidationService.StorageRemainingForSendAsync(send)
-            .Returns(10L * 1024L * 1024L * 1024L); // 10GB remaining (self-hosted default)
+            .Returns(10L * 1024L * 1024L); // 10 MB remaining
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -687,11 +691,40 @@ public class NonAnonymousSendCommandTests
             UserId = userId
         };
         var fileData = new SendFileData();
-        var fileLength = 2L * 1024L * 1024L * 1024L; // 2GB
+        var fileLength = 2L * 1024L * 1024L * 1024L; // 2MB
 
-        // Configure validation service to return 1GB storage (cloud non-premium default)
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
+
+        Assert.Contains("Max file size is ", exception.Message);
+
+        // Verify no further methods were called
+        await _sendValidationService.DidNotReceive().StorageRemainingForSendAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_UserCanAccessPremium_IsNotPremium_IsNotSelfHosted_NotEnoughSpace_ThrowsBadRequest()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = userId
+        };
+        var fileData = new SendFileData();
+        var fileLength = 2L * 1024L * 1024L; // 2MB
+
+        // Configure validation service to return 1 MB storage remaining
         _sendValidationService.StorageRemainingForSendAsync(send)
-            .Returns(1L * 1024L * 1024L * 1024L); // 1GB remaining (cloud default)
+            .Returns(1L * 1024L * 1024L);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -756,7 +789,7 @@ public class NonAnonymousSendCommandTests
             UserId = null
         };
         var fileData = new SendFileData();
-        var fileLength = 2L * 1024L * 1024L * 1024L; // 2GB
+        var fileLength = 2L * 1024L * 1024L; // 2 MB
 
         // Configure validation service to throw BadRequest when checking storage for org without storage
         _sendValidationService.StorageRemainingForSendAsync(send)
@@ -792,11 +825,10 @@ public class NonAnonymousSendCommandTests
             UserId = null
         };
         var fileData = new SendFileData();
-        var fileLength = 2L * 1024L * 1024L * 1024L; // 2GB
+        var fileLength = 2L * 1024L * 1024L; // 2 MB
 
-        // Configure validation service to return 1GB storage (org's max storage limit)
         _sendValidationService.StorageRemainingForSendAsync(send)
-            .Returns(1L * 1024L * 1024L * 1024L); // 1GB remaining
+            .Returns(1L * 1024L * 1024L); // 1 MB remaining
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -980,7 +1012,7 @@ public class NonAnonymousSendCommandTests
         };
 
         // Setup validation to succeed
-        _sendFileStorageService.ValidateFileAsync(send, sendFileData.Id, sendFileData.Size, SendFileSettingHelper.FILE_SIZE_LEEWAY).Returns((true, sendFileData.Size));
+        _sendFileStorageService.ValidateFileAsync(send, sendFileData.Id, Arg.Any<long>(), Arg.Any<long>()).Returns((true, sendFileData.Size));
 
         // Act
         await _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send);
@@ -1014,7 +1046,7 @@ public class NonAnonymousSendCommandTests
             Data = JsonSerializer.Serialize(sendFileData)
         };
 
-        _sendFileStorageService.ValidateFileAsync(send, sendFileData.Id, sendFileData.Size, SendFileSettingHelper.FILE_SIZE_LEEWAY).Returns((true, sendFileData.Size));
+        _sendFileStorageService.ValidateFileAsync(send, sendFileData.Id, Arg.Any<long>(), Arg.Any<long>()).Returns((true, sendFileData.Size));
 
         // Act
         await _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send);

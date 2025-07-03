@@ -1,4 +1,7 @@
-﻿using Bit.Core.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -15,9 +18,10 @@ public interface IConfirmOrganizationUserCommand
     /// <param name="organizationUserId">The ID of the organization user to confirm.</param>
     /// <param name="key">The encrypted organization key for the user.</param>
     /// <param name="confirmingUserId">The ID of the user performing the confirmation.</param>
+    /// <param name="defaultUserCollectionName">Optional encrypted collection name for creating a default collection.</param>
     /// <returns>The confirmed organization user.</returns>
     /// <exception cref="BadRequestException">Thrown when the user is not valid or cannot be confirmed.</exception>
-    Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key, Guid confirmingUserId);
+    Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key, Guid confirmingUserId, string defaultUserCollectionName = null);
 
     /// <summary>
     /// Confirms multiple organization users who have accepted their invitations.

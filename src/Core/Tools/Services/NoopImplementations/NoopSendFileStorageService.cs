@@ -37,8 +37,8 @@ public class NoopSendFileStorageService : ISendFileStorageService
         return Task.FromResult((string)null);
     }
 
-    public Task<(bool, long?)> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
+    public Task<(bool, long)> ValidateFileAsync(Send send, string fileId, long minimum, long maximum)
     {
-        return Task.FromResult((false, default(long?)));
+        return Task.FromResult((false, -1L));
     }
 }
