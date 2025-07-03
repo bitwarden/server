@@ -7,7 +7,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public static class CreateOrganizationUserExtensions
 {
-    public static CreateOrganizationUser MapToDataModel(this OrganizationUserInvite organizationUserInvite,
+    public static CreateOrganizationUser MapToDataModel(this OrganizationUserInviteCommandModel organizationUserInvite,
         DateTimeOffset performedAt,
         InviteOrganization organization) =>
         new()
