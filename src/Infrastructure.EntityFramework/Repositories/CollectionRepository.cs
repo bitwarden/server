@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
@@ -695,17 +694,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             await dbContext.UserBumpAccountRevisionDateByCollectionIdsAsync(collectionIdsList, organizationId);
             await dbContext.SaveChangesAsync();
         }
-    }
-
-    public async Task<IEnumerable<Guid>> GetDefaultCollectionIdsByOrganizationIdAsync(Guid organizationId)
-    {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-
-        return await dbContext.Collections
-            .Where(c => c.OrganizationId == organizationId && c.Type == CollectionType.DefaultUserCollection)
-            .Select(c => c.Id)
-            .ToListAsync();
     }
 
     private static async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups)

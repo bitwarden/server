@@ -309,16 +309,6 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task<IEnumerable<Guid>> GetDefaultCollectionIdsByOrganizationIdAsync(Guid organizationId)
-    {
-        await using var conn = new SqlConnection(ConnectionString);
-        var ids = await conn.QueryAsync<Guid>(
-            $"[{Schema}].[Collection_DefaultIds_ReadByOrganizationId]",
-            new { OrganizationId = organizationId },
-            commandType: CommandType.StoredProcedure);
-        return ids;
-    }
-
     public class CollectionWithGroupsAndUsers : Collection
     {
         [DisallowNull]

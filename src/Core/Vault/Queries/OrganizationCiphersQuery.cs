@@ -8,13 +8,11 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
 {
     private readonly ICipherRepository _cipherRepository;
     private readonly ICollectionCipherRepository _collectionCipherRepository;
-    private readonly ICollectionRepository _collectionRepository;
 
-    public OrganizationCiphersQuery(ICipherRepository cipherRepository, ICollectionCipherRepository collectionCipherRepository, ICollectionRepository collectionRepository)
+    public OrganizationCiphersQuery(ICipherRepository cipherRepository, ICollectionCipherRepository collectionCipherRepository)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
-        _collectionRepository = collectionRepository;
     }
 
     /// <summary>
