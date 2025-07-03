@@ -53,6 +53,8 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
         }
     }
 
+    public Task<OrganizationPolicyDetails> GetOrganizationPolicyDetailsByOrgId(Guid orgId, PolicyType policyType) => throw new NotImplementedException();
+
     public async Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserId(Guid userId)
     {
         using var scope = ServiceScopeFactory.CreateScope();

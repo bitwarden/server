@@ -31,4 +31,6 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     /// You probably do not want to call it directly.
     /// </remarks>
     Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserId(Guid userId);
+
+    Task<OrganizationPolicyDetails> GetOrganizationPolicyDetailsByOrgId(Guid orgId, PolicyType policyType);
 }
