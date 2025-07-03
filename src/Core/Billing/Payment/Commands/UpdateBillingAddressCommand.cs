@@ -1,0 +1,129 @@
+﻿#nullable enable
+using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Entities;
+using Bit.Core.Services;
+using Microsoft.Extensions.Logging;
+using Stripe;
+
+namespace Bit.Core.Billing.Payment.Commands;
+
+public interface IUpdateBillingAddressCommand
+{
+    Task<BillingCommandResult<BillingAddress>> Run(
+        ISubscriber subscriber,
+        BillingAddress billingAddress);
+}
+
+public class UpdateBillingAddressCommand(
+    ILogger<UpdateBillingAddressCommand> logger,
+    IStripeAdapter stripeAdapter) : BillingCommand<UpdateBillingAddressCommand>(logger), IUpdateBillingAddressCommand
+{
+    public Task<BillingCommandResult<BillingAddress>> Run(
+        ISubscriber subscriber,
+        BillingAddress billingAddress) => HandleAsync(() => subscriber.GetProductUsageType() switch
+    {
+        ProductUsageType.Personal => UpdatePersonalBillingAddressAsync(subscriber, billingAddress),
+        ProductUsageType.Business => UpdateBusinessBillingAddressAsync(subscriber, billingAddress)
+    });
+
+    private async Task<BillingCommandResult<BillingAddress>> UpdatePersonalBillingAddressAsync(
+        ISubscriber subscriber,
+        BillingAddress billingAddress)
+    {
+        var customer =
+            await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
+                new CustomerUpdateOptions
+                {
+                    Address = new AddressOptions
+                    {
+                        Country = billingAddress.Country,
+                        PostalCode = billingAddress.PostalCode,
+                        Line1 = billingAddress.Line1,
+                        Line2 = billingAddress.Line2,
+                        City = billingAddress.City,
+                        State = billingAddress.State
+                    },
+                    Expand = ["subscriptions"]
+                });
+
+        await EnableAutomaticTaxAsync(subscriber, customer);
+
+        return BillingAddress.From(customer.Address);
+    }
+
+    private async Task<BillingCommandResult<BillingAddress>> UpdateBusinessBillingAddressAsync(
+        ISubscriber subscriber,
+        BillingAddress billingAddress)
+    {
+        var customer =
+            await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
+                new CustomerUpdateOptions
+                {
+                    Address = new AddressOptions
+                    {
+                        Country = billingAddress.Country,
+                        PostalCode = billingAddress.PostalCode,
+                        Line1 = billingAddress.Line1,
+                        Line2 = billingAddress.Line2,
+                        City = billingAddress.City,
+                        State = billingAddress.State
+                    },
+                    Expand = ["subscriptions", "tax_ids"],
+                    TaxExempt = billingAddress.Country != "US"
+                        ? StripeConstants.TaxExempt.Reverse
+                        : StripeConstants.TaxExempt.None
+                });
+
+        await EnableAutomaticTaxAsync(subscriber, customer);
+
+        var deleteExistingTaxIds = customer.TaxIds?.Any() ?? false
+            ? customer.TaxIds.Select(taxId => stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id)).ToList()
+            : [];
+
+        if (billingAddress.TaxId == null)
+        {
+            await Task.WhenAll(deleteExistingTaxIds);
+            return BillingAddress.From(customer.Address);
+        }
+
+        var updatedTaxId = await stripeAdapter.TaxIdCreateAsync(customer.Id,
+            new TaxIdCreateOptions { Type = billingAddress.TaxId.Code, Value = billingAddress.TaxId.Value });
+
+        if (billingAddress.TaxId.Code == StripeConstants.TaxIdType.SpanishNIF)
+        {
+            updatedTaxId = await stripeAdapter.TaxIdCreateAsync(customer.Id,
+                new TaxIdCreateOptions
+                {
+                    Type = StripeConstants.TaxIdType.EUVAT,
+                    Value = $"ES{billingAddress.TaxId.Value}"
+                });
+        }
+
+        await Task.WhenAll(deleteExistingTaxIds);
+
+        return BillingAddress.From(customer.Address, updatedTaxId);
+    }
+
+    private async Task EnableAutomaticTaxAsync(
+        ISubscriber subscriber,
+        Customer customer)
+    {
+        if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+        {
+            var subscription = customer.Subscriptions.FirstOrDefault(subscription =>
+                subscription.Id == subscriber.GatewaySubscriptionId);
+
+            if (subscription is { AutomaticTax.Enabled: false })
+            {
+                await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
+                    new SubscriptionUpdateOptions
+                    {
+                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+                    });
+            }
+        }
+    }
+}
