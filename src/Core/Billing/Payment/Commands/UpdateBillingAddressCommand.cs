@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
@@ -97,7 +97,8 @@ public class UpdateBillingAddressCommand(
             updatedTaxId = await stripeAdapter.TaxIdCreateAsync(customer.Id,
                 new TaxIdCreateOptions
                 {
-                    Type = StripeConstants.TaxIdType.EUVAT, Value = $"ES{billingAddress.TaxId.Value}"
+                    Type = StripeConstants.TaxIdType.EUVAT,
+                    Value = $"ES{billingAddress.TaxId.Value}"
                 });
         }
 

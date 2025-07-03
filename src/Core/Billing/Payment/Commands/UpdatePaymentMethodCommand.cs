@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
@@ -32,7 +32,7 @@ public class UpdatePaymentMethodCommand(
     ISubscriberService subscriberService) : BillingCommand<UpdatePaymentMethodCommand>(logger), IUpdatePaymentMethodCommand
 {
     private readonly ILogger<UpdatePaymentMethodCommand> _logger = logger;
-    private static readonly Conflict _conflict = new ("We had a problem updating your payment method. Please contact support for assistance.");
+    private static readonly Conflict _conflict = new("We had a problem updating your payment method. Please contact support for assistance.");
 
     public Task<BillingCommandResult<MaskedPaymentMethod>> Run(
         ISubscriber subscriber,
@@ -56,7 +56,8 @@ public class UpdatePaymentMethodCommand(
                 {
                     Address = new AddressOptions
                     {
-                        Country = billingAddress.Country, PostalCode = billingAddress.PostalCode
+                        Country = billingAddress.Country,
+                        PostalCode = billingAddress.PostalCode
                     }
                 });
         }

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Billing.Payment.Models;
 using Xunit;
 
@@ -11,7 +11,9 @@ public class MaskedPaymentMethodTests
     {
         MaskedPaymentMethod input = new MaskedBankAccount
         {
-            BankName = "Chase", Last4 = "9999", Verified = true
+            BankName = "Chase",
+            Last4 = "9999",
+            Verified = true
         };
 
         var json = JsonSerializer.Serialize(input);

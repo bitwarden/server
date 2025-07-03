@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 namespace Bit.Core.Billing.Payment.Models;
 
 public record TokenizedPaymentMethod

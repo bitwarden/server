@@ -1,4 +1,4 @@
-namespace Bit.Core.Billing.Payment.Models;
+﻿namespace Bit.Core.Billing.Payment.Models;
 
 public enum ProductUsageType
 {

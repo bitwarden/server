@@ -1,4 +1,4 @@
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
 using BitPayLight;
 using BitPayLight.Models.Invoice;
 
@@ -13,7 +13,7 @@ public interface IBitPayClient
 public class BitPayClient(
     GlobalSettings globalSettings) : IBitPayClient
 {
-    private readonly BitPay _bitPay = new (
+    private readonly BitPay _bitPay = new(
         globalSettings.BitPay.Token, globalSettings.BitPay.Production ? Env.Prod : Env.Test);
 
     public Task<Invoice> GetInvoice(string invoiceId)

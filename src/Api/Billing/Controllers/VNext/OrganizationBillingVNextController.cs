@@ -1,4 +1,4 @@
-using Bit.Api.Billing.Models.Requests.Payment;
+﻿using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;

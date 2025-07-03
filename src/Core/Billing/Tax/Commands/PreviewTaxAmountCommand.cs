@@ -36,7 +36,8 @@ public class PreviewTaxAmountCommand(
                 {
                     Address = new AddressOptions
                     {
-                        Country = taxInformation.Country, PostalCode = taxInformation.PostalCode
+                        Country = taxInformation.Country,
+                        PostalCode = taxInformation.PostalCode
                     }
                 },
                 SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
@@ -58,7 +59,8 @@ public class PreviewTaxAmountCommand(
             {
                 options.SubscriptionDetails.Items.Add(new InvoiceSubscriptionDetailsItemOptions
                 {
-                    Price = plan.SecretsManager.StripeSeatPlanId, Quantity = 1
+                    Price = plan.SecretsManager.StripeSeatPlanId,
+                    Quantity = 1
                 });
 
                 options.Coupon = StripeConstants.CouponIDs.SecretsManagerStandalone;
@@ -85,7 +87,8 @@ public class PreviewTaxAmountCommand(
                 {
                     options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
                     {
-                        Type = StripeConstants.TaxIdType.EUVAT, Value = $"ES{parameters.TaxInformation.TaxId}"
+                        Type = StripeConstants.TaxIdType.EUVAT,
+                        Value = $"ES{parameters.TaxInformation.TaxId}"
                     });
                 }
             }

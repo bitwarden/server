@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Commands;
@@ -49,11 +49,11 @@ public class CreateBitPayInvoiceForCreditCommand(
 
     private static (string? Name, string? Email, string POSData) GetSubscriberInformation(
         ISubscriber subscriber) => subscriber switch
-    {
-        User user => (user.Email, user.Email, $"userId:{user.Id},accountCredit:1"),
-        Organization organization => (organization.Name, organization.BillingEmail,
-            $"organizationId:{organization.Id},accountCredit:1"),
-        Provider provider => (provider.Name, provider.BillingEmail, $"providerId:{provider.Id},accountCredit:1"),
-        _ => throw new ArgumentOutOfRangeException(nameof(subscriber))
-    };
+        {
+            User user => (user.Email, user.Email, $"userId:{user.Id},accountCredit:1"),
+            Organization organization => (organization.Name, organization.BillingEmail,
+                $"organizationId:{organization.Id},accountCredit:1"),
+            Provider provider => (provider.Name, provider.BillingEmail, $"providerId:{provider.Id},accountCredit:1"),
+            _ => throw new ArgumentOutOfRangeException(nameof(subscriber))
+        };
 }

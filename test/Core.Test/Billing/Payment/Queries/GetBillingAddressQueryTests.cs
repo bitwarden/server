@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Models;
@@ -200,5 +200,5 @@ public class GetBillingAddressQueryTests
         State = "NY"
     };
 
-    private static TaxId GetTaxId() => new () { Type = "us_ein", Value = "123456789" };
+    private static TaxId GetTaxId() => new() { Type = "us_ein", Value = "123456789" };
 }

@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Bit.Core.Billing.Pricing.JSON;
@@ -47,12 +47,16 @@ public class MaskedPaymentMethod(OneOf<MaskedBankAccount, MaskedCard, MaskedPayP
 
     public static MaskedPaymentMethod From(Card card) => new MaskedCard
     {
-        Brand = card.Brand.ToLower(), Last4 = card.Last4, Expiration = $"{card.ExpMonth:00}/{card.ExpYear}"
+        Brand = card.Brand.ToLower(),
+        Last4 = card.Last4,
+        Expiration = $"{card.ExpMonth:00}/{card.ExpYear}"
     };
 
     public static MaskedPaymentMethod From(PaymentMethodCard card) => new MaskedCard
     {
-        Brand = card.Brand.ToLower(), Last4 = card.Last4, Expiration = $"{card.ExpMonth:00}/{card.ExpYear}"
+        Brand = card.Brand.ToLower(),
+        Last4 = card.Last4,
+        Expiration = $"{card.ExpMonth:00}/{card.ExpYear}"
     };
 
     public static MaskedPaymentMethod From(SetupIntent setupIntent) => new MaskedBankAccount
@@ -64,7 +68,9 @@ public class MaskedPaymentMethod(OneOf<MaskedBankAccount, MaskedCard, MaskedPayP
 
     public static MaskedPaymentMethod From(SourceCard sourceCard) => new MaskedCard
     {
-        Brand = sourceCard.Brand.ToLower(), Last4 = sourceCard.Last4, Expiration = $"{sourceCard.ExpMonth:00}/{sourceCard.ExpYear}"
+        Brand = sourceCard.Brand.ToLower(),
+        Last4 = sourceCard.Last4,
+        Expiration = $"{sourceCard.ExpMonth:00}/{sourceCard.ExpYear}"
     };
 
     public static MaskedPaymentMethod From(PaymentMethodUsBankAccount bankAccount) => new MaskedBankAccount

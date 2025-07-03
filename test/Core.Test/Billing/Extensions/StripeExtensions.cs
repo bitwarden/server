@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Payment.Models;
+﻿using Bit.Core.Billing.Payment.Models;
 using Stripe;
 
 namespace Bit.Core.Test.Billing.Extensions;

@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Payment.Queries;
+﻿using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using NSubstitute;

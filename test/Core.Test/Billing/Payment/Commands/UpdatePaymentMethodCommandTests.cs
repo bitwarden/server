@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Commands;
@@ -338,7 +338,7 @@ public class UpdatePaymentMethodCommandTests
         await paymentMethodGateway.Received(1).DeleteAsync(existing.Token);
     }
 
-     [Fact]
+    [Fact]
     public async Task Run_PayPal_NewBraintreeCustomer_MakesCorrectInvocations_ReturnsMaskedPayPalAccount()
     {
         var organization = new Organization

@@ -1,4 +1,4 @@
-using Bit.Api.Billing.Models.Requests.Payment;
+﻿using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;

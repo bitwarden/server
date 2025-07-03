@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Commands;
@@ -32,7 +32,9 @@ public class UpdateBillingAddressCommandTests
     {
         var organization = new Organization
         {
-            PlanType = PlanType.FamiliesAnnually, GatewayCustomerId = "cus_123", GatewaySubscriptionId = "sub_123"
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
         };
 
         var input = new BillingAddress
@@ -89,7 +91,9 @@ public class UpdateBillingAddressCommandTests
     {
         var organization = new Organization
         {
-            PlanType = PlanType.EnterpriseAnnually, GatewayCustomerId = "cus_123", GatewaySubscriptionId = "sub_123"
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
         };
 
         var input = new BillingAddress
@@ -147,7 +151,9 @@ public class UpdateBillingAddressCommandTests
     {
         var organization = new Organization
         {
-            PlanType = PlanType.EnterpriseAnnually, GatewayCustomerId = "cus_123", GatewaySubscriptionId = "sub_123"
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
         };
 
         var input = new BillingAddress
@@ -215,7 +221,9 @@ public class UpdateBillingAddressCommandTests
     {
         var organization = new Organization
         {
-            PlanType = PlanType.EnterpriseAnnually, GatewayCustomerId = "cus_123", GatewaySubscriptionId = "sub_123"
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
         };
 
         var input = new BillingAddress
@@ -273,7 +281,9 @@ public class UpdateBillingAddressCommandTests
     {
         var organization = new Organization
         {
-            PlanType = PlanType.EnterpriseAnnually, GatewayCustomerId = "cus_123", GatewaySubscriptionId = "sub_123"
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
         };
 
         var input = new BillingAddress
