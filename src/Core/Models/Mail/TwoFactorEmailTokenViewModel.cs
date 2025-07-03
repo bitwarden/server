@@ -22,4 +22,9 @@ public class TwoFactorEmailTokenViewModel : BaseMailModel
     public string TimeZone { get; set; }
     public string DeviceIp { get; set; }
     public string DeviceType { get; set; }
+    /// <summary>
+    /// Depending on the context, we may want to show a reminder to the user that they should enable two factor authentication.
+    /// This is not relevant when the user is using the email to verify setting up 2FA, so we hide it in that case.
+    /// </summary>
+    public bool DisplayTwoFactorReminder { get; set; }
 }
