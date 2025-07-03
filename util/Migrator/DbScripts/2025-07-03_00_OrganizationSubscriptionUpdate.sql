@@ -33,7 +33,7 @@ BEGIN
             [OrganizationId] = @OrganizationId
     ELSE
         INSERT INTO [dbo].[OrganizationSubscriptionUpdate] (Id, OrganizationId, SeatsLastUpdated, SyncAttempts)
-        VALUES (NEWID(), @OrganizationId, @SeatsLastUpdated, 1)
+        VALUES (NEWID(), @OrganizationId, @SeatsLastUpdated, 0)
 END
 GO
 
