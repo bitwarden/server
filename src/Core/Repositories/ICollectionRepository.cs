@@ -21,7 +21,7 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task<ICollection<Collection>> GetManyByOrganizationIdAsync(Guid organizationId);
 
     /// <summary>
-    /// Return all collections that belong to the organization. Includes group/user access relationships for each collection.
+    /// Return all shared collections that belong to the organization. Includes group/user access relationships for each collection.
     /// </summary>
     Task<ICollection<Tuple<Collection, CollectionAccessDetails>>> GetManyByOrganizationIdWithAccessAsync(Guid organizationId);
 
