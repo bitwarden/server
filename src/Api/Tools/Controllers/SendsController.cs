@@ -7,7 +7,6 @@ using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
@@ -31,7 +30,6 @@ public class SendsController : Controller
     private readonly IAnonymousSendCommand _anonymousSendCommand;
     private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
     private readonly ILogger<SendsController> _logger;
-    private readonly GlobalSettings _globalSettings;
 
     public SendsController(
         ISendRepository sendRepository,
@@ -40,8 +38,7 @@ public class SendsController : Controller
         IAnonymousSendCommand anonymousSendCommand,
         INonAnonymousSendCommand nonAnonymousSendCommand,
         ISendFileStorageService sendFileStorageService,
-        ILogger<SendsController> logger,
-        GlobalSettings globalSettings)
+        ILogger<SendsController> logger)
     {
         _sendRepository = sendRepository;
         _userService = userService;
@@ -50,7 +47,6 @@ public class SendsController : Controller
         _nonAnonymousSendCommand = nonAnonymousSendCommand;
         _sendFileStorageService = sendFileStorageService;
         _logger = logger;
-        _globalSettings = globalSettings;
     }
 
     #region Anonymous endpoints
@@ -83,7 +79,7 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        var sendResponse = new SendAccessResponseModel(send, _globalSettings);
+        var sendResponse = new SendAccessResponseModel(send);
         if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
         {
             var creator = await _userService.GetUserByIdAsync(send.UserId.Value);
@@ -185,7 +181,7 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        return new SendResponseModel(send, _globalSettings);
+        return new SendResponseModel(send);
     }
 
     [HttpGet("")]
@@ -193,7 +189,7 @@ public class SendsController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var sends = await _sendRepository.GetManyByUserIdAsync(userId);
-        var responses = sends.Select(s => new SendResponseModel(s, _globalSettings));
+        var responses = sends.Select(s => new SendResponseModel(s));
         return new ListResponseModel<SendResponseModel>(responses);
     }
 
@@ -204,7 +200,7 @@ public class SendsController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var send = model.ToSend(userId, _sendAuthorizationService);
         await _nonAnonymousSendCommand.SaveSendAsync(send);
-        return new SendResponseModel(send, _globalSettings);
+        return new SendResponseModel(send);
     }
 
     [HttpPost("file/v2")]
@@ -233,7 +229,7 @@ public class SendsController : Controller
         {
             Url = uploadUrl,
             FileUploadType = _sendFileStorageService.FileUploadType,
-            SendResponse = new SendResponseModel(send, _globalSettings)
+            SendResponse = new SendResponseModel(send)
         };
     }
 
@@ -257,7 +253,7 @@ public class SendsController : Controller
         {
             Url = await _sendFileStorageService.GetSendFileUploadUrlAsync(send, fileId),
             FileUploadType = _sendFileStorageService.FileUploadType,
-            SendResponse = new SendResponseModel(send, _globalSettings),
+            SendResponse = new SendResponseModel(send),
         };
     }
 
@@ -291,7 +287,7 @@ public class SendsController : Controller
         }
 
         await _nonAnonymousSendCommand.SaveSendAsync(model.ToSend(send, _sendAuthorizationService));
-        return new SendResponseModel(send, _globalSettings);
+        return new SendResponseModel(send);
     }
 
     [HttpPut("{id}/remove-password")]
@@ -306,7 +302,7 @@ public class SendsController : Controller
 
         send.Password = null;
         await _nonAnonymousSendCommand.SaveSendAsync(send);
-        return new SendResponseModel(send, _globalSettings);
+        return new SendResponseModel(send);
     }
 
     [HttpDelete("{id}")]

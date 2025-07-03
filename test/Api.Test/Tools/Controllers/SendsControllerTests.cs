@@ -51,8 +51,7 @@ public class SendsControllerTests : IDisposable
             _anonymousSendCommand,
             _nonAnonymousSendCommand,
             _sendFileStorageService,
-            _logger,
-            _globalSettings
+            _logger
         );
     }
 
