@@ -35,7 +35,7 @@ public static class PolicyTypeExtensions
             PolicyType.PasswordGenerator => "Password generator",
             PolicyType.SingleOrg => "Single organization",
             PolicyType.RequireSso => "Require single sign-on authentication",
-            PolicyType.OrganizationDataOwnership => "Enforce organization data ownership",
+            PolicyType.OrganizationDataOwnership => "Remove individual vault",
             PolicyType.DisableSend => "Remove Send",
             PolicyType.SendOptions => "Send options",
             PolicyType.ResetPassword => "Account recovery administration",
