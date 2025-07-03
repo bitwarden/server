@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommandDotNet" Version="7.0.4" />
+    <PackageReference Include="CommandDotNet" Version="8.1.1" />
   </ItemGroup>
 
 </Project>
