@@ -2,6 +2,7 @@
 
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
@@ -40,7 +41,7 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
         }
 
         var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
-        var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception) &&
+        var canUse = license.CanUse(_globalSettings, claimsPrincipal, out var exception) &&
             selfHostedOrganization.CanUseLicense(license, out exception);
 
         if (!canUse)

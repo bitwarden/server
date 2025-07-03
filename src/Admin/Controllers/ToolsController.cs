@@ -5,6 +5,7 @@ using Bit.Admin.Models;
 using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
@@ -25,6 +26,7 @@ public class ToolsController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
+    private readonly IGetUserLicenseQuery _getUserLicenseQuery;
     private readonly IUserService _userService;
     private readonly ITransactionRepository _transactionRepository;
     private readonly IInstallationRepository _installationRepository;
@@ -38,6 +40,7 @@ public class ToolsController : Controller
         GlobalSettings globalSettings,
         IOrganizationRepository organizationRepository,
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
+        IGetUserLicenseQuery getUserLicenseQuery,
         IUserService userService,
         ITransactionRepository transactionRepository,
         IInstallationRepository installationRepository,
@@ -50,6 +53,7 @@ public class ToolsController : Controller
         _globalSettings = globalSettings;
         _organizationRepository = organizationRepository;
         _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
+        _getUserLicenseQuery = getUserLicenseQuery;
         _userService = userService;
         _transactionRepository = transactionRepository;
         _installationRepository = installationRepository;
@@ -326,7 +330,7 @@ public class ToolsController : Controller
         }
         else if (user != null)
         {
-            var license = await _userService.GenerateLicenseAsync(user, null, model.Version);
+            var license = await _getUserLicenseQuery.GetLicenseAsync(user, null, model.Version);
             var ms = new MemoryStream();
             ms.Seek(0, SeekOrigin.Begin);
             await JsonSerializer.SerializeAsync(ms, license, JsonHelpers.Indented);
