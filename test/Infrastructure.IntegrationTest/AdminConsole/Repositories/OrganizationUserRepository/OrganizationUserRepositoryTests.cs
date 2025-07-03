@@ -579,6 +579,17 @@ public class OrganizationUserRepositoryTests
             RevisionDate = requestTime
         });
 
+        // Create a default user collection that should be excluded from admin results
+        var defaultCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            Name = "My Items",
+            Type = CollectionType.DefaultUserCollection,
+            CreationDate = requestTime,
+            RevisionDate = requestTime
+        });
+
         var group1 = await groupRepository.CreateAsync(new Group
         {
             Id = CoreHelpers.GenerateComb(),
@@ -625,6 +636,13 @@ public class OrganizationUserRepositoryTests
                         ReadOnly = true,
                         HidePasswords = false,
                         Manage = false
+                    },
+                    new CollectionAccessSelection
+                    {
+                        Id = defaultCollection.Id,
+                        ReadOnly = false,
+                        HidePasswords = false,
+                        Manage = true
                     }
                 ],
                 Groups = [group1.Id]
@@ -686,7 +704,11 @@ public class OrganizationUserRepositoryTests
         var orgUser1 = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUserCollection[0].OrganizationUser.Id);
         var group1Database = await groupRepository.GetManyIdsByUserIdAsync(orgUserCollection[0].OrganizationUser.Id);
         Assert.Equal(orgUserCollection[0].OrganizationUser.Id, orgUser1.OrganizationUser.Id);
+
+        // Should only return the regular collection, not the default collection (even though both were assigned)
+        Assert.Single(orgUser1.Collections);
         Assert.Equal(collection1.Id, orgUser1.Collections.First().Id);
+        Assert.DoesNotContain(orgUser1.Collections, c => c.Id == defaultCollection.Id);
         Assert.Equal(group1.Id, group1Database.First());
 
 
