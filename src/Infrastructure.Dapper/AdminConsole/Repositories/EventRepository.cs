@@ -41,8 +41,31 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             }, startDate, endDate, pageOptions);
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(Guid organizationId, Guid actingUserId,
+    // TODO implement this properly
+    public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Guid secretId, Guid organizationId,
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        return await GetManyAsync($"[{Schema}].[Event_TODO]",
+                  new Dictionary<string, object?>
+                  {
+                      ["@SecretId"] = secretId
+                  }, startDate, endDate, pageOptions);
+
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Guid projectId, Guid organizationId,
+      DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        return await GetManyAsync($"[{Schema}].[Event_TODO]",
+                  new Dictionary<string, object?>
+                  {
+                      ["@ProjectId"] = projectId
+                  }, startDate, endDate, pageOptions);
+
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(Guid organizationId, Guid actingUserId,
+    DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         return await GetManyAsync($"[{Schema}].[Event_ReadPageByOrganizationIdActingUserId]",
             new Dictionary<string, object?>

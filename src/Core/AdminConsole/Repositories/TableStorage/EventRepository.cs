@@ -34,6 +34,22 @@ public class EventRepository : IEventRepository
         return await GetManyAsync($"OrganizationId={organizationId}", "Date={0}", startDate, endDate, pageOptions);
     }
 
+    public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Guid secretId, Guid organizationId,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        var s = await GetManyAsync($"OrganizationId={organizationId}",
+            $"SecretId={secretId}__Date={{0}}", startDate, endDate, pageOptions);
+        return s;
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Guid projectId, Guid organizationId,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        var s = await GetManyAsync($"OrganizationId={organizationId}",
+            $"ProjectId={projectId}__Date={{0}}", startDate, endDate, pageOptions);
+        return s;
+    }
+
     public async Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(Guid organizationId, Guid actingUserId,
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {

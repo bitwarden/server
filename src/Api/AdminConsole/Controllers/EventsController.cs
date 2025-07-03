@@ -5,6 +5,7 @@ using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
@@ -22,6 +23,8 @@ public class EventsController : Controller
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IEventRepository _eventRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly ISecretRepository _secretRepository;
+    private readonly IProjectRepository _projectRepository;
 
     public EventsController(
         IUserService userService,
@@ -29,7 +32,9 @@ public class EventsController : Controller
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
         IEventRepository eventRepository,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ISecretRepository secretRepository,
+        IProjectRepository projectRepository)
     {
         _userService = userService;
         _cipherRepository = cipherRepository;
@@ -37,6 +42,8 @@ public class EventsController : Controller
         _providerUserRepository = providerUserRepository;
         _eventRepository = eventRepository;
         _currentContext = currentContext;
+        _secretRepository = secretRepository;
+        _projectRepository = projectRepository;
     }
 
     [HttpGet("")]
@@ -96,6 +103,44 @@ public class EventsController : Controller
 
         var dateRange = ApiHelpers.GetDateRange(start, end);
         var result = await _eventRepository.GetManyByOrganizationAsync(orgId, dateRange.Item1, dateRange.Item2,
+            new PageOptions { ContinuationToken = continuationToken });
+        var responses = result.Data.Select(e => new EventResponseModel(e));
+        return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
+    }
+
+    [HttpGet("~/secrets/{id}/events")]
+    public async Task<ListResponseModel<EventResponseModel>> GetSecrets(string id,
+        [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
+    {
+        var secret = await _secretRepository.GetByIdAsync(new Guid(id));
+        var orgId = secret?.OrganizationId;
+
+        if (secret is null || !await _currentContext.AccessEventLogs((Guid)orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var dateRange = ApiHelpers.GetDateRange(start, end);
+        var result = await _eventRepository.GetManyBySecretAsync(new Guid(id), (Guid)orgId, dateRange.Item1, dateRange.Item2,
+            new PageOptions { ContinuationToken = continuationToken });
+        var responses = result.Data.Select(e => new EventResponseModel(e));
+        return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
+    }
+
+    [HttpGet("~/projects/{id}/events")]
+    public async Task<ListResponseModel<EventResponseModel>> GetProjects(string id,
+        [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
+    {
+        var project = await _projectRepository.GetByIdAsync(new Guid(id));
+        var orgId = project?.OrganizationId;
+
+        if (project is null || !await _currentContext.AccessEventLogs((Guid)orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var dateRange = ApiHelpers.GetDateRange(start, end);
+        var result = await _eventRepository.GetManyByProjectAsync(new Guid(id), (Guid)orgId, dateRange.Item1, dateRange.Item2,
             new PageOptions { ContinuationToken = continuationToken });
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);

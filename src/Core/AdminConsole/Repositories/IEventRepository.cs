@@ -11,6 +11,13 @@ public interface IEventRepository
         PageOptions pageOptions);
     Task<PagedResult<IEvent>> GetManyByOrganizationAsync(Guid organizationId, DateTime startDate, DateTime endDate,
         PageOptions pageOptions);
+
+    Task<PagedResult<IEvent>> GetManyBySecretAsync(Guid secretId, Guid organizationId, DateTime startDate, DateTime endDate,
+        PageOptions pageOptions);
+
+    Task<PagedResult<IEvent>> GetManyByProjectAsync(Guid projectId, Guid organizationId, DateTime startDate, DateTime endDate,
+        PageOptions pageOptions);
+
     Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(Guid organizationId, Guid actingUserId,
         DateTime startDate, DateTime endDate, PageOptions pageOptions);
     Task<PagedResult<IEvent>> GetManyByProviderAsync(Guid providerId, DateTime startDate, DateTime endDate,

@@ -69,6 +69,24 @@ public class ProjectsController : Controller
         return new ListResponseModel<ProjectResponseModel>(responses);
     }
 
+    [HttpGet("organizations/{organizationId}/all-projects")]
+    public async Task<ListResponseModel<ProjectResponseModel>> ListByOrganizationAsyncIncludingDeleted([FromRoute] Guid organizationId)
+    {
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
+
+        var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient, true);
+
+        var responses = projects.Select(project => new ProjectResponseModel(project));
+        return new ListResponseModel<ProjectResponseModel>(responses);
+    }
+
     [HttpPost("organizations/{organizationId}/projects")]
     public async Task<ProjectResponseModel> CreateAsync([FromRoute] Guid organizationId,
         [FromBody] ProjectCreateRequestModel createRequest)
@@ -92,7 +110,7 @@ public class ProjectsController : Controller
 
         if (result != null)
         {
-            await LogProjectEventAsync(project, EventType.Project_Edited);
+            await LogProjectEventAsync(project, EventType.Project_Created);
         }
 
         // Creating a project means you have read & write permission.
