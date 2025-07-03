@@ -291,6 +291,49 @@ graph TD
     C1 -->|Can contain| C2[IntegrationFilterGroup...]
 ```
 
+## Caching
+
+To reduce database load and improve performance, integration configurations are cached in-memory during event
+processing. Without caching, each incoming `EventMessage` would trigger a database query to retrieve the
+relevant `OrganizationIntegrationConfigurationDetails`, followed by JSON deserialization of both the
+configuration object and the optional filters. This repeated work becomes costly under high-throughput conditions.
+
+The caching system is centered around the `IntegrationConfigurationDetailsCache`. It uses `IMemoryCache` to store
+configuration details keyed by the organization id, integration type and event type.
+
+### What is cached
+
+Each cache entry is a deserialized list of `CachedIntegrationConfigurationDetails<T>` which include:
+
+- The deserialized configuration (`T`).
+- The deserialized IntegrationFilterGroup (if any).
+- The integration template string.
+
+If the relevant configuration set is not already cached, it is fetched using the
+`IOrganizationIntegrationConfigurationRepository`, deserialized, validated, and stored in the cache. This avoids
+both repeated deserialization of JSON strings and expensive round-trips to the database.
+
+### Expiration strategy
+
+The cache employs two expiration values to manage how long items stay in memory:
+
+- **Absolute expiration** caps the maximum lifetime of a cache entry, regardless of usage.
+    - Configurable via `GlobalSettings.EventLogging.CacheAbsoluteExpiration`.
+    - Default: 60 minutes.
+- **Sliding expiration** keeps active entries alive as long as they continue to be accessed.
+    - Configurable via `GlobalSettings.EventLogging.CacheSlidingExpiration`.
+    - Default: 10 minutes.
+
+There are also two methods for forcibly evicting entries from the cache (i.e. when configuration changes and
+we want to pick up new values immediately):
+
+- `RemoveCacheEntry`
+    - Removes a single configuration entry for a specific organization, integration type, and event type.
+    - Use this when only one `OrganizationIntegrationConfiguration` has changed.
+- `RemoveCacheEntriesForIntegration`
+    - Removes all cached entries for a specific organization and integration type across all event types.
+    - Use this when the entire `OrganizationIntegration` has been removed or updated.
+
 # Building a new integration
 
 These are all the pieces required in the process of building out a new integration. For

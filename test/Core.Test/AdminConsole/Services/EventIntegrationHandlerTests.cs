@@ -1,10 +1,8 @@
-﻿using System.Text.Json;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -30,14 +28,14 @@ public class EventIntegrationHandlerTests
         Substitute.For<ILogger<EventIntegrationHandler<WebhookIntegrationConfigurationDetails>>>();
 
     private SutProvider<EventIntegrationHandler<WebhookIntegrationConfigurationDetails>> GetSutProvider(
-        List<OrganizationIntegrationConfigurationDetails> configurations)
+        List<CachedIntegrationConfigurationDetails<WebhookIntegrationConfigurationDetails>> configurations)
     {
-        var configurationRepository = Substitute.For<IOrganizationIntegrationConfigurationRepository>();
-        configurationRepository.GetConfigurationDetailsAsync(Arg.Any<Guid>(),
+        var detailsCache = Substitute.For<IIntegrationConfigurationDetailsCache>();
+        detailsCache.GetOrAddAsync<WebhookIntegrationConfigurationDetails>(Arg.Any<Guid>(),
             IntegrationType.Webhook, Arg.Any<EventType>()).Returns(configurations);
 
         return new SutProvider<EventIntegrationHandler<WebhookIntegrationConfigurationDetails>>()
-            .SetDependency(configurationRepository)
+            .SetDependency(detailsCache)
             .SetDependency(_eventIntegrationPublisher)
             .SetDependency(IntegrationType.Webhook)
             .SetDependency(_logger)
@@ -57,53 +55,49 @@ public class EventIntegrationHandlerTests
         };
     }
 
-    private static List<OrganizationIntegrationConfigurationDetails> NoConfigurations()
+    private static List<CachedIntegrationConfigurationDetails<WebhookIntegrationConfigurationDetails>> NoConfigurations()
     {
         return [];
     }
 
-    private static List<OrganizationIntegrationConfigurationDetails> OneConfiguration(string template)
+    private static List<CachedIntegrationConfigurationDetails<WebhookIntegrationConfigurationDetails>> OneConfiguration(string template)
     {
-        var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
-        config.Configuration = null;
-        config.IntegrationConfiguration = JsonSerializer.Serialize(new { Uri = _uri });
-        config.Template = template;
+        var config = new CachedIntegrationConfigurationDetails<WebhookIntegrationConfigurationDetails>()
+        {
+            Configuration = new WebhookIntegrationConfigurationDetails(Uri: _uri),
+            FilterGroup = null,
+            Template = template
+        };
 
         return [config];
     }
 
-    private static List<OrganizationIntegrationConfigurationDetails> TwoConfigurations(string template)
+    private static List<CachedIntegrationConfigurationDetails<WebhookIntegrationConfigurationDetails>> TwoConfigurations(string template)
     {
-        var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
-        config.Configuration = null;
-        config.IntegrationConfiguration = JsonSerializer.Serialize(new { Uri = _uri });
-        config.Template = template;
-        var config2 = Substitute.For<OrganizationIntegrationConfigurationDetails>();
-        config2.Configuration = null;
-        config2.IntegrationConfiguration = JsonSerializer.Serialize(new { Uri = _uri2 });
-        config2.Template = template;
+        var config = new CachedIntegrationConfigurationDetails<WebhookIntegrationConfigurationDetails>()
+        {
+            Configuration = new WebhookIntegrationConfigurationDetails(Uri: _uri),
+            FilterGroup = null,
+            Template = template
+        };
+        var config2 = new CachedIntegrationConfigurationDetails<WebhookIntegrationConfigurationDetails>()
+        {
+            Configuration = new WebhookIntegrationConfigurationDetails(Uri: _uri2),
+            FilterGroup = null,
+            Template = template
+        };
 
         return [config, config2];
     }
 
-    private static List<OrganizationIntegrationConfigurationDetails> InvalidFilterConfiguration()
+    private static List<CachedIntegrationConfigurationDetails<WebhookIntegrationConfigurationDetails>> ValidFilterConfiguration()
     {
-        var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
-        config.Configuration = null;
-        config.IntegrationConfiguration = JsonSerializer.Serialize(new { Uri = _uri });
-        config.Template = _templateBase;
-        config.Filters = "Invalid Configuration!";
-
-        return [config];
-    }
-
-    private static List<OrganizationIntegrationConfigurationDetails> ValidFilterConfiguration()
-    {
-        var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
-        config.Configuration = null;
-        config.IntegrationConfiguration = JsonSerializer.Serialize(new { Uri = _uri });
-        config.Template = _templateBase;
-        config.Filters = JsonSerializer.Serialize(new IntegrationFilterGroup() { });
+        var config = new CachedIntegrationConfigurationDetails<WebhookIntegrationConfigurationDetails>()
+        {
+            Configuration = new WebhookIntegrationConfigurationDetails(Uri: _uri),
+            FilterGroup = new IntegrationFilterGroup(),
+            Template = _templateBase
+        };
 
         return [config];
     }
@@ -245,21 +239,6 @@ public class EventIntegrationHandlerTests
         Assert.Single(_eventIntegrationPublisher.ReceivedCalls());
         await _eventIntegrationPublisher.Received(1).PublishAsync(Arg.Is(
             AssertHelper.AssertPropertyEqual(expectedMessage, new[] { "MessageId" })));
-    }
-
-    [Theory, BitAutoData]
-    public async Task HandleEventAsync_InvalidFilter_LogsErrorDoesNothing(EventMessage eventMessage)
-    {
-        var sutProvider = GetSutProvider(InvalidFilterConfiguration());
-
-        await sutProvider.Sut.HandleEventAsync(eventMessage);
-        Assert.Empty(_eventIntegrationPublisher.ReceivedCalls());
-        _logger.Received(1).Log(
-            LogLevel.Error,
-            Arg.Any<EventId>(),
-            Arg.Any<object>(),
-            Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
     }
 
     [Theory, BitAutoData]
