@@ -1,4 +1,7 @@
-﻿namespace Bit.Core.Models.Mail;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Core.Models.Mail;
 
 /// <summary>
 /// This view model is used to set-up email two factor authentication, to log in with email two factor authentication,
