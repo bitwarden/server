@@ -93,7 +93,7 @@ public abstract class PushTestBase
     protected abstract JsonNode GetPushNotificationStatusResponsePayload(Notification notification, NotificationStatus notificationStatus, Guid? userId, Guid? organizationId);
     protected abstract JsonNode GetPushSyncOrganizationStatusResponsePayload(Organization organization);
     protected abstract JsonNode GetPushSyncOrganizationCollectionManagementSettingsResponsePayload(Organization organization);
-    protected abstract JsonNode GetPushPendingSecurityTasksResponsePayload(Guid userId);
+    protected abstract JsonNode GetPushRefreshSecurityTasksResponsePayload(Guid userId);
 
     [Fact]
     public async Task PushSyncCipherCreateAsync_SendsExpectedResponse()
@@ -444,13 +444,13 @@ public abstract class PushTestBase
     }
 
     [Fact]
-    public async Task PushPendingSecurityTasksAsync_SendsExpectedResponse()
+    public async Task PushRefreshSecurityTasksAsync_SendsExpectedResponse()
     {
         var userId = Guid.NewGuid();
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushPendingSecurityTasksAsync(userId),
-            GetPushPendingSecurityTasksResponsePayload(userId)
+            async sut => await sut.PushRefreshSecurityTasksAsync(userId),
+            GetPushRefreshSecurityTasksResponsePayload(userId)
         );
     }
 
