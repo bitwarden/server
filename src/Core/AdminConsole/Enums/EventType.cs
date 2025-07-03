@@ -93,4 +93,9 @@ public enum EventType : int
     Secret_Created = 2101,
     Secret_Edited = 2102,
     Secret_Deleted = 2103,
+
+    Project_Retrieved = 2200,
+    Project_Created = 2201,
+    Project_Edited = 2202,
+    Project_Deleted = 2203,
 }

@@ -23,5 +23,6 @@ public interface IEvent
     EventSystemUser? SystemUser { get; set; }
     string DomainName { get; set; }
     Guid? SecretId { get; set; }
+    Guid? ProjectId { get; set; }
     Guid? ServiceAccountId { get; set; }
 }
