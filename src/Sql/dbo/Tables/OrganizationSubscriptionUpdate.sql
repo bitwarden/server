@@ -6,6 +6,7 @@ CREATE TABLE [dbo].[OrganizationSubscriptionUpdate] (
     CONSTRAINT [PK_OrganizationSubscriptionUpdate] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationSubscriptionUpdate_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
 )
+GO
 
 CREATE NONCLUSTERED INDEX [IX_OrganizationSubscriptionUpdate_SeatsLastUpdated]
     ON [dbo].[OrganizationSubscriptionUpdate]([SeatsLastUpdated] ASC)
