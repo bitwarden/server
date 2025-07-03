@@ -109,7 +109,6 @@ public static class FeatureFlagKeys
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
-    public const string OptimizeNestedTraverseTypescript = "pm-21695-optimize-nested-traverse-typescript";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
 
@@ -194,7 +193,6 @@ public static class FeatureFlagKeys
     public const string IpcChannelFramework = "ipc-channel-framework";
 
     /* Tools Team */
-    public const string ItemShare = "item-share";
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
 
     /* Vault Team */
@@ -208,6 +206,7 @@ public static class FeatureFlagKeys
     public const string PhishingDetection = "phishing-detection";
     public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
+    public const string PM19315EndUserActivationMvp = "pm-19315-end-user-activation-mvp";
 
     public static List<string> GetAllKeys()
     {

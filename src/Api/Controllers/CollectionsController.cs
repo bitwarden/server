@@ -19,7 +19,6 @@ namespace Bit.Api.Controllers;
 public class CollectionsController : Controller
 {
     private readonly ICollectionRepository _collectionRepository;
-    private readonly ICollectionService _collectionService;
     private readonly ICreateCollectionCommand _createCollectionCommand;
     private readonly IUpdateCollectionCommand _updateCollectionCommand;
     private readonly IDeleteCollectionCommand _deleteCollectionCommand;
@@ -30,7 +29,6 @@ public class CollectionsController : Controller
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
-        ICollectionService collectionService,
         ICreateCollectionCommand createCollectionCommand,
         IUpdateCollectionCommand updateCollectionCommand,
         IDeleteCollectionCommand deleteCollectionCommand,
@@ -40,7 +38,6 @@ public class CollectionsController : Controller
         IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand)
     {
         _collectionRepository = collectionRepository;
-        _collectionService = collectionService;
         _createCollectionCommand = createCollectionCommand;
         _updateCollectionCommand = updateCollectionCommand;
         _deleteCollectionCommand = deleteCollectionCommand;

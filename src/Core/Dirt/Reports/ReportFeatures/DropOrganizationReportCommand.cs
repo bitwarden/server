@@ -31,12 +31,15 @@ public class DropOrganizationReportCommand : IDropOrganizationReportCommand
             throw new BadRequestException("No data found.");
         }
 
-        data.Where(_ => request.OrganizationReportIds.Contains(_.Id)).ToList().ForEach(async _ =>
-        {
-            _logger.LogInformation("Dropping organization report {organizationReportId} for organization {organizationId}",
-                _.Id, request.OrganizationId);
+        data
+            .Where(_ => request.OrganizationReportIds.Contains(_.Id))
+            .ToList()
+            .ForEach(async reportId =>
+                {
+                    _logger.LogInformation("Dropping organization report {organizationReportId} for organization {organizationId}",
+                            reportId, request.OrganizationId);
 
-            await _organizationReportRepo.DeleteAsync(_);
-        });
+                    await _organizationReportRepo.DeleteAsync(reportId);
+                });
     }
 }
