@@ -63,7 +63,6 @@ public class InviteOrganizationUsersValidator(
     {
         try
         {
-
             var smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(
                 organization: await organizationRepository.GetByIdAsync(request.InviteOrganization.OrganizationId),
                 plan: request.InviteOrganization.Plan,
