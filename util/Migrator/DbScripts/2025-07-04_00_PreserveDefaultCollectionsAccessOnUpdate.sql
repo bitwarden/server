@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_UpdateWithCollections]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
@@ -86,3 +86,4 @@ BEGIN
                 [Id] = CU.[CollectionId]
         )
 END
+GO
