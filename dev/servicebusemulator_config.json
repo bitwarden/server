@@ -31,6 +31,9 @@
               },
               {
                 "Name": "events-webhook-subscription"
+              },
+              {
+                "Name": "events-hec-subscription"
               }
             ]
           },
@@ -60,6 +63,20 @@
                       "FilterType": "Correlation",
                       "CorrelationFilter": {
                         "Label": "webhook"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "integration-hec-subscription",
+                "Rules": [
+                  {
+                    "Name": "hec-integration-filter",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "hec"
                       }
                     }
                   }

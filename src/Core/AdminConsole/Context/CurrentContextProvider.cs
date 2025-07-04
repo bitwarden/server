@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
