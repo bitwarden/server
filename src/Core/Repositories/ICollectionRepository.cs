@@ -16,12 +16,12 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
 
     /// <summary>
     /// Return all collections that belong to the organization. Does not include any permission details or group/user
-    /// access relationships.
+    /// access relationships. Excludes default collections (My Items collections).
     /// </summary>
     Task<ICollection<Collection>> GetManyByOrganizationIdAsync(Guid organizationId);
 
     /// <summary>
-    /// Return all collections that belong to the organization. Includes group/user access relationships for each collection.
+    /// Return all shared collections that belong to the organization. Includes group/user access relationships for each collection.
     /// </summary>
     Task<ICollection<Tuple<Collection, CollectionAccessDetails>>> GetManyByOrganizationIdWithAccessAsync(Guid organizationId);
 
@@ -34,9 +34,10 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId);
 
     /// <summary>
-    /// Returns all collections for an organization, including permission info for the specified user.
+    /// Returns all shared collections for an organization, including permission info for the specified user.
     /// This does not perform any authorization checks internally!
     /// Optionally, you can include access relationships for other Groups/Users and the collections.
+    /// Excludes default collections (My Items collections) - used by Admin Console Collections tab.
     /// </summary>
     Task<ICollection<CollectionAdminDetails>> GetManyByOrganizationIdWithPermissionsAsync(Guid organizationId, Guid userId, bool includeAccessRelationships);
 

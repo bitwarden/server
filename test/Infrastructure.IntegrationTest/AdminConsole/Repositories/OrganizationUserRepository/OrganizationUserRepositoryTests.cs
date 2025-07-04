@@ -185,6 +185,87 @@ public class OrganizationUserRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task GetManyDetailsByOrganizationAsync_WithIncludeCollections_ExcludesDefaultCollections(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            BillingEmail = user.Email,
+            Plan = "Test",
+        });
+
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+        });
+
+        // Create a regular collection
+        var regularCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = organization.Id,
+            Name = "Regular Collection",
+            Type = CollectionType.SharedCollection
+        });
+
+        // Create a default user collection
+        var defaultCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = organization.Id,
+            Name = "Default Collection",
+            Type = CollectionType.DefaultUserCollection,
+            DefaultUserCollectionEmail = user.Email
+        });
+
+        // Assign the organization user to both collections
+        await organizationUserRepository.ReplaceAsync(orgUser, new List<CollectionAccessSelection>
+        {
+            new CollectionAccessSelection
+            {
+                Id = regularCollection.Id,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true
+            },
+            new CollectionAccessSelection
+            {
+                Id = defaultCollection.Id,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true
+            }
+        });
+
+        // Get organization users with collections included
+        var organizationUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(
+            organization.Id, includeGroups: false, includeCollections: true);
+
+        Assert.NotNull(organizationUsers);
+        Assert.Single(organizationUsers);
+
+        var orgUserWithCollections = organizationUsers.First();
+        Assert.NotNull(orgUserWithCollections.Collections);
+
+        // Should only include the regular collection, not the default collection
+        Assert.Single(orgUserWithCollections.Collections);
+        Assert.Equal(regularCollection.Id, orgUserWithCollections.Collections.First().Id);
+        Assert.DoesNotContain(orgUserWithCollections.Collections, c => c.Id == defaultCollection.Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task GetManyDetailsByUserAsync_Works(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository)
@@ -498,6 +579,17 @@ public class OrganizationUserRepositoryTests
             RevisionDate = requestTime
         });
 
+        // Create a default user collection that should be excluded from admin results
+        var defaultCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            Name = "My Items",
+            Type = CollectionType.DefaultUserCollection,
+            CreationDate = requestTime,
+            RevisionDate = requestTime
+        });
+
         var group1 = await groupRepository.CreateAsync(new Group
         {
             Id = CoreHelpers.GenerateComb(),
@@ -544,6 +636,13 @@ public class OrganizationUserRepositoryTests
                         ReadOnly = true,
                         HidePasswords = false,
                         Manage = false
+                    },
+                    new CollectionAccessSelection
+                    {
+                        Id = defaultCollection.Id,
+                        ReadOnly = false,
+                        HidePasswords = false,
+                        Manage = true
                     }
                 ],
                 Groups = [group1.Id]
@@ -605,7 +704,11 @@ public class OrganizationUserRepositoryTests
         var orgUser1 = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUserCollection[0].OrganizationUser.Id);
         var group1Database = await groupRepository.GetManyIdsByUserIdAsync(orgUserCollection[0].OrganizationUser.Id);
         Assert.Equal(orgUserCollection[0].OrganizationUser.Id, orgUser1.OrganizationUser.Id);
+
+        // Should only return the regular collection, not the default collection (even though both were assigned)
+        Assert.Single(orgUser1.Collections);
         Assert.Equal(collection1.Id, orgUser1.Collections.First().Id);
+        Assert.DoesNotContain(orgUser1.Collections, c => c.Id == defaultCollection.Id);
         Assert.Equal(group1.Id, group1Database.First());
 
 
