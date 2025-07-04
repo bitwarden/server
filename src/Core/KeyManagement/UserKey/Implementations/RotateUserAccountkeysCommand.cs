@@ -217,19 +217,26 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
     void UpdateUserData(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
+        // RevisionDate is used to detect outdated ciphers that are not synced and up-to-date. Without cipher-key encryption, this is
+        // required to detect that ciphers are outdated after a key-rotation on clients that did not receive the logout notification.
+        var now = DateTime.UtcNow;
+
         if (model.Ciphers.Any())
         {
-            saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation(user.Id, model.Ciphers));
+            var ciphersWithUpdatedDate = model.Ciphers.Select(c => { c.RevisionDate = now; return c; }).ToList().AsEnumerable();
+            saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation(user.Id, ciphersWithUpdatedDate));
         }
 
         if (model.Folders.Any())
         {
-            saveEncryptedDataActions.Add(_folderRepository.UpdateForKeyRotation(user.Id, model.Folders));
+            var foldersWithUpdatedDate = model.Folders.Select(f => { f.RevisionDate = now; return f; }).ToList().AsEnumerable();
+            saveEncryptedDataActions.Add(_folderRepository.UpdateForKeyRotation(user.Id, foldersWithUpdatedDate));
         }
 
         if (model.Sends.Any())
         {
-            saveEncryptedDataActions.Add(_sendRepository.UpdateForKeyRotation(user.Id, model.Sends));
+            var sendsWithUpdatedDate = model.Sends.Select(s => { s.RevisionDate = now; return s; }).ToList().AsEnumerable();
+            saveEncryptedDataActions.Add(_sendRepository.UpdateForKeyRotation(user.Id, sendsWithUpdatedDate));
         }
     }
 
