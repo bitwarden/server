@@ -968,6 +968,10 @@ namespace Bit.SqliteMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ContentEncryptionKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
@@ -991,6 +995,10 @@ namespace Bit.SqliteMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationReport", b =>
                 {
                     b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContentEncryptionKey")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
