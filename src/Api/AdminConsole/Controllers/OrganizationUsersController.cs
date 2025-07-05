@@ -124,10 +124,11 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("{id}")]
+    [Authorize<ManageUsersRequirement>]
     public async Task<OrganizationUserDetailsResponseModel> Get(Guid id, bool includeGroups = false)
     {
         var (organizationUser, collections) = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
-        if (organizationUser == null || !await _currentContext.ManageUsers(organizationUser.OrganizationId))
+        if (organizationUser == null)
         {
             throw new NotFoundException();
         }
@@ -146,6 +147,13 @@ public class OrganizationUsersController : Controller
         return response;
     }
 
+    /// <summary>
+    /// Returns a set of basic information about all members of the organization. This is available to all members of
+    /// the organization to manage collections. For this reason, it contains as little information as possible and no
+    /// cryptographic keys or other sensitive data.
+    /// </summary>
+    /// <param name="orgId">Organization identifier</param>
+    /// <returns>List of users for the organization.</returns>
     [HttpGet("mini-details")]
     [Authorize<MemberOrProviderRequirement>]
     public async Task<ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>> GetMiniDetails(Guid orgId)
@@ -241,7 +249,7 @@ public class OrganizationUsersController : Controller
     public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(Guid orgId, Guid id)
     {
         var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
-        if (organizationUser is not { UserId: not null })
+        if (organizationUser is null || organizationUser.UserId is null)
         {
             throw new NotFoundException();
         }
