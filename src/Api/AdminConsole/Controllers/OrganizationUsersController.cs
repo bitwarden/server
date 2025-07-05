@@ -231,19 +231,6 @@ public class OrganizationUsersController : Controller
             .ToList());
     }
 
-
-    [HttpGet("{id}/groups")]
-    [Authorize<ManageGroupsOrUsersRequirement>]
-    public async Task<IEnumerable<string>> GetGroups(Guid id)
-    {
-        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
-
-        var groupIds = await _groupRepository.GetManyIdsByUserIdAsync(organizationUser.Id);
-
-        var responses = groupIds.Select(g => g.ToString());
-        return responses;
-    }
-
     [HttpGet("{id}/reset-password-details")]
     [Authorize<ManageAccountRecoveryRequirement>]
     public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(Guid orgId, Guid id)
