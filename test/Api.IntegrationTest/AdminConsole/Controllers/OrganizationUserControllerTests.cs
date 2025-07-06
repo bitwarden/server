@@ -26,11 +26,13 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
     private Organization _organization = null!;
     private string _ownerEmail = null!;
 
-    [Fact]
-    public async Task BulkDeleteAccount_WhenUserCannotManageUsers_ReturnsForbiddenResponse()
+    [Theory]
+    [InlineData(OrganizationUserType.User)]
+    [InlineData(OrganizationUserType.Custom)]
+    public async Task BulkDeleteAccount_WhenUserCannotManageUsers_ReturnsForbiddenResponse(OrganizationUserType organizationUserType)
     {
-        var (userEmail, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
-            _organization.Id, OrganizationUserType.Custom, new Permissions { ManageUsers = false });
+        var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, organizationUserType, new Permissions { ManageUsers = false });
 
         await _loginHelper.LoginAsync(userEmail);
 
@@ -44,11 +46,13 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         Assert.Equal(HttpStatusCode.Forbidden, httpResponse.StatusCode);
     }
 
-    [Fact]
-    public async Task DeleteAccount_WhenUserCannotManageUsers_ReturnsForbiddenResponse()
+    [Theory]
+    [InlineData(OrganizationUserType.User)]
+    [InlineData(OrganizationUserType.Custom)]
+    public async Task DeleteAccount_WhenUserCannotManageUsers_ReturnsForbiddenResponse(OrganizationUserType organizationUserType)
     {
-        var (userEmail, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
-            _organization.Id, OrganizationUserType.Custom, new Permissions { ManageUsers = false });
+        var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, organizationUserType, new Permissions { ManageUsers = false });
 
         await _loginHelper.LoginAsync(userEmail);
 
@@ -59,11 +63,13 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         Assert.Equal(HttpStatusCode.Forbidden, httpResponse.StatusCode);
     }
 
-    [Fact]
-    public async Task GetAccountRecoveryDetails_WithoutManageResetPasswordPermission_ReturnsForbiddenResponse()
+    [Theory]
+    [InlineData(OrganizationUserType.User)]
+    [InlineData(OrganizationUserType.Custom)]
+    public async Task GetAccountRecoveryDetails_WithoutManageResetPasswordPermission_ReturnsForbiddenResponse(OrganizationUserType organizationUserType)
     {
-        var (userEmail, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
-            _organization.Id, OrganizationUserType.Custom, new Permissions { ManageUsers = false });
+        var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, organizationUserType, new Permissions { ManageUsers = false });
 
         await _loginHelper.LoginAsync(userEmail);
 
