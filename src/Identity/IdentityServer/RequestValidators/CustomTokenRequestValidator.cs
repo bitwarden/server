@@ -97,8 +97,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             }
             if (context.Result.ValidatedRequest.ClientId.StartsWith("installation"))
             {
-                var installationIdPart = clientId.Split(".")[1];
-                await RecordActivityForInstallation(installationIdPart);
+                await RecordActivityForInstallation(clientId.Split(".")[1]);
             }
             return;
         }
