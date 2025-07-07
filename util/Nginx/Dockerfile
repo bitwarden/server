@@ -1,13 +1,12 @@
-FROM --platform=$BUILDPLATFORM nginx:stable-alpine
+FROM --platform=$BUILDPLATFORM nginx:stable-alpine3.21
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
 
 ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 
-RUN apk add curl \
-    && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu \
-    && rm -rf /var/cache/apk/*
+RUN apk add --no-cache curl \
+    && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu 
 
 COPY util/Nginx/nginx.conf /etc/nginx
 COPY util/Nginx/proxy.conf /etc/nginx
