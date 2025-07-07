@@ -61,20 +61,12 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
         }
     }
 
-    public Task<OrganizationPolicyDetails> GetOrganizationPolicyDetailsByOrgId(Guid orgId, PolicyType policyType)
+    public Task<IEnumerable<UserPolicyDetails>> GetOrganizationPolicyDetailsByOrgId(Guid orgId, PolicyType policyType)
     {
         // call our sproc
 
         // mock data
-        var mock = new OrganizationPolicyDetails
-        {
-            OrganizationId = Guid.NewGuid(),
-            PolicyType = PolicyType.OrganizationDataOwnership,
-            PolicyData = "{}",
-            Users = new List<UserPolicyDetails>()
-        };
-
-        return Task.FromResult(mock);
+        return Task.FromResult(new List<UserPolicyDetails>().AsEnumerable());
     }
 
     public async Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserId(Guid userId)

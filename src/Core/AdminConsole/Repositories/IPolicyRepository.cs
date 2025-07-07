@@ -32,5 +32,5 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     /// </remarks>
     Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserId(Guid userId);
 
-    Task<OrganizationPolicyDetails> GetOrganizationPolicyDetailsByOrgId(Guid orgId, PolicyType policyType);
+    Task<IEnumerable<UserPolicyDetails>> GetOrganizationPolicyDetailsByOrgId(Guid orgId, PolicyType policyType);
 }
