@@ -15,10 +15,27 @@ using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using RichardSzalay.MockHttp;
 using Xunit;
+
+public class EngineWrapper(IPushEngine pushEngine, FakeTimeProvider fakeTimeProvider, Guid installationId) : IPushNotificationService
+{
+    public Guid InstallationId { get; } = installationId;
+
+    public TimeProvider TimeProvider { get; } = fakeTimeProvider;
+
+    public ILogger Logger => NullLogger<EngineWrapper>.Instance;
+
+    public Task PushAsync<T>(PushNotification<T> pushNotification) where T : class
+        => pushEngine.PushAsync(pushNotification);
+
+    public Task PushCipherAsync(Cipher cipher, PushType pushType, IEnumerable<Guid>? collectionIds)
+        => pushEngine.PushCipherAsync(cipher, pushType, collectionIds);
+}
 
 public abstract class PushTestBase
 {
@@ -51,7 +68,7 @@ public abstract class PushTestBase
         FakeTimeProvider.SetUtcNow(DateTimeOffset.UtcNow);
     }
 
-    protected abstract IPushNotificationService CreateService();
+    protected abstract IPushEngine CreateService();
 
     protected abstract string ExpectedClientUrl();
 
@@ -76,7 +93,7 @@ public abstract class PushTestBase
     protected abstract JsonNode GetPushNotificationStatusResponsePayload(Notification notification, NotificationStatus notificationStatus, Guid? userId, Guid? organizationId);
     protected abstract JsonNode GetPushSyncOrganizationStatusResponsePayload(Organization organization);
     protected abstract JsonNode GetPushSyncOrganizationCollectionManagementSettingsResponsePayload(Organization organization);
-    protected abstract JsonNode GetPushPendingSecurityTasksResponsePayload(Guid userId);
+    protected abstract JsonNode GetPushRefreshSecurityTasksResponsePayload(Guid userId);
 
     [Fact]
     public async Task PushSyncCipherCreateAsync_SendsExpectedResponse()
@@ -427,13 +444,13 @@ public abstract class PushTestBase
     }
 
     [Fact]
-    public async Task PushPendingSecurityTasksAsync_SendsExpectedResponse()
+    public async Task PushRefreshSecurityTasksAsync_SendsExpectedResponse()
     {
         var userId = Guid.NewGuid();
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushPendingSecurityTasksAsync(userId),
-            GetPushPendingSecurityTasksResponsePayload(userId)
+            async sut => await sut.PushRefreshSecurityTasksAsync(userId),
+            GetPushRefreshSecurityTasksResponsePayload(userId)
         );
     }
 
@@ -480,7 +497,7 @@ public abstract class PushTestBase
             })
             .Respond(HttpStatusCode.OK);
 
-        await test(CreateService());
+        await test(new EngineWrapper(CreateService(), FakeTimeProvider, GlobalSettings.Installation.Id));
 
         Assert.NotNull(actualNode);
 

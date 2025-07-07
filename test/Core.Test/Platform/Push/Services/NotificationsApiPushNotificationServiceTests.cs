@@ -19,14 +19,13 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
 
     protected override string ExpectedClientUrl() => "https://localhost:7777/send";
 
-    protected override IPushNotificationService CreateService()
+    protected override IPushEngine CreateService()
     {
         return new NotificationsApiPushNotificationService(
             HttpClientFactory,
             GlobalSettings,
             HttpContextAccessor,
-            NullLogger<NotificationsApiPushNotificationService>.Instance,
-            FakeTimeProvider
+            NullLogger<NotificationsApiPushNotificationService>.Instance
         );
     }
 
@@ -221,7 +220,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
                 ["UserId"] = send.UserId,
                 ["RevisionDate"] = send.RevisionDate,
             },
-            ["ContextId"] = null,
+            ["ContextId"] = DeviceIdentifier,
         };
     }
 
@@ -236,7 +235,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
                 ["UserId"] = send.UserId,
                 ["RevisionDate"] = send.RevisionDate,
             },
-            ["ContextId"] = null,
+            ["ContextId"] = DeviceIdentifier,
         };
     }
 
@@ -251,7 +250,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
                 ["UserId"] = send.UserId,
                 ["RevisionDate"] = send.RevisionDate,
             },
-            ["ContextId"] = null,
+            ["ContextId"] = DeviceIdentifier,
         };
     }
 
@@ -369,7 +368,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushPendingSecurityTasksResponsePayload(Guid userId)
+    protected override JsonNode GetPushRefreshSecurityTasksResponsePayload(Guid userId)
     {
         return new JsonObject
         {

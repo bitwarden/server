@@ -137,6 +137,20 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
+    -- Delete Organization Application
+    DELETE
+    FROM
+        [dbo].[OrganizationApplication]
+    WHERE
+        [OrganizationId] = @Id
+
+    -- Delete Organization Report
+    DELETE
+    FROM
+        [dbo].[OrganizationReport]
+    WHERE
+        [OrganizationId] = @Id
+
     DELETE
     FROM
         [dbo].[Organization]

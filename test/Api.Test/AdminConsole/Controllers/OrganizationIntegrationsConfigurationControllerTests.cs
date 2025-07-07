@@ -3,7 +3,7 @@ using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Models.Data.Integrations;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -151,9 +151,10 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Slack;
-        var slackConfig = new SlackIntegrationConfiguration(channelId: "C123456");
+        var slackConfig = new SlackIntegrationConfiguration(ChannelId: "C123456");
         model.Configuration = JsonSerializer.Serialize(slackConfig);
         model.Template = "Template String";
+        model.Filters = null;
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(organizationIntegrationConfiguration);
 
@@ -188,9 +189,48 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"), Scheme: "Bearer", Token: "AUTH-TOKEN");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
+        model.Filters = null;
+
+        var expected = new OrganizationIntegrationConfigurationResponseModel(organizationIntegrationConfiguration);
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>())
+            .Returns(organizationIntegrationConfiguration);
+        var requestAction = await sutProvider.Sut.CreateAsync(organizationId, organizationIntegration.Id, model);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .CreateAsync(Arg.Any<OrganizationIntegrationConfiguration>());
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(requestAction);
+        Assert.Equal(expected.Id, requestAction.Id);
+        Assert.Equal(expected.Configuration, requestAction.Configuration);
+        Assert.Equal(expected.EventType, requestAction.EventType);
+        Assert.Equal(expected.Template, requestAction.Template);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostAsync_OnlyUrlProvided_Webhook_Succeeds(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        OrganizationIntegrationConfiguration organizationIntegrationConfiguration,
+        OrganizationIntegrationConfigurationRequestModel model)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegration.Type = IntegrationType.Webhook;
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"));
+        model.Configuration = JsonSerializer.Serialize(webhookConfig);
+        model.Template = "Template String";
+        model.Filters = null;
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(organizationIntegrationConfiguration);
 
@@ -350,7 +390,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"), Scheme: "Bearer", Token: "AUTH-TOKEN");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = null;
 
@@ -393,9 +433,10 @@ public class OrganizationIntegrationsConfigurationControllerTests
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
         organizationIntegration.Type = IntegrationType.Slack;
-        var slackConfig = new SlackIntegrationConfiguration(channelId: "C123456");
+        var slackConfig = new SlackIntegrationConfiguration(ChannelId: "C123456");
         model.Configuration = JsonSerializer.Serialize(slackConfig);
         model.Template = "Template String";
+        model.Filters = null;
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(model.ToOrganizationIntegrationConfiguration(organizationIntegrationConfiguration));
 
@@ -436,9 +477,53 @@ public class OrganizationIntegrationsConfigurationControllerTests
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"), Scheme: "Bearer", Token: "AUTH-TOKEN");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
+        model.Filters = null;
+
+        var expected = new OrganizationIntegrationConfigurationResponseModel(model.ToOrganizationIntegrationConfiguration(organizationIntegrationConfiguration));
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegrationConfiguration);
+        var requestAction = await sutProvider.Sut.UpdateAsync(
+            organizationId,
+            organizationIntegration.Id,
+            organizationIntegrationConfiguration.Id,
+            model);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .ReplaceAsync(Arg.Any<OrganizationIntegrationConfiguration>());
+        Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(requestAction);
+        Assert.Equal(expected.Id, requestAction.Id);
+        Assert.Equal(expected.Configuration, requestAction.Configuration);
+        Assert.Equal(expected.EventType, requestAction.EventType);
+        Assert.Equal(expected.Template, requestAction.Template);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_OnlyUrlProvided_Webhook_Succeeds(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        OrganizationIntegrationConfiguration organizationIntegrationConfiguration,
+        OrganizationIntegrationConfigurationRequestModel model)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
+        organizationIntegration.Type = IntegrationType.Webhook;
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"));
+        model.Configuration = JsonSerializer.Serialize(webhookConfig);
+        model.Template = "Template String";
+        model.Filters = null;
 
         var expected = new OrganizationIntegrationConfigurationResponseModel(model.ToOrganizationIntegrationConfiguration(organizationIntegrationConfiguration));
 
@@ -476,9 +561,10 @@ public class OrganizationIntegrationsConfigurationControllerTests
     {
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegration.Type = IntegrationType.Webhook;
-        var webhookConfig = new WebhookIntegrationConfiguration(url: "https://localhost");
+        var webhookConfig = new WebhookIntegrationConfiguration(Uri: new Uri("https://localhost"), Scheme: "Bearer", Token: "AUTH-TOKEN");
         model.Configuration = JsonSerializer.Serialize(webhookConfig);
         model.Template = "Template String";
+        model.Filters = null;
 
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.GetDependency<ICurrentContext>()
@@ -582,7 +668,7 @@ public class OrganizationIntegrationsConfigurationControllerTests
         organizationIntegration.OrganizationId = organizationId;
         organizationIntegrationConfiguration.OrganizationIntegrationId = organizationIntegration.Id;
         organizationIntegration.Type = IntegrationType.Slack;
-        var slackConfig = new SlackIntegrationConfiguration(channelId: "C123456");
+        var slackConfig = new SlackIntegrationConfiguration(ChannelId: "C123456");
         model.Configuration = JsonSerializer.Serialize(slackConfig);
         model.Template = null;
 

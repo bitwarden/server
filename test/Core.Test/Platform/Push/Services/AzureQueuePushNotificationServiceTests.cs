@@ -9,14 +9,11 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Enums;
+using Bit.Core.Platform.Push;
 using Bit.Core.Platform.Push.Internal;
-using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture;
-using Bit.Core.Test.AutoFixture.CurrentContextFixtures;
-using Bit.Core.Test.NotificationCenter.AutoFixture;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
-using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,96 +37,6 @@ public class AzureQueuePushNotificationServiceTests
     {
         _fakeTimeProvider = new();
         _fakeTimeProvider.SetUtcNow(DateTime.UtcNow);
-    }
-
-    [Theory]
-    [BitAutoData]
-    [NotificationCustomize]
-    [CurrentContextCustomize]
-    public async Task PushNotificationAsync_NotificationGlobal_Sent(
-        SutProvider<AzureQueuePushNotificationService> sutProvider, Notification notification, Guid deviceIdentifier,
-        ICurrentContext currentContext, Guid installationId)
-    {
-        currentContext.DeviceIdentifier.Returns(deviceIdentifier.ToString());
-        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext!.RequestServices
-            .GetService(Arg.Any<Type>()).Returns(currentContext);
-        sutProvider.GetDependency<IGlobalSettings>().Installation.Id = installationId;
-
-        await sutProvider.Sut.PushNotificationAsync(notification);
-
-        await sutProvider.GetDependency<QueueClient>().Received(1)
-            .SendMessageAsync(Arg.Is<string>(message =>
-                MatchMessage(PushType.Notification, message,
-                    new NotificationPushNotificationEquals(notification, null, installationId),
-                    deviceIdentifier.ToString())));
-    }
-
-    [Theory]
-    [BitAutoData]
-    [NotificationCustomize(false)]
-    [CurrentContextCustomize]
-    public async Task PushNotificationAsync_NotificationNotGlobal_Sent(
-        SutProvider<AzureQueuePushNotificationService> sutProvider, Notification notification, Guid deviceIdentifier,
-        ICurrentContext currentContext, Guid installationId)
-    {
-        currentContext.DeviceIdentifier.Returns(deviceIdentifier.ToString());
-        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext!.RequestServices
-            .GetService(Arg.Any<Type>()).Returns(currentContext);
-        sutProvider.GetDependency<IGlobalSettings>().Installation.Id = installationId;
-
-        await sutProvider.Sut.PushNotificationAsync(notification);
-
-        await sutProvider.GetDependency<QueueClient>().Received(1)
-            .SendMessageAsync(Arg.Is<string>(message =>
-                MatchMessage(PushType.Notification, message,
-                    new NotificationPushNotificationEquals(notification, null, null),
-                    deviceIdentifier.ToString())));
-    }
-
-    [Theory]
-    [BitAutoData]
-    [NotificationCustomize]
-    [NotificationStatusCustomize]
-    [CurrentContextCustomize]
-    public async Task PushNotificationStatusAsync_NotificationGlobal_Sent(
-        SutProvider<AzureQueuePushNotificationService> sutProvider, Notification notification, Guid deviceIdentifier,
-        ICurrentContext currentContext, NotificationStatus notificationStatus, Guid installationId)
-    {
-        currentContext.DeviceIdentifier.Returns(deviceIdentifier.ToString());
-        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext!.RequestServices
-            .GetService(Arg.Any<Type>()).Returns(currentContext);
-        sutProvider.GetDependency<IGlobalSettings>().Installation.Id = installationId;
-
-        await sutProvider.Sut.PushNotificationStatusAsync(notification, notificationStatus);
-
-        await sutProvider.GetDependency<QueueClient>().Received(1)
-            .SendMessageAsync(Arg.Is<string>(message =>
-                MatchMessage(PushType.NotificationStatus, message,
-                    new NotificationPushNotificationEquals(notification, notificationStatus, installationId),
-                    deviceIdentifier.ToString())));
-    }
-
-    [Theory]
-    [BitAutoData]
-    [NotificationCustomize(false)]
-    [NotificationStatusCustomize]
-    [CurrentContextCustomize]
-    public async Task PushNotificationStatusAsync_NotificationNotGlobal_Sent(
-        SutProvider<AzureQueuePushNotificationService> sutProvider, Notification notification, Guid deviceIdentifier,
-        ICurrentContext currentContext, NotificationStatus notificationStatus, Guid installationId)
-    {
-        currentContext.DeviceIdentifier.Returns(deviceIdentifier.ToString());
-        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext!.RequestServices
-            .GetService(Arg.Any<Type>()).Returns(currentContext);
-        sutProvider.GetDependency<IGlobalSettings>().Installation.Id = installationId;
-
-        await sutProvider.Sut.PushNotificationStatusAsync(notification, notificationStatus);
-
-        await sutProvider.GetDependency<QueueClient>().Received(1)
-            .SendMessageAsync(Arg.Is<string>(message =>
-                MatchMessage(PushType.NotificationStatus, message,
-                    new NotificationPushNotificationEquals(notification, notificationStatus, null),
-                    deviceIdentifier.ToString())));
     }
 
     [Theory]
@@ -800,7 +707,7 @@ public class AzureQueuePushNotificationServiceTests
     }
 
     [Fact]
-    public async Task PushPendingSecurityTasksAsync_SendsExpectedResponse()
+    public async Task PushRefreshSecurityTasksAsync_SendsExpectedResponse()
     {
         var userId = Guid.NewGuid();
 
@@ -815,7 +722,7 @@ public class AzureQueuePushNotificationServiceTests
         };
 
         await VerifyNotificationAsync(
-            async sut => await sut.PushPendingSecurityTasksAsync(userId),
+            async sut => await sut.PushRefreshSecurityTasksAsync(userId),
             expectedPayload
         );
     }
@@ -844,7 +751,7 @@ public class AzureQueuePushNotificationServiceTests
     //     );
     // }
 
-    private async Task VerifyNotificationAsync(Func<AzureQueuePushNotificationService, Task> test, JsonNode expectedMessage)
+    private async Task VerifyNotificationAsync(Func<IPushNotificationService, Task> test, JsonNode expectedMessage)
     {
         var queueClient = Substitute.For<QueueClient>();
 
@@ -872,7 +779,7 @@ public class AzureQueuePushNotificationServiceTests
             _fakeTimeProvider
         );
 
-        await test(sut);
+        await test(new EngineWrapper(sut, _fakeTimeProvider, _globalSettings.Installation.Id));
 
         // Hoist equality checker outside the expression so that we
         // can more easily place a breakpoint
