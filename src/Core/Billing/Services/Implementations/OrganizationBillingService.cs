@@ -420,11 +420,28 @@ public class OrganizationBillingService(
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
-                ["organizationId"] = organizationId.ToString()
+                ["organizationId"] = organizationId.ToString(),
+                ["trialInitiationPath"] = !string.IsNullOrEmpty(subscriptionSetup.InitiationPath) &&
+                    subscriptionSetup.InitiationPath.Contains("trial from marketing website")
+                    ? "marketing-initiated"
+                    : "product-initiated"
             },
             OffSession = true,
             TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
         };
+
+        // Only set trial_settings.end_behavior.missing_payment_method to "cancel" if there is no payment method
+        if (string.IsNullOrEmpty(customer.InvoiceSettings?.DefaultPaymentMethodId) &&
+            !customer.Metadata.ContainsKey(BraintreeCustomerIdKey))
+        {
+            subscriptionCreateOptions.TrialSettings = new SubscriptionTrialSettingsOptions
+            {
+                EndBehavior = new SubscriptionTrialSettingsEndBehaviorOptions
+                {
+                    MissingPaymentMethod = "cancel"
+                }
+            };
+        }
 
         var setNonUSBusinessUseToReverseCharge =
             featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);

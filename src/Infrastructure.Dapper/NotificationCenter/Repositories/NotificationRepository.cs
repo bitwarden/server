@@ -56,4 +56,21 @@ public class NotificationRepository : Repository<Notification, Guid>, INotificat
             ContinuationToken = data.Count < pageOptions.PageSize ? null : (pageNumber + 1).ToString()
         };
     }
+
+    public async Task<IEnumerable<Guid>> MarkNotificationsAsDeletedByTask(Guid taskId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var results = await connection.QueryAsync<Guid>(
+            "[dbo].[Notification_MarkAsDeletedByTask]",
+            new
+            {
+                TaskId = taskId,
+            },
+            commandType: CommandType.StoredProcedure);
+
+        var data = results.ToList();
+
+        return data;
+    }
 }

@@ -117,7 +117,6 @@ public static class ServiceCollectionExtensions
         services.AddTrialInitiationServices();
         services.AddOrganizationServices(globalSettings);
         services.AddPolicyServices();
-        services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IGroupService, GroupService>();
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
@@ -614,9 +613,11 @@ public static class ServiceCollectionExtensions
             new EventIntegrationHandler<TConfig>(
                 integrationType,
                 provider.GetRequiredService<IEventIntegrationPublisher>(),
+                provider.GetRequiredService<IIntegrationFilterService>(),
                 provider.GetRequiredService<IOrganizationIntegrationConfigurationRepository>(),
                 provider.GetRequiredService<IUserRepository>(),
-                provider.GetRequiredService<IOrganizationRepository>()));
+                provider.GetRequiredService<IOrganizationRepository>(),
+                provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()));
 
         services.AddSingleton<IHostedService>(provider =>
             new AzureServiceBusEventListenerService(
@@ -647,6 +648,7 @@ public static class ServiceCollectionExtensions
             !CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.EventTopicName))
             return services;
 
+        services.AddSingleton<IIntegrationFilterService, IntegrationFilterService>();
         services.AddSingleton<IAzureServiceBusService, AzureServiceBusService>();
         services.AddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
         services.AddAzureServiceBusEventRepositoryListener(globalSettings);
@@ -664,6 +666,13 @@ public static class ServiceCollectionExtensions
             integrationSubscriptionName: globalSettings.EventLogging.AzureServiceBus.WebhookIntegrationSubscriptionName,
             integrationType: IntegrationType.Webhook,
             globalSettings: globalSettings);
+
+        services.AddAzureServiceBusIntegration<WebhookIntegrationConfigurationDetails, WebhookIntegrationHandler>(
+            eventSubscriptionName: globalSettings.EventLogging.AzureServiceBus.HecEventSubscriptionName,
+            integrationSubscriptionName: globalSettings.EventLogging.AzureServiceBus.HecIntegrationSubscriptionName,
+            integrationType: IntegrationType.Hec,
+            globalSettings: globalSettings);
+
         return services;
     }
 
@@ -697,9 +706,11 @@ public static class ServiceCollectionExtensions
             new EventIntegrationHandler<TConfig>(
                 integrationType,
                 provider.GetRequiredService<IEventIntegrationPublisher>(),
+                provider.GetRequiredService<IIntegrationFilterService>(),
                 provider.GetRequiredService<IOrganizationIntegrationConfigurationRepository>(),
                 provider.GetRequiredService<IUserRepository>(),
-                provider.GetRequiredService<IOrganizationRepository>()));
+                provider.GetRequiredService<IOrganizationRepository>(),
+                provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()));
 
         services.AddSingleton<IHostedService>(provider =>
             new RabbitMqEventListenerService(
@@ -730,6 +741,7 @@ public static class ServiceCollectionExtensions
             return services;
         }
 
+        services.AddSingleton<IIntegrationFilterService, IntegrationFilterService>();
         services.AddSingleton<IRabbitMqService, RabbitMqService>();
         services.AddSingleton<IEventIntegrationPublisher, RabbitMqService>();
         services.AddRabbitMqEventRepositoryListener(globalSettings);
@@ -749,6 +761,13 @@ public static class ServiceCollectionExtensions
             globalSettings.EventLogging.RabbitMq.WebhookIntegrationRetryQueueName,
             globalSettings.EventLogging.RabbitMq.MaxRetries,
             IntegrationType.Webhook);
+
+        services.AddRabbitMqIntegration<WebhookIntegrationConfigurationDetails, WebhookIntegrationHandler>(
+            globalSettings.EventLogging.RabbitMq.HecEventsQueueName,
+            globalSettings.EventLogging.RabbitMq.HecIntegrationQueueName,
+            globalSettings.EventLogging.RabbitMq.HecIntegrationRetryQueueName,
+            globalSettings.EventLogging.RabbitMq.MaxRetries,
+            IntegrationType.Hec);
 
         return services;
     }
