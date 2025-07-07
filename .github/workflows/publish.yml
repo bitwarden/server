@@ -110,7 +110,7 @@ jobs:
 
       ########## ACR PROD ##########
       - name: Log in to Azure - production subscription
-        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
+        uses: Azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
