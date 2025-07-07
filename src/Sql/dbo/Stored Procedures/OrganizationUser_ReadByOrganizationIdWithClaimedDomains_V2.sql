@@ -4,11 +4,24 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    WITH OrgUsers AS (
+        SELECT *
+        FROM [dbo].[OrganizationUserView]
+        WHERE [OrganizationId] = @OrganizationId
+    ),
+    UserDomains AS (
+        SELECT U.[Id], U.[EmailDomain]
+        FROM [dbo].[UserEmailDomainView] U
+        WHERE EXISTS (
+            SELECT 1
+            FROM [dbo].[OrganizationDomainView] OD WITH (INDEX(IX_OrganizationDomain_Org_VerifiedDomain))
+            WHERE OD.[OrganizationId] = @OrganizationId
+            AND OD.[VerifiedDate] IS NOT NULL
+            AND OD.[DomainName] = U.[EmailDomain]
+        )
+    )
     SELECT OU.*
-    FROM [dbo].[OrganizationUserView] OU
-    INNER JOIN [dbo].[UserEmailDomainView] U ON OU.[UserId] = U.[Id]
-    INNER JOIN [dbo].[OrganizationDomainView] OD ON OU.[OrganizationId] = OD.[OrganizationId]
-    WHERE OU.[OrganizationId] = @OrganizationId
-      AND OD.[VerifiedDate] IS NOT NULL
-      AND U.EmailDomain = OD.[DomainName]
+    FROM OrgUsers OU
+    JOIN UserDomains UD ON OU.[UserId] = UD.[Id]
+    OPTION (RECOMPILE);
 END
