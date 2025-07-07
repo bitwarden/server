@@ -106,11 +106,13 @@ jobs:
           dest_dir="src/Sql/dbo"
 
           # sync finalization schema back to dbo, maintaining structure
-          rsync -r $src_dir $dest_dir
+          rsync -r "$src_dir/" "$dest_dir/"
           rm -rf $src_dir/*
 
           # Replace any finalization references due to the move
-          sed -i -e 's/dbo_finalization/dbo/g' "$dest_dir/**/*.sql"
+          find ./src/Sql/dbo -name "*.sql" -type f -exec sed -i \
+            -e 's/\[dbo_finalization\]/[dbo]/g' \
+            -e 's/dbo_finalization\./dbo./g' {} +
 
           for file in "$src_dir"/**/*; do
             moved_files="$moved_files \n $file"
