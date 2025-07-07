@@ -9,13 +9,6 @@ WHERE Email IS NOT NULL
     AND CHARINDEX('@', Email) > 0
 GO
 
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_UserEmailDomainView_Id')
-BEGIN
-    CREATE UNIQUE CLUSTERED INDEX [IX_UserEmailDomainView_Id] 
-        ON [dbo].[UserEmailDomainView] ([Id]);
-END
-GO
-
 IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationUser_OrgId_UserId_Includes')
     BEGIN
         CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrgId_UserId_Includes]
