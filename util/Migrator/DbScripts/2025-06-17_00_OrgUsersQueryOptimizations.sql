@@ -1,5 +1,4 @@
 CREATE OR ALTER VIEW [dbo].[UserEmailDomainView]
-WITH SCHEMABINDING
 AS
 SELECT 
     Id,
@@ -15,6 +14,29 @@ BEGIN
     CREATE UNIQUE CLUSTERED INDEX [IX_UserEmailDomainView_Id] 
         ON [dbo].[UserEmailDomainView] ([Id]);
 END
+GO
+
+IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationUser_OrgId_UserId_Includes')
+    BEGIN
+        CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrgId_UserId_Includes]
+            ON [dbo].[OrganizationUser] ([OrganizationId], [UserId])
+            INCLUDE ([Id], [Email], [Key], [Status], [Type], [ExternalId], [CreationDate], [RevisionDate], [Permissions], [ResetPasswordKey], [AccessSecretsManager])
+    END
+GO
+
+IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_User_Id_EmailDomain')
+    BEGIN
+        CREATE NONCLUSTERED INDEX [IX_User_Id_EmailDomain]
+            ON [dbo].[User] ([Id], [Email])
+    END
+GO
+
+IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationDomain_Org_VerifiedDomain')
+    BEGIN
+        CREATE NONCLUSTERED INDEX [IX_OrganizationDomain_Org_VerifiedDomain]
+            ON [dbo].[OrganizationDomain] ([OrganizationId], [DomainName])
+            WHERE [VerifiedDate] IS NOT NULL
+    END
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationUserUserDetails_ReadByOrganizationId_V2]
@@ -56,12 +78,25 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    WITH OrgUsers AS (
+        SELECT *
+        FROM [dbo].[OrganizationUserView]
+        WHERE [OrganizationId] = @OrganizationId
+    ),
+    UserDomains AS (
+        SELECT U.[Id], U.[EmailDomain]
+        FROM [dbo].[UserEmailDomainView] U
+        WHERE EXISTS (
+            SELECT 1
+            FROM [dbo].[OrganizationDomainView] OD WITH (INDEX(IX_OrganizationDomain_Org_VerifiedDomain))
+            WHERE OD.[OrganizationId] = @OrganizationId
+            AND OD.[VerifiedDate] IS NOT NULL
+            AND OD.[DomainName] = U.[EmailDomain]
+        )
+    )
     SELECT OU.*
-    FROM [dbo].[OrganizationUserView] OU
-    INNER JOIN [dbo].[UserEmailDomainView] U ON OU.[UserId] = U.[Id]
-    INNER JOIN [dbo].[OrganizationDomainView] OD ON OU.[OrganizationId] = OD.[OrganizationId]
-    WHERE OU.[OrganizationId] = @OrganizationId
-      AND OD.[VerifiedDate] IS NOT NULL
-      AND U.EmailDomain = OD.[DomainName]
+    FROM OrgUsers OU
+    JOIN UserDomains UD ON OU.[UserId] = UD.[Id]
+    OPTION (RECOMPILE);
 END
 GO

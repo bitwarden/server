@@ -1,5 +1,4 @@
 CREATE VIEW [dbo].[UserEmailDomainView]
-WITH SCHEMABINDING
 AS
 SELECT 
     Id,

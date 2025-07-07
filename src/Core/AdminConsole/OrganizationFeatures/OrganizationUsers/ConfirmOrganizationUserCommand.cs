@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -223,7 +226,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 
     private async Task HandleConfirmationSideEffectsAsync(Guid organizationId, OrganizationUser organizationUser, string defaultUserCollectionName)
     {
-        // Create DefaultUserCollection type collection for the user if the PersonalOwnership policy is enabled for the organization
+        // Create DefaultUserCollection type collection for the user if the OrganizationDataOwnership policy is enabled for the organization
         var requiresDefaultCollection = await OrganizationRequiresDefaultCollectionAsync(organizationId, organizationUser.UserId.Value, defaultUserCollectionName);
         if (requiresDefaultCollection)
         {
@@ -244,8 +247,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return false;
         }
 
-        var personalOwnershipRequirement = await _policyRequirementQuery.GetAsync<PersonalOwnershipPolicyRequirement>(userId);
-        return personalOwnershipRequirement.RequiresDefaultCollection(organizationId);
+        var organizationDataOwnershipRequirement = await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId);
+        return organizationDataOwnershipRequirement.RequiresDefaultCollection(organizationId);
     }
 
     private async Task CreateDefaultCollectionAsync(Guid organizationId, Guid organizationUserId, string defaultCollectionName)
