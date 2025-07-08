@@ -11,7 +11,7 @@ on:
     types: [opened, synchronize]
   workflow_call:
     inputs: {}
-
+  
 permissions:
   contents: read
 
@@ -370,17 +370,56 @@ jobs:
           path: docker-stub-EU.zip
           if-no-files-found: error
 
-      - name: Build Swagger files
+      - name: Build Public API Swagger
         run: |
-          cd ./dev
-          powershell ./generate_openapi_files.ps1
+          cd ./src/Api
+          echo "Restore tools"
+          dotnet tool restore
+          echo "Publish"
+          dotnet publish -c "Release" -o obj/build-output/publish
+
+          dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com \
+            ./obj/build-output/publish/Api.dll public
+          cd ../..
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+          swaggerGen: "True"
+          DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX: 2
+          GLOBALSETTINGS__SQLSERVER__CONNECTIONSTRING: "placeholder"
 
       - name: Upload Public API Swagger artifact
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: swagger.json
-          path: api.public.json
+          path: swagger.json
           if-no-files-found: error
+
+      - name: Build Internal API Swagger
+        run: |
+          cd ./src/Api
+          echo "Restore API tools"
+          dotnet tool restore
+          echo "Publish API"
+          dotnet publish -c "Release" -o obj/build-output/publish
+
+          dotnet swagger tofile --output ../../internal.json --host https://api.bitwarden.com \
+            ./obj/build-output/publish/Api.dll internal
+
+          cd ../Identity
+
+          echo "Restore Identity tools"
+          dotnet tool restore
+          echo "Publish Identity"
+          dotnet publish -c "Release" -o obj/build-output/publish
+
+          dotnet swagger tofile --output ../../identity.json --host https://identity.bitwarden.com \
+            ./obj/build-output/publish/Identity.dll v1
+          cd ../..
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          swaggerGen: "True"
+          DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX: 2
+          GLOBALSETTINGS__SQLSERVER__CONNECTIONSTRING: "placeholder"
 
       - name: Upload Internal API Swagger artifact
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
