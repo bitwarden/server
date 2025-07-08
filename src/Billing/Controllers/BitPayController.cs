@@ -1,4 +1,7 @@
-﻿using System.Globalization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Globalization;
 using Bit.Billing.Constants;
 using Bit.Billing.Models;
 using Bit.Core.AdminConsole.Repositories;

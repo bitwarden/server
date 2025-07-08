@@ -1,4 +1,7 @@
-﻿using Bit.Api.SecretsManager.Models.Request;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;

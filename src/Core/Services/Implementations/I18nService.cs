@@ -20,17 +20,19 @@ public class I18nService : II18nService
         return _localizer[key];
     }
 
-    public LocalizedString GetLocalizedHtmlString(string key, params object[] args)
+    public LocalizedString GetLocalizedHtmlString(string key, params object?[] args)
     {
+#nullable disable // IStringLocalizer does actually support null args, it is annotated incorrectly: https://github.com/dotnet/aspnetcore/issues/44251
         return _localizer[key, args];
+#nullable enable
     }
 
-    public string Translate(string key, params object[] args)
+    public string Translate(string key, params object?[] args)
     {
         return string.Format(GetLocalizedHtmlString(key).ToString(), args);
     }
 
-    public string T(string key, params object[] args)
+    public string T(string key, params object?[] args)
     {
         return Translate(key, args);
     }

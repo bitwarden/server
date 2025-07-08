@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bit.Core.Models.Api;
 
