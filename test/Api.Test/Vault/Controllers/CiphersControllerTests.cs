@@ -603,7 +603,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherDetails.Id).Returns(cipherDetails);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails>
@@ -673,7 +673,7 @@ public class CiphersControllerTests
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherDetails.Id).Returns(cipherDetails);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
 
         sutProvider.GetDependency<ICipherRepository>()
@@ -704,7 +704,7 @@ public class CiphersControllerTests
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherDetails.Id).Returns(cipherDetails);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(new List<Cipher> { cipherDetails });
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
@@ -729,7 +729,7 @@ public class CiphersControllerTests
         organization.Permissions.EditAnyCollection = true;
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherDetails.Id).Returns(cipherDetails);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(new List<Cipher> { cipherDetails });
 
@@ -754,7 +754,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherDetails.Id).Returns(cipherDetails);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails> { cipherDetails });
@@ -787,7 +787,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherDetails.Id).Returns(cipherDetails);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails> { cipherDetails });
@@ -1076,7 +1076,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherDetails.Id).Returns(cipherDetails);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails>
@@ -1114,7 +1114,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherDetails.Id).Returns(cipherDetails);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails>
@@ -1146,7 +1146,7 @@ public class CiphersControllerTests
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherDetails.Id).Returns(cipherDetails);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(organization.Id)
@@ -1178,7 +1178,7 @@ public class CiphersControllerTests
         organization.Type = organizationUserType;
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherDetails.Id).Returns(cipherDetails);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(new List<Cipher> { cipherDetails });
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
@@ -1206,7 +1206,7 @@ public class CiphersControllerTests
         organization.Permissions.EditAnyCollection = true;
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherDetails.Id).Returns(cipherDetails);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(new List<Cipher> { cipherDetails });
 
@@ -1234,7 +1234,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherDetails.Id).Returns(cipherDetails);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails> { cipherDetails });
@@ -1270,7 +1270,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherDetails.Id).Returns(cipherDetails);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails> { cipherDetails });
