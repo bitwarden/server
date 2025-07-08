@@ -104,7 +104,7 @@ public class ImportCiphersControllerTests
         // Arrange
         sutProvider.GetDependency<GlobalSettings>()
             .SelfHosted = false;
-        // Changing import limits to make test run faster
+        // Limits are set in appsettings.json, making values small for test to run faster.
         sutProvider.GetDependency<GlobalSettings>()
             .ImportCiphersLimitation = new()
             {
