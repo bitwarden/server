@@ -20,6 +20,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -418,7 +419,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
-        var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception);
+        var canUse = license.CanUse(_globalSettings, claimsPrincipal, out var exception);
 
         if (!canUse)
         {
