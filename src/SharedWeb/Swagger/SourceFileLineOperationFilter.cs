@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Reflection;
 using System.Reflection.Metadata;
