@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -307,6 +308,173 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
             return results.ToList();
         }
+    }
+
+    // Jimmy TODO: update the params
+    public async Task CreateDefaultCollectionsAsync()
+    {
+
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            connection.Open();
+
+            var orgId = Guid.Parse("C8D71195-CA4F-473F-80E6-B2AB010F35EF");
+
+
+            var collections = new[]
+            {
+            new Collection
+                {
+                    Id = Guid.NewGuid(),
+                    OrganizationId = orgId,
+                    Name = "default collection 1",
+                    ExternalId = "ENG-001",
+                    CreationDate = DateTime.UtcNow.AddDays(-30),
+                    RevisionDate = DateTime.UtcNow.AddDays(-1),
+                    Type = CollectionType.DefaultUserCollection,
+                    DefaultUserCollectionEmail = "eng@example.com"
+                },
+                new Collection
+                {
+                    Id = Guid.NewGuid(),
+                    OrganizationId = orgId,
+                    Name = "default collection 2",
+                    ExternalId = "MKT-002",
+                    CreationDate = DateTime.UtcNow.AddDays(-60),
+                    RevisionDate = DateTime.UtcNow.AddDays(-2),
+                    Type = CollectionType.DefaultUserCollection,
+                    DefaultUserCollectionEmail = "marketing@example.com"
+                },
+                new Collection
+                {
+                    Id = Guid.NewGuid(),
+                    OrganizationId = orgId,
+                    Name = "default collection 3",
+                    ExternalId = null,
+                    CreationDate = DateTime.UtcNow.AddDays(-15),
+                    RevisionDate = DateTime.UtcNow,
+                    Type = CollectionType.DefaultUserCollection,
+                    DefaultUserCollectionEmail = "marketing1@example.com"
+                }
+            };
+
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
+                {
+
+                    // Jimmy TODO: Filter existing CollectionUser
+
+                    // Jimmy TODO: create the CollectionUser
+
+
+
+                    await CreateCollections(connection, transaction, collections);
+
+                    transaction.Commit();
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+        }
+    }
+
+    // Jimmy TODO: rename
+    private async Task CreateTempTable(SqlConnection connection, SqlTransaction transaction, Collection[] collections)
+    {
+        var sqlCreateTemp = @"
+            CREATE TABLE #TempGuid (
+                Id UNIQUEIDENTIFIER NOT NULL
+            );";
+
+        using (var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
+        {
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+
+        var dataTable = new DataTable();
+        dataTable.Columns.Add("Id", typeof(Guid));
+        foreach (var id in yourGuidList)
+        {
+            dataTable.Rows.Add(id);
+        }
+
+        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction))
+        {
+            bulkCopy.DestinationTableName = "#TempGuid";
+            bulkCopy.WriteToServer(dataTable);
+        }
+
+    }
+
+    private async Task CreateCollections(SqlConnection connection, SqlTransaction transaction, Collection[] collections)
+    {
+        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+        {
+            bulkCopy.DestinationTableName = "[dbo].[Collection]";
+            var dataTable = BuildCollectionsTable(bulkCopy, collections);
+            await bulkCopy.WriteToServerAsync(dataTable);
+        }
+    }
+
+    // Jimmy TODO: Assess the trade-offs between IEnumerable and arrays.
+    private DataTable BuildCollectionsTable(SqlBulkCopy bulkCopy, Collection[] collections)
+    {
+        var c = collections.FirstOrDefault();
+        if (c == null)
+        {
+            throw new ApplicationException("Must have some collections to bulk import.");
+        }
+
+        var collectionsTable = new DataTable("CollectionDataTable");
+
+        var idColumn = new DataColumn(nameof(c.Id), c.Id.GetType());
+        collectionsTable.Columns.Add(idColumn);
+        var organizationIdColumn = new DataColumn(nameof(c.OrganizationId), c.OrganizationId.GetType());
+        collectionsTable.Columns.Add(organizationIdColumn);
+        var nameColumn = new DataColumn(nameof(c.Name), typeof(string));
+        collectionsTable.Columns.Add(nameColumn);
+        var creationDateColumn = new DataColumn(nameof(c.CreationDate), c.CreationDate.GetType());
+        collectionsTable.Columns.Add(creationDateColumn);
+        var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
+        collectionsTable.Columns.Add(revisionDateColumn);
+        var externalIdColumn = new DataColumn(nameof(c.ExternalId), typeof(string));
+        collectionsTable.Columns.Add(externalIdColumn);
+        var typeColumn = new DataColumn(nameof(c.Type), typeof(CollectionType));
+        collectionsTable.Columns.Add(typeColumn);
+        var defaultUserCollectionEmailColumn = new DataColumn(nameof(c.DefaultUserCollectionEmail), typeof(string));
+        collectionsTable.Columns.Add(defaultUserCollectionEmailColumn);
+
+        foreach (DataColumn col in collectionsTable.Columns)
+        {
+            bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+        }
+
+        var keys = new DataColumn[1];
+        keys[0] = idColumn;
+        collectionsTable.PrimaryKey = keys;
+
+        foreach (var collection in collections)
+        {
+            var row = collectionsTable.NewRow();
+
+            row[idColumn] = collection.Id;
+            row[organizationIdColumn] = collection.OrganizationId;
+            row[nameColumn] = collection.Name;
+            row[creationDateColumn] = collection.CreationDate;
+            row[revisionDateColumn] = collection.RevisionDate;
+            row[externalIdColumn] = collection.ExternalId;
+            row[typeColumn] = collection.Type;
+            row[defaultUserCollectionEmailColumn] = collection.DefaultUserCollectionEmail;
+
+            collectionsTable.Rows.Add(row);
+        }
+
+        return collectionsTable;
     }
 
     public class CollectionWithGroupsAndUsers : Collection
