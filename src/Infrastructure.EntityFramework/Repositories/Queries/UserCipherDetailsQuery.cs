@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Infrastructure.EntityFramework.Vault.Models;

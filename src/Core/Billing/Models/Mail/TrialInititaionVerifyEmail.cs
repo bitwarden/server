@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Models.Mail;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 

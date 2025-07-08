@@ -1,4 +1,7 @@
-﻿using System.Data;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Data;
 using System.Reflection;
 using System.Text;
 using Bit.Core;

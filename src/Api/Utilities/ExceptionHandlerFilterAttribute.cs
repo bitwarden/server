@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Billing;
 using Bit.Core.Exceptions;

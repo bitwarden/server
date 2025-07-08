@@ -1,4 +1,7 @@
-﻿namespace Bit.Core.Models.BitStripe;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Core.Models.BitStripe;
 
 // Stripe's SubscriptionListOptions model has a complex input for date filters.
 // It expects a dictionary, and has lots of validation rules around what can have a value and what can't.
