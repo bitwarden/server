@@ -1,4 +1,7 @@
-﻿using Bit.Core.Context;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
