@@ -23,7 +23,7 @@ public class EmailTwoFactorTokenProvider : EmailTokenProvider
         IDistributedCache distributedCache,
         IFeatureService featureService) :
         base(distributedCache, featureService)
-    { 
+    {
         // This can be removed when the pm-18612-otp-6-digits feature flag is removed because the base implementation will match.
         TokenAlpha = false;
         TokenNumeric = true;

@@ -1,4 +1,4 @@
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Entities;
 using Bit.Core.Services;
@@ -14,14 +14,10 @@ using Xunit;
 public class EmailTokenProviderTests
 {
     private readonly IDistributedCache _cache;
-    private readonly IFeatureService _featureService;
-    private readonly EmailTokenProvider _tokenProvider;
 
     public EmailTokenProviderTests()
     {
         _cache = Substitute.For<IDistributedCache>();
-        _featureService = Substitute.For<IFeatureService>();
-        _tokenProvider = new EmailTokenProvider(_cache, _featureService);
     }
 
     [Theory]
@@ -30,10 +26,12 @@ public class EmailTokenProviderTests
     {
         // Arrange
         var purpose = "test-purpose";
-        _featureService.IsEnabled(FeatureFlagKeys.Otp6Digits).Returns(true);
+        var featureService = Substitute.For<IFeatureService>();
+        featureService.IsEnabled(FeatureFlagKeys.Otp6Digits).Returns(true);
+        var tokenProvider = new EmailTokenProvider(_cache, featureService);
 
         // Act
-        var code = await _tokenProvider.GenerateAsync(purpose, SubstituteUserManager(), user);
+        var code = await tokenProvider.GenerateAsync(purpose, SubstituteUserManager(), user);
 
         // Assert
         Assert.Equal(6, code.Length);
@@ -45,10 +43,11 @@ public class EmailTokenProviderTests
     {
         // Arrange
         var purpose = "test-purpose";
-        _featureService.IsEnabled(FeatureFlagKeys.Otp6Digits).Returns(false);
-
+        var featureService = Substitute.For<IFeatureService>();
+        featureService.IsEnabled(FeatureFlagKeys.Otp6Digits).Returns(false);
+        var tokenProvider = new EmailTokenProvider(_cache, featureService);
         // Act
-        var code = await _tokenProvider.GenerateAsync(purpose, SubstituteUserManager(), user);
+        var code = await tokenProvider.GenerateAsync(purpose, SubstituteUserManager(), user);
 
         // Assert
         Assert.Equal(8, code.Length);
