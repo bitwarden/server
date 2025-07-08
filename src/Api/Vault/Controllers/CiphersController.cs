@@ -1408,7 +1408,6 @@ public class CiphersController : Controller
     private async Task<CipherOrganizationDetails> GetByIdAsyncAdmin(Guid cipherId)
     {
         return await _cipherRepository.GetOrganizationDetailsByIdAsync(cipherId);
-
     }
 
     private async Task<CipherDetails> GetByIdAsync(Guid cipherId, Guid userId)
