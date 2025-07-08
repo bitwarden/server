@@ -2,12 +2,14 @@
 
 namespace Bit.Core.SecretsManager.Models.Data;
 
+#nullable enable
+
 public class ProjectPeopleAccessPolicies
 {
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
-    public IEnumerable<UserProjectAccessPolicy> UserAccessPolicies { get; set; }
-    public IEnumerable<GroupProjectAccessPolicy> GroupAccessPolicies { get; set; }
+    public IEnumerable<UserProjectAccessPolicy>? UserAccessPolicies { get; set; }
+    public IEnumerable<GroupProjectAccessPolicy>? GroupAccessPolicies { get; set; }
 
     public IEnumerable<BaseAccessPolicy> ToBaseAccessPolicies()
     {

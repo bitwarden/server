@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 /// <summary>
 /// Specifies that the class or method that this attribute is applied to requires the specified boolean feature flag
 /// to be enabled. If the feature flag is not enabled, a <see cref="FeatureUnavailableException"/> is thrown

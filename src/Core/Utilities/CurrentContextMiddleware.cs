@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.Utilities;
 
+#nullable enable
+
 public class CurrentContextMiddleware
 {
     private readonly RequestDelegate _next;
