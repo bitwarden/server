@@ -14,14 +14,24 @@ BEGIN
     INSERT INTO @FailedOrgIds (Id)
     SELECT [value] FROM OPENJSON(@FailedOrganizations)
 
-    UPDATE [dbo].[OrganizationSubscriptionUpdate]
-    SET
-        [SeatsLastUpdated] = NULL,
-        [SyncAttempts] = 0
-    WHERE [OrganizationId] IN (SELECT Id FROM @SuccessfulOrgIds)
-
-    UPDATE [dbo].[OrganizationSubscriptionUpdate]
-    SET
-        [SyncAttempts] = [SyncAttempts] + 1
-    WHERE [OrganizationId] IN (SELECT Id FROM @FailedOrgIds)
+    ;WITH OrgActions AS (
+        -- Failed orgs take precedence
+        SELECT Id, 'Failed' AS Action FROM @FailedOrgIds
+        UNION ALL
+        -- Successful orgs only if not in failed list
+        SELECT Id, 'Successful' AS Action FROM @SuccessfulOrgIds
+        WHERE Id NOT IN (SELECT Id FROM @FailedOrgIds)
+    )
+     UPDATE osu
+     SET
+         [SeatsLastUpdated] = CASE
+                                  WHEN oa.Action = 'Successful' THEN NULL
+                                  ELSE osu.[SeatsLastUpdated]
+             END,
+         [SyncAttempts] = CASE
+                              WHEN oa.Action = 'Failed' THEN osu.[SyncAttempts] + 1
+                              WHEN oa.Action = 'Successful' THEN 0
+             END
+     FROM [dbo].[OrganizationSubscriptionUpdate] osu
+         INNER JOIN OrgActions oa ON osu.OrganizationId = oa.Id
 END
