@@ -1,11 +1,14 @@
-﻿using Bit.Core.Business.Sso;
+﻿using Bit.Core.Auth.Repositories;
+using Bit.Core.Business.Sso;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Identity.IdentityServer;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.IdentityServer;
 using Bit.Sso.Models;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.ResponseHandling;
+using Duende.IdentityServer.Stores;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Sustainsys.Saml2.AspNetCore2;
 
@@ -73,6 +76,19 @@ public static class ServiceCollectionExtensions
                 new IdentityResources.Profile()
             })
             .AddIdentityServerCertificate(env, globalSettings);
+
+        if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CosmosConnectionString))
+        {
+            services.AddSingleton<IPersistedGrantStore>(sp =>
+                new PersistedGrantStore(sp.GetRequiredKeyedService<IGrantRepository>("cosmos"),
+                    g => new Core.Auth.Models.Data.GrantItem(g)));
+        }
+        else
+        {
+            services.AddTransient<IPersistedGrantStore>(sp =>
+                new PersistedGrantStore(sp.GetRequiredService<IGrantRepository>(),
+                    g => new Core.Auth.Entities.Grant(g)));
+        }
 
         return identityServerBuilder;
     }
