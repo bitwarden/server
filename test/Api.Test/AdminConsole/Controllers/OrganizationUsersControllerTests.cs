@@ -257,7 +257,7 @@ public class OrganizationUsersControllerTests
             .GetUsersOrganizationClaimedStatusAsync(organizationUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)))
             .Returns(new Dictionary<Guid, bool> { { organizationUser.Id, true } });
 
-        var response = await sutProvider.Sut.Get(organizationUser.Id, false);
+        var response = await sutProvider.Sut.Get(organizationUser.OrganizationId, organizationUser.Id, false);
 
         Assert.Equal(organizationUser.Id, response.Id);
         Assert.True(response.ManagedByOrganization);

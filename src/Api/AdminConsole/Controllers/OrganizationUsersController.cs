@@ -125,10 +125,10 @@ public class OrganizationUsersController : Controller
 
     [HttpGet("{id}")]
     [Authorize<ManageUsersRequirement>]
-    public async Task<OrganizationUserDetailsResponseModel> Get(Guid id, bool includeGroups = false)
+    public async Task<OrganizationUserDetailsResponseModel> Get(Guid orgId, Guid id, bool includeGroups = false)
     {
         var (organizationUser, collections) = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
-        if (organizationUser == null)
+        if (organizationUser == null && organizationUser.OrganizationId != orgId)
         {
             throw new NotFoundException();
         }
