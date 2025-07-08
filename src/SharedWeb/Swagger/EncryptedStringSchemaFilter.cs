@@ -1,3 +1,5 @@
+#nullable enable
+
 using Bit.Core.Utilities;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
