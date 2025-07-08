@@ -67,6 +67,7 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Extensions.Caching.Cosmos;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -648,6 +649,13 @@ public static class ServiceCollectionExtensions
             !CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.EventTopicName))
             return services;
 
+        services.AddKeyedSingleton<IMemoryCache>("integration-cache",
+            new MemoryCache(new MemoryCacheOptions()
+            {
+                SizeLimit = globalSettings.EventLogging.CacheMaxSize,
+                TrackStatistics = globalSettings.EventLogging.CacheTrackStatistics
+            })
+        );
         services.AddSingleton<IIntegrationConfigurationDetailsCache, IntegrationConfigurationDetailsCache>();
         services.AddSingleton<IIntegrationFilterService, IntegrationFilterService>();
         services.AddSingleton<IAzureServiceBusService, AzureServiceBusService>();
@@ -661,6 +669,7 @@ public static class ServiceCollectionExtensions
             integrationType: IntegrationType.Slack,
             globalSettings: globalSettings);
 
+        services.TryAddSingleton(TimeProvider.System);
         services.AddHttpClient(WebhookIntegrationHandler.HttpClientName);
         services.AddAzureServiceBusIntegration<WebhookIntegrationConfigurationDetails, WebhookIntegrationHandler>(
             eventSubscriptionName: globalSettings.EventLogging.AzureServiceBus.WebhookEventSubscriptionName,
@@ -741,6 +750,13 @@ public static class ServiceCollectionExtensions
             return services;
         }
 
+        services.AddKeyedSingleton<IMemoryCache>("integration-cache",
+            new MemoryCache(new MemoryCacheOptions()
+            {
+                SizeLimit = globalSettings.EventLogging.CacheMaxSize,
+                TrackStatistics = globalSettings.EventLogging.CacheTrackStatistics
+            })
+        );
         services.AddSingleton<IIntegrationConfigurationDetailsCache, IntegrationConfigurationDetailsCache>();
         services.AddSingleton<IIntegrationFilterService, IntegrationFilterService>();
         services.AddSingleton<IRabbitMqService, RabbitMqService>();

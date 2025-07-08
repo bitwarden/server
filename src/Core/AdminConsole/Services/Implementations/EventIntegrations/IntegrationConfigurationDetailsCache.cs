@@ -6,18 +6,18 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
 public class IntegrationConfigurationDetailsCache(
-    IMemoryCache cache,
+    [FromKeyedServices("integration-cache")] IMemoryCache cache,
     IOrganizationIntegrationConfigurationRepository repository,
     GlobalSettings globalSettings,
     ILogger<IntegrationConfigurationDetailsCache> logger)
     : IIntegrationConfigurationDetailsCache
 {
-    private readonly TimeSpan _absoluteExpiration = TimeSpan.FromMinutes(globalSettings.EventLogging.CacheAbsoluteExpiration);
     private readonly TimeSpan _slidingExpiration = TimeSpan.FromMinutes(globalSettings.EventLogging.CacheSlidingExpiration);
 
     public async Task<IReadOnlyList<CachedIntegrationConfigurationDetails<T>>> GetOrAddAsync<T>(
@@ -44,7 +44,7 @@ public class IntegrationConfigurationDetailsCache(
                 if (configuration.Filters is string filterJson)
                 {
                     filters = JsonSerializer.Deserialize<IntegrationFilterGroup>(filterJson)
-                        ?? throw new InvalidOperationException($"Failed to deserialize Filters to FilterGroup");
+                        ?? throw new InvalidOperationException("Failed to deserialize Filters to FilterGroup");
                 }
 
                 var config = configuration.MergedConfiguration.Deserialize<T>()
@@ -69,8 +69,8 @@ public class IntegrationConfigurationDetailsCache(
 
         cache.Set(key, result, new MemoryCacheEntryOptions
         {
-            AbsoluteExpirationRelativeToNow = _absoluteExpiration,
-            SlidingExpiration = _slidingExpiration
+            SlidingExpiration = _slidingExpiration,
+            Size = result.Count
         });
 
         return result;

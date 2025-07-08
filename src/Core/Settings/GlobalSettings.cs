@@ -284,8 +284,9 @@ public class GlobalSettings : IGlobalSettings
     {
         public AzureServiceBusSettings AzureServiceBus { get; set; } = new AzureServiceBusSettings();
         public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
-        public int CacheAbsoluteExpiration { get; set; } = 60;
+        public int CacheMaxSize { get; set; } = 10000;
         public int CacheSlidingExpiration { get; set; } = 10;
+        public bool CacheTrackStatistics { get; set; } = true;
 
         public class AzureServiceBusSettings
         {

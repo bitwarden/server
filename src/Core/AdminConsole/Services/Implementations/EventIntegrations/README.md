@@ -299,15 +299,15 @@ relevant `OrganizationIntegrationConfigurationDetails`, followed by JSON deseria
 configuration object and the optional filters. This repeated work becomes costly under high-throughput conditions.
 
 The caching system is centered around the `IntegrationConfigurationDetailsCache`. It uses `IMemoryCache` to store
-configuration details keyed by the organization id, integration type and event type.
+configuration details keyed by the organization ID, integration type and event type.
 
 ### What is cached
 
-Each cache entry is a deserialized list of `CachedIntegrationConfigurationDetails<T>` which include:
+Each cache entry is a deserialized list of `CachedIntegrationConfigurationDetails<T>` that includes:
 
-- The deserialized configuration (`T`).
-- The deserialized IntegrationFilterGroup (if any).
-- The integration template string.
+- Deserialized configuration (`T`).
+- Deserialized IntegrationFilterGroup (if any).
+- Integration template string.
 
 If the relevant configuration set is not already cached, it is fetched using the
 `IOrganizationIntegrationConfigurationRepository`, deserialized, validated, and stored in the cache. This avoids
@@ -324,7 +324,7 @@ The cache employs two expiration values to manage how long items stay in memory:
     - Configurable via `GlobalSettings.EventLogging.CacheSlidingExpiration`.
     - Default: 10 minutes.
 
-There are also two methods for forcibly evicting entries from the cache (i.e. when configuration changes and
+There are also two methods for forcibly evicting entries from the cache (e.g. when configuration changes and
 we want to pick up new values immediately):
 
 - `RemoveCacheEntry`
