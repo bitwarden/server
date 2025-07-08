@@ -2,18 +2,25 @@ IF OBJECT_ID('dbo.OrganizationSubscriptionUpdate') IS NULL
     BEGIN
         CREATE TABLE [dbo].[OrganizationSubscriptionUpdate]
         (
-            [Id]               UniqueIdentifier NOT NULL,
-            [OrganizationId]   UniqueIdentifier NOT NULL,
+            [Id]               UNIQUEIDENTIFIER NOT NULL,
+            [OrganizationId]   UNIQUEIDENTIFIER NOT NULL,
             [SeatsLastUpdated] DATETIME2        NULL,
             [SyncAttempts]     INT              NOT NULL DEFAULT (0),
             CONSTRAINT [PK_OrganizationSubscriptionUpdate] PRIMARY KEY CLUSTERED ([Id] ASC),
             CONSTRAINT [FK_OrganizationSubscriptionUpdate_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
         )
-
         CREATE NONCLUSTERED INDEX [IX_OrganizationSubscriptionUpdate_SeatsLastUpdated]
             ON [dbo].[OrganizationSubscriptionUpdate] ([SeatsLastUpdated] ASC)
             INCLUDE ([OrganizationId]);
     END
+GO
+
+CREATE OR ALTER VIEW [dbo].[OrganizationSubscriptionUpdateView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[OrganizationSubscriptionUpdate]
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationSubscriptionUpdate_SetToUpdateSubscription]
@@ -41,7 +48,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationSubscriptionUpdate_GetUpdatesToSubs
 AS
 BEGIN
     SELECT *
-    FROM [dbo].[OrganizationSubscriptionUpdate]
+    FROM [dbo].[OrganizationSubscriptionUpdateView]
     WHERE [SeatsLastUpdated] IS NOT NULL
 END
 GO
