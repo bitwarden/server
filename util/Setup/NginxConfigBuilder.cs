@@ -1,4 +1,7 @@
-﻿namespace Bit.Setup;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Setup;
 
 public class NginxConfigBuilder
 {

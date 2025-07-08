@@ -1,4 +1,7 @@
-﻿namespace Bit.Core.Vault.Models.Data;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Core.Vault.Models.Data;
 
 /// <summary>
 /// Data model that represents a User and the amount of actionable security tasks.

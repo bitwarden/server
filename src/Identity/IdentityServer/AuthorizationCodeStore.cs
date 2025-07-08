@@ -1,4 +1,7 @@
-﻿using Duende.IdentityServer;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Duende.IdentityServer;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;

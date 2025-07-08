@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.Caching.Distributed;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Billing.Caches.Implementations;
