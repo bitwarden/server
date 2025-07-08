@@ -128,7 +128,7 @@ public class OrganizationUsersController : Controller
     public async Task<OrganizationUserDetailsResponseModel> Get(Guid orgId, Guid id, bool includeGroups = false)
     {
         var (organizationUser, collections) = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
-        if (organizationUser == null && organizationUser.OrganizationId != orgId)
+        if (organizationUser == null || organizationUser.OrganizationId != orgId)
         {
             throw new NotFoundException();
         }
