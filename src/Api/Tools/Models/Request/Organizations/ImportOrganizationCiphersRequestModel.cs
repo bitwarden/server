@@ -1,4 +1,7 @@
-﻿using Bit.Api.Models.Request;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Models.Request;
 using Bit.Api.Vault.Models.Request;
 
 namespace Bit.Api.Tools.Models.Request.Organizations;
