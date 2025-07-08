@@ -257,7 +257,10 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     {
         if (validatedResult.Value.PasswordManagerSubscriptionUpdate is { SeatsRequiredToAdd: > 0, UpdatedSeatTotal: > 0 })
         {
-            await organizationRepository.IncrementSeatCountAsync(organization.Id, validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd);
+            await organizationRepository.IncrementSeatCountAsync(
+                organization.Id,
+                validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd,
+                validatedResult.Value.PerformedAt.UtcDateTime);
 
             await organizationSubscriptionUpdateRepository.SetToUpdateSubscriptionAsync(organization.Id, validatedResult.Value.PerformedAt.UtcDateTime);
 

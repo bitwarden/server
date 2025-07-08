@@ -431,7 +431,7 @@ public class OrganizationRepositoryTests
         organization.Seats = 5;
         await organizationRepository.ReplaceAsync(organization);
 
-        await organizationRepository.IncrementSeatCountAsync(organization.Id, 3);
+        await organizationRepository.IncrementSeatCountAsync(organization.Id, 3, DateTime.UtcNow);
 
         var result = await organizationRepository.GetByIdAsync(organization.Id);
         Assert.Equal(8, result.Seats);

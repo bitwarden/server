@@ -37,5 +37,5 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     /// <returns>The number of occupied seats for the organization.</returns>
     Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId);
 
-    Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount = 1);
+    Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate);
 }

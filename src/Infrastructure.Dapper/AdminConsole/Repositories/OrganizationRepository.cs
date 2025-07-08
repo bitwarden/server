@@ -221,7 +221,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         }
     }
 
-    public async Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount = 1)
+    public async Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate)
     {
         await using var connection = new SqlConnection(ConnectionString);
 

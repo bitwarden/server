@@ -454,7 +454,7 @@ public class InviteOrganizationUserCommandTests
         // Assert
         Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
 
-        await orgRepository.Received(1).IncrementSeatCountAsync(organization.Id, passwordManagerUpdate.SeatsRequiredToAdd);
+        await orgRepository.Received(1).IncrementSeatCountAsync(organization.Id, passwordManagerUpdate.SeatsRequiredToAdd, request.PerformedAt.UtcDateTime);
 
         await sutProvider.GetDependency<IApplicationCacheService>()
             .Received(1)
