@@ -63,9 +63,12 @@ public class InviteOrganizationUsersValidator(
     {
         try
         {
+            var organization = await organizationRepository.GetByIdAsync(request.InviteOrganization.OrganizationId);
+
+            organization!.Seats = subscriptionUpdate.UpdatedSeatTotal;
 
             var smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(
-                organization: await organizationRepository.GetByIdAsync(request.InviteOrganization.OrganizationId),
+                organization: organization,
                 plan: request.InviteOrganization.Plan,
                 autoscaling: true);
 
