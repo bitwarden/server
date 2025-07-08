@@ -41,7 +41,7 @@ public class EmailTokenProviderTests
 
     [Theory]
     [BitAutoData]
-    public async Task GenerateAsync_GeneratesSixDigitToken_WhenFeatureFlagIsDisabled(User user)
+    public async Task GenerateAsync_GeneratesEightDigitToken_WhenFeatureFlagIsDisabled(User user)
     {
         // Arrange
         var purpose = "test-purpose";

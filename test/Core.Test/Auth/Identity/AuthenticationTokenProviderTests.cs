@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Bit.Core.Test.Auth.Identity;
 
-public class AuthenticationTokenProviderTests : BaseTwoFactorTokenProviderTests<AuthenticatorTokenProvider>
+public class AuthenticationTwoFactorTokenProviderTests : BaseTwoFactorTokenProviderTests<AuthenticatorTokenProvider>
 {
     public override TwoFactorProviderType TwoFactorProviderType => TwoFactorProviderType.Authenticator;
 
