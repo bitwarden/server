@@ -1,20 +1,19 @@
 ﻿#nullable enable
 
-using Amazon;
 using Amazon.SimpleEmail;
 using Amazon.SimpleEmail.Model;
 using Bit.Core.Models.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Platform.MailDelivery;
 
-public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
+internal class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
 {
     private readonly GlobalSettings _globalSettings;
-    private readonly IWebHostEnvironment _hostingEnvironment;
+    private readonly IHostEnvironment _hostEnvironment;
     private readonly ILogger<AmazonSesMailDeliveryService> _logger;
     private readonly IAmazonSimpleEmailService _client;
     private readonly string _source;
@@ -23,20 +22,7 @@ public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
 
     public AmazonSesMailDeliveryService(
         GlobalSettings globalSettings,
-        IWebHostEnvironment hostingEnvironment,
-        ILogger<AmazonSesMailDeliveryService> logger)
-    : this(globalSettings, hostingEnvironment, logger,
-          new AmazonSimpleEmailServiceClient(
-            globalSettings.Amazon.AccessKeyId,
-            globalSettings.Amazon.AccessKeySecret,
-            RegionEndpoint.GetBySystemName(globalSettings.Amazon.Region))
-          )
-    {
-    }
-
-    public AmazonSesMailDeliveryService(
-        GlobalSettings globalSettings,
-        IWebHostEnvironment hostingEnvironment,
+        IHostEnvironment hostEnvironment,
         ILogger<AmazonSesMailDeliveryService> logger,
         IAmazonSimpleEmailService amazonSimpleEmailService)
     {
@@ -56,7 +42,7 @@ public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
         var replyToEmail = CoreHelpers.PunyEncode(globalSettings.Mail.ReplyToEmail);
 
         _globalSettings = globalSettings;
-        _hostingEnvironment = hostingEnvironment;
+        _hostEnvironment = hostEnvironment;
         _logger = logger;
         _client = amazonSimpleEmailService;
         _source = $"\"{globalSettings.SiteName}\" <{replyToEmail}>";
@@ -103,7 +89,7 @@ public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
             },
             Tags = new List<MessageTag>
             {
-                new MessageTag { Name = "Environment", Value = _hostingEnvironment.EnvironmentName },
+                new MessageTag { Name = "Environment", Value = _hostEnvironment.EnvironmentName },
                 new MessageTag { Name = "Sender", Value = _senderTag }
             }
         };
