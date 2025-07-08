@@ -1,4 +1,7 @@
-﻿using Bit.Api.Auth.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Auth.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
