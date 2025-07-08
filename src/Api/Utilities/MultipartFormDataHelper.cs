@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Api.Tools.Models.Request;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.WebUtilities;

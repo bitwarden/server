@@ -1,4 +1,7 @@
-﻿using System.Net;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;

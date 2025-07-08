@@ -1,4 +1,7 @@
-﻿using System.Reflection;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Reflection;
 
 namespace Bit.Core;
 
@@ -189,7 +192,6 @@ public static class FeatureFlagKeys
     public const string PersistPopupView = "persist-popup-view";
     public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string WebPush = "web-push";
-    public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
     public const string IpcChannelFramework = "ipc-channel-framework";
 
     /* Tools Team */

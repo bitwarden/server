@@ -1,4 +1,7 @@
-﻿using Bit.Core.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Commands.Interfaces;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Enums;
@@ -89,7 +92,7 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
             }
 
             // Notify the user that they have pending security tasks
-            await _pushNotificationService.PushPendingSecurityTasksAsync(userId);
+            await _pushNotificationService.PushRefreshSecurityTasksAsync(userId);
         }
     }
 }

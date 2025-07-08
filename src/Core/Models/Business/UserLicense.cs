@@ -1,4 +1,7 @@
-﻿using System.Reflection;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;

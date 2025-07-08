@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Entities;
 
 namespace Bit.Core.Auth.Models.Data;
 

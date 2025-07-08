@@ -1,4 +1,7 @@
-﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Response;
