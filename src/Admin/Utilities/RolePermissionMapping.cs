@@ -45,7 +45,6 @@ public static class RolePermissionMapping
                 Permission.Org_Billing_ConvertToBusinessUnit,
                 Permission.Provider_List_View,
                 Permission.Provider_Create,
-                Permission.Provider_Edit,
                 Permission.Provider_View,
                 Permission.Provider_ResendEmailInvite,
                 Permission.Provider_CheckEnabledBox,
@@ -138,7 +137,6 @@ public static class RolePermissionMapping
                 Permission.Org_Billing_LaunchGateway,
                 Permission.Org_RequestDelete,
                 Permission.Provider_List_View,
-                Permission.Provider_Edit,
                 Permission.Provider_View,
                 Permission.Provider_CheckEnabledBox
             }
