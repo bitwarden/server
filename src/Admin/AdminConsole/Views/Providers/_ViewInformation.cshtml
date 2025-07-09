@@ -14,6 +14,12 @@
     <dt class="col-sm-4 col-lg-3">Provider Type</dt>
     <dd class="col-sm-8 col-lg-9">@(Model.Provider.Type.GetDisplayAttribute()?.GetName())</dd>
 
+    @if (Model.Provider.Type == ProviderType.Msp || Model.Provider.Type == ProviderType.BusinessUnit)
+    {
+        <dt class="col-sm-4 col-lg-3">Enabled</dt>
+        <dd class="col-sm-8 col-lg-9">@(Model.Provider.Enabled ? "Yes" : "No")</dd>
+    }
+
     <dt class="col-sm-4 col-lg-3">Created</dt>
     <dd class="col-sm-8 col-lg-9">@Model.Provider.CreationDate.ToString()</dd>
 

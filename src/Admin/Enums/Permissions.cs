@@ -45,6 +45,7 @@ public enum Permission
     Provider_Edit,
     Provider_View,
     Provider_ResendEmailInvite,
+    Provider_CheckEnabledBox,
 
     Tools_ChargeBrainTreeCustomer,
     Tools_PromoteAdmin,
