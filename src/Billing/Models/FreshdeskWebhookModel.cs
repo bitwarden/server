@@ -13,3 +13,9 @@ public class FreshdeskWebhookModel
     [JsonPropertyName("ticket_tags")]
     public string TicketTags { get; set; }
 }
+
+public class FreshdeskOnyxAiWebhookModel : FreshdeskWebhookModel
+{
+    [JsonPropertyName("ticket_description_text")]
+    public string TicketDescriptionText { get; set; }
+}

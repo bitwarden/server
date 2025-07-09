@@ -141,7 +141,7 @@ public class FreshdeskController : Controller
 
     [HttpPost("webhook-onyx-ai")]
     public async Task<IActionResult> PostWebhookOnyxAi([FromQuery, Required] string key,
-        [FromBody, Required] FreshdeskWebhookModel model)
+        [FromBody, Required] FreshdeskOnyxAiWebhookModel model)
     {
         // ensure that the key is from Freshdesk
         if (!IsValidRequestFromFreshdesk(key))
@@ -149,28 +149,8 @@ public class FreshdeskController : Controller
             return new BadRequestResult();
         }
 
-        // get ticket info from Freshdesk
-        var getTicketRequest = new HttpRequestMessage(HttpMethod.Get,
-            string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}", model.TicketId));
-        var getTicketResponse = await CallFreshdeskApiAsync(getTicketRequest);
-
-        // check if we have a valid response from freshdesk
-        if (getTicketResponse.StatusCode != System.Net.HttpStatusCode.OK)
-        {
-            _logger.LogError("Error getting ticket info from Freshdesk. Ticket Id: {0}. Status code: {1}",
-                            model.TicketId, getTicketResponse.StatusCode);
-            return BadRequest("Failed to retrieve ticket info from Freshdesk");
-        }
-
-        // extract info from the response
-        var ticketInfo = await ExtractTicketInfoFromResponse(getTicketResponse);
-        if (ticketInfo == null)
-        {
-            return BadRequest("Failed to extract ticket info from Freshdesk response");
-        }
-
         // create the onyx `answer-with-citation` request
-        var onyxRequestModel = new OnyxAnswerWithCitationRequestModel(ticketInfo.DescriptionText);
+        var onyxRequestModel = new OnyxAnswerWithCitationRequestModel(model.TicketDescriptionText);
         var onyxRequest = new HttpRequestMessage(HttpMethod.Post,
                             string.Format("{0}/query/answer-with-citation", _billingSettings.Onyx.BaseUrl))
         {
@@ -244,29 +224,6 @@ public class FreshdeskController : Controller
             _logger.LogError("Error adding note to Freshdesk ticket. Ticket Id: {0}. Status: {1}",
                             ticketId, addNoteResponse.ToString());
         }
-    }
-
-    private async Task<FreshdeskViewTicketModel> ExtractTicketInfoFromResponse(HttpResponseMessage getTicketResponse)
-    {
-        var responseString = string.Empty;
-        try
-        {
-            responseString = await getTicketResponse.Content.ReadAsStringAsync();
-            var ticketInfo = JsonSerializer.Deserialize<FreshdeskViewTicketModel>(responseString,
-                options: new System.Text.Json.JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                });
-
-            return ticketInfo;
-        }
-        catch (System.Exception ex)
-        {
-            _logger.LogError("Error deserializing ticket info from Freshdesk response. Response: {0}. Exception {1}",
-                            responseString, ex.ToString());
-        }
-
-        return null;
     }
 
     private async Task<HttpResponseMessage> CallFreshdeskApiAsync(HttpRequestMessage request, int retriedCount = 0)
