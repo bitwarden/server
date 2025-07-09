@@ -9,11 +9,13 @@ WHERE Email IS NOT NULL
     AND CHARINDEX('@', Email) > 0
 GO
 
-IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationUser_OrgId_UserId_Includes')
+-- Index on OrganizationUser for efficient filtering
+IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationUser_OrganizationId_UserId')
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrgId_UserId_Includes]
+        CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrganizationId_UserId]
             ON [dbo].[OrganizationUser] ([OrganizationId], [UserId])
-            INCLUDE ([Id], [Email], [Key], [Status], [Type], [ExternalId], [CreationDate], [RevisionDate], [Permissions], [ResetPasswordKey], [AccessSecretsManager])
+            INCLUDE ([Email], [Status], [Type], [ExternalId], [CreationDate], 
+                [RevisionDate], [Permissions], [ResetPasswordKey], [AccessSecretsManager])
     END
 GO
 
@@ -26,8 +28,9 @@ GO
 
 IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationDomain_Org_VerifiedDomain')
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_OrganizationDomain_Org_VerifiedDomain]
-            ON [dbo].[OrganizationDomain] ([OrganizationId], [DomainName])
+        CREATE NONCLUSTERED INDEX [IX_OrganizationDomain_OrganizationId_VerifiedDate]
+            ON [dbo].[OrganizationDomain] ([OrganizationId], [VerifiedDate])
+            INCLUDE ([DomainName])
             WHERE [VerifiedDate] IS NOT NULL
     END
 GO
@@ -81,7 +84,7 @@ BEGIN
         FROM [dbo].[UserEmailDomainView] U
         WHERE EXISTS (
             SELECT 1
-            FROM [dbo].[OrganizationDomainView] OD WITH (INDEX(IX_OrganizationDomain_Org_VerifiedDomain))
+            FROM [dbo].[OrganizationDomainView] OD 
             WHERE OD.[OrganizationId] = @OrganizationId
             AND OD.[VerifiedDate] IS NOT NULL
             AND OD.[DomainName] = U.[EmailDomain]

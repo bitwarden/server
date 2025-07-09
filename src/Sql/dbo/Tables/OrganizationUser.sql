@@ -28,7 +28,9 @@ CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrganizationId]
     ON [dbo].[OrganizationUser]([OrganizationId] ASC);
 
 GO
-CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrgId_UserId_Includes]
-    ON [dbo].[OrganizationUser]([OrganizationId] ASC, [UserId] ASC)
-    INCLUDE ([Id], [Email], [Key], [Status], [Type], [ExternalId], [CreationDate], [RevisionDate], [Permissions], [ResetPasswordKey], [AccessSecretsManager]);
 
+CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrganizationId_UserId]
+    ON [dbo].[OrganizationUser] ([OrganizationId], [UserId])
+    INCLUDE ([Email], [Status], [Type], [ExternalId], [CreationDate], 
+        [RevisionDate], [Permissions], [ResetPasswordKey], [AccessSecretsManager]);
+GO

@@ -14,7 +14,7 @@ BEGIN
         FROM [dbo].[UserEmailDomainView] U
         WHERE EXISTS (
             SELECT 1
-            FROM [dbo].[OrganizationDomainView] OD WITH (INDEX(IX_OrganizationDomain_Org_VerifiedDomain))
+            FROM [dbo].[OrganizationDomainView] OD 
             WHERE OD.[OrganizationId] = @OrganizationId
             AND OD.[VerifiedDate] IS NOT NULL
             AND OD.[DomainName] = U.[EmailDomain]

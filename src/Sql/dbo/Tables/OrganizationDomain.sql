@@ -28,7 +28,8 @@ CREATE NONCLUSTERED INDEX [IX_OrganizationDomain_DomainNameVerifiedDateOrganizat
     INCLUDE ([OrganizationId]);
 GO
 
-CREATE NONCLUSTERED INDEX [IX_OrganizationDomain_Org_VerifiedDomain]
-    ON [dbo].[OrganizationDomain] ([OrganizationId] ASC, [DomainName] ASC)
+CREATE NONCLUSTERED INDEX [IX_OrganizationDomain_OrganizationId_VerifiedDate]
+    ON [dbo].[OrganizationDomain] ([OrganizationId], [VerifiedDate])
+    INCLUDE ([DomainName])
     WHERE [VerifiedDate] IS NOT NULL;
 GO
