@@ -2,9 +2,9 @@
 
 namespace Bit.Api.Utilities;
 
-public class StringMatchesAttribute(params string[] accepted) : ValidationAttribute
+public class StringMatchesAttribute(params string[]? accepted) : ValidationAttribute
 {
-    public override bool IsValid(object value)
+    public override bool IsValid(object? value)
     {
         if (value is not string str ||
             accepted == null ||
