@@ -373,7 +373,7 @@ jobs:
       - name: Build Swagger files
         run: |
           cd ./dev
-          powershell ./generate_openapi_files.ps1
+          pwsh ./generate_openapi_files.ps1
 
       - name: Upload Public API Swagger artifact
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
