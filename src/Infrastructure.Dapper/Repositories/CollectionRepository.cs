@@ -210,11 +210,14 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     public async Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users)
     {
         obj.SetNewId();
+
+
         var objWithGroupsAndUsers = JsonSerializer.Deserialize<CollectionWithGroupsAndUsers>(JsonSerializer.Serialize(obj))!;
 
         objWithGroupsAndUsers.Groups = groups != null ? groups.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
         objWithGroupsAndUsers.Users = users != null ? users.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
 
+        // Jimmy current collection creation.
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
@@ -320,56 +323,28 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
             var orgId = Guid.Parse("C8D71195-CA4F-473F-80E6-B2AB010F35EF");
 
+            // Jimmy TODO: make sure we pull back the UserId from the other stored for the CollectionUser
+            var useridEmail = Guid.Parse("676931B3-5479-403A-AFF1-B30D014F2A26");
+            var useridUserid = Guid.Parse("D7AAC6DE-6958-4DF6-B22A-B30D0154D878");
 
-            var collections = new[]
-            {
-            new Collection
-                {
-                    Id = Guid.NewGuid(),
-                    OrganizationId = orgId,
-                    Name = "default collection 1",
-                    ExternalId = "ENG-001",
-                    CreationDate = DateTime.UtcNow.AddDays(-30),
-                    RevisionDate = DateTime.UtcNow.AddDays(-1),
-                    Type = CollectionType.DefaultUserCollection,
-                    DefaultUserCollectionEmail = "eng@example.com"
-                },
-                new Collection
-                {
-                    Id = Guid.NewGuid(),
-                    OrganizationId = orgId,
-                    Name = "default collection 2",
-                    ExternalId = "MKT-002",
-                    CreationDate = DateTime.UtcNow.AddDays(-60),
-                    RevisionDate = DateTime.UtcNow.AddDays(-2),
-                    Type = CollectionType.DefaultUserCollection,
-                    DefaultUserCollectionEmail = "marketing@example.com"
-                },
-                new Collection
-                {
-                    Id = Guid.NewGuid(),
-                    OrganizationId = orgId,
-                    Name = "default collection 3",
-                    ExternalId = null,
-                    CreationDate = DateTime.UtcNow.AddDays(-15),
-                    RevisionDate = DateTime.UtcNow,
-                    Type = CollectionType.DefaultUserCollection,
-                    DefaultUserCollectionEmail = "marketing1@example.com"
-                }
-            };
+            var affectedOrgUserIds = new[] { useridEmail, useridUserid };
 
             using (var transaction = connection.BeginTransaction())
             {
                 try
                 {
 
-                    // Jimmy TODO: Filter existing CollectionUser
+                    var orgUserIdWithDefaultCollection = await GetOrganizationUserIdWithDefaultCollectionsAsync(connection, transaction, orgId);
 
-                    // Jimmy TODO: create the CollectionUser
+                    var orgUserIdsNeedDefaultCollection = affectedOrgUserIds.Where(affectedOrgUserId => !orgUserIdWithDefaultCollection.Contains(affectedOrgUserId)).ToList();
 
+                    var (collectionUsers, collections) = GenerateCollectionRecords(orgId, orgUserIdsNeedDefaultCollection);
 
+                    await CreateCollectionsAsync(connection, transaction, collections);
 
-                    await CreateCollections(connection, transaction, collections);
+                    await CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
+
+                    // Jimmy TODO: create the CollectionUser. We need the collections ids for this, but since the server is creating the ids, we don't need something to come back.
 
                     transaction.Commit();
                 }
@@ -383,35 +358,126 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     }
 
     // Jimmy TODO: rename
-    private async Task CreateTempTable(SqlConnection connection, SqlTransaction transaction, Collection[] collections)
+    private async Task<HashSet<Guid>> GetOrganizationUserIdWithDefaultCollectionsAsync(SqlConnection connection, SqlTransaction transaction, Guid organizationId)
     {
-        var sqlCreateTemp = @"
-            CREATE TABLE #TempGuid (
-                Id UNIQUEIDENTIFIER NOT NULL
-            );";
+        const string sql = @"
+                    SELECT
+                        ou.Id AS OrganizationUserId
+                    FROM
+                        OrganizationUser ou
+                    INNER JOIN
+                        CollectionUser cu ON cu.OrganizationUserId = ou.Id
+                    INNER JOIN
+                        Collection c ON c.Id = cu.CollectionId
+                    WHERE
+                        ou.OrganizationId = @OrganizationId
+                        AND c.Type = 1;
+                ";
 
-        using (var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
-        {
-            await cmd.ExecuteNonQueryAsync();
-        }
+        var organizationUserIds = await connection.QueryAsync<Guid>(
+            sql,
+            new { OrganizationId = organizationId },
+            transaction: transaction
+        );
 
-
-        var dataTable = new DataTable();
-        dataTable.Columns.Add("Id", typeof(Guid));
-        foreach (var id in yourGuidList)
-        {
-            dataTable.Rows.Add(id);
-        }
-
-        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction))
-        {
-            bulkCopy.DestinationTableName = "#TempGuid";
-            bulkCopy.WriteToServer(dataTable);
-        }
-
+        return organizationUserIds.ToHashSet();
     }
 
-    private async Task CreateCollections(SqlConnection connection, SqlTransaction transaction, Collection[] collections)
+    private (List<CollectionUser> collectionUser, List<Collection> collection) GenerateCollectionRecords(Guid organizationId, List<Guid> orgUserIdsNeedDefaultCollection)
+    {
+
+        var collectionUser = new List<CollectionUser>();
+        var collections = new List<Collection>();
+
+        foreach (var orgUserId in orgUserIdsNeedDefaultCollection)
+        {
+            var collectionId = Guid.NewGuid();
+
+            collections.Add(new Collection
+            {
+                Id = collectionId,
+                OrganizationId = organizationId,
+                Name = "default collection 1",
+                ExternalId = "ENG-001",
+                CreationDate = DateTime.UtcNow,
+                RevisionDate = DateTime.UtcNow,
+                Type = CollectionType.DefaultUserCollection,
+                DefaultUserCollectionEmail = null
+
+            });
+
+            collectionUser.Add(new CollectionUser
+            {
+                CollectionId = collectionId,
+                OrganizationUserId = orgUserId,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true,
+            });
+        }
+
+        return (collectionUser, collections);
+    }
+
+    private async Task CreateCollectionsUsersAsync(SqlConnection connection, SqlTransaction transaction, List<CollectionUser> collectionUsers)
+    {
+        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+        {
+            bulkCopy.DestinationTableName = "[dbo].[CollectionUser]";
+            var dataTable = BuildCollectionsUsersTable(bulkCopy, collectionUsers);
+            await bulkCopy.WriteToServerAsync(dataTable);
+        }
+    }
+
+    private DataTable BuildCollectionsUsersTable(SqlBulkCopy bulkCopy, List<CollectionUser> collectionUsers)
+    {
+        var cu = collectionUsers.FirstOrDefault();
+
+        // Jimmy TODO: assess if this is needed
+        if (cu == null)
+        {
+            throw new ApplicationException("Error.");
+        }
+
+        var table = new DataTable("CollectionUserDataTable");
+
+        var collectionIdColumn = new DataColumn(nameof(cu.CollectionId), typeof(Guid));
+        table.Columns.Add(collectionIdColumn);
+
+        var orgUserIdColumn = new DataColumn(nameof(cu.OrganizationUserId), typeof(Guid));
+        table.Columns.Add(orgUserIdColumn);
+
+        var readOnlyColumn = new DataColumn(nameof(cu.ReadOnly), typeof(bool));
+        table.Columns.Add(readOnlyColumn);
+
+        var hidePasswordsColumn = new DataColumn(nameof(cu.HidePasswords), typeof(bool));
+        table.Columns.Add(hidePasswordsColumn);
+
+        var manageColumn = new DataColumn(nameof(cu.Manage), typeof(bool));
+        table.Columns.Add(manageColumn);
+
+        foreach (DataColumn col in table.Columns)
+        {
+            bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+        }
+
+        foreach (var collectionUser in collectionUsers)
+        {
+            var row = table.NewRow();
+
+            row[collectionIdColumn] = collectionUser.CollectionId;
+            row[orgUserIdColumn] = collectionUser.OrganizationUserId;
+            row[readOnlyColumn] = collectionUser.ReadOnly;
+            row[hidePasswordsColumn] = collectionUser.HidePasswords;
+            row[manageColumn] = collectionUser.Manage;
+
+            table.Rows.Add(row);
+        }
+
+        return table;
+    }
+
+    private async Task CreateCollectionsAsync(SqlConnection connection, SqlTransaction transaction, IEnumerable<Collection> collections)
     {
         using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
         {
@@ -422,7 +488,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     }
 
     // Jimmy TODO: Assess the trade-offs between IEnumerable and arrays.
-    private DataTable BuildCollectionsTable(SqlBulkCopy bulkCopy, Collection[] collections)
+    private DataTable BuildCollectionsTable(SqlBulkCopy bulkCopy, IEnumerable<Collection> collections)
     {
         var c = collections.FirstOrDefault();
         if (c == null)
