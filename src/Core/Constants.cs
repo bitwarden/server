@@ -1,4 +1,7 @@
-﻿using System.Reflection;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Reflection;
 
 namespace Bit.Core;
 
@@ -189,7 +192,6 @@ public static class FeatureFlagKeys
     public const string PersistPopupView = "persist-popup-view";
     public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string WebPush = "web-push";
-    public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
     public const string IpcChannelFramework = "ipc-channel-framework";
 
     /* Tools Team */
@@ -207,6 +209,7 @@ public static class FeatureFlagKeys
     public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
     public const string PM19315EndUserActivationMvp = "pm-19315-end-user-activation-mvp";
+    public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
 
     public static List<string> GetAllKeys()
     {
