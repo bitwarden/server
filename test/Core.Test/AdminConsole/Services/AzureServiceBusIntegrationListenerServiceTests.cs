@@ -63,7 +63,7 @@ public class AzureServiceBusIntegrationListenerServiceTests
         Assert.False(await sutProvider.Sut.HandleMessageAsync(message.ToJson()));
 
         await _handler.Received(1).HandleAsync(Arg.Is(expected.ToJson()));
-        await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(default);
+        await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(default!);
     }
 
     [Theory, BitAutoData]
@@ -81,7 +81,7 @@ public class AzureServiceBusIntegrationListenerServiceTests
         Assert.False(await sutProvider.Sut.HandleMessageAsync(message.ToJson()));
 
         await _handler.Received(1).HandleAsync(Arg.Is(expected.ToJson()));
-        await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(default);
+        await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(default!);
     }
 
     [Theory, BitAutoData]
@@ -114,6 +114,6 @@ public class AzureServiceBusIntegrationListenerServiceTests
         Assert.True(await sutProvider.Sut.HandleMessageAsync(message.ToJson()));
 
         await _handler.Received(1).HandleAsync(Arg.Is(expected.ToJson()));
-        await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(default);
+        await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(default!);
     }
 }
