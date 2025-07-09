@@ -23,6 +23,7 @@ public class CollectionResponseModel : ResponseModel
         Name = collection.Name;
         ExternalId = collection.ExternalId;
         Type = collection.Type;
+        DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
     }
 
     public Guid Id { get; set; }
@@ -30,6 +31,7 @@ public class CollectionResponseModel : ResponseModel
     public string Name { get; set; }
     public string ExternalId { get; set; }
     public CollectionType Type { get; set; }
+    public string DefaultUserCollectionEmail { get; set; }
 }
 
 /// <summary>
