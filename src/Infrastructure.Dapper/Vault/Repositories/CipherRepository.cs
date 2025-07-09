@@ -352,7 +352,6 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
         Guid userId, IEnumerable<Cipher> ciphers)
     {
-
         return async (SqlConnection connection, SqlTransaction transaction) =>
         {
             // Create temp table
@@ -561,7 +560,6 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
                     if (collections.Any())
                     {
-                        // Jimmy create collection.
                         using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                         {
                             bulkCopy.DestinationTableName = "[dbo].[Collection]";
