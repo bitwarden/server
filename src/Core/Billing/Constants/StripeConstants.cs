@@ -42,8 +42,8 @@ public static class StripeConstants
         public static string[] Get() =>
             typeof(ErrorCodes)
                 .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-                .Where(fi => fi.IsLiteral && !fi.IsInitOnly && fi.FieldType == typeof(string))
-                .Select(fi => (string)fi.GetValue(null))
+                .Where(fi => fi is { IsLiteral: true, IsInitOnly: false } && fi.FieldType == typeof(string))
+                .Select(fi => (string)fi.GetValue(null)!)
                 .ToArray();
     }
 
