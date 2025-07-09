@@ -12,7 +12,7 @@ CREATE PROCEDURE [dbo].[Collection_CreateWithGroupsAndUsers]
 AS
 BEGIN
     SET NOCOUNT ON
- /* jimmy here is the stored proc that create collections */
+
     EXEC [dbo].[Collection_Create] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate, @DefaultUserCollectionEmail, @Type
 
     -- Groups

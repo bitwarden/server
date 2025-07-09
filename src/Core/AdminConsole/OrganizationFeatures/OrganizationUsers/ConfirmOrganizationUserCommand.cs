@@ -260,8 +260,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             Type = CollectionType.DefaultUserCollection
         };
 
-
-        // Jimmy default collection
         var userAccess = new List<CollectionAccessSelection>
         {
             new CollectionAccessSelection

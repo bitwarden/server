@@ -217,7 +217,6 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         objWithGroupsAndUsers.Groups = groups != null ? groups.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
         objWithGroupsAndUsers.Users = users != null ? users.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
 
-        // Jimmy current collection creation.
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
@@ -313,8 +312,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    // Jimmy TODO: update the params
-    public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName)
+    public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, string defaultCollectionName)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -323,11 +321,16 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             {
                 try
                 {
-                    var orgUserIdWithDefaultCollection = await GetOrganizationUserIdWithDefaultCollectionsAsync(connection, transaction, organizationId);
+                    var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(connection, transaction, organizationId);
 
-                    var orgUserIdsNeedDefaultCollection = affectedOrgUserIds.Where(affectedOrgUserId => !orgUserIdWithDefaultCollection.Contains(affectedOrgUserId)).ToList();
+                    var missingDefaultCollectionUserIds = orgUserIds.Where(orgUserId => !orgUserIdWithDefaultCollection.Contains(orgUserId)).ToList();
 
-                    var (collectionUsers, collections) = GenerateCollectionRecords(organizationId, orgUserIdsNeedDefaultCollection, defaultCollectionName);
+                    var (collectionUsers, collections) = GenerateDefaultCollections(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
+
+                    if (!collectionUsers.Any() || !collections.Any())
+                    {
+                        return;
+                    }
 
                     await CreateCollectionsAsync(connection, transaction, collections);
                     await CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
@@ -343,8 +346,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    // Jimmy TODO: rename
-    private async Task<HashSet<Guid>> GetOrganizationUserIdWithDefaultCollectionsAsync(SqlConnection connection, SqlTransaction transaction, Guid organizationId)
+    private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(SqlConnection connection, SqlTransaction transaction, Guid organizationId)
     {
         const string sql = @"
                     SELECT
@@ -357,25 +359,24 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                         Collection c ON c.Id = cu.CollectionId
                     WHERE
                         ou.OrganizationId = @OrganizationId
-                        AND c.Type = 1;
+                        AND c.Type = @CollectionType;
                 ";
 
         var organizationUserIds = await connection.QueryAsync<Guid>(
             sql,
-            new { OrganizationId = organizationId },
+            new { OrganizationId = organizationId, CollectionType = CollectionType.DefaultUserCollection },
             transaction: transaction
         );
 
         return organizationUserIds.ToHashSet();
     }
 
-    private (List<CollectionUser> collectionUser, List<Collection> collection) GenerateCollectionRecords(Guid organizationId, List<Guid> orgUserIdsNeedDefaultCollection, string defaultCollectionName)
+    private (List<CollectionUser> collectionUser, List<Collection> collection) GenerateDefaultCollections(Guid organizationId, List<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
     {
-
-        var collectionUser = new List<CollectionUser>();
+        var collectionUsers = new List<CollectionUser>();
         var collections = new List<Collection>();
 
-        foreach (var orgUserId in orgUserIdsNeedDefaultCollection)
+        foreach (var orgUserId in missingDefaultCollectionUserIds)
         {
             var collectionId = Guid.NewGuid();
 
@@ -391,7 +392,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
             });
 
-            collectionUser.Add(new CollectionUser
+            collectionUsers.Add(new CollectionUser
             {
                 CollectionId = collectionId,
                 OrganizationUserId = orgUserId,
@@ -401,7 +402,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             });
         }
 
-        return (collectionUser, collections);
+        return (collectionUsers, collections);
     }
 
     private async Task CreateCollectionsUsersAsync(SqlConnection connection, SqlTransaction transaction, List<CollectionUser> collectionUsers)
@@ -416,29 +417,23 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
     private DataTable BuildCollectionsUsersTable(SqlBulkCopy bulkCopy, List<CollectionUser> collectionUsers)
     {
-        var cu = collectionUsers.FirstOrDefault();
-
-        // Jimmy TODO: assess if this is needed
-        if (cu == null)
-        {
-            throw new ApplicationException("Error.");
-        }
+        var collectionUser = collectionUsers.First();
 
         var table = new DataTable("CollectionUserDataTable");
 
-        var collectionIdColumn = new DataColumn(nameof(cu.CollectionId), typeof(Guid));
+        var collectionIdColumn = new DataColumn(nameof(collectionUser.CollectionId), typeof(Guid));
         table.Columns.Add(collectionIdColumn);
 
-        var orgUserIdColumn = new DataColumn(nameof(cu.OrganizationUserId), typeof(Guid));
+        var orgUserIdColumn = new DataColumn(nameof(collectionUser.OrganizationUserId), typeof(Guid));
         table.Columns.Add(orgUserIdColumn);
 
-        var readOnlyColumn = new DataColumn(nameof(cu.ReadOnly), typeof(bool));
+        var readOnlyColumn = new DataColumn(nameof(collectionUser.ReadOnly), typeof(bool));
         table.Columns.Add(readOnlyColumn);
 
-        var hidePasswordsColumn = new DataColumn(nameof(cu.HidePasswords), typeof(bool));
+        var hidePasswordsColumn = new DataColumn(nameof(collectionUser.HidePasswords), typeof(bool));
         table.Columns.Add(hidePasswordsColumn);
 
-        var manageColumn = new DataColumn(nameof(cu.Manage), typeof(bool));
+        var manageColumn = new DataColumn(nameof(collectionUser.Manage), typeof(bool));
         table.Columns.Add(manageColumn);
 
         foreach (DataColumn col in table.Columns)
@@ -446,15 +441,15 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
         }
 
-        foreach (var collectionUser in collectionUsers)
+        foreach (var collectionUserRecord in collectionUsers)
         {
             var row = table.NewRow();
 
-            row[collectionIdColumn] = collectionUser.CollectionId;
-            row[orgUserIdColumn] = collectionUser.OrganizationUserId;
-            row[readOnlyColumn] = collectionUser.ReadOnly;
-            row[hidePasswordsColumn] = collectionUser.HidePasswords;
-            row[manageColumn] = collectionUser.Manage;
+            row[collectionIdColumn] = collectionUserRecord.CollectionId;
+            row[orgUserIdColumn] = collectionUserRecord.OrganizationUserId;
+            row[readOnlyColumn] = collectionUserRecord.ReadOnly;
+            row[hidePasswordsColumn] = collectionUserRecord.HidePasswords;
+            row[manageColumn] = collectionUserRecord.Manage;
 
             table.Rows.Add(row);
         }
@@ -472,32 +467,27 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    // Jimmy TODO: Assess the trade-offs between IEnumerable and arrays.
     private DataTable BuildCollectionsTable(SqlBulkCopy bulkCopy, IEnumerable<Collection> collections)
     {
-        var c = collections.FirstOrDefault();
-        if (c == null)
-        {
-            throw new ApplicationException("Must have some collections to bulk import.");
-        }
+        var collection = collections.First();
 
         var collectionsTable = new DataTable("CollectionDataTable");
 
-        var idColumn = new DataColumn(nameof(c.Id), c.Id.GetType());
+        var idColumn = new DataColumn(nameof(collection.Id), collection.Id.GetType());
         collectionsTable.Columns.Add(idColumn);
-        var organizationIdColumn = new DataColumn(nameof(c.OrganizationId), c.OrganizationId.GetType());
+        var organizationIdColumn = new DataColumn(nameof(collection.OrganizationId), collection.OrganizationId.GetType());
         collectionsTable.Columns.Add(organizationIdColumn);
-        var nameColumn = new DataColumn(nameof(c.Name), typeof(string));
+        var nameColumn = new DataColumn(nameof(collection.Name), typeof(string));
         collectionsTable.Columns.Add(nameColumn);
-        var creationDateColumn = new DataColumn(nameof(c.CreationDate), c.CreationDate.GetType());
+        var creationDateColumn = new DataColumn(nameof(collection.CreationDate), collection.CreationDate.GetType());
         collectionsTable.Columns.Add(creationDateColumn);
-        var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
+        var revisionDateColumn = new DataColumn(nameof(collection.RevisionDate), collection.RevisionDate.GetType());
         collectionsTable.Columns.Add(revisionDateColumn);
-        var externalIdColumn = new DataColumn(nameof(c.ExternalId), typeof(string));
+        var externalIdColumn = new DataColumn(nameof(collection.ExternalId), typeof(string));
         collectionsTable.Columns.Add(externalIdColumn);
-        var typeColumn = new DataColumn(nameof(c.Type), typeof(CollectionType));
+        var typeColumn = new DataColumn(nameof(collection.Type), typeof(CollectionType));
         collectionsTable.Columns.Add(typeColumn);
-        var defaultUserCollectionEmailColumn = new DataColumn(nameof(c.DefaultUserCollectionEmail), typeof(string));
+        var defaultUserCollectionEmailColumn = new DataColumn(nameof(collection.DefaultUserCollectionEmail), typeof(string));
         collectionsTable.Columns.Add(defaultUserCollectionEmailColumn);
 
         foreach (DataColumn col in collectionsTable.Columns)
@@ -509,18 +499,18 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         keys[0] = idColumn;
         collectionsTable.PrimaryKey = keys;
 
-        foreach (var collection in collections)
+        foreach (var collectionRecord in collections)
         {
             var row = collectionsTable.NewRow();
 
-            row[idColumn] = collection.Id;
-            row[organizationIdColumn] = collection.OrganizationId;
-            row[nameColumn] = collection.Name;
-            row[creationDateColumn] = collection.CreationDate;
-            row[revisionDateColumn] = collection.RevisionDate;
-            row[externalIdColumn] = collection.ExternalId;
-            row[typeColumn] = collection.Type;
-            row[defaultUserCollectionEmailColumn] = collection.DefaultUserCollectionEmail;
+            row[idColumn] = collectionRecord.Id;
+            row[organizationIdColumn] = collectionRecord.OrganizationId;
+            row[nameColumn] = collectionRecord.Name;
+            row[creationDateColumn] = collectionRecord.CreationDate;
+            row[revisionDateColumn] = collectionRecord.RevisionDate;
+            row[externalIdColumn] = collectionRecord.ExternalId;
+            row[typeColumn] = collectionRecord.Type;
+            row[defaultUserCollectionEmailColumn] = collectionRecord.DefaultUserCollectionEmail;
 
             collectionsTable.Rows.Add(row);
         }
