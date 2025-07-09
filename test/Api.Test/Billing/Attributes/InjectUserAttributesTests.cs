@@ -1,17 +1,17 @@
-﻿using Bit.Core.Entities;
+﻿using System.Security.Claims;
+using Bit.Api.Billing.Attributes;
+using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Xunit;
-using System.Security.Claims;
-using Bit.Api.Billing.Attributes;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bit.Api.Test.Billing.Attributes;
 
@@ -49,7 +49,7 @@ public class InjectUserAttributesTests
             new List<IFilterMetadata>(),
             new Dictionary<string, object>(),
             new object());
-}
+    }
 
     [Fact]
     public async Task OnActionExecutionAsync_WithAuthorizedUser_InjectsUser()

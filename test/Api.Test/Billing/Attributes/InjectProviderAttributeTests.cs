@@ -1,4 +1,5 @@
-﻿using Bit.Api.Models.Public.Response;
+﻿using Bit.Api.Billing.Attributes;
+using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -12,7 +13,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Xunit;
-using Bit.Api.Billing.Attributes;
 
 namespace Bit.Api.Test.Billing.Attributes;
 
