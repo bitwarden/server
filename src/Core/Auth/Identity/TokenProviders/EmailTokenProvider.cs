@@ -7,9 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Auth.Identity.TokenProviders;
 
-/// <summary>
-/// Generates and validates tokens for email OTPs.
-/// </summary>
 public class EmailTokenProvider : IUserTwoFactorTokenProvider<User>
 {
     private const string CacheKeyFormat = "EmailToken_{0}_{1}_{2}";
@@ -28,7 +25,7 @@ public class EmailTokenProvider : IUserTwoFactorTokenProvider<User>
         };
     }
 
-    public int TokenLength { get; protected set; } = 6;
+    public int TokenLength { get; protected set; } = 8;
     public bool TokenAlpha { get; protected set; } = false;
     public bool TokenNumeric { get; protected set; } = true;
 

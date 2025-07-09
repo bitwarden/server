@@ -10,18 +10,17 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Auth.Identity.TokenProviders;
 
-/// <summary>
-/// Generates tokens for email two-factor authentication.
-/// It inherits from the EmailTokenProvider class, which manages the persistence and validation of tokens, 
-/// and adds additional validation to ensure that 2FA is enabled for the user.
-/// </summary>
 public class EmailTwoFactorTokenProvider : EmailTokenProvider
 {
     public EmailTwoFactorTokenProvider(
         [FromKeyedServices("persistent")]
         IDistributedCache distributedCache) :
         base(distributedCache)
-    { }
+    {
+        TokenAlpha = false;
+        TokenNumeric = true;
+        TokenLength = 6;
+    }
 
     public override Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
