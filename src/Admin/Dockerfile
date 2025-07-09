@@ -33,11 +33,9 @@ COPY . ./
 
 # Restore project dependencies and tools
 WORKDIR /source/src/Admin
-#RUN npm ci
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Build project
-#RUN npm run build
 RUN . /tmp/rid.txt && dotnet publish \
     -c release \
     --no-restore \
