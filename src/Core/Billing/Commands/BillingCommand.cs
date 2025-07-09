@@ -11,7 +11,14 @@ public abstract class BillingCommand<T>(
 {
     protected string CommandName => GetType().Name;
 
-    protected async Task<BillingCommandResult<R>> HandleAsync<R>(Func<Task<BillingCommandResult<R>>> function)
+    /// <summary>
+    /// Executes the provided function within a predefined execution context, handling any exceptions that occur during the process.
+    /// </summary>
+    /// <typeparam name="TSuccess">The type of the successful result expected from the provided function.</typeparam>
+    /// <param name="function">A function that performs an operation and returns a <see cref="BillingCommandResult{TSuccess}"/>.</param>
+    /// <returns>A task that represents the operation. The result provides a <see cref="BillingCommandResult{TSuccess}"/> which may indicate success or an error outcome.</returns>
+    protected async Task<BillingCommandResult<TSuccess>> HandleAsync<TSuccess>(
+        Func<Task<BillingCommandResult<TSuccess>>> function)
     {
         try
         {

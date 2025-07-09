@@ -8,6 +8,21 @@ namespace Bit.Api.Billing.Controllers;
 
 public abstract class BaseBillingController : Controller
 {
+    /// <summary>
+    /// Processes the result of a billing command and converts it to an appropriate HTTP result response.
+    /// </summary>
+    /// <remarks>
+    /// Result to response mappings:
+    /// <list type="bullet">
+    /// <item><description><typeparamref name="T"/>: 200 OK</description></item>
+    /// <item><description><see cref="Core.Billing.Commands.BadRequest"/>: 400 BAD_REQUEST</description></item>
+    /// <item><description><see cref="Core.Billing.Commands.Conflict"/>: 409 CONFLICT</description></item>
+    /// <item><description><see cref="Unhandled"/>: 500 INTERNAL_SERVER_ERROR</description></item>
+    /// </list>
+    /// </remarks>
+    /// <typeparam name="T">The type of the successful result.</typeparam>
+    /// <param name="result">The result of executing the billing command.</param>
+    /// <returns>An HTTP result response representing the outcome of the command execution.</returns>
     protected static IResult Handle<T>(BillingCommandResult<T> result) =>
         result.Match<IResult>(
             TypedResults.Ok,
