@@ -314,37 +314,23 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     }
 
     // Jimmy TODO: update the params
-    public async Task CreateDefaultCollectionsAsync()
+    public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName)
     {
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             connection.Open();
-
-            var orgId = Guid.Parse("C8D71195-CA4F-473F-80E6-B2AB010F35EF");
-
-            // Jimmy TODO: make sure we pull back the UserId from the other stored for the CollectionUser
-            var useridEmail = Guid.Parse("676931B3-5479-403A-AFF1-B30D014F2A26");
-            var useridUserid = Guid.Parse("D7AAC6DE-6958-4DF6-B22A-B30D0154D878");
-
-            var affectedOrgUserIds = new[] { useridEmail, useridUserid };
-
             using (var transaction = connection.BeginTransaction())
             {
                 try
                 {
-
-                    var orgUserIdWithDefaultCollection = await GetOrganizationUserIdWithDefaultCollectionsAsync(connection, transaction, orgId);
+                    var orgUserIdWithDefaultCollection = await GetOrganizationUserIdWithDefaultCollectionsAsync(connection, transaction, organizationId);
 
                     var orgUserIdsNeedDefaultCollection = affectedOrgUserIds.Where(affectedOrgUserId => !orgUserIdWithDefaultCollection.Contains(affectedOrgUserId)).ToList();
 
-                    var (collectionUsers, collections) = GenerateCollectionRecords(orgId, orgUserIdsNeedDefaultCollection);
+                    var (collectionUsers, collections) = GenerateCollectionRecords(organizationId, orgUserIdsNeedDefaultCollection, defaultCollectionName);
 
                     await CreateCollectionsAsync(connection, transaction, collections);
-
                     await CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
-
-                    // Jimmy TODO: create the CollectionUser. We need the collections ids for this, but since the server is creating the ids, we don't need something to come back.
 
                     transaction.Commit();
                 }
@@ -383,7 +369,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         return organizationUserIds.ToHashSet();
     }
 
-    private (List<CollectionUser> collectionUser, List<Collection> collection) GenerateCollectionRecords(Guid organizationId, List<Guid> orgUserIdsNeedDefaultCollection)
+    private (List<CollectionUser> collectionUser, List<Collection> collection) GenerateCollectionRecords(Guid organizationId, List<Guid> orgUserIdsNeedDefaultCollection, string defaultCollectionName)
     {
 
         var collectionUser = new List<CollectionUser>();
@@ -397,8 +383,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             {
                 Id = collectionId,
                 OrganizationId = organizationId,
-                Name = "default collection 1",
-                ExternalId = "ENG-001",
+                Name = defaultCollectionName,
                 CreationDate = DateTime.UtcNow,
                 RevisionDate = DateTime.UtcNow,
                 Type = CollectionType.DefaultUserCollection,

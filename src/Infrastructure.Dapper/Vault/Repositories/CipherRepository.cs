@@ -353,7 +353,6 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         Guid userId, IEnumerable<Cipher> ciphers)
     {
 
-        // Jimmy 
         return async (SqlConnection connection, SqlTransaction transaction) =>
         {
             // Create temp table

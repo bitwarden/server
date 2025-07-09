@@ -56,5 +56,5 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task CreateOrUpdateAccessForManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
         IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups);
 
-    Task CreateDefaultCollectionsAsync();
+    Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName);
 }

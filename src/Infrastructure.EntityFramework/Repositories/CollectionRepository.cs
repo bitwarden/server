@@ -696,9 +696,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> collectionIds, IEnumerable<CollectionAccessSelection> users,
-        IEnumerable<CollectionAccessSelection> groups) =>
-        throw new NotImplementedException();
 
     private static async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups)
     {
@@ -772,5 +769,5 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         // SaveChangesAsync is expected to be called outside this method
     }
 
-    public Task CreateDefaultCollectionsAsync() => throw new NotImplementedException();
+    public Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName) => throw new NotImplementedException();
 }
