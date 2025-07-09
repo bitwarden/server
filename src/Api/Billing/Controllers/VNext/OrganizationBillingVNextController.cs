@@ -1,134 +1,107 @@
-﻿using Bit.Api.Billing.Models.Requests.Payment;
+﻿#nullable enable
+using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.Billing.Attributes;
+using Bit.Api.Billing.Models.Requests.Payment;
+using Bit.Api.Billing.Models.Requirements;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
-using Bit.Core.Context;
-using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+// ReSharper disable RouteTemplates.MethodMissingRouteParameters
 
 namespace Bit.Api.Billing.Controllers.VNext;
 
+[Authorize("Application")]
 [Route("organizations/{organizationId:guid}/billing/vnext")]
 [SelfHosted(NotSelfHostedOnly = true)]
 public class OrganizationBillingVNextController(
-    ICurrentContext currentContext,
     ICreateBitPayInvoiceForCreditCommand createBitPayInvoiceForCreditCommand,
     IGetBillingAddressQuery getBillingAddressQuery,
     IGetCreditQuery getCreditQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
-    IOrganizationRepository organizationRepository,
     IUpdateBillingAddressCommand updateBillingAddressCommand,
     IUpdatePaymentMethodCommand updatePaymentMethodCommand,
     IVerifyBankAccountCommand verifyBankAccountCommand) : BaseBillingController
 {
+    [Authorize<ManageOrganizationBillingRequirement>]
     [HttpGet("address")]
-    public Task<IResult> GetBillingAddressAsync(
-        [FromRoute] Guid organizationId)
-        => IfCanEditPaymentMethodAsync(
-            organizationId,
-            async organization =>
-            {
-                var billingAddress = await getBillingAddressQuery.Run(organization);
-                return TypedResults.Ok(billingAddress);
-            });
-
-    [HttpPut("address")]
-    public Task<IResult> UpdateBillingAddressAsync(
-        [FromRoute] Guid organizationId,
-        [FromBody] BillingAddressRequest request)
-        => IfCanEditPaymentMethodAsync(
-            organizationId,
-            async organization =>
-            {
-                var billingAddress = request.ToDomain();
-                var result = await updateBillingAddressCommand.Run(organization, billingAddress);
-                return Handle(result);
-            });
-
-    [HttpGet("credit")]
-    public Task<IResult> GetCreditAsync(
-        [FromRoute] Guid organizationId)
-        => IfCanEditPaymentMethodAsync(
-            organizationId,
-            async organization =>
-            {
-                var credit = await getCreditQuery.Run(organization);
-                return TypedResults.Ok(credit);
-            });
-
-    [HttpPost("credit/bitpay")]
-    public Task<IResult> AddCreditViaBitPayAsync(
-        [FromRoute] Guid organizationId,
-        [FromBody] BitPayCreditRequest request)
-        => IfCanEditPaymentMethodAsync(
-            organizationId,
-            async organization =>
-            {
-                var result = await createBitPayInvoiceForCreditCommand.Run(
-                    organization,
-                    request.Amount,
-                    request.RedirectUrl);
-                return Handle(result);
-            });
-
-    [HttpGet("payment-method")]
-    public Task<IResult> GetPaymentMethodAsync(
-        [FromRoute] Guid organizationId)
-        => IfCanEditPaymentMethodAsync(
-            organizationId,
-            async organization =>
-            {
-                var paymentMethod = await getPaymentMethodQuery.Run(organization);
-                return TypedResults.Ok(paymentMethod);
-            });
-
-    [HttpPut("payment-method")]
-    public Task<IResult> UpdatePaymentMethodAsync(
-        [FromRoute] Guid organizationId,
-        [FromBody] TokenizedPaymentMethodRequest request)
-        => IfCanEditPaymentMethodAsync(
-            organizationId,
-            async organization =>
-            {
-                var (paymentMethod, billingAddress) = request.ToDomain();
-                var result = await updatePaymentMethodCommand.Run(organization, paymentMethod, billingAddress);
-                return Handle(result);
-            });
-
-    [HttpPost("payment-method/verify-bank-account")]
-    public Task<IResult> VerifyBankAccountAsync(
-        [FromRoute] Guid organizationId,
-        [FromBody] VerifyBankAccountRequest request)
-        => IfCanEditPaymentMethodAsync(
-            organizationId,
-            async organization =>
-            {
-                var result = await verifyBankAccountCommand.Run(organization, request.DescriptorCode);
-                return Handle(result);
-            });
-
-    private Task<IResult> IfCanEditPaymentMethodAsync(
-        Guid organizationId,
-        Func<Organization, Task<IResult>> function) => RunIfAuthorizedAsync(organizationId, currentContext.EditPaymentMethods, function);
-
-    private async Task<IResult> RunIfAuthorizedAsync(
-        Guid organizationId,
-        Func<Guid, Task<bool>> authorize,
-        Func<Organization, Task<IResult>> function)
+    [InjectOrganization]
+    public async Task<IResult> GetBillingAddressAsync(
+        [BindNever] Organization organization)
     {
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
+        var billingAddress = await getBillingAddressQuery.Run(organization);
+        return TypedResults.Ok(billingAddress);
+    }
 
-        if (organization == null)
-        {
-            return Error.NotFound();
-        }
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpPut("address")]
+    [InjectOrganization]
+    public async Task<IResult> UpdateBillingAddressAsync(
+        [BindNever] Organization organization,
+        [FromBody] BillingAddressRequest request)
+    {
+        var billingAddress = request.ToDomain();
+        var result = await updateBillingAddressCommand.Run(organization, billingAddress);
+        return Handle(result);
+    }
 
-        if (!await authorize(organizationId))
-        {
-            return Error.Unauthorized();
-        }
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpGet("credit")]
+    [InjectOrganization]
+    public async Task<IResult> GetCreditAsync(
+        [BindNever] Organization organization)
+    {
+        var credit = await getCreditQuery.Run(organization);
+        return TypedResults.Ok(credit);
+    }
 
-        return await function(organization);
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpPost("credit/bitpay")]
+    [InjectOrganization]
+    public async Task<IResult> AddCreditViaBitPayAsync(
+        [BindNever] Organization organization,
+        [FromBody] BitPayCreditRequest request)
+    {
+        var result = await createBitPayInvoiceForCreditCommand.Run(
+            organization,
+            request.Amount,
+            request.RedirectUrl);
+        return Handle(result);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpGet("payment-method")]
+    [InjectOrganization]
+    public async Task<IResult> GetPaymentMethodAsync(
+        [BindNever] Organization organization)
+    {
+        var paymentMethod = await getPaymentMethodQuery.Run(organization);
+        return TypedResults.Ok(paymentMethod);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpPut("payment-method")]
+    [InjectOrganization]
+    public async Task<IResult> UpdatePaymentMethodAsync(
+        [BindNever] Organization organization,
+        [FromBody] TokenizedPaymentMethodRequest request)
+    {
+        var (paymentMethod, billingAddress) = request.ToDomain();
+        var result = await updatePaymentMethodCommand.Run(organization, paymentMethod, billingAddress);
+        return Handle(result);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpPost("payment-method/verify-bank-account")]
+    [InjectOrganization]
+    public async Task<IResult> VerifyBankAccountAsync(
+        [BindNever] Organization organization,
+        [FromBody] VerifyBankAccountRequest request)
+    {
+        var result = await verifyBankAccountCommand.Run(organization, request.DescriptorCode);
+        return Handle(result);
     }
 }
