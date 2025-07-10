@@ -800,6 +800,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 .Select(x => x.ou.Id)
                 .ToListAsync()).ToHashSet();
 
+            // Jimmy TODO: Maybe abstract the logic below into a pure function and share it between SQL and EF?
             var missingDefaultCollectionUserIds = affectedOrgUserIds.Where(orgUserId => !orgUserIdWithDefaultCollection.Contains(orgUserId)).ToList();
 
             var (collectionUsers, collections) = GenerateDefaultCollections(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
