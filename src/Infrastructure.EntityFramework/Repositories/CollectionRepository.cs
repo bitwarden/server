@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
+using LinqToDB.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -769,5 +771,82 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         // SaveChangesAsync is expected to be called outside this method
     }
 
-    public Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName) => throw new NotImplementedException();
+    public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName)
+    {
+        if (!affectedOrgUserIds.Any())
+        {
+            return;
+        }
+
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var orgUserIdWithDefaultCollection = (await dbContext.OrganizationUsers
+                .Where(ou => ou.OrganizationId == organizationId)
+                .Join(
+                    dbContext.CollectionUsers,
+                    ou => ou.Id,
+                    cu => cu.OrganizationUserId,
+                    (ou, cu) => new { ou, cu }
+                )
+                .Join(
+                    dbContext.Collections,
+                    temp => temp.cu.CollectionId,
+                    c => c.Id,
+                    (temp, c) => new { temp.ou, Collection = c }
+                )
+                .Where(x => x.Collection.Type == CollectionType.DefaultUserCollection)
+                .Select(x => x.ou.Id)
+                .ToListAsync()).ToHashSet();
+
+            var missingDefaultCollectionUserIds = affectedOrgUserIds.Where(orgUserId => !orgUserIdWithDefaultCollection.Contains(orgUserId)).ToList();
+
+            var (collectionUsers, collections) = GenerateDefaultCollections(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
+
+            if (!collectionUsers.Any() || !collections.Any())
+            {
+                return;
+            }
+
+            await dbContext.BulkCopyAsync(collections);
+            await dbContext.BulkCopyAsync(collectionUsers);
+
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    private (List<CollectionUser> collectionUser, List<Collection> collection) GenerateDefaultCollections(Guid organizationId, List<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
+    {
+        var collectionUsers = new List<CollectionUser>();
+        var collections = new List<Collection>();
+
+        foreach (var orgUserId in missingDefaultCollectionUserIds)
+        {
+            var collectionId = Guid.NewGuid();
+
+            collections.Add(new Collection
+            {
+                Id = collectionId,
+                OrganizationId = organizationId,
+                Name = defaultCollectionName,
+                CreationDate = DateTime.UtcNow,
+                RevisionDate = DateTime.UtcNow,
+                Type = CollectionType.DefaultUserCollection,
+                DefaultUserCollectionEmail = null
+
+            });
+
+            collectionUsers.Add(new CollectionUser
+            {
+                CollectionId = collectionId,
+                OrganizationUserId = orgUserId,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true,
+            });
+        }
+
+        return (collectionUsers, collections);
+    }
 }

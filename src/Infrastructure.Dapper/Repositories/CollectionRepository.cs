@@ -312,8 +312,13 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, string defaultCollectionName)
+    public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName)
     {
+        if (!affectedOrgUserIds.Any())
+        {
+            return;
+        }
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             connection.Open();
@@ -323,7 +328,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 {
                     var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(connection, transaction, organizationId);
 
-                    var missingDefaultCollectionUserIds = orgUserIds.Where(orgUserId => !orgUserIdWithDefaultCollection.Contains(orgUserId)).ToList();
+                    var missingDefaultCollectionUserIds = affectedOrgUserIds.Where(orgUserId => !orgUserIdWithDefaultCollection.Contains(orgUserId)).ToList();
 
                     var (collectionUsers, collections) = GenerateDefaultCollections(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
 
