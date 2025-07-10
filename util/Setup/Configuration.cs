@@ -1,4 +1,7 @@
-﻿using System.ComponentModel;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel;
 using YamlDotNet.Serialization;
 
 namespace Bit.Setup;
@@ -30,9 +33,6 @@ public class Configuration
     [Description("Docker compose file port mapping for HTTPS. Leave empty to remove the port mapping.\n" +
         "Learn more: https://docs.docker.com/compose/compose-file/#ports")]
     public string HttpsPort { get; set; } = "443";
-
-    [Description("Configure Nginx for Captcha.")]
-    public bool Captcha { get; set; } = false;
 
     [Description("Configure Nginx for SSL.")]
     public bool Ssl { get; set; } = true;

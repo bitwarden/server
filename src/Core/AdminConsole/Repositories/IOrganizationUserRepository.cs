@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.UserKey;
@@ -17,7 +18,6 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUser>> GetManyByUserAsync(Guid userId);
     Task<ICollection<OrganizationUser>> GetManyByOrganizationAsync(Guid organizationId, OrganizationUserType? type);
     Task<int> GetCountByOrganizationAsync(Guid organizationId, string email, bool onlyRegisteredUsers);
-    Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers);
     Task<OrganizationUser?> GetByOrganizationAsync(Guid organizationId, Guid userId);
     Task<Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id);
@@ -68,4 +68,6 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// <param name="role">The role to search for</param>
     /// <returns>A list of OrganizationUsersUserDetails with the specified role</returns>
     Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role);
+
+    Task CreateManyAsync(IEnumerable<CreateOrganizationUser> organizationUserCollection);
 }

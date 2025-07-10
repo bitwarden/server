@@ -1,9 +1,11 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -11,9 +13,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
@@ -26,14 +25,11 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IReferenceEventService _referenceEventService;
 
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
     private readonly IDataProtector _organizationServiceDataProtector;
     private readonly IDataProtector _providerServiceDataProtector;
-
-    private readonly ICurrentContext _currentContext;
 
     private readonly IUserService _userService;
     private readonly IMailService _mailService;
@@ -48,11 +44,9 @@ public class RegisterUserCommand : IRegisterUserCommand
         IGlobalSettings globalSettings,
         IOrganizationUserRepository organizationUserRepository,
         IPolicyRepository policyRepository,
-        IReferenceEventService referenceEventService,
         IDataProtectionProvider dataProtectionProvider,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
-        ICurrentContext currentContext,
         IUserService userService,
         IMailService mailService,
         IValidateRedemptionTokenCommand validateRedemptionTokenCommand,
@@ -62,14 +56,12 @@ public class RegisterUserCommand : IRegisterUserCommand
         _globalSettings = globalSettings;
         _organizationUserRepository = organizationUserRepository;
         _policyRepository = policyRepository;
-        _referenceEventService = referenceEventService;
 
         _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
             "OrganizationServiceDataProtector");
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
 
-        _currentContext = currentContext;
         _userService = userService;
         _mailService = mailService;
 
@@ -86,7 +78,6 @@ public class RegisterUserCommand : IRegisterUserCommand
         if (result == IdentityResult.Success)
         {
             await _mailService.SendWelcomeEmailAsync(user);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
         }
 
         return result;
@@ -108,6 +99,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         var result = await _userService.CreateUserAsync(user, masterPasswordHash);
         if (result == IdentityResult.Success)
         {
+            var sentWelcomeEmail = false;
             if (!string.IsNullOrEmpty(user.ReferenceData))
             {
                 var referenceData = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.ReferenceData);
@@ -115,20 +107,18 @@ public class RegisterUserCommand : IRegisterUserCommand
                 {
                     var initiationPath = value.ToString();
                     await SendAppropriateWelcomeEmailAsync(user, initiationPath);
+                    sentWelcomeEmail = true;
                     if (!string.IsNullOrEmpty(initiationPath))
                     {
-                        await _referenceEventService.RaiseEventAsync(
-                            new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext)
-                            {
-                                SignupInitiationPath = initiationPath
-                            });
-
                         return result;
                     }
                 }
             }
 
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
+            if (!sentWelcomeEmail)
+            {
+                await _mailService.SendWelcomeEmailAsync(user);
+            }
         }
 
         return result;
@@ -256,10 +246,6 @@ public class RegisterUserCommand : IRegisterUserCommand
         if (result == IdentityResult.Success)
         {
             await _mailService.SendWelcomeEmailAsync(user);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext)
-            {
-                ReceiveMarketingEmails = tokenable.ReceiveMarketingEmails
-            });
         }
 
         return result;
@@ -278,7 +264,6 @@ public class RegisterUserCommand : IRegisterUserCommand
         if (result == IdentityResult.Success)
         {
             await _mailService.SendWelcomeEmailAsync(user);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
         }
 
         return result;
@@ -299,7 +284,6 @@ public class RegisterUserCommand : IRegisterUserCommand
         if (result == IdentityResult.Success)
         {
             await _mailService.SendWelcomeEmailAsync(user);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
         }
 
         return result;
@@ -318,7 +302,6 @@ public class RegisterUserCommand : IRegisterUserCommand
         if (result == IdentityResult.Success)
         {
             await _mailService.SendWelcomeEmailAsync(user);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
         }
 
         return result;

@@ -1,9 +1,12 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
@@ -570,6 +573,65 @@ public class CipherRepositoryTests
         Assert.True(personalDetails.Manage, "Personal ciphers should always have Manage permission");
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByUserIdAsync_WhenOneCipherIsAssignedToTwoCollectionsWithDifferentPermissions_MostPrivilegedAccessIsReturnedOnTheCipher(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        //Arrange
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+
+        var cipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        var managedPermissionsCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Managed",
+            OrganizationId = organization.Id
+        });
+
+        var unmanagedPermissionsCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Unmanaged",
+            OrganizationId = organization.Id
+        });
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id, organization.Id,
+            [managedPermissionsCollection.Id, unmanagedPermissionsCollection.Id]);
+
+        await collectionRepository.UpdateUsersAsync(managedPermissionsCollection.Id, new List<CollectionAccessSelection>
+        {
+            new() { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }
+        });
+
+        await collectionRepository.UpdateUsersAsync(unmanagedPermissionsCollection.Id, new List<CollectionAccessSelection>
+        {
+            new() { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = false }
+        });
+
+        // Act
+        var ciphers = await cipherRepository.GetManyByUserIdAsync(user.Id);
+
+        // Assert
+        Assert.Single(ciphers);
+        var deletableCipher = ciphers.SingleOrDefault(x => x.Id == cipher.Id);
+        Assert.NotNull(deletableCipher);
+        Assert.True(deletableCipher.Manage);
+
+        // Annul
+        await cipherRepository.DeleteAsync(cipher);
+        await organizationUserRepository.DeleteAsync(orgUser);
+        await organizationRepository.DeleteAsync(organization);
+        await userRepository.DeleteAsync(user);
+    }
+
     private async Task<(User user, Organization org, OrganizationUser orgUser)> CreateTestUserAndOrganization(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -882,5 +944,114 @@ public class CipherRepositoryTests
         Assert.Equal(user2.Id, user2TaskCiphers.Last().UserId);
         Assert.Contains(user2TaskCiphers, t => t.CipherId == manageCipher1.Id && t.TaskId == securityTasks[0].Id);
         Assert.Contains(user2TaskCiphers, t => t.CipherId == manageCipher2.Id && t.TaskId == securityTasks[1].Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task UpdateCiphersAsync_Works(ICipherRepository cipherRepository, IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var cipher1 = await CreatePersonalCipher(user, cipherRepository);
+        var cipher2 = await CreatePersonalCipher(user, cipherRepository);
+
+        cipher1.Type = CipherType.SecureNote;
+        cipher2.Attachments = "new_attachments";
+
+        await cipherRepository.UpdateCiphersAsync(user.Id, [cipher1, cipher2]);
+
+        var updatedCipher1 = await cipherRepository.GetByIdAsync(cipher1.Id);
+        var updatedCipher2 = await cipherRepository.GetByIdAsync(cipher2.Id);
+
+        Assert.NotNull(updatedCipher1);
+        Assert.NotNull(updatedCipher2);
+
+        Assert.Equal(CipherType.SecureNote, updatedCipher1.Type);
+        Assert.Equal("new_attachments", updatedCipher2.Attachments);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task DeleteCipherWithSecurityTaskAsync_Works(
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository,
+        ICipherRepository cipherRepository,
+        ISecurityTaskRepository securityTaskRepository,
+        INotificationRepository notificationRepository,
+        INotificationStatusRepository notificationStatusRepository)
+    {
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Test Plan",
+            BillingEmail = ""
+        });
+
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var cipher1 = new Cipher { Type = CipherType.Login, OrganizationId = organization.Id, Data = "", };
+        await cipherRepository.CreateAsync(cipher1);
+
+        var cipher2 = new Cipher { Type = CipherType.Login, OrganizationId = organization.Id, Data = "", };
+        await cipherRepository.CreateAsync(cipher2);
+
+        var tasks = new List<SecurityTask>
+        {
+            new()
+            {
+                OrganizationId = organization.Id,
+                CipherId = cipher1.Id,
+                Status = SecurityTaskStatus.Pending,
+                Type = SecurityTaskType.UpdateAtRiskCredential,
+            },
+            new()
+            {
+                OrganizationId = organization.Id,
+                CipherId = cipher2.Id,
+                Status = SecurityTaskStatus.Completed,
+                Type = SecurityTaskType.UpdateAtRiskCredential,
+            }
+        };
+
+        await securityTaskRepository.CreateManyAsync(tasks);
+        var notification = await notificationRepository.CreateAsync(new Notification
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            TaskId = tasks[1].Id,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
+        });
+        await notificationStatusRepository.CreateAsync(new NotificationStatus
+        {
+            NotificationId = notification.Id,
+            UserId = user.Id,
+            ReadDate = DateTime.UtcNow,
+        });
+
+        // Delete cipher with pending security task
+        await cipherRepository.DeleteAsync(cipher1);
+
+        var deletedCipher1 = await cipherRepository.GetByIdAsync(cipher1.Id);
+
+        Assert.Null(deletedCipher1);
+
+        // Delete cipher with completed security task
+        await cipherRepository.DeleteAsync(cipher2);
+
+        var deletedCipher2 = await cipherRepository.GetByIdAsync(cipher2.Id);
+
+        Assert.Null(deletedCipher2);
     }
 }

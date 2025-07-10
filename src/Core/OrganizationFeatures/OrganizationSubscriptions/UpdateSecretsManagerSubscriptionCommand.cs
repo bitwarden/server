@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -124,7 +127,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     }
 
-    private async Task ValidateUpdateAsync(SecretsManagerSubscriptionUpdate update)
+    public async Task ValidateUpdateAsync(SecretsManagerSubscriptionUpdate update)
     {
         if (_globalSettings.SelfHosted)
         {

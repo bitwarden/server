@@ -1,4 +1,7 @@
-﻿using System.Reflection;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -19,6 +22,34 @@ public class OrganizationLicense : ILicense
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrganizationLicense"/> class.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ DEPRECATED: This constructor and the entire property-based licensing system is deprecated.
+    /// Do not add new properties to this constructor or extend its functionality.
+    /// </para>
+    /// <para>
+    /// This implementation has been replaced by a new claims-based licensing system that provides better security
+    /// and flexibility. The new system uses JWT claims to store and validate license information, making it more
+    /// secure and easier to extend without requiring changes to the license format.
+    /// </para>
+    /// <para>
+    /// For new license-related features or modifications:
+    /// 1. Use the claims-based system instead of adding properties here
+    /// 2. Add new claims to the license token
+    /// 3. Validate claims in the <see cref="CanUse"/> and <see cref="VerifyData"/> methods
+    /// </para>
+    /// <para>
+    /// This constructor is maintained only for backward compatibility with existing licenses.
+    /// </para>
+    /// </remarks>
+    /// <param name="org">The organization to create the license for.</param>
+    /// <param name="subscriptionInfo">Information about the organization's subscription.</param>
+    /// <param name="installationId">The ID of the current installation.</param>
+    /// <param name="licenseService">The service used to sign the license.</param>
+    /// <param name="version">Optional version number for the license format.</param>
     public OrganizationLicense(Organization org, SubscriptionInfo subscriptionInfo, Guid installationId,
         ILicensingService licenseService, int? version = null)
     {
@@ -55,6 +86,8 @@ public class OrganizationLicense : ILicense
         UseSecretsManager = org.UseSecretsManager;
         SmSeats = org.SmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
+        UseRiskInsights = org.UseRiskInsights;
+        UseOrganizationDomains = org.UseOrganizationDomains;
 
         // Deprecated. Left for backwards compatibility with old license versions.
         LimitCollectionCreationDeletion = org.LimitCollectionCreation || org.LimitCollectionDeletion;
@@ -104,6 +137,7 @@ public class OrganizationLicense : ILicense
             Trial = false;
         }
 
+        UseAdminSponsoredFamilies = org.UseAdminSponsoredFamilies;
         Hash = Convert.ToBase64String(ComputeHash());
         Signature = Convert.ToBase64String(licenseService.SignLicense(this));
     }
@@ -143,6 +177,7 @@ public class OrganizationLicense : ILicense
     public bool UseSecretsManager { get; set; }
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
+    public bool UseRiskInsights { get; set; }
 
     // Deprecated. Left for backwards compatibility with old license versions.
     public bool LimitCollectionCreationDeletion { get; set; } = true;
@@ -151,6 +186,8 @@ public class OrganizationLicense : ILicense
 
     public bool Trial { get; set; }
     public LicenseType? LicenseType { get; set; }
+    public bool UseOrganizationDomains { get; set; }
+    public bool UseAdminSponsoredFamilies { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
     public string Token { get; set; }
@@ -162,10 +199,10 @@ public class OrganizationLicense : ILicense
     /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
     /// getting out of date license errors
     /// </remarks>
-    public const int CurrentLicenseFileVersion = 14;
+    public const int CurrentLicenseFileVersion = 15;
     private bool ValidLicenseVersion
     {
-        get => Version is >= 1 and <= 15;
+        get => Version is >= 1 and <= 16;
     }
 
     public byte[] GetDataBytes(bool forHash = false)
@@ -211,6 +248,8 @@ public class OrganizationLicense : ILicense
                     (Version >= 14 || !p.Name.Equals(nameof(LimitCollectionCreationDeletion))) &&
                     // AllowAdminAccessToAllCollectionItems was added in Version 15
                     (Version >= 15 || !p.Name.Equals(nameof(AllowAdminAccessToAllCollectionItems))) &&
+                    // UseOrganizationDomains was added in Version 16
+                    (Version >= 16 || !p.Name.Equals(nameof(UseOrganizationDomains))) &&
                     (
                         !forHash ||
                         (
@@ -218,7 +257,11 @@ public class OrganizationLicense : ILicense
                             !p.Name.Equals(nameof(Issued)) &&
                             !p.Name.Equals(nameof(Refresh))
                         )
-                    ))
+                    ) &&
+                    // any new fields added need to be added here so that they're ignored
+                    !p.Name.Equals(nameof(UseRiskInsights)) &&
+                    !p.Name.Equals(nameof(UseAdminSponsoredFamilies)) &&
+                    !p.Name.Equals(nameof(UseOrganizationDomains)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");
@@ -289,13 +332,35 @@ public class OrganizationLicense : ILicense
     }
 
     /// <summary>
-    /// Do not extend this method. It is only here for backwards compatibility with old licenses.
-    /// Instead, extend the CanUse method using the ClaimsPrincipal.
+    /// Validates an obsolete license format using property-based validation.
     /// </summary>
-    /// <param name="globalSettings"></param>
-    /// <param name="licensingService"></param>
-    /// <param name="exception"></param>
-    /// <returns></returns>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ DEPRECATED: This method is deprecated and should not be extended or modified.
+    /// It is maintained only for backward compatibility with old license formats.
+    /// </para>
+    /// <para>
+    /// This method has been replaced by a new claims-based validation system that provides:
+    /// - Better security through JWT claims
+    /// - More flexible validation rules
+    /// - Easier extensibility without changing the license format
+    /// - Better separation of concerns
+    /// </para>
+    /// <para>
+    /// To add new license validation rules:
+    /// 1. Add new claims to the license token in the claims-based system
+    /// 2. Extend the <see cref="CanUse(IGlobalSettings, ILicensingService, ClaimsPrincipal, out string)"/> method
+    /// 3. Validate the new claims using the ClaimsPrincipal parameter
+    /// </para>
+    /// <para>
+    /// This method will be removed in a future version once all old licenses have been migrated
+    /// to the new claims-based system.
+    /// </para>
+    /// </remarks>
+    /// <param name="globalSettings">The global settings containing installation information.</param>
+    /// <param name="licensingService">The service used to verify the license signature.</param>
+    /// <param name="exception">When the method returns false, contains the error message explaining why the license is invalid.</param>
+    /// <returns>True if the license is valid, false otherwise.</returns>
     private bool ObsoleteCanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
     {
         // Do not extend this method. It is only here for backwards compatibility with old licenses.
@@ -389,6 +454,8 @@ public class OrganizationLicense : ILicense
         var usePasswordManager = claimsPrincipal.GetValue<bool>(nameof(UsePasswordManager));
         var smSeats = claimsPrincipal.GetValue<int?>(nameof(SmSeats));
         var smServiceAccounts = claimsPrincipal.GetValue<int?>(nameof(SmServiceAccounts));
+        var useAdminSponsoredFamilies = claimsPrincipal.GetValue<bool>(nameof(UseAdminSponsoredFamilies));
+        var useOrganizationDomains = claimsPrincipal.GetValue<bool>(nameof(UseOrganizationDomains));
 
         return issued <= DateTime.UtcNow &&
                expires >= DateTime.UtcNow &&
@@ -416,7 +483,10 @@ public class OrganizationLicense : ILicense
                useSecretsManager == organization.UseSecretsManager &&
                usePasswordManager == organization.UsePasswordManager &&
                smSeats == organization.SmSeats &&
-               smServiceAccounts == organization.SmServiceAccounts;
+               smServiceAccounts == organization.SmServiceAccounts &&
+               useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies &&
+               useOrganizationDomains == organization.UseOrganizationDomains;
+
     }
 
     /// <summary>
@@ -521,6 +591,11 @@ public class OrganizationLicense : ILicense
             * are no longer used and are intentionally excluded from
             * validation.
             */
+
+        if (valid && Version >= 16)
+        {
+            valid = organization.UseOrganizationDomains;
+        }
 
         return valid;
     }

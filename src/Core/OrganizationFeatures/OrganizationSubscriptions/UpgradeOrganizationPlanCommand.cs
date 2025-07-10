@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.AdminConsole.Repositories;
@@ -8,7 +11,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -16,9 +18,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 
@@ -30,9 +29,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private readonly IPaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
-    private readonly ICurrentContext _currentContext;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
@@ -47,9 +44,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         IPaymentService paymentService,
         IPolicyRepository policyRepository,
         ISsoConfigRepository ssoConfigRepository,
-        IReferenceEventService referenceEventService,
         IOrganizationConnectionRepository organizationConnectionRepository,
-        ICurrentContext currentContext,
         IServiceAccountRepository serviceAccountRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
@@ -63,9 +58,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         _paymentService = paymentService;
         _policyRepository = policyRepository;
         _ssoConfigRepository = ssoConfigRepository;
-        _referenceEventService = referenceEventService;
         _organizationConnectionRepository = organizationConnectionRepository;
-        _currentContext = currentContext;
         _serviceAccountRepository = serviceAccountRepository;
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
@@ -117,12 +110,20 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
                                                   (newPlan.PasswordManager.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
         if (!organization.Seats.HasValue || organization.Seats.Value > updatedPasswordManagerSeats)
         {
-            var occupiedSeats =
-                await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            if (occupiedSeats > updatedPasswordManagerSeats)
+            var seatCounts =
+                await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            if (seatCounts.Total > updatedPasswordManagerSeats)
             {
-                throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
+                if (organization.UseAdminSponsoredFamilies || seatCounts.Sponsored > 0)
+                {
+                    throw new BadRequestException($"Your organization has {seatCounts.Users} members and {seatCounts.Sponsored} sponsored families. " +
+                                                  $"To decrease the seat count below {seatCounts.Total}, you must remove members or sponsorships.");
+                }
+                else
+                {
+                    throw new BadRequestException($"Your organization currently has {seatCounts.Total} seats filled. " +
                                               $"Your new plan only has ({updatedPasswordManagerSeats}) seats. Remove some users.");
+                }
             }
         }
 
@@ -263,6 +264,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         organization.Use2fa = newPlan.Has2fa;
         organization.UseApi = newPlan.HasApi;
         organization.UseSso = newPlan.HasSso;
+        organization.UseOrganizationDomains = newPlan.HasOrganizationDomains;
         organization.UseKeyConnector = newPlan.HasKeyConnector;
         organization.UseScim = newPlan.HasScim;
         organization.UseResetPassword = newPlan.HasResetPassword;
@@ -284,25 +286,6 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         }
 
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
-
-        if (success)
-        {
-            var upgradePath = GetUpgradePath(existingPlan.ProductTier, newPlan.ProductTier);
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.UpgradePlan, organization, _currentContext)
-                {
-                    PlanName = newPlan.Name,
-                    PlanType = newPlan.Type,
-                    OldPlanName = existingPlan.Name,
-                    OldPlanType = existingPlan.Type,
-                    Seats = organization.Seats,
-                    SignupInitiationPath = "Upgrade in-product",
-                    PlanUpgradePath = upgradePath,
-                    Storage = organization.MaxStorageGb,
-                    // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
-                });
-        }
-
         return new Tuple<bool, string>(success, paymentIntentClientSecret);
     }
 

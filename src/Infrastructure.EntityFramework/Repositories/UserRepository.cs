@@ -1,10 +1,10 @@
 ﻿using AutoMapper;
 using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using DataModel = Bit.Core.Models.Data;
 
 #nullable enable
 
@@ -38,13 +38,13 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
-    public async Task<DataModel.UserKdfInformation?> GetKdfInformationByEmailAsync(string email)
+    public async Task<UserKdfInformation?> GetKdfInformationByEmailAsync(string email)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             return await GetDbSet(dbContext).Where(e => e.Email == email)
-                .Select(e => new DataModel.UserKdfInformation
+                .Select(e => new UserKdfInformation
                 {
                     Kdf = e.Kdf,
                     KdfIterations = e.KdfIterations,
@@ -170,6 +170,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             entity.SecurityStamp = user.SecurityStamp;
             entity.Key = user.Key;
+
             entity.PrivateKey = user.PrivateKey;
             entity.LastKeyRotationDate = user.LastKeyRotationDate;
             entity.AccountRevisionDate = user.AccountRevisionDate;
@@ -194,6 +195,52 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
     }
 
+
+    public async Task UpdateUserKeyAndEncryptedDataV2Async(Core.Entities.User user,
+        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        // Update user
+        var userEntity = await dbContext.Users.FindAsync(user.Id);
+        if (userEntity == null)
+        {
+            throw new ArgumentException("User not found", nameof(user));
+        }
+
+        userEntity.SecurityStamp = user.SecurityStamp;
+        userEntity.Key = user.Key;
+        userEntity.PrivateKey = user.PrivateKey;
+
+        userEntity.Kdf = user.Kdf;
+        userEntity.KdfIterations = user.KdfIterations;
+        userEntity.KdfMemory = user.KdfMemory;
+        userEntity.KdfParallelism = user.KdfParallelism;
+
+        userEntity.Email = user.Email;
+
+        userEntity.MasterPassword = user.MasterPassword;
+        userEntity.MasterPasswordHint = user.MasterPasswordHint;
+
+        userEntity.LastKeyRotationDate = user.LastKeyRotationDate;
+        userEntity.AccountRevisionDate = user.AccountRevisionDate;
+        userEntity.RevisionDate = user.RevisionDate;
+
+        await dbContext.SaveChangesAsync();
+
+        //  Update re-encrypted data
+        foreach (var action in updateDataActions)
+        {
+            // connection and transaction aren't used in EF
+            await action();
+        }
+
+        await transaction.CommitAsync();
+    }
+
     public async Task<IEnumerable<Core.Entities.User>> GetManyAsync(IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -204,13 +251,13 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
-    public async Task<IEnumerable<DataModel.UserWithCalculatedPremium>> GetManyWithCalculatedPremiumAsync(IEnumerable<Guid> ids)
+    public async Task<IEnumerable<UserWithCalculatedPremium>> GetManyWithCalculatedPremiumAsync(IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var users = dbContext.Users.Where(x => ids.Contains(x.Id));
-            return await users.Select(e => new DataModel.UserWithCalculatedPremium(e)
+            return await users.Select(e => new UserWithCalculatedPremium(e)
             {
                 HasPremiumAccess = e.Premium || dbContext.OrganizationUsers
                     .Any(ou => ou.UserId == e.Id &&
@@ -220,6 +267,12 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
                                              o.Enabled == true))
             }).ToListAsync();
         }
+    }
+
+    public async Task<UserWithCalculatedPremium?> GetCalculatedPremiumAsync(Guid id)
+    {
+        var result = await GetManyWithCalculatedPremiumAsync([id]);
+        return result.FirstOrDefault();
     }
 
     public override async Task DeleteAsync(Core.Entities.User user)

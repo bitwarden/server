@@ -1,4 +1,7 @@
-﻿using Stripe;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Stripe;
 
 namespace Bit.Billing.Services.Implementations;
 
@@ -32,6 +35,13 @@ public class StripeFacade : IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default) =>
         await _customerService.GetAsync(customerId, customerGetOptions, requestOptions, cancellationToken);
+
+    public async Task<Customer> UpdateCustomer(
+        string customerId,
+        CustomerUpdateOptions customerUpdateOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        await _customerService.UpdateAsync(customerId, customerUpdateOptions, requestOptions, cancellationToken);
 
     public async Task<Invoice> GetInvoice(
         string invoiceId,

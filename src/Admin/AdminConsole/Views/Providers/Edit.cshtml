@@ -74,20 +74,20 @@
                 </div>
                 break;
             }
-            case ProviderType.MultiOrganizationEnterprise:
+            case ProviderType.BusinessUnit:
             {
                 <div class="row">
                     <div class="col-sm">
                         <div class="mb-3">
                             @{
-                                var multiOrgPlans = new List<PlanType>
+                                var businessUnitPlanTypes = new List<PlanType>
                                 {
                                     PlanType.EnterpriseAnnually,
                                     PlanType.EnterpriseMonthly
                                 };
                             }
                             <label asp-for="Plan" class="form-label"></label>
-                            <select class="form-control" asp-for="Plan" asp-items="Html.GetEnumSelectList(multiOrgPlans)">
+                            <select class="form-control" asp-for="Plan" asp-items="Html.GetEnumSelectList(businessUnitPlanTypes)">
                                 <option value="">--</option>
                             </select>
                         </div>
@@ -136,6 +136,17 @@
                 </div>
             </div>
         </div>
+        @if (FeatureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) && Model.Provider.Type == ProviderType.Msp && Model.Provider.IsBillable())
+        {
+            <div class="row">
+                <div class="col-sm">
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" asp-for="PayByInvoice">
+                        <label class="form-check-label" asp-for="PayByInvoice"></label>
+                    </div>
+                </div>
+            </div>
+        }
     }
 </form>
 @await Html.PartialAsync("Organizations", Model)
@@ -172,17 +183,29 @@
                 <div class="p-3">
                     <h4 class="fw-bolder" id="exampleModalLabel">Delete provider</h4>
                 </div>
-                <div class="modal-body">
-                    <span class="fw-light">
-                        This action is permanent and irreversible. Enter the provider name to complete deletion of the provider and associated data.
-                    </span>
-                    <form>
-                        <div class="mb-3">
-                            <label for="provider-name" class="col-form-label">Provider name</label>
-                            <input type="text" class="form-control" id="provider-name">
-                        </div>
-                    </form>
-                </div>
+
+                @if (Model.Provider.Status == ProviderStatusType.Pending)
+                {
+                    <div class="modal-body">
+                        <span class="fw-light">
+                            This action is permanent and irreversible.
+                        </span>
+                    </div>
+                }
+                else
+                {
+                    <div class="modal-body">
+                        <span class="fw-light">
+                            This action is permanent and irreversible. Enter the provider name to complete deletion of the provider and associated data.
+                        </span>
+                        <form>
+                            <div class="mb-3">
+                                <label for="provider-name" class="col-form-label">Provider name</label>
+                                <input type="text" class="form-control" id="provider-name">
+                            </div>
+                        </form>
+                    </div>
+                }
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-primary btn-pill" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-danger btn-pill" onclick="deleteProvider('@Model.Provider.Id');">Delete provider</button>

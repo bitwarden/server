@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoMapper;
 using Bit.Core.KeyManagement.UserKey;
@@ -142,8 +145,10 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Vault.Entities.Folder> folders)
+    public async Task CreateAsync(Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers,
+        IEnumerable<Core.Vault.Entities.Folder> folders)
     {
+        ciphers = ciphers.ToList();
         if (!ciphers.Any())
         {
             return;
@@ -156,7 +161,8 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
             var cipherEntities = Mapper.Map<List<Cipher>>(ciphers);
             await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
-            await dbContext.UserBumpAccountRevisionDateAsync(ciphers.First().UserId.GetValueOrDefault());
+            await dbContext.UserBumpAccountRevisionDateAsync(userId);
+
             await dbContext.SaveChangesAsync();
         }
     }
@@ -454,7 +460,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            IQueryable<CipherDetails> cipherDetailsView = withOrganizations ?
+            var cipherDetailsView = withOrganizations ?
                 new UserCipherDetailsQuery(userId).Run(dbContext) :
                 new CipherDetailsQuery(userId).Run(dbContext);
             if (!withOrganizations)
@@ -482,8 +488,15 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                         Key = c.Key
                                     };
             }
+
             var ciphers = await cipherDetailsView.ToListAsync();
-            return ciphers;
+
+            return ciphers.GroupBy(c => c.Id)
+                .Select(g => g.OrderByDescending(c => c.Manage)
+                    .ThenByDescending(c => c.Edit)
+                    .ThenByDescending(c => c.ViewPassword)
+                    .First())
+                .ToList();
         }
     }
 
@@ -863,8 +876,30 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var entities = Mapper.Map<List<Cipher>>(ciphers);
-            await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, entities);
+            var ciphersToUpdate = ciphers.ToDictionary(c => c.Id);
+
+            var existingCiphers = await dbContext.Ciphers
+                .Where(c => c.UserId == userId && ciphersToUpdate.Keys.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id);
+
+            foreach (var (cipherId, cipher) in ciphersToUpdate)
+            {
+                if (!existingCiphers.TryGetValue(cipherId, out var existingCipher))
+                {
+                    // The Dapper version does not validate that the same amount of items given where updated.
+                    continue;
+                }
+
+                existingCipher.UserId = cipher.UserId;
+                existingCipher.OrganizationId = cipher.OrganizationId;
+                existingCipher.Type = cipher.Type;
+                existingCipher.Data = cipher.Data;
+                existingCipher.Attachments = cipher.Attachments;
+                existingCipher.RevisionDate = cipher.RevisionDate;
+                existingCipher.DeletedDate = cipher.DeletedDate;
+                existingCipher.Key = cipher.Key;
+            }
+
             await dbContext.UserBumpAccountRevisionDateAsync(userId);
             await dbContext.SaveChangesAsync();
         }

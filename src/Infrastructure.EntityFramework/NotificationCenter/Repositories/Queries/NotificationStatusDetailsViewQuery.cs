@@ -52,6 +52,7 @@ public class NotificationStatusDetailsViewQuery(Guid userId, ClientType clientTy
             ClientType = x.n.ClientType,
             UserId = x.n.UserId,
             OrganizationId = x.n.OrganizationId,
+            TaskId = x.n.TaskId,
             Title = x.n.Title,
             Body = x.n.Body,
             CreationDate = x.n.CreationDate,

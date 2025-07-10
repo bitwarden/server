@@ -1,4 +1,7 @@
-﻿using Bit.Api.AdminConsole.Models.Response.Organizations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.AdminConsole.Entities;
@@ -23,7 +26,7 @@ public class SyncResponseModel : ResponseModel
         bool userTwoFactorEnabled,
         bool userHasPremiumFromOrganization,
         IDictionary<Guid, OrganizationAbility> organizationAbilities,
-        IEnumerable<Guid> organizationIdsManagingUser,
+        IEnumerable<Guid> organizationIdsClaimingingUser,
         IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails,
         IEnumerable<ProviderUserProviderDetails> providerUserDetails,
         IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
@@ -37,7 +40,7 @@ public class SyncResponseModel : ResponseModel
         : base("sync")
     {
         Profile = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
-            providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsManagingUser);
+            providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingingUser);
         Folders = folders.Select(f => new FolderResponseModel(f));
         Ciphers = ciphers.Select(cipher =>
             new CipherDetailsResponseModel(

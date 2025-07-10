@@ -56,6 +56,7 @@ public class NotificationPushNotification
     public Guid? UserId { get; set; }
     public Guid? OrganizationId { get; set; }
     public Guid? InstallationId { get; set; }
+    public Guid? TaskId { get; set; }
     public string? Title { get; set; }
     public string? Body { get; set; }
     public DateTime CreationDate { get; set; }

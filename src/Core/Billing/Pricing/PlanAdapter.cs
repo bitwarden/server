@@ -26,10 +26,12 @@ public record PlanAdapter : Plan
         Has2fa = HasFeature("2fa");
         HasApi = HasFeature("api");
         HasSso = HasFeature("sso");
+        HasOrganizationDomains = HasFeature("organizationDomains");
         HasKeyConnector = HasFeature("keyConnector");
         HasScim = HasFeature("scim");
         HasResetPassword = HasFeature("resetPassword");
         UsersGetPremium = HasFeature("usersGetPremium");
+        HasCustomPermissions = HasFeature("customPermissions");
         UpgradeSortOrder = plan.AdditionalData.TryGetValue("upgradeSortOrder", out var upgradeSortOrder)
             ? int.Parse(upgradeSortOrder)
             : 0;
@@ -140,6 +142,7 @@ public record PlanAdapter : Plan
         var stripeSeatPlanId = GetStripeSeatPlanId(seats);
         var hasAdditionalSeatsOption = seats.IsScalable;
         var seatPrice = GetSeatPrice(seats);
+        var baseSeats = GetBaseSeats(seats);
         var maxSeats = GetMaxSeats(seats);
         var allowSeatAutoscale = seats.IsScalable;
         var maxProjects = plan.AdditionalData.TryGetValue("secretsManager.maxProjects", out var value) ? short.Parse(value) : 0;
@@ -155,6 +158,7 @@ public record PlanAdapter : Plan
             StripeSeatPlanId = stripeSeatPlanId,
             HasAdditionalSeatsOption = hasAdditionalSeatsOption,
             SeatPrice = seatPrice,
+            BaseSeats = baseSeats,
             MaxSeats = maxSeats,
             AllowSeatAutoscale = allowSeatAutoscale,
             MaxProjects = maxProjects
@@ -167,8 +171,16 @@ public record PlanAdapter : Plan
     private static decimal GetBasePrice(PurchasableDTO purchasable)
         => purchasable.FromPackaged(x => x.Price);
 
+    private static int GetBaseSeats(FreeOrScalableDTO freeOrScalable)
+        => freeOrScalable.Match(
+            free => free.Quantity,
+            scalable => scalable.Provided);
+
     private static int GetBaseSeats(PurchasableDTO purchasable)
-        => purchasable.FromPackaged(x => x.Quantity);
+        => purchasable.Match(
+            free => free.Quantity,
+            packaged => packaged.Quantity,
+            scalable => scalable.Provided);
 
     private static short GetBaseServiceAccount(FreeOrScalableDTO freeOrScalable)
         => freeOrScalable.Match(

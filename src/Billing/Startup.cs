@@ -1,4 +1,7 @@
-﻿using System.Globalization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Globalization;
 using System.Net.Http.Headers;
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
@@ -87,8 +90,7 @@ public class Startup
         // TODO: no longer be required - see PM-1880
         services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
 
-        // Mvc
-        services.AddMvc(config =>
+        services.AddControllers(config =>
         {
             config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
         });

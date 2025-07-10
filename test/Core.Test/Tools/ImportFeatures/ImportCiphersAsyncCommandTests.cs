@@ -1,15 +1,15 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
-using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.ImportFeatures;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
@@ -17,7 +17,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-
 
 namespace Bit.Core.Test.Tools.ImportFeatures;
 
@@ -32,7 +31,7 @@ public class ImportCiphersAsyncCommandTests
         SutProvider<ImportCiphersCommand> sutProvider)
     {
         sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.PersonalOwnership)
+            .AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.OrganizationDataOwnership)
             .Returns(false);
 
         sutProvider.GetDependency<IFolderRepository>()
@@ -47,7 +46,37 @@ public class ImportCiphersAsyncCommandTests
         await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, importingUserId);
 
         // Assert
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(ciphers, Arg.Any<List<Folder>>());
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>());
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportIntoIndividualVaultAsync_WithPolicyRequirementsEnabled_WithOrganizationDataOwnershipPolicyDisabled_Success(
+        Guid importingUserId,
+        List<CipherDetails> ciphers,
+        SutProvider<ImportCiphersCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            .Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(importingUserId)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(
+                OrganizationDataOwnershipState.Disabled,
+                []));
+
+        sutProvider.GetDependency<IFolderRepository>()
+            .GetManyByUserIdAsync(importingUserId)
+            .Returns(new List<Folder>());
+
+        var folders = new List<Folder> { new Folder { UserId = importingUserId } };
+
+        var folderRelationships = new List<KeyValuePair<int, int>>();
+
+        await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, importingUserId);
+
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 
@@ -62,8 +91,36 @@ public class ImportCiphersAsyncCommandTests
         ciphers.ForEach(c => c.UserId = userId);
 
         sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(userId, PolicyType.PersonalOwnership)
+            .AnyPoliciesApplicableToUserAsync(userId, PolicyType.OrganizationDataOwnership)
             .Returns(true);
+
+        var folderRelationships = new List<KeyValuePair<int, int>>();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, userId));
+
+        Assert.Equal("You cannot import items into your personal vault because you are a member of an organization which forbids it.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportIntoIndividualVaultAsync_WithPolicyRequirementsEnabled_WithOrganizationDataOwnershipPolicyEnabled_ThrowsBadRequestException(
+        List<Folder> folders,
+        List<CipherDetails> ciphers,
+        SutProvider<ImportCiphersCommand> sutProvider)
+    {
+        var userId = Guid.NewGuid();
+        folders.ForEach(f => f.UserId = userId);
+        ciphers.ForEach(c => c.UserId = userId);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            .Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(
+                OrganizationDataOwnershipState.Enabled,
+                [Guid.NewGuid()]));
 
         var folderRelationships = new List<KeyValuePair<int, int>>();
 
@@ -127,8 +184,6 @@ public class ImportCiphersAsyncCommandTests
                 !cus.Any(cu => cu.CollectionId == collections[0].Id) && // Check that access was not added for the collection that already existed in the organization
                 cus.All(cu => cu.OrganizationUserId == importingOrganizationUser.Id && cu.Manage == true)));
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
-        await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(
-            Arg.Is<ReferenceEvent>(e => e.Type == ReferenceEventType.VaultImported));
     }
 
     [Theory, BitAutoData]

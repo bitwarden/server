@@ -1,20 +1,26 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Billing.Entities;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Repositories;
-using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Services.Contracts;
+using Bit.Core.Billing.Providers.Entities;
+using Bit.Core.Billing.Providers.Models;
+using Bit.Core.Billing.Providers.Repositories;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -23,6 +29,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Stripe;
 
 namespace Bit.Admin.AdminConsole.Controllers;
 
@@ -31,54 +38,54 @@ namespace Bit.Admin.AdminConsole.Controllers;
 public class ProvidersController : Controller
 {
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationService _organizationService;
+    private readonly IResellerClientOrganizationSignUpCommand _resellerClientOrganizationSignUpCommand;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly GlobalSettings _globalSettings;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderService _providerService;
-    private readonly IUserService _userService;
     private readonly ICreateProviderCommand _createProviderCommand;
     private readonly IFeatureService _featureService;
     private readonly IProviderPlanRepository _providerPlanRepository;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IPricingClient _pricingClient;
+    private readonly IStripeAdapter _stripeAdapter;
     private readonly string _stripeUrl;
     private readonly string _braintreeMerchantUrl;
     private readonly string _braintreeMerchantId;
 
     public ProvidersController(
         IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService,
+        IResellerClientOrganizationSignUpCommand resellerClientOrganizationSignUpCommand,
         IProviderRepository providerRepository,
         IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderService providerService,
         GlobalSettings globalSettings,
         IApplicationCacheService applicationCacheService,
-        IUserService userService,
         ICreateProviderCommand createProviderCommand,
         IFeatureService featureService,
         IProviderPlanRepository providerPlanRepository,
         IProviderBillingService providerBillingService,
         IWebHostEnvironment webHostEnvironment,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IStripeAdapter stripeAdapter)
     {
         _organizationRepository = organizationRepository;
-        _organizationService = organizationService;
+        _resellerClientOrganizationSignUpCommand = resellerClientOrganizationSignUpCommand;
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerService = providerService;
         _globalSettings = globalSettings;
         _applicationCacheService = applicationCacheService;
-        _userService = userService;
         _createProviderCommand = createProviderCommand;
         _featureService = featureService;
         _providerPlanRepository = providerPlanRepository;
         _providerBillingService = providerBillingService;
         _pricingClient = pricingClient;
+        _stripeAdapter = stripeAdapter;
         _stripeUrl = webHostEnvironment.GetStripeUrl();
         _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
         _braintreeMerchantId = globalSettings.Braintree.MerchantId;
@@ -133,10 +140,10 @@ public class ProvidersController : Controller
         return View(new CreateResellerProviderModel());
     }
 
-    [HttpGet("providers/create/multi-organization-enterprise")]
-    public IActionResult CreateMultiOrganizationEnterprise(int enterpriseMinimumSeats, string ownerEmail = null)
+    [HttpGet("providers/create/business-unit")]
+    public IActionResult CreateBusinessUnit(int enterpriseMinimumSeats, string ownerEmail = null)
     {
-        return View(new CreateMultiOrganizationEnterpriseProviderModel
+        return View(new CreateBusinessUnitProviderModel
         {
             OwnerEmail = ownerEmail,
             EnterpriseSeatMinimum = enterpriseMinimumSeats
@@ -157,7 +164,7 @@ public class ProvidersController : Controller
         {
             ProviderType.Msp => RedirectToAction("CreateMsp"),
             ProviderType.Reseller => RedirectToAction("CreateReseller"),
-            ProviderType.MultiOrganizationEnterprise => RedirectToAction("CreateMultiOrganizationEnterprise"),
+            ProviderType.BusinessUnit => RedirectToAction("CreateBusinessUnit"),
             _ => View(model)
         };
     }
@@ -198,10 +205,10 @@ public class ProvidersController : Controller
         return RedirectToAction("Edit", new { id = provider.Id });
     }
 
-    [HttpPost("providers/create/multi-organization-enterprise")]
+    [HttpPost("providers/create/business-unit")]
     [ValidateAntiForgeryToken]
     [RequirePermission(Permission.Provider_Create)]
-    public async Task<IActionResult> CreateMultiOrganizationEnterprise(CreateMultiOrganizationEnterpriseProviderModel model)
+    public async Task<IActionResult> CreateBusinessUnit(CreateBusinessUnitProviderModel model)
     {
         if (!ModelState.IsValid)
         {
@@ -209,7 +216,7 @@ public class ProvidersController : Controller
         }
         var provider = model.ToProvider();
 
-        await _createProviderCommand.CreateMultiOrganizationEnterpriseAsync(
+        await _createProviderCommand.CreateBusinessUnitAsync(
             provider,
             model.OwnerEmail,
             model.Plan.Value,
@@ -300,29 +307,44 @@ public class ProvidersController : Controller
         {
             case ProviderType.Msp:
                 var updateMspSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
-                    provider.Id,
-                    provider.GatewaySubscriptionId,
+                    provider,
                     [
                         (Plan: PlanType.TeamsMonthly, SeatsMinimum: model.TeamsMonthlySeatMinimum),
                         (Plan: PlanType.EnterpriseMonthly, SeatsMinimum: model.EnterpriseMonthlySeatMinimum)
                     ]);
                 await _providerBillingService.UpdateSeatMinimums(updateMspSeatMinimumsCommand);
+
+                if (_featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically))
+                {
+                    var customer = await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId);
+
+                    if (model.PayByInvoice != customer.ApprovedToPayByInvoice())
+                    {
+                        var approvedToPayByInvoice = model.PayByInvoice ? "1" : "0";
+                        await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+                        {
+                            Metadata = new Dictionary<string, string>
+                            {
+                                [StripeConstants.MetadataKeys.InvoiceApproved] = approvedToPayByInvoice
+                            }
+                        });
+                    }
+                }
                 break;
-            case ProviderType.MultiOrganizationEnterprise:
+            case ProviderType.BusinessUnit:
                 {
                     var existingMoePlan = providerPlans.Single();
 
                     // 1. Change the plan and take over any old values.
                     var changeMoePlanCommand = new ChangeProviderPlanCommand(
+                        provider,
                         existingMoePlan.Id,
-                        model.Plan!.Value,
-                        provider.GatewaySubscriptionId);
+                        model.Plan!.Value);
                     await _providerBillingService.ChangePlan(changeMoePlanCommand);
 
                     // 2. Update the seat minimums.
                     var updateMoeSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
-                        provider.Id,
-                        provider.GatewaySubscriptionId,
+                        provider,
                         [
                             (Plan: model.Plan!.Value, SeatsMinimum: model.EnterpriseMinimumSeats!.Value)
                         ]);
@@ -347,14 +369,18 @@ public class ProvidersController : Controller
 
         if (!provider.IsBillable())
         {
-            return new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>());
+            return new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>(), false);
         }
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
 
+        var payByInvoice =
+            _featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) &&
+            (await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)).ApprovedToPayByInvoice();
+
         return new ProviderEditModel(
             provider, users, providerOrganizations,
-            providerPlans.ToList(), GetGatewayCustomerUrl(provider), GetGatewaySubscriptionUrl(provider));
+            providerPlans.ToList(), payByInvoice, GetGatewayCustomerUrl(provider), GetGatewaySubscriptionUrl(provider));
     }
 
     [RequirePermission(Permission.Provider_ResendEmailInvite)]
@@ -434,7 +460,7 @@ public class ProvidersController : Controller
         }
 
         var organization = model.CreateOrganization(provider);
-        await _organizationService.CreatePendingOrganization(organization, model.Owners, User, _userService, model.SalesAssistedTrialStarted);
+        await _resellerClientOrganizationSignUpCommand.SignUpResellerClientAsync(organization, model.Owners);
         await _providerService.AddOrganization(providerId, organization.Id, null);
 
         return RedirectToAction("Edit", "Providers", new { id = providerId });
@@ -445,6 +471,19 @@ public class ProvidersController : Controller
     [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> Delete(Guid id, string providerName)
     {
+        var provider = await _providerRepository.GetByIdAsync(id);
+
+        if (provider is null)
+        {
+            return BadRequest("Provider does not exist");
+        }
+
+        if (provider.Status == ProviderStatusType.Pending)
+        {
+            await _providerService.DeleteAsync(provider);
+            return NoContent();
+        }
+
         if (string.IsNullOrWhiteSpace(providerName))
         {
             return BadRequest("Invalid provider name");
@@ -455,13 +494,6 @@ public class ProvidersController : Controller
         if (providerOrganizations.Count > 0)
         {
             return BadRequest("You must unlink all clients before you can delete a provider");
-        }
-
-        var provider = await _providerRepository.GetByIdAsync(id);
-
-        if (provider is null)
-        {
-            return BadRequest("Provider does not exist");
         }
 
         if (!string.Equals(providerName.Trim(), provider.DisplayName(), StringComparison.OrdinalIgnoreCase))

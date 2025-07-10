@@ -1,16 +1,21 @@
-﻿using AutoMapper;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 
 public class OrganizationUserRepository : Repository<Core.Entities.OrganizationUser, OrganizationUser, Guid>, IOrganizationUserRepository
 {
@@ -226,12 +231,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         return await GetCountFromQuery(query);
     }
 
-    public async Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
-    {
-        var query = new OrganizationUserReadOccupiedSeatCountByOrganizationIdQuery(organizationId);
-        return await GetCountFromQuery(query);
-    }
-
     public async Task<int> GetCountByOrganizationIdAsync(Guid organizationId)
     {
         var query = new OrganizationUserReadCountByOrganizationIdQuery(organizationId);
@@ -439,15 +438,20 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async override Task ReplaceAsync(Core.Entities.OrganizationUser organizationUser)
+    public override async Task ReplaceAsync(Core.Entities.OrganizationUser organizationUser)
     {
         await base.ReplaceAsync(organizationUser);
-        using (var scope = ServiceScopeFactory.CreateScope())
+
+        // Only bump the account revision date if linked to a user account
+        if (!organizationUser.UserId.HasValue)
         {
-            var dbContext = GetDatabaseContext(scope);
-            await dbContext.UserBumpAccountRevisionDateAsync(organizationUser.UserId.GetValueOrDefault());
-            await dbContext.SaveChangesAsync();
+            return;
         }
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        await dbContext.UserBumpAccountRevisionDateAsync(organizationUser.UserId.Value);
+        await dbContext.SaveChangesAsync();
     }
 
     public async Task ReplaceAsync(Core.Entities.OrganizationUser obj, IEnumerable<CollectionAccessSelection> requestedCollections)
@@ -756,5 +760,29 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         };
             return await query.ToListAsync();
         }
+    }
+
+    public async Task CreateManyAsync(IEnumerable<CreateOrganizationUser> organizationUserCollection)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        await using var dbContext = GetDatabaseContext(scope);
+
+        dbContext.OrganizationUsers.AddRange(Mapper.Map<List<OrganizationUser>>(organizationUserCollection.Select(x => x.OrganizationUser)));
+        dbContext.CollectionUsers.AddRange(organizationUserCollection.SelectMany(x => x.Collections, (user, collection) => new CollectionUser
+        {
+            CollectionId = collection.Id,
+            HidePasswords = collection.HidePasswords,
+            OrganizationUserId = user.OrganizationUser.Id,
+            Manage = collection.Manage,
+            ReadOnly = collection.ReadOnly
+        }));
+        dbContext.GroupUsers.AddRange(organizationUserCollection.SelectMany(x => x.Groups, (user, group) => new GroupUser
+        {
+            GroupId = group,
+            OrganizationUserId = user.OrganizationUser.Id
+        }));
+
+        await dbContext.SaveChangesAsync();
     }
 }

@@ -1,9 +1,13 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Tax.Models;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -23,6 +27,7 @@ namespace Bit.Core.Billing.Services.Implementations;
 
 public class OrganizationBillingService(
     IBraintreeGateway braintreeGateway,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -37,8 +42,8 @@ public class OrganizationBillingService(
         var (organization, customerSetup, subscriptionSetup) = sale;
 
         var customer = string.IsNullOrEmpty(organization.GatewayCustomerId) && customerSetup != null
-            ? await CreateCustomerAsync(organization, customerSetup)
-            : await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = ["tax"] });
+            ? await CreateCustomerAsync(organization, customerSetup, subscriptionSetup.PlanType)
+            : await GetCustomerWhileEnsuringCorrectTaxExemptionAsync(organization, subscriptionSetup);
 
         var subscription = await CreateSubscriptionAsync(organization.Id, customer, subscriptionSetup);
 
@@ -72,13 +77,14 @@ public class OrganizationBillingService(
         var isEligibleForSelfHost = await IsEligibleForSelfHostAsync(organization);
 
         var isManaged = organization.Status == OrganizationStatusType.Managed;
-
+        var orgOccupiedSeats = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
             return OrganizationMetadata.Default with
             {
                 IsEligibleForSelfHost = isEligibleForSelfHost,
-                IsManaged = isManaged
+                IsManaged = isManaged,
+                OrganizationOccupiedSeats = orgOccupiedSeats.Total
             };
         }
 
@@ -87,9 +93,20 @@ public class OrganizationBillingService(
 
         var subscription = await subscriberService.GetSubscription(organization);
 
+        if (customer == null || subscription == null)
+        {
+            return OrganizationMetadata.Default with
+            {
+                IsEligibleForSelfHost = isEligibleForSelfHost,
+                IsManaged = isManaged
+            };
+        }
+
         var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
 
-        var invoice = await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions());
+        var invoice = !string.IsNullOrEmpty(subscription.LatestInvoiceId)
+            ? await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions())
+            : null;
 
         return new OrganizationMetadata(
             isEligibleForSelfHost,
@@ -101,10 +118,12 @@ public class OrganizationBillingService(
             subscription.Status == StripeConstants.SubscriptionStatus.Canceled,
             invoice?.DueDate,
             invoice?.Created,
-            subscription.CurrentPeriodEnd);
+            subscription.CurrentPeriodEnd,
+            orgOccupiedSeats.Total);
     }
 
-    public async Task UpdatePaymentMethod(
+    public async Task
+        UpdatePaymentMethod(
         Organization organization,
         TokenizedPaymentSource tokenizedPaymentSource,
         TaxInformation taxInformation)
@@ -134,8 +153,11 @@ public class OrganizationBillingService(
 
     private async Task<Customer> CreateCustomerAsync(
         Organization organization,
-        CustomerSetup customerSetup)
+        CustomerSetup customerSetup,
+        PlanType? updatedPlanType = null)
     {
+        var planType = updatedPlanType ?? organization.PlanType;
+
         var displayName = organization.DisplayName();
 
         var customerCreateOptions = new CustomerCreateOptions
@@ -143,7 +165,7 @@ public class OrganizationBillingService(
             Coupon = customerSetup.Coupon,
             Description = organization.DisplayBusinessName(),
             Email = organization.BillingEmail,
-            Expand = ["tax"],
+            Expand = ["tax", "tax_ids"],
             InvoiceSettings = new CustomerInvoiceSettingsOptions
             {
                 CustomFields = [
@@ -195,12 +217,23 @@ public class OrganizationBillingService(
                 City = customerSetup.TaxInformation.City,
                 PostalCode = customerSetup.TaxInformation.PostalCode,
                 State = customerSetup.TaxInformation.State,
-                Country = customerSetup.TaxInformation.Country,
+                Country = customerSetup.TaxInformation.Country
             };
+
             customerCreateOptions.Tax = new CustomerTaxOptions
             {
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             };
+
+            var setNonUSBusinessUseToReverseCharge =
+                featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+            if (setNonUSBusinessUseToReverseCharge &&
+                planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
+                customerSetup.TaxInformation.Country != "US")
+            {
+                customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
+            }
 
             if (!string.IsNullOrEmpty(customerSetup.TaxInformation.TaxId))
             {
@@ -213,12 +246,23 @@ public class OrganizationBillingService(
                         organization.Id,
                         customerSetup.TaxInformation.Country,
                         customerSetup.TaxInformation.TaxId);
+
+                    throw new BadRequestException("billingTaxIdTypeInferenceError");
                 }
 
                 customerCreateOptions.TaxIdData =
                 [
                     new() { Type = taxIdType, Value = customerSetup.TaxInformation.TaxId }
                 ];
+
+                if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
+                {
+                    customerCreateOptions.TaxIdData.Add(new CustomerTaxIdDataOptions
+                    {
+                        Type = StripeConstants.TaxIdType.EUVAT,
+                        Value = $"ES{customerSetup.TaxInformation.TaxId}"
+                    });
+                }
             }
 
             var (paymentMethodType, paymentMethodToken) = customerSetup.TokenizedPaymentSource;
@@ -369,33 +413,96 @@ public class OrganizationBillingService(
             }
         }
 
-        var customerHasTaxInfo = customer is
-        {
-            Address:
-            {
-                Country: not null and not "",
-                PostalCode: not null and not ""
-            }
-        };
-
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
-            AutomaticTax = new SubscriptionAutomaticTaxOptions
-            {
-                Enabled = customerHasTaxInfo
-            },
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
-                ["organizationId"] = organizationId.ToString()
+                ["organizationId"] = organizationId.ToString(),
+                ["trialInitiationPath"] = !string.IsNullOrEmpty(subscriptionSetup.InitiationPath) &&
+                    subscriptionSetup.InitiationPath.Contains("trial from marketing website")
+                    ? "marketing-initiated"
+                    : "product-initiated"
             },
             OffSession = true,
             TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
         };
 
+        // Only set trial_settings.end_behavior.missing_payment_method to "cancel" if there is no payment method
+        if (string.IsNullOrEmpty(customer.InvoiceSettings?.DefaultPaymentMethodId) &&
+            !customer.Metadata.ContainsKey(BraintreeCustomerIdKey))
+        {
+            subscriptionCreateOptions.TrialSettings = new SubscriptionTrialSettingsOptions
+            {
+                EndBehavior = new SubscriptionTrialSettingsEndBehaviorOptions
+                {
+                    MissingPaymentMethod = "cancel"
+                }
+            };
+        }
+
+        var setNonUSBusinessUseToReverseCharge =
+            featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+        if (setNonUSBusinessUseToReverseCharge && customer.HasBillingLocation())
+        {
+            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+        }
+        else if (customer.HasRecognizedTaxLocation())
+        {
+            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
+            {
+                Enabled =
+                    subscriptionSetup.PlanType.GetProductTier() == ProductTierType.Families ||
+                    customer.Address.Country == "US" ||
+                    customer.TaxIds.Any()
+            };
+        }
+
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+    }
+
+    private async Task<Customer> GetCustomerWhileEnsuringCorrectTaxExemptionAsync(
+        Organization organization,
+        SubscriptionSetup subscriptionSetup)
+    {
+        var customer = await subscriberService.GetCustomerOrThrow(organization,
+            new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
+
+        var setNonUSBusinessUseToReverseCharge = featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+        if (!setNonUSBusinessUseToReverseCharge || subscriptionSetup.PlanType.GetProductTier() is
+                not (ProductTierType.Teams or
+                ProductTierType.TeamsStarter or
+                ProductTierType.Enterprise))
+        {
+            return customer;
+        }
+
+        List<string> expansions = ["tax", "tax_ids"];
+
+        customer = customer switch
+        {
+            { Address.Country: not "US", TaxExempt: not StripeConstants.TaxExempt.Reverse } => await
+                stripeAdapter.CustomerUpdateAsync(customer.Id,
+                    new CustomerUpdateOptions
+                    {
+                        Expand = expansions,
+                        TaxExempt = StripeConstants.TaxExempt.Reverse
+                    }),
+            { Address.Country: "US", TaxExempt: StripeConstants.TaxExempt.Reverse } => await
+                stripeAdapter.CustomerUpdateAsync(customer.Id,
+                    new CustomerUpdateOptions
+                    {
+                        Expand = expansions,
+                        TaxExempt = StripeConstants.TaxExempt.None
+                    }),
+            _ => customer
+        };
+
+        return customer;
     }
 
     private async Task<bool> IsEligibleForSelfHostAsync(

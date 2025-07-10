@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Bit.DbSeederUtility</RootNamespace>
+    <AssemblyName>DbSeeder</AssemblyName>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <UserSecretsId>2294c6ba-7cd0-4293-a797-3882e41c61cb</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Seeder\Seeder.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommandDotNet" Version="7.0.4" />
+  </ItemGroup>
+
+</Project>

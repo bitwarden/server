@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Tax.Models;
 
 namespace Bit.Core.Billing.Services;
 

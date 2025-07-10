@@ -17,6 +17,9 @@ on:
 env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
 
+permissions:
+  contents: read
+
 jobs:
   setup:
     name: Setup
@@ -56,6 +59,8 @@ jobs:
     name: Create GitHub release
     runs-on: ubuntu-22.04
     needs: setup
+    permissions:
+      contents: write
     steps:
       - name: Download latest release Docker stubs
         if: ${{ inputs.release_type != 'Dry Run' }}
@@ -65,9 +70,7 @@ jobs:
           workflow_conclusion: success
           branch: ${{ needs.setup.outputs.branch-name }}
           artifacts: "docker-stub-US.zip,
-            docker-stub-US-sha256.txt,
             docker-stub-EU.zip,
-            docker-stub-EU-sha256.txt,
             swagger.json"
 
       - name: Dry Run - Download latest release Docker stubs
@@ -78,9 +81,7 @@ jobs:
           workflow_conclusion: success
           branch: main
           artifacts: "docker-stub-US.zip,
-            docker-stub-US-sha256.txt,
             docker-stub-EU.zip,
-            docker-stub-EU-sha256.txt,
             swagger.json"
 
       - name: Create release
@@ -88,9 +89,7 @@ jobs:
         uses: ncipollo/release-action@cdcc88a9acf3ca41c16c37bb7d21b9ad48560d87 # v1.15.0
         with:
           artifacts: "docker-stub-US.zip,
-            docker-stub-US-sha256.txt,
             docker-stub-EU.zip,
-            docker-stub-EU-sha256.txt,
             swagger.json"
           commit: ${{ github.sha }}
           tag: "v${{ needs.setup.outputs.release_version }}"

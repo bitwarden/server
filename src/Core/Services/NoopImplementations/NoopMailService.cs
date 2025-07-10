@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Billing.Enums;
@@ -6,6 +8,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
 using Bit.Core.Vault.Models.Data;
+using Core.Auth.Enums;
 
 namespace Bit.Core.Services;
 
@@ -31,7 +34,8 @@ public class NoopMailService : IMailService
         string email,
         string token,
         ProductTierType productTier,
-        IEnumerable<ProductType> products)
+        IEnumerable<ProductType> products,
+        int trailLength)
     {
         return Task.FromResult(0);
     }
@@ -77,18 +81,13 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
-    {
-        return Task.FromResult(0);
-    }
-
     public Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email) =>
         Task.CompletedTask;
 
     public Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email) =>
         Task.CompletedTask;
 
-    public Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true)
+    public Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, TwoFactorEmailPurpose purpose)
     {
         return Task.FromResult(0);
     }
@@ -103,7 +102,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendCannotDeleteManagedAccountEmailAsync(string email)
+    public Task SendCannotDeleteClaimedAccountEmailAsync(string email)
     {
         return Task.FromResult(0);
     }
@@ -137,7 +136,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendLicenseExpiredAsync(IEnumerable<string> emails, string organizationName = null)
+    public Task SendLicenseExpiredAsync(IEnumerable<string> emails, string? organizationName = null)
     {
         return Task.FromResult(0);
     }
@@ -148,11 +147,6 @@ public class NoopMailService : IMailService
     }
 
     public Task SendRecoverTwoFactorEmail(string email, DateTime timestamp, string ip)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email)
     {
         return Task.FromResult(0);
     }
@@ -212,6 +206,11 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendBusinessUnitConversionInviteAsync(Organization organization, string token, string email)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email)
     {
         return Task.FromResult(0);
@@ -260,21 +259,6 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
-    {
-        return Task.FromResult(0);
-    }
-
     public Task SendUnclaimedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
     {
         return Task.FromResult(0);
@@ -317,9 +301,9 @@ public class NoopMailService : IMailService
     {
         return Task.FromResult(0);
     }
-    public Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList) => Task.CompletedTask;
+    public Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList) => Task.CompletedTask;
 
-    public Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName)
+    public Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string? userName)
     {
         return Task.FromResult(0);
     }

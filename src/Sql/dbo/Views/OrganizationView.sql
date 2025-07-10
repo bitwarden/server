@@ -1,4 +1,4 @@
-﻿CREATE VIEW [dbo].[OrganizationView]
+CREATE VIEW [dbo].[OrganizationView]
 AS
 SELECT
     *

@@ -22,4 +22,21 @@ public static class Claims
 
     // General
     public const string Type = "type";
+
+    // Organization custom permissions
+    public static class CustomPermissions
+    {
+        public const string AccessEventLogs = "accesseventlogs";
+        public const string AccessImportExport = "accessimportexport";
+        public const string AccessReports = "accessreports";
+        public const string CreateNewCollections = "createnewcollections";
+        public const string EditAnyCollection = "editanycollection";
+        public const string DeleteAnyCollection = "deleteanycollection";
+        public const string ManageGroups = "managegroups";
+        public const string ManagePolicies = "managepolicies";
+        public const string ManageSso = "managesso";
+        public const string ManageUsers = "manageusers";
+        public const string ManageResetPassword = "manageresetpassword";
+        public const string ManageScim = "managescim";
+    }
 }

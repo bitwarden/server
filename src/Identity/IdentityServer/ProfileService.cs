@@ -1,4 +1,7 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Identity;
@@ -72,6 +75,10 @@ public class ProfileService : IProfileService
 
     public async Task IsActiveAsync(IsActiveContext context)
     {
+        // We add the security stamp claim to the persisted grant when we issue the refresh token.
+        // IdentityServer will add this claim to the subject, and here we evaluate whether the security stamp that
+        // was persisted matches the current security stamp of the user. If it does not match, then the user has performed
+        // an operation that we want to invalidate the refresh token.
         var securityTokenClaim = context.Subject?.Claims.FirstOrDefault(c => c.Type == Claims.SecurityStamp);
         var user = await _userService.GetUserByPrincipalAsync(context.Subject);
 

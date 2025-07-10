@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -109,6 +112,13 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
             _logger.LogWarning("Sponsoring Organization {SponsoringOrganizationId} is disabled for more than 3 months.", sponsoringOrganization.Id);
             await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);
 
+            return false;
+        }
+
+        if (existingSponsorship.IsAdminInitiated && !sponsoringOrganization.UseAdminSponsoredFamilies)
+        {
+            _logger.LogWarning("Admin initiated sponsorship for sponsored Organization {SponsoredOrganizationId} is not allowed because sponsoring organization does not have UseAdminSponsoredFamilies enabled", sponsoredOrganizationId);
+            await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);
             return false;
         }
 

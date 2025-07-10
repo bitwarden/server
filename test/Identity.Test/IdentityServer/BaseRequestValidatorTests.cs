@@ -1,6 +1,7 @@
 ﻿using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
@@ -32,7 +33,6 @@ public class BaseRequestValidatorTests
     private readonly IDeviceValidator _deviceValidator;
     private readonly ITwoFactorAuthenticationValidator _twoFactorAuthenticationValidator;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IMailService _mailService;
     private readonly ILogger<BaseRequestValidatorTests> _logger;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
@@ -41,6 +41,7 @@ public class BaseRequestValidatorTests
     private readonly IFeatureService _featureService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserDecryptionOptionsBuilder _userDecryptionOptionsBuilder;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -52,7 +53,6 @@ public class BaseRequestValidatorTests
         _deviceValidator = Substitute.For<IDeviceValidator>();
         _twoFactorAuthenticationValidator = Substitute.For<ITwoFactorAuthenticationValidator>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-        _mailService = Substitute.For<IMailService>();
         _logger = Substitute.For<ILogger<BaseRequestValidatorTests>>();
         _currentContext = Substitute.For<ICurrentContext>();
         _globalSettings = Substitute.For<GlobalSettings>();
@@ -61,6 +61,7 @@ public class BaseRequestValidatorTests
         _featureService = Substitute.For<IFeatureService>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _userDecryptionOptionsBuilder = Substitute.For<IUserDecryptionOptionsBuilder>();
+        _policyRequirementQuery = Substitute.For<IPolicyRequirementQuery>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -69,7 +70,6 @@ public class BaseRequestValidatorTests
             _deviceValidator,
             _twoFactorAuthenticationValidator,
             _organizationUserRepository,
-            _mailService,
             _logger,
             _currentContext,
             _globalSettings,
@@ -77,37 +77,8 @@ public class BaseRequestValidatorTests
             _policyService,
             _featureService,
             _ssoConfigRepository,
-            _userDecryptionOptionsBuilder);
-    }
-
-    /* Logic path
-     * ValidateAsync -> _Logger.LogInformation
-     *            |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
-     *                                     |-> SetErrorResult
-     */
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_IsBot_UserNotNull_ShouldBuildErrorResult_ShouldLogFailedLoginEvent(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
-    {
-        // Arrange
-        var context = CreateContext(tokenRequest, requestContext, grantResult);
-
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = true;
-        _sut.isValid = true;
-
-        // Act
-        await _sut.ValidateAsync(context);
-
-        var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-
-        // Assert
-        await _eventService.Received(1)
-                           .LogUserEventAsync(context.CustomValidatorRequestContext.User.Id,
-                                             EventType.User_FailedLogIn);
-        Assert.True(context.GrantResult.IsError);
-        Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
+            _userDecryptionOptionsBuilder,
+            _policyRequirementQuery);
     }
 
     /* Logic path
@@ -124,8 +95,6 @@ public class BaseRequestValidatorTests
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
-        _globalSettings.Captcha.Returns(new GlobalSettings.CaptchaSettings());
         _globalSettings.SelfHosted = true;
         _sut.isValid = false;
 
@@ -134,44 +103,6 @@ public class BaseRequestValidatorTests
 
         // Assert
         _logger.Received(1).LogWarning(Constants.BypassFiltersEventId, "Failed login attempt. ");
-        var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-        Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
-    }
-
-    /* Logic path
-     * ValidateAsync -> UpdateFailedAuthDetailsAsync -> _mailService.SendFailedLoginAttemptsEmailAsync
-     *            |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
-     *                                     |-> SetErrorResult
-     */
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_ContextNotValid_MaxAttemptLogin_ShouldSendEmail(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
-    {
-        // Arrange
-        var context = CreateContext(tokenRequest, requestContext, grantResult);
-
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
-        // This needs to be n-1 of the max failed login attempts
-        context.CustomValidatorRequestContext.User.FailedLoginCount = 2;
-        context.CustomValidatorRequestContext.KnownDevice = false;
-
-        _globalSettings.Captcha.Returns(
-            new GlobalSettings.CaptchaSettings
-            {
-                MaximumFailedLoginAttempts = 3
-            });
-        _sut.isValid = false;
-
-        // Act
-        await _sut.ValidateAsync(context);
-
-        // Assert
-        await _mailService.Received(1)
-                          .SendFailedLoginAttemptsEmailAsync(
-                            Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
-        Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
         Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
     }
@@ -185,7 +116,6 @@ public class BaseRequestValidatorTests
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         // 1 -> to pass
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
 
         // 2 -> will result to false with no extra configuration
@@ -222,7 +152,6 @@ public class BaseRequestValidatorTests
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         // 1 -> to pass
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
 
         // 2 -> will result to false with no extra configuration
@@ -259,7 +188,6 @@ public class BaseRequestValidatorTests
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
 
         context.ValidatedTokenRequest.GrantType = grantType;
@@ -276,6 +204,73 @@ public class BaseRequestValidatorTests
         Assert.Equal("SSO authentication is required.", errorResponse.Message);
     }
 
+    // Test grantTypes with RequireSsoPolicyRequirement when feature flag is enabled
+    [Theory]
+    [BitAutoData("password")]
+    [BitAutoData("webauthn")]
+    [BitAutoData("refresh_token")]
+    public async Task ValidateAsync_GrantTypes_WithPolicyRequirementsEnabled_OrgSsoRequiredTrue_ShouldSetSsoResult(
+        string grantType,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        context.ValidatedTokenRequest.GrantType = grantType;
+        // Configure requirement to require SSO
+        var requirement = new RequireSsoPolicyRequirement { SsoRequired = true };
+        _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(Arg.Any<Guid>()).Returns(requirement);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        await _policyService.DidNotReceive().AnyPoliciesApplicableToUserAsync(
+                Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
+        Assert.True(context.GrantResult.IsError);
+        var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
+        Assert.Equal("SSO authentication is required.", errorResponse.Message);
+    }
+
+    [Theory]
+    [BitAutoData("password")]
+    [BitAutoData("webauthn")]
+    [BitAutoData("refresh_token")]
+    public async Task ValidateAsync_GrantTypes_WithPolicyRequirementsEnabled_OrgSsoRequiredFalse_ShouldSucceed(
+        string grantType,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        context.ValidatedTokenRequest.GrantType = grantType;
+        context.ValidatedTokenRequest.ClientId = "web";
+
+        // Configure requirement to not require SSO
+        var requirement = new RequireSsoPolicyRequirement { SsoRequired = false };
+        _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(Arg.Any<Guid>()).Returns(requirement);
+
+        _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        await _sut.ValidateAsync(context);
+
+        Assert.False(context.GrantResult.IsError);
+        await _eventService.Received(1).LogUserEventAsync(
+            context.CustomValidatorRequestContext.User.Id, EventType.User_LoggedIn);
+        await _userRepository.Received(1).ReplaceAsync(Arg.Any<User>());
+    }
+
     // Test grantTypes where SSO would be required but the user is not in an
     // organization that requires it
     [Theory]
@@ -290,7 +285,6 @@ public class BaseRequestValidatorTests
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
 
         context.ValidatedTokenRequest.GrantType = grantType;
@@ -328,7 +322,6 @@ public class BaseRequestValidatorTests
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
 
         context.ValidatedTokenRequest.GrantType = grantType;
@@ -366,7 +359,6 @@ public class BaseRequestValidatorTests
         var user = context.CustomValidatorRequestContext.User;
         user.Key = null;
 
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         context.ValidatedTokenRequest.ClientId = "Not Web";
         _sut.isValid = true;
         _twoFactorAuthenticationValidator
@@ -381,8 +373,7 @@ public class BaseRequestValidatorTests
         // Assert
         Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-        var expectedMessage = $"Encryption key migration is required. Please log in to the web " +
-                              $"vault at {_globalSettings.BaseServiceUri.VaultWithHash}";
+        var expectedMessage = "Legacy encryption without a userkey is no longer supported. To recover your account, please contact support";
         Assert.Equal(expectedMessage, errorResponse.Message);
     }
 

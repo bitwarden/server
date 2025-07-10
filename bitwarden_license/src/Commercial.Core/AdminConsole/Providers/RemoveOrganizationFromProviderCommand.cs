@@ -1,4 +1,8 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Providers.Interfaces;
@@ -6,6 +10,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -20,7 +25,6 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IEventService _eventService;
     private readonly IMailService _mailService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationService _organizationService;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IFeatureService _featureService;
@@ -33,7 +37,6 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IEventService eventService,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService,
         IProviderOrganizationRepository providerOrganizationRepository,
         IStripeAdapter stripeAdapter,
         IFeatureService featureService,
@@ -45,7 +48,6 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         _eventService = eventService;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
-        _organizationService = organizationService;
         _providerOrganizationRepository = providerOrganizationRepository;
         _stripeAdapter = stripeAdapter;
         _featureService = featureService;
@@ -70,7 +72,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
         if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
-                Array.Empty<Guid>(),
+                [],
                 includeProvider: false))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
@@ -95,7 +97,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     /// <summary>
     /// When a client organization is unlinked from a provider, we have to check if they're Stripe-enabled
     /// and, if they are, we remove their MSP discount and set their Subscription to `send_invoice`. This is because
-    /// the provider's payment method will be removed from their Stripe customer causing ensuing charges to fail. Lastly,
+    /// the provider's payment method will be removed from their Stripe customer, causing ensuing charges to fail. Lastly,
     /// we email the organization owners letting them know they need to add a new payment method.
     /// </summary>
     private async Task ResetOrganizationBillingAsync(
@@ -104,13 +106,19 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IEnumerable<string> organizationOwnerEmails)
     {
         if (provider.IsBillable() &&
-            organization.IsValidClient() &&
-            !string.IsNullOrEmpty(organization.GatewayCustomerId))
+            organization.IsValidClient())
         {
-            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            // An organization converted to a business unit will not have a Customer since it was given to the business unit.
+            if (string.IsNullOrEmpty(organization.GatewayCustomerId))
+            {
+                await _providerBillingService.CreateCustomerForClientOrganization(provider, organization);
+            }
+
+            var customer = await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Description = string.Empty,
-                Email = organization.BillingEmail
+                Email = organization.BillingEmail,
+                Expand = ["tax", "tax_ids"]
             });
 
             var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
@@ -120,7 +128,6 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 Customer = organization.GatewayCustomerId,
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
                 DaysUntilDue = 30,
-                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
                 Metadata = new Dictionary<string, string>
                 {
                     { "organizationId", organization.Id.ToString() }
@@ -129,6 +136,21 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
                 Items = [new SubscriptionItemOptions { Price = plan.PasswordManager.StripeSeatPlanId, Quantity = organization.Seats }]
             };
+
+            var setNonUSBusinessUseToReverseCharge = _featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
+            if (setNonUSBusinessUseToReverseCharge)
+            {
+                subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+            }
+            else if (customer.HasRecognizedTaxLocation())
+            {
+                subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
+                {
+                    Enabled = customer.Address.Country == "US" ||
+                              customer.TaxIds.Any()
+                };
+            }
 
             var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 
@@ -163,7 +185,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         await _mailService.SendProviderUpdatePaymentMethod(
             organization.Id,
             organization.Name,
-            provider.Name,
+            provider.Name!,
             organizationOwnerEmails);
     }
 }

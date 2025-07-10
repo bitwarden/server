@@ -1,4 +1,7 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -46,7 +49,7 @@ public static class LoggerFactoryExtensions
             {
                 return true;
             }
-            var eventId = e.Properties.ContainsKey("EventId") ? e.Properties["EventId"].ToString() : null;
+            var eventId = e.Properties.TryGetValue("EventId", out var eventIdValue) ? eventIdValue.ToString() : null;
             if (eventId?.Contains(Constants.BypassFiltersEventId.ToString()) ?? false)
             {
                 return true;

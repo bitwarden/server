@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Bit.Core.Exceptions;
 using Bit.Core.Tools.Entities;
@@ -36,31 +39,31 @@ public class SendRequestModel
     public bool? Disabled { get; set; }
     public bool? HideEmail { get; set; }
 
-    public Send ToSend(Guid userId, ISendService sendService)
+    public Send ToSend(Guid userId, ISendAuthorizationService sendAuthorizationService)
     {
         var send = new Send
         {
             Type = Type,
             UserId = (Guid?)userId
         };
-        ToSend(send, sendService);
+        ToSend(send, sendAuthorizationService);
         return send;
     }
 
-    public (Send, SendFileData) ToSend(Guid userId, string fileName, ISendService sendService)
+    public (Send, SendFileData) ToSend(Guid userId, string fileName, ISendAuthorizationService sendAuthorizationService)
     {
         var send = ToSendBase(new Send
         {
             Type = Type,
             UserId = (Guid?)userId
-        }, sendService);
+        }, sendAuthorizationService);
         var data = new SendFileData(Name, Notes, fileName);
         return (send, data);
     }
 
-    public Send ToSend(Send existingSend, ISendService sendService)
+    public Send ToSend(Send existingSend, ISendAuthorizationService sendAuthorizationService)
     {
-        existingSend = ToSendBase(existingSend, sendService);
+        existingSend = ToSendBase(existingSend, sendAuthorizationService);
         switch (existingSend.Type)
         {
             case SendType.File:
@@ -125,7 +128,7 @@ public class SendRequestModel
         }
     }
 
-    private Send ToSendBase(Send existingSend, ISendService sendService)
+    private Send ToSendBase(Send existingSend, ISendAuthorizationService authorizationService)
     {
         existingSend.Key = Key;
         existingSend.ExpirationDate = ExpirationDate;
@@ -133,7 +136,7 @@ public class SendRequestModel
         existingSend.MaxAccessCount = MaxAccessCount;
         if (!string.IsNullOrWhiteSpace(Password))
         {
-            existingSend.Password = sendService.HashPassword(Password);
+            existingSend.Password = authorizationService.HashPassword(Password);
         }
         existingSend.Disabled = Disabled.GetValueOrDefault();
         existingSend.HideEmail = HideEmail.GetValueOrDefault();

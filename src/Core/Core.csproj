@@ -3,8 +3,6 @@
   <PropertyGroup>
     <GenerateUserSecretsAttribute>false</GenerateUserSecretsAttribute>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
-    <!-- Temp exclusions until warnings are fixed -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS1570;CS1574;CS8602;CS9113;CS1998;CS8604</WarningsNotAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -23,8 +21,8 @@
 
   <ItemGroup>
     <PackageReference Include="AspNetCoreRateLimit.Redis" Version="2.0.0" />
-    <PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.402.28" />
-    <PackageReference Include="AWSSDK.SQS" Version="3.7.400.85" />
+    <PackageReference Include="AWSSDK.SimpleEmail" Version="4.0.0.12" />
+    <PackageReference Include="AWSSDK.SQS" Version="4.0.0.13" />
     <PackageReference Include="Azure.Data.Tables" Version="12.9.0" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.3.4" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="8.0.10" />
@@ -36,9 +34,9 @@
     <PackageReference Include="DnsClient" Version="1.8.0" />
     <PackageReference Include="Fido2.AspNet" Version="3.0.1" />
     <PackageReference Include="Handlebars.Net" Version="2.1.6" />
-    <PackageReference Include="MailKit" Version="4.11.0" />
+    <PackageReference Include="MailKit" Version="4.13.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
-    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.46.1" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.52.0" />
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="4.2.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageReference Include="Microsoft.Extensions.Caching.Cosmos" Version="1.7.0" />
@@ -52,7 +50,7 @@
     <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
     <PackageReference Include="Serilog.Extensions.Logging.File" Version="3.0.0" />
     <PackageReference Include="Sentry.Serilog" Version="5.0.0" />
-    <PackageReference Include="Duende.IdentityServer" Version="7.1.0" />
+    <PackageReference Include="Duende.IdentityServer" Version="7.0.8" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Serilog.Sinks.SyslogMessages" Version="4.0.0" />
     <PackageReference Include="AspNetCoreRateLimit" Version="5.0.0" />
@@ -61,11 +59,11 @@
     <PackageReference Include="Otp.NET" Version="1.4.0" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.10" />
-    <PackageReference Include="LaunchDarkly.ServerSdk" Version="8.6.0" />
-    <PackageReference Include="Quartz" Version="3.13.1" />
-    <PackageReference Include="Quartz.Extensions.Hosting" Version="3.13.1" />
-    <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.13.1" />
-    <PackageReference Include="RabbitMQ.Client" Version="7.0.0" />
+    <PackageReference Include="LaunchDarkly.ServerSdk" Version="8.9.1" />
+    <PackageReference Include="Quartz" Version="3.14.0" />
+    <PackageReference Include="Quartz.Extensions.Hosting" Version="3.14.0" />
+    <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.14.0" />
+    <PackageReference Include="RabbitMQ.Client" Version="7.1.2" />
   </ItemGroup>
 
   <ItemGroup Label="Pinned transitive dependencies">
@@ -76,5 +74,9 @@
   <ItemGroup>
     <Folder Include="Resources\" />
     <Folder Include="Properties\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Infrastructure.IntegrationTest" />
   </ItemGroup>
 </Project>

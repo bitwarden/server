@@ -29,9 +29,17 @@ public class DeviceService : IDeviceService
         _globalSettings = globalSettings;
     }
 
-    public async Task SaveAsync(WebPushRegistrationData webPush, Device device)
+    public async Task SaveAsync(WebPushRegistrationData webPush, Device device, IEnumerable<string> organizationIds)
     {
-        await SaveAsync(new PushRegistrationData(webPush.Endpoint, webPush.P256dh, webPush.Auth), device);
+        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(
+            new PushRegistrationData(webPush.Endpoint, webPush.P256dh, webPush.Auth),
+            device.Id.ToString(),
+            device.UserId.ToString(),
+            device.Identifier,
+            device.Type,
+            organizationIds,
+            _globalSettings.Installation.Id
+        );
     }
 
     public async Task SaveAsync(Device device)
@@ -77,6 +85,9 @@ public class DeviceService : IDeviceService
 
         device.Active = false;
         device.RevisionDate = DateTime.UtcNow;
+        device.EncryptedPrivateKey = null;
+        device.EncryptedPublicKey = null;
+        device.EncryptedUserKey = null;
         await _deviceRepository.UpsertAsync(device);
 
         await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString());

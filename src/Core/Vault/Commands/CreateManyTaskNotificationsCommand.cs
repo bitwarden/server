@@ -1,4 +1,7 @@
-﻿using Bit.Core.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Commands.Interfaces;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Enums;
@@ -48,9 +51,16 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
         }).ToList();
 
         var organization = await _organizationRepository.GetByIdAsync(orgId);
-        var orgAdminEmails = await _organizationUserRepository.GetManyDetailsByRoleAsync(orgId, OrganizationUserType.Admin);
-        var orgOwnerEmails = await _organizationUserRepository.GetManyDetailsByRoleAsync(orgId, OrganizationUserType.Owner);
-        var orgAdminAndOwnerEmails = orgAdminEmails.Concat(orgOwnerEmails).Select(x => x.Email).Distinct().ToList();
+        var orgAdminEmails = (await _organizationUserRepository.GetManyDetailsByRoleAsync(orgId, OrganizationUserType.Admin))
+            .Select(u => u.Email)
+            .ToList();
+
+        var orgOwnerEmails = (await _organizationUserRepository.GetManyDetailsByRoleAsync(orgId, OrganizationUserType.Owner))
+            .Select(u => u.Email)
+            .ToList();
+
+        // Ensure proper deserialization of emails
+        var orgAdminAndOwnerEmails = orgAdminEmails.Concat(orgOwnerEmails).Distinct().ToList();
 
         await _mailService.SendBulkSecurityTaskNotificationsAsync(organization, userTaskCount, orgAdminAndOwnerEmails);
 
@@ -82,7 +92,7 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
             }
 
             // Notify the user that they have pending security tasks
-            await _pushNotificationService.PushPendingSecurityTasksAsync(userId);
+            await _pushNotificationService.PushRefreshSecurityTasksAsync(userId);
         }
     }
 }

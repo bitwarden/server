@@ -1,14 +1,16 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Tools.Enums;
+using Bit.Core.Services;
 using Bit.Core.Tools.ImportFeatures.Interfaces;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
@@ -24,9 +26,8 @@ public class ImportCiphersCommand : IImportCiphersCommand
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IReferenceEventService _referenceEventService;
-    private readonly ICurrentContext _currentContext;
-
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IFeatureService _featureService;
 
     public ImportCiphersCommand(
         ICipherRepository cipherRepository,
@@ -36,8 +37,8 @@ public class ImportCiphersCommand : IImportCiphersCommand
         IOrganizationUserRepository organizationUserRepository,
         IPushNotificationService pushService,
         IPolicyService policyService,
-        IReferenceEventService referenceEventService,
-        ICurrentContext currentContext)
+        IPolicyRequirementQuery policyRequirementQuery,
+        IFeatureService featureService)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -46,10 +47,9 @@ public class ImportCiphersCommand : IImportCiphersCommand
         _collectionRepository = collectionRepository;
         _pushService = pushService;
         _policyService = policyService;
-        _referenceEventService = referenceEventService;
-        _currentContext = currentContext;
+        _policyRequirementQuery = policyRequirementQuery;
+        _featureService = featureService;
     }
-
 
     public async Task ImportIntoIndividualVaultAsync(
         List<Folder> folders,
@@ -58,8 +58,11 @@ public class ImportCiphersCommand : IImportCiphersCommand
         Guid importingUserId)
     {
         // Make sure the user can save new ciphers to their personal vault
-        var anyPersonalOwnershipPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.PersonalOwnership);
-        if (anyPersonalOwnershipPolicies)
+        var organizationDataOwnershipEnabled = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            ? (await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(importingUserId)).State == OrganizationDataOwnershipState.Enabled
+            : await _policyService.AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.OrganizationDataOwnership);
+
+        if (organizationDataOwnershipEnabled)
         {
             throw new BadRequestException("You cannot import items into your personal vault because you are " +
                 "a member of an organization which forbids it.");
@@ -105,7 +108,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
         }
 
         // Create it all
-        await _cipherRepository.CreateAsync(ciphers, newFolders);
+        await _cipherRepository.CreateAsync(importingUserId, ciphers, newFolders);
 
         // push
         await _pushService.PushSyncVaultAsync(importingUserId);
@@ -184,12 +187,5 @@ public class ImportCiphersCommand : IImportCiphersCommand
 
         // push
         await _pushService.PushSyncVaultAsync(importingUserId);
-
-
-        if (org != null)
-        {
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.VaultImported, org, _currentContext));
-        }
     }
 }

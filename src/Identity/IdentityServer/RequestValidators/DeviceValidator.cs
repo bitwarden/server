@@ -1,6 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Bit.Core;
+using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -22,8 +26,8 @@ public class DeviceValidator(
     ICurrentContext currentContext,
     IUserService userService,
     IDistributedCache distributedCache,
-    ILogger<DeviceValidator> logger,
-    IFeatureService featureService) : IDeviceValidator
+    ITwoFactorEmailService twoFactorEmailService,
+    ILogger<DeviceValidator> logger) : IDeviceValidator
 {
     private readonly IDeviceService _deviceService = deviceService;
     private readonly IDeviceRepository _deviceRepository = deviceRepository;
@@ -33,7 +37,7 @@ public class DeviceValidator(
     private readonly IUserService _userService = userService;
     private readonly IDistributedCache distributedCache = distributedCache;
     private readonly ILogger<DeviceValidator> _logger = logger;
-    private readonly IFeatureService _featureService = featureService;
+    private readonly ITwoFactorEmailService _twoFactorEmailService = twoFactorEmailService;
 
     public async Task<bool> ValidateRequestDeviceAsync(ValidatedTokenRequest request, CustomValidatorRequestContext context)
     {
@@ -64,9 +68,7 @@ public class DeviceValidator(
         }
 
         // We have established that the device is unknown at this point; begin new device verification
-        // PM-13340: remove feature flag
-        if (_featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification) &&
-            request.GrantType == "password" &&
+        if (request.GrantType == "password" &&
             request.Raw["AuthRequest"] == null &&
             !context.TwoFactorRequired &&
             !context.SsoRequired &&
@@ -79,7 +81,7 @@ public class DeviceValidator(
                     BuildDeviceErrorResult(validationResult);
                 if (validationResult == DeviceValidationResultType.NewDeviceVerificationRequired)
                 {
-                    await _userService.SendNewDeviceVerificationEmailAsync(context.User);
+                    await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(context.User);
                 }
                 return false;
             }

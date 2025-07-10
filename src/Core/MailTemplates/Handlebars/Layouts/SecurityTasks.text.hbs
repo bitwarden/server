@@ -1,7 +1,5 @@
 ﻿{{#>FullTextLayout}}
-{{OrgName}} has identified {{TaskCount}} critical login{{#if TaskCountPlural}}s{{/if}} that require{{#unless
-TaskCountPlural}}s{{/unless}} a
-password change
+{{OrgName}} has identified {{TaskCount}} critical {{plurality TaskCount "login" "logins"}} that {{plurality TaskCount "requires" "require"}} a password change
 
 {{>@partial-block}}
 

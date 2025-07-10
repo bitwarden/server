@@ -1,10 +1,14 @@
-﻿using AutoMapper;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using LinqToDB.Tools;
 using Microsoft.EntityFrameworkCore;
@@ -106,7 +110,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 LimitCollectionDeletion = e.LimitCollectionDeletion,
                 LimitItemDeletion = e.LimitItemDeletion,
                 AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems,
-                UseRiskInsights = e.UseRiskInsights
+                UseRiskInsights = e.UseRiskInsights,
+                UseOrganizationDomains = e.UseOrganizationDomains,
+                UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies
             }).ToListAsync();
         }
     }
@@ -198,6 +204,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.OrganizationUsers.Where(ou => ou.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.ProviderOrganizations.Where(po => po.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.OrganizationIntegrations.Where(oi => oi.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 
             await dbContext.GroupServiceAccountAccessPolicy.Where(ap => ap.GrantedServiceAccount.OrganizationId == organization.Id)
@@ -330,7 +338,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             var planTypes = providerType switch
             {
                 ProviderType.Msp => PlanConstants.EnterprisePlanTypes.Concat(PlanConstants.TeamsPlanTypes),
-                ProviderType.MultiOrganizationEnterprise => PlanConstants.EnterprisePlanTypes,
+                ProviderType.BusinessUnit => PlanConstants.EnterprisePlanTypes,
                 _ => []
             };
 
@@ -354,8 +362,45 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         }
     }
 
+    public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetManyByIdsAsync(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        var query = from organization in dbContext.Organizations
+                    where ids.Contains(organization.Id)
+                    select organization;
+
+        return await query.ToArrayAsync();
+    }
+
     public Task EnableCollectionEnhancements(Guid organizationId)
     {
         throw new NotImplementedException("Collection enhancements migration is not yet supported for Entity Framework.");
+    }
+
+    public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var users = await dbContext.OrganizationUsers
+                .Where(ou => ou.OrganizationId == organizationId && ou.Status >= 0)
+                .CountAsync();
+
+            var sponsored = await dbContext.OrganizationSponsorships
+                .Where(os => os.SponsoringOrganizationId == organizationId &&
+                    os.IsAdminInitiated &&
+                    (os.ToDelete == false || (os.ToDelete == true && os.ValidUntil != null && os.ValidUntil > DateTime.UtcNow)) &&
+                    (os.SponsoredOrganizationId == null || (os.SponsoredOrganizationId != null && (os.ValidUntil == null || os.ValidUntil > DateTime.UtcNow))))
+                .CountAsync();
+
+            return new OrganizationSeatCounts
+            {
+                Users = users,
+                Sponsored = sponsored
+            };
+        }
     }
 }

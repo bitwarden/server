@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -23,19 +26,21 @@ public class YubicoOtpTokenProvider : IUserTwoFactorTokenProvider<User>
 
     public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
+        // Ensure the user has access to premium
         var userService = _serviceProvider.GetRequiredService<IUserService>();
         if (!await userService.CanAccessPremium(user))
         {
             return false;
         }
 
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
-        if (!provider?.MetaData.Values.Any(v => !string.IsNullOrWhiteSpace((string)v)) ?? true)
+        // Check if the user has a YubiKey provider configured
+        var yubicoProvider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
+        if (!yubicoProvider?.MetaData.Values.Any(v => !string.IsNullOrWhiteSpace((string)v)) ?? true)
         {
             return false;
         }
 
-        return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.YubiKey, user);
+        return yubicoProvider.Enabled;
     }
 
     public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)

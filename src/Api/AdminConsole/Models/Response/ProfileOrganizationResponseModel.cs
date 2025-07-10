@@ -1,4 +1,7 @@
-﻿using System.Text.Json.Serialization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -18,7 +21,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
 
     public ProfileOrganizationResponseModel(
         OrganizationUserOrganizationDetails organization,
-        IEnumerable<Guid> organizationIdsManagingUser)
+        IEnumerable<Guid> organizationIdsClaimingUser)
         : this("profileOrganization")
     {
         Id = organization.OrganizationId;
@@ -51,14 +54,15 @@ public class ProfileOrganizationResponseModel : ResponseModel
         SsoBound = !string.IsNullOrWhiteSpace(organization.SsoExternalId);
         Identifier = organization.Identifier;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organization.Permissions);
-        ResetPasswordEnrolled = organization.ResetPasswordKey != null;
+        ResetPasswordEnrolled = !string.IsNullOrWhiteSpace(organization.ResetPasswordKey);
         UserId = organization.UserId;
         OrganizationUserId = organization.OrganizationUserId;
         ProviderId = organization.ProviderId;
         ProviderName = organization.ProviderName;
         ProviderType = organization.ProviderType;
         FamilySponsorshipFriendlyName = organization.FamilySponsorshipFriendlyName;
-        FamilySponsorshipAvailable = FamilySponsorshipFriendlyName == null &&
+        IsAdminInitiated = organization.IsAdminInitiated ?? false;
+        FamilySponsorshipAvailable = (FamilySponsorshipFriendlyName == null || IsAdminInitiated) &&
             StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
             .UsersCanSponsor(organization);
         ProductTierType = organization.PlanType.GetProductTier();
@@ -70,8 +74,10 @@ public class ProfileOrganizationResponseModel : ResponseModel
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
         LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
-        UserIsManagedByOrganization = organizationIdsManagingUser.Contains(organization.OrganizationId);
+        UserIsClaimedByOrganization = organizationIdsClaimingUser.Contains(organization.OrganizationId);
         UseRiskInsights = organization.UseRiskInsights;
+        UseOrganizationDomains = organization.UseOrganizationDomains;
+        UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
 
         if (organization.SsoConfig != null)
         {
@@ -133,15 +139,25 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     /// <summary>
-    /// Indicates if the organization manages the user.
+    /// Obsolete.
+    /// See <see cref="UserIsClaimedByOrganization"/>
+    /// </summary>
+    [Obsolete("Please use UserIsClaimedByOrganization instead. This property will be removed in a future version.")]
+    public bool UserIsManagedByOrganization
+    {
+        get => UserIsClaimedByOrganization;
+        set => UserIsClaimedByOrganization = value;
+    }
+    /// <summary>
+    /// Indicates if the user is claimed by the organization.
     /// </summary>
     /// <remarks>
-    /// An organization manages a user if the user's email domain is verified by the organization and the user is a member of it.
+    /// A user is claimed by an organization if the user's email domain is verified by the organization and the user is a member.
     /// The organization must be enabled and able to have verified domains.
     /// </remarks>
-    /// <returns>
-    /// False if the Account Deprovisioning feature flag is disabled.
-    /// </returns>
-    public bool UserIsManagedByOrganization { get; set; }
+    public bool UserIsClaimedByOrganization { get; set; }
     public bool UseRiskInsights { get; set; }
+    public bool UseOrganizationDomains { get; set; }
+    public bool UseAdminSponsoredFamilies { get; set; }
+    public bool IsAdminInitiated { get; set; }
 }
