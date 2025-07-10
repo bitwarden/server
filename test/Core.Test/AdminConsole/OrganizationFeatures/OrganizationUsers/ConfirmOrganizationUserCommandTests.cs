@@ -445,7 +445,7 @@ public class ConfirmOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmUserAsync_WithCreateDefaultLocationEnabled_WithPersonalOwnershipPolicyApplicable_WithValidCollectionName_CreatesDefaultCollection(
+    public async Task ConfirmUserAsync_WithCreateDefaultLocationEnabled_WithOrganizationDataOwnershipPolicyApplicable_WithValidCollectionName_CreatesDefaultCollection(
         Organization organization, OrganizationUser confirmingUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
         string key, string collectionName, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
@@ -461,9 +461,9 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<PersonalOwnershipPolicyRequirement>(user.Id)
-            .Returns(new PersonalOwnershipPolicyRequirement(
-                PersonalOwnershipState.Restricted,
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(user.Id)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(
+                OrganizationDataOwnershipState.Enabled,
                 [organization.Id]));
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
@@ -482,7 +482,7 @@ public class ConfirmOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmUserAsync_WithCreateDefaultLocationEnabled_WithPersonalOwnershipPolicyApplicable_WithInvalidCollectionName_DoesNotCreateDefaultCollection(
+    public async Task ConfirmUserAsync_WithCreateDefaultLocationEnabled_WithOrganizationDataOwnershipPolicyApplicable_WithInvalidCollectionName_DoesNotCreateDefaultCollection(
         Organization org, OrganizationUser confirmingUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
         string key, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
@@ -498,9 +498,9 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<PersonalOwnershipPolicyRequirement>(user.Id)
-            .Returns(new PersonalOwnershipPolicyRequirement(
-                PersonalOwnershipState.Restricted,
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(user.Id)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(
+                OrganizationDataOwnershipState.Enabled,
                 [org.Id]));
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, "");
@@ -511,7 +511,7 @@ public class ConfirmOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmUserAsync_WithCreateDefaultLocationEnabled_WithPersonalOwnershipPolicyNotApplicable_DoesNotCreateDefaultCollection(
+    public async Task ConfirmUserAsync_WithCreateDefaultLocationEnabled_WithOrganizationDataOwnershipPolicyNotApplicable_DoesNotCreateDefaultCollection(
         Organization org, OrganizationUser confirmingUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
         string key, string collectionName, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
@@ -526,9 +526,9 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<PersonalOwnershipPolicyRequirement>(user.Id)
-            .Returns(new PersonalOwnershipPolicyRequirement(
-                PersonalOwnershipState.Restricted,
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(user.Id)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(
+                OrganizationDataOwnershipState.Enabled,
                 [Guid.NewGuid()]));
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);

@@ -1,4 +1,7 @@
-﻿using AutoMapper;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AutoMapper;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;

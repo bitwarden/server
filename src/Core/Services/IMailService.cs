@@ -8,6 +8,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
 using Bit.Core.Vault.Models.Data;
+using Core.Auth.Enums;
 
 namespace Bit.Core.Services;
 
@@ -27,7 +28,7 @@ public interface IMailService
     Task SendCannotDeleteClaimedAccountEmailAsync(string email);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
-    Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true);
+    Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, TwoFactorEmailPurpose purpose);
     Task SendNoMasterPasswordHintEmailAsync(string email);
     Task SendMasterPasswordHintEmailAsync(string email, string hint);
 

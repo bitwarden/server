@@ -1,4 +1,7 @@
-﻿using System.Reflection;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Reflection;
 
 namespace Bit.Core;
 
@@ -109,7 +112,6 @@ public static class FeatureFlagKeys
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
-    public const string OptimizeNestedTraverseTypescript = "pm-21695-optimize-nested-traverse-typescript";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
 
@@ -138,6 +140,7 @@ public static class FeatureFlagKeys
     public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string InlineMenuTotp = "inline-menu-totp";
+    public const string WindowsDesktopAutotype = "windows-desktop-autotype";
 
     /* Billing Team */
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
@@ -152,6 +155,7 @@ public static class FeatureFlagKeys
     public const string PM20322_AllowTrialLength0 = "pm-20322-allow-trial-length-0";
     public const string PM21092_SetNonUSBusinessUseToReverseCharge = "pm-21092-set-non-us-business-use-to-reverse-charge";
     public const string PM21383_GetProviderPriceFromStripe = "pm-21383-get-provider-price-from-stripe";
+    public const string PM21881_ManagePaymentDetailsOutsideCheckout = "pm-21881-manage-payment-details-outside-checkout";
 
     /* Data Insights and Reporting Team */
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
@@ -189,11 +193,9 @@ public static class FeatureFlagKeys
     public const string PersistPopupView = "persist-popup-view";
     public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string WebPush = "web-push";
-    public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
     public const string IpcChannelFramework = "ipc-channel-framework";
 
     /* Tools Team */
-    public const string ItemShare = "item-share";
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
 
     /* Vault Team */
@@ -207,6 +209,8 @@ public static class FeatureFlagKeys
     public const string PhishingDetection = "phishing-detection";
     public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
+    public const string PM19315EndUserActivationMvp = "pm-19315-end-user-activation-mvp";
+    public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
 
     public static List<string> GetAllKeys()
     {
