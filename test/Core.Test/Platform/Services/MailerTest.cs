@@ -32,6 +32,6 @@ public class MailerTest
         Assert.Contains("test@bw.com", sentMessage.ToEmails);
         Assert.Equal("Test Email", sentMessage.Subject);
         Assert.Equivalent("Hello John Smith", sentMessage.TextContent.Trim());
-        Assert.Equivalent("Hello <b>John Smith</b>",  sentMessage.HtmlContent.Trim());
+        Assert.Equivalent("Hello <b>John Smith</b>", sentMessage.HtmlContent.Trim());
     }
 }
