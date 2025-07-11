@@ -75,7 +75,7 @@ public class CreateDefaultCollectionsTests
         var defaultCollectionName = $"default-name-{organizationId}";
 
 
-        await CreateUsersWithExistingDefaultCollections(collectionRepository, organizationId, affectedOrgUserIds, defaultCollectionName, resulOrganizationUsers);
+        await CreateUsersWithExistingDefaultCollectionsAsync(collectionRepository, organizationId, affectedOrgUserIds, defaultCollectionName, resulOrganizationUsers);
 
         // Act
         await collectionRepository.CreateDefaultCollectionsAsync(organizationId, affectedOrgUserIds, defaultCollectionName);
@@ -84,7 +84,7 @@ public class CreateDefaultCollectionsTests
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, resulOrganizationUsers, organizationId);
     }
 
-    private static async Task CreateUsersWithExistingDefaultCollections(ICollectionRepository collectionRepository,
+    private static async Task CreateUsersWithExistingDefaultCollectionsAsync(ICollectionRepository collectionRepository,
         Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName,
         OrganizationUser[] resulOrganizationUsers)
     {
