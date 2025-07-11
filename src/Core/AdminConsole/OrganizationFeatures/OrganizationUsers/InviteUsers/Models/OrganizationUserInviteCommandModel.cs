@@ -7,7 +7,7 @@ using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Invite
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 
-public class OrganizationUserInvite
+public class OrganizationUserInviteCommandModel
 {
     public string Email { get; private init; }
     public CollectionAccessSelection[] AssignedCollections { get; private init; }
@@ -17,7 +17,7 @@ public class OrganizationUserInvite
     public bool AccessSecretsManager { get; private init; }
     public Guid[] Groups { get; private init; }
 
-    public OrganizationUserInvite(string email, string externalId) :
+    public OrganizationUserInviteCommandModel(string email, string externalId) :
         this(
             email: email,
             assignedCollections: [],
@@ -29,7 +29,7 @@ public class OrganizationUserInvite
     {
     }
 
-    public OrganizationUserInvite(OrganizationUserInvite invite, bool accessSecretsManager) :
+    public OrganizationUserInviteCommandModel(OrganizationUserInviteCommandModel invite, bool accessSecretsManager) :
         this(invite.Email,
             invite.AssignedCollections,
             invite.Groups,
@@ -41,7 +41,7 @@ public class OrganizationUserInvite
 
     }
 
-    public OrganizationUserInvite(string email,
+    public OrganizationUserInviteCommandModel(string email,
         IEnumerable<CollectionAccessSelection> assignedCollections,
         IEnumerable<Guid> groups,
         OrganizationUserType type,
