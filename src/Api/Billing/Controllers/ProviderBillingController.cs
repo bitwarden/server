@@ -1,4 +1,7 @@
-﻿using Bit.Api.Billing.Models.Requests;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Commercial.Core.Billing.Providers.Services;
 using Bit.Core;
