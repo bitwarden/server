@@ -3,10 +3,10 @@
 
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.OrganizationLicenses;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
