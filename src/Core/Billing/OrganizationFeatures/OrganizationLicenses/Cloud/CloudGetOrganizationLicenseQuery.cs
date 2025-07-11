@@ -3,14 +3,16 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Services;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationLicenses;
+namespace Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses;
 
 public class CloudGetOrganizationLicenseQuery : ICloudGetOrganizationLicenseQuery
 {

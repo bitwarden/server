@@ -1,13 +1,16 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
+using Bit.Core.Test.Billing.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -15,7 +18,7 @@ using NSubstitute.ReturnsExtensions;
 using Stripe;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationLicenses;
+namespace Bit.Core.Test.Billing.OrganizationFeatures.OrganizationLicenses;
 
 [SubscriptionInfoCustomize]
 [OrganizationLicenseCustomize]

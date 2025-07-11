@@ -1,10 +1,10 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 
-namespace Bit.Core.Test.Models.Business;
+namespace Bit.Core.Test.Billing.Models.Business;
 
 /// <summary>
 /// Contains test data for OrganizationLicense tests, including json strings for each OrganizationLicense version.

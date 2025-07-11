@@ -1,11 +1,11 @@
 ﻿using System.Security.Claims;
-using Bit.Core.Models.Business;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Models.Business;
+namespace Bit.Core.Test.Billing.Models.Business;
 
 public class OrganizationLicenseTests
 {
