@@ -596,6 +596,19 @@
             }
         },
         {
+          "name": "Unified",
+          "requireExactSource": true,
+          "type": "coreclr",
+          "request": "launch",
+          "program": "${workspaceFolder}/src/Unified/bin/Debug/net8.0/Unified.dll",
+          "cwd": "${workspaceFolder}/src/Unified",
+          "stopAtEntry": false,
+          "env": {
+            "ASPNETCORE_ENVIRONMENT": "Development",
+          },
+          "preLaunchTask": "buildUnified"
+        },
+        {
             "name": ".NET Core Attach",
             "type": "coreclr",
             "request": "attach",
