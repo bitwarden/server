@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Bit.Billing.Controllers;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
