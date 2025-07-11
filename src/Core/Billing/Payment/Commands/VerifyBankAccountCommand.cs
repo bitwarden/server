@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Billing.Caches;
+﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Entities;
@@ -19,12 +18,12 @@ public interface IVerifyBankAccountCommand
 public class VerifyBankAccountCommand(
     ILogger<VerifyBankAccountCommand> logger,
     ISetupIntentCache setupIntentCache,
-    IStripeAdapter stripeAdapter) : BillingCommand<VerifyBankAccountCommand>(logger), IVerifyBankAccountCommand
+    IStripeAdapter stripeAdapter) : BaseBillingCommand<VerifyBankAccountCommand>(logger), IVerifyBankAccountCommand
 {
     private readonly ILogger<VerifyBankAccountCommand> _logger = logger;
 
-    private static readonly Conflict _conflict =
-        new("We had a problem verifying your bank account. Please contact support for assistance.");
+    protected override Conflict DefaultConflict
+        => new("We had a problem verifying your bank account. Please contact support for assistance.");
 
     public Task<BillingCommandResult<MaskedPaymentMethod>> Run(
         ISubscriber subscriber,
@@ -37,7 +36,7 @@ public class VerifyBankAccountCommand(
             _logger.LogError(
                 "{Command}: Could not find setup intent to verify subscriber's ({SubscriberID}) bank account",
                 CommandName, subscriber.Id);
-            return _conflict;
+            return DefaultConflict;
         }
 
         await stripeAdapter.SetupIntentVerifyMicroDeposit(setupIntentId,

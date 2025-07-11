@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Billing.Commands;
+﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
@@ -20,8 +19,11 @@ public class PreviewTaxAmountCommand(
     ILogger<PreviewTaxAmountCommand> logger,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
-    ITaxService taxService) : BillingCommand<PreviewTaxAmountCommand>(logger), IPreviewTaxAmountCommand
+    ITaxService taxService) : BaseBillingCommand<PreviewTaxAmountCommand>(logger), IPreviewTaxAmountCommand
 {
+    protected override Conflict DefaultConflict
+        => new("We had a problem calculating your tax obligation. Please contact support for assistance.");
+
     public Task<BillingCommandResult<decimal>> Run(OrganizationTrialParameters parameters)
         => HandleAsync<decimal>(async () =>
         {

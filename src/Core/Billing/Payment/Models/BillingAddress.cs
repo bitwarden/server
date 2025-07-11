@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Stripe;
+﻿using Stripe;
 
 namespace Bit.Core.Billing.Payment.Models;
 
