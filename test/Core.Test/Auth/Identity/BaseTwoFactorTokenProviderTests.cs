@@ -14,7 +14,7 @@ using Xunit;
 namespace Bit.Core.Test.Auth.Identity;
 
 [SutProviderCustomize]
-public abstract class BaseTokenProviderTests<T>
+public abstract class BaseTwoFactorTokenProviderTests<T>
     where T : IUserTwoFactorTokenProvider<User>
 {
     public abstract TwoFactorProviderType TwoFactorProviderType { get; }

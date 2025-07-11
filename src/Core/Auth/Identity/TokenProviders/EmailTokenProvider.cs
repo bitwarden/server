@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
@@ -7,6 +8,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Auth.Identity.TokenProviders;
 
+/// <summary>
+/// Generates and validates tokens for email OTPs.
+/// </summary>
 public class EmailTokenProvider : IUserTwoFactorTokenProvider<User>
 {
     private const string CacheKeyFormat = "EmailToken_{0}_{1}_{2}";
@@ -16,16 +20,25 @@ public class EmailTokenProvider : IUserTwoFactorTokenProvider<User>
 
     public EmailTokenProvider(
         [FromKeyedServices("persistent")]
-        IDistributedCache distributedCache)
+        IDistributedCache distributedCache,
+        IFeatureService featureService)
     {
         _distributedCache = distributedCache;
         _distributedCacheEntryOptions = new DistributedCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
         };
+        if (featureService.IsEnabled(FeatureFlagKeys.Otp6Digits))
+        {
+            TokenLength = 6;
+        }
+        else
+        {
+            TokenLength = 8;
+        }
     }
 
-    public int TokenLength { get; protected set; } = 8;
+    public int TokenLength { get; protected set; }
     public bool TokenAlpha { get; protected set; } = false;
     public bool TokenNumeric { get; protected set; } = true;
 
