@@ -2,11 +2,11 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.OrganizationLicenses;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Services;

@@ -2,8 +2,8 @@
 
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Services;

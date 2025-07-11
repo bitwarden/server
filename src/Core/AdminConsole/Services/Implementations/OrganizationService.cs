@@ -20,6 +20,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Entities;

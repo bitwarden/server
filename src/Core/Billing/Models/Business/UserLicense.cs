@@ -10,9 +10,10 @@ using System.Text.Json.Serialization;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Business;
 using Bit.Core.Services;
 
-namespace Bit.Core.Models.Business;
+namespace Bit.Core.Billing.Models.Business;
 
 public class UserLicense : ILicense
 {
@@ -22,7 +23,7 @@ public class UserLicense : ILicense
     public UserLicense(User user, SubscriptionInfo subscriptionInfo, ILicensingService licenseService,
         int? version = null)
     {
-        LicenseType = Enums.LicenseType.User;
+        LicenseType = Core.Enums.LicenseType.User;
         LicenseKey = user.LicenseKey;
         Id = user.Id;
         Name = user.Name;
@@ -44,7 +45,7 @@ public class UserLicense : ILicense
 
     public UserLicense(User user, ILicensingService licenseService, int? version = null)
     {
-        LicenseType = Enums.LicenseType.User;
+        LicenseType = Core.Enums.LicenseType.User;
         LicenseKey = user.LicenseKey;
         Id = user.Id;
         Name = user.Name;
@@ -100,7 +101,7 @@ public class UserLicense : ILicense
                         )
                     ))
                 .OrderBy(p => p.Name)
-                .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
+                .Select(p => $"{p.Name}:{Core.Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");
             data = $"license:user|{props}";
         }
