@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Exceptions;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -6,10 +7,16 @@ namespace Bit.Core.Billing.Commands;
 
 using static StripeConstants;
 
-public abstract class BillingCommand<T>(
+public abstract class BaseBillingCommand<T>(
     ILogger<T> logger)
 {
     protected string CommandName => GetType().Name;
+
+    /// <summary>
+    /// Override this property to set a client-facing conflict response in the case a <see cref="ConflictException"/> is thrown
+    /// during the command's execution.
+    /// </summary>
+    protected virtual Conflict? DefaultConflict => null;
 
     /// <summary>
     /// Executes the provided function within a predefined execution context, handling any exceptions that occur during the process.
@@ -29,22 +36,34 @@ public abstract class BillingCommand<T>(
             return stripeException.StripeError.Code switch
             {
                 ErrorCodes.CustomerTaxLocationInvalid =>
-                    new BadRequest("Your location wasn't recognized. Please ensure your country and postal code are valid and try again."),
+                    new BadRequest(
+                        "Your location wasn't recognized. Please ensure your country and postal code are valid and try again."),
 
                 ErrorCodes.PaymentMethodMicroDepositVerificationAttemptsExceeded =>
-                    new BadRequest("You have exceeded the number of allowed verification attempts. Please contact support for assistance."),
+                    new BadRequest(
+                        "You have exceeded the number of allowed verification attempts. Please contact support for assistance."),
 
                 ErrorCodes.PaymentMethodMicroDepositVerificationDescriptorCodeMismatch =>
-                    new BadRequest("The verification code you provided does not match the one sent to your bank account. Please try again."),
+                    new BadRequest(
+                        "The verification code you provided does not match the one sent to your bank account. Please try again."),
 
                 ErrorCodes.PaymentMethodMicroDepositVerificationTimeout =>
-                    new BadRequest("Your bank account was not verified within the required time period. Please contact support for assistance."),
+                    new BadRequest(
+                        "Your bank account was not verified within the required time period. Please contact support for assistance."),
 
                 ErrorCodes.TaxIdInvalid =>
-                    new BadRequest("The tax ID number you provided was invalid. Please try again or contact support for assistance."),
+                    new BadRequest(
+                        "The tax ID number you provided was invalid. Please try again or contact support for assistance."),
 
                 _ => new Unhandled(stripeException)
             };
+        }
+        catch (ConflictException conflictException)
+        {
+            logger.LogError("{Command}: {Message}", CommandName, conflictException.Message);
+            return DefaultConflict != null ?
+                DefaultConflict :
+                new Unhandled(conflictException);
         }
         catch (StripeException stripeException)
         {

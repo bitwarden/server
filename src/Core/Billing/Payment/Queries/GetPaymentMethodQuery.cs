@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Billing.Caches;
+﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Models;
@@ -28,6 +27,11 @@ public class GetPaymentMethodQuery(
     {
         var customer = await subscriberService.GetCustomer(subscriber,
             new CustomerGetOptions { Expand = ["default_source", "invoice_settings.default_payment_method"] });
+
+        if (customer == null)
+        {
+            return null;
+        }
 
         if (customer.Metadata.TryGetValue(StripeConstants.MetadataKeys.BraintreeCustomerId, out var braintreeCustomerId))
         {
