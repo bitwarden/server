@@ -1,6 +1,3 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Builder;
@@ -33,7 +30,7 @@ public static class LoggerFactoryExtensions
     public static ILoggingBuilder AddSerilog(
         this ILoggingBuilder builder,
         WebHostBuilderContext context,
-        Func<LogEvent, IGlobalSettings, bool> filter = null)
+        Func<LogEvent, IGlobalSettings, bool>? filter = null)
     {
         var globalSettings = new GlobalSettings();
         ConfigurationBinder.Bind(context.Configuration.GetSection("GlobalSettings"), globalSettings);
@@ -57,18 +54,24 @@ public static class LoggerFactoryExtensions
             return filter(e, globalSettings);
         }
 
+        var logSentryWarning = false;
+        var logSyslogWarning = false;
+        var logFileWarning = false;
+
+        var newPathFormat = context.Configuration["Logging:PathFormat"];
+
         var config = new LoggerConfiguration()
             .MinimumLevel.Verbose()
             .Enrich.FromLogContext()
             .Filter.ByIncludingOnly(inclusionPredicate);
 
-        if (CoreHelpers.SettingHasValue(globalSettings?.Sentry.Dsn))
+        if (CoreHelpers.SettingHasValue(globalSettings.Sentry.Dsn))
         {
             config.WriteTo.Sentry(globalSettings.Sentry.Dsn)
                 .Enrich.FromLogContext()
                 .Enrich.WithProperty("Project", globalSettings.ProjectName);
         }
-        else if (CoreHelpers.SettingHasValue(globalSettings?.Syslog.Destination))
+        else if (CoreHelpers.SettingHasValue(globalSettings.Syslog.Destination))
         {
             // appending sitename to project name to allow easier identification in syslog.
             var appName = $"{globalSettings.SiteName}-{globalSettings.ProjectName}";
@@ -111,8 +114,14 @@ public static class LoggerFactoryExtensions
                 }
             }
         }
+        else if (!string.IsNullOrEmpty(newPathFormat))
+        {
+            // Use new location
+            builder.AddFile(context.Configuration.GetSection("Logging"));
+        }
         else if (CoreHelpers.SettingHasValue(globalSettings.LogDirectory))
         {
+            logFileWarning = true;
             if (globalSettings.LogRollBySizeLimit.HasValue)
             {
                 var pathFormat = Path.Combine(globalSettings.LogDirectory, $"{globalSettings.ProjectName.ToLowerInvariant()}.log");
@@ -138,6 +147,22 @@ public static class LoggerFactoryExtensions
         }
 
         var serilog = config.CreateLogger();
+
+        if (logSentryWarning)
+        {
+            serilog.Warning("Sentry for logging has been deprecated. Read more: https://bitwarden.com/help/releasenotes/#2025.7.0");
+        }
+
+        if (logSyslogWarning)
+        {
+            serilog.Warning("Syslog for logging has been deprecated. Read more: https://bitwarden.com/help/releasenotes/#2025.7.0");
+        }
+
+        if (logFileWarning)
+        {
+            serilog.Warning("This configuration location for file logging has been deprecated. Read more: https://bitwarden.com/help/releasenotes/#2025.7.0");
+        }
+
         builder.AddSerilog(serilog);
 
         return builder;
