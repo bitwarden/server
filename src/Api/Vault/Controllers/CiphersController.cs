@@ -927,7 +927,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        await _cipherService.SoftDeleteAsync((CipherDetails)cipher, userId, true);
+        await _cipherService.SoftDeleteAsync(new CipherDetails(cipher), userId, true);
     }
 
     [HttpPut("delete")]
@@ -996,7 +996,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        await _cipherService.RestoreAsync((CipherDetails)cipher, userId, true);
+        await _cipherService.RestoreAsync(new CipherDetails(cipher), userId, true);
         return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
     }
 
