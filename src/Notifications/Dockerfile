@@ -49,6 +49,7 @@ EXPOSE 5000
 
 RUN apk add --no-cache curl \
     icu-libs \
+    shadow \
     && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu
 
 # Copy app from the build stage

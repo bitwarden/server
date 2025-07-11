@@ -46,6 +46,7 @@ ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 
 RUN apk add --no-cache curl \
     openssl \
+    shadow \
     && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu
 
 # Copy app from the build stage
