@@ -330,7 +330,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
                     var missingDefaultCollectionUserIds = affectedOrgUserIds.Where(orgUserId => !orgUserIdWithDefaultCollection.Contains(orgUserId)).ToList();
 
-                    var (collectionUsers, collections) = GenerateDefaultCollections(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
+                    var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
 
                     if (!collectionUsers.Any() || !collections.Any())
                     {
@@ -376,7 +376,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         return organizationUserIds.ToHashSet();
     }
 
-    private (List<CollectionUser> collectionUser, List<Collection> collection) GenerateDefaultCollections(Guid organizationId, List<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
+    private (List<CollectionUser> collectionUser, List<Collection> collection) BuildDefaultCollectionForUsers(Guid organizationId, List<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
     {
         var collectionUsers = new List<CollectionUser>();
         var collections = new List<Collection>();
