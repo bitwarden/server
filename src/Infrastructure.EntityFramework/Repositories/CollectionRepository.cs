@@ -782,23 +782,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         {
             var dbContext = GetDatabaseContext(scope);
 
-            var orgUserIdWithDefaultCollection = (await dbContext.OrganizationUsers
-                .Where(ou => ou.OrganizationId == organizationId)
-                .Join(
-                    dbContext.CollectionUsers,
-                    ou => ou.Id,
-                    cu => cu.OrganizationUserId,
-                    (ou, cu) => new { ou, cu }
-                )
-                .Join(
-                    dbContext.Collections,
-                    temp => temp.cu.CollectionId,
-                    c => c.Id,
-                    (temp, c) => new { temp.ou, Collection = c }
-                )
-                .Where(x => x.Collection.Type == CollectionType.DefaultUserCollection)
-                .Select(x => x.ou.Id)
-                .ToListAsync()).ToHashSet();
+            var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(dbContext, organizationId);
 
             var missingDefaultCollectionUserIds = affectedOrgUserIds.Where(orgUserId => !orgUserIdWithDefaultCollection.Contains(orgUserId)).ToList();
 
@@ -814,6 +798,29 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
             await dbContext.SaveChangesAsync();
         }
+    }
+
+    private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(DatabaseContext dbContext, Guid organizationId)
+    {
+        var results = await dbContext.OrganizationUsers
+                 .Where(ou => ou.OrganizationId == organizationId)
+                 .Join(
+                     dbContext.CollectionUsers,
+                     ou => ou.Id,
+                     cu => cu.OrganizationUserId,
+                     (ou, cu) => new { ou, cu }
+                 )
+                 .Join(
+                     dbContext.Collections,
+                     temp => temp.cu.CollectionId,
+                     c => c.Id,
+                     (temp, c) => new { temp.ou, Collection = c }
+                 )
+                 .Where(x => x.Collection.Type == CollectionType.DefaultUserCollection)
+                 .Select(x => x.ou.Id)
+                 .ToListAsync();
+
+        return results.ToHashSet();
     }
 
     private (List<CollectionUser> collectionUser, List<Collection> collection) BuildDefaultCollectionForUsers(Guid organizationId, List<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
