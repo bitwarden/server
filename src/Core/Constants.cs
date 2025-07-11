@@ -194,6 +194,7 @@ public static class FeatureFlagKeys
     public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string WebPush = "web-push";
     public const string IpcChannelFramework = "ipc-channel-framework";
+    public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
 
     /* Tools Team */
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
