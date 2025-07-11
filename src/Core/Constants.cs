@@ -155,6 +155,7 @@ public static class FeatureFlagKeys
     public const string PM20322_AllowTrialLength0 = "pm-20322-allow-trial-length-0";
     public const string PM21092_SetNonUSBusinessUseToReverseCharge = "pm-21092-set-non-us-business-use-to-reverse-charge";
     public const string PM21383_GetProviderPriceFromStripe = "pm-21383-get-provider-price-from-stripe";
+    public const string PM21881_ManagePaymentDetailsOutsideCheckout = "pm-21881-manage-payment-details-outside-checkout";
 
     /* Data Insights and Reporting Team */
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
@@ -193,6 +194,7 @@ public static class FeatureFlagKeys
     public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string WebPush = "web-push";
     public const string IpcChannelFramework = "ipc-channel-framework";
+    public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
 
     /* Tools Team */
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
@@ -209,6 +211,7 @@ public static class FeatureFlagKeys
     public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
     public const string PM19315EndUserActivationMvp = "pm-19315-end-user-activation-mvp";
+    public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
 
     public static List<string> GetAllKeys()
     {

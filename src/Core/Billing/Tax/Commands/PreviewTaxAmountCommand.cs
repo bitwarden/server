@@ -1,8 +1,8 @@
 ﻿#nullable enable
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Services;
@@ -20,111 +20,95 @@ public class PreviewTaxAmountCommand(
     ILogger<PreviewTaxAmountCommand> logger,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
-    ITaxService taxService) : IPreviewTaxAmountCommand
+    ITaxService taxService) : BillingCommand<PreviewTaxAmountCommand>(logger), IPreviewTaxAmountCommand
 {
-    public async Task<BillingCommandResult<decimal>> Run(OrganizationTrialParameters parameters)
-    {
-        var (planType, productType, taxInformation) = parameters;
-
-        var plan = await pricingClient.GetPlanOrThrow(planType);
-
-        var options = new InvoiceCreatePreviewOptions
+    public Task<BillingCommandResult<decimal>> Run(OrganizationTrialParameters parameters)
+        => HandleAsync<decimal>(async () =>
         {
-            Currency = "usd",
-            CustomerDetails = new InvoiceCustomerDetailsOptions
+            var (planType, productType, taxInformation) = parameters;
+
+            var plan = await pricingClient.GetPlanOrThrow(planType);
+
+            var options = new InvoiceCreatePreviewOptions
             {
-                Address = new AddressOptions
+                Currency = "usd",
+                CustomerDetails = new InvoiceCustomerDetailsOptions
                 {
-                    Country = taxInformation.Country,
-                    PostalCode = taxInformation.PostalCode
-                }
-            },
-            SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
-            {
-                Items = [
-                    new InvoiceSubscriptionDetailsItemOptions
+                    Address = new AddressOptions
                     {
-                        Price = plan.HasNonSeatBasedPasswordManagerPlan() ? plan.PasswordManager.StripePlanId : plan.PasswordManager.StripeSeatPlanId,
-                        Quantity = 1
+                        Country = taxInformation.Country,
+                        PostalCode = taxInformation.PostalCode
                     }
-                ]
-            }
-        };
-
-        if (productType == ProductType.SecretsManager)
-        {
-            options.SubscriptionDetails.Items.Add(new InvoiceSubscriptionDetailsItemOptions
-            {
-                Price = plan.SecretsManager.StripeSeatPlanId,
-                Quantity = 1
-            });
-
-            options.Coupon = StripeConstants.CouponIDs.SecretsManagerStandalone;
-        }
-
-        if (!string.IsNullOrEmpty(taxInformation.TaxId))
-        {
-            var taxIdType = taxService.GetStripeTaxCode(
-                taxInformation.Country,
-                taxInformation.TaxId);
-
-            if (string.IsNullOrEmpty(taxIdType))
-            {
-                return BadRequest.UnknownTaxIdType;
-            }
-
-            options.CustomerDetails.TaxIds = [
-                new InvoiceCustomerDetailsTaxIdOptions
+                },
+                SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
                 {
-                    Type = taxIdType,
-                    Value = taxInformation.TaxId
+                    Items =
+                    [
+                        new InvoiceSubscriptionDetailsItemOptions
+                        {
+                            Price = plan.HasNonSeatBasedPasswordManagerPlan()
+                                ? plan.PasswordManager.StripePlanId
+                                : plan.PasswordManager.StripeSeatPlanId,
+                            Quantity = 1
+                        }
+                    ]
                 }
-            ];
-
-            if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
-            {
-                options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
-                {
-                    Type = StripeConstants.TaxIdType.EUVAT,
-                    Value = $"ES{parameters.TaxInformation.TaxId}"
-                });
-            }
-        }
-
-        if (planType.GetProductTier() == ProductTierType.Families)
-        {
-            options.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true };
-        }
-        else
-        {
-            options.AutomaticTax = new InvoiceAutomaticTaxOptions
-            {
-                Enabled = options.CustomerDetails.Address.Country == "US" ||
-                          options.CustomerDetails.TaxIds is [_, ..]
             };
-        }
 
-        try
-        {
+            if (productType == ProductType.SecretsManager)
+            {
+                options.SubscriptionDetails.Items.Add(new InvoiceSubscriptionDetailsItemOptions
+                {
+                    Price = plan.SecretsManager.StripeSeatPlanId,
+                    Quantity = 1
+                });
+
+                options.Coupon = StripeConstants.CouponIDs.SecretsManagerStandalone;
+            }
+
+            if (!string.IsNullOrEmpty(taxInformation.TaxId))
+            {
+                var taxIdType = taxService.GetStripeTaxCode(
+                    taxInformation.Country,
+                    taxInformation.TaxId);
+
+                if (string.IsNullOrEmpty(taxIdType))
+                {
+                    return new BadRequest(
+                        "We couldn't find a corresponding tax ID type for the tax ID you provided. Please try again or contact support for assistance.");
+                }
+
+                options.CustomerDetails.TaxIds =
+                [
+                    new InvoiceCustomerDetailsTaxIdOptions { Type = taxIdType, Value = taxInformation.TaxId }
+                ];
+
+                if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
+                {
+                    options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
+                    {
+                        Type = StripeConstants.TaxIdType.EUVAT,
+                        Value = $"ES{parameters.TaxInformation.TaxId}"
+                    });
+                }
+            }
+
+            if (planType.GetProductTier() == ProductTierType.Families)
+            {
+                options.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true };
+            }
+            else
+            {
+                options.AutomaticTax = new InvoiceAutomaticTaxOptions
+                {
+                    Enabled = options.CustomerDetails.Address.Country == "US" ||
+                              options.CustomerDetails.TaxIds is [_, ..]
+                };
+            }
+
             var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
             return Convert.ToDecimal(invoice.Tax) / 100;
-        }
-        catch (StripeException stripeException) when (stripeException.StripeError.Code ==
-                                                      StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
-        {
-            return BadRequest.TaxLocationInvalid;
-        }
-        catch (StripeException stripeException) when (stripeException.StripeError.Code ==
-                                                      StripeConstants.ErrorCodes.TaxIdInvalid)
-        {
-            return BadRequest.TaxIdNumberInvalid;
-        }
-        catch (StripeException stripeException)
-        {
-            logger.LogError(stripeException, "Stripe responded with an error during {Operation}. Code: {Code}", nameof(PreviewTaxAmountCommand), stripeException.StripeError.Code);
-            return new Unhandled();
-        }
-    }
+        });
 }
 
 #region Command Parameters
