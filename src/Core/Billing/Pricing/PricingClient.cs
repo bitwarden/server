@@ -45,7 +45,7 @@ public class PricingClient(
 
         if (response.IsSuccessStatusCode)
         {
-            var plan = await response.Content.ReadFromJsonAsync<PlanDTO>();
+            var plan = await response.Content.ReadFromJsonAsync<Models.Plan>();
             if (plan == null)
             {
                 throw new BillingException(message: "Deserialization of Pricing Service response resulted in null");
@@ -93,7 +93,7 @@ public class PricingClient(
 
         if (response.IsSuccessStatusCode)
         {
-            var plans = await response.Content.ReadFromJsonAsync<List<PlanDTO>>();
+            var plans = await response.Content.ReadFromJsonAsync<List<Models.Plan>>();
             if (plans == null)
             {
                 throw new BillingException(message: "Deserialization of Pricing Service response resulted in null");
