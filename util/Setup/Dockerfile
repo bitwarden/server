@@ -43,9 +43,11 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden" com.bitwarden.project="setup"
 ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 
 RUN apk add --no-cache curl \
     openssl \
+    icu-libs \
     shadow \
     && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu
 
