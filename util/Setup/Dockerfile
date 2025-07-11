@@ -44,10 +44,9 @@ ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden" com.bitwarden.project="setup"
 ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 
-RUN apk add curl \
+RUN apk add --no-cache curl \
     openssl \
-    && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu \
-    && rm -rf /var/cache/apk/*
+    && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu
 
 # Copy app from the build stage
 WORKDIR /app
