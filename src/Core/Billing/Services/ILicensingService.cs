@@ -6,7 +6,7 @@ using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Billing.Services;
 
 public interface ILicensingService
 {

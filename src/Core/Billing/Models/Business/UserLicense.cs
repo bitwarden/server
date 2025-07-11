@@ -8,10 +8,10 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json.Serialization;
 using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Services;
 
 namespace Bit.Core.Billing.Models.Business;
 

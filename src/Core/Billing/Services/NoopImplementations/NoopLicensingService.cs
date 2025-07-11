@@ -9,7 +9,7 @@ using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Billing.Services;
 
 public class NoopLicensingService : ILicensingService
 {

@@ -3,6 +3,7 @@
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;

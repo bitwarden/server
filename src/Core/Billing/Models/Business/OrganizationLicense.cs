@@ -10,9 +10,9 @@ using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 
 namespace Bit.Core.Billing.Models.Business;

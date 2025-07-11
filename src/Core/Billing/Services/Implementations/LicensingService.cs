@@ -14,6 +14,7 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using IdentityModel;
@@ -22,7 +23,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Billing.Services;
 
 public class LicensingService : ILicensingService
 {
@@ -95,7 +96,7 @@ public class LicensingService : ILicensingService
         }
 
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
-        _logger.LogInformation(Constants.BypassFiltersEventId, null,
+        _logger.LogInformation(Core.Constants.BypassFiltersEventId, null,
             "Validating licenses for {NumberOfOrganizations} organizations.", enabledOrgs.Count);
 
         var exceptions = new List<Exception>();
@@ -144,7 +145,7 @@ public class LicensingService : ILicensingService
 
     private async Task DisableOrganizationAsync(Organization org, ILicense license, string reason)
     {
-        _logger.LogInformation(Constants.BypassFiltersEventId, null,
+        _logger.LogInformation(Core.Constants.BypassFiltersEventId, null,
             "Organization {0} ({1}) has an invalid license and is being disabled. Reason: {2}",
             org.Id, org.DisplayName(), reason);
         org.Enabled = false;
@@ -163,7 +164,7 @@ public class LicensingService : ILicensingService
         }
 
         var premiumUsers = await _userRepository.GetManyByPremiumAsync(true);
-        _logger.LogInformation(Constants.BypassFiltersEventId, null,
+        _logger.LogInformation(Core.Constants.BypassFiltersEventId, null,
             "Validating premium for {0} users.", premiumUsers.Count);
 
         foreach (var user in premiumUsers)
@@ -202,7 +203,7 @@ public class LicensingService : ILicensingService
             _userCheckCache.Add(user.Id, now);
         }
 
-        _logger.LogInformation(Constants.BypassFiltersEventId, null,
+        _logger.LogInformation(Core.Constants.BypassFiltersEventId, null,
             "Validating premium license for user {0}({1}).", user.Id, user.Email);
         return await ProcessUserValidationAsync(user);
     }
@@ -234,7 +235,7 @@ public class LicensingService : ILicensingService
 
     private async Task DisablePremiumAsync(User user, ILicense license, string reason)
     {
-        _logger.LogInformation(Constants.BypassFiltersEventId, null,
+        _logger.LogInformation(Core.Constants.BypassFiltersEventId, null,
             "User {0}({1}) has an invalid license and premium is being disabled. Reason: {2}",
             user.Id, user.Email, reason);
 

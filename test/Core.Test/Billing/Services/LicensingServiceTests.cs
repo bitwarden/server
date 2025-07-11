@@ -2,14 +2,14 @@
 using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models.Business;
-using Bit.Core.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.Billing.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
-namespace Bit.Core.Test.Services;
+namespace Bit.Core.Test.Billing.Services;
 
 [SutProviderCustomize]
 public class LicensingServiceTests
