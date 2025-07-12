@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -321,7 +321,7 @@ public class OtpTokenProviderTests
         string purpose)
     {
         // Act
-        var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName,purpose, "");
+        var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName, purpose, "");
 
         // Assert
         Assert.False(result);
@@ -358,7 +358,7 @@ public class OtpTokenProviderTests
         string uniqueIdentifier)
     {
         // Act
-        await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName,purpose, uniqueIdentifier);
+        await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
 
         // Assert
         var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
