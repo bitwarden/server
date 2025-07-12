@@ -38,6 +38,7 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         GatewaySubscriptionUrl = gatewaySubscriptionUrl;
         Type = provider.Type;
         PayByInvoice = payByInvoice;
+        Enabled = provider.Enabled;
 
         if (Type == ProviderType.BusinessUnit)
         {
@@ -78,10 +79,14 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
     [Display(Name = "Enterprise Seats Minimum")]
     public int? EnterpriseMinimumSeats { get; set; }
 
+    [Display(Name = "Enabled")]
+    public bool Enabled { get; set; }
+
     public virtual Provider ToProvider(Provider existingProvider)
     {
         existingProvider.BillingEmail = BillingEmail?.ToLowerInvariant().Trim();
         existingProvider.BillingPhone = BillingPhone?.ToLowerInvariant().Trim();
+        existingProvider.Enabled = Enabled;
         switch (Type)
         {
             case ProviderType.Msp:

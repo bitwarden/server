@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
+using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -51,6 +52,7 @@ public class ProvidersController : Controller
     private readonly IProviderBillingService _providerBillingService;
     private readonly IPricingClient _pricingClient;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IAccessControlService _accessControlService;
     private readonly string _stripeUrl;
     private readonly string _braintreeMerchantUrl;
     private readonly string _braintreeMerchantId;
@@ -70,7 +72,8 @@ public class ProvidersController : Controller
         IProviderBillingService providerBillingService,
         IWebHostEnvironment webHostEnvironment,
         IPricingClient pricingClient,
-        IStripeAdapter stripeAdapter)
+        IStripeAdapter stripeAdapter,
+        IAccessControlService accessControlService)
     {
         _organizationRepository = organizationRepository;
         _resellerClientOrganizationSignUpCommand = resellerClientOrganizationSignUpCommand;
@@ -89,6 +92,7 @@ public class ProvidersController : Controller
         _stripeUrl = webHostEnvironment.GetStripeUrl();
         _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
         _braintreeMerchantId = globalSettings.Braintree.MerchantId;
+        _accessControlService = accessControlService;
     }
 
     [RequirePermission(Permission.Provider_List_View)]
@@ -291,9 +295,14 @@ public class ProvidersController : Controller
             return View(oldModel);
         }
 
+        var originalProviderStatus = provider.Enabled;
+
         model.ToProvider(provider);
 
-        await _providerRepository.ReplaceAsync(provider);
+        provider.Enabled = _accessControlService.UserHasPermission(Permission.Provider_CheckEnabledBox)
+            ? model.Enabled : originalProviderStatus;
+
+        await _providerService.UpdateAsync(provider);
         await _applicationCacheService.UpsertProviderAbilityAsync(provider);
 
         if (!provider.IsBillable())
