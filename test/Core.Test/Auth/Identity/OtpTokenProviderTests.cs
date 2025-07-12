@@ -11,6 +11,8 @@ namespace Bit.Core.Test.Auth.Identity;
 [SutProviderCustomize]
 public class OtpTokenProviderTests
 {
+    private readonly string _defaultTokenProviderName = "DefaultOtpProvider";
+
     [Theory, BitAutoData]
     public async Task GenerateTokenAsync_Success_ReturnsToken(
         SutProvider<OtpTokenProvider> sutProvider,
@@ -18,7 +20,7 @@ public class OtpTokenProviderTests
         string uniqueIdentifier)
     {
         // Act
-        var result = await sutProvider.Sut.GenerateTokenAsync(purpose, uniqueIdentifier);
+        var result = await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
 
         // Assert
         Assert.NotNull(result);
@@ -27,7 +29,7 @@ public class OtpTokenProviderTests
         Assert.True(result.All(char.IsDigit)); // Default is numeric only
 
         // Verify cache was called with correct key
-        var expectedCacheKey = $"{purpose}_{uniqueIdentifier}";
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
         await sutProvider.GetDependency<IDistributedCache>()
             .Received(1)
             .SetAsync(expectedCacheKey, Arg.Any<byte[]>(), Arg.Any<DistributedCacheEntryOptions>());
@@ -36,14 +38,21 @@ public class OtpTokenProviderTests
     [Theory, BitAutoData]
     public async Task GenerateTokenAsync_CustomConfiguration_ReturnsCorrectFormat(
         SutProvider<OtpTokenProvider> sutProvider,
+        string tokenProviderName,
         string purpose,
         string uniqueIdentifier)
     {
         // Arrange
-        sutProvider.Sut.ConfigureToken(8, true, true); // 8 chars, alpha + numeric
+        var otpConfig = new OtpTokenProviderConfigurationOptions
+        {
+            TokenLength = 8,
+            TokenAlpha = true,
+            TokenNumeric = true
+        };
+        sutProvider.Sut.ConfigureToken(otpConfig);
 
         // Act
-        var result = await sutProvider.Sut.GenerateTokenAsync(purpose, uniqueIdentifier);
+        var result = await sutProvider.Sut.GenerateTokenAsync(tokenProviderName, purpose, uniqueIdentifier);
 
         // Assert
         Assert.NotNull(result);
@@ -59,10 +68,16 @@ public class OtpTokenProviderTests
         string uniqueIdentifier)
     {
         // Arrange
-        sutProvider.Sut.ConfigureToken(10, false, true); // 10 chars, numeric only
+        var otpConfig = new OtpTokenProviderConfigurationOptions
+        {
+            TokenLength = 10,
+            TokenAlpha = false,
+            TokenNumeric = true
+        };
+        sutProvider.Sut.ConfigureToken(otpConfig); // 10 chars, numeric only
 
         // Act
-        var result = await sutProvider.Sut.GenerateTokenAsync(purpose, uniqueIdentifier);
+        var result = await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
 
         // Assert
         Assert.Equal(10, result.Length);
@@ -77,7 +92,7 @@ public class OtpTokenProviderTests
         string token)
     {
         // Arrange
-        var expectedCacheKey = $"{purpose}_{uniqueIdentifier}";
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
         var tokenBytes = Encoding.UTF8.GetBytes(token);
 
         sutProvider.GetDependency<IDistributedCache>()
@@ -85,7 +100,7 @@ public class OtpTokenProviderTests
             .Returns(tokenBytes);
 
         // Act
-        var result = await sutProvider.Sut.ValidateTokenAsync(token, purpose, uniqueIdentifier);
+        var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName, purpose, uniqueIdentifier);
 
         // Assert
         Assert.True(result);
@@ -105,7 +120,7 @@ public class OtpTokenProviderTests
         string wrongToken)
     {
         // Arrange
-        var expectedCacheKey = $"{purpose}_{uniqueIdentifier}";
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
         var tokenBytes = Encoding.UTF8.GetBytes(wrongToken); // Different token in cache
 
         sutProvider.GetDependency<IDistributedCache>()
@@ -113,7 +128,7 @@ public class OtpTokenProviderTests
             .Returns(tokenBytes);
 
         // Act
-        var result = await sutProvider.Sut.ValidateTokenAsync(token, purpose, uniqueIdentifier);
+        var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName, purpose, uniqueIdentifier);
 
         // Assert
         Assert.False(result);
@@ -132,14 +147,14 @@ public class OtpTokenProviderTests
         string token)
     {
         // Arrange
-        var expectedCacheKey = $"{purpose}_{uniqueIdentifier}";
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
 
         sutProvider.GetDependency<IDistributedCache>()
             .GetAsync(expectedCacheKey)
             .Returns((byte[])null); // Token not found in cache
 
         // Act
-        var result = await sutProvider.Sut.ValidateTokenAsync(token, purpose, uniqueIdentifier);
+        var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName, purpose, uniqueIdentifier);
 
         // Assert
         Assert.False(result);
@@ -157,7 +172,7 @@ public class OtpTokenProviderTests
         string uniqueIdentifier)
     {
         // Act
-        var result = await sutProvider.Sut.ValidateTokenAsync("", purpose, uniqueIdentifier);
+        var result = await sutProvider.Sut.ValidateTokenAsync("", _defaultTokenProviderName, purpose, uniqueIdentifier);
 
         // Assert
         Assert.False(result);
@@ -170,7 +185,7 @@ public class OtpTokenProviderTests
         string uniqueIdentifier)
     {
         // Act
-        var result = await sutProvider.Sut.ValidateTokenAsync(null, purpose, uniqueIdentifier);
+        var result = await sutProvider.Sut.ValidateTokenAsync(null, _defaultTokenProviderName, purpose, uniqueIdentifier);
 
         // Assert
         Assert.False(result);
@@ -183,7 +198,7 @@ public class OtpTokenProviderTests
         string uniqueIdentifier)
     {
         // Act
-        var result = await sutProvider.Sut.GenerateTokenAsync(null, uniqueIdentifier);
+        var result = await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, null, uniqueIdentifier);
 
         // Assert
         Assert.Null(result);
@@ -200,7 +215,7 @@ public class OtpTokenProviderTests
         string uniqueIdentifier)
     {
         // Act
-        var result = await sutProvider.Sut.GenerateTokenAsync("", uniqueIdentifier);
+        var result = await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, "", uniqueIdentifier);
 
         // Assert
         Assert.Null(result);
@@ -217,7 +232,7 @@ public class OtpTokenProviderTests
         string purpose)
     {
         // Act
-        var result = await sutProvider.Sut.GenerateTokenAsync(purpose, null);
+        var result = await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, null);
 
         // Assert
         Assert.Null(result);
@@ -234,7 +249,7 @@ public class OtpTokenProviderTests
         string purpose)
     {
         // Act
-        var result = await sutProvider.Sut.GenerateTokenAsync(purpose, "");
+        var result = await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, "");
 
         // Assert
         Assert.Null(result);
@@ -252,7 +267,7 @@ public class OtpTokenProviderTests
         string uniqueIdentifier)
     {
         // Act
-        var result = await sutProvider.Sut.ValidateTokenAsync(token, null, uniqueIdentifier);
+        var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName, null, uniqueIdentifier);
 
         // Assert
         Assert.False(result);
@@ -270,7 +285,7 @@ public class OtpTokenProviderTests
         string uniqueIdentifier)
     {
         // Act
-        var result = await sutProvider.Sut.ValidateTokenAsync(token, "", uniqueIdentifier);
+        var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName, "", uniqueIdentifier);
 
         // Assert
         Assert.False(result);
@@ -288,7 +303,7 @@ public class OtpTokenProviderTests
         string purpose)
     {
         // Act
-        var result = await sutProvider.Sut.ValidateTokenAsync(token, purpose, null);
+        var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName, purpose, null);
 
         // Assert
         Assert.False(result);
@@ -306,7 +321,7 @@ public class OtpTokenProviderTests
         string purpose)
     {
         // Act
-        var result = await sutProvider.Sut.ValidateTokenAsync(token, purpose, "");
+        var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName,purpose, "");
 
         // Assert
         Assert.False(result);
@@ -324,51 +339,16 @@ public class OtpTokenProviderTests
         string uniqueIdentifier)
     {
         // Act - Generate token twice with same parameters
-        var firstToken = await sutProvider.Sut.GenerateTokenAsync(purpose, uniqueIdentifier);
-        var secondToken = await sutProvider.Sut.GenerateTokenAsync(purpose, uniqueIdentifier);
+        var firstToken = await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
+        var secondToken = await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
 
         // Assert
         Assert.NotEqual(firstToken, secondToken); // Should be different tokens
 
-        var expectedCacheKey = $"{purpose}_{uniqueIdentifier}";
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
         await sutProvider.GetDependency<IDistributedCache>()
             .Received(2) // Called twice - once for each generation
             .SetAsync(expectedCacheKey, Arg.Any<byte[]>(), Arg.Any<DistributedCacheEntryOptions>());
-    }
-
-    [Theory, BitAutoData]
-    public void ConfigureToken_UpdatesProperties(
-        SutProvider<OtpTokenProvider> sutProvider)
-    {
-        // Arrange
-        var length = 12;
-        var alpha = true;
-        var numeric = false;
-
-        // Act
-        sutProvider.Sut.ConfigureToken(length, alpha, numeric);
-
-        // Assert
-        Assert.Equal(length, sutProvider.Sut.TokenLength);
-        Assert.Equal(alpha, sutProvider.Sut.TokenAlpha);
-        Assert.Equal(numeric, sutProvider.Sut.TokenNumeric);
-    }
-
-    [Theory, BitAutoData]
-    public void SetCacheEntryOptions_UpdatesOptions(
-        SutProvider<OtpTokenProvider> sutProvider)
-    {
-        // Arrange
-        var options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
-        };
-
-        // Act
-        sutProvider.Sut.SetCacheEntryOptions(options);
-
-        // Assert
-        Assert.Equal(options, sutProvider.Sut._distributedCacheEntryOptions);
     }
 
     [Theory, BitAutoData]
@@ -378,10 +358,10 @@ public class OtpTokenProviderTests
         string uniqueIdentifier)
     {
         // Act
-        await sutProvider.Sut.GenerateTokenAsync(purpose, uniqueIdentifier);
+        await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName,purpose, uniqueIdentifier);
 
         // Assert
-        var expectedCacheKey = $"{purpose}_{uniqueIdentifier}";
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
         await sutProvider.GetDependency<IDistributedCache>()
             .Received(1)
             .SetAsync(expectedCacheKey, Arg.Any<byte[]>(), Arg.Any<DistributedCacheEntryOptions>());
@@ -395,7 +375,7 @@ public class OtpTokenProviderTests
     {
         // Arrange
         var token = "ABC123";
-        var expectedCacheKey = $"{purpose}_{uniqueIdentifier}";
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
         var tokenBytes = Encoding.UTF8.GetBytes(token);
 
         sutProvider.GetDependency<IDistributedCache>()
@@ -403,7 +383,7 @@ public class OtpTokenProviderTests
             .Returns(tokenBytes);
 
         // Act & Assert
-        var validResult = await sutProvider.Sut.ValidateTokenAsync("ABC123", purpose, uniqueIdentifier);
+        var validResult = await sutProvider.Sut.ValidateTokenAsync("ABC123", _defaultTokenProviderName, purpose, uniqueIdentifier);
         Assert.True(validResult);
 
         // Reset the cache mock to return the token again
@@ -411,33 +391,8 @@ public class OtpTokenProviderTests
             .GetAsync(expectedCacheKey)
             .Returns(tokenBytes);
 
-        var invalidResult = await sutProvider.Sut.ValidateTokenAsync("abc123", purpose, uniqueIdentifier);
+        var invalidResult = await sutProvider.Sut.ValidateTokenAsync("abc123", _defaultTokenProviderName, purpose, uniqueIdentifier);
         Assert.False(invalidResult);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GenerateTokenAsync_WithCustomCacheOptions_UsesCorrectExpiration(
-        SutProvider<OtpTokenProvider> sutProvider,
-        string purpose,
-        string uniqueIdentifier)
-    {
-        // Arrange
-        var customExpiration = TimeSpan.FromHours(2);
-        var customOptions = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = customExpiration
-        };
-        sutProvider.Sut.SetCacheEntryOptions(customOptions);
-
-        // Act
-        await sutProvider.Sut.GenerateTokenAsync(purpose, uniqueIdentifier);
-
-        // Assert
-        await sutProvider.GetDependency<IDistributedCache>()
-            .Received(1)
-            .SetAsync(Arg.Any<string>(), Arg.Any<byte[]>(),
-                Arg.Is<DistributedCacheEntryOptions>(opts =>
-                    opts.AbsoluteExpirationRelativeToNow == customExpiration));
     }
 
     [Theory, BitAutoData]
@@ -447,7 +402,7 @@ public class OtpTokenProviderTests
         string uniqueIdentifier)
     {
         // Arrange
-        var expectedCacheKey = $"{purpose}_{uniqueIdentifier}";
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
         byte[] storedToken = null;
 
         // Setup cache to capture stored token and return it on get
@@ -460,8 +415,8 @@ public class OtpTokenProviderTests
             .Returns(callInfo => storedToken);
 
         // Act
-        var generatedToken = await sutProvider.Sut.GenerateTokenAsync(purpose, uniqueIdentifier);
-        var isValid = await sutProvider.Sut.ValidateTokenAsync(generatedToken, purpose, uniqueIdentifier);
+        var generatedToken = await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
+        var isValid = await sutProvider.Sut.ValidateTokenAsync(generatedToken, _defaultTokenProviderName, purpose, uniqueIdentifier);
 
         // Assert
         Assert.True(isValid);
