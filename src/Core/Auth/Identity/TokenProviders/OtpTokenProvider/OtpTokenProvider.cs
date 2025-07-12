@@ -17,9 +17,9 @@ public class OtpTokenProvider(
 
     /// <summary>
     /// Used to store and fetch the OTP tokens from the distributed cache.
-    /// The format is "{purpose}_{uniqueIdentifier}".
+    /// The format is "{tokenProviderName}_{purpose}_{uniqueIdentifier}".
     /// </summary>
-    private readonly string _cacheKeyFormat = "{0}_{1}";
+    private readonly string _cacheKeyFormat = "{0}_{1}_{2}";
 
     /// <summary>
     /// Sets the cache entry options for the token provider.
@@ -44,27 +44,32 @@ public class OtpTokenProvider(
     /// </summary>
     public bool TokenNumeric { get; protected set; } = true;
 
-    public async Task<string> GenerateTokenAsync(string purpose, string uniqueIdentifier)
+    public async Task<string> GenerateTokenAsync(string tokenProviderName, string purpose, string uniqueIdentifier)
     {
-        if (string.IsNullOrEmpty(purpose) || string.IsNullOrEmpty(uniqueIdentifier))
+        if (string.IsNullOrEmpty(tokenProviderName)
+            || string.IsNullOrEmpty(purpose)
+            || string.IsNullOrEmpty(uniqueIdentifier))
         {
             return null;
         }
 
-        var cacheKey = string.Format(_cacheKeyFormat, purpose, uniqueIdentifier);
+        var cacheKey = string.Format(_cacheKeyFormat, tokenProviderName, purpose, uniqueIdentifier);
         var token = CoreHelpers.SecureRandomString(TokenLength, TokenAlpha, true, false, TokenNumeric, false);
         await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(token), _distributedCacheEntryOptions);
         return token;
     }
 
-    public async Task<bool> ValidateTokenAsync(string token, string purpose, string uniqueIdentifier)
+    public async Task<bool> ValidateTokenAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier)
     {
-        if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(purpose) || string.IsNullOrEmpty(uniqueIdentifier))
+        if (string.IsNullOrEmpty(token)
+            || string.IsNullOrEmpty(tokenProviderName)
+            || string.IsNullOrEmpty(purpose)
+            || string.IsNullOrEmpty(uniqueIdentifier))
         {
             return false;
         }
 
-        var cacheKey = string.Format(_cacheKeyFormat, purpose, uniqueIdentifier);
+        var cacheKey = string.Format(_cacheKeyFormat, tokenProviderName, purpose, uniqueIdentifier);
         var cachedValue = await _distributedCache.GetAsync(cacheKey);
         if (cachedValue == null)
         {
@@ -81,15 +86,16 @@ public class OtpTokenProvider(
         return valid;
     }
 
-    public void ConfigureToken(int length, bool alpha, bool numeric)
+    public void ConfigureToken(OtpTokenProviderConfigurationOptions options)
     {
-        TokenLength = length;
-        TokenAlpha = alpha;
-        TokenNumeric = numeric;
-    }
+        if (options == null)
+        {
+            throw new ArgumentNullException(nameof(options), "Options cannot be null.");
+        }
 
-    public void SetCacheEntryOptions(DistributedCacheEntryOptions options)
-    {
-        _distributedCacheEntryOptions = options;
+        TokenLength = options.TokenLength;
+        TokenAlpha = options.TokenAlpha;
+        TokenNumeric = options.TokenNumeric;
+        _distributedCacheEntryOptions = options.DistributedCacheEntryOptions;
     }
 }
