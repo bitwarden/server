@@ -296,9 +296,28 @@ public class CollectionRepositoryTests
             }
         }, null);
 
+        // Create a default user collection (should be excluded from admin console results)
+        var defaultCollection = new Collection
+        {
+            Name = "My Items Collection",
+            OrganizationId = organization.Id,
+            Type = CollectionType.DefaultUserCollection
+        };
+
+        await collectionRepository.CreateAsync(defaultCollection, null, users: new[]
+        {
+            new CollectionAccessSelection()
+            {
+                Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true
+            }
+        });
+
         var collections = await collectionRepository.GetManyByOrganizationIdWithPermissionsAsync(organization.Id, user.Id, true);
 
         Assert.NotNull(collections);
+
+        // Should return only 3 collections (excluding the default user collection)
+        Assert.Equal(3, collections.Count);
 
         collections = collections.OrderBy(c => c.Name).ToList();
 
@@ -462,5 +481,70 @@ public class CollectionRepositoryTests
             Assert.False(c3.HidePasswords);
             Assert.False(c3.Unmanaged);
         });
+    }
+
+    /// <summary>
+    /// Test to ensure collections are properly retrieved by organization
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByOrganizationIdAsync_Success(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Test Plan",
+            BillingEmail = "billing@email.com"
+        });
+
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+        });
+
+        var collection1 = new Collection { Name = "Collection 1", OrganizationId = organization.Id, };
+        await collectionRepository.CreateAsync(collection1, null, null);
+
+        var collection2 = new Collection { Name = "Collection 2", OrganizationId = organization.Id, };
+        await collectionRepository.CreateAsync(collection2, null, null);
+
+        var collection3 = new Collection { Name = "Collection 3", OrganizationId = organization.Id, };
+        await collectionRepository.CreateAsync(collection3, null, null);
+
+        // Create a default user collection (should not be returned by this method)
+        var defaultCollection = new Collection
+        {
+            Name = "My Items",
+            OrganizationId = organization.Id,
+            Type = CollectionType.DefaultUserCollection
+        };
+        await collectionRepository.CreateAsync(defaultCollection, null, null);
+
+        var collections = await collectionRepository.GetManyByOrganizationIdAsync(organization.Id);
+
+        Assert.NotNull(collections);
+        Assert.Equal(3, collections.Count); // Should only return the 3 shared collections, excluding the default user collection
+        Assert.All(collections, c => Assert.Equal(organization.Id, c.OrganizationId));
+        Assert.All(collections, c => Assert.NotEqual(CollectionType.DefaultUserCollection, c.Type));
+
+        // Verify specific collections are returned
+        Assert.Contains(collections, c => c.Name == "Collection 1");
+        Assert.Contains(collections, c => c.Name == "Collection 2");
+        Assert.Contains(collections, c => c.Name == "Collection 3");
+        Assert.DoesNotContain(collections, c => c.Name == "My Items");
     }
 }
