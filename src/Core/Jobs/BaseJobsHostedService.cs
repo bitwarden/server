@@ -109,7 +109,7 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
 
                         _logger.LogWarning($"Exception while trying to schedule job: {job.FullName}, {e}");
                         var random = new Random();
-                        Thread.Sleep(random.Next(50, 250));
+                        await Task.Delay(random.Next(50, 250));
                     }
                 }
             }

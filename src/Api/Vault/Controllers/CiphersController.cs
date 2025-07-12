@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Response;
@@ -154,6 +157,7 @@ public class CiphersController : Controller
         {
             if (model.EncryptedFor != user.Id)
             {
+                _logger.LogError("Cipher was not encrypted for the current user. CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", user.Id, model.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }
@@ -183,6 +187,7 @@ public class CiphersController : Controller
         {
             if (model.Cipher.EncryptedFor != user.Id)
             {
+                _logger.LogError("Cipher was not encrypted for the current user. CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", user.Id, model.Cipher.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }
@@ -215,6 +220,7 @@ public class CiphersController : Controller
         {
             if (model.Cipher.EncryptedFor != userId)
             {
+                _logger.LogError("Cipher was not encrypted for the current user. CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", userId, model.Cipher.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }
@@ -241,6 +247,7 @@ public class CiphersController : Controller
         {
             if (model.EncryptedFor != user.Id)
             {
+                _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId}, CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", id, user.Id, model.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }
@@ -278,6 +285,7 @@ public class CiphersController : Controller
         {
             if (model.EncryptedFor != userId)
             {
+                _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId}, CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", id, userId, model.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }
@@ -703,6 +711,7 @@ public class CiphersController : Controller
         {
             if (model.Cipher.EncryptedFor != user.Id)
             {
+                _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId} CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", id, user.Id, model.Cipher.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }
@@ -1074,6 +1083,7 @@ public class CiphersController : Controller
         {
             if (cipher.EncryptedFor.HasValue && cipher.EncryptedFor.Value != userId)
             {
+                _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId}, CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", cipher.Id, userId, cipher.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }

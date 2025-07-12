@@ -1,4 +1,7 @@
-﻿using Bit.Core.Models.BitStripe;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Models.BitStripe;
 using Stripe;
 
 namespace Bit.Core.Services;
