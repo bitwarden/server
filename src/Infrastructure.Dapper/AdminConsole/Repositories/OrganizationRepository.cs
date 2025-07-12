@@ -220,4 +220,13 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             return result.SingleOrDefault() ?? new OrganizationSeatCounts();
         }
     }
+
+    public async Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
+            new { OrganizationId = organizationId, SeatsToAdd = increaseAmount },
+            commandType: CommandType.StoredProcedure);
+    }
 }

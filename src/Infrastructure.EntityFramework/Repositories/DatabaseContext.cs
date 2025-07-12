@@ -59,6 +59,7 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationConnection> OrganizationConnections { get; set; }
     public DbSet<OrganizationIntegration> OrganizationIntegrations { get; set; }
     public DbSet<OrganizationIntegrationConfiguration> OrganizationIntegrationConfigurations { get; set; }
+    public DbSet<OrganizationSubscriptionUpdate> OrganizationSubscriptionUpdates { get; set; }
     public DbSet<OrganizationUser> OrganizationUsers { get; set; }
     public DbSet<Policy> Policies { get; set; }
     public DbSet<Provider> Providers { get; set; }
