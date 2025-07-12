@@ -96,8 +96,9 @@ See `DistributedCacheEntryOptions` documentation for a complete list of configur
 | `AbsoluteExpirationRelativeToNow` | 5 minutes | How long tokens remain valid |
 
 ## Cache Key Format
+todo: add docs about unique
 
-The provider uses a cache key format: `{purpose}_{uniqueIdentifier}`
+The provider uses a cache key format: `{tokenProvider}_{uniqueIdentifier}`
 
 ### Examples:
 
@@ -105,10 +106,10 @@ The provider uses a cache key format: `{purpose}_{uniqueIdentifier}`
 Email token provider uses the `user.Id`, `securityStamp`, and `purpose` to create a unique key. This key can be passed into the OTP provider along with the specific use case purpose.
 
 - Use Case Purpose: `EmailToken`
-- Unique Key: `purpose_guid_guid`
+- Unique Identifier: `guid_guid_purpose`
 
 These are passed into the Otp Token Provider which create record in the cache:
-- `EmailToken_purpose_guid_guid`
+- `EmailToken_guid_guid_purpose`
 
 ## Security Considerations
 
