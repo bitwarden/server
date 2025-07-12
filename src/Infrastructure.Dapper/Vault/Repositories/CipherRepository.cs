@@ -656,6 +656,47 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(Guid orgId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var dict = new Dictionary<Guid, CipherOrganizationDetailsWithCollections>();
+        var tempCollections = new Dictionary<Guid, List<Guid>>();
+
+        await connection.QueryAsync<CipherOrganizationDetailsWithCollections, CollectionCipher, CipherOrganizationDetailsWithCollections>(
+            $"[{Schema}].[CipherOrganizationDetails_ReadByOrganizationIdExcludingDefaultCollections]",
+            (cipher, cc) =>
+            {
+                if (!dict.TryGetValue(cipher.Id, out var details))
+                {
+                    details = new CipherOrganizationDetailsWithCollections(cipher, /*dummy*/null);
+                    dict.Add(cipher.Id, details);
+                    tempCollections[cipher.Id] = new List<Guid>();
+                }
+
+                if (cc?.CollectionId != null)
+                {
+                    var list = tempCollections[cipher.Id];
+                    if (!list.Contains(cc.CollectionId))
+                        list.Add(cc.CollectionId);
+                }
+
+                return details;
+            },
+            new { OrganizationId = orgId },
+            splitOn: "CollectionId",
+            commandType: CommandType.StoredProcedure
+        );
+
+        // now assign each List<Guid> back to the array property in one shot
+        foreach (var kv in dict)
+            kv.Value.CollectionIds = tempCollections[kv.Key].ToArray();
+
+        return dict.Values.ToList();
+    }
+
+
     private DataTable BuildCiphersTable(SqlBulkCopy bulkCopy, IEnumerable<Cipher> ciphers)
     {
         var c = ciphers.FirstOrDefault();
