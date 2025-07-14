@@ -104,7 +104,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         {
             throw new InvalidOperationException("The provided signing key data is null, but the user already has signing keys.");
         }
-        if (model.AccountKeys.SignatureKeyPairData.VerifyingKey != currentSignatureKeyPair.VerifyingKey)
+        if (model.AccountKeys.SignatureKeyPairData.VerifyingKey != currentSignatureKeyPair?.VerifyingKey)
         {
             throw new InvalidOperationException("The provided verifying key does not match the user's current verifying key.");
         }
