@@ -1,13 +1,16 @@
-﻿using Bit.Api.AdminConsole.Models.Response.Organizations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Utilities;
+using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;

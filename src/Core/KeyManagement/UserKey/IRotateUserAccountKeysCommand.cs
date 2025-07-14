@@ -1,4 +1,7 @@
-﻿using Bit.Core.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
