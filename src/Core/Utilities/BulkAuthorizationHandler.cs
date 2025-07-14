@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.Utilities;
 

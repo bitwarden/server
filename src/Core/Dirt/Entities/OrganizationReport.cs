@@ -13,6 +13,8 @@ public class OrganizationReport : ITableObject<Guid>
     public string ReportData { get; set; } = string.Empty;
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
+    public string ContentEncryptionKey { get; set; } = string.Empty;
+
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();
