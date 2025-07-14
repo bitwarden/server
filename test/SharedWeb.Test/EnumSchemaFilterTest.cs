@@ -1,7 +1,7 @@
-using Bit.SharedWeb.Swagger;
+﻿using Bit.SharedWeb.Swagger;
+using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
-using Microsoft.OpenApi.Any;
 
 namespace SharedWeb.Test;
 
