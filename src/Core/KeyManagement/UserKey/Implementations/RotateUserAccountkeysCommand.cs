@@ -97,29 +97,6 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         return IdentityResult.Success;
     }
 
-    async Task<bool> IsV2EncryptionUserAsync(User user)
-    {
-        // A V2 user has a signature key pair, and their user key is COSE
-        // The user key cannot be directly checked here; but the items encrypted with it can be checked.
-        ArgumentNullException.ThrowIfNull(user);
-        var hasSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id) != null;
-        var isPrivateKeyEncryptionV2 = GetEncryptionType(user.PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
-
-        // Valid v2 user
-        if (hasSignatureKeyPair && isPrivateKeyEncryptionV2)
-        {
-            return true;
-        }
-
-        // Valid v1 user
-        if (!hasSignatureKeyPair && !isPrivateKeyEncryptionV2)
-        {
-            return false;
-        }
-
-        throw new InvalidOperationException("User is in an invalid state for key rotation. User has a signature key pair, but the private key is not in v2 format, or vice versa.");
-    }
-
     public async Task ValidateRotationModelSignatureKeyPairForV2User(RotateUserAccountKeysData model, User user)
     {
         var currentSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id);
@@ -236,6 +213,29 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         {
             saveEncryptedDataActions.Add(_deviceRepository.UpdateKeysForRotationAsync(user.Id, model.DeviceKeys));
         }
+    }
+
+    private async Task<bool> IsV2EncryptionUserAsync(User user)
+    {
+        // A V2 user has a signature key pair, and their user key is COSE
+        // The user key cannot be directly checked here; but the items encrypted with it can be checked.
+        ArgumentNullException.ThrowIfNull(user);
+        var hasSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id) != null;
+        var isPrivateKeyEncryptionV2 = GetEncryptionType(user.PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
+
+        // Valid v2 user
+        if (hasSignatureKeyPair && isPrivateKeyEncryptionV2)
+        {
+            return true;
+        }
+
+        // Valid v1 user
+        if (!hasSignatureKeyPair && !isPrivateKeyEncryptionV2)
+        {
+            return false;
+        }
+
+        throw new InvalidOperationException("User is in an invalid state for key rotation. User has a signature key pair, but the private key is not in v2 format, or vice versa.");
     }
 
     /// <summary>
