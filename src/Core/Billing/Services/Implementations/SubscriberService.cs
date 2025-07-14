@@ -153,7 +153,7 @@ public class SubscriberService(
         throw new BillingException();
     }
 
-    #nullable enable
+#nullable enable
     public async Task<Customer> CreateStripeCustomer(ISubscriber subscriber)
     {
         if (!string.IsNullOrEmpty(subscriber.GatewayCustomerId))
@@ -194,7 +194,8 @@ public class SubscriberService(
                     [
                         new CustomerInvoiceSettingsCustomFieldOptions
                         {
-                            Name = provider.SubscriberType(), Value = Max30Characters(provider.DisplayName())
+                            Name = provider.SubscriberType(),
+                            Value = Max30Characters(provider.DisplayName())
                         }
                     ]
                 },
@@ -214,7 +215,8 @@ public class SubscriberService(
                     [
                         new CustomerInvoiceSettingsCustomFieldOptions
                         {
-                            Name = user.SubscriberType(), Value = Max30Characters(user.SubscriberName())
+                            Name = user.SubscriberType(),
+                            Value = Max30Characters(user.SubscriberName())
                         }
                     ]
                 },
@@ -253,7 +255,7 @@ public class SubscriberService(
         string? Max30Characters(string? input)
             => input?.Length <= 30 ? input : input?[..30];
     }
-    #nullable disable
+#nullable disable
 
     public async Task<Customer> GetCustomer(
         ISubscriber subscriber,

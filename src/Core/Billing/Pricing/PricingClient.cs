@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Pricing.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
