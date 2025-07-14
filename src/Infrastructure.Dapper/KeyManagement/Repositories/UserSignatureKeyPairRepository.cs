@@ -50,7 +50,7 @@ public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, G
                     UserId = userId,
                     SignatureKeyPairAlgorithm = (byte)signingKeys.SignatureAlgorithm,
                     SigningKey = signingKeys.WrappedSigningKey,
-                    signingKeys.VerifyingKey,
+                    VerifyingKey = signingKeys.VerifyingKey,
                     CreationDate = DateTime.UtcNow,
                     RevisionDate = DateTime.UtcNow
                 },
