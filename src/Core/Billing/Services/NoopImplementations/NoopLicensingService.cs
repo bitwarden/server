@@ -2,13 +2,14 @@
 
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Billing.Services;
 
 public class NoopLicensingService : ILicensingService
 {

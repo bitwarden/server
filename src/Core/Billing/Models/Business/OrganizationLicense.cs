@@ -10,11 +10,12 @@ using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
-using Bit.Core.Services;
+using Bit.Core.Models.Business;
 using Bit.Core.Settings;
 
-namespace Bit.Core.Models.Business;
+namespace Bit.Core.Billing.Models.Business;
 
 public class OrganizationLicense : ILicense
 {
@@ -54,7 +55,7 @@ public class OrganizationLicense : ILicense
         ILicensingService licenseService, int? version = null)
     {
         Version = version.GetValueOrDefault(CurrentLicenseFileVersion); // TODO: Remember to change the constant
-        LicenseType = Enums.LicenseType.Organization;
+        LicenseType = Core.Enums.LicenseType.Organization;
         LicenseKey = org.LicenseKey;
         InstallationId = installationId;
         Id = org.Id;
@@ -124,7 +125,7 @@ public class OrganizationLicense : ILicense
                      subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
             {
                 Refresh = DateTime.UtcNow.AddDays(30);
-                Expires = subscriptionInfo.Subscription.PeriodEndDate?.AddDays(Constants
+                Expires = subscriptionInfo.Subscription.PeriodEndDate?.AddDays(Core.Constants
                     .OrganizationSelfHostSubscriptionGracePeriodDays);
                 ExpirationWithoutGracePeriod = subscriptionInfo.Subscription.PeriodEndDate;
             }
@@ -263,7 +264,7 @@ public class OrganizationLicense : ILicense
                     !p.Name.Equals(nameof(UseAdminSponsoredFamilies)) &&
                     !p.Name.Equals(nameof(UseOrganizationDomains)))
                 .OrderBy(p => p.Name)
-                .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
+                .Select(p => $"{p.Name}:{Core.Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");
             data = $"license:organization|{props}";
         }
@@ -315,7 +316,7 @@ public class OrganizationLicense : ILicense
         }
 
         var licenseType = claimsPrincipal.GetValue<LicenseType>(nameof(LicenseType));
-        if (licenseType != Enums.LicenseType.Organization)
+        if (licenseType != Core.Enums.LicenseType.Organization)
         {
             errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
                                      "Upload this license from your personal account settings page.");
@@ -396,7 +397,7 @@ public class OrganizationLicense : ILicense
             errorMessages.AppendLine("The license does not allow for on-premise hosting of organizations.");
         }
 
-        if (LicenseType != null && LicenseType != Enums.LicenseType.Organization)
+        if (LicenseType != null && LicenseType != Core.Enums.LicenseType.Organization)
         {
             errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
                                      "Upload this license from your personal account settings page.");

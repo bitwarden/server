@@ -5,11 +5,11 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Test.AutoFixture;
+using Bit.Core.Test.Billing.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 

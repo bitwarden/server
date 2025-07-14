@@ -1,6 +1,6 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 
-namespace Bit.Core.Models.Business;
+namespace Bit.Core.Billing.Models.Business;
 
 public interface ILicense
 {

@@ -1,18 +1,18 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.SelfHosted;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses;
 using Bit.Core.Settings;
-using Bit.Core.Test.AutoFixture;
+using Bit.Core.Test.Billing.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationLicenses;
+namespace Bit.Core.Test.Billing.OrganizationFeatures.OrganizationLicenses;
 
 [SutProviderCustomize]
 public class SelfHostedGetOrganizationLicenseQueryTests

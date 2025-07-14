@@ -1,8 +1,8 @@
 ﻿using AutoFixture;
-using Bit.Core.Models.Business;
+using Bit.Core.Billing.Models.Business;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Core.Test.AutoFixture;
+namespace Bit.Core.Test.Billing.AutoFixture;
 
 public class OrganizationLicenseCustomizeAttribute : BitCustomizeAttribute
 {
