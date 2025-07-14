@@ -122,7 +122,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     {
         if (model.AccountKeys.SignatureKeyPairData != null)
         {
-            if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData?.SignedPublicKey))
+            if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey))
             {
                 throw new InvalidOperationException("The provided public key encryption key pair data does not contain a valid signed public key.");
             }
