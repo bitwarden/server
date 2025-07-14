@@ -94,4 +94,6 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                     };
         return await query.ToListAsync();
     }
+
+    public Task<IEnumerable<PolicyDetails>> PolicyDetailsReadByOrganizationIdAsync(Guid organizationId, PolicyType policyType) => throw new NotImplementedException();
 }
