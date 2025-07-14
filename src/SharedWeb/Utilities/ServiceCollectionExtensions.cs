@@ -618,7 +618,7 @@ public static class ServiceCollectionExtensions
                 integrationType,
                 provider.GetRequiredService<IEventIntegrationPublisher>(),
                 provider.GetRequiredService<IIntegrationFilterService>(),
-                provider.GetRequiredService<IOrganizationIntegrationConfigurationRepository>(),
+                provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
                 provider.GetRequiredService<IUserRepository>(),
                 provider.GetRequiredService<IOrganizationRepository>(),
                 provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()));
@@ -652,6 +652,10 @@ public static class ServiceCollectionExtensions
             !CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.EventTopicName))
             return services;
 
+        services.AddSingleton<IntegrationConfigurationDetailsCacheService>();
+        services.AddSingleton<IIntegrationConfigurationDetailsCache>(provider =>
+            provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
+        services.AddHostedService(provider => provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
         services.AddSingleton<IIntegrationFilterService, IntegrationFilterService>();
         services.AddSingleton<IAzureServiceBusService, AzureServiceBusService>();
         services.AddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
@@ -664,6 +668,7 @@ public static class ServiceCollectionExtensions
             integrationType: IntegrationType.Slack,
             globalSettings: globalSettings);
 
+        services.TryAddSingleton(TimeProvider.System);
         services.AddHttpClient(WebhookIntegrationHandler.HttpClientName);
         services.AddAzureServiceBusIntegration<WebhookIntegrationConfigurationDetails, WebhookIntegrationHandler>(
             eventSubscriptionName: globalSettings.EventLogging.AzureServiceBus.WebhookEventSubscriptionName,
@@ -711,7 +716,7 @@ public static class ServiceCollectionExtensions
                 integrationType,
                 provider.GetRequiredService<IEventIntegrationPublisher>(),
                 provider.GetRequiredService<IIntegrationFilterService>(),
-                provider.GetRequiredService<IOrganizationIntegrationConfigurationRepository>(),
+                provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
                 provider.GetRequiredService<IUserRepository>(),
                 provider.GetRequiredService<IOrganizationRepository>(),
                 provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()));
@@ -745,6 +750,10 @@ public static class ServiceCollectionExtensions
             return services;
         }
 
+        services.AddSingleton<IntegrationConfigurationDetailsCacheService>();
+        services.AddSingleton<IIntegrationConfigurationDetailsCache>(provider =>
+            provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
+        services.AddHostedService(provider => provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
         services.AddSingleton<IIntegrationFilterService, IntegrationFilterService>();
         services.AddSingleton<IRabbitMqService, RabbitMqService>();
         services.AddSingleton<IEventIntegrationPublisher, RabbitMqService>();
