@@ -36,6 +36,18 @@ public class OtpTokenProviderTests
     }
 
     [Theory, BitAutoData]
+    public void ConfigureToken_ConfigurationNull_Throws(
+        SutProvider<OtpTokenProvider> sutProvider)
+    {
+        // Arrange
+        OtpTokenProviderConfigurationOptions otpConfig = null;
+
+        // Act
+        // Assert
+        Assert.Throws<ArgumentNullException>(() => sutProvider.Sut.ConfigureToken(otpConfig));
+    }
+
+    [Theory, BitAutoData]
     public async Task GenerateTokenAsync_CustomConfiguration_ReturnsCorrectFormat(
         SutProvider<OtpTokenProvider> sutProvider,
         string tokenProviderName,
