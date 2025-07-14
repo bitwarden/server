@@ -16,7 +16,7 @@ public interface IOtpTokenProvider
     /// <param name="purpose">Purpose of the OTP token, used to distinguish different types of tokens.</param>
     /// <param name="uniqueIdentifier">Unique identifier to distinguish one request from another</param>
     /// <returns>generated token</returns>
-    Task<string> GenerateTokenAsync(string tokenProviderName, string purpose, string uniqueIdentifier);
+    Task<string?> GenerateTokenAsync(string tokenProviderName, string purpose, string uniqueIdentifier);
 
     /// <summary>
     /// Validates the provided token against the stored value in the distributed cache.

@@ -44,7 +44,7 @@ public class OtpTokenProvider(
     /// </summary>
     public bool TokenNumeric { get; protected set; } = true;
 
-    public async Task<string> GenerateTokenAsync(string tokenProviderName, string purpose, string uniqueIdentifier)
+    public async Task<string?> GenerateTokenAsync(string tokenProviderName, string purpose, string uniqueIdentifier)
     {
         if (string.IsNullOrEmpty(tokenProviderName)
             || string.IsNullOrEmpty(purpose)
