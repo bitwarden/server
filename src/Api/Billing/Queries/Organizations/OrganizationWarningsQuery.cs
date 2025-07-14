@@ -100,6 +100,15 @@ public class OrganizationWarningsQuery(
         Provider? provider,
         Subscription subscription)
     {
+        if (organization.Enabled && subscription.Status is StripeConstants.SubscriptionStatus.Trialing
+                                 && subscription.Customer.InvoiceSettings.DefaultPaymentMethodId is null)
+        {
+            if (await currentContext.OrganizationOwner(organization.Id))
+            {
+                return new InactiveSubscriptionWarning { Resolution = "add_payment_method_optional_trial" };
+            }
+        }
+
         if (organization.Enabled ||
             subscription.Status is not StripeConstants.SubscriptionStatus.Unpaid
                 and not StripeConstants.SubscriptionStatus.Canceled)
