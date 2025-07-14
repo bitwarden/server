@@ -128,6 +128,4 @@ public class CreateDefaultCollectionsTests
 
         return orgUser;
     }
-
-    // Jimmy TODO: make sure to add the clean up data for the tests.
 }
