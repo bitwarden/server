@@ -8,6 +8,7 @@ using Bit.Core.Test.Billing.Extensions;
 using Braintree;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using Stripe;
 using Xunit;
 using Customer = Stripe.Customer;
@@ -33,6 +34,23 @@ public class GetPaymentMethodQueryTests
             _setupIntentCache,
             _stripeAdapter,
             _subscriberService);
+    }
+
+    [Fact]
+    public async Task Run_NoCustomer_ReturnsNull()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid()
+        };
+
+        _subscriberService.GetCustomer(organization,
+            Arg.Is<CustomerGetOptions>(options =>
+                options.HasExpansions("default_source", "invoice_settings.default_payment_method"))).ReturnsNull();
+
+        var maskedPaymentMethod = await _query.Run(organization);
+
+        Assert.Null(maskedPaymentMethod);
     }
 
     [Fact]

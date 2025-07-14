@@ -45,7 +45,8 @@ public class UpdatePaymentMethodCommandTests
     {
         var organization = new Organization
         {
-            Id = Guid.NewGuid()
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_123"
         };
 
         var customer = new Customer
@@ -100,11 +101,73 @@ public class UpdatePaymentMethodCommandTests
     }
 
     [Fact]
-    public async Task Run_BankAccount_StripeToPayPal_MakesCorrectInvocations_ReturnsMaskedBankAccount()
+    public async Task Run_BankAccount_NoCurrentCustomer_MakesCorrectInvocations_ReturnsMaskedBankAccount()
     {
         var organization = new Organization
         {
             Id = Guid.NewGuid()
+        };
+
+        var customer = new Customer
+        {
+            Address = new Address
+            {
+                Country = "US",
+                PostalCode = "12345"
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        _subscriberService.GetCustomer(organization).Returns(customer);
+
+        const string token = "TOKEN";
+
+        var setupIntent = new SetupIntent
+        {
+            Id = "seti_123",
+            PaymentMethod =
+                new PaymentMethod
+                {
+                    Type = "us_bank_account",
+                    UsBankAccount = new PaymentMethodUsBankAccount { BankName = "Chase", Last4 = "9999" }
+                },
+            NextAction = new SetupIntentNextAction
+            {
+                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
+            },
+            Status = "requires_action"
+        };
+
+        _stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options =>
+            options.PaymentMethod == token && options.HasExpansions("data.payment_method"))).Returns([setupIntent]);
+
+        var result = await _command.Run(organization,
+            new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.BankAccount, Token = token }, new BillingAddress
+            {
+                Country = "US",
+                PostalCode = "12345"
+            });
+
+        Assert.True(result.IsT0);
+        var maskedPaymentMethod = result.AsT0;
+        Assert.True(maskedPaymentMethod.IsT0);
+        var maskedBankAccount = maskedPaymentMethod.AsT0;
+        Assert.Equal("Chase", maskedBankAccount.BankName);
+        Assert.Equal("9999", maskedBankAccount.Last4);
+        Assert.False(maskedBankAccount.Verified);
+
+        await _subscriberService.Received(1).CreateStripeCustomer(organization);
+
+        await _setupIntentCache.Received(1).Set(organization.Id, setupIntent.Id);
+    }
+
+    [Fact]
+    public async Task Run_BankAccount_StripeToPayPal_MakesCorrectInvocations_ReturnsMaskedBankAccount()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_123"
         };
 
         var customer = new Customer
@@ -170,7 +233,8 @@ public class UpdatePaymentMethodCommandTests
     {
         var organization = new Organization
         {
-            Id = Guid.NewGuid()
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_123"
         };
 
         var customer = new Customer
@@ -227,7 +291,8 @@ public class UpdatePaymentMethodCommandTests
     {
         var organization = new Organization
         {
-            Id = Guid.NewGuid()
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_123"
         };
 
         var customer = new Customer
@@ -282,7 +347,8 @@ public class UpdatePaymentMethodCommandTests
     {
         var organization = new Organization
         {
-            Id = Guid.NewGuid()
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_123"
         };
 
         var customer = new Customer
@@ -343,7 +409,8 @@ public class UpdatePaymentMethodCommandTests
     {
         var organization = new Organization
         {
-            Id = Guid.NewGuid()
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_123"
         };
 
         var customer = new Customer

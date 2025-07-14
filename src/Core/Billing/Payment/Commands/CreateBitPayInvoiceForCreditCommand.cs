@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Payment.Clients;
@@ -21,8 +20,10 @@ public interface ICreateBitPayInvoiceForCreditCommand
 public class CreateBitPayInvoiceForCreditCommand(
     IBitPayClient bitPayClient,
     GlobalSettings globalSettings,
-    ILogger<CreateBitPayInvoiceForCreditCommand> logger) : BillingCommand<CreateBitPayInvoiceForCreditCommand>(logger), ICreateBitPayInvoiceForCreditCommand
+    ILogger<CreateBitPayInvoiceForCreditCommand> logger) : BaseBillingCommand<CreateBitPayInvoiceForCreditCommand>(logger), ICreateBitPayInvoiceForCreditCommand
 {
+    protected override Conflict DefaultConflict => new("We had a problem applying your account credit. Please contact support for assistance.");
+
     public Task<BillingCommandResult<string>> Run(
         ISubscriber subscriber,
         decimal amount,
