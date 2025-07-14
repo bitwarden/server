@@ -380,7 +380,7 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services, GlobalSettings globalSettings)
     {
         services.AddScoped<IOrganizationDuoUniversalTokenProvider, OrganizationDuoUniversalTokenProvider>();
-        services.AddScoped<IOtpTokenProvider, OtpTokenProvider>();
+        services.TryAddScoped<IOtpTokenProvider, OtpTokenProvider>();
         services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
         {

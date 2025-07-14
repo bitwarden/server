@@ -96,19 +96,20 @@ See `DistributedCacheEntryOptions` documentation for a complete list of configur
 | `AbsoluteExpirationRelativeToNow` | 5 minutes | How long tokens remain valid |
 
 ## Cache Key Format
-todo: add docs about unique
+
+The cache key format is generally up to the developer but the general guidance  is to have a `const string` with the name of the token provider to help identify the usage.
 
 The provider uses a cache key format: `{tokenProvider}_{uniqueIdentifier}`
 
 ### Examples:
 
 #### Possible Email Token Provider
-Email token provider uses the `user.Id`, `securityStamp`, and `purpose` to create a unique key. This key can be passed into the OTP provider along with the specific use case purpose.
+Email token provider uses the `user.Id`, `securityStamp`, and `purpose` to create a unique key. This key will be passed into the OTP provider along with the specific use case purpose.
 
-- Use Case Purpose: `EmailToken`
-- Unique Identifier: `guid_guid_purpose`
+- Use Case Purpose: `const string tokenProvider = "EmailToken";`
+- Unique Identifier: `"{user.Id}_{securityStamp}_{purpose}"`
 
-These are passed into the Otp Token Provider which create record in the cache:
+These are passed into the Otp Token Provider which creates a record in the cache:
 - `EmailToken_guid_guid_purpose`
 
 ## Security Considerations
@@ -133,7 +134,7 @@ These are passed into the Otp Token Provider which create record in the cache:
 The provider is registered in `ServiceCollectionExtensions.cs`:
 
 ```csharp
-services.AddScoped<IOtpTokenProvider, OtpTokenProvider>();
+services.TryAddScoped<IOtpTokenProvider, OtpTokenProvider>();
 ```
 
 ## Error Handling
