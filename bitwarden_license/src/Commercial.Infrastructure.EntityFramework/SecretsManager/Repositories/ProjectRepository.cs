@@ -22,7 +22,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         {
             var dbContext = GetDatabaseContext(scope);
             var project = await dbContext.Project
-                                    .Where(c => c.Id == id)
+                                    .Where(c => c.Id == id && c.DeletedDate == null)
                                     .FirstOrDefaultAsync();
             return Mapper.Map<Core.SecretsManager.Entities.Project>(project);
         }
@@ -31,19 +31,12 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
     public async Task<IEnumerable<ProjectPermissionDetails>> GetManyByOrganizationIdAsync(
         Guid organizationId,
         Guid userId,
-        AccessClientType accessType,
-        bool includeDeleted = false)
+        AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var query = dbContext.Project
-            .Where(p => p.OrganizationId == organizationId);
-
-        if (!includeDeleted)
-        {
-            query = query.Where(p => p.DeletedDate == null);
-        }
+        var query = dbContext.Project.Where(p => p.OrganizationId == organizationId && p.DeletedDate == null).OrderBy(p => p.RevisionDate);
 
         query = query.OrderBy(p => p.RevisionDate);
 
@@ -82,7 +75,6 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
     public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
-        //TODO after verifying with Thomas we can soft delete, update code to unattach the service accounts and secrets for a soft deleted project
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
@@ -118,8 +110,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
                     setters.SetProperty(s => s.RevisionDate, utcNow));
         }
 
-        await dbContext.Project.Where(p => ids.Contains(p.Id)).ExecuteUpdateAsync(setters =>
-                    setters.SetProperty(sa => sa.DeletedDate, utcNow));
+        await dbContext.Project.Where(p => ids.Contains(p.Id)).ExecuteDeleteAsync();
 
         await transaction.CommitAsync();
     }

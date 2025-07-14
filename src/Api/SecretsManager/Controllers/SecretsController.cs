@@ -82,24 +82,6 @@ public class SecretsController : Controller
         return new SecretWithProjectsListResponseModel(secrets);
     }
 
-    [HttpGet("organizations/{organizationId}/all-secrets")]
-    public async Task<SecretWithProjectsListResponseModel> ListAllSecretsByOrganizationAsync([FromRoute] Guid organizationId)
-    {
-        if (!_currentContext.AccessSecretsManager(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var userId = _userService.GetProperUserId(User).Value;
-        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
-
-        var secrets = await _secretRepository.GetManyDetailsByOrganizationIdAsync(organizationId, userId, accessClient, true);
-
-        return new SecretWithProjectsListResponseModel(secrets);
-    }
-
-
     [HttpPost("organizations/{organizationId}/secrets")]
     public async Task<SecretResponseModel> CreateAsync([FromRoute] Guid organizationId,
         [FromBody] SecretCreateRequestModel createRequest)

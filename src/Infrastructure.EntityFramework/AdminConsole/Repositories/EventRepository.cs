@@ -77,7 +77,7 @@ public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEv
         return result;
     }
     //TODO implement this properly
-    public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Guid secretId, Guid organizationId,
+    public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Guid secretId, Guid orgId,
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         DateTime? beforeDate = null;
@@ -102,7 +102,7 @@ public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEv
         }
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Guid projectId, Guid organizationId,
+    public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Guid projectId, Guid orgId,
     DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         DateTime? beforeDate = null;

@@ -79,7 +79,4 @@ public class NoopProjectRepository : IProjectRepository
     {
         return Task.FromResult(null as Dictionary<Guid, (bool Read, bool Write)>);
     }
-
-    public Task<Project> GetDeletedProjectByIdAsync(Guid id) => throw new NotImplementedException();
-    public Task<IEnumerable<ProjectPermissionDetails>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType, bool includeDeleted = false) => throw new NotImplementedException();
 }

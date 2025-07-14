@@ -45,6 +45,19 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         }
     }
 
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyTrashedSecretsByIds(IEnumerable<Guid> ids)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var secrets = await dbContext.Secret
+                .Where(c => ids.Contains(c.Id) && c.DeletedDate != null)
+                .Include(c => c.Projects)
+                .ToListAsync();
+            return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
+        }
+    }
+
     public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdAsync(
         Guid organizationId, Guid userId, AccessClientType accessType)
     {
@@ -69,20 +82,14 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
     public async Task<IEnumerable<SecretPermissionDetails>> GetManyDetailsByOrganizationIdAsync(
         Guid organizationId,
         Guid userId,
-        AccessClientType accessType,
-        bool includeDeleted = false)
+        AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
         var query = dbContext.Secret
             .Include(c => c.Projects)
-            .Where(c => c.OrganizationId == organizationId);
-
-        if (!includeDeleted)
-        {
-            query = query.Where(c => c.DeletedDate == null);
-        }
+            .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null);
 
         query = query.OrderBy(s => s.RevisionDate);
 

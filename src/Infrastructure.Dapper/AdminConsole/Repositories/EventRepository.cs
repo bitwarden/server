@@ -42,7 +42,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
     }
 
     // TODO implement this properly
-    public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Guid secretId, Guid organizationId,
+    public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Guid secretId, Guid orgId,
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         return await GetManyAsync($"[{Schema}].[Event_TODO]",
@@ -53,7 +53,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
 
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Guid projectId, Guid organizationId,
+    public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Guid projectId, Guid orgId,
       DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         return await GetManyAsync($"[{Schema}].[Event_TODO]",

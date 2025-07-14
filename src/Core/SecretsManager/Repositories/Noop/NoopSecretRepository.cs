@@ -103,6 +103,5 @@ public class NoopSecretRepository : ISecretRepository
         return Task.FromResult(0);
     }
 
-    public Task<Secret> GetDeletedSecretByIdAsync(Guid id) => throw new NotImplementedException();
-    public Task<IEnumerable<SecretPermissionDetails>> GetManyDetailsByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType, bool includeDeleted = false) => throw new NotImplementedException();
+    public Task<IEnumerable<Secret>> GetManyTrashedSecretsByIds(IEnumerable<Guid> ids) => throw new NotImplementedException();
 }

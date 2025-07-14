@@ -6,7 +6,7 @@ namespace Bit.Core.SecretsManager.Repositories;
 
 public interface IProjectRepository
 {
-    Task<IEnumerable<ProjectPermissionDetails>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType, bool includeDeleted = false);
+    Task<IEnumerable<ProjectPermissionDetails>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType);
     Task<IEnumerable<Project>> GetManyByOrganizationIdWriteAccessAsync(Guid organizationId, Guid userId, AccessClientType accessType);
     Task<IEnumerable<Project>> GetManyWithSecretsByIds(IEnumerable<Guid> ids);
     Task<Project> GetByIdAsync(Guid id);
