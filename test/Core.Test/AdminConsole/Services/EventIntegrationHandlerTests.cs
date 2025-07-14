@@ -32,12 +32,12 @@ public class EventIntegrationHandlerTests
     private SutProvider<EventIntegrationHandler<WebhookIntegrationConfigurationDetails>> GetSutProvider(
         List<OrganizationIntegrationConfigurationDetails> configurations)
     {
-        var configurationRepository = Substitute.For<IIntegrationConfigurationDetailsCache>();
-        configurationRepository.GetConfigurationDetails(Arg.Any<Guid>(),
+        var configurationCache = Substitute.For<IIntegrationConfigurationDetailsCache>();
+        configurationCache.GetConfigurationDetails(Arg.Any<Guid>(),
             IntegrationType.Webhook, Arg.Any<EventType>()).Returns(configurations);
 
         return new SutProvider<EventIntegrationHandler<WebhookIntegrationConfigurationDetails>>()
-            .SetDependency(configurationRepository)
+            .SetDependency(configurationCache)
             .SetDependency(_eventIntegrationPublisher)
             .SetDependency(IntegrationType.Webhook)
             .SetDependency(_logger)

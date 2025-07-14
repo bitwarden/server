@@ -49,7 +49,7 @@ public class IntegrationConfigurationDetailsCacheService : BackgroundService, II
         }
     }
 
-    private async Task RefreshAsync()
+    internal async Task RefreshAsync()
     {
         var stopwatch = Stopwatch.StartNew();
         try
