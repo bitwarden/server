@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegrationConfigurationDetails_ReadMany]
+CREATE PROCEDURE [dbo].[OrganizationIntegrationConfigurationDetails_ReadMany]
 AS
 BEGIN
     SET NOCOUNT ON
