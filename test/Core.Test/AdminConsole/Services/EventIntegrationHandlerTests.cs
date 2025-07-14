@@ -32,8 +32,8 @@ public class EventIntegrationHandlerTests
     private SutProvider<EventIntegrationHandler<WebhookIntegrationConfigurationDetails>> GetSutProvider(
         List<OrganizationIntegrationConfigurationDetails> configurations)
     {
-        var configurationRepository = Substitute.For<IOrganizationIntegrationConfigurationRepository>();
-        configurationRepository.GetConfigurationDetailsAsync(Arg.Any<Guid>(),
+        var configurationRepository = Substitute.For<IIntegrationConfigurationDetailsCache>();
+        configurationRepository.GetConfigurationDetails(Arg.Any<Guid>(),
             IntegrationType.Webhook, Arg.Any<EventType>()).Returns(configurations);
 
         return new SutProvider<EventIntegrationHandler<WebhookIntegrationConfigurationDetails>>()
