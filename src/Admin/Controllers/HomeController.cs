@@ -1,4 +1,7 @@
-﻿using System.Diagnostics;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Diagnostics;
 using System.Text.Json;
 using Bit.Admin.Models;
 using Bit.Core.Settings;

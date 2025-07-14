@@ -9,7 +9,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
@@ -38,9 +37,11 @@ public class CollectionsControllerTests
 
         _ = await sutProvider.Sut.Post(organization.Id, collectionRequest);
 
-        await sutProvider.GetDependency<ICollectionService>()
+        await sutProvider.GetDependency<ICreateCollectionCommand>()
             .Received(1)
-            .SaveAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+            .CreateAsync(Arg.Is<Collection>(c =>
+                c.Name == collectionRequest.Name && c.ExternalId == collectionRequest.ExternalId && c.OrganizationId == organization.Id),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
                 Arg.Any<IEnumerable<CollectionAccessSelection>>());
     }
 
@@ -64,9 +65,9 @@ public class CollectionsControllerTests
 
         _ = await sutProvider.Sut.Put(collection.OrganizationId, collection.Id, collectionRequest);
 
-        await sutProvider.GetDependency<ICollectionService>()
+        await sutProvider.GetDependency<IUpdateCollectionCommand>()
             .Received(1)
-            .SaveAsync(ExpectedCollection(), Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+            .UpdateAsync(ExpectedCollection(), Arg.Any<IEnumerable<CollectionAccessSelection>>(),
                 Arg.Any<IEnumerable<CollectionAccessSelection>>());
     }
 
