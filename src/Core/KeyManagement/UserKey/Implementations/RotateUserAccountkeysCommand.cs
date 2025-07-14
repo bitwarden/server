@@ -116,10 +116,8 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     public async Task UpdateAccountKeysAsync(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
         ValidatePrivateKeyUnchanged(model, user);
-        // Private key is re-wrapped with new user key by client
-        user.PrivateKey = model.UserKeyEncryptedAccountPrivateKey;
 
-        if (await IsV2EncryptionUserAsync(user))
+        if (IsV2EncryptionUserAsync(user))
         {
             await RotateV2AccountKeysAsync(model, user, saveEncryptedDataActions);
         }
@@ -129,8 +127,15 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         }
         else
         {
+            if (GetEncryptionType(model.UserKeyEncryptedAccountPrivateKey) != EncryptionType.AesCbc256_HmacSha256_B64)
+            {
+                throw new InvalidOperationException("The provided account private key was not wrapped with AES-256-CBC-HMAC");
+            }
             // V1 user to V1 user rotation needs to further changes, the private key was re-encrypted.
         }
+
+        // Private key is re-wrapped with new user key by client
+        user.PrivateKey = model.UserKeyEncryptedAccountPrivateKey;
     }
 
     void UpdateUserData(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
@@ -183,27 +188,12 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         }
     }
 
-    private async Task<bool> IsV2EncryptionUserAsync(User user)
+    private bool IsV2EncryptionUserAsync(User user)
     {
-        // A V2 user has a signature key pair, and their user key is COSE
-        // The user key cannot be directly checked here; but the items encrypted with it can be checked.
+        // Returns whether the user is a V2 user based on the private key's encryption type.
         ArgumentNullException.ThrowIfNull(user);
-        var hasSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id) != null;
         var isPrivateKeyEncryptionV2 = GetEncryptionType(user.PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
-
-        // Valid v2 user
-        if (hasSignatureKeyPair && isPrivateKeyEncryptionV2)
-        {
-            return true;
-        }
-
-        // Valid v1 user
-        if (!hasSignatureKeyPair && !isPrivateKeyEncryptionV2)
-        {
-            return false;
-        }
-
-        throw new InvalidOperationException("User is in an invalid state for key rotation. User has a signature key pair, but the private key is not in v2 format, or vice versa.");
+        return isPrivateKeyEncryptionV2;
     }
 
     private async Task ValidateVerifyingKeyUnchanged(RotateUserAccountKeysData model, User user)

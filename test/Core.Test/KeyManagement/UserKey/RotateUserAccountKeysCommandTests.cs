@@ -168,11 +168,11 @@ public class RotateUserAccountKeysCommandTests
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
-        Assert.Equal("The provided user key encrypted account private key was not wrapped with XChaCha20-Poly1305", ex.Message);
+        Assert.Equal("The provided signature key pair data is null", ex.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DoesNotThrowWhenSignatureKeyPairPresentForV2User(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+    public async Task UpgradesV1UserToV2(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
     {
         user.Kdf = Enums.KdfType.Argon2id;
@@ -181,19 +181,16 @@ public class RotateUserAccountKeysCommandTests
         user.KdfParallelism = 4;
         user.PublicKey = "public-key";
         user.PrivateKey = "2.xxx";
-        // Ensure signature key pair is present
-        if (model.AccountKeys != null)
-        {
-            model.AccountKeys.SignatureKeyPairData = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "dummyWrappedSigningKey", "dummyVerifyingKey");
-        }
         model.MasterPasswordUnlockData.Email = user.Email;
         model.MasterPasswordUnlockData.KdfType = Enums.KdfType.Argon2id;
         model.MasterPasswordUnlockData.KdfIterations = 3;
         model.MasterPasswordUnlockData.KdfMemory = 64;
         model.MasterPasswordUnlockData.KdfParallelism = 4;
+
+        model.UserKeyEncryptedAccountPrivateKey = "7.xxx";
         model.AccountPublicKey = user.PublicKey;
-        model.UserKeyEncryptedAccountPrivateKey = "2.xxx";
-        model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey = user.PublicKey;
+        model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("7.xxx", user.PublicKey, "signed-public-key");
+        model.AccountKeys.SignatureKeyPairData = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "7.xxx", "dummyVerifyingKey");
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
         var result = await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
@@ -244,7 +241,7 @@ public class RotateUserAccountKeysCommandTests
         model.AccountKeys.SignatureKeyPairData = null;
         var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
-        Assert.Equal("The provided user key encrypted account private key was not wrapped with AES-256-CBC-HMAC", ex.Message);
+        Assert.Equal("The provided account private key was not wrapped with AES-256-CBC-HMAC", ex.Message);
     }
 
     [Theory, BitAutoData]
@@ -277,7 +274,8 @@ public class RotateUserAccountKeysCommandTests
     public async Task ValidateRotationModelSignatureKeyPairForV2User_NoSignatureKeyPairThrows(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         model.AccountKeys.SignatureKeyPairData = null;
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateV2AccountKeysAsync(model, user));
+        var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateV2AccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("The provided signing key data is null, but the user already has signing keys.", exception.Message);
     }
 
@@ -296,7 +294,8 @@ public class RotateUserAccountKeysCommandTests
         model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("2.abc", user.PublicKey, "signed-public-key");
         sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(user.Id)
             .Returns(repoKeyPair);
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateV2AccountKeysAsync(model, user));
+        var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateV2AccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("The provided verifying key does not match the user's current verifying key.", ex.Message);
     }
 
@@ -314,7 +313,8 @@ public class RotateUserAccountKeysCommandTests
         model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("2.abc", user.PublicKey, null);
         sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(user.Id)
             .Returns(keyPair);
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateV2AccountKeysAsync(model, user));
+        var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateV2AccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("No signed public key provided, but the user already has a signature key pair.", ex.Message);
     }
 
@@ -332,7 +332,8 @@ public class RotateUserAccountKeysCommandTests
         model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("7.xxx", user.PublicKey, "signed-public-key");
         sutProvider.GetDependency<IUserSignatureKeyPairRepository>().GetByUserIdAsync(user.Id)
             .Returns(keyPair);
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateV2AccountKeysAsync(model, user));
+        var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateV2AccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("The provided signing key data is not wrapped with XChaCha20-Poly1305.", ex.Message);
     }
 }
