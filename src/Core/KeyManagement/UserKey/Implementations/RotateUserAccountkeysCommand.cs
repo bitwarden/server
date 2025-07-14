@@ -97,71 +97,39 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         return IdentityResult.Success;
     }
 
-    public async Task ValidateRotationModelSignatureKeyPairForV2UserAsync(RotateUserAccountKeysData model, User user)
+    public async Task RotateV2AccountKeysAsync(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
-        var currentSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id);
-        if (model.AccountKeys == null || model.AccountKeys.SignatureKeyPairData == null)
-        {
-            throw new InvalidOperationException("The provided signing key data is null, but the user already has signing keys.");
-        }
-        if (model.AccountKeys.SignatureKeyPairData.VerifyingKey != currentSignatureKeyPair?.VerifyingKey)
-        {
-            throw new InvalidOperationException("The provided verifying key does not match the user's current verifying key.");
-        }
-        if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey))
-        {
-            throw new InvalidOperationException("No signed public key provided, but the user already has a signature key pair.");
-        }
-        if (GetEncryptionType(model.AccountKeys.SignatureKeyPairData.WrappedSigningKey) != EncryptionType.XChaCha20Poly1305_B64)
-        {
-            throw new InvalidOperationException("The provided signing key data is not wrapped with XChaCha20-Poly1305.");
-        }
+        ValidateV2Encryption(model);
+        await ValidateVerifyingKeyUnchanged(model, user);
+
+        saveEncryptedDataActions.Add(_userSignatureKeyPairRepository.UpdateForKeyRotation(user.Id, model.AccountKeys.SignatureKeyPairData));
+        user.SignedPublicKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey;
     }
 
-    public void ValidateRotationModelSignatureKeyPairForV1UserAndUpgradeToV2(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    public void UpgradeV1ToV2KeysAsync(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
-        if (model.AccountKeys.SignatureKeyPairData != null)
-        {
-            if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData?.SignedPublicKey))
-            {
-                throw new InvalidOperationException("The provided public key encryption key pair data does not contain a valid signed public key.");
-            }
-            saveEncryptedDataActions.Add(_userSignatureKeyPairRepository.SetUserSignatureKeyPair(user.Id, model.AccountKeys.SignatureKeyPairData));
-            user.SignedPublicKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey;
-        }
+        ValidateV2Encryption(model);
+        saveEncryptedDataActions.Add(_userSignatureKeyPairRepository.SetUserSignatureKeyPair(user.Id, model.AccountKeys.SignatureKeyPairData));
+        user.SignedPublicKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey;
     }
 
     public async Task UpdateAccountKeysAsync(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
-        var isV2User = await IsV2EncryptionUserAsync(user);
-
-        // Changing the public key encryption key pair is not supported during key rotation for now; so this ensures it is not accidentally changed
-        var providedPublicKey = model.AccountPublicKey;
-        if (providedPublicKey != user.PublicKey)
-        {
-            throw new InvalidOperationException("The provided account public key does not match the user's current public key, and changing the account asymmetric keypair is currently not supported during key rotation.");
-        }
-
-        // Validate that the user key is in the right format by checking that the private key is wrapped with the expected encryption type.
-        if (isV2User && GetEncryptionType(model.UserKeyEncryptedAccountPrivateKey) != EncryptionType.XChaCha20Poly1305_B64)
-        {
-            throw new InvalidOperationException("The provided user key encrypted account private key was not wrapped with XChaCha20-Poly1305");
-        }
-        if (!isV2User && model.AccountKeys.SignatureKeyPairData == null && GetEncryptionType(model.UserKeyEncryptedAccountPrivateKey) != EncryptionType.AesCbc256_HmacSha256_B64)
-        {
-            throw new InvalidOperationException("The provided user key encrypted account private key was not wrapped with AES-256-CBC-HMAC");
-        }
+        ValidatePrivateKeyUnchanged(model, user);
         // Private key is re-wrapped with new user key by client
         user.PrivateKey = model.UserKeyEncryptedAccountPrivateKey;
 
-
-        if (isV2User)
+        if (await IsV2EncryptionUserAsync(user))
         {
-            await ValidateRotationModelSignatureKeyPairForV2UserAsync(model, user);
+            await RotateV2AccountKeysAsync(model, user, saveEncryptedDataActions);
         }
         else if (model.AccountKeys.SignatureKeyPairData != null)
         {
-            ValidateRotationModelSignatureKeyPairForV1UserAndUpgradeToV2(model, user, saveEncryptedDataActions);
+            UpgradeV1ToV2KeysAsync(model, user, saveEncryptedDataActions);
+        }
+        else
+        {
+            // V1 user to V1 user rotation needs to further changes, the private key was re-encrypted.
         }
     }
 
@@ -238,10 +206,52 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         throw new InvalidOperationException("User is in an invalid state for key rotation. User has a signature key pair, but the private key is not in v2 format, or vice versa.");
     }
 
+    private async Task ValidateVerifyingKeyUnchanged(RotateUserAccountKeysData model, User user)
+    {
+        var currentSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id);
+        if (model.AccountKeys.SignatureKeyPairData.VerifyingKey != currentSignatureKeyPair?.VerifyingKey)
+        {
+            throw new InvalidOperationException("The provided verifying key does not match the user's current verifying key.");
+        }
+    }
+
+    private static void ValidatePrivateKeyUnchanged(RotateUserAccountKeysData model, User user)
+    {
+        if (model.AccountPublicKey != user.PublicKey)
+        {
+            throw new InvalidOperationException("The provided account public key does not match the user's current public key, and changing the account asymmetric keypair is currently not supported during key rotation.");
+        }
+    }
+
+    private static void ValidateV2Encryption(RotateUserAccountKeysData model)
+    {
+        if (model.AccountKeys.SignatureKeyPairData == null)
+        {
+            throw new InvalidOperationException("The provided signature key pair data is null");
+        }
+        if (GetEncryptionType(model.AccountKeys.SignatureKeyPairData.WrappedSigningKey) != EncryptionType.XChaCha20Poly1305_B64)
+        {
+            throw new InvalidOperationException("The provided signing key data is not wrapped with XChaCha20-Poly1305.");
+        }
+        if (string.IsNullOrEmpty(model.AccountKeys.SignatureKeyPairData.VerifyingKey))
+        {
+            throw new InvalidOperationException("The provided signature key pair data does not contain a valid verifying key.");
+        }
+
+        if (GetEncryptionType(model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey) != EncryptionType.XChaCha20Poly1305_B64)
+        {
+            throw new InvalidOperationException("The provided private key encryption key is not wrapped with XChaCha20-Poly1305.");
+        }
+        if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey))
+        {
+            throw new InvalidOperationException("No signed public key provided, but the user already has a signature key pair.");
+        }
+    }
+
     /// <summary>
     /// Helper method to convert an encryption type string to an enum value.
     /// </summary>
-    private EncryptionType GetEncryptionType(string encString)
+    private static EncryptionType GetEncryptionType(string encString)
     {
         var parts = encString.Split('.');
         if (parts.Length == 0)
