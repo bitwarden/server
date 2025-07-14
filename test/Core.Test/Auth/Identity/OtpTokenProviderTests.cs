@@ -43,8 +43,11 @@ public class OtpTokenProviderTests
         OtpTokenProviderConfigurationOptions otpConfig = null;
 
         // Act
+        var exception = Assert.Throws<ArgumentNullException>(
+            () => sutProvider.Sut.ConfigureToken(otpConfig));
+
         // Assert
-        Assert.Throws<ArgumentNullException>(() => sutProvider.Sut.ConfigureToken(otpConfig));
+        Assert.Contains("Options cannot be null.", exception.Message);
     }
 
     [Theory, BitAutoData]
