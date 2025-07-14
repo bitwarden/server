@@ -15,6 +15,7 @@ public class AccountKeysRequestModel
     public UserAccountKeysData ToAccountKeysData()
     {
         // This will be cleaned up, after a compatibility period, at which point PublicKeyEncryptionKeyPair and SignatureKeyPair will be required.
+        // TODO: https://bitwarden.atlassian.net/browse/PM-23751
         if (PublicKeyEncryptionKeyPair == null)
         {
             return new UserAccountKeysData
