@@ -108,7 +108,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         {
             throw new InvalidOperationException("The provided verifying key does not match the user's current verifying key.");
         }
-        if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData?.SignedPublicKey))
+        if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey))
         {
             throw new InvalidOperationException("No signed public key provided, but the user already has a signature key pair.");
         }
