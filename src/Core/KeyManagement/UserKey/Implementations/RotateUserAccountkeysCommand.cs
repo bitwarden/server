@@ -88,7 +88,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
         List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = [];
 
-        await UpdateAccountKeys(model, user, saveEncryptedDataActions);
+        await UpdateAccountKeysAsync(model, user, saveEncryptedDataActions);
         UpdateUnlockMethods(model, user, saveEncryptedDataActions);
         UpdateUserData(model, user, saveEncryptedDataActions);
 
@@ -97,7 +97,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         return IdentityResult.Success;
     }
 
-    public async Task ValidateRotationModelSignatureKeyPairForV2User(RotateUserAccountKeysData model, User user)
+    public async Task ValidateRotationModelSignatureKeyPairForV2UserAsync(RotateUserAccountKeysData model, User user)
     {
         var currentSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id);
         if (model.AccountKeys == null || model.AccountKeys.SignatureKeyPairData == null)
@@ -131,7 +131,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         }
     }
 
-    public async Task UpdateAccountKeys(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    public async Task UpdateAccountKeysAsync(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
         var isV2User = await IsV2EncryptionUserAsync(user);
 
@@ -157,7 +157,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
         if (isV2User)
         {
-            await ValidateRotationModelSignatureKeyPairForV2User(model, user);
+            await ValidateRotationModelSignatureKeyPairForV2UserAsync(model, user);
         }
         else if (model.AccountKeys.SignatureKeyPairData != null)
         {
