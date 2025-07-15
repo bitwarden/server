@@ -79,7 +79,7 @@ public class RotateUserAccountKeysCommandTests
         SetV1ExistingUser(user, signatureRepository);
         SetV1ModelUser(model);
 
-        model.AccountPublicKey = "new-public";
+        model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey = "new-public";
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
 
@@ -127,7 +127,6 @@ public class RotateUserAccountKeysCommandTests
         SetV1ExistingUser(user, signatureRepository);
         SetV1ModelUser(model);
 
-        model.AccountPublicKey = "new-public";
         model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey = "new-public";
         var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
@@ -140,7 +139,6 @@ public class RotateUserAccountKeysCommandTests
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
         SetV2ExistingUser(user, signatureRepository);
         SetV2ModelUser(model);
-        model.UserKeyEncryptedAccountPrivateKey = "2.xxx";
         model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = "2.xxx";
 
         var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
@@ -154,7 +152,6 @@ public class RotateUserAccountKeysCommandTests
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
         SetV1ExistingUser(user, signatureRepository);
         SetV1ModelUser(model);
-        model.UserKeyEncryptedAccountPrivateKey = "7.xxx";
         model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = "7.xxx";
 
         var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
@@ -253,7 +250,7 @@ public class RotateUserAccountKeysCommandTests
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
         SetV1ExistingUser(user, signatureRepository);
         SetV2ModelUser(model);
-        model.UserKeyEncryptedAccountPrivateKey = "2.xxx";
+        model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = "2.abc";
 
         var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
@@ -295,7 +292,6 @@ public class RotateUserAccountKeysCommandTests
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
         SetV1ExistingUser(user, signatureRepository);
         SetV1ModelUser(model);
-        model.UserKeyEncryptedAccountPrivateKey = "";
         model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = "";
 
         var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
@@ -310,7 +306,6 @@ public class RotateUserAccountKeysCommandTests
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
         SetV1ExistingUser(user, signatureRepository);
         SetV1ModelUser(model);
-        model.UserKeyEncryptedAccountPrivateKey = "9.xxx";
         model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = "9.xxx";
 
         var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
@@ -351,16 +346,12 @@ public class RotateUserAccountKeysCommandTests
 
     private static void SetV1ModelUser(RotateUserAccountKeysData model)
     {
-        model.UserKeyEncryptedAccountPrivateKey = "2.abc";
-        model.AccountPublicKey = "public";
         model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("2.abc", "public", null);
         model.AccountKeys.SignatureKeyPairData = null;
     }
 
     private static void SetV2ModelUser(RotateUserAccountKeysData model)
     {
-        model.UserKeyEncryptedAccountPrivateKey = "7.abc";
-        model.AccountPublicKey = "public";
         model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("7.abc", "public", "signed-public");
         model.AccountKeys.SignatureKeyPairData = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "7.abc", "verifying-key");
     }

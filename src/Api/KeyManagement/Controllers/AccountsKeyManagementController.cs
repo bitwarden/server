@@ -106,8 +106,6 @@ public class AccountsKeyManagementController : Controller
         {
             OldMasterKeyAuthenticationHash = model.OldMasterKeyAuthenticationHash,
 
-            UserKeyEncryptedAccountPrivateKey = model.AccountKeys.UserKeyEncryptedAccountPrivateKey,
-            AccountPublicKey = model.AccountKeys.AccountPublicKey,
             AccountKeys = model.AccountKeys.ToAccountKeysData(),
 
             MasterPasswordUnlockData = model.AccountUnlockData.MasterPasswordUnlockData.ToUnlockData(),

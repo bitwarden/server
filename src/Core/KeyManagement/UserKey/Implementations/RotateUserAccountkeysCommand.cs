@@ -127,7 +127,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         }
         else
         {
-            if (GetEncryptionType(model.UserKeyEncryptedAccountPrivateKey) != EncryptionType.AesCbc256_HmacSha256_B64)
+            if (GetEncryptionType(model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey) != EncryptionType.AesCbc256_HmacSha256_B64)
             {
                 throw new InvalidOperationException("The provided account private key was not wrapped with AES-256-CBC-HMAC");
             }
@@ -135,7 +135,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         }
 
         // Private key is re-wrapped with new user key by client
-        user.PrivateKey = model.UserKeyEncryptedAccountPrivateKey;
+        user.PrivateKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey;
     }
 
     void UpdateUserData(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
@@ -207,7 +207,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
     private static void ValidatePublicKeyEncryptionKeyPairUnchanged(RotateUserAccountKeysData model, User user)
     {
-        var publicKey = model.AccountPublicKey ?? model.AccountKeys?.PublicKeyEncryptionKeyPairData.PublicKey;
+        var publicKey = model.AccountKeys?.PublicKeyEncryptionKeyPairData.PublicKey;
         if (publicKey != user.PublicKey)
         {
             throw new InvalidOperationException("The provided account public key does not match the user's current public key, and changing the account asymmetric key pair is currently not supported during key rotation.");
@@ -229,7 +229,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             throw new InvalidOperationException("The provided signature key pair data does not contain a valid verifying key.");
         }
 
-        if (GetEncryptionType(model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey) != EncryptionType.XChaCha20Poly1305_B64 || GetEncryptionType(model.UserKeyEncryptedAccountPrivateKey) != EncryptionType.XChaCha20Poly1305_B64)
+        if (GetEncryptionType(model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey) != EncryptionType.XChaCha20Poly1305_B64)
         {
             throw new InvalidOperationException("The provided private key encryption key is not wrapped with XChaCha20-Poly1305.");
         }
