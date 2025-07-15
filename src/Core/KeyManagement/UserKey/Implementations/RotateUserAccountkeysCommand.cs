@@ -207,7 +207,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
     private static void ValidatePublicKeyEncryptionKeyPairUnchanged(RotateUserAccountKeysData model, User user)
     {
-        var publicKey = model.AccountPublicKey ?? model.AccountKeys?.PublicKeyEncryptionKeyPairData?.PublicKey;
+        var publicKey = model.AccountPublicKey ?? model.AccountKeys?.PublicKeyEncryptionKeyPairData.PublicKey;
         if (publicKey != user.PublicKey)
         {
             throw new InvalidOperationException("The provided account public key does not match the user's current public key, and changing the account asymmetric key pair is currently not supported during key rotation.");
