@@ -5,6 +5,7 @@ using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
@@ -95,5 +96,61 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
         return await query.ToListAsync();
     }
 
-    public Task<IEnumerable<PolicyDetails>> PolicyDetailsReadByOrganizationIdAsync(Guid organizationId, PolicyType policyType) => throw new NotImplementedException();
+    public async Task<IEnumerable<PolicyDetails>> PolicyDetailsReadByOrganizationIdAsync(Guid organizationId, PolicyType policyType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var givenOrgUsers = from ou in dbContext.OrganizationUsers
+                            where ou.OrganizationId == organizationId
+                            select new OrganizationUser { Id = ou.Id, UserId = ou.UserId, Email = ou.Email };
+
+        var allOrgUsers = from ou in dbContext.OrganizationUsers
+                .Join(
+                    givenOrgUsers,
+                    ou => ou.UserId,
+                    gou => gou.UserId,
+                    (ou, gou) => ou
+                )
+                          where ou.OrganizationId == organizationId
+                          select ou;
+        var test = await allOrgUsers.ToListAsync();
+
+        return new List<PolicyDetails>();
+
+        // var providerOrganizations = from pu in dbContext.ProviderUsers
+        //     where pu.UserId == userId
+        //     join po in dbContext.ProviderOrganizations
+        //         on pu.ProviderId equals po.ProviderId
+        //     select po;
+
+        // var query = from p in dbContext.Policies
+        //     join ou in dbContext.OrganizationUsers
+        //         on p.OrganizationId equals ou.OrganizationId
+        //     join o in dbContext.Organizations
+        //         on p.OrganizationId equals o.Id
+        //     where
+        //         p.Enabled &&
+        //         o.Enabled &&
+        //         o.UsePolicies &&
+        //         (
+        //             (ou.Status != OrganizationUserStatusType.Invited && ou.UserId == userId) ||
+        //             // Invited orgUsers do not have a UserId associated with them, so we have to match up their email
+        //             (ou.Status == OrganizationUserStatusType.Invited && ou.Email == dbContext.Users.Find(userId).Email)
+        //         )
+        //     select new PolicyDetails
+        //     {
+        //         OrganizationUserId = ou.Id,
+        //         OrganizationId = p.OrganizationId,
+        //         PolicyType = p.Type,
+        //         PolicyData = p.Data,
+        //         OrganizationUserType = ou.Type,
+        //         OrganizationUserStatus = ou.Status,
+        //         OrganizationUserPermissionsData = ou.Permissions,
+        //         IsProvider = providerOrganizations.Any(po => po.OrganizationId == p.OrganizationId)
+        //     };
+        // return await query.ToListAsync();
+
+        // return [];
+    }
 }
