@@ -171,6 +171,7 @@ public static class FeatureFlagKeys
     public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
     public const string UserSdkForDecryption = "use-sdk-for-decryption";
     public const string PM17987_BlockType0 = "pm-17987-block-type-0";
+    public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
 
     /* Mobile Team */
     public const string NativeCarouselFlow = "native-carousel-flow";
@@ -199,6 +200,7 @@ public static class FeatureFlagKeys
 
     /* Tools Team */
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
+    public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
 
     /* Vault Team */
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
