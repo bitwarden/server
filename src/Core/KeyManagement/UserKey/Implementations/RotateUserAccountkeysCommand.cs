@@ -196,7 +196,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         return isPrivateKeyEncryptionV2;
     }
 
-    private async Task ValidateVerifyingKeyUnchanged(RotateUserAccountKeysData model, User user)
+    private async Task ValidateVerifyingKeyUnchangedAsync(RotateUserAccountKeysData model, User user)
     {
         var currentSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id) ?? throw new InvalidOperationException("User does not have a signature key pair.");
         if (model.AccountKeys.SignatureKeyPairData.VerifyingKey != currentSignatureKeyPair!.VerifyingKey)
