@@ -143,8 +143,8 @@ public class AccountsKeyManagementControllerTests
                 && d.MasterPasswordUnlockData.MasterKeyAuthenticationHash == data.AccountUnlockData.MasterPasswordUnlockData.MasterKeyAuthenticationHash
                 && d.MasterPasswordUnlockData.MasterKeyEncryptedUserKey == data.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey
 
-                && d.AccountPublicKey == data.AccountKeys.AccountPublicKey
-                && d.UserKeyEncryptedAccountPrivateKey == data.AccountKeys.UserKeyEncryptedAccountPrivateKey
+                && d.AccountKeys!.PublicKeyEncryptionKeyPairData.WrappedPrivateKey == data.AccountKeys.PublicKeyEncryptionKeyPair!.WrappedPrivateKey
+                && d.AccountKeys!.PublicKeyEncryptionKeyPairData.PublicKey == data.AccountKeys.PublicKeyEncryptionKeyPair!.PublicKey
             ));
     }
 
@@ -191,9 +191,7 @@ public class AccountsKeyManagementControllerTests
                 && d.MasterPasswordUnlockData.MasterKeyAuthenticationHash == data.AccountUnlockData.MasterPasswordUnlockData.MasterKeyAuthenticationHash
                 && d.MasterPasswordUnlockData.MasterKeyEncryptedUserKey == data.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey
 
-                && d.AccountPublicKey == data.AccountKeys.AccountPublicKey
-                && d.UserKeyEncryptedAccountPrivateKey == data.AccountKeys.UserKeyEncryptedAccountPrivateKey
-
+                && d.AccountKeys!.PublicKeyEncryptionKeyPairData.WrappedPrivateKey == data.AccountKeys.PublicKeyEncryptionKeyPair!.WrappedPrivateKey
                 && d.AccountKeys!.PublicKeyEncryptionKeyPairData.PublicKey == data.AccountKeys.PublicKeyEncryptionKeyPair!.PublicKey
                 && d.AccountKeys!.PublicKeyEncryptionKeyPairData.SignedPublicKey == data.AccountKeys.PublicKeyEncryptionKeyPair!.SignedPublicKey
                 && d.AccountKeys!.SignatureKeyPairData!.SignatureAlgorithm == Core.KeyManagement.Enums.SignatureAlgorithm.Ed25519
