@@ -15,9 +15,9 @@ public class RotateUserAccountKeysData
 
     // Other keys encrypted by the userkey
     [Obsolete("Use AccountKeys instead")]
-    public required string UserKeyEncryptedAccountPrivateKey { get; set; }
+    public string? UserKeyEncryptedAccountPrivateKey { get; set; }
     [Obsolete("Use AccountKeys instead")]
-    public required string AccountPublicKey { get; set; }
+    public string? AccountPublicKey { get; set; }
 
     public UserAccountKeysData? AccountKeys { get; set; }
 
