@@ -13,99 +13,28 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.PolicyRep
 public class PolicyDetailsReadByOrganizationIdAsyncTests
 {
     [DatabaseTheory, DatabaseData]
-    public async Task PolicyDetailsReadByOrganizationIdAsync(
+    public async Task ShouldNotReturnOtherOrganizations_WhenUserIsNotConnected(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         IPolicyRepository policyRepository)
     {
         // Arrange
-        var userA = await userRepository.CreateTestUserAsync();
-        var org1 = await organizationRepository.CreateTestOrganizationAsync();
-        // direct OrgUser in Org1
-        var userAOrg1 = await organizationUserRepository.CreateTestOrganizationUserAsync(org1, userA);
+        var user = await userRepository.CreateTestUserAsync();
+
         const PolicyType policyType = PolicyType.SingleOrg;
+        var userOrgConnectedDirectly = await ArrangeDirectlyConnectedOrgByUserIdAsync(organizationUserRepository, organizationRepository, policyRepository, user, policyType);
 
-        await policyRepository.CreateAsync(new Policy { OrganizationId = org1.Id, Enabled = true, Type = policyType });
-
-        // Org2 via UserId → UserId
-        var org2 = await CreateEnterpriseOrg(organizationRepository);
-        var userAOrg2 = new OrganizationUser
-        {
-            OrganizationId = org2.Id,
-            UserId = userA.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.Custom,
-            Email = null
-        };
-        await organizationUserRepository.CreateAsync(userAOrg2);
-        await policyRepository.CreateAsync(new Policy { OrganizationId = org2.Id, Enabled = true, Type = policyType });
+        var otherOrg = await CreateEnterpriseOrg(organizationRepository);
+        await policyRepository.CreateAsync(new Policy { OrganizationId = otherOrg.Id, Enabled = true, Type = policyType });
 
         // Act
-        var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(org1.Id, policyType)).ToList();
+        var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, PolicyType.SingleOrg)).ToList();
 
         // Assert
-        Assert.Contains(results, result => result.OrganizationUserId == userAOrg1.Id && result.OrganizationId == userAOrg1.OrganizationId);
-        Assert.Contains(results, result => result.OrganizationUserId == userAOrg2.Id && result.OrganizationId == userAOrg2.OrganizationId);
-
-    }
-
-
-
-    [DatabaseTheory, DatabaseData]
-    public async Task JimmyTodoTestFor_ShouldNotReturnUserIfTheOtherOrgDoesNotThePolicy(
-        IUserRepository userRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository,
-        IPolicyRepository policyRepository)
-    {
-        // Arrange
-        var userA = await userRepository.CreateTestUserAsync();
-        var org1 = await CreateEnterpriseOrg(organizationRepository);
-        // direct OrgUser in Org1
-        var orgUser1 = await organizationUserRepository.CreateTestOrganizationUserAsync(org1, userA);
-        await policyRepository.CreateAsync(new Policy { OrganizationId = org1.Id, Enabled = true, Type = PolicyType.SingleOrg });
-
-        // Org2 via UserId → UserId
-        var org2 = await CreateEnterpriseOrg(organizationRepository);
-
-        await policyRepository.CreateAsync(new Policy { OrganizationId = org2.Id, Enabled = true, Type = PolicyType.SingleOrg });
-
-        // Act
-        var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(org1.Id, PolicyType.SingleOrg)).ToList();
-
-        // Assert
-        Assert.Contains(results, result => result.OrganizationUserId == orgUser1.Id && result.OrganizationId == orgUser1.OrganizationId);
-        Assert.DoesNotContain(results, result => result.OrganizationId == org2.Id);
-
-    }
-
-    [DatabaseTheory, DatabaseData]
-    public async Task ShouldNotReturnOtherOrgUsers_WhenUserIsNotConnected(
-        IUserRepository userRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository,
-        IPolicyRepository policyRepository)
-    {
-        // Arrange
-        var userA = await userRepository.CreateTestUserAsync();
-        var org1 = await CreateEnterpriseOrg(organizationRepository);
-
-        var orgUser1 = await organizationUserRepository.CreateTestOrganizationUserAsync(org1, userA);
-        await policyRepository.CreateAsync(new Policy { OrganizationId = org1.Id, Enabled = true, Type = PolicyType.SingleOrg });
-
-
-        var org2 = await CreateEnterpriseOrg(organizationRepository);
-
-        await policyRepository.CreateAsync(new Policy { OrganizationId = org2.Id, Enabled = true, Type = PolicyType.SingleOrg });
-
-        // Act
-        var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(org1.Id, PolicyType.SingleOrg)).ToList();
-
-        // Assert
-        Assert.Contains(results, result => result.OrganizationUserId == orgUser1.Id && result.OrganizationId == orgUser1.OrganizationId);
-        Assert.DoesNotContain(results, result => result.OrganizationId == org2.Id);
-
+        Assert.Contains(results, result => result.OrganizationUserId == userOrgConnectedDirectly.Id
+                                           && result.OrganizationId == userOrgConnectedDirectly.OrganizationId);
+        Assert.DoesNotContain(results, result => result.OrganizationId == otherOrg.Id);
     }
 
     [DatabaseTheory, DatabaseData]
