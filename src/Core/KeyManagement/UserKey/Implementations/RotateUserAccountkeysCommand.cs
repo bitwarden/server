@@ -100,7 +100,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     public async Task RotateV2AccountKeysAsync(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
         ValidateV2Encryption(model);
-        await ValidateVerifyingKeyUnchanged(model, user);
+        await ValidateVerifyingKeyUnchangedAsync(model, user);
 
         saveEncryptedDataActions.Add(_userSignatureKeyPairRepository.UpdateForKeyRotation(user.Id, model.AccountKeys.SignatureKeyPairData));
         user.SignedPublicKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey;
@@ -123,7 +123,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         }
         else if (model.AccountKeys.SignatureKeyPairData != null)
         {
-            UpgradeV1ToV2KeysAsync(model, user, saveEncryptedDataActions);
+            UpgradeV1ToV2Keys(model, user, saveEncryptedDataActions);
         }
         else
         {
