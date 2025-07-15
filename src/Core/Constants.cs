@@ -157,6 +157,7 @@ public static class FeatureFlagKeys
     public const string PM21092_SetNonUSBusinessUseToReverseCharge = "pm-21092-set-non-us-business-use-to-reverse-charge";
     public const string PM21383_GetProviderPriceFromStripe = "pm-21383-get-provider-price-from-stripe";
     public const string PM21881_ManagePaymentDetailsOutsideCheckout = "pm-21881-manage-payment-details-outside-checkout";
+    public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
 
     /* Data Insights and Reporting Team */
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
