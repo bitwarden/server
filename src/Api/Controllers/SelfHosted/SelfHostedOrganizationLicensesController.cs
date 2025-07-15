@@ -5,6 +5,7 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Utilities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Context;
@@ -27,7 +28,7 @@ public class SelfHostedOrganizationLicensesController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ISelfHostedGetOrganizationLicenseQuery _selfHostedGetOrganizationLicenseQuery;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
-    private readonly IOrganizationService _organizationService;
+    private readonly ISelfHostedOrganizationSignUpCommand _selfHostedOrganizationSignUpCommand;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IUserService _userService;
     private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
@@ -36,7 +37,7 @@ public class SelfHostedOrganizationLicensesController : Controller
         ICurrentContext currentContext,
         ISelfHostedGetOrganizationLicenseQuery selfHostedGetOrganizationLicenseQuery,
         IOrganizationConnectionRepository organizationConnectionRepository,
-        IOrganizationService organizationService,
+        ISelfHostedOrganizationSignUpCommand selfHostedOrganizationSignUpCommand,
         IOrganizationRepository organizationRepository,
         IUserService userService,
         IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand)
@@ -44,7 +45,7 @@ public class SelfHostedOrganizationLicensesController : Controller
         _currentContext = currentContext;
         _selfHostedGetOrganizationLicenseQuery = selfHostedGetOrganizationLicenseQuery;
         _organizationConnectionRepository = organizationConnectionRepository;
-        _organizationService = organizationService;
+        _selfHostedOrganizationSignUpCommand = selfHostedOrganizationSignUpCommand;
         _organizationRepository = organizationRepository;
         _userService = userService;
         _updateOrganizationLicenseCommand = updateOrganizationLicenseCommand;
@@ -65,7 +66,7 @@ public class SelfHostedOrganizationLicensesController : Controller
             throw new BadRequestException("Invalid license");
         }
 
-        var result = await _organizationService.SignUpAsync(license, user, model.Key,
+        var result = await _selfHostedOrganizationSignUpCommand.SignUpAsync(license, user, model.Key,
             model.CollectionName, model.Keys?.PublicKey, model.Keys?.EncryptedPrivateKey);
 
         return new OrganizationResponseModel(result.Item1, null);
