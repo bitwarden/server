@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -223,54 +224,130 @@ public class PolicyDetailsReadByOrganizationIdAsyncTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task PolicyDetailsReadByOrganizationIdAsync_GetUsersByEmails(
+    public async Task WhenDirectlyConnectedUserHasUserId_ShouldReturnOtherConnectedOrganizationPolicies(
+       IUserRepository userRepository,
+       IOrganizationUserRepository organizationUserRepository,
+       IOrganizationRepository organizationRepository,
+       IPolicyRepository policyRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        const PolicyType policyType = PolicyType.SingleOrg;
+
+        var userOrgConnectedDirectly = await ArrangeDirectlyConnectedOrgByUserIdAsync(organizationUserRepository, organizationRepository, policyRepository, user, policyType);
+
+        var userOrgConnectedByEmail = await ArrangeOtherOrgConnectedByEmailAsync(organizationUserRepository, organizationRepository, policyRepository, user, policyType);
+
+        var userOrgConnectedByUserId = await ArrangeOtherOrgConnectedByUserIdAsync(organizationUserRepository, organizationRepository, policyRepository, user, policyType);
+
+        // Act
+        var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, policyType)).ToList();
+
+        // Assert
+        AssertPolicyDetails(results, userOrgConnectedDirectly, userOrgConnectedByEmail, userOrgConnectedByUserId);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task WhenDirectlyConnectedUserHasEmail_ShouldReturnOtherConnectedOrganizationPolicies(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         IPolicyRepository policyRepository)
     {
         // Arrange
-        var userA = await userRepository.CreateTestUserAsync();
-        var orgDirectlyConnected = await CreateEnterpriseOrg(organizationRepository);
-        var userOrgDirectlyConnected = new OrganizationUser
-        {
-            OrganizationId = orgDirectlyConnected.Id,
-            UserId = null,
-            Status = OrganizationUserStatusType.Invited,
-            Type = OrganizationUserType.Custom,
-            Email = userA.Email
-        };
-        await organizationUserRepository.CreateAsync(userOrgDirectlyConnected);
-        var policyType = PolicyType.SingleOrg;
+        var user = await userRepository.CreateTestUserAsync();
+        const PolicyType policyType = PolicyType.SingleOrg;
 
-        await policyRepository.CreateAsync(new Policy { OrganizationId = orgDirectlyConnected.Id, Enabled = true, Type = policyType });
+        var userOrgConnectedDirectly = await ArrangeDirectlyConnectedOrgByEmailAsync(organizationUserRepository, organizationRepository, policyRepository, user, policyType);
 
-        var org2 = await CreateEnterpriseOrg(organizationRepository);
-        var userAOrg2 = new OrganizationUser
-        {
-            OrganizationId = org2.Id,
-            UserId = null,
-            Status = OrganizationUserStatusType.Invited,
-            Type = OrganizationUserType.Custom,
-            Email = userA.Email
-        };
-        await organizationUserRepository.CreateAsync(userAOrg2);
-        await policyRepository.CreateAsync(new Policy { OrganizationId = org2.Id, Enabled = true, Type = policyType });
+        var userOrgConnectedByEmail = await ArrangeOtherOrgConnectedByEmailAsync(organizationUserRepository, organizationRepository, policyRepository, user, policyType);
 
-
-
-        var orgWithUserIdConnection = await CreateEnterpriseOrg(organizationRepository);
-
-        var orgUserWithUserIdConnection = await organizationUserRepository.CreateTestOrganizationUserAsync(orgWithUserIdConnection, userA);
-        await policyRepository.CreateAsync(new Policy { OrganizationId = orgWithUserIdConnection.Id, Enabled = true, Type = PolicyType.SingleOrg });
-
+        var userOrgConnectedByUserId = await ArrangeOtherOrgConnectedByUserIdAsync(organizationUserRepository, organizationRepository, policyRepository, user, policyType);
 
         // Act
-        var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(orgWithUserIdConnection.Id, policyType)).ToList();
+        var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, policyType)).ToList();
 
         // Assert
-        Assert.Contains(results, result => result.OrganizationUserId == userAOrg2.Id && result.OrganizationId == org2.Id);
-        Assert.Contains(results, result => result.OrganizationUserId == userAOrg2.Id && result.OrganizationId == org2.Id);
+        AssertPolicyDetails(results, userOrgConnectedDirectly, userOrgConnectedByEmail, userOrgConnectedByUserId);
+    }
+
+    private async Task<OrganizationUser> ArrangeOtherOrgConnectedByUserIdAsync(IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository, IPolicyRepository policyRepository, User user,
+        PolicyType policyType)
+    {
+        var organization = await CreateEnterpriseOrg(organizationRepository);
+
+        var organizationUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+        await policyRepository.CreateAsync(new Policy { OrganizationId = organization.Id, Enabled = true, Type = policyType });
+
+        return organizationUser;
+    }
+
+    private async Task<OrganizationUser> ArrangeDirectlyConnectedOrgByUserIdAsync(IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository, IPolicyRepository policyRepository, User user,
+        PolicyType policyType)
+    {
+        var organization = await CreateEnterpriseOrg(organizationRepository);
+
+        var organizationUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        await organizationUserRepository.CreateAsync(organizationUser);
+
+        await policyRepository.CreateAsync(new Policy { OrganizationId = organization.Id, Enabled = true, Type = policyType });
+
+        return organizationUser;
+    }
+
+    private static void AssertPolicyDetails(List<PolicyDetails> results,
+        OrganizationUser userOrgConnectedDirectly,
+        OrganizationUser userOrgConnectedByEmail,
+        OrganizationUser userOrgConnectedByUserId)
+    {
+        Assert.Contains(results, result => result.OrganizationUserId == userOrgConnectedDirectly.Id
+                                           && result.OrganizationId == userOrgConnectedDirectly.OrganizationId);
+        Assert.Contains(results, result => result.OrganizationUserId == userOrgConnectedByEmail.Id
+                                           && result.OrganizationId == userOrgConnectedByEmail.OrganizationId);
+        Assert.Contains(results, result => result.OrganizationUserId == userOrgConnectedByUserId.Id
+                                           && result.OrganizationId == userOrgConnectedByUserId.OrganizationId);
+    }
+
+    private async Task<OrganizationUser> ArrangeOtherOrgConnectedByEmailAsync(IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository, IPolicyRepository policyRepository, User user,
+        PolicyType policyType)
+    {
+        var organization = await CreateEnterpriseOrg(organizationRepository);
+        var organizationUser = new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = null,
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.Custom,
+            Email = user.Email
+        };
+        await organizationUserRepository.CreateAsync(organizationUser);
+        await policyRepository.CreateAsync(new Policy { OrganizationId = organization.Id, Enabled = true, Type = policyType });
+
+        return organizationUser;
+    }
+
+    private async Task<OrganizationUser> ArrangeDirectlyConnectedOrgByEmailAsync(IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository, IPolicyRepository policyRepository, User user,
+        PolicyType policyType)
+    {
+        var organization = await CreateEnterpriseOrg(organizationRepository);
+        var organizationUser = new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = null,
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.Custom,
+            Email = user.Email
+        };
+        await organizationUserRepository.CreateAsync(organizationUser);
+
+        await policyRepository.CreateAsync(new Policy { OrganizationId = organization.Id, Enabled = true, Type = policyType });
+
+        return organizationUser;
     }
 
     private Task<Organization> CreateEnterpriseOrg(IOrganizationRepository orgRepo)
