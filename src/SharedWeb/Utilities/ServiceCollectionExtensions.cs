@@ -54,7 +54,6 @@ using Bit.Core.Vault;
 using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
-using Core.Auth.Identity.TokenProviders;
 using DnsClient;
 using IdentityModel;
 using LaunchDarkly.Sdk.Server;
@@ -380,7 +379,17 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services, GlobalSettings globalSettings)
     {
         services.AddScoped<IOrganizationDuoUniversalTokenProvider, OrganizationDuoUniversalTokenProvider>();
-        services.TryAddScoped<IOtpTokenProvider, OtpTokenProvider>();
+        services.Configure<DefaultOtpTokenProviderOptions>(options =>
+        {
+            options.TokenLength = 6;
+            options.TokenAlpha = false;
+            options.TokenNumeric = true;
+            options.DistributedCacheEntryOptions = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+            };
+        });
+        services.TryAddScoped<IOtpTokenProvider<DefaultOtpTokenProviderOptions>, OtpTokenProvider<DefaultOtpTokenProviderOptions>>();
         services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
         {

@@ -5,7 +5,7 @@ namespace Bit.Core.Auth.Identity.TokenProviders;
 /// <summary>
 /// Options for configuring the OTP token provider.
 /// </summary>
-public class OtpTokenProviderConfigurationOptions
+public class DefaultOtpTokenProviderOptions
 {
     /// <summary>
     /// Gets or sets the length of the generated token.

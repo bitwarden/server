@@ -1,15 +1,19 @@
 ﻿using System.Text;
 using Bit.Core.Utilities;
-using Core.Auth.Identity.TokenProviders;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Core.Auth.Identity.TokenProviders;
 
-public class OtpTokenProvider(
+public class OtpTokenProvider<TOptions>(
     [FromKeyedServices("persistent")]
-    IDistributedCache distributedCache) : IOtpTokenProvider
+    IDistributedCache distributedCache,
+    IOptions<TOptions> options) : IOtpTokenProvider<TOptions>
+        where TOptions : DefaultOtpTokenProviderOptions
 {
+    private readonly TOptions _otpTokenProviderOptions = options.Value;
+
     /// <summary>
     /// This is where the OTP tokens are stored.
     /// </summary>
@@ -21,29 +25,6 @@ public class OtpTokenProvider(
     /// </summary>
     private readonly string _cacheKeyFormat = "{0}_{1}_{2}";
 
-    /// <summary>
-    /// Sets the cache entry options for the token provider.
-    /// Default is 5 minutes expiration.
-    /// </summary>
-    public DistributedCacheEntryOptions _distributedCacheEntryOptions { get; protected set; } =
-        new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-        };
-
-    /// <summary>
-    /// Sets the length of the token to be generated. Default is 6 characters.
-    /// </summary>
-    public int TokenLength { get; protected set; } = 6;
-    /// <summary>
-    /// Sets whether the token should contain alphabetic characters. Default is false.
-    /// </summary>
-    public bool TokenAlpha { get; protected set; } = false;
-    /// <summary>
-    /// Sets whether the token should contain numeric characters. Default is true.
-    /// </summary>
-    public bool TokenNumeric { get; protected set; } = true;
-
     public async Task<string?> GenerateTokenAsync(string tokenProviderName, string purpose, string uniqueIdentifier)
     {
         if (string.IsNullOrEmpty(tokenProviderName)
@@ -54,8 +35,14 @@ public class OtpTokenProvider(
         }
 
         var cacheKey = string.Format(_cacheKeyFormat, tokenProviderName, purpose, uniqueIdentifier);
-        var token = CoreHelpers.SecureRandomString(TokenLength, TokenAlpha, true, false, TokenNumeric, false);
-        await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(token), _distributedCacheEntryOptions);
+        var token = CoreHelpers.SecureRandomString(
+            _otpTokenProviderOptions.TokenLength,
+            _otpTokenProviderOptions.TokenAlpha,
+            true,
+            false,
+            _otpTokenProviderOptions.TokenNumeric,
+            false);
+        await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(token), _otpTokenProviderOptions.DistributedCacheEntryOptions);
         return token;
     }
 
@@ -84,18 +71,5 @@ public class OtpTokenProvider(
         }
 
         return valid;
-    }
-
-    public void ConfigureToken(OtpTokenProviderConfigurationOptions options)
-    {
-        if (options == null)
-        {
-            throw new ArgumentNullException(nameof(options), "Options cannot be null.");
-        }
-
-        TokenLength = options.TokenLength;
-        TokenAlpha = options.TokenAlpha;
-        TokenNumeric = options.TokenNumeric;
-        _distributedCacheEntryOptions = options.DistributedCacheEntryOptions;
     }
 }
