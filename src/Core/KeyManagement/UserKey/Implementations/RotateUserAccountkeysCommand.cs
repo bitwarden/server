@@ -115,7 +115,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
     public async Task UpdateAccountKeysAsync(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
-        ValidatePrivateKeyUnchanged(model, user);
+        ValidatePublicKeyEncryptionKeyPairUnchanged(model, user);
 
         if (IsV2EncryptionUserAsync(user))
         {
@@ -198,27 +198,24 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
     private async Task ValidateVerifyingKeyUnchanged(RotateUserAccountKeysData model, User user)
     {
-        var currentSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id);
-        if (model.AccountKeys.SignatureKeyPairData.VerifyingKey != currentSignatureKeyPair?.VerifyingKey)
+        var currentSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id) ?? throw new InvalidOperationException("User does not have a signature key pair.");
+        if (model.AccountKeys.SignatureKeyPairData.VerifyingKey != currentSignatureKeyPair!.VerifyingKey)
         {
             throw new InvalidOperationException("The provided verifying key does not match the user's current verifying key.");
         }
     }
 
-    private static void ValidatePrivateKeyUnchanged(RotateUserAccountKeysData model, User user)
+    private static void ValidatePublicKeyEncryptionKeyPairUnchanged(RotateUserAccountKeysData model, User user)
     {
-        if (model.AccountPublicKey != user.PublicKey)
+        var publicKey = model.AccountPublicKey ?? model.AccountKeys?.PublicKeyEncryptionKeyPairData?.PublicKey;
+        if (publicKey != user.PublicKey)
         {
-            throw new InvalidOperationException("The provided account public key does not match the user's current public key, and changing the account asymmetric keypair is currently not supported during key rotation.");
+            throw new InvalidOperationException("The provided account public key does not match the user's current public key, and changing the account asymmetric key pair is currently not supported during key rotation.");
         }
     }
 
     private static void ValidateV2Encryption(RotateUserAccountKeysData model)
     {
-        if (model.AccountKeys.SignatureKeyPairData == null)
-        {
-            throw new InvalidOperationException("The provided signature key pair data is null");
-        }
         if (GetEncryptionType(model.AccountKeys.SignatureKeyPairData.WrappedSigningKey) != EncryptionType.XChaCha20Poly1305_B64)
         {
             throw new InvalidOperationException("The provided signing key data is not wrapped with XChaCha20-Poly1305.");
@@ -228,7 +225,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             throw new InvalidOperationException("The provided signature key pair data does not contain a valid verifying key.");
         }
 
-        if (GetEncryptionType(model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey) != EncryptionType.XChaCha20Poly1305_B64)
+        if (GetEncryptionType(model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey) != EncryptionType.XChaCha20Poly1305_B64 || GetEncryptionType(model.UserKeyEncryptedAccountPrivateKey) != EncryptionType.XChaCha20Poly1305_B64)
         {
             throw new InvalidOperationException("The provided private key encryption key is not wrapped with XChaCha20-Poly1305.");
         }
@@ -244,14 +241,17 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     private static EncryptionType GetEncryptionType(string encString)
     {
         var parts = encString.Split('.');
-        if (parts.Length == 0)
+        if (parts.Length == 1)
         {
-            throw new ArgumentException("Invalid encryption type string.", nameof(encString));
+            throw new ArgumentException("Invalid encryption type string.");
         }
         if (byte.TryParse(parts[0], out var encryptionTypeNumber))
         {
-            return (EncryptionType)encryptionTypeNumber;
+            if (Enum.IsDefined(typeof(EncryptionType), encryptionTypeNumber))
+            {
+                return (EncryptionType)encryptionTypeNumber;
+            }
         }
-        throw new ArgumentException("Invalid encryption type string.", nameof(encString));
+        throw new ArgumentException("Invalid encryption type string.");
     }
 }
