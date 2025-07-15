@@ -5,7 +5,7 @@ namespace Bit.Api.AdminConsole.Authorization.Requirements;
 
 public class ManageGroupsOrUsersRequirement : IOrganizationRequirement
 {
-    public async Task<bool> AuthorizeAsync(CurrentContextOrganization organizationClaims, Func<Task<bool>> isProviderUserForOrg) =>
+    public async Task<bool> AuthorizeAsync(CurrentContextOrganization? organizationClaims, Func<Task<bool>> isProviderUserForOrg) =>
         organizationClaims switch
         {
             { Type: OrganizationUserType.Owner } => true,
