@@ -106,7 +106,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         user.SignedPublicKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey;
     }
 
-    public void UpgradeV1ToV2KeysAsync(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    public void UpgradeV1ToV2Keys(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
         ValidateV2Encryption(model);
         saveEncryptedDataActions.Add(_userSignatureKeyPairRepository.SetUserSignatureKeyPair(user.Id, model.AccountKeys.SignatureKeyPairData));
@@ -196,7 +196,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         return isPrivateKeyEncryptionV2;
     }
 
-    private async Task ValidateVerifyingKeyUnchanged(RotateUserAccountKeysData model, User user)
+    private async Task ValidateVerifyingKeyUnchangedAsync(RotateUserAccountKeysData model, User user)
     {
         var currentSignatureKeyPair = await _userSignatureKeyPairRepository.GetByUserIdAsync(user.Id) ?? throw new InvalidOperationException("User does not have a signature key pair.");
         if (model.AccountKeys.SignatureKeyPairData.VerifyingKey != currentSignatureKeyPair!.VerifyingKey)
@@ -207,7 +207,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
     private static void ValidatePublicKeyEncryptionKeyPairUnchanged(RotateUserAccountKeysData model, User user)
     {
-        var publicKey = model.AccountPublicKey ?? model.AccountKeys?.PublicKeyEncryptionKeyPairData?.PublicKey;
+        var publicKey = model.AccountPublicKey ?? model.AccountKeys?.PublicKeyEncryptionKeyPairData.PublicKey;
         if (publicKey != user.PublicKey)
         {
             throw new InvalidOperationException("The provided account public key does not match the user's current public key, and changing the account asymmetric key pair is currently not supported during key rotation.");
