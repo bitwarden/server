@@ -3,6 +3,7 @@ using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
 
@@ -13,12 +14,24 @@ public class OtpTokenProviderTests
 {
     private readonly string _defaultTokenProviderName = "DefaultOtpProvider";
 
+    private readonly DefaultOtpTokenProviderOptions _defaultOtpTokenProviderOptions = new()
+    {
+        TokenLength = 6,
+        TokenAlpha = false,
+        TokenNumeric = true
+    };
+
     [Theory, BitAutoData]
     public async Task GenerateTokenAsync_Success_ReturnsToken(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string purpose,
         string uniqueIdentifier)
     {
+        // Arrange
+        sutProvider.GetDependency<IOptions<DefaultOtpTokenProviderOptions>>()
+            .Value.Returns(_defaultOtpTokenProviderOptions);
+        sutProvider.Create();
+
         // Act
         var result = await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
 
@@ -36,35 +49,23 @@ public class OtpTokenProviderTests
     }
 
     [Theory, BitAutoData]
-    public void ConfigureToken_ConfigurationNull_Throws(
-        SutProvider<OtpTokenProvider> sutProvider)
-    {
-        // Arrange
-        OtpTokenProviderConfigurationOptions otpConfig = null;
-
-        // Act
-        var exception = Assert.Throws<ArgumentNullException>(
-            () => sutProvider.Sut.ConfigureToken(otpConfig));
-
-        // Assert
-        Assert.Contains("Options cannot be null.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
     public async Task GenerateTokenAsync_CustomConfiguration_ReturnsCorrectFormat(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string tokenProviderName,
         string purpose,
         string uniqueIdentifier)
     {
         // Arrange
-        var otpConfig = new OtpTokenProviderConfigurationOptions
+        var otpConfig = new DefaultOtpTokenProviderOptions
         {
             TokenLength = 8,
             TokenAlpha = true,
             TokenNumeric = true
         };
-        sutProvider.Sut.ConfigureToken(otpConfig);
+
+        sutProvider.GetDependency<IOptions<DefaultOtpTokenProviderOptions>>()
+            .Value.Returns(otpConfig);
+        sutProvider.Create();
 
         // Act
         var result = await sutProvider.Sut.GenerateTokenAsync(tokenProviderName, purpose, uniqueIdentifier);
@@ -78,18 +79,21 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task GenerateTokenAsync_NumericOnly_ReturnsOnlyDigits(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string purpose,
         string uniqueIdentifier)
     {
         // Arrange
-        var otpConfig = new OtpTokenProviderConfigurationOptions
+        var otpConfig = new DefaultOtpTokenProviderOptions
         {
             TokenLength = 10,
             TokenAlpha = false,
             TokenNumeric = true
         };
-        sutProvider.Sut.ConfigureToken(otpConfig); // 10 chars, numeric only
+
+        sutProvider.GetDependency<IOptions<DefaultOtpTokenProviderOptions>>()
+            .Value.Returns(otpConfig);
+        sutProvider.Create();
 
         // Act
         var result = await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
@@ -101,7 +105,7 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task ValidateTokenAsync_ValidToken_ReturnsTrue(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string purpose,
         string uniqueIdentifier,
         string token)
@@ -128,7 +132,7 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task ValidateTokenAsync_InvalidToken_ReturnsFalse(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string purpose,
         string uniqueIdentifier,
         string token,
@@ -156,7 +160,7 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task ValidateTokenAsync_TokenNotFound_ReturnsFalse(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string purpose,
         string uniqueIdentifier,
         string token)
@@ -182,7 +186,7 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task ValidateTokenAsync_EmptyToken_ReturnsFalse(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string purpose,
         string uniqueIdentifier)
     {
@@ -195,7 +199,7 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task ValidateTokenAsync_NullToken_ReturnsFalse(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string purpose,
         string uniqueIdentifier)
     {
@@ -209,7 +213,7 @@ public class OtpTokenProviderTests
     // Tests for null/empty purpose and uniqueIdentifier parameters
     [Theory, BitAutoData]
     public async Task GenerateTokenAsync_NullPurpose_ReturnsNull(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string uniqueIdentifier)
     {
         // Act
@@ -226,7 +230,7 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task GenerateTokenAsync_EmptyPurpose_ReturnsNull(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string uniqueIdentifier)
     {
         // Act
@@ -243,7 +247,7 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task GenerateTokenAsync_NullUniqueIdentifier_ReturnsNull(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string purpose)
     {
         // Act
@@ -260,7 +264,7 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task GenerateTokenAsync_EmptyUniqueIdentifier_ReturnsNull(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string purpose)
     {
         // Act
@@ -277,7 +281,7 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task ValidateTokenAsync_NullPurpose_ReturnsFalse(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string token,
         string uniqueIdentifier)
     {
@@ -295,7 +299,7 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task ValidateTokenAsync_EmptyPurpose_ReturnsFalse(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string token,
         string uniqueIdentifier)
     {
@@ -313,7 +317,7 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task ValidateTokenAsync_NullUniqueIdentifier_ReturnsFalse(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string token,
         string purpose)
     {
@@ -331,7 +335,7 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task ValidateTokenAsync_EmptyUniqueIdentifier_ReturnsFalse(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string token,
         string purpose)
     {
@@ -349,10 +353,15 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task GenerateTokenAsync_OverwritesExistingToken(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string purpose,
         string uniqueIdentifier)
     {
+        // Arrange
+        sutProvider.GetDependency<IOptions<DefaultOtpTokenProviderOptions>>()
+            .Value.Returns(_defaultOtpTokenProviderOptions);
+        sutProvider.Create();
+
         // Act - Generate token twice with same parameters
         var firstToken = await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
         var secondToken = await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
@@ -368,10 +377,15 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task CacheKeyFormat_IsCorrect(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string purpose,
         string uniqueIdentifier)
     {
+        // Arrange
+        sutProvider.GetDependency<IOptions<DefaultOtpTokenProviderOptions>>()
+            .Value.Returns(_defaultOtpTokenProviderOptions);
+        sutProvider.Create();
+
         // Act
         await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
 
@@ -384,7 +398,7 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task ValidateTokenAsync_CaseSensitive(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string purpose,
         string uniqueIdentifier)
     {
@@ -412,11 +426,15 @@ public class OtpTokenProviderTests
 
     [Theory, BitAutoData]
     public async Task RoundTrip_GenerateAndValidate_Success(
-        SutProvider<OtpTokenProvider> sutProvider,
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string purpose,
         string uniqueIdentifier)
     {
         // Arrange
+        sutProvider.GetDependency<IOptions<DefaultOtpTokenProviderOptions>>()
+            .Value.Returns(_defaultOtpTokenProviderOptions);
+        sutProvider.Create();
+
         var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
         byte[] storedToken = null;
 
