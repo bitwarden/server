@@ -156,6 +156,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
             organization.GatewaySubscriptionId = subscription.Id;
             organization.Status = OrganizationStatusType.Created;
+            organization.Enabled = true; // Enable organization when unlinked from provider and new subscription is created
 
             await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats ?? 0);
         }
