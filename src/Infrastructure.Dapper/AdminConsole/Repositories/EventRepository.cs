@@ -41,11 +41,10 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             }, startDate, endDate, pageOptions);
     }
 
-    // TODO implement this properly
     public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Guid secretId, Guid orgId,
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
-        return await GetManyAsync($"[{Schema}].[Event_TODO]",
+        return await GetManyAsync($"[{Schema}].[Event_ReadPageBySecretId]",
                   new Dictionary<string, object?>
                   {
                       ["@SecretId"] = secretId
@@ -56,7 +55,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
     public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Guid projectId, Guid orgId,
       DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
-        return await GetManyAsync($"[{Schema}].[Event_TODO]",
+        return await GetManyAsync($"[{Schema}].[Event_ReadPageByProjectId]",
                   new Dictionary<string, object?>
                   {
                       ["@ProjectId"] = projectId
@@ -228,6 +227,8 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         eventsTable.Columns.Add(secretIdColumn);
         var serviceAccountIdColumn = new DataColumn(nameof(e.ServiceAccountId), typeof(Guid));
         eventsTable.Columns.Add(serviceAccountIdColumn);
+        var projectIdColumn = new DataColumn(nameof(e.ProjectId), typeof(Guid));
+        eventsTable.Columns.Add(projectIdColumn);
 
         foreach (DataColumn col in eventsTable.Columns)
         {
@@ -260,7 +261,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             row[dateColumn] = ev.Date;
             row[secretIdColumn] = ev.SecretId.HasValue ? ev.SecretId.Value : DBNull.Value;
             row[serviceAccountIdColumn] = ev.ServiceAccountId.HasValue ? ev.ServiceAccountId.Value : DBNull.Value;
-
+            row[projectIdColumn] = ev.ProjectId.HasValue ? ev.ProjectId.Value : DBNull.Value;
             eventsTable.Rows.Add(row);
         }
 

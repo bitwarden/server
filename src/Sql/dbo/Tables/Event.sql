@@ -14,13 +14,13 @@
     [IpAddress]              VARCHAR(50)      NULL,
     [Date]                   DATETIME2 (7)    NOT NULL,
     [ProviderId]             UNIQUEIDENTIFIER NULL,
-[ProviderUserId]         UNIQUEIDENTIFIER NULL,
+    [ProviderUserId]         UNIQUEIDENTIFIER NULL,
     [ProviderOrganizationId] UNIQUEIDENTIFIER NULL,
     [SystemUser]             TINYINT          NULL,
     [DomainName]             VARCHAR(256)     NULL,
     [SecretId]               UNIQUEIDENTIFIER NULL,
-    [ProjectId]              UNIQUEIDENTIFIER NULL,
     [ServiceAccountId]       UNIQUEIDENTIFIER NULL,
+    [ProjectId]              UNIQUEIDENTIFIER NULL,
     CONSTRAINT [PK_Event] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
