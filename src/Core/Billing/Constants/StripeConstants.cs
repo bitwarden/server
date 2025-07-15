@@ -60,6 +60,7 @@ public static class StripeConstants
         public const string InvoiceApproved = "invoice_approved";
         public const string OrganizationId = "organizationId";
         public const string ProviderId = "providerId";
+        public const string Region = "region";
         public const string RetiredBraintreeCustomerId = "btCustomerId_old";
         public const string UserId = "userId";
     }
