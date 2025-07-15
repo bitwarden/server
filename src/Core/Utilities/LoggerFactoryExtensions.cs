@@ -73,6 +73,7 @@ public static class LoggerFactoryExtensions
         }
         else if (CoreHelpers.SettingHasValue(globalSettings.Syslog.Destination))
         {
+            logSyslogWarning = true;
             // appending sitename to project name to allow easier identification in syslog.
             var appName = $"{globalSettings.SiteName}-{globalSettings.ProjectName}";
             if (globalSettings.Syslog.Destination.Equals("local", StringComparison.OrdinalIgnoreCase))
@@ -110,7 +111,6 @@ public static class LoggerFactoryExtensions
                             certProvider: new CertificateFileProvider(globalSettings.Syslog.CertificatePath,
                                                                       globalSettings.Syslog?.CertificatePassword ?? string.Empty));
                     }
-
                 }
             }
         }
@@ -150,17 +150,17 @@ public static class LoggerFactoryExtensions
 
         if (logSentryWarning)
         {
-            serilog.Warning("Sentry for logging has been deprecated. Read more: https://bitwarden.com/help/releasenotes/#2025.7.0");
+            serilog.Warning("Sentry for logging has been deprecated. Read more: https://bitwarden.com/help/releasenotes/#2025.8.0");
         }
 
         if (logSyslogWarning)
         {
-            serilog.Warning("Syslog for logging has been deprecated. Read more: https://bitwarden.com/help/releasenotes/#2025.7.0");
+            serilog.Warning("Syslog for logging has been deprecated. Read more: https://bitwarden.com/help/releasenotes/#2025.8.0");
         }
 
         if (logFileWarning)
         {
-            serilog.Warning("This configuration location for file logging has been deprecated. Read more: https://bitwarden.com/help/releasenotes/#2025.7.0");
+            serilog.Warning("This configuration location for file logging has been deprecated. Read more: https://bitwarden.com/help/releasenotes/#2025.8.0");
         }
 
         builder.AddSerilog(serilog);

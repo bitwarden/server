@@ -1,11 +1,10 @@
-using System.Reflection;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using Serilog.Core;
+using Serilog;
 using Serilog.Extensions.Logging;
 using Xunit;
 
@@ -30,24 +29,90 @@ public class LoggerFactoryExtensionsTests
         }, "Development");
 
         var provider = Assert.Single(providers);
-        var serilog = Assert.IsAssignableFrom<SerilogLoggerProvider>(provider);
-        var details = GetSerilogDetails(serilog);
+        Assert.IsAssignableFrom<SerilogLoggerProvider>(provider);
     }
 
-    private Logger GetSerilogDetails(SerilogLoggerProvider provider)
+    [Fact]
+    public void AddSerilog_IsProduction_AddsSerilog()
     {
-        var fieldInfo = typeof(SerilogLoggerProvider).GetField("_logger", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new Exception("We tried to private reflection to get the serilog logger but it's not there. It may have moved.");
+        var providers = GetProviders([]);
 
-        if (fieldInfo.GetValue(provider) is not Serilog.Core.Logger logger)
+        var provider = Assert.Single(providers);
+        Assert.IsAssignableFrom<SerilogLoggerProvider>(provider);
+    }
+
+    [Fact]
+    public async Task AddSerilog_FileLogging_Old_Warns()
+    {
+        var tempDir = Directory.CreateTempSubdirectory();
+
+        var providers = GetProviders(new Dictionary<string, string?>
         {
-            throw new Exception("The private field _logger was there but it's either null or not assignable to Serilog.Core.Logger");
-        }
+            { "GlobalSettings:ProjectName", "Test" },
+            { "GlobalSetting:LogDirectoryByProject", "true" },
+            { "GlobalSettings:LogDirectory", tempDir.FullName },
+        });
 
-        return logger;
+        var provider = Assert.Single(providers);
+        Assert.IsAssignableFrom<SerilogLoggerProvider>(provider);
+
+        var logger = provider.CreateLogger("Test");
+        logger.LogWarning("This is a test");
+
+        var logFile = Assert.Single(tempDir.EnumerateFiles("Test/*.txt"));
+
+        var logFileContents = await File.ReadAllTextAsync(logFile.FullName);
+
+        Assert.Contains(
+            "This configuration location for file logging has been deprecated.",
+            logFileContents
+        );
+        Assert.Contains(
+            "This is a test",
+            logFileContents
+        );
+    }
+
+    [Fact]
+    public async Task AddSerilog_FileLogging_New_DoesNotWarn()
+    {
+        var tempDir = Directory.CreateTempSubdirectory();
+
+        var provider = GetServiceProvider(new Dictionary<string, string?>
+        {
+            { "Logging:PathFormat", $"{tempDir}/Logs/log-{{Date}}.log" },
+        }, "Production");
+
+        var logger = provider
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("Test");
+
+        logger.LogWarning("This is a test");
+
+        // Writing to the file is buffered, give it a little time to flush
+        await Task.Delay(2);
+
+        var logFile = Assert.Single(tempDir.EnumerateFiles("Logs/*.log"));
+
+        var logFileContents = await File.ReadAllTextAsync(logFile.FullName);
+
+        Assert.DoesNotContain(
+            "This configuration location for file logging has been deprecated.",
+            logFileContents
+        );
+        Assert.Contains(
+            "This is a test",
+            logFileContents
+        );
     }
 
     private static IEnumerable<ILoggerProvider> GetProviders(Dictionary<string, string?> initialData, string environment = "Production")
+    {
+        var provider = GetServiceProvider(initialData, environment);
+        return provider.GetServices<ILoggerProvider>();
+    }
+
+    private static IServiceProvider GetServiceProvider(Dictionary<string, string?> initialData, string environment)
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(initialData)
@@ -71,7 +136,6 @@ public class LoggerFactoryExtensionsTests
             builder.AddSerilog(context);
         });
 
-        var provider = services.BuildServiceProvider();
-        return provider.GetServices<ILoggerProvider>();
+        return services.BuildServiceProvider();
     }
 }
