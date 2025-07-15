@@ -32,6 +32,8 @@ public class PolicyDetailsReadByOrganizationIdAsyncTests
         var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, PolicyType.SingleOrg)).ToList();
 
         // Assert
+        Assert.Single(results);
+
         Assert.Contains(results, result => result.OrganizationUserId == userOrgConnectedDirectly.Id
                                            && result.OrganizationId == userOrgConnectedDirectly.OrganizationId);
         Assert.DoesNotContain(results, result => result.OrganizationId == otherOrg.Id);
@@ -57,6 +59,8 @@ public class PolicyDetailsReadByOrganizationIdAsyncTests
         var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(orgUser.OrganizationId, inputPolicyType)).ToList();
 
         // Assert
+        Assert.Single(results);
+
         Assert.Contains(results, result => result.OrganizationUserId == orgUser.Id
                                            && result.OrganizationId == orgUser.OrganizationId
                                            && result.PolicyType == inputPolicyType);
@@ -86,7 +90,10 @@ public class PolicyDetailsReadByOrganizationIdAsyncTests
         var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, policyType)).ToList();
 
         // Assert
-        AssertPolicyDetails(results, userOrgConnectedDirectly, userOrgConnectedByEmail, userOrgConnectedByUserId);
+        const int expectedCount = 3;
+        Assert.Equal(expectedCount, results.Count);
+
+        AssertPolicyDetailUserConnections(results, userOrgConnectedDirectly, userOrgConnectedByEmail, userOrgConnectedByUserId);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -110,7 +117,7 @@ public class PolicyDetailsReadByOrganizationIdAsyncTests
         var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, policyType)).ToList();
 
         // Assert
-        AssertPolicyDetails(results, userOrgConnectedDirectly, userOrgConnectedByEmail, userOrgConnectedByUserId);
+        AssertPolicyDetailUserConnections(results, userOrgConnectedDirectly, userOrgConnectedByEmail, userOrgConnectedByUserId);
     }
 
     private async Task<OrganizationUser> ArrangeOtherOrgConnectedByUserIdAsync(IOrganizationUserRepository organizationUserRepository,
@@ -133,14 +140,12 @@ public class PolicyDetailsReadByOrganizationIdAsyncTests
 
         var organizationUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
 
-        await organizationUserRepository.CreateAsync(organizationUser);
-
         await policyRepository.CreateAsync(new Policy { OrganizationId = organization.Id, Enabled = true, Type = policyType });
 
         return organizationUser;
     }
 
-    private static void AssertPolicyDetails(List<PolicyDetails> results,
+    private static void AssertPolicyDetailUserConnections(List<PolicyDetails> results,
         OrganizationUser userOrgConnectedDirectly,
         OrganizationUser userOrgConnectedByEmail,
         OrganizationUser userOrgConnectedByUserId)

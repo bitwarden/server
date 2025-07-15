@@ -32,5 +32,16 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     /// </remarks>
     Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserId(Guid userId);
 
+    /// <summary>
+    /// Retrieves <see cref="PolicyDetails"/> of the specified <paramref name="policyType"/>
+    /// for users in the given organization—and for any other organizations those users belong to.
+    /// </summary>
+    /// <remarks>
+    /// Each PolicyDetail represents an OrganizationUser and a Policy which *may* be enforced
+    /// against them. It only returns PolicyDetails for policies that are enabled and where the organization's plan
+    /// supports policies. It also excludes "revoked invited" users who are not subject to policy enforcement.
+    /// This is consumed by <see cref="IPolicyRequirementQuery"/> to create requirements for specific policy types.
+    /// You probably do not want to call it directly.
+    /// </remarks>
     Task<IEnumerable<PolicyDetails>> PolicyDetailsReadByOrganizationIdAsync(Guid organizationId, PolicyType policyType);
 }

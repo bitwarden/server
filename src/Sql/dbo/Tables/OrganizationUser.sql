@@ -27,3 +27,4 @@ GO
 CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrganizationId]
     ON [dbo].[OrganizationUser]([OrganizationId] ASC);
 
+-- Jimmy TODO: Consider adding an index on the email column since we’ll be querying it frequently.
