@@ -17,7 +17,7 @@ namespace Bit.Core.Test.KeyManagement.UserKey;
 public class RotateUserAccountKeysCommandTests
 {
     [Theory, BitAutoData]
-    public async Task RejectsWrongOldMasterPassword(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+    public async Task RotateUserAccountKeysAsync_WrongOldMasterPassword_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
     {
         user.Email = model.MasterPasswordUnlockData.Email;
@@ -30,14 +30,14 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ThrowsWhenUserIsNull(SutProvider<RotateUserAccountKeysCommand> sutProvider,
+    public async Task RotateUserAccountKeysAsync_UserIsNull_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider,
           RotateUserAccountKeysData model)
     {
         await Assert.ThrowsAsync<ArgumentNullException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(null, model));
     }
 
     [Theory, BitAutoData]
-    public async Task RejectsEmailChange(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+    public async Task RotateUserAccountKeysAsync_EmailChange_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
@@ -52,7 +52,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RejectsKdfChange(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+    public async Task RotateUserAccountKeysAsync_KdfChange_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
@@ -71,7 +71,7 @@ public class RotateUserAccountKeysCommandTests
 
 
     [Theory, BitAutoData]
-    public async Task RejectsPublicKeyChange(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+    public async Task RotateUserAccountKeysAsync_PublicKeyChange_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
@@ -87,7 +87,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RotatesCorrectlyV1Async(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+    public async Task RotateUserAccountKeysAsync_V1_Success(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
@@ -103,7 +103,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpgradesV1UserToV2(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+    public async Task RotateUserAccountKeysAsync_UpgradeV1ToV2_Success(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
@@ -120,7 +120,7 @@ public class RotateUserAccountKeysCommandTests
 
 
     [Theory, BitAutoData]
-    public async Task UpdateAccountKeys_ThrowsIfPublicKeyChangesAsync(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateAccountKeysAsync_PublicKeyChange_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
@@ -134,7 +134,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAccountKeys_V2User_ThrowsIfPrivateKeyWrappedWithNotXchacha20ForV2UserAsync(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateAccountKeysAsync_V2User_PrivateKeyNotXChaCha20_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
@@ -148,7 +148,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAccountKeys_V1User_ThrowsIfPrivateKeyWrappedWithNotAesCbcHmacAsync(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateAccountKeysAsync_V1User_PrivateKeyNotAesCbcHmac_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
@@ -163,7 +163,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAccountKeys_V1_SuccessAsync(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateAccountKeysAsync_V1_Success(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
@@ -176,7 +176,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAccountKeys_V2_SuccessAsync(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateAccountKeysAsync_V2_Success(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
@@ -191,7 +191,7 @@ public class RotateUserAccountKeysCommandTests
 
 
     [Theory, BitAutoData]
-    public async Task ValidateRotationModelSignatureKeyPairForV2User_VerifyingKeyMismatch_ThrowsAsync(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateAccountKeysAsync_V2User_VerifyingKeyMismatch_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
@@ -205,7 +205,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateRotationModelSignatureKeyPairForV2User_SignedPublicKeyNullOrEmpty_Throws(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateAccountKeysAsync_V2User_SignedPublicKeyNullOrEmpty_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
@@ -219,7 +219,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateRotationModelSignatureKeyPairForV2User_WrappedSigningKeyNotXChaCha20_Throws(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateAccountKeysAsync_V2User_WrappedSigningKeyNotXChaCha20_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
@@ -233,7 +233,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateEncryptedDataForKeyRotation_UpgradeToV2_InvalidVerifyingKey_ThrowsAsync(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateEncryptedDataForKeyRotation_UpgradeToV2_InvalidVerifyingKey_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
@@ -247,7 +247,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateEncryptedDataForKeyRotation_UpgradeToV2_IncorrectlyWrappedPrivateKey_ThrowsAsync(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateEncryptedDataForKeyRotation_UpgradeToV2_IncorrectlyWrappedPrivateKey_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
@@ -261,7 +261,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateEncryptedDataForKeyRotation_UpgradeToV2_NoSignedPublicKey_ThrowsAsync(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateEncryptedDataForKeyRotation_UpgradeToV2_NoSignedPublicKey_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
@@ -275,7 +275,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetEncryptionType_EmptyString_ThrowsAsync(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateAccountKeysAsync_GetEncryptionType_EmptyString_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
@@ -290,7 +290,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetEncryptionType_InvalidString_ThrowsAsync(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateAccountKeysAsync_GetEncryptionType_InvalidString_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
