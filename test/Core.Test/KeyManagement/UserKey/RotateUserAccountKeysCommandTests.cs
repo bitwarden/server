@@ -275,6 +275,20 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task UpdateEncryptedDataForKeyRotation_RotateV2_NoSignatureKeyPair_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV2ExistingUser(user, signatureRepository);
+        SetV2ModelUser(model);
+        model.AccountKeys.SignatureKeyPairData = null;
+
+        var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
+        Assert.Equal("Signature key pair data is required for V2 encryption.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
     public async Task UpdateAccountKeysAsync_GetEncryptionType_EmptyString_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);

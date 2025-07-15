@@ -216,6 +216,10 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
     private static void ValidateV2Encryption(RotateUserAccountKeysData model)
     {
+        if (model.AccountKeys.SignatureKeyPairData == null)
+        {
+            throw new InvalidOperationException("Signature key pair data is required for V2 encryption.");
+        }
         if (GetEncryptionType(model.AccountKeys.SignatureKeyPairData.WrappedSigningKey) != EncryptionType.XChaCha20Poly1305_B64)
         {
             throw new InvalidOperationException("The provided signing key data is not wrapped with XChaCha20-Poly1305.");
