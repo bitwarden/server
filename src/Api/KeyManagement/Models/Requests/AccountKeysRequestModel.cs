@@ -11,6 +11,7 @@ public class AccountKeysRequestModel
 
     public PublicKeyEncryptionKeyPairRequestModel? PublicKeyEncryptionKeyPair { get; set; }
     public SignatureKeyPairRequestModel? SignatureKeyPair { get; set; }
+    public SecurityStateModel? SecurityState { get; set; }
 
     public UserAccountKeysData ToAccountKeysData()
     {
@@ -29,7 +30,7 @@ public class AccountKeysRequestModel
         }
         else
         {
-            if (SignatureKeyPair == null)
+            if (SignatureKeyPair == null || SecurityState == null)
             {
                 return new UserAccountKeysData
                 {
@@ -41,7 +42,8 @@ public class AccountKeysRequestModel
                 return new UserAccountKeysData
                 {
                     PublicKeyEncryptionKeyPairData = PublicKeyEncryptionKeyPair.ToPublicKeyEncryptionKeyPairData(),
-                    SignatureKeyPairData = SignatureKeyPair.ToSignatureKeyPairData()
+                    SignatureKeyPairData = SignatureKeyPair.ToSignatureKeyPairData(),
+                    SecurityStateData = SecurityState.ToSecurityState()
                 };
             }
         }

@@ -42,7 +42,9 @@
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
-    @SignedPublicKey NVARCHAR(MAX) = NULL
+    @SignedPublicKey NVARCHAR(MAX) = NULL,
+    @SecurityVersion INT = NULL,
+    @SecurityState NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -92,7 +94,9 @@ BEGIN
         [LastKeyRotationDate],
         [LastEmailChangeDate],
         [VerifyDevices],
-        [SignedPublicKey]
+        [SignedPublicKey],
+        [SecurityVersion],
+        [SecurityState]
     )
     VALUES
     (
@@ -139,6 +143,8 @@ BEGIN
         @LastKeyRotationDate,
         @LastEmailChangeDate,
         @VerifyDevices,
-        @SignedPublicKey
+        @SignedPublicKey,
+        @SecurityVersion,
+        @SecurityState
     )
 END

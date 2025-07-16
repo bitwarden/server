@@ -12,11 +12,25 @@ public class UserAccountKeysQuery(IUserSignatureKeyPairRepository signatureKeyPa
 {
     public async Task<UserAccountKeysData> Run(User user)
     {
-        var userAccountKeysData = new UserAccountKeysData
+        if (user.GetSecurityVersion() < 2)
         {
-            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
-            SignatureKeyPairData = await signatureKeyPairRepository.GetByUserIdAsync(user.Id)
-        };
-        return userAccountKeysData;
+            return new UserAccountKeysData
+            {
+                PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            };
+        }
+        else
+        {
+            return new UserAccountKeysData
+            {
+                PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+                SignatureKeyPairData = await signatureKeyPairRepository.GetByUserIdAsync(user.Id),
+                SecurityStateData = new SecurityStateData
+                {
+                    SecurityState = user.SecurityState!,
+                    SecurityVersion = (int)user.SecurityVersion!,
+                }
+            };
+        }
     }
 }

@@ -1786,6 +1786,13 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
+                    b.Property<string>("SecurityState")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<int?>("SecurityVersion")
+                        .HasColumnType("int");
+
                     b.Property<string>("SignedPublicKey")
                         .HasColumnType("longtext");
 
