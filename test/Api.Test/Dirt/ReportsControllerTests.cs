@@ -1,12 +1,14 @@
 ﻿using AutoFixture;
 using Bit.Api.Dirt.Controllers;
 using Bit.Api.Dirt.Models;
+using Bit.Api.Dirt.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Exceptions;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Xunit;
 
@@ -279,5 +281,60 @@ public class ReportsControllerTests
         // Assert
         _ = sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .Received(0);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateOrganizationReportSummary_ReturnsNoContent_WhenAccessGranted(SutProvider<ReportsController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var model = new OrganizationReportSummaryModel
+        {
+            OrganizationId = orgId,
+            EncryptedData = "mock-data",
+            EncryptionKey = "mock-key",
+            Date = DateTime.UtcNow
+        };
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(true);
+
+        // Act
+        var result = await sutProvider.Sut.CreateOrganizationReportSummary(model);
+
+        // Assert
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateOrganizationReportSummary_ThrowsNotFoundException_WhenAccessDenied(SutProvider<ReportsController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var model = new OrganizationReportSummaryModel
+        {
+            OrganizationId = orgId,
+            EncryptedData = "mock-data",
+            EncryptionKey = "mock-key",
+            Date = DateTime.UtcNow
+        };
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(false);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Bit.Core.Exceptions.NotFoundException>(
+            () => sutProvider.Sut.CreateOrganizationReportSummary(model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationReportSummary_ThrowsNotFoundException_WhenAccessDenied(
+        SutProvider<ReportsController> sutProvider
+    )
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(false);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Bit.Core.Exceptions.NotFoundException>(
+            () => sutProvider.Sut.GetOrganizationReportSummary(orgId));
     }
 }
