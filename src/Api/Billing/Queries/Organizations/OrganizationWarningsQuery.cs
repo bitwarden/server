@@ -12,6 +12,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Services;
 using Stripe;
+using static Bit.Core.Billing.Utilities;
 using FreeTrialWarning = Bit.Api.Billing.Models.Responses.Organizations.OrganizationWarningsResponse.FreeTrialWarning;
 using InactiveSubscriptionWarning =
     Bit.Api.Billing.Models.Responses.Organizations.OrganizationWarningsResponse.InactiveSubscriptionWarning;
@@ -100,6 +101,20 @@ public class OrganizationWarningsQuery(
         Provider? provider,
         Subscription subscription)
     {
+        if (organization.Enabled && subscription.Status is StripeConstants.SubscriptionStatus.Trialing)
+        {
+            var isStripeCustomerWithoutPayment =
+                subscription.Customer.InvoiceSettings.DefaultPaymentMethodId is null;
+            var isBraintreeCustomer =
+                subscription.Customer.Metadata.ContainsKey(BraintreeCustomerIdKey);
+            var hasNoPaymentMethod = isStripeCustomerWithoutPayment && !isBraintreeCustomer;
+
+            if (hasNoPaymentMethod && await currentContext.OrganizationOwner(organization.Id))
+            {
+                return new InactiveSubscriptionWarning { Resolution = "add_payment_method_optional_trial" };
+            }
+        }
+
         if (organization.Enabled ||
             subscription.Status is not StripeConstants.SubscriptionStatus.Unpaid
                 and not StripeConstants.SubscriptionStatus.Canceled)

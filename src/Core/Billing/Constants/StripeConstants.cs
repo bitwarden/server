@@ -118,4 +118,11 @@ public static class StripeConstants
         public const string Deferred = "deferred";
         public const string Immediately = "immediately";
     }
+
+    public static class MissingPaymentMethodBehaviorOptions
+    {
+        public const string CreateInvoice = "create_invoice";
+        public const string Cancel = "cancel";
+        public const string Pause = "pause";
+    }
 }
