@@ -101,29 +101,78 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
+        // Jimmy this works but product a cross join.
         var givenOrgUsers = from ou in dbContext.OrganizationUsers
                             where ou.OrganizationId == organizationId
-                            select new OrganizationUser { Id = ou.Id, UserId = ou.UserId, Email = ou.Email };
+                            from u in dbContext.Users
+                            where
+                                u.Email == ou.Email
+                                || ou.UserId == u.Id
+                            select new OrganizationUser
+                            {
+                                Id = ou.Id,
+                                OrganizationId = ou.OrganizationId,
+                                UserId = u.Id,
+                                Email = u.Email
+                            };
 
-        var allOrgUsers = from ou in dbContext.OrganizationUsers
+        // Jimmy
+        // var sql = givenOrgUsers.ToQueryString();
+        // Console.WriteLine(sql);
+
+        var orgUsersLinkedByEmail = from ou in dbContext.OrganizationUsers
                 .Join(
                     givenOrgUsers,
                     ou => ou.UserId,
                     gou => gou.UserId,
                     (ou, gou) => ou
                 )
-                          where ou.OrganizationId == organizationId
-                          select ou;
-        var test = await allOrgUsers.ToListAsync();
+                                    select new OrganizationUser
+                                    {
+                                        Id = ou.Id,
+                                        OrganizationId = ou.OrganizationId,
+                                        UserId = ou.Id
+                                    };
 
-        return new List<PolicyDetails>();
 
-        // var providerOrganizations = from pu in dbContext.ProviderUsers
-        //     where pu.UserId == userId
-        //     join po in dbContext.ProviderOrganizations
-        //         on pu.ProviderId equals po.ProviderId
-        //     select po;
+        var orgUsersLinkedByUserId = from ou in dbContext.OrganizationUsers
+                .Join(
+                    givenOrgUsers,
+                    ou => ou.Email,
+                    gou => gou.Email,
+                    (ou, gou) => ou
+                )
+                                     select new OrganizationUser
+                                     {
+                                         Id = ou.Id,
+                                         OrganizationId = ou.OrganizationId,
+                                         UserId = ou.Id
+                                     };
 
+        // Jimmy debugging
+        var test = await orgUsersLinkedByEmail.ToListAsync();
+        // var test2 = await orgUsersLinkedByUserId.ToListAsync();
+
+        // var allAffectedOrgUsers = await orgUsersLinkedByEmail.Union(orgUsersLinkedByUserId).ToListAsync();
+
+        var allAffectedOrgUsers = orgUsersLinkedByEmail.Union(orgUsersLinkedByUserId);
+
+
+        var providersForAffectedUsers = from ou in allAffectedOrgUsers
+                                        join pu in dbContext.ProviderUsers
+                                            on ou.UserId equals pu.UserId
+                                        join po in dbContext.ProviderOrganizations
+                                            on pu.ProviderId equals po.ProviderId
+                                        select new
+                                        {
+                                            OrganizationUser = ou,
+                                            ProviderUser = pu,
+                                            ProviderOrganization = po
+                                        };
+
+
+        var result = providersForAffectedUsers.ToList();
+        //
         // var query = from p in dbContext.Policies
         //     join ou in dbContext.OrganizationUsers
         //         on p.OrganizationId equals ou.OrganizationId
@@ -151,6 +200,6 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
         //     };
         // return await query.ToListAsync();
 
-        // return [];
+        return new List<PolicyDetails>();
     }
 }
