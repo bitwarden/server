@@ -58,6 +58,8 @@ public static class LoggerFactoryExtensions
         var logSyslogWarning = false;
         var logFileWarning = false;
 
+        // Path format is the only required option for file logging, we will use that as
+        // the keystone for if they have configured the new location.
         var newPathFormat = context.Configuration["Logging:PathFormat"];
 
         var config = new LoggerConfiguration()
