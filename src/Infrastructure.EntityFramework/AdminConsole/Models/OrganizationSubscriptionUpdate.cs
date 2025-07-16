@@ -4,7 +4,7 @@ namespace Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 
 public class OrganizationSubscriptionUpdate : Core.AdminConsole.Entities.OrganizationSubscriptionUpdate
 {
-    public virtual Organization Organization { get; set; }
+    public virtual Organization? Organization { get; set; }
 }
 
 public class OrganizationSubscriptionUpdateMapperProfile : Profile
