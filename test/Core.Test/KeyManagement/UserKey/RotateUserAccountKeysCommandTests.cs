@@ -116,6 +116,7 @@ public class RotateUserAccountKeysCommandTests
 
         var result = await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
         Assert.Equal(IdentityResult.Success, result);
+        Assert.Equal(user.SecurityState, model.AccountKeys.SecurityStateData!.SecurityState);
     }
 
 
@@ -183,6 +184,7 @@ public class RotateUserAccountKeysCommandTests
         var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
         await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions);
         Assert.NotEmpty(saveEncryptedDataActions);
+        Assert.Equal(user.SecurityState, model.AccountKeys.SecurityStateData!.SecurityState);
     }
 
 
@@ -348,11 +350,17 @@ public class RotateUserAccountKeysCommandTests
     {
         model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("2.abc", "public", null);
         model.AccountKeys.SignatureKeyPairData = null;
+        model.AccountKeys.SecurityStateData = null;
     }
 
     private static void SetV2ModelUser(RotateUserAccountKeysData model)
     {
         model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("7.abc", "public", "signed-public");
         model.AccountKeys.SignatureKeyPairData = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "7.abc", "verifying-key");
+        model.AccountKeys.SecurityStateData = new SecurityStateData
+        {
+            SecurityState = "abc",
+            SecurityVersion = 2,
+        };
     }
 }
