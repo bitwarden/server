@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Jobs;
@@ -12,10 +13,16 @@ public class OrganizationSubscriptionUpdateJob(ILogger<OrganizationSubscriptionU
     IPaymentService paymentService,
     IPricingClient pricingClient,
     IOrganizationRepository organizationRepository,
-    IOrganizationSubscriptionUpdateRepository repository) : BaseJob(logger)
+    IOrganizationSubscriptionUpdateRepository repository,
+    IFeatureService featureService) : BaseJob(logger)
 {
     protected override async Task ExecuteJobAsync(IJobExecutionContext context)
     {
+        if (!featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization))
+        {
+            return;
+        }
+
         logger.LogInformation("OrganizationSubscriptionUpdateJob - START");
 
         var subscriptionUpdates = await repository.GetUpdatesToSubscriptionAsync();
