@@ -78,30 +78,6 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
         return responses;
     }
 
-    /// <summary>
-    /// Get the organization users user details, two factor enabled status, and
-    /// claimed status for confirmed users that are enrolled in account recovery
-    /// </summary>
-    /// <param name="request">Request details for the query</param>
-    /// <returns>List of OrganizationUserUserDetails</returns>
-    public async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> GetAccountRecoveryEnrolledUsers(OrganizationUserUserDetailsQueryRequest request)
-    {
-        if (_featureService.IsEnabled(FeatureFlagKeys.MembersGetEndpointOptimization))
-        {
-            return await GetAccountRecoveryEnrolledUsers_vNext(request);
-        }
-
-        var organizationUsers = (await GetOrganizationUserUserDetails(request))
-            .Where(o => o.Status.Equals(OrganizationUserStatusType.Confirmed) && o.UsesKeyConnector == false && !String.IsNullOrEmpty(o.ResetPasswordKey));
-
-        var organizationUsersTwoFactorEnabled = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers)).ToDictionary(u => u.user.Id);
-        var organizationUsersClaimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(request.OrganizationId, organizationUsers.Select(o => o.Id));
-        var responses = organizationUsers
-            .Select(o => (o, organizationUsersTwoFactorEnabled[o.Id].twoFactorIsEnabled, organizationUsersClaimedStatus[o.Id]));
-
-        return responses;
-    }
-
     private async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> Get_vNext(OrganizationUserUserDetailsQueryRequest request)
     {
         var organizationUsers = await _organizationUserRepository
@@ -128,6 +104,30 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
 
             return (organizationUserDetails, userHasTwoFactorEnabled, userIsClaimedByOrganization);
         });
+
+        return responses;
+    }
+
+    /// <summary>
+    /// Get the organization users user details, two factor enabled status, and
+    /// claimed status for confirmed users that are enrolled in account recovery
+    /// </summary>
+    /// <param name="request">Request details for the query</param>
+    /// <returns>List of OrganizationUserUserDetails</returns>
+    public async Task<IEnumerable<(OrganizationUserUserDetails OrgUser, bool TwoFactorEnabled, bool ClaimedByOrganization)>> GetAccountRecoveryEnrolledUsers(OrganizationUserUserDetailsQueryRequest request)
+    {
+        if (_featureService.IsEnabled(FeatureFlagKeys.MembersGetEndpointOptimization))
+        {
+            return await GetAccountRecoveryEnrolledUsers_vNext(request);
+        }
+
+        var organizationUsers = (await GetOrganizationUserUserDetails(request))
+            .Where(o => o.Status.Equals(OrganizationUserStatusType.Confirmed) && o.UsesKeyConnector == false && !String.IsNullOrEmpty(o.ResetPasswordKey));
+
+        var organizationUsersTwoFactorEnabled = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers)).ToDictionary(u => u.user.Id);
+        var organizationUsersClaimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(request.OrganizationId, organizationUsers.Select(o => o.Id));
+        var responses = organizationUsers
+            .Select(o => (o, organizationUsersTwoFactorEnabled[o.Id].twoFactorIsEnabled, organizationUsersClaimedStatus[o.Id]));
 
         return responses;
     }
