@@ -9,7 +9,7 @@ public interface ISelfHostedOrganizationSignUpCommand
     /// <summary>
     /// Create a new organization on a self-hosted instance
     /// </summary>
-    Task<(Organization organization, OrganizationUser organizationUser)> SignUpAsync(
+    Task<(Organization organization, OrganizationUser? organizationUser)> SignUpAsync(
         OrganizationLicense license, User owner, string ownerKey,
-        string collectionName, string publicKey, string privateKey);
+        string? collectionName, string publicKey, string privateKey);
 }

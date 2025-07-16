@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
@@ -63,8 +60,8 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
         _paymentService = paymentService;
     }
 
-    public async Task<(Organization organization, OrganizationUser organizationUser)> SignUpAsync(
-        OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
+    public async Task<(Organization organization, OrganizationUser? organizationUser)> SignUpAsync(
+        OrganizationLicense license, User owner, string ownerKey, string? collectionName, string publicKey,
         string privateKey)
     {
         if (license.LicenseType != LicenseType.Organization)
@@ -118,9 +115,9 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
     /// Private helper method to create a new organization.
     /// This is common code used by both the cloud and self-hosted methods.
     /// </summary>
-    private async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)>
+    private async Task<(Organization organization, OrganizationUser? organizationUser, Collection? defaultCollection)>
         SignUpAsync(Organization organization,
-            Guid ownerId, string ownerKey, string collectionName, bool withPayment)
+            Guid ownerId, string ownerKey, string? collectionName, bool withPayment)
     {
         try
         {
@@ -136,7 +133,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
 
             // ownerId == default if the org is created by a provider - in this case it's created without an
             // owner and the first owner is immediately invited afterwards
-            OrganizationUser orgUser = null;
+            OrganizationUser? orgUser = null;
             if (ownerId != default)
             {
                 orgUser = new OrganizationUser
@@ -154,13 +151,13 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
 
                 await _organizationUserRepository.CreateAsync(orgUser);
 
-                var devices = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
+                var devices = await GetUserDeviceIdsAsync(orgUser.UserId!.Value);
                 await _pushRegistrationService.AddUserRegistrationOrganizationAsync(devices,
                     organization.Id.ToString());
                 await _pushNotificationService.PushSyncOrgKeysAsync(ownerId);
             }
 
-            Collection defaultCollection = null;
+            Collection? defaultCollection = null;
             if (!string.IsNullOrWhiteSpace(collectionName))
             {
                 defaultCollection = new Collection
@@ -172,7 +169,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
                 };
 
                 // Give the owner Can Manage access over the default collection
-                List<CollectionAccessSelection> defaultOwnerAccess = null;
+                List<CollectionAccessSelection>? defaultOwnerAccess = null;
                 if (orgUser != null)
                 {
                     defaultOwnerAccess =
