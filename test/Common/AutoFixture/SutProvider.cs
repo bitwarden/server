@@ -1,4 +1,7 @@
-﻿using System.Reflection;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Reflection;
 using AutoFixture;
 using AutoFixture.Kernel;
 

@@ -1,4 +1,7 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Platform.X509ChainCustomization;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
