@@ -1,5 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
@@ -13,6 +15,53 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.PolicyRep
 public class PolicyDetailsReadByOrganizationIdAsyncTests
 {
     [DatabaseTheory, DatabaseData]
+    public async Task ShouldContainProviderData(
+        IUserRepository userRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        IProviderRepository providerRepository,
+        IProviderUserRepository providerUserRepository,
+        IProviderOrganizationRepository providerOrganizationRepository,
+        IPolicyRepository policyRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        const PolicyType policyType = PolicyType.SingleOrg;
+
+        var userOrgConnectedDirectly = await ArrangeDirectlyConnectedOrgByUserIdAsync(organizationUserRepository, organizationRepository, policyRepository, user, policyType);
+
+        await ArrangeProvider();
+
+        // Act
+        var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, policyType)).ToList();
+
+        // Assert
+        Assert.Single(results);
+
+        Assert.True(results.Single().IsProvider);
+
+        async Task ArrangeProvider()
+        {
+            var provider = await providerRepository.CreateAsync(new Provider
+            {
+                Name = Guid.NewGuid().ToString(),
+                Enabled = true
+            });
+            await providerUserRepository.CreateAsync(new ProviderUser
+            {
+                ProviderId = provider.Id,
+                UserId = user.Id,
+                Status = ProviderUserStatusType.Confirmed
+            });
+            await providerOrganizationRepository.CreateAsync(new ProviderOrganization
+            {
+                OrganizationId = userOrgConnectedDirectly.OrganizationId,
+                ProviderId = provider.Id
+            });
+        }
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task ShouldNotReturnOtherOrganizations_WhenUserIsNotConnected(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -25,8 +74,8 @@ public class PolicyDetailsReadByOrganizationIdAsyncTests
         const PolicyType policyType = PolicyType.SingleOrg;
         var userOrgConnectedDirectly = await ArrangeDirectlyConnectedOrgByUserIdAsync(organizationUserRepository, organizationRepository, policyRepository, user, policyType);
 
-        var otherOrg = await CreateEnterpriseOrg(organizationRepository);
-        await policyRepository.CreateAsync(new Policy { OrganizationId = otherOrg.Id, Enabled = true, Type = policyType });
+        var notConnectedOrg = await CreateEnterpriseOrg(organizationRepository);
+        await policyRepository.CreateAsync(new Policy { OrganizationId = notConnectedOrg.Id, Enabled = true, Type = policyType });
 
         // Act
         var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, PolicyType.SingleOrg)).ToList();
@@ -36,7 +85,7 @@ public class PolicyDetailsReadByOrganizationIdAsyncTests
 
         Assert.Contains(results, result => result.OrganizationUserId == userOrgConnectedDirectly.Id
                                            && result.OrganizationId == userOrgConnectedDirectly.OrganizationId);
-        Assert.DoesNotContain(results, result => result.OrganizationId == otherOrg.Id);
+        Assert.DoesNotContain(results, result => result.OrganizationId == notConnectedOrg.Id);
     }
 
     [DatabaseTheory, DatabaseData]

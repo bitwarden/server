@@ -5,7 +5,6 @@ using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
@@ -101,105 +100,91 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Jimmy this works but product a cross join.
-        var givenOrgUsers = from ou in dbContext.OrganizationUsers
-                            where ou.OrganizationId == organizationId
-                            from u in dbContext.Users
-                            where
-                                u.Email == ou.Email
-                                || ou.UserId == u.Id
-                            select new OrganizationUser
-                            {
-                                Id = ou.Id,
-                                OrganizationId = ou.OrganizationId,
-                                UserId = u.Id,
-                                Email = u.Email
-                            };
+        var givenOrgUsers =
+            from ou in dbContext.OrganizationUsers
+            where ou.OrganizationId == organizationId
+            from u in dbContext.Users
+            where
+                u.Email == ou.Email
+                || ou.UserId == u.Id
+            select new
+            {
+                ou.Id,
+                ou.OrganizationId,
+                UserId = u.Id,
+                u.Email
+            };
 
-        // Jimmy
-        // var sql = givenOrgUsers.ToQueryString();
-        // Console.WriteLine(sql);
-
-        var orgUsersLinkedByEmail = from ou in dbContext.OrganizationUsers
+        var orgUsersLinkedByEmail = from row in dbContext.OrganizationUsers
                 .Join(
                     givenOrgUsers,
                     ou => ou.UserId,
                     gou => gou.UserId,
-                    (ou, gou) => ou
+                    (ou, gou) => new { ou, gou }
                 )
-                                    select new OrganizationUser
+                                    select new
                                     {
-                                        Id = ou.Id,
-                                        OrganizationId = ou.OrganizationId,
-                                        UserId = ou.Id
+                                        row.ou.Id,
+                                        row.ou.OrganizationId,
+                                        row.gou.UserId,
+                                        row.ou.Type,
+                                        row.ou.Status,
+                                        row.ou.Permissions
                                     };
 
-
-        var orgUsersLinkedByUserId = from ou in dbContext.OrganizationUsers
+        var orgUsersLinkedByUserId = from row in dbContext.OrganizationUsers
                 .Join(
                     givenOrgUsers,
                     ou => ou.Email,
                     gou => gou.Email,
-                    (ou, gou) => ou
+                    (ou, gou) => new { ou, gou }
                 )
-                                     select new OrganizationUser
+                                     select new
                                      {
-                                         Id = ou.Id,
-                                         OrganizationId = ou.OrganizationId,
-                                         UserId = ou.Id
+                                         row.ou.Id,
+                                         row.ou.OrganizationId,
+                                         row.gou.UserId,
+                                         row.ou.Type,
+                                         row.ou.Status,
+                                         row.ou.Permissions
                                      };
-
-        // Jimmy debugging
-        var test = await orgUsersLinkedByEmail.ToListAsync();
-        // var test2 = await orgUsersLinkedByUserId.ToListAsync();
-
-        // var allAffectedOrgUsers = await orgUsersLinkedByEmail.Union(orgUsersLinkedByUserId).ToListAsync();
 
         var allAffectedOrgUsers = orgUsersLinkedByEmail.Union(orgUsersLinkedByUserId);
 
+        var providerOrganizations = from pu in dbContext.ProviderUsers
+                                    join po in dbContext.ProviderOrganizations
+                                        on pu.ProviderId equals po.ProviderId
+                                    join ou in allAffectedOrgUsers
+                                        on pu.UserId equals ou.UserId
+                                    where pu.UserId == ou.UserId
+                                    select new
+                                    {
+                                        pu.UserId,
+                                        po.OrganizationId
+                                    };
 
-        var providersForAffectedUsers = from ou in allAffectedOrgUsers
-                                        join pu in dbContext.ProviderUsers
-                                            on ou.UserId equals pu.UserId
-                                        join po in dbContext.ProviderOrganizations
-                                            on pu.ProviderId equals po.ProviderId
-                                        select new
-                                        {
-                                            OrganizationUser = ou,
-                                            ProviderUser = pu,
-                                            ProviderOrganization = po
-                                        };
+        var policyWithAffectedUsers =
+            from p in dbContext.Policies
+            join o in dbContext.Organizations
+                on p.OrganizationId equals o.Id
+            join ou in allAffectedOrgUsers
+                on o.Id equals ou.OrganizationId
+            where p.Enabled
+                   && o.Enabled
+                   && o.UsePolicies
+                   && p.Type == policyType
+            select new PolicyDetails
+            {
+                OrganizationUserId = ou.Id,
+                OrganizationId = p.OrganizationId,
+                PolicyType = p.Type,
+                PolicyData = p.Data,
+                OrganizationUserType = ou.Type,
+                OrganizationUserStatus = ou.Status,
+                OrganizationUserPermissionsData = ou.Permissions,
+                IsProvider = providerOrganizations.Any(po => po.OrganizationId == p.OrganizationId)
+            };
 
-
-        var result = providersForAffectedUsers.ToList();
-        //
-        // var query = from p in dbContext.Policies
-        //     join ou in dbContext.OrganizationUsers
-        //         on p.OrganizationId equals ou.OrganizationId
-        //     join o in dbContext.Organizations
-        //         on p.OrganizationId equals o.Id
-        //     where
-        //         p.Enabled &&
-        //         o.Enabled &&
-        //         o.UsePolicies &&
-        //         (
-        //             (ou.Status != OrganizationUserStatusType.Invited && ou.UserId == userId) ||
-        //             // Invited orgUsers do not have a UserId associated with them, so we have to match up their email
-        //             (ou.Status == OrganizationUserStatusType.Invited && ou.Email == dbContext.Users.Find(userId).Email)
-        //         )
-        //     select new PolicyDetails
-        //     {
-        //         OrganizationUserId = ou.Id,
-        //         OrganizationId = p.OrganizationId,
-        //         PolicyType = p.Type,
-        //         PolicyData = p.Data,
-        //         OrganizationUserType = ou.Type,
-        //         OrganizationUserStatus = ou.Status,
-        //         OrganizationUserPermissionsData = ou.Permissions,
-        //         IsProvider = providerOrganizations.Any(po => po.OrganizationId == p.OrganizationId)
-        //     };
-        // return await query.ToListAsync();
-
-        return new List<PolicyDetails>();
+        return await policyWithAffectedUsers.ToListAsync();
     }
 }
