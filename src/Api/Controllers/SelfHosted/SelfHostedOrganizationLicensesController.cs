@@ -5,7 +5,7 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Utilities;
-using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Context;

@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
@@ -18,16 +19,6 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
-
-public interface ISelfHostedOrganizationSignUpCommand
-{
-    /// <summary>
-    /// Create a new organization on a self-hosted instance
-    /// </summary>
-    Task<(Organization organization, OrganizationUser organizationUser)> SignUpAsync(
-        OrganizationLicense license, User owner, string ownerKey,
-        string collectionName, string publicKey, string privateKey);
-}
 
 public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUpCommand
 {
