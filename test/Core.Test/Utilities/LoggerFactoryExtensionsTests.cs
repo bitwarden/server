@@ -42,7 +42,7 @@ public class LoggerFactoryExtensionsTests
     }
 
     [Fact]
-    public async Task AddSerilog_FileLogging_Old_Warns()
+    public async Task AddSerilog_FileLogging_Old_Works()
     {
         var tempDir = Directory.CreateTempSubdirectory();
 
@@ -70,7 +70,7 @@ public class LoggerFactoryExtensionsTests
     }
 
     [Fact]
-    public async Task AddSerilog_FileLogging_New_DoesNotWarn()
+    public async Task AddSerilog_FileLogging_New_Works()
     {
         var tempDir = Directory.CreateTempSubdirectory();
 
