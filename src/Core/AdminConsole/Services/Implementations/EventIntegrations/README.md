@@ -298,15 +298,15 @@ query to retrieve the relevant `OrganizationIntegrationConfigurationDetails`.
 
 By loading all configurations into memory on a fixed interval, we ensure:
 
-- Consistent performance for reads
-- Reduced database pressure
-- Predictable refresh timing, independent of event activity
+- Consistent performance for reads.
+- Reduced database pressure.
+- Predictable refresh timing, independent of event activity.
 
 ### Architecture / Design
 
 - The cache is read-only for consumers. It is only updated in bulk by a background refresh process.
 - The cache is fully replaced on each refresh to avoid locking or partial state.
-- Reads return a `List<OrganizationIntegrationConfigurationDetails>` for a given key — or an empty list if no
+- Reads return a `List<OrganizationIntegrationConfigurationDetails>` for a given key or an empty list if no
   match exists.
 - Failures or delays in the loading process do not affect the existing cache state. The cache will continue serving
   the last known good state until the update replaces the whole cache.
@@ -315,10 +315,10 @@ By loading all configurations into memory on a fixed interval, we ensure:
 
 A hosted service (`IntegrationConfigurationDetailsCacheService`) runs in the background and:
 
-- Loads all configuration records at application startup
-- Refreshes the cache on a configurable interval (default: every 10 minutes)
-- Logs timing and entry count on success
-- Logs exceptions on failure without disrupting application flow
+- Loads all configuration records at application startup.
+- Refreshes the cache on a configurable interval.
+- Logs timing and entry count on success.
+- Logs exceptions on failure without disrupting application flow.
 
 # Building a new integration
 
