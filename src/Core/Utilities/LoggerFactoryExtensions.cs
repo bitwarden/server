@@ -56,7 +56,6 @@ public static class LoggerFactoryExtensions
 
         var logSentryWarning = false;
         var logSyslogWarning = false;
-        var logFileWarning = false;
 
         // Path format is the only required option for file logging, we will use that as
         // the keystone for if they have configured the new location.
@@ -123,7 +122,6 @@ public static class LoggerFactoryExtensions
         }
         else if (CoreHelpers.SettingHasValue(globalSettings.LogDirectory))
         {
-            logFileWarning = true;
             if (globalSettings.LogRollBySizeLimit.HasValue)
             {
                 var pathFormat = Path.Combine(globalSettings.LogDirectory, $"{globalSettings.ProjectName.ToLowerInvariant()}.log");
@@ -158,11 +156,6 @@ public static class LoggerFactoryExtensions
         if (logSyslogWarning)
         {
             serilog.Warning("Syslog for logging has been deprecated. Read more: https://bitwarden.com/help/releasenotes/#2025.8.0");
-        }
-
-        if (logFileWarning)
-        {
-            serilog.Warning("This configuration location for file logging has been deprecated. Read more: https://bitwarden.com/help/releasenotes/#2025.8.0");
         }
 
         builder.AddSerilog(serilog);

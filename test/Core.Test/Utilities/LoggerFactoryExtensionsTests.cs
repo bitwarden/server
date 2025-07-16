@@ -64,10 +64,6 @@ public class LoggerFactoryExtensionsTests
         var logFileContents = await File.ReadAllTextAsync(logFile.FullName);
 
         Assert.Contains(
-            "This configuration location for file logging has been deprecated.",
-            logFileContents
-        );
-        Assert.Contains(
             "This is a test",
             logFileContents
         );
