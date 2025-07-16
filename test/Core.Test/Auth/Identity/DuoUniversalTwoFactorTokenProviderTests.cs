@@ -12,7 +12,7 @@ using Duo = DuoUniversal;
 
 namespace Bit.Core.Test.Auth.Identity;
 
-public class DuoUniversalTwoFactorTokenProviderTests : BaseTokenProviderTests<DuoUniversalTokenProvider>
+public class DuoUniversalTwoFactorTokenProviderTests : BaseTwoFactorTokenProviderTests<DuoUniversalTokenProvider>
 {
     private readonly IDuoUniversalTokenService _duoUniversalTokenService = Substitute.For<IDuoUniversalTokenService>();
     public override TwoFactorProviderType TwoFactorProviderType => TwoFactorProviderType.Duo;
