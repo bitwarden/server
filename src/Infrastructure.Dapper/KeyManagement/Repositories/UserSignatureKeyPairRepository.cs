@@ -28,13 +28,13 @@ public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, G
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            return await connection.QuerySingleOrDefaultAsync<SignatureKeyPairData>(
+            return (await connection.QuerySingleOrDefaultAsync<UserSignatureKeyPair>(
                 "[dbo].[UserSignatureKeyPair_ReadByUserId]",
                 new
                 {
                     UserId = userId
                 },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure))?.ToSignatureKeyPairData();
         }
     }
 
@@ -48,9 +48,9 @@ public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, G
                 {
                     Id = CoreHelpers.GenerateComb(),
                     UserId = userId,
-                    SignatureAlgorithm = (byte)signingKeys.SignatureAlgorithm,
+                    SignatureKeyPairAlgorithm = (byte)signingKeys.SignatureAlgorithm,
                     SigningKey = signingKeys.WrappedSigningKey,
-                    signingKeys.VerifyingKey,
+                    VerifyingKey = signingKeys.VerifyingKey,
                     CreationDate = DateTime.UtcNow,
                     RevisionDate = DateTime.UtcNow
                 },
