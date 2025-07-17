@@ -1,6 +1,6 @@
 # OtpTokenProvider
 
-The `OtpTokenProvider` is a token provider service for generating and validating Time-Based one-time passwords (TOTP). It provides a secure way to create temporary tokens for various authentication and verification scenarios. The provider can be configured to generate tokens specific to your use case. Currently they are hard-coded in the DI pipeline.
+The `OtpTokenProvider` is a token provider service for generating and validating Time-Based one-time passwords (TOTP). It provides a secure way to create temporary tokens for various authentication and verification scenarios. The provider can be configured to generate tokens specific to your use case by using the options pattern in the DI pipeline.
 
 ## Overview
 
@@ -68,11 +68,11 @@ If you need to modify the default options you can do so by creating an extension
 
 #### OtpTokenProviderOptions
 
-``` csharp
+```csharp
 public class DefaultOtpTokenProviderOptions
 { ... }
 
-public class UserEmailOtpTokenOptions : DefaultOtpTokenProviderOptions {}
+public class UserEmailOtpTokenOptions : DefaultOtpTokenProviderOptions { }
 ```
 
 #### Service Collection
@@ -81,28 +81,27 @@ public class UserEmailOtpTokenOptions : DefaultOtpTokenProviderOptions {}
 public static IdentityBuilder AddCustomIdentityServices(
     this IServiceCollection services, GlobalSettings globalSettings)
 {
-    // Default Implementation
-    services.Configure<DefaultOtpTokenProviderOptions>(options =>
-    {
-        options.TokenLength = 6;
-        options.TokenAlpha = false;
-        options.TokenNumeric = true;
-        options.DistributedCacheEntryOptions = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-        };
-    });
-    // User email Options
+    // possible customization
     services.Configure<UserEmailOtpTokenOptions>(options =>
     {
         options.TokenLength = 8;
         // The other options are left default
     });
 
-    // TryAddScoped Default options
-    services.TryAddScoped<IOtpTokenProvider<DefaultOtpTokenProviderOptions>, OtpTokenProvider<DefaultOtpTokenProviderOptions>>();
-    // TryAddScoped UserEmail options
-    services.TryAddScoped<IOtpTokenProvider<UserEmailOtpTokenOptions>, OtpTokenProvider<UserEmailOtpTokenOptions>>();
+    // TryAddTransient open generics -> this allows us to inject IOtpTokenProvider<T> without having to specify the specific type here.
+    services.TryAddTransient(typeof(IOtpTokenProvider<>), typeof(OtpTokenProvider<>);
+}
+```
+
+#### Usage
+
+```csharp
+public class UserEmailTokenProvider(
+    IOtpTokenProvider<UserEmailOtpTokenOptions> otpTokenProvider
+)
+{
+    private readonly IOtpTokenProvider<UserEmailOtpTokenOptions> _otpTokenProvider = otpTokenProvider;
+    ...
 }
 ```
 
@@ -133,11 +132,13 @@ The cache key format uses three components: `{tokenProviderName}_{purpose}_{uniq
 #### Possible Email Token Provider Example
 
 Email token provider uses:
+
 - **Token Provider Name**: `"EmailToken"` (identifies the specific use case)
 - **Purpose**: `"EmailTwoFactorAuthentication"` (specific action being verified)
 - **Unique Identifier**: `"{user.Id}_{securityStamp}"` (user-specific data)
 
 These are passed into the OTP Token Provider which creates a cache record:
+
 - Cache Key: `EmailToken_EmailTwoFactorAuthentication_guid_guid`
 
 ## Security Considerations
