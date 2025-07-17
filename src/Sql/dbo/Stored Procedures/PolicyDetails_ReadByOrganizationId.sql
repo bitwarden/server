@@ -5,48 +5,67 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    WITH SelectedOrgUsers AS (
-        SELECT
-            OU.Id AS OrganizationUserID,
-            U.Id AS UserId,
-            U.Email
-        FROM [dbo].[OrganizationView] AS O
-        INNER JOIN [dbo].[OrganizationUserView] AS OU
-            ON O.Id = OU.OrganizationId
-        INNER JOIN [User] U
-            ON (U.Email = OU.Email AND OU.[Status] = 0)
-                OR OU.UserId = U.Id
-        WHERE O.Id = @OrganizationId
-    )
-
-    SELECT OU.[Id] AS OrganizationUserId,
-        SelectedOrgUsers.UserId,
-        P.[OrganizationId],
-        P.[Type]         AS PolicyType,
-        P.[Data]         AS PolicyData,
-        OU.[Type]        AS OrganizationUserType,
-        OU.[Status]      AS OrganizationUserStatus,
-        OU.[Permissions] AS OrganizationUserPermissionsData,
-        CASE
-            WHEN EXISTS (SELECT 1
-                            FROM [dbo].[ProviderUserView] PU
-                                    INNER JOIN [dbo].[ProviderOrganizationView] PO
-                                                ON PO.[ProviderId] = PU.[ProviderId]
-                            WHERE PU.[UserId] = OU.[UserId]
-                            AND PO.[OrganizationId] = P.[OrganizationId]) THEN 1
-            ELSE 0 END   AS IsProvider
-    FROM [dbo].[PolicyView] P
-            INNER JOIN [dbo].[OrganizationUserView] OU
-                        ON P.[OrganizationId] = OU.[OrganizationId]
-            INNER JOIN [dbo].[OrganizationView] O
-                        ON P.[OrganizationId] = O.[Id]
-            INNER JOIN SelectedOrgUsers
-                        ON SelectedOrgUsers.UserId = OU.UserId
-                            OR SelectedOrgUsers.Email = OU.Email
-    WHERE P.Enabled = 1
-    AND O.Enabled = 1
-    AND O.UsePolicies = 1
-    AND p.Type = @PolicyType
-
+    ;WITH givenorgusers
+              AS (SELECT OU.id AS OrganizationUserID,
+                         OU.userid,
+                         U.email
+                  FROM   dbo.organizationuserview OU
+                             INNER JOIN dbo.userview U
+                                        ON U.id = OU.userid
+                  WHERE  OU.organizationid = @OrganizationId
+                  UNION ALL
+                  SELECT OU.id AS OrganizationUserID,
+                         U.id  AS UserId,
+                         U.email
+                  FROM   dbo.organizationuserview OU
+                             INNER JOIN dbo.userview U
+                                        ON U.email = OU.email
+                  WHERE  OU.organizationid = @OrganizationId),
+          allorgusers
+              AS (SELECT OU.id            AS OrganizationUserID,
+                         OU.userid,
+                         Ou.organizationid,
+                         AU.email,
+                         OU.[type]        AS OrganizationUserType,
+                         OU.[status]      AS OrganizationUserStatus,
+                         OU.[permissions] AS OrganizationUserPermissionsData
+                  FROM   dbo.organizationuserview OU
+                             INNER JOIN givenorgusers AU
+                                        ON AU.userid = OU.userid
+                  UNION ALL
+                  SELECT OU.id            AS OrganizationUserID,
+                         AU.userid,
+                         Ou.organizationid,
+                         AU.email,
+                         OU.[type]        AS OrganizationUserType,
+                         OU.[status]      AS OrganizationUserStatus,
+                         OU.[permissions] AS OrganizationUserPermissionsData
+                  FROM   dbo.organizationuserview OU
+                             INNER JOIN givenorgusers AU
+                                        ON AU.email = OU.email)
+     SELECT OU.organizationuserid,
+            P.[organizationid],
+            P.[type] AS PolicyType,
+            P.[data] AS PolicyData,
+            OU.organizationusertype,
+            OU.organizationuserstatus,
+            OU.organizationuserpermissionsdata
+             ,CASE
+                  WHEN EXISTS (SELECT 1
+                               FROM [dbo].[ProviderUserView] PU
+                                        INNER JOIN [dbo].[ProviderOrganizationView] PO
+                                                   ON PO.[ProviderId] = PU.[ProviderId]
+                               WHERE PU.[UserId] = OU.[UserId]
+                                 AND PO.[OrganizationId] = P.[OrganizationId]) THEN 1
+                  ELSE 0 END   AS IsProvider
+     FROM   [dbo].[policyview] P
+                INNER JOIN [dbo].[organizationview] O
+                           ON P.[organizationid] = O.[id]
+                INNER JOIN allorgusers OU
+                           ON OU.organizationid = O.[id]
+     WHERE  P.enabled = 1
+       AND O.enabled = 1
+       AND O.usepolicies = 1
+       AND p.type = @PolicyType;
     END
 GO
