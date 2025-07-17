@@ -10,7 +10,6 @@ using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bit.Api.Dirt.Controllers;
 
@@ -299,7 +298,10 @@ public class ReportsController : Controller
         [FromQuery] DateOnly from,
         [FromQuery] DateOnly to)
     {
-        GuardAgainstInvalidModelState(ModelState);
+        if (!ModelState.IsValid)
+        {
+            throw new BadRequestException(ModelState);
+        }
 
         GuardOrganizationAccess(orgId);
 
@@ -319,7 +321,10 @@ public class ReportsController : Controller
     [HttpPost("organization-report-summary")]
     public IActionResult CreateOrganizationReportSummary([FromBody] OrganizationReportSummaryModel model)
     {
-        GuardAgainstInvalidModelState(ModelState);
+        if (!ModelState.IsValid)
+        {
+            throw new BadRequestException(ModelState);
+        }
 
         GuardOrganizationAccess(model.OrganizationId);
 
@@ -327,14 +332,6 @@ public class ReportsController : Controller
 
         // Returns 204 No Content as a placeholder
         return NoContent();
-    }
-
-    private void GuardAgainstInvalidModelState(ModelStateDictionary modelState)
-    {
-        if (!modelState.IsValid)
-        {
-            throw new BadRequestException(modelState);
-        }
     }
 
     private void GuardOrganizationAccess(Guid organizationId)
