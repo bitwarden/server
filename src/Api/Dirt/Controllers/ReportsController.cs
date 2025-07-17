@@ -288,16 +288,25 @@ public class ReportsController : Controller
     /// This is a mock implementation and should be replaced with actual data retrieval logic.
     /// </summary>
     /// <param name="orgId"></param>
+    /// <param name="from">Min date (example: 2023-01-01)</param>
+    /// <param name="to">Max date (example: 2023-12-31)</param>
     /// <returns></returns>
     /// <exception cref="NotFoundException"></exception>
-    [HttpGet("organization-report-summary/latest/{orgId}")]
-    public async Task<IEnumerable<OrganizationReportSummaryModel>> GetOrganizationReportSummary([FromRoute] Guid orgId)
+    [HttpGet("organization-report-summary/{orgId}")]
+    public async Task<IEnumerable<OrganizationReportSummaryModel>> GetOrganizationReportSummary(
+        [FromRoute] Guid orgId,
+        [FromQuery] DateOnly from,
+        [FromQuery] DateOnly to)
     {
         if (!await _currentContext.AccessReports(orgId))
         {
             throw new NotFoundException();
         }
-        return MockOrganizationReportSummary.GetMockData();
+
+        return MockOrganizationReportSummary.GetMockData()
+            .Where(_ => _.OrganizationId == orgId
+                && _.Date >= from.ToDateTime(TimeOnly.MinValue)
+                && _.Date <= to.ToDateTime(TimeOnly.MaxValue));
     }
 
     /// <summary>
@@ -338,28 +347,28 @@ public class ReportsController : Controller
                     OrganizationId = Guid.Parse("cf6cb873-4916-4b2b-aef0-b20d00e7f3e2"),
                     EncryptedData = "2.HvY4fAvbzYV1hqa3255m5Q==|WcKga2Wka5i8fVso8MgjzfBAwxaqdhZDL3bnvhDsisZ0r9lNKQcG3YUQSFpJxr74cgg5QRQaFieCUe2YppciHDT6bsaE2VzFce3cNNB821uTFqnlJClkGJpG1nGvPupdErrg4Ik57WenEzYesmR4pw==|F0aJfF+1MlPm+eAlQnDgFnwfv198N9VtPqFJa4+UFqk=",
                     EncryptionKey = "2.ctMgLN4ycPusbQArG/uiag==|NtqiQsAoUxMSTBQsxAMyVLWdt5lVEUGZQNxZSBU4l76ywH2f6dx5FWFrcF3t3GBqy5yDoc5eBg0VlJDW9coqzp8j9n8h1iMrtmXPyBMAhbc=|pbH+w68BUdUKYCfNRpjd8NENw2lZ0vfxgMuTrsrRCTQ=",
-                    Date = DateTime.UtcNow.AddDays(-1),
+                    Date = DateTime.UtcNow.AddMonths(-1)
                 },
                 new OrganizationReportSummaryModel
                 {
                     OrganizationId = Guid.Parse("cf6cb873-4916-4b2b-aef0-b20d00e7f3e2"),
                     EncryptedData = "2.NH4qLZYUkz/+qpB/mRsLTA==|LEFt05jJz0ngh+Hl5lqk6kebj7lZMefA3eFdL1kLJSGdD3uTOngRwH7GXLQNFeQOxutnLX9YUILbUEPwaM8gCwNQ1KWYdB1Z+Ky4nzKRb60N7L5aTA2za6zXTIdjv7Zwhg0jPZ6sPevTuvSyqjMCuA==|Uuu6gZaF0wvB2mHFwtvHegMxfe8DgsYWTRfGiVn4lkM=",
                     EncryptionKey = "2.3YwG78ykSxAn44NcymdG4w==|4jfn0nLoFielicAFbmq27DNUUjV4SwGePnjYRmOa7hk4pEPnQRS3MsTJFbutVyXOgKFY9Yn2yGFZownY9EmXOMM+gHPD0t6TfzUKqQcRyuI=|wasP9zZEL9mFH5HzJYrMxnKUr/XlFKXCxG9uW66uaPU=",
-                    Date = DateTime.UtcNow.AddDays(-1)
+                    Date = DateTime.UtcNow.AddMonths(-1)
                 },
                 new OrganizationReportSummaryModel
                 {
                     OrganizationId = Guid.Parse("cf6cb873-4916-4b2b-aef0-b20d00e7f3e2"),
                     EncryptedData = "2.YmKWj/707wDPONh+JXPBOw==|Fx4jcUHmnUnSMCU8vdThMSYpDyKPnC09TxpSbNxia0M6MFbd5WHElcVribrYgTENyU0HlqPW43hThJ6xXCM0EjEWP7/jb/0l07vMNkA7sDYq+czf0XnYZgZSGKh06wFVz8xkhaPTdsiO4CXuMsoH+w==|DDVwVFHzdfbPQe3ycCx82eYVHDW97V/eWTPsNpHX/+U=",
                     EncryptionKey = "2.f/U45I7KF+JKfnvOArUyaw==|zNhhS2q2WwBl6SqLWMkxrXC8EX91Ra9LJExywkJhsRbxubRLt7fK+YWc8T1LUaDmMwJ3G8buSPGzyacKX0lnUR33dW6DIaLNgRZ/ekb/zkg=|qFoIZWwS0foiiIOyikFRwQKmmmI2HeyHcOVklJnIILI=",
-                    Date = DateTime.UtcNow.AddDays(-1)
+                    Date = DateTime.UtcNow.AddMonths(-1)
                 },
                 new OrganizationReportSummaryModel
                 {
                     OrganizationId = Guid.Parse("cf6cb873-4916-4b2b-aef0-b20d00e7f3e2"),
                     EncryptedData = "2.WYauwooJUEY3kZsDPphmrA==|oguYW6h10A4GxK4KkRS0X32qSTekU2CkGqNDNGfisUgvJzsyoVTafO9sVcdPdg4BUM7YNkPMjYiKEc5jMHkIgLzbnM27jcGvMJrrccSrLHiWL6/mEiqQkV3TlfiZF9i3wqj1ITsYRzM454uNle6Wrg==|uR67aFYb1i5LSidWib0iTf8091l8GY5olHkVXse3CAw=",
                     EncryptionKey = "2.ZyV9+9A2cxNaf8dfzfbnlA==|hhorBpVkcrrhTtNmd6SNHYI8gPNokGLOC22Vx8Qa/AotDAcyuYWw56zsawMnzpAdJGEJFtszKM2+VUVOcroCTMWHpy8yNf/kZA6uPk3Lz3s=|ASzVeJf+K1ZB8NXuypamRBGRuRq0GUHZBEy5r/O7ORY=",
-                    Date = DateTime.UtcNow.AddDays(-1)
+                    Date = DateTime.UtcNow.AddMonths(-1)
                 },
             };
         }

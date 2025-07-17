@@ -335,6 +335,28 @@ public class ReportsControllerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<Bit.Core.Exceptions.NotFoundException>(
-            () => sutProvider.Sut.GetOrganizationReportSummary(orgId));
+            () => sutProvider.Sut.GetOrganizationReportSummary(orgId, DateOnly.FromDateTime(DateTime.UtcNow), DateOnly.FromDateTime(DateTime.UtcNow)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationReportSummary_returnsExpectedResult(
+        SutProvider<ReportsController> sutProvider
+    )
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var dates = new[]
+        {
+            DateOnly.FromDateTime(DateTime.UtcNow),
+            DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-1))
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(true);
+
+        // Act
+        var result = await sutProvider.Sut.GetOrganizationReportSummary(orgId, dates[0], dates[1]);
+
+        // Assert
+        Assert.NotNull(result);
     }
 }
