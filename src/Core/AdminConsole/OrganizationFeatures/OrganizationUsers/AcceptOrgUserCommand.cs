@@ -16,7 +16,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationUsers;
@@ -71,18 +70,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             throw new BadRequestException("User invalid.");
         }
 
-        // Tokens will have been created in two ways in the OrganizationService invite methods:
-        // 1. New way - via OrgUserInviteTokenable
-        // 2. Old way - via manual process using data protector initialized with purpose: "OrganizationServiceDataProtector"
-        // For backwards compatibility, must check validity of both types of tokens and accept if either is valid
-
-        // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-        var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+        var tokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
             _orgUserInviteTokenDataFactory, emailToken, orgUser);
-
-        var tokenValid = newTokenValid ||
-                         CoreHelpers.UserInviteTokenIsValid(_dataProtector, emailToken, user.Email, orgUser.Id,
-                             _globalSettings);
 
         if (!tokenValid)
         {

@@ -115,13 +115,8 @@ public class PoliciesController : Controller
             throw new NotFoundException();
         }
 
-        // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-        var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+        var tokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
             _orgUserInviteTokenDataFactory, token, organizationUserId, email);
-
-        var tokenValid = newTokenValid || CoreHelpers.UserInviteTokenIsValid(
-            _organizationServiceDataProtector, token, email, organizationUserId, _globalSettings
-        );
 
         if (!tokenValid)
         {
