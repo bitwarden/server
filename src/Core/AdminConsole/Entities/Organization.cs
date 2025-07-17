@@ -4,7 +4,6 @@ using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;

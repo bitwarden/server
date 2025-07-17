@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
-using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

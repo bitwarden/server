@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Entities;

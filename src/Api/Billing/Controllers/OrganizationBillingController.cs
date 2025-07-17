@@ -6,7 +6,6 @@ using Bit.Api.Billing.Models.Responses;
 using Bit.Api.Billing.Queries.Organizations;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;

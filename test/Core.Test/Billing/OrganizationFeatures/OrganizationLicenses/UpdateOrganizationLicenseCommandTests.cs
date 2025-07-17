@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;

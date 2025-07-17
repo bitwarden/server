@@ -2,7 +2,6 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;

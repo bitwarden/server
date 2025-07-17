@@ -1,5 +1,4 @@
 ﻿using AutoFixture;
-using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Test.Common.AutoFixture.Attributes;
 

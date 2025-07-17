@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture.Attributes;

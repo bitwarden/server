@@ -5,7 +5,6 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Utilities;
-using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Queries;

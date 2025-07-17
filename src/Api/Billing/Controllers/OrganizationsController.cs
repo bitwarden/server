@@ -10,7 +10,6 @@ using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Organizations.Entities;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Queries;
