@@ -239,6 +239,10 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         {
             throw new InvalidOperationException("No signed public key provided, but the user already has a signature key pair.");
         }
+        if (model.AccountKeys.SecurityStateData == null || string.IsNullOrEmpty(model.AccountKeys.SecurityStateData.SecurityState))
+        {
+            throw new InvalidOperationException("No signed security state provider for V2 user");
+        }
     }
 
     /// <summary>
