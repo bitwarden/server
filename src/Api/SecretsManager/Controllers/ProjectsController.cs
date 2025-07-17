@@ -190,8 +190,11 @@ public class ProjectsController : Controller
             }
         }
 
-        await _deleteProjectCommand.DeleteProjects(projectsToDelete);
-        await LogProjectsEventAsync(projects, EventType.Project_Deleted);
+        if (projectsToDelete.Count > 0)
+        {
+            await _deleteProjectCommand.DeleteProjects(projectsToDelete);
+            await LogProjectsEventAsync(projectsToDelete, EventType.Project_Deleted);
+        }
 
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Project.Id, r.Error));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
