@@ -1,12 +1,12 @@
 ﻿CREATE PROCEDURE [dbo].[OrganizationIntegrationConfiguration_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationIntegrationId UNIQUEIDENTIFIER,
-    @EventType SMALLINT,
     @Configuration VARCHAR(MAX),
     @Template VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @Filters VARCHAR(MAX) = NULL
+    @Filters VARCHAR(MAX) = NULL,
+    @EventType SMALLINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -15,22 +15,22 @@ BEGIN
         (
         [Id],
         [OrganizationIntegrationId],
-        [EventType],
         [Configuration],
         [Template],
         [CreationDate],
         [RevisionDate],
-        [Filters]
+        [Filters],
+        [EventType]
         )
     VALUES
         (
             @Id,
             @OrganizationIntegrationId,
-            @EventType,
             @Configuration,
             @Template,
             @CreationDate,
             @RevisionDate,
-            @Filters
+            @Filters,
+            @EventType
         )
 END
