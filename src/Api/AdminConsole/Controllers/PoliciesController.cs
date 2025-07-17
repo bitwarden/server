@@ -16,11 +16,8 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Controllers;
@@ -30,11 +27,8 @@ namespace Bit.Api.AdminConsole.Controllers;
 public class PoliciesController : Controller
 {
     private readonly ICurrentContext _currentContext;
-    private readonly IFeatureService _featureService;
-    private readonly GlobalSettings _globalSettings;
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IDataProtector _organizationServiceDataProtector;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IPolicyRepository _policyRepository;
@@ -46,10 +40,7 @@ public class PoliciesController : Controller
         IOrganizationUserRepository organizationUserRepository,
         IUserService userService,
         ICurrentContext currentContext,
-        GlobalSettings globalSettings,
-        IDataProtectionProvider dataProtectionProvider,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        IFeatureService featureService,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
         IOrganizationRepository organizationRepository,
         ISavePolicyCommand savePolicyCommand)
@@ -58,12 +49,8 @@ public class PoliciesController : Controller
         _organizationUserRepository = organizationUserRepository;
         _userService = userService;
         _currentContext = currentContext;
-        _globalSettings = globalSettings;
-        _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
-            "OrganizationServiceDataProtector");
         _organizationRepository = organizationRepository;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
-        _featureService = featureService;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
         _savePolicyCommand = savePolicyCommand;
     }
