@@ -22,7 +22,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         {
             var dbContext = GetDatabaseContext(scope);
             var project = await dbContext.Project
-                                    .Where(c => c.Id == id && c.DeletedDate == null)
+                                    .Where(c => c.Id == id)
                                     .FirstOrDefaultAsync();
             return Mapper.Map<Core.SecretsManager.Entities.Project>(project);
         }
@@ -37,8 +37,6 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         var dbContext = GetDatabaseContext(scope);
 
         var query = dbContext.Project.Where(p => p.OrganizationId == organizationId && p.DeletedDate == null).OrderBy(p => p.RevisionDate);
-
-        query = query.OrderBy(p => p.RevisionDate);
 
         var projects = ProjectToPermissionDetails(query, userId, accessType);
 
@@ -111,7 +109,6 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         }
 
         await dbContext.Project.Where(p => ids.Contains(p.Id)).ExecuteDeleteAsync();
-
         await transaction.CommitAsync();
     }
 

@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Dapper;
@@ -41,24 +42,24 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             }, startDate, endDate, pageOptions);
     }
 
-    public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Guid secretId, Guid orgId,
+    public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Secret secret,
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         return await GetManyAsync($"[{Schema}].[Event_ReadPageBySecretId]",
                   new Dictionary<string, object?>
                   {
-                      ["@SecretId"] = secretId
+                      ["@SecretId"] = secret.Id
                   }, startDate, endDate, pageOptions);
 
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Guid projectId, Guid orgId,
+    public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Project project,
       DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         return await GetManyAsync($"[{Schema}].[Event_ReadPageByProjectId]",
                   new Dictionary<string, object?>
                   {
-                      ["@ProjectId"] = projectId
+                      ["@ProjectId"] = project.Id
                   }, startDate, endDate, pageOptions);
 
     }

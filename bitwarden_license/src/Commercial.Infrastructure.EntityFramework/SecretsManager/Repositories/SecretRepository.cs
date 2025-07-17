@@ -89,9 +89,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
         var query = dbContext.Secret
             .Include(c => c.Projects)
-            .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null);
-
-        query = query.OrderBy(s => s.RevisionDate);
+            .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
+            .OrderBy(s => s.RevisionDate);
 
         var secrets = SecretToPermissionDetails(query, userId, accessType);
 

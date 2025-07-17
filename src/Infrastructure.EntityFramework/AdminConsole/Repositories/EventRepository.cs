@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using LinqToDB.EntityFrameworkCore;
@@ -76,8 +77,8 @@ public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEv
         result.Data.AddRange(events);
         return result;
     }
-    //TODO implement this properly
-    public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Guid secretId, Guid orgId,
+
+    public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Secret secret,
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         DateTime? beforeDate = null;
@@ -89,7 +90,7 @@ public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEv
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = new EventReadPageByCipherIdQuery(null, startDate, endDate, beforeDate, pageOptions);
+            var query = new EventReadPageBySecretQuery(secret, startDate, endDate, beforeDate, pageOptions);
             var events = await query.Run(dbContext).ToListAsync();
 
             var result = new PagedResult<IEvent>();
@@ -102,7 +103,7 @@ public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEv
         }
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Guid projectId, Guid orgId,
+    public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Project project,
     DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         DateTime? beforeDate = null;
@@ -114,7 +115,7 @@ public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEv
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = new EventReadPageByCipherIdQuery(null, startDate, endDate, beforeDate, pageOptions);
+            var query = new EventReadPageByProjectQuery(project, startDate, endDate, beforeDate, pageOptions);
             var events = await query.Run(dbContext).ToListAsync();
 
             var result = new PagedResult<IEvent>();
