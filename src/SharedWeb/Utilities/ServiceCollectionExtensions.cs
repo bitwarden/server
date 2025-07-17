@@ -378,18 +378,9 @@ public static class ServiceCollectionExtensions
     public static IdentityBuilder AddCustomIdentityServices(
         this IServiceCollection services, GlobalSettings globalSettings)
     {
+        services.TryAddTransient(typeof(IOtpTokenProvider<>), typeof(OtpTokenProvider<>));
+
         services.AddScoped<IOrganizationDuoUniversalTokenProvider, OrganizationDuoUniversalTokenProvider>();
-        services.Configure<DefaultOtpTokenProviderOptions>(options =>
-        {
-            options.TokenLength = 6;
-            options.TokenAlpha = false;
-            options.TokenNumeric = true;
-            options.DistributedCacheEntryOptions = new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-            };
-        });
-        services.TryAddScoped<IOtpTokenProvider<DefaultOtpTokenProviderOptions>, OtpTokenProvider<DefaultOtpTokenProviderOptions>>();
         services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
         {
