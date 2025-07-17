@@ -1,16 +1,13 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Text;
 using Bit.Core.Utilities;
-using Bit.Test.Common;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Serilog;
-using Serilog.Debugging;
 using Serilog.Extensions.Logging;
 using Xunit;
 
