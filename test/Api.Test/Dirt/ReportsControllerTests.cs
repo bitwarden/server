@@ -284,7 +284,7 @@ public class ReportsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportSummary_ReturnsNoContent_WhenAccessGranted(SutProvider<ReportsController> sutProvider)
+    public void CreateOrganizationReportSummary_ReturnsNoContent_WhenAccessGranted(SutProvider<ReportsController> sutProvider)
     {
         // Arrange
         var orgId = Guid.NewGuid();
@@ -298,14 +298,14 @@ public class ReportsControllerTests
         sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(true);
 
         // Act
-        var result = await sutProvider.Sut.CreateOrganizationReportSummary(model);
+        var result = sutProvider.Sut.CreateOrganizationReportSummary(model);
 
         // Assert
         Assert.IsType<NoContentResult>(result);
     }
 
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportSummary_ThrowsNotFoundException_WhenAccessDenied(SutProvider<ReportsController> sutProvider)
+    public void CreateOrganizationReportSummary_ThrowsNotFoundException_WhenAccessDenied(SutProvider<ReportsController> sutProvider)
     {
         // Arrange
         var orgId = Guid.NewGuid();
@@ -319,12 +319,12 @@ public class ReportsControllerTests
         sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(false);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Bit.Core.Exceptions.NotFoundException>(
+        Assert.Throws<Bit.Core.Exceptions.NotFoundException>(
             () => sutProvider.Sut.CreateOrganizationReportSummary(model));
     }
 
     [Theory, BitAutoData]
-    public async Task GetOrganizationReportSummary_ThrowsNotFoundException_WhenAccessDenied(
+    public void GetOrganizationReportSummary_ThrowsNotFoundException_WhenAccessDenied(
         SutProvider<ReportsController> sutProvider
     )
     {
@@ -334,12 +334,12 @@ public class ReportsControllerTests
         sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(false);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Bit.Core.Exceptions.NotFoundException>(
+        Assert.Throws<Bit.Core.Exceptions.NotFoundException>(
             () => sutProvider.Sut.GetOrganizationReportSummary(orgId, DateOnly.FromDateTime(DateTime.UtcNow), DateOnly.FromDateTime(DateTime.UtcNow)));
     }
 
     [Theory, BitAutoData]
-    public async Task GetOrganizationReportSummary_returnsExpectedResult(
+    public void GetOrganizationReportSummary_returnsExpectedResult(
         SutProvider<ReportsController> sutProvider
     )
     {
@@ -354,7 +354,7 @@ public class ReportsControllerTests
         sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(true);
 
         // Act
-        var result = await sutProvider.Sut.GetOrganizationReportSummary(orgId, dates[0], dates[1]);
+        var result = sutProvider.Sut.GetOrganizationReportSummary(orgId, dates[0], dates[1]);
 
         // Assert
         Assert.NotNull(result);

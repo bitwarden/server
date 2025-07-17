@@ -10,6 +10,7 @@ using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bit.Api.Dirt.Controllers;
 
@@ -293,15 +294,14 @@ public class ReportsController : Controller
     /// <returns></returns>
     /// <exception cref="NotFoundException"></exception>
     [HttpGet("organization-report-summary/{orgId}")]
-    public async Task<IEnumerable<OrganizationReportSummaryModel>> GetOrganizationReportSummary(
+    public IEnumerable<OrganizationReportSummaryModel> GetOrganizationReportSummary(
         [FromRoute] Guid orgId,
         [FromQuery] DateOnly from,
         [FromQuery] DateOnly to)
     {
-        if (!await _currentContext.AccessReports(orgId))
-        {
-            throw new NotFoundException();
-        }
+        GuardAgainstInvalidModelState(ModelState);
+
+        GuardOrganizationAccess(orgId);
 
         return MockOrganizationReportSummary.GetMockData()
             .Where(_ => _.OrganizationId == orgId
@@ -317,16 +317,32 @@ public class ReportsController : Controller
     /// <returns>Returns 204 Created with the created OrganizationReportSummaryModel</returns>
     /// <exception cref="NotFoundException"></exception>
     [HttpPost("organization-report-summary")]
-    public async Task<IActionResult> CreateOrganizationReportSummary([FromBody] OrganizationReportSummaryModel model)
+    public IActionResult CreateOrganizationReportSummary([FromBody] OrganizationReportSummaryModel model)
     {
-        if (!await _currentContext.AccessReports(model.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
+        GuardAgainstInvalidModelState(ModelState);
+
+        GuardOrganizationAccess(model.OrganizationId);
+
         // TODO: Implement actual creation logic
 
         // Returns 204 No Content as a placeholder
         return NoContent();
+    }
+
+    private void GuardAgainstInvalidModelState(ModelStateDictionary modelState)
+    {
+        if (!modelState.IsValid)
+        {
+            throw new BadRequestException(modelState);
+        }
+    }
+
+    private void GuardOrganizationAccess(Guid organizationId)
+    {
+        if (!_currentContext.AccessReports(organizationId).Result)
+        {
+            throw new NotFoundException();
+        }
     }
 
     private class MockOrganizationReportSummary
