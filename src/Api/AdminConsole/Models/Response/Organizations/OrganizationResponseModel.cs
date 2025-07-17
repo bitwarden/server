@@ -1,7 +1,11 @@
-﻿using System.Text.Json.Serialization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json.Serialization;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;

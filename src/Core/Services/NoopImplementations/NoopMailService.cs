@@ -8,6 +8,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
 using Bit.Core.Vault.Models.Data;
+using Core.Auth.Enums;
 
 namespace Bit.Core.Services;
 
@@ -86,7 +87,7 @@ public class NoopMailService : IMailService
     public Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email) =>
         Task.CompletedTask;
 
-    public Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true)
+    public Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, TwoFactorEmailPurpose purpose)
     {
         return Task.FromResult(0);
     }
