@@ -3,6 +3,7 @@
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 using Bit.Core.Settings;
