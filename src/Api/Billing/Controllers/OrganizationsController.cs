@@ -9,12 +9,13 @@ using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
-using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.Billing.Organizations.Entities;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -39,7 +40,7 @@ public class OrganizationsController(
     IUserService userService,
     IPaymentService paymentService,
     ICurrentContext currentContext,
-    ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
+    IGetCloudOrganizationLicenseQuery getCloudOrganizationLicenseQuery,
     GlobalSettings globalSettings,
     ILicensingService licensingService,
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
@@ -98,7 +99,7 @@ public class OrganizationsController(
         }
 
         var org = await organizationRepository.GetByIdAsync(id);
-        var license = await cloudGetOrganizationLicenseQuery.GetLicenseAsync(org, installationId);
+        var license = await getCloudOrganizationLicenseQuery.GetLicenseAsync(org, installationId);
         if (license == null)
         {
             throw new NotFoundException();

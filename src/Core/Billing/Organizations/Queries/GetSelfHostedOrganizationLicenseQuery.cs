@@ -3,7 +3,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models.Business;
-using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -13,13 +13,18 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.SelfHosted;
+namespace Bit.Core.Billing.Organizations.Queries;
 
-public class SelfHostedGetOrganizationLicenseQuery : BaseIdentityClientService, ISelfHostedGetOrganizationLicenseQuery
+public interface IGetSelfHostedOrganizationLicenseQuery
+{
+    Task<OrganizationLicense> GetLicenseAsync(Organization organization, OrganizationConnection billingSyncConnection);
+}
+
+public class GetSelfHostedOrganizationLicenseQuery : BaseIdentityClientService, IGetSelfHostedOrganizationLicenseQuery
 {
     private readonly IGlobalSettings _globalSettings;
 
-    public SelfHostedGetOrganizationLicenseQuery(IHttpClientFactory httpFactory, IGlobalSettings globalSettings, ILogger<SelfHostedGetOrganizationLicenseQuery> logger, ICurrentContext currentContext)
+    public GetSelfHostedOrganizationLicenseQuery(IHttpClientFactory httpFactory, IGlobalSettings globalSettings, ILogger<GetSelfHostedOrganizationLicenseQuery> logger, ICurrentContext currentContext)
         : base(
             httpFactory,
             globalSettings.Installation.ApiUri,

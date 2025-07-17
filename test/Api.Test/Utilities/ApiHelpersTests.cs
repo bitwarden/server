@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Bit.Api.Utilities;
 using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Organizations.Models;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using Xunit;

@@ -1,7 +1,8 @@
 ﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models.Business;
-using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;

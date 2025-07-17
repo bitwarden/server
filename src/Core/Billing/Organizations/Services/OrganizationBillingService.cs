@@ -5,7 +5,9 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Enums;
@@ -16,14 +18,11 @@ using Bit.Core.Settings;
 using Braintree;
 using Microsoft.Extensions.Logging;
 using Stripe;
-
 using static Bit.Core.Billing.Utilities;
 using Customer = Stripe.Customer;
 using Subscription = Stripe.Subscription;
 
-namespace Bit.Core.Billing.Services.Implementations;
-
-#nullable enable
+namespace Bit.Core.Billing.Organizations.Services;
 
 public class OrganizationBillingService(
     IBraintreeGateway braintreeGateway,

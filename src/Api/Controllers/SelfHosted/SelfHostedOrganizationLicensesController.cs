@@ -6,7 +6,9 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Utilities;
 using Bit.Core.Billing.Models.Business;
-using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -25,7 +27,7 @@ namespace Bit.Api.Controllers.SelfHosted;
 public class SelfHostedOrganizationLicensesController : Controller
 {
     private readonly ICurrentContext _currentContext;
-    private readonly ISelfHostedGetOrganizationLicenseQuery _selfHostedGetOrganizationLicenseQuery;
+    private readonly IGetSelfHostedOrganizationLicenseQuery _getSelfHostedOrganizationLicenseQuery;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IOrganizationRepository _organizationRepository;
@@ -34,7 +36,7 @@ public class SelfHostedOrganizationLicensesController : Controller
 
     public SelfHostedOrganizationLicensesController(
         ICurrentContext currentContext,
-        ISelfHostedGetOrganizationLicenseQuery selfHostedGetOrganizationLicenseQuery,
+        IGetSelfHostedOrganizationLicenseQuery getSelfHostedOrganizationLicenseQuery,
         IOrganizationConnectionRepository organizationConnectionRepository,
         IOrganizationService organizationService,
         IOrganizationRepository organizationRepository,
@@ -42,7 +44,7 @@ public class SelfHostedOrganizationLicensesController : Controller
         IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand)
     {
         _currentContext = currentContext;
-        _selfHostedGetOrganizationLicenseQuery = selfHostedGetOrganizationLicenseQuery;
+        _getSelfHostedOrganizationLicenseQuery = getSelfHostedOrganizationLicenseQuery;
         _organizationConnectionRepository = organizationConnectionRepository;
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -120,7 +122,7 @@ public class SelfHostedOrganizationLicensesController : Controller
         }
 
         var license =
-            await _selfHostedGetOrganizationLicenseQuery.GetLicenseAsync(selfHostedOrganizationDetails, billingSyncConnection);
+            await _getSelfHostedOrganizationLicenseQuery.GetLicenseAsync(selfHostedOrganizationDetails, billingSyncConnection);
         var currentOrganization = await _organizationRepository.GetByLicenseKeyAsync(license.LicenseKey);
 
         await _updateOrganizationLicenseCommand.UpdateLicenseAsync(selfHostedOrganizationDetails, license, currentOrganization);

@@ -1,9 +1,7 @@
-﻿#nullable enable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models.Business;
-using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
@@ -11,7 +9,13 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses;
+namespace Bit.Core.Billing.Organizations.Commands;
+
+public interface IUpdateOrganizationLicenseCommand
+{
+    Task UpdateLicenseAsync(SelfHostedOrganizationDetails selfHostedOrganization,
+        OrganizationLicense license, Organization? currentOrganizationUsingLicenseKey);
+}
 
 public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseCommand
 {

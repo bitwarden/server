@@ -1,7 +1,8 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models.Business;
-using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.SelfHosted;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.OrganizationConnectionConfigs;
@@ -15,12 +16,12 @@ using Xunit;
 namespace Bit.Core.Test.Billing.OrganizationFeatures.OrganizationLicenses;
 
 [SutProviderCustomize]
-public class SelfHostedGetOrganizationLicenseQueryTests
+public class GetSelfHostedOrganizationLicenseQueryTests
 {
-    private static SutProvider<SelfHostedGetOrganizationLicenseQuery> GetSutProvider(BillingSyncConfig config,
+    private static SutProvider<GetSelfHostedOrganizationLicenseQuery> GetSutProvider(BillingSyncConfig config,
         string apiResponse = null)
     {
-        return new SutProvider<SelfHostedGetOrganizationLicenseQuery>()
+        return new SutProvider<GetSelfHostedOrganizationLicenseQuery>()
             .ConfigureBaseIdentityClientService($"licenses/organization/{config.CloudOrganizationId}",
                 HttpMethod.Get, apiResponse: apiResponse);
     }

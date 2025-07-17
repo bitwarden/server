@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
