@@ -15,8 +15,10 @@ public class OrganizationIntegrationResponseModel : ResponseModel
 
         Id = organizationIntegration.Id;
         Type = organizationIntegration.Type;
+        Configuration = organizationIntegration.Configuration;
     }
 
     public Guid Id { get; set; }
     public IntegrationType Type { get; set; }
+    public string? Configuration { get; set; }
 }
