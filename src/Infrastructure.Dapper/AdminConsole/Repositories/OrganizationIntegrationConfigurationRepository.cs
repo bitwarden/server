@@ -52,4 +52,20 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
             return results.ToList();
         }
     }
+
+    public async Task<List<OrganizationIntegrationConfiguration>> GetManyByIntegrationAsync(Guid organizationIntegrationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationIntegrationConfiguration>(
+                "[dbo].[OrganizationIntegrationConfiguration_ReadByOrganizationIntegrationId]",
+                new
+                {
+                    OrganizationIntegrationId = organizationIntegrationId
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
 }
