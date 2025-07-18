@@ -16,7 +16,8 @@ public class UserAccountKeysQueryTests
     public async Task V1User_Success(SutProvider<UserAccountKeysQuery> sutProvider, User user)
     {
         var result = await sutProvider.Sut.Run(user);
-        Assert.Equal(user.GetPublicKeyEncryptionKeyPair(), result.PublicKeyEncryptionKeyPairData);
+        Assert.Equal(user.GetPublicKeyEncryptionKeyPair().PublicKey, result.PublicKeyEncryptionKeyPairData.PublicKey);
+        Assert.Equal(user.GetPublicKeyEncryptionKeyPair().WrappedPrivateKey, result.PublicKeyEncryptionKeyPairData.WrappedPrivateKey);
     }
 
     [Theory, BitAutoData]
