@@ -61,6 +61,14 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
         }
     }
 
+    public Task<IEnumerable<UserPolicyDetails>> GetOrganizationPolicyDetailsByOrgId(Guid orgId, PolicyType policyType)
+    {
+        // call our sproc
+
+        // mock data
+        return Task.FromResult(new List<UserPolicyDetails>().AsEnumerable());
+    }
+
     public async Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserId(Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
