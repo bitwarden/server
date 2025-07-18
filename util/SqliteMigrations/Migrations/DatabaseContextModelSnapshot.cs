@@ -1845,7 +1845,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SecurityState")
-                        .HasMaxLength(1000)
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("SecurityVersion")

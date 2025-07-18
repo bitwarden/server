@@ -13,8 +13,7 @@ public partial class UserSecurityState : Migration
         migrationBuilder.AddColumn<string>(
             name: "SecurityState",
             table: "User",
-            type: "character varying(1000)",
-            maxLength: 1000,
+            type: "text",
             nullable: true);
 
         migrationBuilder.AddColumn<int>(

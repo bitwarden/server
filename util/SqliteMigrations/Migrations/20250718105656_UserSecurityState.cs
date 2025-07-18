@@ -14,7 +14,6 @@ public partial class UserSecurityState : Migration
             name: "SecurityState",
             table: "User",
             type: "TEXT",
-            maxLength: 1000,
             nullable: true);
 
         migrationBuilder.AddColumn<int>(

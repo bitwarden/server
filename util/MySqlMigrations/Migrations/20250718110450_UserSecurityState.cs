@@ -13,8 +13,7 @@ public partial class UserSecurityState : Migration
         migrationBuilder.AddColumn<string>(
             name: "SecurityState",
             table: "User",
-            type: "varchar(1000)",
-            maxLength: 1000,
+            type: "longtext",
             nullable: true)
             .Annotation("MySql:CharSet", "utf8mb4");
 
