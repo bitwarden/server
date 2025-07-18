@@ -25,6 +25,6 @@ public class OrganizationIntegrationConfigurationResponseModel : ResponseModel
     public string? Configuration { get; set; }
     public string? Filters { get; set; }
     public DateTime CreationDate { get; set; }
-    public EventType EventType { get; set; }
+    public EventType? EventType { get; set; }
     public string? Template { get; set; }
 }

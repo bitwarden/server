@@ -10,7 +10,7 @@ public class OrganizationIntegrationConfiguration : ITableObject<Guid>
 {
     public Guid Id { get; set; }
     public Guid OrganizationIntegrationId { get; set; }
-    public EventType EventType { get; set; }
+    public EventType? EventType { get; set; }
     public string? Configuration { get; set; }
     public string? Template { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
