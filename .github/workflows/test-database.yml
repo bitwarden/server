@@ -238,7 +238,7 @@ jobs:
              echo ""
              
              # Show actual SQL differences - exclude database setup commands
-             if [ -f "diff.sql" ] && [ -s "diff.sql" ]; then
+             if [ -s "diff.sql" ]; then
                echo "Key SQL differences:"
                # Show meaningful schema differences, filtering out database setup noise
                grep -E "^(CREATE|DROP|ALTER)" diff.sql | grep -v "ALTER DATABASE" | grep -v "DatabaseName" | head -5
