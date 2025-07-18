@@ -1,20 +1,23 @@
-FROM nginx:stable
+FROM --platform=$BUILDPLATFORM nginx:stable
 
+ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
+
+ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        gosu \
-        curl \
+    gosu \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY nginx.conf /etc/nginx
-COPY proxy.conf /etc/nginx
-COPY mime.types /etc/nginx
-COPY security-headers.conf /etc/nginx
-COPY security-headers-ssl.conf /etc/nginx
-COPY logrotate.sh /
-COPY entrypoint.sh /
+COPY util/Nginx/nginx.conf /etc/nginx
+COPY util/Nginx/proxy.conf /etc/nginx
+COPY util/Nginx/mime.types /etc/nginx
+COPY util/Nginx/security-headers.conf /etc/nginx
+COPY util/Nginx/security-headers-ssl.conf /etc/nginx
+COPY util/Nginx/logrotate.sh /
+COPY util/Nginx/entrypoint.sh /
 
 EXPOSE 8080
 EXPOSE 8443

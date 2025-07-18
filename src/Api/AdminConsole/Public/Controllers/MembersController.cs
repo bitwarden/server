@@ -1,4 +1,7 @@
-﻿using System.Net;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Net;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
@@ -177,9 +180,10 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
+        var existingUserType = existingUser.Type;
         var updatedUser = model.ToOrganizationUser(existingUser);
         var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
-        await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, null, associations, model.Groups);
+        await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, existingUserType, null, associations, model.Groups);
         MemberResponseModel response = null;
         if (existingUser.UserId.HasValue)
         {

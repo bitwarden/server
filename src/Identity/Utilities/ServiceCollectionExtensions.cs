@@ -3,6 +3,7 @@ using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer;
+using Bit.Identity.IdentityServer.ClientProviders;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.SharedWeb.Utilities;
 using Duende.IdentityServer.ResponseHandling;
@@ -48,13 +49,28 @@ public static class ServiceCollectionExtensions
             .AddInMemoryCaching()
             .AddInMemoryApiResources(ApiResources.GetApiResources())
             .AddInMemoryApiScopes(ApiScopes.GetApiScopes())
-            .AddClientStoreCache<ClientStore>()
+            .AddClientStoreCache<DynamicClientStore>()
             .AddCustomTokenRequestValidator<CustomTokenRequestValidator>()
             .AddProfileService<ProfileService>()
             .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
-            .AddClientStore<ClientStore>()
+            .AddClientStore<DynamicClientStore>()
             .AddIdentityServerCertificate(env, globalSettings)
             .AddExtensionGrantValidator<WebAuthnGrantValidator>();
+
+        if (!globalSettings.SelfHosted)
+        {
+            // Only cloud instances should be able to handle installations
+            services.AddClientProvider<InstallationClientProvider>("installation");
+        }
+
+        if (globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey))
+        {
+            services.AddClientProvider<InternalClientProvider>("internal");
+        }
+
+        services.AddClientProvider<UserClientProvider>("user");
+        services.AddClientProvider<OrganizationClientProvider>("organization");
+        services.AddClientProvider<SecretsManagerApiKeyProvider>(SecretsManagerApiKeyProvider.ApiKeyPrefix);
 
         if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CosmosConnectionString))
         {

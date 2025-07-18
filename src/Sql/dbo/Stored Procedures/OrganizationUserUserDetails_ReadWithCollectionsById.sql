@@ -15,6 +15,9 @@ BEGIN
         [dbo].[OrganizationUser] OU
     INNER JOIN
         [dbo].[CollectionUser] CU ON CU.[OrganizationUserId] = [OU].[Id]
+    INNER JOIN
+        [dbo].[Collection] C ON CU.[CollectionId] = C.[Id]
     WHERE
         [OrganizationUserId] = @Id
+        AND C.[Type] != 1 -- Exclude default user collections
 END

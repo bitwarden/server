@@ -286,4 +286,141 @@ public class OrganizationRepositoryTests
         await organizationRepository.DeleteAsync(organization1);
         await organizationRepository.DeleteAsync(organization2);
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithUsersAndSponsorships_ReturnsCorrectCounts(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationSponsorshipRepository organizationSponsorshipRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        // Create users in different states
+        var user1 = await userRepository.CreateTestUserAsync("test1");
+        var user2 = await userRepository.CreateTestUserAsync("test2");
+        var user3 = await userRepository.CreateTestUserAsync("test3");
+
+        // Create organization users in different states
+        await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user1); // Confirmed state
+        await organizationUserRepository.CreateTestOrganizationUserInviteAsync(organization); // Invited state
+
+        // Create a revoked user manually since there's no helper for it
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user3.Id,
+            Status = OrganizationUserStatusType.Revoked,
+        });
+
+        // Create sponsorships in different states
+        await organizationSponsorshipRepository.CreateAsync(new OrganizationSponsorship
+        {
+            SponsoringOrganizationId = organization.Id,
+            IsAdminInitiated = true,
+            ToDelete = false,
+            ValidUntil = null,
+        });
+
+        await organizationSponsorshipRepository.CreateAsync(new OrganizationSponsorship
+        {
+            SponsoringOrganizationId = organization.Id,
+            IsAdminInitiated = true,
+            ToDelete = true,
+            ValidUntil = DateTime.UtcNow.AddDays(1),
+        });
+
+        await organizationSponsorshipRepository.CreateAsync(new OrganizationSponsorship
+        {
+            SponsoringOrganizationId = organization.Id,
+            IsAdminInitiated = true,
+            ToDelete = true,
+            ValidUntil = DateTime.UtcNow.AddDays(-1), // Expired
+        });
+
+        await organizationSponsorshipRepository.CreateAsync(new OrganizationSponsorship
+        {
+            SponsoringOrganizationId = organization.Id,
+            IsAdminInitiated = false, // Not admin initiated
+            ToDelete = false,
+            ValidUntil = null,
+        });
+
+        // Act
+        var result = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+
+        // Assert
+        Assert.Equal(2, result.Users); // Confirmed + Invited users
+        Assert.Equal(2, result.Sponsored); // Two valid sponsorships
+        Assert.Equal(4, result.Total); // Total occupied seats
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithNoUsersOrSponsorships_ReturnsZero(
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        // Act
+        var result = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+
+        // Assert
+        Assert.Equal(0, result.Users);
+        Assert.Equal(0, result.Sponsored);
+        Assert.Equal(0, result.Total);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithOnlyRevokedUsers_ReturnsZero(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        var user = await userRepository.CreateTestUserAsync("test1");
+
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Revoked,
+        });
+
+        // Act
+        var result = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+
+        // Assert
+        Assert.Equal(0, result.Users);
+        Assert.Equal(0, result.Sponsored);
+        Assert.Equal(0, result.Total);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithOnlyExpiredSponsorships_ReturnsZero(
+        IOrganizationRepository organizationRepository,
+        IOrganizationSponsorshipRepository organizationSponsorshipRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        await organizationSponsorshipRepository.CreateAsync(new OrganizationSponsorship
+        {
+            SponsoringOrganizationId = organization.Id,
+            IsAdminInitiated = true,
+            ToDelete = true,
+            ValidUntil = DateTime.UtcNow.AddDays(-1), // Expired
+        });
+
+        // Act
+        var result = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+
+        // Assert
+        Assert.Equal(0, result.Users);
+        Assert.Equal(0, result.Sponsored);
+        Assert.Equal(0, result.Total);
+    }
 }

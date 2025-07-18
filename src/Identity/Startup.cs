@@ -120,9 +120,9 @@ public class Startup
                         // Pass domain_hint onto the sso idp
                         context.ProtocolMessage.DomainHint = context.Properties.Items["domain_hint"];
                         context.ProtocolMessage.Parameters.Add("organizationId", context.Properties.Items["organizationId"]);
-                        if (context.Properties.Items.ContainsKey("user_identifier"))
+                        if (context.Properties.Items.TryGetValue("user_identifier", out var userIdentifier))
                         {
-                            context.ProtocolMessage.SessionState = context.Properties.Items["user_identifier"];
+                            context.ProtocolMessage.SessionState = userIdentifier;
                         }
 
                         if (context.Properties.Parameters.Count > 0 &&

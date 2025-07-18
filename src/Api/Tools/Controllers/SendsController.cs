@@ -1,11 +1,13 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
-using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -33,7 +35,6 @@ public class SendsController : Controller
     private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
     private readonly ILogger<SendsController> _logger;
     private readonly GlobalSettings _globalSettings;
-    private readonly ICurrentContext _currentContext;
 
     public SendsController(
         ISendRepository sendRepository,
@@ -43,8 +44,7 @@ public class SendsController : Controller
         INonAnonymousSendCommand nonAnonymousSendCommand,
         ISendFileStorageService sendFileStorageService,
         ILogger<SendsController> logger,
-        GlobalSettings globalSettings,
-        ICurrentContext currentContext)
+        GlobalSettings globalSettings)
     {
         _sendRepository = sendRepository;
         _userService = userService;
@@ -54,7 +54,6 @@ public class SendsController : Controller
         _sendFileStorageService = sendFileStorageService;
         _logger = logger;
         _globalSettings = globalSettings;
-        _currentContext = currentContext;
     }
 
     #region Anonymous endpoints

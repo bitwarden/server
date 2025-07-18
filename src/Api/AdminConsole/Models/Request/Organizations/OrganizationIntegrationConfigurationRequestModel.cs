@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data.Integrations;
 
 #nullable enable
 
@@ -15,6 +15,8 @@ public class OrganizationIntegrationConfigurationRequestModel
     [Required]
     public EventType EventType { get; set; }
 
+    public string? Filters { get; set; }
+
     public string? Template { get; set; }
 
     public bool IsValidForType(IntegrationType integrationType)
@@ -24,9 +26,17 @@ public class OrganizationIntegrationConfigurationRequestModel
             case IntegrationType.CloudBillingSync or IntegrationType.Scim:
                 return false;
             case IntegrationType.Slack:
-                return !string.IsNullOrWhiteSpace(Template) && IsConfigurationValid<SlackIntegrationConfiguration>();
+                return !string.IsNullOrWhiteSpace(Template) &&
+                       IsConfigurationValid<SlackIntegrationConfiguration>() &&
+                       IsFiltersValid();
             case IntegrationType.Webhook:
-                return !string.IsNullOrWhiteSpace(Template) && IsConfigurationValid<WebhookIntegrationConfiguration>();
+                return !string.IsNullOrWhiteSpace(Template) &&
+                       IsConfigurationValid<WebhookIntegrationConfiguration>() &&
+                       IsFiltersValid();
+            case IntegrationType.Hec:
+                return !string.IsNullOrWhiteSpace(Template) &&
+                       Configuration is null &&
+                       IsFiltersValid();
             default:
                 return false;
 
@@ -39,6 +49,7 @@ public class OrganizationIntegrationConfigurationRequestModel
         {
             OrganizationIntegrationId = organizationIntegrationId,
             Configuration = Configuration,
+            Filters = Filters,
             EventType = EventType,
             Template = Template
         };
@@ -48,6 +59,7 @@ public class OrganizationIntegrationConfigurationRequestModel
     {
         currentConfiguration.Configuration = Configuration;
         currentConfiguration.EventType = EventType;
+        currentConfiguration.Filters = Filters;
         currentConfiguration.Template = Template;
 
         return currentConfiguration;
@@ -64,6 +76,24 @@ public class OrganizationIntegrationConfigurationRequestModel
         {
             var config = JsonSerializer.Deserialize<T>(Configuration);
             return config is not null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool IsFiltersValid()
+    {
+        if (Filters is null)
+        {
+            return true;
+        }
+
+        try
+        {
+            var filters = JsonSerializer.Deserialize<IntegrationFilterGroup>(Filters);
+            return filters is not null;
         }
         catch
         {

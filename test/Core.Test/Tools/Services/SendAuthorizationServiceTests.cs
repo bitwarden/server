@@ -1,5 +1,4 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Platform.Push;
+﻿using Bit.Core.Platform.Push;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
@@ -15,8 +14,6 @@ public class SendAuthorizationServiceTests
     private readonly ISendRepository _sendRepository;
     private readonly IPasswordHasher<Bit.Core.Entities.User> _passwordHasher;
     private readonly IPushNotificationService _pushNotificationService;
-    private readonly IReferenceEventService _referenceEventService;
-    private readonly ICurrentContext _currentContext;
     private readonly SendAuthorizationService _sendAuthorizationService;
 
     public SendAuthorizationServiceTests()
@@ -24,15 +21,11 @@ public class SendAuthorizationServiceTests
         _sendRepository = Substitute.For<ISendRepository>();
         _passwordHasher = Substitute.For<IPasswordHasher<Bit.Core.Entities.User>>();
         _pushNotificationService = Substitute.For<IPushNotificationService>();
-        _referenceEventService = Substitute.For<IReferenceEventService>();
-        _currentContext = Substitute.For<ICurrentContext>();
 
         _sendAuthorizationService = new SendAuthorizationService(
             _sendRepository,
             _passwordHasher,
-            _pushNotificationService,
-            _referenceEventService,
-            _currentContext);
+            _pushNotificationService);
     }
 
 

@@ -14,13 +14,12 @@ namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 
 public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequestRepository
 {
+    private readonly GlobalSettings _globalSettings;
     public AuthRequestRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
-
-    public AuthRequestRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+        : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+    {
+        _globalSettings = globalSettings;
+    }
 
     public async Task<int> DeleteExpiredAsync(
         TimeSpan userRequestExpiration, TimeSpan adminRequestExpiration, TimeSpan afterAdminApprovalExpiration)
@@ -50,6 +49,18 @@ public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequest
 
             return results.ToList();
         }
+    }
+
+    public async Task<IEnumerable<PendingAuthRequestDetails>> GetManyPendingAuthRequestByUserId(Guid userId)
+    {
+        var expirationMinutes = (int)_globalSettings.PasswordlessAuth.UserRequestExpiration.TotalMinutes;
+        using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<PendingAuthRequestDetails>(
+            $"[{Schema}].[AuthRequest_ReadPendingByUserId]",
+            new { UserId = userId, ExpirationMinutes = expirationMinutes },
+            commandType: CommandType.StoredProcedure);
+
+        return results;
     }
 
     public async Task<ICollection<OrganizationAdminAuthRequest>> GetManyPendingByOrganizationIdAsync(Guid organizationId)

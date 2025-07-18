@@ -3,7 +3,6 @@ using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
-using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 
@@ -11,7 +10,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Entities;
 
-public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFactorProvidersUser, IReferenceable
+public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFactorProvidersUser
 {
     private Dictionary<TwoFactorProviderType, TwoFactorProvider>? _twoFactorProviders;
 
@@ -36,6 +35,11 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public string? TwoFactorRecoveryCode { get; set; }
     public string? EquivalentDomains { get; set; }
     public string? ExcludedGlobalEquivalentDomains { get; set; }
+    /// <summary>
+    /// The Account Revision Date is used to check if new sync needs to occur. It should be updated
+    /// whenever a change is made that affects a client's sync data; for example, updating their vault or
+    /// organization membership.
+    /// </summary>
     public DateTime AccountRevisionDate { get; set; } = DateTime.UtcNow;
     public string? Key { get; set; }
     public string? PublicKey { get; set; }
@@ -191,12 +195,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public TwoFactorProvider? GetTwoFactorProvider(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.TryGetValue(provider, out var value))
-        {
-            return null;
-        }
-
-        return value;
+        return providers?.GetValueOrDefault(provider);
     }
 
     public long StorageBytesRemaining()

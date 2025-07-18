@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -287,11 +290,10 @@ public class ProviderService : IProviderService
 
         foreach (var user in users)
         {
-            if (!keyedFilteredUsers.ContainsKey(user.Id))
+            if (!keyedFilteredUsers.TryGetValue(user.Id, out var providerUser))
             {
                 continue;
             }
-            var providerUser = keyedFilteredUsers[user.Id];
             try
             {
                 if (providerUser.Status != ProviderUserStatusType.Accepted || providerUser.ProviderId != providerId)

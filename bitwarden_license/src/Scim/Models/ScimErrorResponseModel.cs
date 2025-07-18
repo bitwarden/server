@@ -1,4 +1,7 @@
-﻿using Bit.Scim.Utilities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Scim.Utilities;
 
 namespace Bit.Scim.Models;
 

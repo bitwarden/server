@@ -1,4 +1,4 @@
-﻿using Bit.Core.Billing.Models;
+﻿using Bit.Core.Billing.Organizations.Models;
 
 namespace Bit.Api.Billing.Models.Responses;
 
@@ -12,7 +12,8 @@ public record OrganizationMetadataResponse(
     bool IsSubscriptionCanceled,
     DateTime? InvoiceDueDate,
     DateTime? InvoiceCreatedDate,
-    DateTime? SubPeriodEndDate)
+    DateTime? SubPeriodEndDate,
+    int OrganizationOccupiedSeats)
 {
     public static OrganizationMetadataResponse From(OrganizationMetadata metadata)
         => new(
@@ -25,5 +26,6 @@ public record OrganizationMetadataResponse(
             metadata.IsSubscriptionCanceled,
             metadata.InvoiceDueDate,
             metadata.InvoiceCreatedDate,
-            metadata.SubPeriodEndDate);
+            metadata.SubPeriodEndDate,
+            metadata.OrganizationOccupiedSeats);
 }

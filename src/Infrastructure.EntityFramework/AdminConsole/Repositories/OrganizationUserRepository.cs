@@ -1,4 +1,7 @@
-﻿using AutoMapper;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
@@ -7,11 +10,12 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 
 public class OrganizationUserRepository : Repository<Core.Entities.OrganizationUser, OrganizationUser, Guid>, IOrganizationUserRepository
 {
@@ -227,12 +231,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         return await GetCountFromQuery(query);
     }
 
-    public async Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
-    {
-        var query = new OrganizationUserReadOccupiedSeatCountByOrganizationIdQuery(organizationId);
-        return await GetCountFromQuery(query);
-    }
-
     public async Task<int> GetCountByOrganizationIdAsync(Guid organizationId)
     {
         var query = new OrganizationUserReadCountByOrganizationIdQuery(organizationId);
@@ -259,7 +257,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var dbContext = GetDatabaseContext(scope);
             var query = from ou in dbContext.OrganizationUsers
                         join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
-                        where ou.Id == id
+                        join c in dbContext.Collections on cu.CollectionId equals c.Id
+                        where ou.Id == id && c.Type != CollectionType.DefaultUserCollection
                         select cu;
             var collections = await query.Select(cu => new CollectionAccessSelection
             {
@@ -371,6 +370,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             {
                 collections = (await (from cu in dbContext.CollectionUsers
                                       join ou in userIdEntities on cu.OrganizationUserId equals ou.Id
+                                      join c in dbContext.Collections on cu.CollectionId equals c.Id
+                                      where c.Type != CollectionType.DefaultUserCollection
                                       select cu).ToListAsync())
                     .GroupBy(c => c.OrganizationUserId).ToList();
             }
@@ -440,15 +441,20 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async override Task ReplaceAsync(Core.Entities.OrganizationUser organizationUser)
+    public override async Task ReplaceAsync(Core.Entities.OrganizationUser organizationUser)
     {
         await base.ReplaceAsync(organizationUser);
-        using (var scope = ServiceScopeFactory.CreateScope())
+
+        // Only bump the account revision date if linked to a user account
+        if (!organizationUser.UserId.HasValue)
         {
-            var dbContext = GetDatabaseContext(scope);
-            await dbContext.UserBumpAccountRevisionDateAsync(organizationUser.UserId.GetValueOrDefault());
-            await dbContext.SaveChangesAsync();
+            return;
         }
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        await dbContext.UserBumpAccountRevisionDateAsync(organizationUser.UserId.Value);
+        await dbContext.SaveChangesAsync();
     }
 
     public async Task ReplaceAsync(Core.Entities.OrganizationUser obj, IEnumerable<CollectionAccessSelection> requestedCollections)
