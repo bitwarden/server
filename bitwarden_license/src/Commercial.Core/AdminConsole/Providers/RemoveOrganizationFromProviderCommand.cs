@@ -156,6 +156,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
             organization.GatewaySubscriptionId = subscription.Id;
             organization.Status = OrganizationStatusType.Created;
+            organization.Enabled = true;
 
             await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats ?? 0);
         }
