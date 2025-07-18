@@ -17,7 +17,6 @@ public enum PolicyType : byte
     AutomaticAppLogIn = 12,
     FreeFamiliesSponsorshipPolicy = 13,
     RemoveUnlockWithPin = 14,
-    HelpUsersUpdatePasswords = 16,
     RestrictedItemTypesPolicy = 15,
 }
 
@@ -46,7 +45,6 @@ public static class PolicyTypeExtensions
             PolicyType.AutomaticAppLogIn => "Automatically log in users for allowed applications",
             PolicyType.FreeFamiliesSponsorshipPolicy => "Remove Free Bitwarden Families sponsorship",
             PolicyType.RemoveUnlockWithPin => "Remove unlock with PIN",
-            PolicyType.HelpUsersUpdatePasswords => "Automatically direct users to password change pages",
             PolicyType.RestrictedItemTypesPolicy => "Restricted item types",
         };
     }
