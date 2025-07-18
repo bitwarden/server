@@ -22,8 +22,10 @@ GO
 CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserIdOrganizationIdStatusV2]
     ON [dbo].[OrganizationUser]([UserId] ASC, [OrganizationId] ASC, [Status] ASC);
 
-
 GO
 CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrganizationId]
     ON [dbo].[OrganizationUser]([OrganizationId] ASC);
 
+GO
+CREATE NONCLUSTERED INDEX  IX_OrganizationUser_EmailOrganizationIdStatus
+    ON OrganizationUser (Email ASC, OrganizationId ASC, [Status] ASC);

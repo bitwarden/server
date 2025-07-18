@@ -94,4 +94,97 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                     };
         return await query.ToListAsync();
     }
+
+    public async Task<IEnumerable<PolicyDetails>> PolicyDetailsReadByOrganizationIdAsync(Guid organizationId, PolicyType policyType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var givenOrgUsers =
+            from ou in dbContext.OrganizationUsers
+            where ou.OrganizationId == organizationId
+            from u in dbContext.Users
+            where
+                u.Email == ou.Email
+                || ou.UserId == u.Id
+            select new
+            {
+                ou.Id,
+                ou.OrganizationId,
+                UserId = u.Id,
+                u.Email
+            };
+
+        var orgUsersLinkedByEmail = from row in dbContext.OrganizationUsers
+                .Join(
+                    givenOrgUsers,
+                    ou => ou.UserId,
+                    gou => gou.UserId,
+                    (ou, gou) => new { ou, gou }
+                )
+                                    select new
+                                    {
+                                        row.ou.Id,
+                                        row.ou.OrganizationId,
+                                        row.gou.UserId,
+                                        row.ou.Type,
+                                        row.ou.Status,
+                                        row.ou.Permissions
+                                    };
+
+        var orgUsersLinkedByUserId = from row in dbContext.OrganizationUsers
+                .Join(
+                    givenOrgUsers,
+                    ou => ou.Email,
+                    gou => gou.Email,
+                    (ou, gou) => new { ou, gou }
+                )
+                                     select new
+                                     {
+                                         row.ou.Id,
+                                         row.ou.OrganizationId,
+                                         row.gou.UserId,
+                                         row.ou.Type,
+                                         row.ou.Status,
+                                         row.ou.Permissions
+                                     };
+
+        var allAffectedOrgUsers = orgUsersLinkedByEmail.Union(orgUsersLinkedByUserId);
+
+        var providerOrganizations = from pu in dbContext.ProviderUsers
+                                    join po in dbContext.ProviderOrganizations
+                                        on pu.ProviderId equals po.ProviderId
+                                    join ou in allAffectedOrgUsers
+                                        on pu.UserId equals ou.UserId
+                                    where pu.UserId == ou.UserId
+                                    select new
+                                    {
+                                        pu.UserId,
+                                        po.OrganizationId
+                                    };
+
+        var policyWithAffectedUsers =
+            from p in dbContext.Policies
+            join o in dbContext.Organizations
+                on p.OrganizationId equals o.Id
+            join ou in allAffectedOrgUsers
+                on o.Id equals ou.OrganizationId
+            where p.Enabled
+                   && o.Enabled
+                   && o.UsePolicies
+                   && p.Type == policyType
+            select new PolicyDetails
+            {
+                OrganizationUserId = ou.Id,
+                OrganizationId = p.OrganizationId,
+                PolicyType = p.Type,
+                PolicyData = p.Data,
+                OrganizationUserType = ou.Type,
+                OrganizationUserStatus = ou.Status,
+                OrganizationUserPermissionsData = ou.Permissions,
+                IsProvider = providerOrganizations.Any(po => po.OrganizationId == p.OrganizationId)
+            };
+
+        return await policyWithAffectedUsers.ToListAsync();
+    }
 }
