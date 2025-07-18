@@ -1,4 +1,7 @@
-﻿using Bit.Api.AdminConsole.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
@@ -7,6 +10,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
@@ -34,6 +38,8 @@ public class AccountsController : Controller
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
+    private readonly ITwoFactorEmailService _twoFactorEmailService;
+
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -44,7 +50,8 @@ public class AccountsController : Controller
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IFeatureService featureService
+        IFeatureService featureService,
+        ITwoFactorEmailService twoFactorEmailService
         )
     {
         _organizationService = organizationService;
@@ -56,6 +63,8 @@ public class AccountsController : Controller
         _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _featureService = featureService;
+        _twoFactorEmailService = twoFactorEmailService;
+
     }
 
 
@@ -619,7 +628,14 @@ public class AccountsController : Controller
     [HttpPost("resend-new-device-otp")]
     public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificationRequestModel request)
     {
-        await _userService.ResendNewDeviceVerificationEmail(request.Email, request.Secret);
+        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+        if (!await _userService.VerifySecretAsync(user, request.Secret))
+        {
+            await Task.Delay(2000);
+            throw new BadRequestException(string.Empty, "User verification failed.");
+        }
+
+        await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user);
     }
 
     [HttpPost("verify-devices")]

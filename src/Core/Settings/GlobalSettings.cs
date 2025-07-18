@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Settings;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Settings;
 using Bit.Core.Settings.LoggingSettings;
 
 namespace Bit.Core.Settings;
@@ -284,6 +287,7 @@ public class GlobalSettings : IGlobalSettings
     {
         public AzureServiceBusSettings AzureServiceBus { get; set; } = new AzureServiceBusSettings();
         public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
+        public int IntegrationCacheRefreshIntervalMinutes { get; set; } = 10;
 
         public class AzureServiceBusSettings
         {

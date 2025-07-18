@@ -166,7 +166,7 @@ public class PushControllerTests
         yield return UserTyped(PushType.SyncOrgKeys);
         yield return UserTyped(PushType.SyncSettings);
         yield return UserTyped(PushType.LogOut);
-        yield return UserTyped(PushType.PendingSecurityTasks);
+        yield return UserTyped(PushType.RefreshSecurityTasks);
 
         yield return Typed(new PushSendRequestModel<AuthRequestPushNotification>
         {

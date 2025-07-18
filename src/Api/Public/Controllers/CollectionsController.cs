@@ -1,11 +1,13 @@
-﻿using System.Net;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Net;
 using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,18 +20,15 @@ public class CollectionsController : Controller
     private readonly ICollectionRepository _collectionRepository;
     private readonly IUpdateCollectionCommand _updateCollectionCommand;
     private readonly ICurrentContext _currentContext;
-    private readonly IApplicationCacheService _applicationCacheService;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
         IUpdateCollectionCommand updateCollectionCommand,
-        ICurrentContext currentContext,
-        IApplicationCacheService applicationCacheService)
+        ICurrentContext currentContext)
     {
         _collectionRepository = collectionRepository;
         _updateCollectionCommand = updateCollectionCommand;
         _currentContext = currentContext;
-        _applicationCacheService = applicationCacheService;
     }
 
     /// <summary>
@@ -46,7 +45,8 @@ public class CollectionsController : Controller
     public async Task<IActionResult> Get(Guid id)
     {
         (var collection, var access) = await _collectionRepository.GetByIdWithAccessAsync(id);
-        if (collection == null || collection.OrganizationId != _currentContext.OrganizationId)
+        if (collection == null || collection.OrganizationId != _currentContext.OrganizationId ||
+            collection.Type == CollectionType.DefaultUserCollection)
         {
             return new NotFoundResult();
         }
