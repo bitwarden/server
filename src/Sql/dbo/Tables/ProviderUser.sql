@@ -16,5 +16,5 @@
 
 
 GO
-CREATE NONCLUSTERED INDEX IX_ProviderUser_UserId_ProviderId
+CREATE NONCLUSTERED INDEX IX_ProviderUser_UserIdProviderId
        ON [dbo].[ProviderUser] ([UserId], [ProviderId]);
