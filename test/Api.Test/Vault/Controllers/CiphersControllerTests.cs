@@ -1864,10 +1864,9 @@ public class CiphersControllerTests
     public async Task PostPurge_OrganizationPurge_Successful(
         User user,
         SecretVerificationRequestModel model,
+        Guid organizationId,
         SutProvider<CiphersController> sutProvider)
     {
-        var orgId = Guid.NewGuid();
-        var orgIdStr = orgId.ToString();
         sutProvider.GetDependency<IUserService>()
             .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
             .Returns(user);
@@ -1878,24 +1877,23 @@ public class CiphersControllerTests
             .IsClaimedByAnyOrganizationAsync(user.Id)
             .Returns(false);
         sutProvider.GetDependency<ICurrentContext>()
-            .EditAnyCollection(orgId)
+            .EditAnyCollection(organizationId)
             .Returns(true);
 
-        await sutProvider.Sut.PostPurge(model, orgIdStr);
+        await sutProvider.Sut.PostPurge(model, organizationId);
 
         await sutProvider.GetDependency<ICipherService>()
             .Received(1)
-            .PurgeAsync(orgId);
+            .PurgeAsync(organizationId);
     }
 
     [Theory, BitAutoData]
     public async Task PostPurge_OrganizationPurge_WithInsufficientPermissions_ThrowsNotFoundException(
         User user,
+        Guid organizationId,
         SecretVerificationRequestModel model,
         SutProvider<CiphersController> sutProvider)
     {
-        var orgId = Guid.NewGuid();
-        var orgIdStr = orgId.ToString();
         sutProvider.GetDependency<IUserService>()
             .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
             .Returns(user);
@@ -1906,10 +1904,9 @@ public class CiphersControllerTests
             .IsClaimedByAnyOrganizationAsync(user.Id)
             .Returns(false);
         sutProvider.GetDependency<ICurrentContext>()
-            .EditAnyCollection(orgId)
+            .EditAnyCollection(organizationId)
             .Returns(false);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostPurge(model, orgIdStr));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostPurge(model, organizationId));
     }
 }
-
