@@ -4,12 +4,12 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public class InviteOrganizationUsersRequest
 {
-    public OrganizationUserInvite[] Invites { get; } = [];
+    public OrganizationUserInviteCommandModel[] Invites { get; } = [];
     public InviteOrganization InviteOrganization { get; }
     public Guid PerformedBy { get; }
     public DateTimeOffset PerformedAt { get; }
 
-    public InviteOrganizationUsersRequest(OrganizationUserInvite[] invites,
+    public InviteOrganizationUsersRequest(OrganizationUserInviteCommandModel[] invites,
         InviteOrganization inviteOrganization,
         Guid performedBy,
         DateTimeOffset performedAt)
