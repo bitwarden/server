@@ -1,28 +1,18 @@
 ﻿using System.Security.Claims;
-using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Controllers;
-using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
-using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.KeyManagement.Queries.Interfaces;
-using Bit.Api.KeyManagement.Validators;
-using Bit.Api.Tools.Models.Request;
-using Bit.Api.Vault.Models.Request;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
-using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Entities;
-using Bit.Core.Vault.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
@@ -40,22 +30,11 @@ public class AccountsControllerTests : IDisposable
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
-    private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IFeatureService _featureService;
-
-    private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
-    private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
-    private readonly IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> _sendValidator;
-    private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
-        _emergencyAccessValidator;
-    private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
-            IReadOnlyList<OrganizationUser>>
-        _resetPasswordValidator;
-    private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
-        _webauthnKeyRotationValidator;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
+    private readonly ITwoFactorEmailService _twoFactorEmailService;
 
     public AccountsControllerTests()
     {
@@ -65,23 +44,11 @@ public class AccountsControllerTests : IDisposable
         _providerUserRepository = Substitute.For<IProviderUserRepository>();
         _policyService = Substitute.For<IPolicyService>();
         _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
-        _rotateUserKeyCommand = Substitute.For<IRotateUserKeyCommand>();
         _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
         _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
         _featureService = Substitute.For<IFeatureService>();
-        _cipherValidator =
-            Substitute.For<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>>();
-        _folderValidator =
-            Substitute.For<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>>();
-        _sendValidator = Substitute.For<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>>();
-        _emergencyAccessValidator = Substitute.For<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>,
-            IEnumerable<EmergencyAccess>>>();
-        _webauthnKeyRotationValidator = Substitute.For<IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>>();
-        _resetPasswordValidator = Substitute
-            .For<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
-                IReadOnlyList<OrganizationUser>>>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
-
+        _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
         _sut = new AccountsController(
             _organizationService,
             _organizationUserRepository,
@@ -90,16 +57,10 @@ public class AccountsControllerTests : IDisposable
             _policyService,
             _setInitialMasterPasswordCommand,
             _tdeOffboardingPasswordCommand,
-            _rotateUserKeyCommand,
             _twoFactorIsEnabledQuery,
             _featureService,
-            _cipherValidator,
-            _folderValidator,
-            _sendValidator,
-            _emergencyAccessValidator,
-            _resetPasswordValidator,
-            _webauthnKeyRotationValidator,
-            _userAccountKeysQuery
+            _userAccountKeysQuery,
+            _twoFactorEmailService
         );
     }
 
@@ -591,6 +552,46 @@ public class AccountsControllerTests : IDisposable
 
         await _userService.Received(1).SaveUserAsync(user);
         Assert.Equal(model.VerifyDevices, user.VerifyDevices);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_WhenUserNotFound_ShouldFail(
+    UnauthenticatedSecretVerificationRequestModel model)
+    {
+        // Arrange
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((User)null));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.ResendNewDeviceOtpAsync(model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_WhenSecretNotValid_ShouldFail(
+        User user,
+        UnauthenticatedSecretVerificationRequestModel model)
+    {
+        // Arrange
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(false));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.ResendNewDeviceOtpAsync(model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_WhenTokenValid_SendsEmail(User user,
+        UnauthenticatedSecretVerificationRequestModel model)
+    {
+        // Arrange
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.ResendNewDeviceOtpAsync(model);
+
+        // Assert
+        await _twoFactorEmailService.Received(1).SendNewDeviceVerificationEmailAsync(user);
     }
 
     // Below are helper functions that currently belong to this
