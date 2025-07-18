@@ -1819,7 +1819,7 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PostPurge_WhenUserIsClaimedByAnOrganization_ThrowsBadRequestException(
+    public async Task PostPurge_UserPurge_WithClaimedUser_ThrowsBadRequestException(
         User user,
         SecretVerificationRequestModel model,
         SutProvider<CiphersController> sutProvider)
@@ -1838,7 +1838,7 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PostPurge_UserPurge_Successful(
+    public async Task PostPurge_UserPurge_WithUnclaimedUser_Successful(
         User user,
         SecretVerificationRequestModel model,
         SutProvider<CiphersController> sutProvider)
@@ -1861,7 +1861,7 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PostPurge_OrganizationPurge_Successful(
+    public async Task PostPurge_OrganizationPurge_WithEditAnyCollectionPermission_Successful(
         User user,
         SecretVerificationRequestModel model,
         Guid organizationId,
@@ -1875,7 +1875,7 @@ public class CiphersControllerTests
             .Returns(true);
         sutProvider.GetDependency<IUserService>()
             .IsClaimedByAnyOrganizationAsync(user.Id)
-            .Returns(false);
+            .Returns(true);
         sutProvider.GetDependency<ICurrentContext>()
             .EditAnyCollection(organizationId)
             .Returns(true);
