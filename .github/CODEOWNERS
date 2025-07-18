@@ -50,11 +50,7 @@ src/Core/IdentityServer @bitwarden/team-auth-dev
 **/Tools @bitwarden/team-tools-dev
 
 # Dirt (Data Insights & Reporting) team
-src/Api/Controllers/Dirt @bitwarden/team-data-insights-and-reporting-dev
-src/Core/Dirt @bitwarden/team-data-insights-and-reporting-dev
-src/Infrastructure.Dapper/Dirt @bitwarden/team-data-insights-and-reporting-dev
-test/Api.Test/Dirt @bitwarden/team-data-insights-and-reporting-dev
-test/Core.Test/Dirt @bitwarden/team-data-insights-and-reporting-dev
+**/Dirt @bitwarden/team-data-insights-and-reporting-dev
 
 # Vault team
 **/Vault @bitwarden/team-vault-dev
