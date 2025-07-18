@@ -68,7 +68,6 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     /// <summary>
     /// The security state is a signed object attesting to the version of the user's account.
     /// </summary>
-    [MaxLength(1000)]
     public string? SecurityState { get; set; }
     public bool Premium { get; set; }
     public DateTime? PremiumExpirationDate { get; set; }
