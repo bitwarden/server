@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Repositories;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
@@ -209,7 +212,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
     private static void ValidatePublicKeyEncryptionKeyPairUnchanged(RotateUserAccountKeysData model, User user)
     {
-        var publicKey = model.AccountKeys?.PublicKeyEncryptionKeyPairData.PublicKey;
+        var publicKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey;
         if (publicKey != user.PublicKey)
         {
             throw new InvalidOperationException("The provided account public key does not match the user's current public key, and changing the account asymmetric key pair is currently not supported during key rotation.");
@@ -238,6 +241,10 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         if (string.IsNullOrEmpty(model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey))
         {
             throw new InvalidOperationException("No signed public key provided, but the user already has a signature key pair.");
+        }
+        if (model.AccountKeys.SecurityStateData == null || string.IsNullOrEmpty(model.AccountKeys.SecurityStateData.SecurityState))
+        {
+            throw new InvalidOperationException("No signed security state provider for V2 user");
         }
     }
 

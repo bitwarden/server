@@ -93,6 +93,7 @@ public class EfRepositoryListBuilder<T> : ISpecimenBuilder where T : BaseEntityF
                     cfg.AddProfile<UserMapperProfile>();
                     cfg.AddProfile<PasswordHealthReportApplicationProfile>();
                     cfg.AddProfile<UserSignatureKeyPairMapperProfile>();
+                    cfg.AddProfile<OrganizationReportProfile>();
                 })
             .CreateMapper()));
 

@@ -38,7 +38,6 @@ public static class UserServiceCollectionExtensions
 
     public static void AddUserKeyCommands(this IServiceCollection services, IGlobalSettings globalSettings)
     {
-        services.AddScoped<IRotateUserKeyCommand, RotateUserKeyCommand>();
         services.AddScoped<IRotateUserAccountKeysCommand, RotateUserAccountKeysCommand>();
     }
 

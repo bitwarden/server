@@ -43,8 +43,8 @@
     [LastEmailChangeDate]              DATETIME2 (7)    NULL,
     [VerifyDevices]                    BIT              DEFAULT ((1)) NOT NULL,
     [SignedPublicKey]                  VARCHAR (MAX)    NULL,
-    [SecurityVersion]                  INT              NULL,
     [SecurityState]                    NVARCHAR (MAX)   NULL,
+    [SecurityVersion]                  INT              NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

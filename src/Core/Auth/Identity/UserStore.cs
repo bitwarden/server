@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;

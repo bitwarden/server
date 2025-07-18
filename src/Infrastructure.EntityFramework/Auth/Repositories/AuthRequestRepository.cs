@@ -3,6 +3,7 @@ using AutoMapper.QueryableExtensions;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -14,9 +15,13 @@ namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 
 public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, AuthRequest, Guid>, IAuthRequestRepository
 {
-    public AuthRequestRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.AuthRequests)
-    { }
+    private readonly IGlobalSettings _globalSettings;
+    public AuthRequestRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper, IGlobalSettings globalSettings)
+        : base(serviceScopeFactory, mapper, context => context.AuthRequests)
+    {
+        _globalSettings = globalSettings;
+    }
+
     public async Task<int> DeleteExpiredAsync(
         TimeSpan userRequestExpiration, TimeSpan adminRequestExpiration, TimeSpan afterAdminApprovalExpiration)
     {
@@ -55,6 +60,32 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
 
             return orgUserAuthRequests;
         }
+    }
+
+    public async Task<IEnumerable<PendingAuthRequestDetails>> GetManyPendingAuthRequestByUserId(Guid userId)
+    {
+        var expirationMinutes = (int)_globalSettings.PasswordlessAuth.UserRequestExpiration.TotalMinutes;
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var mostRecentAuthRequests = await
+            (from authRequest in dbContext.AuthRequests
+             where authRequest.Type == AuthRequestType.AuthenticateAndUnlock
+                || authRequest.Type == AuthRequestType.Unlock
+             where authRequest.UserId == userId
+             where authRequest.CreationDate.AddMinutes(expirationMinutes) >= DateTime.UtcNow
+             group authRequest by authRequest.RequestDeviceIdentifier into groupedAuthRequests
+             select
+                 (from r in groupedAuthRequests
+                  join d in dbContext.Devices on new { r.RequestDeviceIdentifier, r.UserId }
+                                            equals new { RequestDeviceIdentifier = d.Identifier, d.UserId } into deviceJoin
+                  from dj in deviceJoin.DefaultIfEmpty() // This creates a left join allowing null for devices
+                  orderby r.CreationDate descending
+                  select new PendingAuthRequestDetails(r, dj.Id)).First()
+             ).ToListAsync();
+
+        mostRecentAuthRequests.RemoveAll(a => a.Approved != null);
+
+        return mostRecentAuthRequests;
     }
 
     public async Task<ICollection<OrganizationAdminAuthRequest>> GetManyAdminApprovalRequestsByManyIdsAsync(

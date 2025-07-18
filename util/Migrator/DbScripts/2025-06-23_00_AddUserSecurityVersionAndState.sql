@@ -58,8 +58,8 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
     @SignedPublicKey NVARCHAR(MAX) = NULL,
-    @SecurityVersion INT = NULL,
-    @SecurityState NVARCHAR(MAX) = NULL
+    @SecurityState NVARCHAR(MAX) = NULL,
+    @SecurityVersion INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -110,8 +110,8 @@ BEGIN
         [LastEmailChangeDate],
         [VerifyDevices],
         [SignedPublicKey],
-        [SecurityVersion],
-        [SecurityState]
+        [SecurityState],
+        [SecurityVersion]
     )
     VALUES
     (
@@ -159,8 +159,8 @@ BEGIN
         @LastEmailChangeDate,
         @VerifyDevices,
         @SignedPublicKey,
-        @SecurityVersion,
         @SecurityState
+        @SecurityVersion,
     )
 END
 GO
@@ -211,8 +211,8 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
     @SignedPublicKey NVARCHAR(MAX) = NULL,
-    @SecurityVersion INT = NULL,
     @SecurityState NVARCHAR(MAX) = NULL
+    @SecurityVersion INT = NULL,
 AS
 BEGIN
     SET NOCOUNT ON
@@ -263,8 +263,8 @@ BEGIN
         [LastEmailChangeDate] = @LastEmailChangeDate,
         [VerifyDevices] = @VerifyDevices,
         [SignedPublicKey] = @SignedPublicKey,
-        [SecurityVersion] = @SecurityVersion,
-        [SecurityState] = @SecurityState
+        [SecurityState] = @SecurityState,
+        [SecurityVersion] = @SecurityVersion
     WHERE
         [Id] = @Id
 END
