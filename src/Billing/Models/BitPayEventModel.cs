@@ -1,4 +1,7 @@
-﻿namespace Bit.Billing.Models;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Billing.Models;
 
 public class BitPayEventModel
 {

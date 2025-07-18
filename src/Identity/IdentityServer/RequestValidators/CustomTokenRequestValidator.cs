@@ -95,10 +95,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
                 context.Result.CustomResponse = new Dictionary<string, object> { { "encrypted_payload", payload } };
 
             }
-            if (FeatureService.IsEnabled(FeatureFlagKeys.RecordInstallationLastActivityDate)
-                && context.Result.ValidatedRequest.ClientId.StartsWith("installation"))
+            if (context.Result.ValidatedRequest.ClientId.StartsWith("installation"))
             {
-                var installationIdPart = clientId.Split(".")[1];
                 await RecordActivityForInstallation(clientId.Split(".")[1]);
             }
             return;
