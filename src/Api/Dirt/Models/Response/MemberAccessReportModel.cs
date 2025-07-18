@@ -1,4 +1,4 @@
-﻿using Bit.Core.Dirt.Reports.Models.Data;
+﻿using Bit.Core.Dirt.Models.Data;
 
 namespace Bit.Api.Dirt.Models.Response;
 

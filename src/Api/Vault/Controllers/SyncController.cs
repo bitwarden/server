@@ -1,4 +1,7 @@
-﻿using Bit.Api.KeyManagement.Queries.Interfaces;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.KeyManagement.Queries.Interfaces;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;

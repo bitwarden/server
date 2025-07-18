@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
@@ -10,8 +13,7 @@ namespace Bit.Core.Dirt.Reports.ReportFeatures;
 public class MemberAccessReportQuery(
     IOrganizationMemberBaseDetailRepository organizationMemberBaseDetailRepository,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-    IApplicationCacheService applicationCacheService)
-    : IMemberAccessReportQuery
+    IApplicationCacheService applicationCacheService) : IMemberAccessReportQuery
 {
     public async Task<IEnumerable<MemberAccessReportDetail>> GetMemberAccessReportsAsync(
         MemberAccessReportRequest request)
