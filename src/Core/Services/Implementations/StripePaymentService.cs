@@ -1,11 +1,14 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Requests;
@@ -842,7 +845,13 @@ public class StripePaymentService : IPaymentService
         try
         {
             await _stripeAdapter.TaxIdCreateAsync(customer.Id,
-                new TaxIdCreateOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber, });
+                new TaxIdCreateOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber });
+
+            if (taxInfo.TaxIdType == StripeConstants.TaxIdType.SpanishNIF)
+            {
+                await _stripeAdapter.TaxIdCreateAsync(customer.Id,
+                    new TaxIdCreateOptions { Type = StripeConstants.TaxIdType.EUVAT, Value = $"ES{taxInfo.TaxIdNumber}" });
+            }
         }
         catch (StripeException e)
         {
@@ -1000,6 +1009,15 @@ public class StripePaymentService : IPaymentService
                     Value = parameters.TaxInformation.TaxId
                 }
             ];
+
+            if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
+            {
+                options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
+                {
+                    Type = StripeConstants.TaxIdType.EUVAT,
+                    Value = $"ES{parameters.TaxInformation.TaxId}"
+                });
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(gatewayCustomerId))
@@ -1154,6 +1172,15 @@ public class StripePaymentService : IPaymentService
                     Value = parameters.TaxInformation.TaxId
                 }
             ];
+
+            if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
+            {
+                options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
+                {
+                    Type = StripeConstants.TaxIdType.EUVAT,
+                    Value = $"ES{parameters.TaxInformation.TaxId}"
+                });
+            }
         }
 
         Customer gatewayCustomer = null;

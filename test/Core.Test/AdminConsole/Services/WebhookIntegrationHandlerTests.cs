@@ -1,10 +1,12 @@
 ﻿using System.Net;
-using Bit.Core.AdminConsole.Models.Data.Integrations;
+using System.Net.Http.Headers;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Bit.Test.Common.MockedHttpClient;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -15,7 +17,9 @@ public class WebhookIntegrationHandlerTests
 {
     private readonly MockedHttpMessageHandler _handler;
     private readonly HttpClient _httpClient;
-    private const string _webhookUrl = "http://localhost/test/event";
+    private const string _scheme = "Bearer";
+    private const string _token = "AUTH_TOKEN";
+    private static readonly Uri _webhookUri = new Uri("https://localhost");
 
     public WebhookIntegrationHandlerTests()
     {
@@ -33,14 +37,15 @@ public class WebhookIntegrationHandlerTests
 
         return new SutProvider<WebhookIntegrationHandler>()
             .SetDependency(clientFactory)
+            .WithFakeTimeProvider()
             .Create();
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_SuccessfulRequest_ReturnsSuccess(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_SuccessfulRequestWithoutAuth_ReturnsSuccess(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl);
+        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUri);
 
         var result = await sutProvider.Sut.HandleAsync(message);
 
@@ -57,15 +62,46 @@ public class WebhookIntegrationHandlerTests
         var returned = await request.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpMethod.Post, request.Method);
-        Assert.Equal(_webhookUrl, request.RequestUri.ToString());
+        Assert.Null(request.Headers.Authorization);
+        Assert.Equal(_webhookUri, request.RequestUri);
         AssertHelper.AssertPropertyEqual(message.RenderedTemplate, returned);
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_TooManyRequests_ReturnsFailureSetsNotBeforUtc(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_SuccessfulRequestWithAuthorizationHeader_ReturnsSuccess(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl);
+        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUri, _scheme, _token);
+
+        var result = await sutProvider.Sut.HandleAsync(message);
+
+        Assert.True(result.Success);
+        Assert.Equal(result.Message, message);
+
+        sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient(
+            Arg.Is(AssertHelper.AssertPropertyEqual(WebhookIntegrationHandler.HttpClientName))
+        );
+
+        Assert.Single(_handler.CapturedRequests);
+        var request = _handler.CapturedRequests[0];
+        Assert.NotNull(request);
+        var returned = await request.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal(new AuthenticationHeaderValue(_scheme, _token), request.Headers.Authorization);
+        Assert.Equal(_webhookUri, request.RequestUri);
+        AssertHelper.AssertPropertyEqual(message.RenderedTemplate, returned);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleAsync_TooManyRequests_ReturnsFailureSetsDelayUntilDate(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
+    {
+        var sutProvider = GetSutProvider();
+        var now = new DateTime(2014, 3, 2, 1, 0, 0, DateTimeKind.Utc);
+        var retryAfter = now.AddSeconds(60);
+
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
+        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUri, _scheme, _token);
 
         _handler.Fallback
             .WithStatusCode(HttpStatusCode.TooManyRequests)
@@ -78,19 +114,21 @@ public class WebhookIntegrationHandlerTests
         Assert.True(result.Retryable);
         Assert.Equal(result.Message, message);
         Assert.True(result.DelayUntilDate.HasValue);
-        Assert.InRange(result.DelayUntilDate.Value, DateTime.UtcNow.AddSeconds(59), DateTime.UtcNow.AddSeconds(61));
+        Assert.Equal(retryAfter, result.DelayUntilDate.Value);
         Assert.Equal("Too Many Requests", result.FailureReason);
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_TooManyRequestsWithDate_ReturnsFailureSetsNotBeforUtc(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_TooManyRequestsWithDate_ReturnsFailureSetsDelayUntilDate(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl);
+        var now = new DateTime(2014, 3, 2, 1, 0, 0, DateTimeKind.Utc);
+        var retryAfter = now.AddSeconds(60);
+        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUri, _scheme, _token);
 
         _handler.Fallback
             .WithStatusCode(HttpStatusCode.TooManyRequests)
-            .WithHeader("Retry-After", DateTime.UtcNow.AddSeconds(60).ToString("r")) // "r" is the round-trip format: RFC1123
+            .WithHeader("Retry-After", retryAfter.ToString("r"))
             .WithContent(new StringContent("<html><head><title>test</title></head><body>test</body></html>"));
 
         var result = await sutProvider.Sut.HandleAsync(message);
@@ -99,7 +137,7 @@ public class WebhookIntegrationHandlerTests
         Assert.True(result.Retryable);
         Assert.Equal(result.Message, message);
         Assert.True(result.DelayUntilDate.HasValue);
-        Assert.InRange(result.DelayUntilDate.Value, DateTime.UtcNow.AddSeconds(59), DateTime.UtcNow.AddSeconds(61));
+        Assert.Equal(retryAfter, result.DelayUntilDate.Value);
         Assert.Equal("Too Many Requests", result.FailureReason);
     }
 
@@ -107,7 +145,7 @@ public class WebhookIntegrationHandlerTests
     public async Task HandleAsync_InternalServerError_ReturnsFailureSetsRetryable(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl);
+        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUri, _scheme, _token);
 
         _handler.Fallback
             .WithStatusCode(HttpStatusCode.InternalServerError)
@@ -126,7 +164,7 @@ public class WebhookIntegrationHandlerTests
     public async Task HandleAsync_UnexpectedRedirect_ReturnsFailureNotRetryable(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUrl);
+        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUri, _scheme, _token);
 
         _handler.Fallback
             .WithStatusCode(HttpStatusCode.TemporaryRedirect)

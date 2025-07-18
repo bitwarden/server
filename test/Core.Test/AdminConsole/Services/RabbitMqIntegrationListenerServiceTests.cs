@@ -1,9 +1,10 @@
 ﻿using System.Text;
-using Bit.Core.AdminConsole.Models.Data.Integrations;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -18,19 +19,24 @@ public class RabbitMqIntegrationListenerServiceTests
     private const string _queueName = "test_queue";
     private const string _retryQueueName = "test_queue_retry";
     private const string _routingKey = "test_routing_key";
+    private readonly DateTime _now = new DateTime(2014, 3, 2, 1, 0, 0, DateTimeKind.Utc);
     private readonly IIntegrationHandler _handler = Substitute.For<IIntegrationHandler>();
     private readonly IRabbitMqService _rabbitMqService = Substitute.For<IRabbitMqService>();
 
     private SutProvider<RabbitMqIntegrationListenerService> GetSutProvider()
     {
-        return new SutProvider<RabbitMqIntegrationListenerService>()
+        var sutProvider = new SutProvider<RabbitMqIntegrationListenerService>()
             .SetDependency(_handler)
             .SetDependency(_rabbitMqService)
             .SetDependency(_queueName, "queueName")
             .SetDependency(_retryQueueName, "retryQueueName")
             .SetDependency(_routingKey, "routingKey")
             .SetDependency(_maxRetries, "maxRetries")
+            .WithFakeTimeProvider()
             .Create();
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+
+        return sutProvider;
     }
 
     [Fact]
@@ -55,7 +61,7 @@ public class RabbitMqIntegrationListenerServiceTests
         var cancellationToken = CancellationToken.None;
         await sutProvider.Sut.StartAsync(cancellationToken);
 
-        message.DelayUntilDate = DateTime.UtcNow.AddMinutes(-1);
+        message.DelayUntilDate = null;
         message.RetryCount = 0;
         var eventArgs = new BasicDeliverEventArgs(
             consumerTag: string.Empty,
@@ -94,7 +100,7 @@ public class RabbitMqIntegrationListenerServiceTests
         var cancellationToken = CancellationToken.None;
         await sutProvider.Sut.StartAsync(cancellationToken);
 
-        message.DelayUntilDate = DateTime.UtcNow.AddMinutes(-1);
+        message.DelayUntilDate = null;
         message.RetryCount = _maxRetries;
         var eventArgs = new BasicDeliverEventArgs(
             consumerTag: string.Empty,
@@ -132,7 +138,7 @@ public class RabbitMqIntegrationListenerServiceTests
         var cancellationToken = CancellationToken.None;
         await sutProvider.Sut.StartAsync(cancellationToken);
 
-        message.DelayUntilDate = DateTime.UtcNow.AddMinutes(-1);
+        message.DelayUntilDate = null;
         message.RetryCount = 0;
         var eventArgs = new BasicDeliverEventArgs(
             consumerTag: string.Empty,
@@ -145,7 +151,7 @@ public class RabbitMqIntegrationListenerServiceTests
         );
         var result = new IntegrationHandlerResult(false, message);
         result.Retryable = true;
-        result.DelayUntilDate = DateTime.UtcNow.AddMinutes(1);
+        result.DelayUntilDate = _now.AddMinutes(1);
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
         var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
@@ -173,7 +179,7 @@ public class RabbitMqIntegrationListenerServiceTests
         var cancellationToken = CancellationToken.None;
         await sutProvider.Sut.StartAsync(cancellationToken);
 
-        message.DelayUntilDate = DateTime.UtcNow.AddMinutes(-1);
+        message.DelayUntilDate = null;
         var eventArgs = new BasicDeliverEventArgs(
             consumerTag: string.Empty,
             deliveryTag: 0,
@@ -205,7 +211,7 @@ public class RabbitMqIntegrationListenerServiceTests
         var cancellationToken = CancellationToken.None;
         await sutProvider.Sut.StartAsync(cancellationToken);
 
-        message.DelayUntilDate = DateTime.UtcNow.AddMinutes(1);
+        message.DelayUntilDate = _now.AddMinutes(1);
         var eventArgs = new BasicDeliverEventArgs(
             consumerTag: string.Empty,
             deliveryTag: 0,

@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
@@ -200,11 +201,23 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
     public async Task<ICollection<Organization>> GetManyByIdsAsync(IEnumerable<Guid> ids)
     {
         await using var connection = new SqlConnection(ConnectionString);
-
         return (await connection.QueryAsync<Organization>(
             $"[{Schema}].[{Table}_ReadManyByIds]",
             new { OrganizationIds = ids.ToGuidIdArrayTVP() },
             commandType: CommandType.StoredProcedure))
             .ToList();
+    }
+
+    public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QueryAsync<OrganizationSeatCounts>(
+                "[dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return result.SingleOrDefault() ?? new OrganizationSeatCounts();
+        }
     }
 }

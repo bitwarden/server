@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Response;
@@ -42,7 +45,6 @@ public class CiphersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
-    private readonly IFeatureService _featureService;
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ICollectionRepository _collectionRepository;
@@ -57,7 +59,6 @@ public class CiphersController : Controller
         ICurrentContext currentContext,
         ILogger<CiphersController> logger,
         GlobalSettings globalSettings,
-        IFeatureService featureService,
         IOrganizationCiphersQuery organizationCiphersQuery,
         IApplicationCacheService applicationCacheService,
         ICollectionRepository collectionRepository)
@@ -71,7 +72,6 @@ public class CiphersController : Controller
         _currentContext = currentContext;
         _logger = logger;
         _globalSettings = globalSettings;
-        _featureService = featureService;
         _organizationCiphersQuery = organizationCiphersQuery;
         _applicationCacheService = applicationCacheService;
         _collectionRepository = collectionRepository;
@@ -157,6 +157,7 @@ public class CiphersController : Controller
         {
             if (model.EncryptedFor != user.Id)
             {
+                _logger.LogError("Cipher was not encrypted for the current user. CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", user.Id, model.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }
@@ -186,6 +187,7 @@ public class CiphersController : Controller
         {
             if (model.Cipher.EncryptedFor != user.Id)
             {
+                _logger.LogError("Cipher was not encrypted for the current user. CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", user.Id, model.Cipher.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }
@@ -218,6 +220,7 @@ public class CiphersController : Controller
         {
             if (model.Cipher.EncryptedFor != userId)
             {
+                _logger.LogError("Cipher was not encrypted for the current user. CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", userId, model.Cipher.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }
@@ -244,6 +247,7 @@ public class CiphersController : Controller
         {
             if (model.EncryptedFor != user.Id)
             {
+                _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId}, CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", id, user.Id, model.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }
@@ -281,6 +285,7 @@ public class CiphersController : Controller
         {
             if (model.EncryptedFor != userId)
             {
+                _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId}, CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", id, userId, model.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }
@@ -375,11 +380,6 @@ public class CiphersController : Controller
 
     private async Task<bool> CanDeleteOrRestoreCipherAsAdminAsync(Guid organizationId, IEnumerable<Guid> cipherIds)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.LimitItemDeletion))
-        {
-            return await CanEditCipherAsAdminAsync(organizationId, cipherIds);
-        }
-
         var org = _currentContext.GetOrganization(organizationId);
 
         // If we're not an "admin" or if we're a provider user we don't need to check the ciphers
@@ -711,6 +711,7 @@ public class CiphersController : Controller
         {
             if (model.Cipher.EncryptedFor != user.Id)
             {
+                _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId} CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", id, user.Id, model.Cipher.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }
@@ -925,14 +926,14 @@ public class CiphersController : Controller
     public async Task PutDeleteAdmin(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await GetByIdAsync(id, userId);
+        var cipher = await GetByIdAsyncAdmin(id);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await CanDeleteOrRestoreCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
 
-        await _cipherService.SoftDeleteAsync(cipher, userId, true);
+        await _cipherService.SoftDeleteAsync(new CipherDetails(cipher), userId, true);
     }
 
     [HttpPut("delete")]
@@ -994,14 +995,14 @@ public class CiphersController : Controller
     public async Task<CipherMiniResponseModel> PutRestoreAdmin(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await GetByIdAsync(id, userId);
+        var cipher = await GetByIdAsyncAdmin(id);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await CanDeleteOrRestoreCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
 
-        await _cipherService.RestoreAsync(cipher, userId, true);
+        await _cipherService.RestoreAsync(new CipherDetails(cipher), userId, true);
         return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
     }
 
@@ -1082,6 +1083,7 @@ public class CiphersController : Controller
         {
             if (cipher.EncryptedFor.HasValue && cipher.EncryptedFor.Value != userId)
             {
+                _logger.LogError("Cipher was not encrypted for the current user. CipherId: {CipherId}, CurrentUser: {CurrentUserId}, EncryptedFor: {EncryptedFor}", cipher.Id, userId, cipher.EncryptedFor);
                 throw new BadRequestException("Cipher was not encrypted for the current user. Please try again.");
             }
         }
@@ -1408,6 +1410,11 @@ public class CiphersController : Controller
                 throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
             }
         }
+    }
+
+    private async Task<CipherOrganizationDetails> GetByIdAsyncAdmin(Guid cipherId)
+    {
+        return await _cipherRepository.GetOrganizationDetailsByIdAsync(cipherId);
     }
 
     private async Task<CipherDetails> GetByIdAsync(Guid cipherId, Guid userId)

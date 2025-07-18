@@ -1,4 +1,7 @@
-﻿using AutoMapper;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
@@ -225,12 +228,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     public async Task<int> GetCountByOrganizationAsync(Guid organizationId, string email, bool onlyRegisteredUsers)
     {
         var query = new OrganizationUserReadCountByOrganizationIdEmailQuery(organizationId, email, onlyRegisteredUsers);
-        return await GetCountFromQuery(query);
-    }
-
-    public async Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
-    {
-        var query = new OrganizationUserReadOccupiedSeatCountByOrganizationIdQuery(organizationId);
         return await GetCountFromQuery(query);
     }
 

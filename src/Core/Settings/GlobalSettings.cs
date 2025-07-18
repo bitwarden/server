@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Settings;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Settings;
 using Bit.Core.Settings.LoggingSettings;
 
 namespace Bit.Core.Settings;
@@ -284,6 +287,7 @@ public class GlobalSettings : IGlobalSettings
     {
         public AzureServiceBusSettings AzureServiceBus { get; set; } = new AzureServiceBusSettings();
         public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
+        public int IntegrationCacheRefreshIntervalMinutes { get; set; } = 10;
 
         public class AzureServiceBusSettings
         {
@@ -297,6 +301,8 @@ public class GlobalSettings : IGlobalSettings
             public virtual string SlackIntegrationSubscriptionName { get; set; } = "integration-slack-subscription";
             public virtual string WebhookEventSubscriptionName { get; set; } = "events-webhook-subscription";
             public virtual string WebhookIntegrationSubscriptionName { get; set; } = "integration-webhook-subscription";
+            public virtual string HecEventSubscriptionName { get; set; } = "events-hec-subscription";
+            public virtual string HecIntegrationSubscriptionName { get; set; } = "integration-hec-subscription";
 
             public string ConnectionString
             {
@@ -336,6 +342,9 @@ public class GlobalSettings : IGlobalSettings
             public virtual string WebhookEventsQueueName { get; set; } = "events-webhook-queue";
             public virtual string WebhookIntegrationQueueName { get; set; } = "integration-webhook-queue";
             public virtual string WebhookIntegrationRetryQueueName { get; set; } = "integration-webhook-retry-queue";
+            public virtual string HecEventsQueueName { get; set; } = "events-hec-queue";
+            public virtual string HecIntegrationQueueName { get; set; } = "integration-hec-queue";
+            public virtual string HecIntegrationRetryQueueName { get; set; } = "integration-hec-retry-queue";
 
             public string HostName
             {
@@ -431,6 +440,7 @@ public class GlobalSettings : IGlobalSettings
         public SmtpSettings Smtp { get; set; } = new SmtpSettings();
         public string SendGridApiKey { get; set; }
         public int? SendGridPercentage { get; set; }
+        public string SendGridApiHost { get; set; } = "https://api.sendgrid.com";
 
         public class SmtpSettings
         {

@@ -1,4 +1,7 @@
-﻿using System.Globalization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Globalization;
 using Bit.Commercial.Core.Billing.Providers.Models;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
@@ -550,6 +553,15 @@ public class ProviderBillingService(
             [
                 new CustomerTaxIdDataOptions { Type = taxIdType, Value = taxInfo.TaxIdNumber }
             ];
+
+            if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
+            {
+                options.TaxIdData.Add(new CustomerTaxIdDataOptions
+                {
+                    Type = StripeConstants.TaxIdType.EUVAT,
+                    Value = $"ES{taxInfo.TaxIdNumber}"
+                });
+            }
         }
 
         if (!string.IsNullOrEmpty(provider.DiscountId))

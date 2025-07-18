@@ -1,4 +1,7 @@
-﻿using System.Net;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;
@@ -242,10 +245,32 @@ public class OrganizationsController : Controller
             Seats = organization.Seats
         };
 
+        if (model.PlanType.HasValue)
+        {
+            var freePlan = await _pricingClient.GetPlanOrThrow(model.PlanType.Value);
+            var isDowngradingToFree = organization.PlanType != PlanType.Free && model.PlanType.Value == PlanType.Free;
+            if (isDowngradingToFree)
+            {
+                if (model.Seats.HasValue && model.Seats.Value > freePlan.PasswordManager.MaxSeats)
+                {
+                    TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxSeats} seats cannot be downgraded to the Free plan";
+                    return RedirectToAction("Edit", new { id });
+                }
+
+                if (model.MaxCollections > freePlan.PasswordManager.MaxCollections)
+                {
+                    TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxCollections} collections cannot be downgraded to the Free plan. Your organization currently has {organization.MaxCollections} collections.";
+                    return RedirectToAction("Edit", new { id });
+                }
+
+                model.MaxStorageGb = null;
+                model.ExpirationDate = null;
+                model.Enabled = true;
+            }
+        }
+
         UpdateOrganization(organization, model);
-
         var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
-
         if (organization.UseSecretsManager && !plan.SupportsSecretsManager)
         {
             TempData["Error"] = "Plan does not support Secrets Manager";

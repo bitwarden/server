@@ -53,7 +53,7 @@
                                         && @Model.Provider.Status.Equals(ProviderStatusType.Pending)
                                         && canResendEmailInvite)
                                     {
-                                        @if(@TempData["InviteResentTo"] != null && @TempData["InviteResentTo"].ToString() == @user.UserId.Value.ToString())
+                                        @if(@TempData["InviteResentTo"] != null && @TempData["InviteResentTo"]!.ToString() == @user.UserId!.Value.ToString())
                                         {
                                             <button class="btn btn-outline-success btn-sm disabled" disabled>Invite Resent!</button>
                                         }

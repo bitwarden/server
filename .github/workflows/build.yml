@@ -11,7 +11,7 @@ on:
     types: [opened, synchronize]
   workflow_call:
     inputs: {}
-  
+
 permissions:
   contents: read
 
@@ -95,10 +95,8 @@ jobs:
     steps:
       - name: Check secrets
         id: check-secrets
-        env:
-          AZURE_KV_CI_SERVICE_PRINCIPAL: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
         run: |
-          has_secrets=${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL != '' }}
+          has_secrets=${{ secrets.AZURE_CLIENT_ID != '' }}
           echo "has_secrets=$has_secrets" >> $GITHUB_OUTPUT
 
       - name: Check out repo
@@ -174,18 +172,15 @@ jobs:
         uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
 
       ########## ACRs ##########
-      - name: Log in to Azure - production subscription
-        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
         with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
 
       - name: Log in to ACR - production subscription
         run: az acr login -n bitwardenprod
-
-      - name: Log in to Azure - CI subscription
-        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
-        with:
-          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
       - name: Retrieve GitHub PAT secrets
         id: retrieve-secret-pat
@@ -287,10 +282,16 @@ jobs:
           sha: ${{ contains(github.event_name, 'pull_request') && github.event.pull_request.head.sha || github.sha }}
           ref: ${{ contains(github.event_name, 'pull_request') && format('refs/pull/{0}/head', github.event.pull_request.number) || github.ref }}
 
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
+
   upload:
     name: Upload
     runs-on: ubuntu-24.04
     needs: build-artifacts
+    permissions:
+      id-token: write
+      actions: read
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -300,10 +301,12 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@87b7050bc53ea08284295505d98d2aa94301e852 # v4.2.0
 
-      - name: Log in to Azure - production subscription
-        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
         with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
 
       - name: Log in to ACR - production subscription
         run: az acr login -n $_AZ_REGISTRY --only-show-errors
@@ -350,13 +353,8 @@ jobs:
           cd docker-stub/US; zip -r ../../docker-stub-US.zip *; cd ../..
           cd docker-stub/EU; zip -r ../../docker-stub-EU.zip *; cd ../..
 
-      - name: Make Docker stub checksums
-        if: |
-          github.event_name != 'pull_request'
-          && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
-        run: |
-          sha256sum docker-stub-US.zip > docker-stub-US-sha256.txt
-          sha256sum docker-stub-EU.zip > docker-stub-EU-sha256.txt
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Upload Docker stub US artifact
         if: |
@@ -376,26 +374,6 @@ jobs:
         with:
           name: docker-stub-EU.zip
           path: docker-stub-EU.zip
-          if-no-files-found: error
-
-      - name: Upload Docker stub US checksum artifact
-        if: |
-          github.event_name != 'pull_request'
-          && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-        with:
-          name: docker-stub-US-sha256.txt
-          path: docker-stub-US-sha256.txt
-          if-no-files-found: error
-
-      - name: Upload Docker stub EU checksum artifact
-        if: |
-          github.event_name != 'pull_request'
-          && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-        with:
-          name: docker-stub-EU-sha256.txt
-          path: docker-stub-EU-sha256.txt
           if-no-files-found: error
 
       - name: Build Public API Swagger
@@ -524,11 +502,15 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - build-artifacts
+    permissions:
+      id-token: write
     steps:
-      - name: Log in to Azure - CI subscription
-        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
         with:
-          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
 
       - name: Retrieve GitHub PAT secrets
         id: retrieve-secret-pat
@@ -536,6 +518,9 @@ jobs:
         with:
           keyvault: "bitwarden-ci"
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Trigger self-host build
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
@@ -558,11 +543,15 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - build-artifacts
+    permissions:
+      id-token: write
     steps:
-      - name: Log in to Azure - CI subscription
-        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
         with:
-          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
 
       - name: Retrieve GitHub PAT secrets
         id: retrieve-secret-pat
@@ -570,6 +559,9 @@ jobs:
         with:
           keyvault: "bitwarden-ci"
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Trigger k8s deploy
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
@@ -598,9 +590,11 @@ jobs:
     uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
     with:
       project: server
-      pull_request_number: ${{ github.event.number }}
+      pull_request_number: ${{ github.event.number || 0 }}
     secrets: inherit
-    permissions: read-all
+    permissions:
+      contents: read
+      id-token: write
 
   check-failures:
     name: Check for failures
@@ -613,6 +607,8 @@ jobs:
       - build-mssqlmigratorutility
       - self-host-build
       - trigger-k8s-deploy
+    permissions:
+      id-token: write
     steps:
       - name: Check if any job failed
         if: |
@@ -621,11 +617,12 @@ jobs:
           && contains(needs.*.result, 'failure')
         run: exit 1
 
-      - name: Log in to Azure - CI subscription
-        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
-        if: failure()
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
         with:
-          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
@@ -634,6 +631,9 @@ jobs:
         with:
           keyvault: "bitwarden-ci"
           secrets: "devops-alerts-slack-webhook-url"
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Notify Slack on failure
         uses: act10ns/slack@44541246747a30eb3102d87f7a4cc5471b0ffb7d # v2.1.0

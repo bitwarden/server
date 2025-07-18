@@ -18,16 +18,6 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUser>> GetManyByUserAsync(Guid userId);
     Task<ICollection<OrganizationUser>> GetManyByOrganizationAsync(Guid organizationId, OrganizationUserType? type);
     Task<int> GetCountByOrganizationAsync(Guid organizationId, string email, bool onlyRegisteredUsers);
-
-    /// <summary>
-    /// Returns the number of occupied seats for an organization.
-    /// Occupied seats are OrganizationUsers that have at least been invited.
-    /// As of https://bitwarden.atlassian.net/browse/PM-17772, a seat is also occupied by a Families for Enterprise sponsorship sent by an
-    /// organization admin, even if the user sent the invitation doesn't have a corresponding OrganizationUser in the Enterprise organization.
-    /// </summary>
-    /// <param name="organizationId">The ID of the organization to get the occupied seat count for.</param>
-    /// <returns>The number of occupied seats for the organization.</returns>
-    Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers);
     Task<OrganizationUser?> GetByOrganizationAsync(Guid organizationId, Guid userId);
     Task<Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id);
