@@ -128,6 +128,11 @@ public class LoggerFactoryExtensionsTests
         // Look in syslog for data
         using var socket = await listener.AcceptSocketAsync(cts.Token);
 
+        // This is rather lazy as opposed to implementing smarter syslog message
+        // reading but thats not what this test about, so instead just give
+        // the sink time to finish its work in the background
+        await Task.Delay(5);
+
         List<string> messages = [];
 
         while (true)
