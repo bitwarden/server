@@ -71,4 +71,3 @@ BEGIN
        AND O.usepolicies = 1
        AND p.type = @PolicyType;
 END
-GO
