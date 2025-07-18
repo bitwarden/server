@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-namespace Bit.Icons.Services;
+﻿namespace Bit.Icons.Services;
 
 public class ChangePasswordUriService : IChangePasswordUriService
 {

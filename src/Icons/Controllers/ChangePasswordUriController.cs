@@ -59,7 +59,7 @@ public class ChangePasswordUriController : Controller
         var domain = validUri.Host;
 
         var mappedDomain = _domainMappingService.MapDomain(domain);
-        if (!_changePasswordSettings.CacheEnabled || !_memoryCache.TryGetValue(mappedDomain, out string changePasswordUri))
+        if (!_changePasswordSettings.CacheEnabled || !_memoryCache.TryGetValue(mappedDomain, out string? changePasswordUri))
         {
             var result = await _changePasswordService.GetChangePasswordUri(domain);
             if (result == null)
