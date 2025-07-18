@@ -84,7 +84,6 @@
         "Serilog.AspNetCore",
         "Serilog.Extensions.Logging",
         "Serilog.Extensions.Logging.File",
-        "Serilog.Sinks.AzureCosmosDB",
         "Serilog.Sinks.SyslogMessages",
         "Stripe.net",
         "Swashbuckle.AspNetCore",
