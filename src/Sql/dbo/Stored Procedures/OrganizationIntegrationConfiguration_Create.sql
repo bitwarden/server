@@ -1,7 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[OrganizationIntegrationConfiguration_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationIntegrationId UNIQUEIDENTIFIER,
-    @EventType SMALLINT = NULL,
+    @EventType SMALLINT,
     @Configuration VARCHAR(MAX),
     @Template VARCHAR(MAX),
     @CreationDate DATETIME2(7),

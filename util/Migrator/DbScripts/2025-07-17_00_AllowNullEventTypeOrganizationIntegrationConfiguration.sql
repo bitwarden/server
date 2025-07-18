@@ -14,7 +14,7 @@ GO
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegrationConfiguration_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationIntegrationId UNIQUEIDENTIFIER,
-    @EventType SMALLINT = NULL,
+    @EventType SMALLINT,
     @Configuration VARCHAR(MAX),
     @Template VARCHAR(MAX),
     @CreationDate DATETIME2(7),
@@ -52,7 +52,7 @@ GO
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegrationConfiguration_Update]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationIntegrationId UNIQUEIDENTIFIER,
-    @EventType SMALLINT = NULL,
+    @EventType SMALLINT,
     @Configuration VARCHAR(MAX),
     @Template VARCHAR(MAX),
     @CreationDate DATETIME2(7),
@@ -75,4 +75,28 @@ SET
 WHERE
     [Id] = @Id
 END
+GO
+
+CREATE OR ALTER VIEW [dbo].[OrganizationIntegrationConfigurationView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[OrganizationIntegrationConfiguration]
+GO
+
+CREATE OR ALTER VIEW [dbo].[OrganizationIntegrationConfigurationDetailsView]
+AS
+SELECT
+    oi.[OrganizationId],
+    oi.[Type] AS [IntegrationType],
+    oic.[EventType],
+    oic.[Configuration],
+    oi.[Configuration] AS [IntegrationConfiguration],
+    oic.[Template],
+    oic.[Filters]
+FROM
+    [dbo].[OrganizationIntegrationConfiguration] oic
+        INNER JOIN
+    [dbo].[OrganizationIntegration] oi ON oi.[Id] = oic.[OrganizationIntegrationId]
 GO
