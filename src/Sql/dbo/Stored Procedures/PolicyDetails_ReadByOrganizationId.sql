@@ -5,9 +5,6 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-BEGIN
-    SET NOCOUNT ON;
-
     ;WITH givenorgusers
                       AS (SELECT OU.id AS OrganizationUserID,
                                  OU.userid,
@@ -69,5 +66,6 @@ BEGIN
      WHERE  P.enabled = 1
        AND O.enabled = 1
        AND O.usepolicies = 1
-       AND p.type = @PolicyType;
+       AND p.type = @PolicyType
 END
+GO
