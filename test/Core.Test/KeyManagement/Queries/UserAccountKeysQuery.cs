@@ -31,10 +31,13 @@ public class UserAccountKeysQueryTests
         Assert.Equal(user.GetPublicKeyEncryptionKeyPair().PublicKey, result.PublicKeyEncryptionKeyPairData.PublicKey);
         Assert.Equal(user.GetPublicKeyEncryptionKeyPair().WrappedPrivateKey, result.PublicKeyEncryptionKeyPairData.WrappedPrivateKey);
         Assert.Equal(user.GetPublicKeyEncryptionKeyPair().SignedPublicKey, result.PublicKeyEncryptionKeyPairData.SignedPublicKey);
+
         Assert.NotNull(result.SignatureKeyPairData);
+        Assert.Equal("wrappedSigningKey", result.SignatureKeyPairData.WrappedSigningKey);
+        Assert.Equal("verifyingKey", result.SignatureKeyPairData.VerifyingKey);
+
         Assert.Equal(user.SecurityState, result.SecurityStateData.SecurityState);
         Assert.Equal(user.GetSecurityVersion(), result.SecurityStateData.SecurityVersion);
-        Assert.Equal(user.SecurityVersion, result.SecurityStateData.SecurityVersion);
     }
 
 }
