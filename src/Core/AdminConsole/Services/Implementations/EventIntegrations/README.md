@@ -197,22 +197,37 @@ interface and therefore can also handle directly all the message publishing func
 
 Organizations can configure integration configurations to send events to different endpoints -- each
 handler maps to a specific integration and checks for the configuration when it receives an event.
-Currently, there are integrations / handlers for Slack and webhooks (as mentioned above).
+Currently, there are integrations / handlers for Slack, webhooks, and HTTP Event Collector (HEC).
 
 ### `OrganizationIntegration`
 
 - The top-level object that enables a specific integration for the organization.
 - Includes any properties that apply to the entire integration across all events.
-    - For Slack, it consists of the token: `{ "token": "xoxb-token-from-slack" }`
-    - For webhooks, it is `null`. However, even though there is no configuration, an organization must
-      have a webhook `OrganizationIntegration` to enable configuration via `OrganizationIntegrationConfiguration`.
+    - For Slack, it consists of the token: `{ "Token": "xoxb-token-from-slack" }`.
+    - For webhooks, it is optional. Webhooks can either be configured at this level or the configuration level,
+      but the configuration level takes precedence. However, even though it is optional, an organization must
+      have a webhook `OrganizationIntegration` (even will a `null` `Configuration`) to enable configuration
+      via `OrganizationIntegrationConfiguration`.
+    - For HEC, it consists of the scheme, token, and URI:
+
+```json
+    {
+      "Scheme": "Bearer",
+      "Token": "Auth-token-from-HEC-service",
+      "Uri": "https://example.com/api"
+    }
+```
 
 ### `OrganizationIntegrationConfiguration`
 
 - This contains the configurations specific to each `EventType` for the integration.
 - `Configuration` contains the event-specific configuration.
     - For Slack, this would contain what channel to send the message to: `{ "channelId": "C123456" }`
-    - For Webhook, this is the URL the request should be sent to: `{ "url": "https://api.example.com" }`
+    - For webhooks, this is the URL the request should be sent to: `{ "url": "https://api.example.com" }`
+      - Optionally this also can include a `Scheme` and `Token` if this webhook needs Authentication.
+      - As stated above, all of this information can be specified here or at the `OrganizationIntegration`
+        level, but any properties declared here will take precedence over the ones above.
+    - For HEC, this must be null. HEC is configured only at the `OrganizationIntegration` level.
 - `Template` contains a template string that is expected to be filled in with the contents of the actual event.
     - The tokens in the string are wrapped in `#` characters. For instance, the UserId would be `#UserId#`.
     - The `IntegrationTemplateProcessor` does the actual work of replacing these tokens with introspected values from
@@ -225,8 +240,85 @@ Currently, there are integrations / handlers for Slack and webhooks (as mentione
 - This is the combination of both the `OrganizationIntegration` and `OrganizationIntegrationConfiguration` into
   a single object. The combined contents tell the integration's handler all the details needed to send to an
   external service.
+- `OrganizationIntegrationConfiguration` takes precedence over `OrganizationIntegration` - any keys present in
+  both will receive the value declared in `OrganizationIntegrationConfiguration`.
 - An array of `OrganizationIntegrationConfigurationDetails` is what the `EventIntegrationHandler` fetches from
   the database to determine what to publish at the integration level.
+
+## Filtering
+
+In addition to the ability to configure integrations mentioned above, organization admins can
+also add `Filters` stored in the `OrganizationIntegrationConfiguration`. Filters are completely
+optional and as simple or complex as organization admins want to make them. These are stored in
+the database as JSON and serialized into an `IntegrationFilterGroup`. This is then passed to
+the `IntegrationFilterService`, which evaluates it to a `bool`. If it's `true`, the integration
+proceeds as above. If it's `false`, we ignore this event and do not route it to the integration
+level.
+
+### `IntegrationFilterGroup`
+
+Logical AND / OR grouping of a number of rules and other subgroups.
+
+| Property      | Description                                                                                                                                                                                                                                                                                                                                                      |
+|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `AndOperator` | Indicates whether **all** (`true`) or **any** (`false`) of the `Rules` and `Groups` must be true. This applies to _both_ the inner group and the list of rules; for instance, if this group contained Rule1 and Rule2 as well as Group1 and Group2:<br/><br/>`true`: `Rule1 && Rule2 && Group1 && Group2`<br>`false`: `Rule1 \|\| Rule2 \|\| Group1 \|\| Group2` |
+| `Rules`       | A list of `IntegrationFilterRule`. Can be null or empty, in which case it will return `true`.                                                                                                                                                                                                                                                                    |
+| `Groups`      | A list of nested `IntegrationFilterGroup`. Can be null or empty, in which case it will return `true`.                                                                                                                                                                                                                                                            |
+
+### `IntegrationFilterRule`
+
+The core of the filtering framework to determine if the data in this specific EventMessage
+matches the data for which the filter is searching.
+
+| Property    | Description                                                                                                                                                                                                                                                 |
+|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `Property`  | The property on `EventMessage` to evaluate (e.g., `CollectionId`).                                                                                                                                                                                          |
+| `Operation` | The comparison to perform between the property and `Value`. <br><br>**Supported operations:**<br>• `Equals`: `Guid` equals `Value`<br>• `NotEquals`: logical inverse of `Equals`<br>• `In`: `Guid` is in `Value` list<br>• `NotIn`: logical inverse of `In` |
+| `Value`     | The comparison value. Type depends on `Operation`: <br>• `Equals`, `NotEquals`: `Guid`<br>• `In`, `NotIn`: list of `Guid`                                                                                                                                   |
+
+```mermaid
+graph TD
+    A[IntegrationFilterGroup]
+    A -->|Has 0..many| B1[IntegrationFilterRule]
+    A --> D1[And Operator]
+    A -->|Has 0..many| C1[Nested IntegrationFilterGroup]
+
+    B1 --> B2[Property: string]
+    B1 --> B3[Operation: Equals/In/DateBefore/DateAfter]
+    B1 --> B4[Value: object?]
+
+    C1 -->|Has many| B1_2[IntegrationFilterRule]
+    C1 -->|Can contain| C2[IntegrationFilterGroup...]
+```
+## Caching
+
+To reduce database load and improve performance, integration configurations are cached in-memory as a Dictionary
+with a periodic load of all configurations. Without caching, each incoming `EventMessage` would trigger a database
+query to retrieve the relevant `OrganizationIntegrationConfigurationDetails`.
+
+By loading all configurations into memory on a fixed interval, we ensure:
+
+- Consistent performance for reads.
+- Reduced database pressure.
+- Predictable refresh timing, independent of event activity.
+
+### Architecture / Design
+
+- The cache is read-only for consumers. It is only updated in bulk by a background refresh process.
+- The cache is fully replaced on each refresh to avoid locking or partial state.
+- Reads return a `List<OrganizationIntegrationConfigurationDetails>` for a given key or an empty list if no
+  match exists.
+- Failures or delays in the loading process do not affect the existing cache state. The cache will continue serving
+  the last known good state until the update replaces the whole cache.
+
+### Background Refresh
+
+A hosted service (`IntegrationConfigurationDetailsCacheService`) runs in the background and:
+
+- Loads all configuration records at application startup.
+- Refreshes the cache on a configurable interval.
+- Logs timing and entry count on success.
+- Logs exceptions on failure without disrupting application flow.
 
 # Building a new integration
 

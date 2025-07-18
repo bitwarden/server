@@ -1,4 +1,7 @@
-﻿using Bit.Core.PhishingDomainFeatures.Interfaces;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.PhishingDomainFeatures.Interfaces;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;

@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Enums;
 using Bit.Core.Services;
 
 namespace Bit.Core.Auth.Models;

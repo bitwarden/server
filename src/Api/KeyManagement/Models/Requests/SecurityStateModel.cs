@@ -1,10 +1,12 @@
 ﻿#nullable enable
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Api.KeyManagement.Models.Requests;
 
 public class SecurityStateModel
 {
+    [StringLength(1000)]
     public required string SecurityState { get; set; }
     public required int SecurityVersion { get; set; }
 

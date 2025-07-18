@@ -1,4 +1,7 @@
-﻿using Bit.Core.Models.Mail;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Models.Mail;
 
 namespace Bit.Core.AdminConsole.Models.Mail;
 

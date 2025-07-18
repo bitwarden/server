@@ -1,8 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Providers.Repositories;
-using Bit.Core.Billing.Repositories;
 using Bit.Core.Dirt.Reports.Repositories;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Platform.Installations;
@@ -71,6 +72,8 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
         services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
         services.AddSingleton<IUserSignatureKeyPairRepository, UserSignatureKeyPairRepository>();
+        services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
+        services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
 
         if (selfHosted)
