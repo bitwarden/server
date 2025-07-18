@@ -95,8 +95,8 @@ BEGIN
         [LastEmailChangeDate],
         [VerifyDevices],
         [SignedPublicKey],
-        [SecurityState]
-        [SecurityVersion],
+        [SecurityState],
+        [SecurityVersion]
     )
     VALUES
     (
