@@ -25,7 +25,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 public class InviteOrganizationUsersCommand(IEventService eventService,
     IOrganizationUserRepository organizationUserRepository,
     IInviteUsersValidator inviteUsersValidator,
-    IPaymentService paymentService,
     IOrganizationRepository organizationRepository,
     IApplicationCacheService applicationCacheService,
     IMailService mailService,
@@ -33,7 +32,8 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
     IProviderOrganizationRepository providerOrganizationRepository,
-    IProviderUserRepository providerUserRepository
+    IProviderUserRepository providerUserRepository,
+    IOrganizationSubscriptionUpdateRepository organizationSubscriptionUpdateRepository
     ) : IInviteOrganizationUsersCommand
 {
 
@@ -156,12 +156,6 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     {
         if (validatedResult.Value.PasswordManagerSubscriptionUpdate is { Seats: > 0, SeatsRequiredToAdd: > 0 })
         {
-
-
-            await paymentService.AdjustSeatsAsync(organization,
-                validatedResult.Value.InviteOrganization.Plan,
-                validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats.Value);
-
             organization.Seats = (short?)validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats;
 
             await organizationRepository.ReplaceAsync(organization);
@@ -263,13 +257,14 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     {
         if (validatedResult.Value.PasswordManagerSubscriptionUpdate is { SeatsRequiredToAdd: > 0, UpdatedSeatTotal: > 0 })
         {
-            await paymentService.AdjustSeatsAsync(organization,
-                validatedResult.Value.InviteOrganization.Plan,
-                validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal.Value);
+            await organizationRepository.IncrementSeatCountAsync(
+                organization.Id,
+                validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd,
+                validatedResult.Value.PerformedAt.UtcDateTime);
 
-            organization.Seats = (short?)validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal;
+            await organizationSubscriptionUpdateRepository.SetToUpdateSubscriptionAsync(organization.Id, validatedResult.Value.PerformedAt.UtcDateTime);
 
-            await organizationRepository.ReplaceAsync(organization); // could optimize this with only a property update
+            organization.Seats = validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal;
             await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
         }
     }

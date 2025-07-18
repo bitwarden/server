@@ -403,4 +403,16 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             };
         }
     }
+
+    public async Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        await using var dbContext = GetDatabaseContext(scope);
+
+        await dbContext.Organizations
+            .Where(o => o.Id == organizationId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(o => o.Seats, o => o.Seats + increaseAmount)
+                .SetProperty(o => o.RevisionDate, requestDate));
+    }
 }
