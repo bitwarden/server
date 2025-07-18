@@ -47,6 +47,7 @@ public class IntegrationConfigurationDetailsCacheService : BackgroundService, II
 
         return results;
     }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await RefreshAsync();
