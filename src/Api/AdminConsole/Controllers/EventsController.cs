@@ -114,39 +114,34 @@ public class EventsController : Controller
 
     [HttpGet("~/organization/{orgId}/secrets/{id}/events")]
     public async Task<ListResponseModel<EventResponseModel>> GetSecrets(
-        string id,
-        string orgId,
+        string id, string orgId,
         [FromQuery] DateTime? start = null,
         [FromQuery] DateTime? end = null,
         [FromQuery] string continuationToken = null)
     {
-        var secretGuid = new Guid(id);
-        var secret = await _secretRepository.GetByIdAsync(secretGuid);
-        bool canViewLogs = false;
-
-        Guid orgIdForVerificaiton = secret != null
-                ? secret.OrganizationId
-                : new Guid(orgId);
-
-        var secretOrg = _currentContext.GetOrganization(orgIdForVerificaiton);
-
-        if (id is null || secretOrg == null || !await _currentContext.AccessEventLogs(secretOrg.Id))
+        if (!Guid.TryParse(id, out var secretGuid) || !Guid.TryParse(orgId, out var orgGuid))
         {
             throw new NotFoundException();
         }
 
-        if (secret is null)
-        {
-            secret = new Core.SecretsManager.Entities.Secret();
-            secret.Id = new Guid(id);
-            secret.OrganizationId = new Guid(orgId);
+        var secret = await _secretRepository.GetByIdAsync(secretGuid);
+        var orgIdForVerification = secret?.OrganizationId ?? orgGuid;
+        var secretOrg = _currentContext.GetOrganization(orgIdForVerification);
 
-            canViewLogs = secretOrg.Type == Core.Enums.OrganizationUserType.Admin ||
-                        secretOrg.Type == Core.Enums.OrganizationUserType.Owner;
+        if (secretOrg == null || !await _currentContext.AccessEventLogs(secretOrg.Id))
+        {
+            throw new NotFoundException();
+        }
+
+        bool canViewLogs = false;
+
+        if (secret == null)
+        {
+            secret = new Core.SecretsManager.Entities.Secret { Id = secretGuid, OrganizationId = orgGuid };
+            canViewLogs = secretOrg.Type is Core.Enums.OrganizationUserType.Admin or Core.Enums.OrganizationUserType.Owner;
         }
         else
         {
-            // Check if user has Secrets Manager access and explicit read access to this secret
             if (!_currentContext.AccessSecretsManager(secret.OrganizationId))
             {
                 throw new NotFoundException();
@@ -155,7 +150,6 @@ public class EventsController : Controller
             var userId = _userService.GetProperUserId(User)!.Value;
             var isAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
             var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, isAdmin);
-
             var access = await _secretRepository.AccessToSecretAsync(secret.Id, userId, accessClient);
             canViewLogs = access.Read;
         }
@@ -165,42 +159,51 @@ public class EventsController : Controller
             throw new NotFoundException();
         }
 
-        var dateRange = ApiHelpers.GetDateRange(start, end);
-        var result = await _eventRepository.GetManyBySecretAsync(
-            secret, dateRange.Item1, dateRange.Item2,
-            new PageOptions { ContinuationToken = continuationToken });
+        var (fromDate, toDate) = ApiHelpers.GetDateRange(start, end);
+        var result = await _eventRepository.GetManyBySecretAsync(secret, fromDate, toDate, new PageOptions { ContinuationToken = continuationToken });
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }
 
 
     [HttpGet("~/organization/{orgId}/projects/{id}/events")]
-    public async Task<ListResponseModel<EventResponseModel>> GetProjects(string id, string orgId,
-        [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
+    public async Task<ListResponseModel<EventResponseModel>> GetProjects(
+        string id,
+        string orgId,
+        [FromQuery] DateTime? start = null,
+        [FromQuery] DateTime? end = null,
+        [FromQuery] string continuationToken = null)
     {
-        var project = await _projectRepository.GetByIdAsync(new Guid(id));
-
-        Guid orgIdForVerificaiton = project != null
-                ? project.OrganizationId
-                : new Guid(orgId);
-
-        var org = _currentContext.GetOrganization(orgIdForVerificaiton);
-
-        if (project is null) //If the project was deleted, we can get the logs using the id and the orgId that were passed into this API endpoint
-        {
-            project = new Core.SecretsManager.Entities.Project();
-            project.Id = new Guid(id);
-            project.OrganizationId = new Guid(orgId);
-        }
-
-        if (id is null || org == null || !await _currentContext.AccessEventLogs(org.Id))
+        if (!Guid.TryParse(id, out var projectGuid) || !Guid.TryParse(orgId, out var orgGuid))
         {
             throw new NotFoundException();
         }
 
-        var dateRange = ApiHelpers.GetDateRange(start, end);
-        var result = await _eventRepository.GetManyByProjectAsync(project, dateRange.Item1, dateRange.Item2,
+        // Try to get project
+        var project = await _projectRepository.GetByIdAsync(projectGuid);
+        var orgIdForVerification = project?.OrganizationId ?? orgGuid;
+        var org = _currentContext.GetOrganization(orgIdForVerification);
+
+        // Fallback project if it was deleted
+        project ??= new Core.SecretsManager.Entities.Project
+        {
+            Id = projectGuid,
+            OrganizationId = orgGuid
+        };
+
+        if (org == null || !await _currentContext.AccessEventLogs(org.Id))
+        {
+            throw new NotFoundException();
+        }
+
+        // Get logs
+        var (fromDate, toDate) = ApiHelpers.GetDateRange(start, end);
+        var result = await _eventRepository.GetManyByProjectAsync(
+            project,
+            fromDate,
+            toDate,
             new PageOptions { ContinuationToken = continuationToken });
+
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }

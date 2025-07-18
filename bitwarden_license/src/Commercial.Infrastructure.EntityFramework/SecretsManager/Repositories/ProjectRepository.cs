@@ -22,7 +22,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         {
             var dbContext = GetDatabaseContext(scope);
             var project = await dbContext.Project
-                                    .Where(c => c.Id == id)
+                                    .Where(c => c.Id == id && c.DeletedDate == null)
                                     .FirstOrDefaultAsync();
             return Mapper.Map<Core.SecretsManager.Entities.Project>(project);
         }
