@@ -28,12 +28,13 @@ public class UserAccountKeysQueryTests
         var signatureKeyPairRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
         signatureKeyPairRepository.GetByUserIdAsync(user.Id).Returns(new SignatureKeyPairData(Core.KeyManagement.Enums.SignatureAlgorithm.Ed25519, "wrappedSigningKey", "verifyingKey"));
         var result = await sutProvider.Sut.Run(user);
-        Assert.Equal(user.GetPublicKeyEncryptionKeyPair(), result.PublicKeyEncryptionKeyPairData);
+        Assert.Equal(user.GetPublicKeyEncryptionKeyPair().PublicKey, result.PublicKeyEncryptionKeyPairData.PublicKey);
+        Assert.Equal(user.GetPublicKeyEncryptionKeyPair().WrappedPrivateKey, result.PublicKeyEncryptionKeyPairData.WrappedPrivateKey);
+        Assert.Equal(user.GetPublicKeyEncryptionKeyPair().SignedPublicKey, result.PublicKeyEncryptionKeyPairData.SignedPublicKey);
         Assert.NotNull(result.SignatureKeyPairData);
         Assert.Equal(user.SecurityState, result.SecurityStateData.SecurityState);
         Assert.Equal(user.GetSecurityVersion(), result.SecurityStateData.SecurityVersion);
         Assert.Equal(user.SecurityVersion, result.SecurityStateData.SecurityVersion);
-        Assert.Equal(user.SecurityState, result.SecurityStateData.SecurityState);
     }
 
 }
