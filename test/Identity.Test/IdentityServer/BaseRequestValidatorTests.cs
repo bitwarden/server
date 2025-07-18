@@ -3,10 +3,13 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Response;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -27,6 +30,9 @@ namespace Bit.Identity.Test.IdentityServer;
 
 public class BaseRequestValidatorTests
 {
+    private static readonly string _mockEncryptedString =
+        "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+
     private UserManager<User> _userManager;
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
@@ -375,6 +381,102 @@ public class BaseRequestValidatorTests
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
         var expectedMessage = "Legacy encryption without a userkey is no longer supported. To recover your account, please contact support";
         Assert.Equal(expectedMessage, errorResponse.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_CustomResponse_NoMasterPassword_ShouldSetUserDecryptionOptions(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        _userDecryptionOptionsBuilder.ForUser(Arg.Any<User>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithDevice(Arg.Any<Device>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithSso(Arg.Any<SsoConfig>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredential(Arg.Any<WebAuthnCredential>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.BuildAsync().Returns(Task.FromResult(new UserDecryptionOptions
+        {
+            HasMasterPassword = false,
+            MasterPasswordUnlock = null
+        }));
+
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError);
+        var customResponse = context.GrantResult.CustomResponse;
+        Assert.Contains("UserDecryptionOptions", customResponse);
+        Assert.IsType<UserDecryptionOptions>(customResponse["UserDecryptionOptions"]);
+        var userDecryptionOptions = (UserDecryptionOptions)customResponse["UserDecryptionOptions"];
+        Assert.False(userDecryptionOptions.HasMasterPassword);
+        Assert.Null(userDecryptionOptions.MasterPasswordUnlock);
+    }
+
+    [Theory]
+    [BitAutoData(KdfType.PBKDF2_SHA256, 654_321, null, null)]
+    [BitAutoData(KdfType.Argon2id, 11, 128, 5)]
+    public async Task ValidateAsync_CustomResponse_MasterPassword_ShouldSetUserDecryptionOptions(
+        KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        _userDecryptionOptionsBuilder.ForUser(Arg.Any<User>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithDevice(Arg.Any<Device>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithSso(Arg.Any<SsoConfig>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredential(Arg.Any<WebAuthnCredential>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.BuildAsync().Returns(Task.FromResult(new UserDecryptionOptions
+        {
+            HasMasterPassword = true,
+            MasterPasswordUnlock = new MasterPasswordUnlockResponseModel
+            {
+                Kdf = new MasterPasswordUnlockKdfResponseModel
+                {
+                    KdfType = kdfType,
+                    Iterations = kdfIterations,
+                    Memory = kdfMemory,
+                    Parallelism = kdfParallelism
+                },
+                MasterKeyEncryptedUserKey = _mockEncryptedString,
+                Salt = "test@example.com"
+            }
+        }));
+
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError);
+        var customResponse = context.GrantResult.CustomResponse;
+        Assert.Contains("UserDecryptionOptions", customResponse);
+        Assert.IsType<UserDecryptionOptions>(customResponse["UserDecryptionOptions"]);
+        var userDecryptionOptions = (UserDecryptionOptions)customResponse["UserDecryptionOptions"];
+        Assert.True(userDecryptionOptions.HasMasterPassword);
+        Assert.NotNull(userDecryptionOptions.MasterPasswordUnlock);
+        Assert.Equal(kdfType, userDecryptionOptions.MasterPasswordUnlock.Kdf.KdfType);
+        Assert.Equal(kdfIterations, userDecryptionOptions.MasterPasswordUnlock.Kdf.Iterations);
+        Assert.Equal(kdfMemory, userDecryptionOptions.MasterPasswordUnlock.Kdf.Memory);
+        Assert.Equal(kdfParallelism, userDecryptionOptions.MasterPasswordUnlock.Kdf.Parallelism);
+        Assert.Equal(_mockEncryptedString, userDecryptionOptions.MasterPasswordUnlock.MasterKeyEncryptedUserKey);
+        Assert.Equal("test@example.com", userDecryptionOptions.MasterPasswordUnlock.Salt);
     }
 
     private BaseRequestValidationContextFake CreateContext(
