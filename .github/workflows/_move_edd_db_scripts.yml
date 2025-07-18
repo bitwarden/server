@@ -1,5 +1,5 @@
-name: _move_finalization_db_scripts
-run-name: Move finalization database scripts
+name: _move_edd_db_scripts
+run-name: Move EDD database scripts
 
 on:
   workflow_call:
@@ -17,7 +17,8 @@ jobs:
       id-token: write
     outputs:
       migration_filename_prefix: ${{ steps.prefix.outputs.prefix }}
-      copy_finalization_scripts: ${{ steps.check-finalization-scripts-existence.outputs.copy_finalization_scripts }}
+      copy_edd_scripts: ${{ steps.check-script-existence.outputs.copy_edd_scripts }}
+
     steps:
       - name: Log in to Azure
         uses: bitwarden/gh-actions/azure-login@main
@@ -45,17 +46,17 @@ jobs:
         id: prefix
         run: echo "prefix=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
-      - name: Check if any files in DB finalization directory
-        id: check-finalization-scripts-existence
+      - name: Check if any files in DB transition or finalization directories
+        id: check-script-existence
         run: |
-          if [ -f util/Migrator/DbScripts_finalization/* ]; then
-            echo "copy_finalization_scripts=true" >> $GITHUB_OUTPUT
+          if [ -f util/Migrator/DbScripts_transition/* -o -f util/Migrator/DbScripts_finalization/* ]; then
+            echo "copy_edd_scripts=true" >> $GITHUB_OUTPUT
           else
-            echo "copy_finalization_scripts=false" >> $GITHUB_OUTPUT
+            echo "copy_edd_scripts=false" >> $GITHUB_OUTPUT
           fi
 
-  move-finalization-db-scripts:
-    name: Move finalization database scripts
+  move-scripts:
+    name: Move scripts
     runs-on: ubuntu-22.04
     needs: setup
     permissions:
@@ -63,9 +64,9 @@ jobs:
       pull-requests: write
       id-token: write
       actions: read
-    if: ${{ needs.setup.outputs.copy_finalization_scripts == 'true' }}
+    if: ${{ needs.setup.outputs.copy_edd_scripts == 'true' }}
     steps:
-      - name: Checkout
+      - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
@@ -74,35 +75,62 @@ jobs:
         id: branch_name
         env:
           PREFIX: ${{ needs.setup.outputs.migration_filename_prefix }}
-        run: echo "branch_name=move_finalization_db_scripts_$PREFIX" >> $GITHUB_OUTPUT
+        run: echo "branch_name=move_edd_db_scripts_$PREFIX" >> $GITHUB_OUTPUT
 
       - name: "Create branch"
         env:
           BRANCH: ${{ steps.branch_name.outputs.branch_name }}
         run: git switch -c $BRANCH
 
-      - name: Move DbScripts_finalization
+      - name: Move scripts and finalization database schema
         id: move-files
         env:
           PREFIX: ${{ needs.setup.outputs.migration_filename_prefix }}
         run: |
-          src_dir="util/Migrator/DbScripts_finalization"
+          # scripts
+          moved_files="Migration scripts moved:\n\n"
+
+          src_dirs="util/Migrator/DbScripts_transition,util/Migrator/DbScripts_finalization"
           dest_dir="util/Migrator/DbScripts"
           i=0
 
-          moved_files=""
-          for file in "$src_dir"/*; do
-            filenumber=$(printf "%02d" $i)
+          for src_dir in ${src_dirs//,/ }; do
+            for file in "$src_dir"/*; do
+              filenumber=$(printf "%02d" $i)
 
-            filename=$(basename "$file")
-            new_filename="${PREFIX}_${filenumber}_${filename}"
-            dest_file="$dest_dir/$new_filename"
+              filename=$(basename "$file")
+              new_filename="${PREFIX}_${filenumber}_${filename}"
+              dest_file="$dest_dir/$new_filename"
 
-            mv "$file" "$dest_file"
-            moved_files="$moved_files \n $filename -> $new_filename"
+              # Replace any finalization references due to the move
+              sed -i -e 's/dbo_finalization/dbo/g' "$file"
 
-            i=$((i+1))
+              mv "$file" "$dest_file"
+              moved_files="$moved_files \n $filename -> $new_filename"
+
+              i=$((i+1))
+            done
           done
+
+          # schema
+          moved_files="$moved_files\n\nFinalization scripts moved:\n\n"
+
+          src_dir="src/Sql/dbo_finalization"
+          dest_dir="src/Sql/dbo"
+
+          # sync finalization schema back to dbo, maintaining structure
+          rsync -r "$src_dir/" "$dest_dir/"
+          rm -rf $src_dir/*
+
+          # Replace any finalization references due to the move
+          find ./src/Sql/dbo -name "*.sql" -type f -exec sed -i \
+            -e 's/\[dbo_finalization\]/[dbo]/g' \
+            -e 's/dbo_finalization\./dbo./g' {} +
+
+          for file in "$src_dir"/**/*; do
+            moved_files="$moved_files \n $file"
+          done
+
           echo "moved_files=$moved_files" >> $GITHUB_OUTPUT
 
       - name: Log in to Azure
@@ -139,7 +167,7 @@ jobs:
           git config --local user.name "bitwarden-devops-bot"
           if [ -n "$(git status --porcelain)" ]; then
             git add .
-            git commit -m "Move DbScripts_finalization to DbScripts" -a
+            git commit -m "Move EDD database scripts" -a
             git push -u origin ${{ steps.branch_name.outputs.branch_name }}
             echo "pr_needed=true" >> $GITHUB_OUTPUT
           else
@@ -155,16 +183,16 @@ jobs:
           BRANCH: ${{ steps.branch_name.outputs.branch_name }}
           GH_TOKEN: ${{ github.token }}
           MOVED_FILES: ${{ steps.move-files.outputs.moved_files }}
-          TITLE: "Move finalization database scripts"
+          TITLE: "Move EDD database scripts"
         run: |
           PR_URL=$(gh pr create --title "$TITLE" \
             --base "main" \
             --head "$BRANCH" \
             --label "automated pr" \
             --body "
-              ## Automated movement of DbScripts_finalization to DbScripts
+              Automated movement of EDD database scripts.
 
-              ## Files moved:
+              Files moved:
               $(echo -e "$MOVED_FILES")
               ")
           echo "pr_url=${PR_URL}" >> $GITHUB_OUTPUT
@@ -175,5 +203,5 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
         with:
-          message: "Created PR for moving DbScripts_finalization to DbScripts: ${{ steps.create-pr.outputs.pr_url }}"
+          message: "Created PR for moving EDD database scripts: ${{ steps.create-pr.outputs.pr_url }}"
           status: ${{ job.status }}

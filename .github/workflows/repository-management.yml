@@ -228,8 +228,8 @@ jobs:
           git switch --quiet --create $BRANCH_NAME
           git push --quiet --set-upstream origin $BRANCH_NAME
 
-  move_future_db_scripts:
-    name: Move finalization database scripts
+  move_edd_db_scripts:
+    name: Move EDD database scripts
     needs: cut_branch
-    uses: ./.github/workflows/_move_finalization_db_scripts.yml
+    uses: ./.github/workflows/_move_edd_db_scripts.yml
     secrets: inherit
