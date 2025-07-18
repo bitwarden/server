@@ -26,6 +26,27 @@ public class MaskedPaymentMethodTests
     }
 
     [Fact]
+    public void Write_Read_BankAccount_WithOptions_Succeeds()
+    {
+        MaskedPaymentMethod input = new MaskedBankAccount
+        {
+            BankName = "Chase",
+            Last4 = "9999",
+            Verified = true
+        };
+
+        var jsonSerializerOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
+        var json = JsonSerializer.Serialize(input, jsonSerializerOptions);
+
+        var output = JsonSerializer.Deserialize<MaskedPaymentMethod>(json, jsonSerializerOptions);
+        Assert.NotNull(output);
+        Assert.True(output.IsT0);
+
+        Assert.Equivalent(input.AsT0, output.AsT0);
+    }
+
+    [Fact]
     public void Write_Read_Card_Succeeds()
     {
         MaskedPaymentMethod input = new MaskedCard

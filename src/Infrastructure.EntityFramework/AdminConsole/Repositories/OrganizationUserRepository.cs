@@ -257,7 +257,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var dbContext = GetDatabaseContext(scope);
             var query = from ou in dbContext.OrganizationUsers
                         join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
-                        where ou.Id == id
+                        join c in dbContext.Collections on cu.CollectionId equals c.Id
+                        where ou.Id == id && c.Type != CollectionType.DefaultUserCollection
                         select cu;
             var collections = await query.Select(cu => new CollectionAccessSelection
             {
@@ -369,6 +370,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             {
                 collections = (await (from cu in dbContext.CollectionUsers
                                       join ou in userIdEntities on cu.OrganizationUserId equals ou.Id
+                                      join c in dbContext.Collections on cu.CollectionId equals c.Id
+                                      where c.Type != CollectionType.DefaultUserCollection
                                       select cu).ToListAsync())
                     .GroupBy(c => c.OrganizationUserId).ToList();
             }

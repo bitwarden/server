@@ -3,6 +3,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -13,6 +14,7 @@ using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -27,14 +29,19 @@ using Subscription = Stripe.Subscription;
 
 namespace Bit.Core.Billing.Services.Implementations;
 
+using static StripeConstants;
+
 public class SubscriberService(
     IBraintreeGateway braintreeGateway,
     IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
+    IOrganizationRepository organizationRepository,
+    IProviderRepository providerRepository,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
-    ITaxService taxService) : ISubscriberService
+    ITaxService taxService,
+    IUserRepository userRepository) : ISubscriberService
 {
     public async Task CancelSubscription(
         ISubscriber subscriber,
@@ -145,6 +152,110 @@ public class SubscriberService(
 
         throw new BillingException();
     }
+
+#nullable enable
+    public async Task<Customer> CreateStripeCustomer(ISubscriber subscriber)
+    {
+        if (!string.IsNullOrEmpty(subscriber.GatewayCustomerId))
+        {
+            throw new ConflictException("Subscriber already has a linked Stripe Customer");
+        }
+
+        var options = subscriber switch
+        {
+            Organization organization => new CustomerCreateOptions
+            {
+                Description = organization.DisplayBusinessName(),
+                Email = organization.BillingEmail,
+                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                {
+                    CustomFields =
+                    [
+                        new CustomerInvoiceSettingsCustomFieldOptions
+                        {
+                            Name = organization.SubscriberType(),
+                            Value = Max30Characters(organization.DisplayName())
+                        }
+                    ]
+                },
+                Metadata = new Dictionary<string, string>
+                {
+                    [MetadataKeys.OrganizationId] = organization.Id.ToString(),
+                    [MetadataKeys.Region] = globalSettings.BaseServiceUri.CloudRegion
+                }
+            },
+            Provider provider => new CustomerCreateOptions
+            {
+                Description = provider.DisplayBusinessName(),
+                Email = provider.BillingEmail,
+                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                {
+                    CustomFields =
+                    [
+                        new CustomerInvoiceSettingsCustomFieldOptions
+                        {
+                            Name = provider.SubscriberType(),
+                            Value = Max30Characters(provider.DisplayName())
+                        }
+                    ]
+                },
+                Metadata = new Dictionary<string, string>
+                {
+                    [MetadataKeys.ProviderId] = provider.Id.ToString(),
+                    [MetadataKeys.Region] = globalSettings.BaseServiceUri.CloudRegion
+                }
+            },
+            User user => new CustomerCreateOptions
+            {
+                Description = user.Name,
+                Email = user.Email,
+                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                {
+                    CustomFields =
+                    [
+                        new CustomerInvoiceSettingsCustomFieldOptions
+                        {
+                            Name = user.SubscriberType(),
+                            Value = Max30Characters(user.SubscriberName())
+                        }
+                    ]
+                },
+                Metadata = new Dictionary<string, string>
+                {
+                    [MetadataKeys.Region] = globalSettings.BaseServiceUri.CloudRegion,
+                    [MetadataKeys.UserId] = user.Id.ToString()
+                }
+            },
+            _ => throw new ArgumentOutOfRangeException(nameof(subscriber))
+        };
+
+        var customer = await stripeAdapter.CustomerCreateAsync(options);
+
+        switch (subscriber)
+        {
+            case Organization organization:
+                organization.Gateway = GatewayType.Stripe;
+                organization.GatewayCustomerId = customer.Id;
+                await organizationRepository.ReplaceAsync(organization);
+                break;
+            case Provider provider:
+                provider.Gateway = GatewayType.Stripe;
+                provider.GatewayCustomerId = customer.Id;
+                await providerRepository.ReplaceAsync(provider);
+                break;
+            case User user:
+                user.Gateway = GatewayType.Stripe;
+                user.GatewayCustomerId = customer.Id;
+                await userRepository.ReplaceAsync(user);
+                break;
+        }
+
+        return customer;
+
+        string? Max30Characters(string? input)
+            => input?.Length <= 30 ? input : input?[..30];
+    }
+#nullable disable
 
     public async Task<Customer> GetCustomer(
         ISubscriber subscriber,

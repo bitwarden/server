@@ -179,7 +179,6 @@ public static class OrganizationServiceCollectionExtensions
 
         services.AddScoped<IRestoreOrganizationUserCommand, RestoreOrganizationUserCommand>();
 
-        services.AddScoped<IAuthorizationHandler, OrganizationUserUserMiniDetailsAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, OrganizationUserUserDetailsAuthorizationHandler>();
         services.AddScoped<IHasConfirmedOwnersExceptQuery, HasConfirmedOwnersExceptQuery>();
 
