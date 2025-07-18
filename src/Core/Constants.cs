@@ -1,4 +1,7 @@
-﻿using System.Reflection;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Reflection;
 
 namespace Bit.Core;
 
@@ -121,6 +124,7 @@ public static class FeatureFlagKeys
     public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
+    public const string Otp6Digits = "pm-18612-otp-6-digits";
 
     /* Autofill Team */
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
@@ -152,6 +156,7 @@ public static class FeatureFlagKeys
     public const string PM20322_AllowTrialLength0 = "pm-20322-allow-trial-length-0";
     public const string PM21092_SetNonUSBusinessUseToReverseCharge = "pm-21092-set-non-us-business-use-to-reverse-charge";
     public const string PM21383_GetProviderPriceFromStripe = "pm-21383-get-provider-price-from-stripe";
+    public const string PM21881_ManagePaymentDetailsOutsideCheckout = "pm-21881-manage-payment-details-outside-checkout";
 
     /* Data Insights and Reporting Team */
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
@@ -166,6 +171,7 @@ public static class FeatureFlagKeys
     public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
     public const string UserSdkForDecryption = "use-sdk-for-decryption";
     public const string PM17987_BlockType0 = "pm-17987-block-type-0";
+    public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
 
     /* Mobile Team */
     public const string NativeCarouselFlow = "native-carousel-flow";
@@ -189,11 +195,12 @@ public static class FeatureFlagKeys
     public const string PersistPopupView = "persist-popup-view";
     public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string WebPush = "web-push";
-    public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
     public const string IpcChannelFramework = "ipc-channel-framework";
+    public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
 
     /* Tools Team */
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
+    public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
 
     /* Vault Team */
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
@@ -207,6 +214,7 @@ public static class FeatureFlagKeys
     public const string RemoveCardItemTypePolicy = "pm-16442-remove-card-item-type-policy";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
     public const string PM19315EndUserActivationMvp = "pm-19315-end-user-activation-mvp";
+    public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
 
     public static List<string> GetAllKeys()
     {
