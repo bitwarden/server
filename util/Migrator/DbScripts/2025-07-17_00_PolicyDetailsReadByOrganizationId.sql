@@ -66,7 +66,7 @@ BEGIN
      WHERE  P.enabled = 1
        AND O.enabled = 1
        AND O.usepolicies = 1
-       AND p.type = @PolicyType;
+       AND p.type = @PolicyType
 END
 GO
 
