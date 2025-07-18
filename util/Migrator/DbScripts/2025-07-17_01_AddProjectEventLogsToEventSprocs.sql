@@ -1,4 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[Event_Create]
+-- Create or alter Event_Create procedure
+CREATE OR ALTER PROCEDURE [dbo].[Event_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Type INT,
     @UserId UNIQUEIDENTIFIER,
@@ -11,19 +12,19 @@
     @GroupId UNIQUEIDENTIFIER,
     @OrganizationUserId UNIQUEIDENTIFIER,
     @ProviderUserId UNIQUEIDENTIFIER,
-    @ProviderOrganizationId UNIQUEIDENTIFIER = null,
+    @ProviderOrganizationId UNIQUEIDENTIFIER = NULL,
     @ActingUserId UNIQUEIDENTIFIER,
     @DeviceType SMALLINT,
     @IpAddress VARCHAR(50),
     @Date DATETIME2(7),
-    @SystemUser TINYINT = null,
+    @SystemUser TINYINT = NULL,
     @DomainName VARCHAR(256),
-    @SecretId UNIQUEIDENTIFIER = null,
-    @ServiceAccountId UNIQUEIDENTIFIER = null,
-    @ProjectId UNIQUEIDENTIFIER = null
+    @SecretId UNIQUEIDENTIFIER = NULL,
+    @ServiceAccountId UNIQUEIDENTIFIER = NULL,
+    @ProjectId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
     INSERT INTO [dbo].[Event]
     (
@@ -74,5 +75,58 @@ BEGIN
         @SecretId,
         @ServiceAccountId,
         @ProjectId
-    )
+    );
 END
+GO
+
+-- Create or alter Event_ReadPageByProjectId procedure
+CREATE OR ALTER PROCEDURE [dbo].[Event_ReadPageByProjectId]
+    @ProjectId UNIQUEIDENTIFIER,
+    @StartDate DATETIME2(7),
+    @EndDate DATETIME2(7),
+    @BeforeDate DATETIME2(7),
+    @PageSize INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        *
+    FROM
+        [dbo].[EventView]
+    WHERE
+        [Date] >= @StartDate
+        AND (@BeforeDate IS NOT NULL OR [Date] <= @EndDate)
+        AND (@BeforeDate IS NULL OR [Date] < @BeforeDate)
+        AND [ProjectId] = @ProjectId
+    ORDER BY [Date] DESC
+    OFFSET 0 ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- Create or alter Event_ReadPageBySecretId procedure
+CREATE OR ALTER PROCEDURE [dbo].[Event_ReadPageBySecretId]
+    @SecretId UNIQUEIDENTIFIER,
+    @StartDate DATETIME2(7),
+    @EndDate DATETIME2(7),
+    @BeforeDate DATETIME2(7),
+    @PageSize INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        *
+    FROM
+        [dbo].[EventView]
+    WHERE
+        [Date] >= @StartDate
+        AND (@BeforeDate IS NOT NULL OR [Date] <= @EndDate)
+        AND (@BeforeDate IS NULL OR [Date] < @BeforeDate)
+        AND [SecretId] = @SecretId
+    ORDER BY [Date] DESC
+    OFFSET 0 ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO

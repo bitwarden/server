@@ -26,7 +26,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             var dbContext = GetDatabaseContext(scope);
             var secret = await dbContext.Secret
                                     .Include("Projects")
-                                    .Where(c => c.Id == id && c.DeletedDate == null)
+                                    .Where(c => c.Id == id)
                                     .FirstOrDefaultAsync();
             return Mapper.Map<Core.SecretsManager.Entities.Secret>(secret);
         }
@@ -39,6 +39,19 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             var dbContext = GetDatabaseContext(scope);
             var secrets = await dbContext.Secret
                 .Where(c => ids.Contains(c.Id) && c.DeletedDate == null)
+                .Include(c => c.Projects)
+                .ToListAsync();
+            return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
+        }
+    }
+
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyTrashedSecretsByIds(IEnumerable<Guid> ids)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var secrets = await dbContext.Secret
+                .Where(c => ids.Contains(c.Id) && c.DeletedDate != null)
                 .Include(c => c.Projects)
                 .ToListAsync();
             return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
@@ -66,10 +79,14 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
     }
 
-    public async Task<IEnumerable<SecretPermissionDetails>> GetManyDetailsByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType)
+    public async Task<IEnumerable<SecretPermissionDetails>> GetManyDetailsByOrganizationIdAsync(
+        Guid organizationId,
+        Guid userId,
+        AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
+
         var query = dbContext.Secret
             .Include(c => c.Projects)
             .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)

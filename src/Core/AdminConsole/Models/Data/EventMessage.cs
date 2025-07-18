@@ -37,5 +37,6 @@ public class EventMessage : IEvent
     public EventSystemUser? SystemUser { get; set; }
     public string DomainName { get; set; }
     public Guid? SecretId { get; set; }
+    public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
 }

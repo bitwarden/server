@@ -35,6 +35,7 @@ public class AzureEvent : ITableEntity
     public int? SystemUser { get; set; }
     public string DomainName { get; set; }
     public Guid? SecretId { get; set; }
+    public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
 
     public EventTableEntity ToEventTableEntity()
@@ -65,7 +66,8 @@ public class AzureEvent : ITableEntity
             SystemUser = SystemUser.HasValue ? (EventSystemUser)SystemUser.Value : null,
             DomainName = DomainName,
             SecretId = SecretId,
-            ServiceAccountId = ServiceAccountId
+            ServiceAccountId = ServiceAccountId,
+            ProjectId = ProjectId,
         };
     }
 }
@@ -95,6 +97,7 @@ public class EventTableEntity : IEvent
         SystemUser = e.SystemUser;
         DomainName = e.DomainName;
         SecretId = e.SecretId;
+        ProjectId = e.ProjectId;
         ServiceAccountId = e.ServiceAccountId;
     }
 
@@ -122,6 +125,7 @@ public class EventTableEntity : IEvent
     public EventSystemUser? SystemUser { get; set; }
     public string DomainName { get; set; }
     public Guid? SecretId { get; set; }
+    public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
 
     public AzureEvent ToAzureEvent()
@@ -152,6 +156,7 @@ public class EventTableEntity : IEvent
             SystemUser = SystemUser.HasValue ? (int)SystemUser.Value : null,
             DomainName = DomainName,
             SecretId = SecretId,
+            ProjectId = ProjectId,
             ServiceAccountId = ServiceAccountId
         };
     }
@@ -215,6 +220,15 @@ public class EventTableEntity : IEvent
             {
                 PartitionKey = pKey,
                 RowKey = $"SecretId={e.SecretId}__Date={dateKey}__Uniquifier={uniquifier}"
+            });
+        }
+
+        if (e.ProjectId.HasValue)
+        {
+            entities.Add(new EventTableEntity(e)
+            {
+                PartitionKey = pKey,
+                RowKey = $"ProjectId={e.ProjectId}__Date={dateKey}__Uniquifier={uniquifier}"
             });
         }
 
