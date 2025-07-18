@@ -1,4 +1,7 @@
-﻿using System.Text.RegularExpressions;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.RegularExpressions;
 using Bit.Core.Billing.Tax.Models;
 
 namespace Bit.Core.Billing.Tax.Services.Implementations;
