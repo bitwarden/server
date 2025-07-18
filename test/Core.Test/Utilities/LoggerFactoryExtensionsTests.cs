@@ -89,7 +89,7 @@ public class LoggerFactoryExtensionsTests
         logger.LogWarning("This is a test");
 
         // Writing to the file is buffered, give it a little time to flush
-        await Task.Delay(2);
+        await Task.Delay(5);
 
         var logFile = Assert.Single(tempDir.EnumerateFiles("Logs/*.log"));
 
