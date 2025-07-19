@@ -1861,6 +1861,12 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("SecurityState")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("SecurityVersion")
+                        .HasColumnType("integer");
+
                     b.Property<string>("SignedPublicKey")
                         .HasColumnType("text");
 

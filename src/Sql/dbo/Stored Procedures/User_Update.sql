@@ -42,7 +42,9 @@
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
-    @SignedPublicKey NVARCHAR(MAX) = NULL
+    @SignedPublicKey NVARCHAR(MAX) = NULL,
+    @SecurityState NVARCHAR(MAX) = NULL,
+    @SecurityVersion INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -92,7 +94,9 @@ BEGIN
         [LastKeyRotationDate] = @LastKeyRotationDate,
         [LastEmailChangeDate] = @LastEmailChangeDate,
         [VerifyDevices] = @VerifyDevices,
-        [SignedPublicKey] = @SignedPublicKey
+        [SignedPublicKey] = @SignedPublicKey,
+        [SecurityState] = @SecurityState,
+        [SecurityVersion] = @SecurityVersion
     WHERE
         [Id] = @Id
 END

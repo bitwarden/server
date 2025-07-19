@@ -61,6 +61,14 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     /// The public key, signed by the user's signature key.
     /// </summary>
     public string? SignedPublicKey { get; set; }
+    /// <summary>
+    /// The security version is included in the security state, but needs COSE parsing
+    /// </summary>
+    public int? SecurityVersion { get; set; }
+    /// <summary>
+    /// The security state is a signed object attesting to the version of the user's account.
+    /// </summary>
+    public string? SecurityState { get; set; }
     public bool Premium { get; set; }
     public DateTime? PremiumExpirationDate { get; set; }
     public DateTime? RenewalReminderDate { get; set; }
@@ -190,6 +198,12 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public bool GetPremium()
     {
         return Premium;
+    }
+
+    public int GetSecurityVersion()
+    {
+        // If no security version is set, it is version 1. The minimum initialized version is 2.
+        return SecurityVersion ?? 1;
     }
 
     /// <summary>

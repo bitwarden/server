@@ -498,6 +498,11 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
             WrappedSigningKey = _mockEncryptedType7String,
             VerifyingKey = "verifyingKey",
         };
+        request.AccountKeys.SecurityState = new SecurityStateModel
+        {
+            SecurityVersion = 2,
+            SecurityState = "v2",
+        };
 
         request.OldMasterKeyAuthenticationHash = "newMasterPassword";
 
