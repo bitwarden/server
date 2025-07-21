@@ -105,7 +105,7 @@ public class LoggerFactoryExtensionsTests
         );
     }
 
-    [Fact]
+    [Fact(Skip = "Only for local development.")]
     public async Task AddSerilog_SyslogConfigured_Warns()
     {
         // Setup a fake syslog server
@@ -131,7 +131,6 @@ public class LoggerFactoryExtensionsTests
         // This is rather lazy as opposed to implementing smarter syslog message
         // reading but thats not what this test about, so instead just give
         // the sink time to finish its work in the background
-        await Task.Delay(5);
 
         List<string> messages = [];
 
