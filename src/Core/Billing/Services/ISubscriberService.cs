@@ -1,4 +1,7 @@
-﻿using Bit.Core.Billing.Models;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -32,6 +35,9 @@ public interface ISubscriberService
     Task<string> CreateBraintreeCustomer(
         ISubscriber subscriber,
         string paymentMethodNonce);
+
+    Task<Customer> CreateStripeCustomer(
+        ISubscriber subscriber);
 
     /// <summary>
     /// Retrieves a Stripe <see cref="Customer"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> property.

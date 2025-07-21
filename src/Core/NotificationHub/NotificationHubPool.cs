@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.NotificationHub;
 
+#nullable enable
+
 public class NotificationHubPool : INotificationHubPool
 {
     private List<NotificationHubConnection> _connections { get; }

@@ -1,15 +1,14 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 
@@ -18,21 +17,16 @@ public class CreateGroupCommand : ICreateGroupCommand
     private readonly IEventService _eventService;
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IReferenceEventService _referenceEventService;
-    private readonly ICurrentContext _currentContext;
 
     public CreateGroupCommand(
         IEventService eventService,
         IGroupRepository groupRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IReferenceEventService referenceEventService,
-        ICurrentContext currentContext)
+        IOrganizationUserRepository organizationUserRepository
+        )
     {
         _eventService = eventService;
         _groupRepository = groupRepository;
         _organizationUserRepository = organizationUserRepository;
-        _referenceEventService = referenceEventService;
-        _currentContext = currentContext;
     }
 
     public async Task CreateGroupAsync(Group group, Organization organization,
@@ -77,8 +71,6 @@ public class CreateGroupCommand : ICreateGroupCommand
         {
             await _groupRepository.CreateAsync(group, collections);
         }
-
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.GroupCreated, organization, _currentContext));
     }
 
     private async Task GroupRepositoryUpdateUsersAsync(Group group, IEnumerable<Guid> userIds,

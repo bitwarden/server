@@ -104,8 +104,8 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
             throw new BadRequestException(string.Join(", ", commandResult.ErrorMessages));
         }
 
-        await Task.WhenAll(currentActiveRevocableOrganizationUsers.Select(x =>
-            _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), x.Email)));
+        await Task.WhenAll(nonCompliantUsers.Select(nonCompliantUser =>
+            _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), nonCompliantUser.user.Email)));
     }
 
     private static bool MembersWithNoMasterPasswordWillLoseAccess(

@@ -12,7 +12,9 @@
       <ul>
         <li>Deauthorize unrecognized devices</li>
         <li>Change your master password</li>
-        <li>Turn on two-step login</li>
+        {{#if DisplayTwoFactorReminder}}
+          <li style="margin-bottom: 5px;">Turn on two-step login</li>
+        {{/if}}
       </ul>
     </td>
   </tr>

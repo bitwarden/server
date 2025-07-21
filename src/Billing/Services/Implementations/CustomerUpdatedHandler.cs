@@ -1,8 +1,4 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Repositories;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
+﻿using Bit.Core.Repositories;
 using Event = Stripe.Event;
 
 namespace Bit.Billing.Services.Implementations;
@@ -10,23 +6,17 @@ namespace Bit.Billing.Services.Implementations;
 public class CustomerUpdatedHandler : ICustomerUpdatedHandler
 {
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IReferenceEventService _referenceEventService;
-    private readonly ICurrentContext _currentContext;
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly ILogger<CustomerUpdatedHandler> _logger;
 
     public CustomerUpdatedHandler(
         IOrganizationRepository organizationRepository,
-        IReferenceEventService referenceEventService,
-        ICurrentContext currentContext,
         IStripeEventService stripeEventService,
         IStripeEventUtilityService stripeEventUtilityService,
         ILogger<CustomerUpdatedHandler> logger)
     {
         _organizationRepository = organizationRepository ?? throw new ArgumentNullException(nameof(organizationRepository));
-        _referenceEventService = referenceEventService;
-        _currentContext = currentContext;
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
         _logger = logger;
@@ -95,20 +85,5 @@ public class CustomerUpdatedHandler : ICustomerUpdatedHandler
 
         organization.BillingEmail = customer.Email;
         await _organizationRepository.ReplaceAsync(organization);
-
-        if (_referenceEventService == null)
-        {
-            _logger.LogError("ReferenceEventService was not initialized in CustomerUpdatedHandler");
-            throw new InvalidOperationException($"{nameof(_referenceEventService)} is not initialized");
-        }
-
-        if (_currentContext == null)
-        {
-            _logger.LogError("CurrentContext was not initialized in CustomerUpdatedHandler");
-            throw new InvalidOperationException($"{nameof(_currentContext)} is not initialized");
-        }
-
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.OrganizationEditedInStripe, organization, _currentContext));
     }
 }

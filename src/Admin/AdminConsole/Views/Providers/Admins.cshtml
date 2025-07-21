@@ -7,7 +7,7 @@
     var canResendEmailInvite = AccessControlService.UserHasPermission(Permission.Provider_ResendEmailInvite);
 }
 
-<h2>Provider Admins</h2>
+<h2>Administrators</h2>
 <div class="row">
     <div class="col-8">
         <div class="table-responsive">
@@ -15,12 +15,13 @@
                 <thead>
                     <tr>
                         <th style="width: 190px;">Email</th>
+                        <th style="width: 160px;">Role</th>
                         <th style="width: 40px;">Status</th>
                         <th style="width: 30px;"></th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if(!Model.ProviderAdmins.Any())
+                    @if(!Model.ProviderUsers.Any())
                     {
                         <tr>
                             <td colspan="6">No results to list.</td>
@@ -28,29 +29,39 @@
                     }
                     else
                     {
-                        @foreach(var admin in Model.ProviderAdmins)
+                        @foreach(var user in Model.ProviderUsers)
                         {
                             <tr>
                                 <td class="align-middle">
-                                    @admin.Email
+                                    @user.Email
                                 </td>
                                 <td class="align-middle">
-                                    @admin.Status
+                                    @if(@user.Type == 0)
+                                    {
+                                        <span>Provider Admin</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Service User</span>
+                                    }
+                                </td>
+                                <td class="align-middle">
+                                    @user.Status
                                 </td>
                                 <td>
-                                    @if(admin.Status.Equals(ProviderUserStatusType.Confirmed)
+                                    @if(user.Status.Equals(ProviderUserStatusType.Confirmed)
                                         && @Model.Provider.Status.Equals(ProviderStatusType.Pending)
                                         && canResendEmailInvite)
                                     {
-                                        @if(@TempData["InviteResentTo"] != null && @TempData["InviteResentTo"].ToString() == @admin.UserId.Value.ToString())
+                                        @if(@TempData["InviteResentTo"] != null && @TempData["InviteResentTo"]!.ToString() == @user.UserId!.Value.ToString())
                                         {
                                             <button class="btn btn-outline-success btn-sm disabled" disabled>Invite Resent!</button>
                                         }
                                         else
                                         {
                                             <a class="btn btn-outline-secondary btn-sm"
-                                                data-id="@admin.Id" asp-controller="Providers"
-                                                asp-action="ResendInvite" asp-route-ownerId="@admin.UserId"
+                                                data-id="@user.Id" asp-controller="Providers"
+                                                asp-action="ResendInvite" asp-route-ownerId="@user.UserId"
                                                 asp-route-providerId="@Model.Provider.Id">
                                                 Resend Setup Invite
                                             </a>

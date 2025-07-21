@@ -1,6 +1,10 @@
-﻿using Bit.Core.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.SqlClient;
 
 namespace Bit.Core.KeyManagement.UserKey;
 
@@ -18,3 +22,12 @@ public interface IRotateUserAccountKeysCommand
     /// <exception cref="InvalidOperationException">User KDF settings and email must match the model provided settings.</exception>
     Task<IdentityResult> RotateUserAccountKeysAsync(User user, RotateUserAccountKeysData model);
 }
+
+/// <summary>
+/// A type used to implement updates to the database for key rotations. Each domain that requires an update of encrypted
+/// data during a key rotation should use this to implement its own database call. The user repository loops through
+/// these during a key rotation.
+/// <para>Note: connection and transaction are only used for Dapper. They won't be available in EF</para>
+/// </summary>
+public delegate Task UpdateEncryptedDataForKeyRotation(SqlConnection connection = null,
+    SqlTransaction transaction = null);

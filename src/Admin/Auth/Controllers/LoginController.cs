@@ -1,4 +1,7 @@
-﻿using Bit.Admin.Auth.IdentityServer;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Admin.Auth.IdentityServer;
 using Bit.Admin.Auth.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

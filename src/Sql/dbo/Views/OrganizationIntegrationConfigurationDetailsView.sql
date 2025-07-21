@@ -6,7 +6,8 @@ AS
         oic.[EventType],
         oic.[Configuration],
         oi.[Configuration] AS [IntegrationConfiguration],
-        oic.[Template]
+        oic.[Template],
+        oic.[Filters]
     FROM
         [dbo].[OrganizationIntegrationConfiguration] oic
         INNER JOIN

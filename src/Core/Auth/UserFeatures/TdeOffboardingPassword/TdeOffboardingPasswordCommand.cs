@@ -91,7 +91,7 @@ public class TdeOffboardingPasswordCommand : ITdeOffboardingPasswordCommand
         user.MasterPasswordHint = hint;
 
         await _userRepository.ReplaceAsync(user);
-        await _eventService.LogUserEventAsync(user.Id, EventType.User_UpdatedTempPassword);
+        await _eventService.LogUserEventAsync(user.Id, EventType.User_TdeOffboardingPasswordSet);
         await _pushService.PushLogOutAsync(user.Id);
 
         return IdentityResult.Success;

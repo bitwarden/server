@@ -27,8 +27,10 @@ public class UpdateOrganizationUserCommandTests
         List<CollectionAccessSelection> collections, List<Guid> groups, SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
         user.Id = default(Guid);
+        var existingUserType = OrganizationUserType.User;
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collections, groups));
+            () => sutProvider.Sut.UpdateUserAsync(user, existingUserType, savingUserId, collections, groups));
         Assert.Contains("invite the user first", exception.Message.ToLowerInvariant());
     }
 
@@ -37,9 +39,10 @@ public class UpdateOrganizationUserCommandTests
         Guid? savingUserId, SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(user.Id).Returns(originalUser);
+        var existingUserType = OrganizationUserType.User;
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, null, null));
+            () => sutProvider.Sut.UpdateUserAsync(user, existingUserType, savingUserId, null, null));
     }
 
     [Theory, BitAutoData]
@@ -55,8 +58,10 @@ public class UpdateOrganizationUserCommandTests
             .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
                 .Select(guid => new Collection { Id = guid, OrganizationId = CoreHelpers.GenerateComb() }).ToList());
 
+        var existingUserType = OrganizationUserType.User;
+
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collectionAccess, null));
+            () => sutProvider.Sut.UpdateUserAsync(user, existingUserType, savingUserId, collectionAccess, null));
     }
 
     [Theory, BitAutoData]
@@ -76,9 +81,9 @@ public class UpdateOrganizationUserCommandTests
                 result.RemoveAt(0);
                 return result;
             });
-
+        var existingUserType = OrganizationUserType.User;
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collectionAccess, null));
+            () => sutProvider.Sut.UpdateUserAsync(user, existingUserType, savingUserId, collectionAccess, null));
     }
 
     [Theory, BitAutoData]
@@ -94,8 +99,10 @@ public class UpdateOrganizationUserCommandTests
             .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
                 .Select(guid => new Group { Id = guid, OrganizationId = CoreHelpers.GenerateComb() }).ToList());
 
+        var existingUserType = OrganizationUserType.User;
+
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, null, groupAccess));
+            () => sutProvider.Sut.UpdateUserAsync(user, existingUserType, savingUserId, null, groupAccess));
     }
 
     [Theory, BitAutoData]
@@ -115,9 +122,9 @@ public class UpdateOrganizationUserCommandTests
                 result.RemoveAt(0);
                 return result;
             });
-
+        var existingUserType = OrganizationUserType.User;
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, null, groupAccess));
+            () => sutProvider.Sut.UpdateUserAsync(user, existingUserType, savingUserId, null, groupAccess));
     }
 
     [Theory, BitAutoData]
@@ -165,7 +172,9 @@ public class UpdateOrganizationUserCommandTests
             .GetCountByFreeOrganizationAdminUserAsync(newUserData.Id)
             .Returns(0);
 
-        await sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups);
+        var existingUserType = OrganizationUserType.User;
+
+        await sutProvider.Sut.UpdateUserAsync(newUserData, existingUserType, savingUser.UserId, collections, groups);
 
         var organizationService = sutProvider.GetDependency<IOrganizationService>();
         await organizationService.Received(1).ValidateOrganizationUserUpdatePermissions(
@@ -184,7 +193,7 @@ public class UpdateOrganizationUserCommandTests
     [Theory]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task UpdateUserAsync_WhenUpdatingUserToAdminOrOwner_WithUserAlreadyAdminOfAnotherFreeOrganization_Throws(
+    public async Task UpdateUserAsync_WhenUpdatingUserToAdminOrOwner_AndExistingUserTypeIsNotAdminOrOwner_WithUserAlreadyAdminOfAnotherFreeOrganization_Throws(
         OrganizationUserType userType,
         OrganizationUser oldUserData,
         OrganizationUser newUserData,
@@ -199,11 +208,58 @@ public class UpdateOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetCountByFreeOrganizationAdminUserAsync(newUserData.UserId!.Value)
             .Returns(1);
+        var existingUserType = OrganizationUserType.User;
 
         // Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateUserAsync(newUserData, null, null, null));
+            () => sutProvider.Sut.UpdateUserAsync(newUserData, existingUserType, null, null, null));
         Assert.Contains("User can only be an admin of one free organization.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin, OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Admin, OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Owner, OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner, OrganizationUserType.Owner)]
+    public async Task UpdateUserAsync_WhenUpdatingUserToAdminOrOwner_AndExistingUserTypeIsAdminOrOwner_WithUserAlreadyAdminOfAnotherFreeOrganization_Throws(
+        OrganizationUserType newUserType,
+        OrganizationUserType existingUserType,
+        OrganizationUser oldUserData,
+        OrganizationUser newUserData,
+        Organization organization,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    {
+        organization.PlanType = PlanType.Free;
+        newUserData.Type = newUserType;
+
+        Setup(sutProvider, organization, newUserData, oldUserData);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByFreeOrganizationAdminUserAsync(newUserData.UserId!.Value)
+            .Returns(2);
+
+        // Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateUserAsync(newUserData, existingUserType, null, null, null));
+        Assert.Contains("User can only be an admin of one free organization.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateUserAsync_WithDefaultUserCollectionType_Throws(OrganizationUser user, OrganizationUser originalUser,
+        List<CollectionAccessSelection> collectionAccess, Guid? savingUserId, SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization)
+    {
+        Setup(sutProvider, organization, user, originalUser);
+
+        // Return collections with DefaultUserCollection type
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
+                .Select(guid => new Collection { Id = guid, OrganizationId = user.OrganizationId, Type = CollectionType.DefaultUserCollection }).ToList());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateUserAsync(user, OrganizationUserType.User, savingUserId, collectionAccess, null));
+        Assert.Contains("You cannot modify member access for collections with the type as DefaultUserCollection.", exception.Message);
     }
 
     private void Setup(SutProvider<UpdateOrganizationUserCommand> sutProvider, Organization organization,

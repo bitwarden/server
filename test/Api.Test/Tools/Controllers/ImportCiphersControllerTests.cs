@@ -20,6 +20,7 @@ using NSubstitute;
 using NSubstitute.ClearExtensions;
 using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
+using ImportCiphersLimitationSettings = Bit.Core.Settings.GlobalSettings.ImportCiphersLimitationSettings;
 
 namespace Bit.Api.Test.Tools.Controllers;
 
@@ -27,6 +28,12 @@ namespace Bit.Api.Test.Tools.Controllers;
 [SutProviderCustomize]
 public class ImportCiphersControllerTests
 {
+    private readonly ImportCiphersLimitationSettings _organizationCiphersLimitations = new()
+    {
+        CiphersLimit = 40000,
+        CollectionRelationshipsLimit = 80000,
+        CollectionsLimit = 2000
+    };
 
     /*************************
      * PostImport - Individual
@@ -35,7 +42,7 @@ public class ImportCiphersControllerTests
     public async Task PostImportIndividual_ImportCiphersRequestModel_BadRequestException(SutProvider<ImportCiphersController> sutProvider, IFixture fixture)
     {
         // Arrange
-        sutProvider.GetDependency<Core.Settings.GlobalSettings>()
+        sutProvider.GetDependency<GlobalSettings>()
             .SelfHosted = false;
         var ciphers = fixture.CreateMany<CipherRequestModel>(7001).ToArray();
         var model = new ImportCiphersRequestModel
@@ -90,24 +97,27 @@ public class ImportCiphersControllerTests
      ****************************/
 
     [Theory, BitAutoData]
-    public async Task PostImportOrganization_ImportOrganizationCiphersRequestModel_BadRequestException(SutProvider<ImportCiphersController> sutProvider, IFixture fixture)
+    public async Task PostImportOrganization_ImportOrganizationCiphersRequestModel_BadRequestException(
+        SutProvider<ImportCiphersController> sutProvider,
+        IFixture fixture)
     {
         // Arrange
-        var globalSettings = sutProvider.GetDependency<Core.Settings.GlobalSettings>();
-        globalSettings.SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        // Limits are set in appsettings.json, making values small for test to run faster.
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = new()
+            {
+                CiphersLimit = 4,
+                CollectionRelationshipsLimit = 8,
+                CollectionsLimit = 2
+            };
 
         var userService = sutProvider.GetDependency<Bit.Core.Services.IUserService>();
         userService.GetProperUserId(Arg.Any<ClaimsPrincipal>())
             .Returns(null as Guid?);
 
-        globalSettings.ImportCiphersLimitation = new GlobalSettings.ImportCiphersLimitationSettings()
-        { // limits are set in appsettings.json, making values small for test to run faster.
-            CiphersLimit = 200,
-            CollectionsLimit = 400,
-            CollectionRelationshipsLimit = 20
-        };
-
-        var ciphers = fixture.CreateMany<CipherRequestModel>(201).ToArray();
+        var ciphers = fixture.CreateMany<CipherRequestModel>(5).ToArray();
         var model = new ImportOrganizationCiphersRequestModel
         {
             Collections = null,
@@ -133,7 +143,10 @@ public class ImportCiphersControllerTests
         var orgIdGuid = Guid.Parse(orgId);
         var existingCollections = fixture.CreateMany<CollectionWithIdRequestModel>(2).ToArray();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
 
         sutProvider.GetDependency<Bit.Core.Services.IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
@@ -196,7 +209,15 @@ public class ImportCiphersControllerTests
         var orgIdGuid = Guid.Parse(orgId);
         var existingCollections = fixture.CreateMany<CollectionWithIdRequestModel>(2).ToArray();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
+
+        var importCiphersLimitation = new GlobalSettings.ImportCiphersLimitationSettings();
+        importCiphersLimitation.CiphersLimit = 40000;
+        importCiphersLimitation.CollectionRelationshipsLimit = 80000;
+        importCiphersLimitation.CollectionsLimit = 2000;
 
         sutProvider.GetDependency<Bit.Core.Services.IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
@@ -259,7 +280,10 @@ public class ImportCiphersControllerTests
         var orgIdGuid = Guid.Parse(orgId);
         var existingCollections = fixture.CreateMany<CollectionWithIdRequestModel>(2).ToArray();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
 
         SetupUserService(sutProvider, user);
 
@@ -317,7 +341,10 @@ public class ImportCiphersControllerTests
         var orgIdGuid = Guid.Parse(orgId);
         var existingCollections = fixture.CreateMany<CollectionWithIdRequestModel>(2).ToArray();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
 
         sutProvider.GetDependency<Bit.Core.Services.IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
@@ -375,7 +402,10 @@ public class ImportCiphersControllerTests
         // Arrange
         var orgId = Guid.NewGuid();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
 
         SetupUserService(sutProvider, user);
 
@@ -448,7 +478,10 @@ public class ImportCiphersControllerTests
         // Arrange
         var orgId = Guid.NewGuid();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
 
         SetupUserService(sutProvider, user);
 
@@ -525,7 +558,11 @@ public class ImportCiphersControllerTests
         // Arrange
         var orgId = Guid.NewGuid();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
+
         SetupUserService(sutProvider, user);
 
         // Create new collections
@@ -594,7 +631,10 @@ public class ImportCiphersControllerTests
         // Arrange
         var orgId = Guid.NewGuid();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
 
         SetupUserService(sutProvider, user);
 
@@ -666,7 +706,10 @@ public class ImportCiphersControllerTests
         // Arrange
         var orgId = Guid.NewGuid();
 
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .SelfHosted = false;
+        sutProvider.GetDependency<GlobalSettings>()
+            .ImportCiphersLimitation = _organizationCiphersLimitations;
 
         SetupUserService(sutProvider, user);
 

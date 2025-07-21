@@ -1,4 +1,7 @@
-﻿using AspNetCoreRateLimit;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AspNetCoreRateLimit;
 using Bit.Core.Utilities;
 
 namespace Bit.Identity;

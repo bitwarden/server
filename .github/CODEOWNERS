@@ -33,6 +33,9 @@ util/SqliteMigrations/** @bitwarden/dept-dbops
 # Shared util projects
 util/Setup/** @bitwarden/dept-bre @bitwarden/team-platform-dev
 
+# UIF
+src/Core/MailTemplates/Mjml @bitwarden/team-ui-foundation # Teams are expected to own sub-directories of this project
+
 # Auth team
 **/Auth @bitwarden/team-auth-dev
 bitwarden_license/src/Sso @bitwarden/team-auth-dev

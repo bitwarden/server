@@ -1,4 +1,5 @@
-﻿
+﻿#nullable enable
+
 using System.Text.Json.Serialization;
 
 namespace Bit.Core.Models.Slack;

@@ -1,4 +1,7 @@
-﻿using Azure.Storage.Blobs;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using Bit.Core.Enums;
@@ -251,16 +254,17 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
 
     private async Task InitAsync(string containerName)
     {
-        if (!_attachmentContainers.ContainsKey(containerName) || _attachmentContainers[containerName] == null)
+        if (!_attachmentContainers.TryGetValue(containerName, out var attachmentContainer) || attachmentContainer == null)
         {
-            _attachmentContainers[containerName] = _blobServiceClient.GetBlobContainerClient(containerName);
+            attachmentContainer = _blobServiceClient.GetBlobContainerClient(containerName);
+            _attachmentContainers[containerName] = attachmentContainer;
             if (containerName == "attachments")
             {
-                await _attachmentContainers[containerName].CreateIfNotExistsAsync(PublicAccessType.Blob, null, null);
+                await attachmentContainer.CreateIfNotExistsAsync(PublicAccessType.Blob, null, null);
             }
             else
             {
-                await _attachmentContainers[containerName].CreateIfNotExistsAsync(PublicAccessType.None, null, null);
+                await attachmentContainer.CreateIfNotExistsAsync(PublicAccessType.None, null, null);
             }
         }
     }

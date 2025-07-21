@@ -1,4 +1,7 @@
-﻿using System.Net;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Net;
 using System.Security.Cryptography;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
@@ -8,7 +11,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Tools.Controllers;
+namespace Bit.Api.Dirt.Controllers;
 
 [Route("hibp")]
 [Authorize("Application")]

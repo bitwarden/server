@@ -1,4 +1,7 @@
-﻿using Bit.Api.AdminConsole.Models.Request.Providers;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.AdminConsole.Models.Response.Providers;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Providers.Interfaces;

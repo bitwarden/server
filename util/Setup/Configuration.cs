@@ -1,4 +1,7 @@
-﻿using System.ComponentModel;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel;
 using YamlDotNet.Serialization;
 
 namespace Bit.Setup;
@@ -93,6 +96,9 @@ public class Configuration
 
     [Description("Enable SCIM")]
     public bool EnableScim { get; set; } = false;
+
+    [Description("Enable Built-In MSSQL Container Generation")]
+    public bool EnableBuiltInMsSql { get; set; } = true;
 
     [YamlIgnore]
     public string Domain

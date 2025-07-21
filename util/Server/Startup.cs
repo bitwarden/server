@@ -26,7 +26,8 @@ public class Startup
 
     public void Configure(
         IApplicationBuilder app,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ILogger<Startup> logger)
     {
         if (configuration.GetValue<bool?>("serveUnknown") ?? false)
         {
@@ -44,6 +45,22 @@ public class Startup
         }
         else if (configuration.GetValue<bool?>("webVault") ?? false)
         {
+            var appIdLocation = configuration.GetValue<string>("appIdLocation");
+
+            if (!string.IsNullOrEmpty(appIdLocation))
+            {
+                app.UseRouting();
+                app.UseEndpoints(endpoints =>
+                {
+                    endpoints.MapGet("/app-id.json", async context =>
+                    {
+                        var appId = await File.ReadAllTextAsync(appIdLocation);
+                        context.Response.ContentType = "application/json";
+                        await context.Response.WriteAsync(appId);
+                    });
+                });
+            }
+
             // TODO: This should be removed when asp.net natively support avif
             var provider = new FileExtensionContentTypeProvider { Mappings = { [".avif"] = "image/avif" } };
 

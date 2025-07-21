@@ -30,4 +30,14 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Core.Ad
             return await query.Run(dbContext).ToListAsync();
         }
     }
+
+    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetAllConfigurationDetailsAsync()
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new OrganizationIntegrationConfigurationDetailsReadManyQuery();
+            return await query.Run(dbContext).ToListAsync();
+        }
+    }
 }

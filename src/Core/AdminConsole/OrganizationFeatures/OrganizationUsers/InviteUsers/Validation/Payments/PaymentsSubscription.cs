@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Models.Business;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Models.Business;
 

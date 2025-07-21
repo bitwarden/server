@@ -4,18 +4,17 @@ using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 using Bit.Core.Services;
-using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 
 #nullable enable
 
 namespace Bit.Core.AdminConsole.Entities;
 
-public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable, IReferenceable
+public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
 {
     private Dictionary<TwoFactorProviderType, TwoFactorProvider>? _twoFactorProviders;
 
@@ -258,12 +257,12 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public bool TwoFactorProviderIsEnabled(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.ContainsKey(provider))
+        if (providers == null || !providers.TryGetValue(provider, out var twoFactorProvider))
         {
             return false;
         }
 
-        return providers[provider].Enabled && Use2fa;
+        return twoFactorProvider.Enabled && Use2fa;
     }
 
     public bool TwoFactorIsEnabled()
@@ -280,12 +279,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public TwoFactorProvider? GetTwoFactorProvider(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.ContainsKey(provider))
-        {
-            return null;
-        }
-
-        return providers[provider];
+        return providers?.GetValueOrDefault(provider);
     }
 
     public void UpdateFromLicense(OrganizationLicense license, IFeatureService featureService)

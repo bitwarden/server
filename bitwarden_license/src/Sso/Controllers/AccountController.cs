@@ -1,4 +1,7 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
@@ -370,8 +373,8 @@ public class AccountController : Controller
         //  for the user identifier.
         static bool nameIdIsNotTransient(Claim c) => c.Type == ClaimTypes.NameIdentifier
             && (c.Properties == null
-            || !c.Properties.ContainsKey(SamlPropertyKeys.ClaimFormat)
-            || c.Properties[SamlPropertyKeys.ClaimFormat] != SamlNameIdFormats.Transient);
+            || !c.Properties.TryGetValue(SamlPropertyKeys.ClaimFormat, out var claimFormat)
+            || claimFormat != SamlNameIdFormats.Transient);
 
         // Try to determine the unique id of the external user (issued by the provider)
         // the most common claim type for that are the sub claim and the NameIdentifier
@@ -499,9 +502,9 @@ public class AccountController : Controller
         // Before any user creation - if Org User doesn't exist at this point - make sure there are enough seats to add one
         if (orgUser == null && organization.Seats.HasValue)
         {
-            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            var occupiedSeats = await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
             var initialSeatCount = organization.Seats.Value;
-            var availableSeats = initialSeatCount - occupiedSeats;
+            var availableSeats = initialSeatCount - occupiedSeats.Total;
             if (availableSeats < 1)
             {
                 try

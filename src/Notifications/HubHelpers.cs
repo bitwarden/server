@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Microsoft.AspNetCore.SignalR;
@@ -135,7 +138,7 @@ public static class HubHelpers
                 }
 
                 break;
-            case PushType.PendingSecurityTasks:
+            case PushType.RefreshSecurityTasks:
                 var pendingTasksData = JsonSerializer.Deserialize<PushNotificationData<UserPushNotification>>(notificationJson, _deserializerOptions);
                 await hubContext.Clients.User(pendingTasksData.Payload.UserId.ToString())
                     .SendAsync(_receiveMessageMethod, pendingTasksData, cancellationToken);

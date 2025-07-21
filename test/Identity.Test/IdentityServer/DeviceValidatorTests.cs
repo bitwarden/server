@@ -1,4 +1,5 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core.Auth.Services;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
@@ -26,6 +27,7 @@ public class DeviceValidatorTests
     private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
     private readonly IDistributedCache _distributedCache;
+    private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly Logger<DeviceValidator> _logger;
 
     private readonly DeviceValidator _sut;
@@ -39,6 +41,7 @@ public class DeviceValidatorTests
         _currentContext = Substitute.For<ICurrentContext>();
         _userService = Substitute.For<IUserService>();
         _distributedCache = Substitute.For<IDistributedCache>();
+        _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
         _logger = new Logger<DeviceValidator>(Substitute.For<ILoggerFactory>());
         _sut = new DeviceValidator(
             _deviceService,
@@ -48,6 +51,7 @@ public class DeviceValidatorTests
             _currentContext,
             _userService,
             _distributedCache,
+            _twoFactorEmailService,
             _logger);
     }
 
@@ -580,7 +584,7 @@ public class DeviceValidatorTests
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
 
         // Assert
-        await _userService.Received(1).SendNewDeviceVerificationEmailAsync(context.User);
+        await _twoFactorEmailService.Received(1).SendNewDeviceVerificationEmailAsync(context.User);
         await _deviceService.Received(0).SaveAsync(Arg.Any<Device>());
 
         Assert.False(result);

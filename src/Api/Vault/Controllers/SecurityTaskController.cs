@@ -1,9 +1,10 @@
-﻿using Bit.Api.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
-using Bit.Core;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
@@ -15,7 +16,6 @@ namespace Bit.Api.Vault.Controllers;
 
 [Route("tasks")]
 [Authorize("Application")]
-[RequireFeature(FeatureFlagKeys.SecurityTasks)]
 public class SecurityTaskController : Controller
 {
     private readonly IUserService _userService;

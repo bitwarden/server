@@ -10,4 +10,6 @@ public interface IOrganizationIntegrationConfigurationRepository : IRepository<O
         Guid organizationId,
         IntegrationType integrationType,
         EventType eventType);
+
+    Task<List<OrganizationIntegrationConfigurationDetails>> GetAllConfigurationDetailsAsync();
 }

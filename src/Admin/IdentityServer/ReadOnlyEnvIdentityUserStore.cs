@@ -1,4 +1,7 @@
-﻿using Bit.Core.Utilities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Admin.IdentityServer;
@@ -39,7 +42,7 @@ public class ReadOnlyEnvIdentityUserStore : ReadOnlyIdentityUserStore
             }
         }
 
-        var userStamp = usersDict.ContainsKey(normalizedEmail) ? usersDict[normalizedEmail] : null;
+        var userStamp = usersDict.GetValueOrDefault(normalizedEmail);
         if (userStamp == null)
         {
             return Task.FromResult<IdentityUser>(null);

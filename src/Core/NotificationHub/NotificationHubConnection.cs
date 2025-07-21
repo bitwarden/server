@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
 using System.Text;
 using System.Web;
 using Bit.Core.Settings;
@@ -7,21 +8,23 @@ using Microsoft.Azure.NotificationHubs;
 
 namespace Bit.Core.NotificationHub;
 
+#nullable enable
+
 public class NotificationHubConnection
 {
-    public string HubName { get; init; }
-    public string ConnectionString { get; init; }
+    public string? HubName { get; init; }
+    public string? ConnectionString { get; init; }
     private Lazy<NotificationHubConnectionStringBuilder> _parsedConnectionString;
     public Uri Endpoint => _parsedConnectionString.Value.Endpoint;
     private string SasKey => _parsedConnectionString.Value.SharedAccessKey;
     private string SasKeyName => _parsedConnectionString.Value.SharedAccessKeyName;
     public bool EnableSendTracing { get; init; }
-    private NotificationHubClient _hubClient;
+    private NotificationHubClient? _hubClient;
     /// <summary>
     /// Gets the NotificationHubClient for this connection.
-    /// 
+    ///
     /// If the client is null, it will be initialized.
-    /// 
+    ///
     /// <throws>Exception</throws> if the connection is invalid.
     /// </summary>
     public NotificationHubClient HubClient
@@ -45,13 +48,13 @@ public class NotificationHubConnection
     }
     /// <summary>
     /// Gets the start date for registration.
-    /// 
+    ///
     /// If null, registration is always disabled.
     /// </summary>
     public DateTime? RegistrationStartDate { get; init; }
     /// <summary>
     /// Gets the end date for registration.
-    /// 
+    ///
     /// If null, registration has no end date.
     /// </summary>
     public DateTime? RegistrationEndDate { get; init; }
@@ -155,9 +158,10 @@ public class NotificationHubConnection
         };
     }
 
+    [MemberNotNull(nameof(_hubClient))]
     private NotificationHubConnection Init()
     {
-        HubClient = NotificationHubClient.CreateClientFromConnectionString(ConnectionString, HubName, EnableSendTracing);
+        _hubClient = NotificationHubClient.CreateClientFromConnectionString(ConnectionString, HubName, EnableSendTracing);
         return this;
     }
 

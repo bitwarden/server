@@ -1,4 +1,7 @@
-﻿namespace Bit.Core.Models.Mail;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Core.Models.Mail;
 
 /// <summary>
 /// This view model is used to set-up email two factor authentication, to log in with email two factor authentication,
@@ -22,4 +25,9 @@ public class TwoFactorEmailTokenViewModel : BaseMailModel
     public string TimeZone { get; set; }
     public string DeviceIp { get; set; }
     public string DeviceType { get; set; }
+    /// <summary>
+    /// Depending on the context, we may want to show a reminder to the user that they should enable two factor authentication.
+    /// This is not relevant when the user is using the email to verify setting up 2FA, so we hide it in that case.
+    /// </summary>
+    public bool DisplayTwoFactorReminder { get; set; }
 }

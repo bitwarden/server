@@ -13,6 +13,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.NotificationHub;
 
+#nullable enable
+
 public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
     private static readonly JsonSerializerOptions webPushSerializationOptions = new()
@@ -37,7 +39,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     public async Task CreateOrUpdateRegistrationAsync(PushRegistrationData data, string deviceId, string userId,
-        string identifier, DeviceType type, IEnumerable<string> organizationIds, Guid installationId)
+        string? identifier, DeviceType type, IEnumerable<string> organizationIds, Guid installationId)
     {
         var orgIds = organizationIds.ToList();
         var clientType = DeviceTypes.ToClientType(type);
@@ -79,7 +81,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     private async Task CreateOrUpdateMobileRegistrationAsync(Installation installation, string userId,
-        string identifier, ClientType clientType, List<string> organizationIds, DeviceType type, Guid installationId)
+        string? identifier, ClientType clientType, List<string> organizationIds, DeviceType type, Guid installationId)
     {
         if (string.IsNullOrWhiteSpace(installation.PushChannel))
         {
@@ -137,7 +139,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     private async Task CreateOrUpdateWebRegistrationAsync(string endpoint, string p256dh, string auth, Installation installation, string userId,
-        string identifier, ClientType clientType, List<string> organizationIds, Guid installationId)
+        string? identifier, ClientType clientType, List<string> organizationIds, Guid installationId)
     {
         // The Azure SDK is currently lacking support for web push registrations.
         // We need to use the REST API directly.
@@ -187,7 +189,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     private static KeyValuePair<string, InstallationTemplate> BuildInstallationTemplate(string templateId, [StringSyntax(StringSyntaxAttribute.Json)] string templateBody,
-        string userId, string identifier, ClientType clientType, List<string> organizationIds, Guid installationId)
+        string userId, string? identifier, ClientType clientType, List<string> organizationIds, Guid installationId)
     {
         var fullTemplateId = $"template:{templateId}";
 

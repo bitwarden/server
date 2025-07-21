@@ -1,4 +1,7 @@
-﻿using Bit.Api.Billing.Models.Requests;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Commercial.Core.Billing.Providers.Services;
 using Bit.Core;
@@ -81,13 +84,6 @@ public class ProviderBillingController(
         [FromRoute] Guid providerId,
         [FromBody] UpdatePaymentMethodRequestBody requestBody)
     {
-        var allowProviderPaymentMethod = featureService.IsEnabled(FeatureFlagKeys.PM18794_ProviderPaymentMethod);
-
-        if (!allowProviderPaymentMethod)
-        {
-            return TypedResults.NotFound();
-        }
-
         var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
         if (provider == null)
@@ -111,13 +107,6 @@ public class ProviderBillingController(
         [FromRoute] Guid providerId,
         [FromBody] VerifyBankAccountRequestBody requestBody)
     {
-        var allowProviderPaymentMethod = featureService.IsEnabled(FeatureFlagKeys.PM18794_ProviderPaymentMethod);
-
-        if (!allowProviderPaymentMethod)
-        {
-            return TypedResults.NotFound();
-        }
-
         var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
         if (provider == null)

@@ -1,4 +1,7 @@
-﻿namespace Bit.Core.Vault.Models.Data;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Core.Vault.Models.Data;
 
 /// <summary>
 /// Minimal data model that represents a User and the associated cipher for a security task.

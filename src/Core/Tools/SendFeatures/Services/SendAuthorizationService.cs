@@ -1,9 +1,7 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Platform.Push;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Microsoft.AspNetCore.Identity;
@@ -15,21 +13,15 @@ public class SendAuthorizationService : ISendAuthorizationService
     private readonly ISendRepository _sendRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IPushNotificationService _pushNotificationService;
-    private readonly IReferenceEventService _referenceEventService;
-    private readonly ICurrentContext _currentContext;
 
     public SendAuthorizationService(
         ISendRepository sendRepository,
         IPasswordHasher<User> passwordHasher,
-        IPushNotificationService pushNotificationService,
-        IReferenceEventService referenceEventService,
-        ICurrentContext currentContext)
+        IPushNotificationService pushNotificationService)
     {
         _sendRepository = sendRepository;
         _passwordHasher = passwordHasher;
         _pushNotificationService = pushNotificationService;
-        _referenceEventService = referenceEventService;
-        _currentContext = currentContext;
     }
 
     public SendAccessResult SendCanBeAccessed(Send send,
@@ -79,18 +71,6 @@ public class SendAuthorizationService : ISendAuthorizationService
 
         await _sendRepository.ReplaceAsync(sendToBeAccessed);
         await _pushNotificationService.PushSyncSendUpdateAsync(sendToBeAccessed);
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent
-        {
-            Id = sendToBeAccessed.UserId ?? default,
-            Type = ReferenceEventType.SendAccessed,
-            Source = ReferenceEventSource.User,
-            SendType = sendToBeAccessed.Type,
-            MaxAccessCount = sendToBeAccessed.MaxAccessCount,
-            HasPassword = !string.IsNullOrWhiteSpace(sendToBeAccessed.Password),
-            SendHasNotes = sendToBeAccessed.Data?.Contains("Notes"),
-            ClientId = _currentContext.ClientId,
-            ClientVersion = _currentContext.ClientVersion
-        });
         return accessResult;
     }
 

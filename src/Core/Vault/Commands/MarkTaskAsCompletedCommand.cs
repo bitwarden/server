@@ -14,15 +14,19 @@ public class MarkTaskAsCompletedCommand : IMarkTaskAsCompleteCommand
     private readonly ISecurityTaskRepository _securityTaskRepository;
     private readonly IAuthorizationService _authorizationService;
     private readonly ICurrentContext _currentContext;
+    private readonly IMarkNotificationsForTaskAsDeletedCommand _markNotificationsForTaskAsDeletedAsync;
+
 
     public MarkTaskAsCompletedCommand(
         ISecurityTaskRepository securityTaskRepository,
         IAuthorizationService authorizationService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IMarkNotificationsForTaskAsDeletedCommand markNotificationsForTaskAsDeletedAsync)
     {
         _securityTaskRepository = securityTaskRepository;
         _authorizationService = authorizationService;
         _currentContext = currentContext;
+        _markNotificationsForTaskAsDeletedAsync = markNotificationsForTaskAsDeletedAsync;
     }
 
     /// <inheritdoc />
@@ -46,5 +50,8 @@ public class MarkTaskAsCompletedCommand : IMarkTaskAsCompleteCommand
         task.RevisionDate = DateTime.UtcNow;
 
         await _securityTaskRepository.ReplaceAsync(task);
+
+        // Mark all notifications related to this task as deleted
+        await _markNotificationsForTaskAsDeletedAsync.MarkAsDeletedAsync(taskId);
     }
 }

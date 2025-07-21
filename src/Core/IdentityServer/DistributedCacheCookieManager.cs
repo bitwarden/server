@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
@@ -63,6 +66,6 @@ public class DistributedCacheCookieManager : ICookieManager
     private string GetKey(string key, string id) => $"{CacheKeyPrefix}-{key}-{id}";
 
     private string GetId(HttpContext context, string key) =>
-        context.Request.Cookies.ContainsKey(key) ?
-        context.Request.Cookies[key] : null;
+        context.Request.Cookies.TryGetValue(key, out var cookie) ?
+        cookie : null;
 }

@@ -3,6 +3,9 @@ services:
     image: mcr.microsoft.com/devcontainers/dotnet:8.0
     volumes:
       - ../../:/workspace:cached
+    env_file:
+      - path: ../../dev/.env
+        required: false
     # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
 

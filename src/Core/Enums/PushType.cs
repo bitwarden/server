@@ -31,5 +31,5 @@ public enum PushType : byte
     Notification = 20,
     NotificationStatus = 21,
 
-    PendingSecurityTasks = 22
+    RefreshSecurityTasks = 22
 }

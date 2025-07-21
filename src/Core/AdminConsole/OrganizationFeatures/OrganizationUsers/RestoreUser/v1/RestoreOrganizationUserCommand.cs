@@ -1,5 +1,10 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -22,7 +27,9 @@ public class RestoreOrganizationUserCommand(
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     IPolicyService policyService,
     IUserRepository userRepository,
-    IOrganizationService organizationService) : IRestoreOrganizationUserCommand
+    IOrganizationService organizationService,
+    IFeatureService featureService,
+    IPolicyRequirementQuery policyRequirementQuery) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId)
     {
@@ -66,8 +73,8 @@ public class RestoreOrganizationUserCommand(
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
-        var occupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-        var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
+        var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+        var availableSeats = organization.Seats.GetValueOrDefault(0) - seatCounts.Total;
 
         if (availableSeats < 1)
         {
@@ -159,8 +166,8 @@ public class RestoreOrganizationUserCommand(
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
-        var occupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-        var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
+        var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+        var availableSeats = organization.Seats.GetValueOrDefault(0) - seatCounts.Total;
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
         await organizationService.AutoAddSeatsAsync(organization, newSeatsRequired);
 
@@ -270,12 +277,7 @@ public class RestoreOrganizationUserCommand(
         // Enforce 2FA Policy of organization user is trying to join
         if (!userHasTwoFactorEnabled)
         {
-            var invitedTwoFactorPolicies = await policyService.GetPoliciesApplicableToUserAsync(userId,
-                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Revoked);
-            if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
-            {
-                twoFactorCompliant = false;
-            }
+            twoFactorCompliant = !await IsTwoFactorRequiredForOrganizationAsync(userId, orgUser.OrganizationId);
         }
 
         var user = await userRepository.GetByIdAsync(userId);
@@ -298,5 +300,18 @@ public class RestoreOrganizationUserCommand(
         {
             throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
         }
+    }
+
+    private async Task<bool> IsTwoFactorRequiredForOrganizationAsync(Guid userId, Guid organizationId)
+    {
+        if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            var requirement = await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(userId);
+            return requirement.IsTwoFactorRequiredForOrganization(organizationId);
+        }
+
+        var invitedTwoFactorPolicies = await policyService.GetPoliciesApplicableToUserAsync(userId,
+            PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Revoked);
+        return invitedTwoFactorPolicies.Any(p => p.OrganizationId == organizationId);
     }
 }
