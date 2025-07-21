@@ -143,21 +143,28 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         user.PrivateKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey;
     }
 
-    void UpdateUserData(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    public void UpdateUserData(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
+        // The revision date has to be updated so that de-synced clients don't accidentally post over the re-encrypted data
+        // with an old-user key-encrypted copy
+        var now = DateTime.UtcNow;
+
         if (model.Ciphers.Any())
         {
-            saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation(user.Id, model.Ciphers));
+            var ciphersWithUpdatedDate = model.Ciphers.ToList().Select(c => { c.RevisionDate = now; return c; });
+            saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation(user.Id, ciphersWithUpdatedDate));
         }
 
         if (model.Folders.Any())
         {
-            saveEncryptedDataActions.Add(_folderRepository.UpdateForKeyRotation(user.Id, model.Folders));
+            var foldersWithUpdatedDate = model.Folders.ToList().Select(f => { f.RevisionDate = now; return f; });
+            saveEncryptedDataActions.Add(_folderRepository.UpdateForKeyRotation(user.Id, foldersWithUpdatedDate));
         }
 
         if (model.Sends.Any())
         {
-            saveEncryptedDataActions.Add(_sendRepository.UpdateForKeyRotation(user.Id, model.Sends));
+            var sendsWithUpdatedDate = model.Sends.ToList().Select(s => { s.RevisionDate = now; return s; });
+            saveEncryptedDataActions.Add(_sendRepository.UpdateForKeyRotation(user.Id, sendsWithUpdatedDate));
         }
     }
 
