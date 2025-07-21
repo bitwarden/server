@@ -11,6 +11,21 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyRequire
 [SutProviderCustomize]
 public class MasterPasswordPolicyRequirementFactoryTests
 {
+    [Fact]
+    public void MasterPasswordPolicyData_CombineWith_Joins_Policy_Options()
+    {
+        var mpd1 = new MasterPasswordPolicyData { MinLength = 20, RequireLower = false, RequireSpecial = false };
+        var mpd2 = new MasterPasswordPolicyData { RequireLower = true };
+        var mpd3 = new MasterPasswordPolicyData { RequireSpecial = true };
+
+        mpd1.CombineWith(mpd2);
+        mpd1.CombineWith(mpd3);
+
+        Assert.Equal(20, mpd1.MinLength);
+        Assert.True(mpd1.RequireLower);
+        Assert.True(mpd1.RequireSpecial);
+    }
+
     [Theory, BitAutoData]
     public void MasterPassword_IsFalse_IfNoPolicies(SutProvider<MasterPasswordPolicyRequirementFactory> sutProvider)
     {

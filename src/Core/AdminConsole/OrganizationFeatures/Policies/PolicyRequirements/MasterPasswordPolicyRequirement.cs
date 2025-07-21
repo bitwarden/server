@@ -2,8 +2,6 @@
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.Enums;
 
-#nullable enable
-
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
 /// <summary>
@@ -43,7 +41,7 @@ public class MasterPasswordPolicyRequirementFactory : BasePolicyRequirementFacto
                     data.CombineWith(result.EnforcedOptions);
                     return new MasterPasswordPolicyRequirement
                     {
-                        Enabled = policyDetails.Any(),
+                        Enabled = true,
                         EnforcedOptions = data
                     };
                 });

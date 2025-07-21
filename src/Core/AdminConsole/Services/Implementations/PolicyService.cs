@@ -53,26 +53,24 @@ public class PolicyService : IPolicyService
 
             return masterPaswordPolicy.EnforcedOptions;
         }
-        else
+
+        var policies = (await _policyRepository.GetManyByUserIdAsync(user.Id))
+            .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
+            .ToList();
+
+        if (!policies.Any())
         {
-            var policies = (await _policyRepository.GetManyByUserIdAsync(user.Id))
-                .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
-                .ToList();
-
-            if (!policies.Any())
-            {
-                return null;
-            }
-
-            var enforcedOptions = new MasterPasswordPolicyData();
-
-            foreach (var policy in policies)
-            {
-                enforcedOptions.CombineWith(policy.GetDataModel<MasterPasswordPolicyData>());
-            }
-
-            return enforcedOptions;
+            return null;
         }
+
+        var enforcedOptions = new MasterPasswordPolicyData();
+
+        foreach (var policy in policies)
+        {
+            enforcedOptions.CombineWith(policy.GetDataModel<MasterPasswordPolicyData>());
+        }
+
+        return enforcedOptions;
 
     }
 

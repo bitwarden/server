@@ -14,7 +14,7 @@ public class MasterPasswordPolicyData : IPolicyDataModel
     /// Combine the other policy data with this instance, taking the most secure options
     /// </summary>
     /// <param name="other">The other policy instance to combine with this</param>
-    public void CombineWith(MasterPasswordPolicyData other)
+    public void CombineWith(MasterPasswordPolicyData? other)
     {
         if (other == null)
         {
