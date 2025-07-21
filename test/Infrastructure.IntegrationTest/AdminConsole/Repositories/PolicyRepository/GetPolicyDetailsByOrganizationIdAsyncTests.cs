@@ -33,7 +33,7 @@ public class PolicyDetailsReadByOrganizationIdAsyncTests
         await ArrangeProvider();
 
         // Act
-        var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, policyType)).ToList();
+        var results = (await policyRepository.GetPolicyDetailsByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, policyType)).ToList();
 
         // Assert
         Assert.Single(results);
@@ -78,7 +78,7 @@ public class PolicyDetailsReadByOrganizationIdAsyncTests
         await policyRepository.CreateAsync(new Policy { OrganizationId = notConnectedOrg.Id, Enabled = true, Type = policyType });
 
         // Act
-        var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, PolicyType.SingleOrg)).ToList();
+        var results = (await policyRepository.GetPolicyDetailsByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, PolicyType.SingleOrg)).ToList();
 
         // Assert
         Assert.Single(results);
@@ -105,7 +105,7 @@ public class PolicyDetailsReadByOrganizationIdAsyncTests
         await policyRepository.CreateAsync(new Policy { OrganizationId = orgUser.OrganizationId, Enabled = true, Type = notInputPolicyType });
 
         // Act
-        var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(orgUser.OrganizationId, inputPolicyType)).ToList();
+        var results = (await policyRepository.GetPolicyDetailsByOrganizationIdAsync(orgUser.OrganizationId, inputPolicyType)).ToList();
 
         // Assert
         Assert.Single(results);
@@ -136,7 +136,7 @@ public class PolicyDetailsReadByOrganizationIdAsyncTests
         var userOrgConnectedByUserId = await ArrangeOtherOrgConnectedByUserIdAsync(organizationUserRepository, organizationRepository, policyRepository, user, policyType);
 
         // Act
-        var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, policyType)).ToList();
+        var results = (await policyRepository.GetPolicyDetailsByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, policyType)).ToList();
 
         // Assert
         const int expectedCount = 3;
@@ -163,7 +163,7 @@ public class PolicyDetailsReadByOrganizationIdAsyncTests
         var userOrgConnectedByUserId = await ArrangeOtherOrgConnectedByUserIdAsync(organizationUserRepository, organizationRepository, policyRepository, user, policyType);
 
         // Act
-        var results = (await policyRepository.PolicyDetailsReadByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, policyType)).ToList();
+        var results = (await policyRepository.GetPolicyDetailsByOrganizationIdAsync(userOrgConnectedDirectly.OrganizationId, policyType)).ToList();
 
         // Assert
         AssertPolicyDetailUserConnections(results, userOrgConnectedDirectly, userOrgConnectedByEmail, userOrgConnectedByUserId);
