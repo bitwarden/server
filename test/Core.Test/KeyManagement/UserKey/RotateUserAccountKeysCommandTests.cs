@@ -4,6 +4,10 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.KeyManagement.UserKey.Implementations;
 using Bit.Core.Services;
+using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Repositories;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
@@ -313,6 +317,62 @@ public class RotateUserAccountKeysCommandTests
         var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
         var ex = await Assert.ThrowsAsync<ArgumentException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("Invalid encryption type string.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateUserData_RevisionDateChanged_Success(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        var oldDate = new DateTime(2017, 1, 1);
+
+        var cipher = Substitute.For<Cipher>();
+        cipher.RevisionDate = oldDate;
+        model.Ciphers = [cipher];
+
+        var folder = Substitute.For<Folder>();
+        folder.RevisionDate = oldDate;
+        model.Folders = [folder];
+
+        var send = Substitute.For<Send>();
+        send.RevisionDate = oldDate;
+        model.Sends = [send];
+
+        var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
+
+        sutProvider.Sut.UpdateUserData(model, user, saveEncryptedDataActions);
+        foreach (var dataAction in saveEncryptedDataActions)
+        {
+            await dataAction.Invoke();
+        }
+
+        var updatedCiphers = sutProvider.GetDependency<ICipherRepository>()
+            .ReceivedCalls()
+            .FirstOrDefault(call => call.GetMethodInfo().Name == "UpdateForKeyRotation")?
+            .GetArguments()[1] as IEnumerable<Cipher>;
+        foreach (var updatedCipher in updatedCiphers!)
+        {
+            var oldCipher = model.Ciphers.FirstOrDefault(c => c.Id == updatedCipher.Id);
+            Assert.NotEqual(oldDate, updatedCipher.RevisionDate);
+        }
+
+        var updatedFolders = sutProvider.GetDependency<IFolderRepository>()
+            .ReceivedCalls()
+            .FirstOrDefault(call => call.GetMethodInfo().Name == "UpdateForKeyRotation")?
+            .GetArguments()[1] as IEnumerable<Folder>;
+        foreach (var updatedFolder in updatedFolders!)
+        {
+            var oldFolder = model.Folders.FirstOrDefault(f => f.Id == updatedFolder.Id);
+            Assert.NotEqual(oldDate, updatedFolder.RevisionDate);
+        }
+
+        var updatedSends = sutProvider.GetDependency<ISendRepository>()
+            .ReceivedCalls()
+            .FirstOrDefault(call => call.GetMethodInfo().Name == "UpdateForKeyRotation")?
+            .GetArguments()[1] as IEnumerable<Send>;
+        foreach (var updatedSend in updatedSends!)
+        {
+            var oldSend = model.Sends.FirstOrDefault(s => s.Id == updatedSend.Id);
+            Assert.NotEqual(oldDate, updatedSend.RevisionDate);
+        }
     }
 
     // Helper functions to set valid test parameters that match each other to the model and user. 

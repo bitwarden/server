@@ -140,7 +140,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         user.PrivateKey = model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey;
     }
 
-    void UpdateUserData(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
+    public void UpdateUserData(RotateUserAccountKeysData model, User user, List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions)
     {
         // The revision date has to be updated so that de-synced clients don't accidentally post over the re-encrypted data
         // with an old-user key-encrypted copy
