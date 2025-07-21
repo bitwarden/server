@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Billing.Services;
+﻿using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 
 namespace Bit.Core.Billing.Payment.Queries;
