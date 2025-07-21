@@ -4,7 +4,7 @@
 using Bit.Core.Models.Business;
 using Stripe;
 
-namespace Bit.Core.Billing.Models.Business;
+namespace Bit.Core.Billing.Organizations.Models;
 
 public class SponsorOrganizationSubscriptionUpdate : SubscriptionUpdate
 {

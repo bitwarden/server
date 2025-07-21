@@ -1,9 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Billing.Entities;
-
-#nullable enable
+namespace Bit.Core.Billing.Organizations.Entities;
 
 public class OrganizationInstallation : ITableObject<Guid>
 {
