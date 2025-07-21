@@ -95,7 +95,7 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
         return await query.ToListAsync();
     }
 
-    public async Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByOrganizationIdAsync(Guid organizationId, PolicyType policyType)
+    public async Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetailsByOrganizationIdAsync(Guid organizationId, PolicyType policyType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -173,8 +173,9 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                    && o.Enabled
                    && o.UsePolicies
                    && p.Type == policyType
-            select new PolicyDetails
+            select new OrganizationPolicyDetails
             {
+                UserId = ou.UserId,
                 OrganizationUserId = ou.Id,
                 OrganizationId = p.OrganizationId,
                 PolicyType = p.Type,

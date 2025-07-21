@@ -194,7 +194,7 @@ public class GetPolicyDetailsByOrganizationIdAsyncTests
         return organizationUser;
     }
 
-    private static void AssertPolicyDetailUserConnections(List<PolicyDetails> results,
+    private static void AssertPolicyDetailUserConnections(List<OrganizationPolicyDetails> results,
         OrganizationUser userOrgConnectedDirectly,
         OrganizationUser userOrgConnectedByEmail,
         OrganizationUser userOrgConnectedByUserId)
