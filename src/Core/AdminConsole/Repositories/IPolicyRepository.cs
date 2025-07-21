@@ -33,7 +33,7 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserId(Guid userId);
 
     /// <summary>
-    /// Retrieves <see cref="PolicyDetails"/> of the specified <paramref name="policyType"/>
+    /// Retrieves <see cref="OrganizationPolicyDetails"/> of the specified <paramref name="policyType"/>
     /// for users in the given organization—and for any other organizations those users belong to.
     /// </summary>
     /// <remarks>
@@ -43,5 +43,6 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     /// This is consumed by <see cref="IPolicyRequirementQuery"/> to create requirements for specific policy types.
     /// You probably do not want to call it directly.
     /// </remarks>
-    Task<IEnumerable<PolicyDetails>> PolicyDetailsReadByOrganizationIdAsync(Guid organizationId, PolicyType policyType);
+    Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetailsByOrganizationIdAsync(Guid organizationId,
+        PolicyType policyType);
 }

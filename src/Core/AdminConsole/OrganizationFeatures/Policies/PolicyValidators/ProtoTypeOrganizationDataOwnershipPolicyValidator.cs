@@ -9,7 +9,7 @@ using Bit.Core.AdminConsole.Repositories;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
 
-public class OrganizationDataOwnershipPolicyValidator(
+public class ProtoTypeOrganizationDataOwnershipPolicyValidator(
     IPolicyRepository policyRepository,
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
     : OrganizationPolicyValidator(policyRepository, factories)
@@ -27,7 +27,7 @@ public class OrganizationDataOwnershipPolicyValidator(
 
     public override async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
-        var affectUsers = await GetAsync<OrganizationDataOwnershipPolicyRequirement>(policyUpdate);
+        var affectUsers = await GetAsync<OrganizationDataOwnershipPolicyRequirement>(policyUpdate.OrganizationId, policyUpdate.Type);
 
     }
 
