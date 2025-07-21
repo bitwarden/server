@@ -11,12 +11,10 @@ using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -168,43 +166,6 @@ public class OrganizationUsersController : Controller
 
     [HttpGet("")]
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
-    {
-
-        if (_featureService.IsEnabled(FeatureFlagKeys.SeparateCustomRolePermissions))
-        {
-            return await GetvNextAsync(orgId, includeGroups, includeCollections);
-        }
-
-        var authorized = (await _authorizationService.AuthorizeAsync(
-            User, new OrganizationScope(orgId), OrganizationUserUserDetailsOperations.ReadAll)).Succeeded;
-        if (!authorized)
-        {
-            throw new NotFoundException();
-        }
-
-        var organizationUsers = await _organizationUserUserDetailsQuery.GetOrganizationUserUserDetails(
-            new OrganizationUserUserDetailsQueryRequest
-            {
-                OrganizationId = orgId,
-                IncludeGroups = includeGroups,
-                IncludeCollections = includeCollections
-            }
-        );
-        var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
-        var organizationUsersClaimedStatus = await GetClaimedByOrganizationStatusAsync(orgId, organizationUsers.Select(o => o.Id));
-        var responses = organizationUsers
-            .Select(o =>
-            {
-                var userTwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == o.Id).twoFactorIsEnabled;
-                var claimedByOrganization = organizationUsersClaimedStatus[o.Id];
-                var orgUser = new OrganizationUserUserDetailsResponseModel(o, userTwoFactorEnabled, claimedByOrganization);
-
-                return orgUser;
-            });
-        return new ListResponseModel<OrganizationUserUserDetailsResponseModel>(responses);
-    }
-
-    private async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> GetvNextAsync(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
         var request = new OrganizationUserUserDetailsQueryRequest
         {

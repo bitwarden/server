@@ -10,9 +10,9 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
-using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -40,7 +40,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IPaymentService _paymentService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserService _userService;
-    private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
+    private readonly IGetCloudOrganizationLicenseQuery _getCloudOrganizationLicenseQuery;
     private readonly ILicensingService _licensingService;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
@@ -64,7 +64,7 @@ public class OrganizationsControllerTests : IDisposable
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         Substitute.For<ISsoConfigService>();
         _userService = Substitute.For<IUserService>();
-        _cloudGetOrganizationLicenseQuery = Substitute.For<ICloudGetOrganizationLicenseQuery>();
+        _getCloudOrganizationLicenseQuery = Substitute.For<IGetCloudOrganizationLicenseQuery>();
         _licensingService = Substitute.For<ILicensingService>();
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
@@ -81,7 +81,7 @@ public class OrganizationsControllerTests : IDisposable
             _userService,
             _paymentService,
             _currentContext,
-            _cloudGetOrganizationLicenseQuery,
+            _getCloudOrganizationLicenseQuery,
             _globalSettings,
             _licensingService,
             _updateSecretsManagerSubscriptionCommand,

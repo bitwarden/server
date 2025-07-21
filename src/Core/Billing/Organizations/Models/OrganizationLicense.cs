@@ -10,12 +10,13 @@ using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Settings;
 
-namespace Bit.Core.Billing.Models.Business;
+namespace Bit.Core.Billing.Organizations.Models;
 
 public class OrganizationLicense : ILicense
 {
