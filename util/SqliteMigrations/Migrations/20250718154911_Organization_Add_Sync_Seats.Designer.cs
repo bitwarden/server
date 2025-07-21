@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250702162112_Add_Organization_Subscription_Update")]
-    partial class Add_Organization_Subscription_Update
+    [Migration("20250718154911_Organization_Add_Sync_Seats")]
+    partial class Organization_Add_Sync_Seats
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -203,6 +203,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<long?>("Storage")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("SyncSeats")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("TwoFactorProviders")
                         .HasColumnType("TEXT");
 
@@ -331,28 +334,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("OrganizationIntegrationId");
 
                     b.ToTable("OrganizationIntegrationConfiguration", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationSubscriptionUpdate", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("SeatsLastUpdated")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SyncAttempts")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationId");
-
-                    b.ToTable("OrganizationSubscriptionUpdates");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>
@@ -993,6 +974,10 @@ namespace Bit.SqliteMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ContentEncryptionKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
@@ -1016,6 +1001,10 @@ namespace Bit.SqliteMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationReport", b =>
                 {
                     b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContentEncryptionKey")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
@@ -2485,17 +2474,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("OrganizationIntegration");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationSubscriptionUpdate", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
-                        .WithMany()
-                        .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>

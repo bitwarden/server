@@ -207,6 +207,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<long?>("Storage")
                         .HasColumnType("bigint");
 
+                    b.Property<bool>("SyncSeats")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("TwoFactorProviders")
                         .HasColumnType("text");
 
@@ -336,28 +339,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("OrganizationIntegrationId");
 
                     b.ToTable("OrganizationIntegrationConfiguration", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationSubscriptionUpdate", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("SeatsLastUpdated")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("SyncAttempts")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationId");
-
-                    b.ToTable("OrganizationSubscriptionUpdates");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>
@@ -2507,17 +2488,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("OrganizationIntegration");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationSubscriptionUpdate", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
-                        .WithMany()
-                        .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>

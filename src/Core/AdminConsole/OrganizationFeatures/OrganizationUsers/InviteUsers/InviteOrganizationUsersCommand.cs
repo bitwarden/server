@@ -32,8 +32,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
     IProviderOrganizationRepository providerOrganizationRepository,
-    IProviderUserRepository providerUserRepository,
-    IOrganizationSubscriptionUpdateRepository organizationSubscriptionUpdateRepository
+    IProviderUserRepository providerUserRepository
     ) : IInviteOrganizationUsersCommand
 {
 
@@ -262,9 +261,9 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd,
                 validatedResult.Value.PerformedAt.UtcDateTime);
 
-            await organizationSubscriptionUpdateRepository.SetToUpdateSubscriptionAsync(organization.Id, validatedResult.Value.PerformedAt.UtcDateTime);
-
             organization.Seats = validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal;
+            organization.SyncSeats = true;
+
             await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
         }
     }
