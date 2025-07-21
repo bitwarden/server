@@ -5,7 +5,7 @@ IF NOT EXISTS (SELECT 1
              AND COLUMN_NAME = 'SyncSeats')
     BEGIN
         ALTER TABLE [dbo].[Organization]
-            ADD [SyncSeats] BIT NOT NULL DEFAULT 0;
+            ADD [SyncSeats] BIT NOT NULL CONSTRAINT [DF_Organization_SyncSeats] DEFAULT 0;
     END
 GO
 
