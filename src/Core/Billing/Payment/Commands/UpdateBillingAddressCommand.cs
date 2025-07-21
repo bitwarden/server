@@ -1,8 +1,8 @@
-﻿#nullable enable
-using Bit.Core.Billing.Commands;
+﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -19,14 +19,26 @@ public interface IUpdateBillingAddressCommand
 
 public class UpdateBillingAddressCommand(
     ILogger<UpdateBillingAddressCommand> logger,
-    IStripeAdapter stripeAdapter) : BillingCommand<UpdateBillingAddressCommand>(logger), IUpdateBillingAddressCommand
+    ISubscriberService subscriberService,
+    IStripeAdapter stripeAdapter) : BaseBillingCommand<UpdateBillingAddressCommand>(logger), IUpdateBillingAddressCommand
 {
+    protected override Conflict DefaultConflict =>
+        new("We had a problem updating your billing address. Please contact support for assistance.");
+
     public Task<BillingCommandResult<BillingAddress>> Run(
         ISubscriber subscriber,
-        BillingAddress billingAddress) => HandleAsync(() => subscriber.GetProductUsageType() switch
+        BillingAddress billingAddress) => HandleAsync(async () =>
     {
-        ProductUsageType.Personal => UpdatePersonalBillingAddressAsync(subscriber, billingAddress),
-        ProductUsageType.Business => UpdateBusinessBillingAddressAsync(subscriber, billingAddress)
+        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
+        {
+            await subscriberService.CreateStripeCustomer(subscriber);
+        }
+
+        return subscriber.GetProductUsageType() switch
+        {
+            ProductUsageType.Personal => await UpdatePersonalBillingAddressAsync(subscriber, billingAddress),
+            ProductUsageType.Business => await UpdateBusinessBillingAddressAsync(subscriber, billingAddress)
+        };
     });
 
     private async Task<BillingCommandResult<BillingAddress>> UpdatePersonalBillingAddressAsync(

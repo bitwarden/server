@@ -14,7 +14,7 @@ public class EventIntegrationHandler<T>(
     IntegrationType integrationType,
     IEventIntegrationPublisher eventIntegrationPublisher,
     IIntegrationFilterService integrationFilterService,
-    IOrganizationIntegrationConfigurationRepository configurationRepository,
+    IIntegrationConfigurationDetailsCache configurationCache,
     IUserRepository userRepository,
     IOrganizationRepository organizationRepository,
     ILogger<EventIntegrationHandler<T>> logger)
@@ -27,7 +27,7 @@ public class EventIntegrationHandler<T>(
             return;
         }
 
-        var configurations = await configurationRepository.GetConfigurationDetailsAsync(
+        var configurations = configurationCache.GetConfigurationDetails(
             organizationId,
             integrationType,
             eventMessage.Type);

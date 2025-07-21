@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Billing.Caches;
+﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Models;
@@ -29,16 +28,22 @@ public class UpdatePaymentMethodCommand(
     ILogger<UpdatePaymentMethodCommand> logger,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService) : BillingCommand<UpdatePaymentMethodCommand>(logger), IUpdatePaymentMethodCommand
+    ISubscriberService subscriberService) : BaseBillingCommand<UpdatePaymentMethodCommand>(logger), IUpdatePaymentMethodCommand
 {
     private readonly ILogger<UpdatePaymentMethodCommand> _logger = logger;
-    private static readonly Conflict _conflict = new("We had a problem updating your payment method. Please contact support for assistance.");
+    protected override Conflict DefaultConflict
+        => new("We had a problem updating your payment method. Please contact support for assistance.");
 
     public Task<BillingCommandResult<MaskedPaymentMethod>> Run(
         ISubscriber subscriber,
         TokenizedPaymentMethod paymentMethod,
         BillingAddress? billingAddress) => HandleAsync(async () =>
     {
+        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
+        {
+            await subscriberService.CreateStripeCustomer(subscriber);
+        }
+
         var customer = await subscriberService.GetCustomer(subscriber);
 
         var result = paymentMethod.Type switch
@@ -80,10 +85,10 @@ public class UpdatePaymentMethodCommand(
         {
             case 0:
                 _logger.LogError("{Command}: Could not find setup intent for subscriber's ({SubscriberID}) bank account", CommandName, subscriber.Id);
-                return _conflict;
+                return DefaultConflict;
             case > 1:
                 _logger.LogError("{Command}: Found more than one set up intent for subscriber's ({SubscriberID}) bank account", CommandName, subscriber.Id);
-                return _conflict;
+                return DefaultConflict;
         }
 
         var setupIntent = setupIntents.First();

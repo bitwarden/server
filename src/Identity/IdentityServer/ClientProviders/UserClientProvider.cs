@@ -3,10 +3,10 @@
 using System.Collections.ObjectModel;
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Identity;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Duende.IdentityServer.Models;
 using IdentityModel;
