@@ -43,5 +43,5 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     /// This is consumed by <see cref="IPolicyRequirementQuery"/> to create requirements for specific policy types.
     /// You probably do not want to call it directly.
     /// </remarks>
-    Task<IEnumerable<PolicyDetails>> PolicyDetailsReadByOrganizationIdAsync(Guid organizationId, PolicyType policyType);
+    Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByOrganizationIdAsync(Guid organizationId, PolicyType policyType);
 }

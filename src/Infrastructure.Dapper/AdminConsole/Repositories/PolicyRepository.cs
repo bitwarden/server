@@ -74,7 +74,7 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
         }
     }
 
-    public async Task<IEnumerable<PolicyDetails>> PolicyDetailsReadByOrganizationIdAsync(Guid organizationId, PolicyType policyType)
+    public async Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByOrganizationIdAsync(Guid organizationId, PolicyType policyType)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {

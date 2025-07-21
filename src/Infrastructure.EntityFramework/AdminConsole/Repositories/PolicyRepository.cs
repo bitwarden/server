@@ -95,7 +95,7 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
         return await query.ToListAsync();
     }
 
-    public async Task<IEnumerable<PolicyDetails>> PolicyDetailsReadByOrganizationIdAsync(Guid organizationId, PolicyType policyType)
+    public async Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByOrganizationIdAsync(Guid organizationId, PolicyType policyType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);

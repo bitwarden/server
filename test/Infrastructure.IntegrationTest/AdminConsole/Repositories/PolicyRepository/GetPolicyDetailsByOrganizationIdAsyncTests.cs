@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.PolicyRepository;
 
-public class PolicyDetailsReadByOrganizationIdAsyncTests
+public class GetPolicyDetailsByOrganizationIdAsyncTests
 {
     [DatabaseTheory, DatabaseData]
     public async Task ShouldContainProviderData(
