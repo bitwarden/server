@@ -94,10 +94,10 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                     break;
                 }
             case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired when providerId.HasValue:
-            {
-                await HandleUnpaidProviderSubscriptionAsync(providerId.Value, subscription);
-                break;
-            }
+                {
+                    await HandleUnpaidProviderSubscriptionAsync(providerId.Value, subscription);
+                    break;
+                }
             case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired:
                 {
                     if (!userId.HasValue)
