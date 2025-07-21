@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using System.Text.Json;
 using Bit.Core.Utilities;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -27,7 +28,7 @@ public class EncryptedStringSchemaFilter : ISchemaFilter
             if (prop.GetCustomAttributes(typeof(EncryptedStringAttribute), true).FirstOrDefault() != null)
             {
                 // Convert prop.Name to camelCase for JSON schema property lookup
-                var jsonPropName = char.ToLowerInvariant(prop.Name[0]) + prop.Name[1..];
+                var jsonPropName = JsonNamingPolicy.CamelCase.ConvertName(prop.Name);
 
                 if (schema.Properties.TryGetValue(jsonPropName, out var value))
                 {
