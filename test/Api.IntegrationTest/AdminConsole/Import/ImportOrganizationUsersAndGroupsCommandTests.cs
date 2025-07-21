@@ -184,32 +184,44 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
     [Fact]
     public async Task Import_Existing_Groups_Succeeds()
     {
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
         var group = await OrganizationTestHelpers.CreateGroup(_factory, _organization.Id);
-
         var request = new OrganizationImportRequestModel();
+        var addedMember = new OrganizationImportRequestModel.OrganizationImportMemberRequestModel
+        {
+            Email = "test@test.com",
+            ExternalId = "bwtest-externalId",
+            Deleted = false
+        };
+
         request.LargeImport = false;
         request.OverwriteExisting = false;
         request.Groups = [
             new OrganizationImportRequestModel.OrganizationImportGroupRequestModel
             {
-                Name = group.Name,
-                ExternalId = Guid.NewGuid().ToString(),
+                Name = "new-name",
+                ExternalId = "bwtest-externalId",
                 MemberExternalIds = []
             }
         ];
-        request.Members = [];
+        request.Members = [addedMember];
 
         var response = await _client.PostAsync($"/public/organization/import", JsonContent.Create(request));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         // Assert against the database values
         var groupRepository = _factory.GetService<IGroupRepository>();
-        var existingGroup = await groupRepository.GetByIdAsync(group.Id);
+        var existingGroups = (await groupRepository.GetManyByOrganizationIdAsync(_organization.Id)).ToArray();
 
-        Assert.NotNull(existingGroup);
-        Assert.Equal(existingGroup.Id, group.Id);
-        Assert.Equal(existingGroup.Name, group.Name);
-        Assert.Equal(existingGroup.ExternalId, group.ExternalId);
+        // Assert that we are actually updating the existing group, not adding a new one.
+        Assert.Single(existingGroups);
+        Assert.NotNull(existingGroups[0]);
+        Assert.Equal(group.Id, existingGroups[0].Id);
+        Assert.Equal("new-name", existingGroups[0].Name);
+        Assert.Equal(group.ExternalId, existingGroups[0].ExternalId);
+
+        var addedOrgUser = await organizationUserRepository.GetByOrganizationEmailAsync(_organization.Id, addedMember.Email);
+        Assert.NotNull(addedOrgUser);
     }
 
     [Fact]
@@ -266,8 +278,8 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
         request.Groups = [
             new OrganizationImportRequestModel.OrganizationImportGroupRequestModel
             {
-                Name = existingGroup.Name,
-                ExternalId = Guid.NewGuid().ToString(),
+                Name = "new-name",
+                ExternalId = existingGroup.ExternalId,
                 MemberExternalIds = []
             },
             new OrganizationImportRequestModel.OrganizationImportGroupRequestModel
@@ -293,8 +305,8 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
 
         var existingGroupInDb = groups.Where(g => g.ExternalId == existingGroup.ExternalId).FirstOrDefault();
         Assert.NotNull(existingGroupInDb);
-        Assert.Equal(existingGroupInDb.Id, existingGroup.Id);
-        Assert.Equal(existingGroupInDb.Name, existingGroup.Name);
-        Assert.Equal(existingGroupInDb.ExternalId, existingGroup.ExternalId);
+        Assert.Equal(existingGroup.Id, existingGroupInDb.Id);
+        Assert.Equal("new-name", existingGroupInDb.Name);
+        Assert.Equal(existingGroup.ExternalId, existingGroupInDb.ExternalId);
     }
 }
