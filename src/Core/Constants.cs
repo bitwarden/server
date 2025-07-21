@@ -170,6 +170,7 @@ public static class FeatureFlagKeys
     public const string UserkeyRotationV2 = "userkey-rotation-v2";
     public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
     public const string UserSdkForDecryption = "use-sdk-for-decryption";
+    public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
     public const string PM17987_BlockType0 = "pm-17987-block-type-0";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
 
