@@ -305,6 +305,7 @@ public class ReportsController : Controller
 
         GuardOrganizationAccess(orgId);
 
+        // FIXME: remove this mock class when actual data retrieval is implemented
         return MockOrganizationReportSummary.GetMockData()
             .Where(_ => _.OrganizationId == orgId
                 && _.Date >= from.ToDateTime(TimeOnly.MinValue)
