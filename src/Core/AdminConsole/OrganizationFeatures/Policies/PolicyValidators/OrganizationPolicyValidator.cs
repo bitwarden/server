@@ -16,7 +16,7 @@ public abstract class OrganizationPolicyValidator(IPolicyRepository policyReposi
     public abstract IEnumerable<PolicyType> RequiredPolicies { get; }
 
 
-    protected async Task<IEnumerable<T>> GetAsync<T>(Guid organizationId, PolicyType policyType) where T : IPolicyRequirement
+    protected async Task<IEnumerable<T>> GetUserPolicyRequirementsByOrganizationIdAsync<T>(Guid organizationId, PolicyType policyType) where T : IPolicyRequirement
     {
         var policyDetails = await policyRepository.GetPolicyDetailsByOrganizationIdAsync(organizationId, policyType);
         var policyDetailGroups = policyDetails.GroupBy(policyDetail => policyDetail.UserId);

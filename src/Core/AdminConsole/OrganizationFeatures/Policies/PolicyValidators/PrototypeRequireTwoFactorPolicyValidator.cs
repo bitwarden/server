@@ -23,7 +23,7 @@ public class PrototypeRequireTwoFactorPolicyValidator(
 
     public override async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
-        var affectUsers = await GetAsync<RequireTwoFactorPolicyRequirement>(policyUpdate.OrganizationId, policyUpdate.Type);
+        var affectUsers = await GetUserPolicyRequirementsByOrganizationIdAsync<RequireTwoFactorPolicyRequirement>(policyUpdate.OrganizationId, policyUpdate.Type);
         // logic: do something with the side effect users.
     }
 }
