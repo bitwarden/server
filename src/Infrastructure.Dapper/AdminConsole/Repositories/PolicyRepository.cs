@@ -61,14 +61,6 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
         }
     }
 
-    public Task<IEnumerable<UserPolicyDetails>> GetOrganizationPolicyDetailsByOrgId(Guid orgId, PolicyType policyType)
-    {
-        // call our sproc
-
-        // mock data
-        return Task.FromResult(new List<UserPolicyDetails>().AsEnumerable());
-    }
-
     public async Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserId(Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -80,5 +72,11 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
 
             return results.ToList();
         }
+    }
+
+    public Task<IEnumerable<PolicyDetails>> PolicyDetailsReadByOrganizationIdAsync(Guid organizationId,
+        PolicyType policyType)
+    {
+        return Task.FromResult(new List<PolicyDetails>().AsEnumerable());
     }
 }

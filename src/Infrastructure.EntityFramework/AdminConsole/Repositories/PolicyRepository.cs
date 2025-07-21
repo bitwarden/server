@@ -56,7 +56,7 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
         }
     }
 
-    public Task<OrganizationPolicyDetails> GetOrganizationPolicyDetailsByOrgId(Guid orgId, PolicyType policyType) => throw new NotImplementedException();
+    public Task<IEnumerable<PolicyDetails>> GetOrganizationPolicyDetailsByOrgId(Guid orgId, PolicyType policyType) => throw new NotImplementedException();
 
     public async Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserId(Guid userId)
     {
@@ -96,4 +96,6 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                     };
         return await query.ToListAsync();
     }
+
+    public Task<IEnumerable<PolicyDetails>> PolicyDetailsReadByOrganizationIdAsync(Guid organizationId, PolicyType policyType) => throw new NotImplementedException();
 }
