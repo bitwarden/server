@@ -236,7 +236,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateEncryptedDataForKeyRotation_UpgradeToV2_InvalidVerifyingKey_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateAccountKeys_UpgradeToV2_InvalidVerifyingKey_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
@@ -250,7 +250,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateEncryptedDataForKeyRotation_UpgradeToV2_IncorrectlyWrappedPrivateKey_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateAccountKeysAsync_UpgradeToV2_IncorrectlyWrappedPrivateKey_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
@@ -264,7 +264,7 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateEncryptedDataForKeyRotation_UpgradeToV2_NoSignedPublicKey_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateAccountKeysAsync_UpgradeToV2_NoSignedPublicKey_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
@@ -278,7 +278,21 @@ public class RotateUserAccountKeysCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateEncryptedDataForKeyRotation_RotateV2_NoSignatureKeyPair_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    public async Task UpdateAccountKeysAsync_UpgradeToV2_NoSecurityState_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV2ModelUser(model);
+        model.AccountKeys.SecurityStateData = null;
+
+        var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
+        Assert.Equal("No signed security state provider for V2 user", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAccountKeysAsync_RotateV2_NoSignatureKeyPair_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
     {
         SetTestKdfAndSaltForUserAndModel(user, model);
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();

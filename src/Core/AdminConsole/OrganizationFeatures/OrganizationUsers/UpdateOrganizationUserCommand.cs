@@ -199,6 +199,11 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             // Use generic error message to avoid enumeration
             throw new NotFoundException();
         }
+
+        if (collections.Any(c => c.Type == CollectionType.DefaultUserCollection))
+        {
+            throw new BadRequestException("You cannot modify member access for collections with the type as DefaultUserCollection.");
+        }
     }
 
     private async Task ValidateGroupAccessAsync(OrganizationUser originalUser,

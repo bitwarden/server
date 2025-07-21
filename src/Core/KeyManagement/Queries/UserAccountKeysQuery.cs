@@ -28,7 +28,7 @@ public class UserAccountKeysQuery(IUserSignatureKeyPairRepository signatureKeyPa
                 SecurityStateData = new SecurityStateData
                 {
                     SecurityState = user.SecurityState!,
-                    SecurityVersion = (int)user.SecurityVersion!,
+                    SecurityVersion = user.GetSecurityVersion(),
                 }
             };
         }

@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
@@ -206,7 +209,11 @@ public class DevicesController : Controller
             throw new NotFoundException();
         }
 
-        await _deviceService.SaveAsync(model.ToData(), device);
+        await _deviceService.SaveAsync(
+            model.ToData(),
+            device,
+            _currentContext.Organizations.Select(org => org.Id.ToString())
+        );
     }
 
     [AllowAnonymous]

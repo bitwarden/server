@@ -1,4 +1,7 @@
-﻿using Azure.Storage.Queues;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Azure.Storage.Queues;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.SignalR;

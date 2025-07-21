@@ -1,8 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Providers.Repositories;
-using Bit.Core.Billing.Repositories;
 using Bit.Core.Dirt.Reports.Repositories;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.NotificationCenter.Repositories;
@@ -109,6 +110,8 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
         services.AddSingleton<IUserSignatureKeyPairRepository, UserSignatureKeyPairRepository>();
         services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
+        services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
+        services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
 
         if (selfHosted)
