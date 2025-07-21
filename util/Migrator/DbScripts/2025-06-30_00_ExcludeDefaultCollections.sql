@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Collection_ReadByOrganizationIdWithPermissions]
+CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadByOrganizationIdWithPermissions]
     @OrganizationId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @IncludeAccessRelationships BIT
@@ -84,3 +84,66 @@ BEGIN
         EXEC [dbo].[CollectionUser_ReadByOrganizationId] @OrganizationId
     END
 END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadByOrganizationId]
+    @OrganizationId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[CollectionView]
+    WHERE
+        [OrganizationId] = @OrganizationId AND
+        [Type] != 1 -- Exclude DefaultUserCollection
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [OrganizationUserUserDetails_ReadById] @Id
+
+    SELECT
+        CU.[CollectionId] Id,
+        CU.[ReadOnly],
+        CU.[HidePasswords],
+        CU.[Manage]
+    FROM
+        [dbo].[OrganizationUser] OU
+    INNER JOIN
+        [dbo].[CollectionUser] CU ON CU.[OrganizationUserId] = [OU].[Id]
+    INNER JOIN
+        [dbo].[Collection] C ON CU.[CollectionId] = C.[Id]
+    WHERE
+        [OrganizationUserId] = @Id
+        AND C.[Type] != 1 -- Exclude default user collections
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[CollectionUser_ReadByOrganizationUserIds]
+    @OrganizationUserIds [dbo].[GuidIdArray] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        CU.*
+    FROM
+        [dbo].[OrganizationUser] OU
+    INNER JOIN
+        [dbo].[CollectionUser] CU ON CU.[OrganizationUserId] = OU.[Id]
+    INNER JOIN
+        [dbo].[Collection] C ON CU.[CollectionId] = C.[Id]
+    INNER JOIN
+        @OrganizationUserIds OUI ON OUI.[Id] = OU.[Id]
+    WHERE
+        C.[Type] != 1 -- Exclude DefaultUserCollection
+END
+GO
