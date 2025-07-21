@@ -334,6 +334,22 @@ public class ReportsController : Controller
         return NoContent();
     }
 
+    [HttpPut("organization-report-summary")]
+    public IActionResult UpdateOrganizationReportSummary([FromBody] OrganizationReportSummaryModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            throw new BadRequestException(ModelState);
+        }
+
+        GuardOrganizationAccess(model.OrganizationId);
+
+        // TODO: Implement actual update logic
+
+        // Returns 204 No Content as a placeholder
+        return NoContent();
+    }
+
     private void GuardOrganizationAccess(Guid organizationId)
     {
         if (!_currentContext.AccessReports(organizationId).Result)
@@ -342,6 +358,7 @@ public class ReportsController : Controller
         }
     }
 
+    // FIXME: remove this mock class when actual data retrieval is implemented
     private class MockOrganizationReportSummary
     {
         public static List<OrganizationReportSummaryModel> GetMockData()
