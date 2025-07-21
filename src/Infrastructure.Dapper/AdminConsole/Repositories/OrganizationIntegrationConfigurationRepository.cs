@@ -58,7 +58,7 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationIntegrationConfiguration>(
-                "[dbo].[OrganizationIntegrationConfiguration_ReadByOrganizationIntegrationId]",
+                "[dbo].[OrganizationIntegrationConfiguration_ReadManyByOrganizationIntegrationId]",
                 new
                 {
                     OrganizationIntegrationId = organizationIntegrationId

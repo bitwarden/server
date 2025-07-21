@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationIntegration_ReadByOrganizationId]
+CREATE PROCEDURE [dbo].[OrganizationIntegration_ReadManyByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN

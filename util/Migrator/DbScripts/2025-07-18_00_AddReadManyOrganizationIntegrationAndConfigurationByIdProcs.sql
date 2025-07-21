@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationIntegration_ReadByOrganizationId]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegration_ReadManyByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -13,7 +13,7 @@ WHERE
 END
 GO
 
-CREATE PROCEDURE [dbo].[OrganizationIntegrationConfiguration_ReadByOrganizationIntegrationId]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegrationConfiguration_ReadManyByOrganizationIntegrationId]
     @OrganizationIntegrationId UNIQUEIDENTIFIER
 AS
 BEGIN

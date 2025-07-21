@@ -22,7 +22,7 @@ public class OrganizationIntegrationRepository : Repository<OrganizationIntegrat
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationIntegration>(
-                "[dbo].[OrganizationIntegration_ReadByOrganizationId]",
+                "[dbo].[OrganizationIntegration_ReadManyByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
