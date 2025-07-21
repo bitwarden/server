@@ -3,8 +3,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Models.Business;
-using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -12,9 +11,15 @@ using Bit.Core.Models.Business;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Services;
 
-namespace Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses;
+namespace Bit.Core.Billing.Organizations.Queries;
 
-public class CloudGetOrganizationLicenseQuery : ICloudGetOrganizationLicenseQuery
+public interface IGetCloudOrganizationLicenseQuery
+{
+    Task<OrganizationLicense> GetLicenseAsync(Organization organization, Guid installationId,
+        int? version = null);
+}
+
+public class GetCloudOrganizationLicenseQuery : IGetCloudOrganizationLicenseQuery
 {
     private readonly IInstallationRepository _installationRepository;
     private readonly IPaymentService _paymentService;
@@ -22,7 +27,7 @@ public class CloudGetOrganizationLicenseQuery : ICloudGetOrganizationLicenseQuer
     private readonly IProviderRepository _providerRepository;
     private readonly IFeatureService _featureService;
 
-    public CloudGetOrganizationLicenseQuery(
+    public GetCloudOrganizationLicenseQuery(
         IInstallationRepository installationRepository,
         IPaymentService paymentService,
         ILicensingService licensingService,
