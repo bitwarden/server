@@ -123,7 +123,7 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_UnpaidProviderSubscription_DisablesProviderAndSchedulesCancellation()
+    public async Task HandleAsync_UnpaidProviderSubscription_WithValidTransition_DisablesProviderAndSchedulesCancellation()
     {
         // Arrange
         var providerId = Guid.NewGuid();
@@ -153,7 +153,74 @@ public class SubscriptionUpdatedHandlerTests
             Enabled = true
         };
 
-        var parsedEvent = new Event { Data = new EventData() };
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                PreviousAttributes = JObject.FromObject(new
+                {
+                    status = "active"
+                })
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
+            .Returns(true);
+
+        _providerRepository.GetByIdAsync(providerId)
+            .Returns(provider);
+
+        _stripeFacade.GetTestClock(testClock.Id)
+            .Returns(testClock);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        Assert.False(provider.Enabled);
+        await _providerService.Received(1).UpdateAsync(provider);
+        await _stripeFacade.Received(1).UpdateSubscription(subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(o => o.CancelAt == frozenTime.AddDays(7)));
+    }
+
+    [Fact]
+    public async Task HandleAsync_UnpaidProviderSubscription_WithoutValidTransition_DisablesProviderOnly()
+    {
+        // Arrange
+        var providerId = Guid.NewGuid();
+        const string subscriptionId = "sub_123";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = StripeSubscriptionStatus.Unpaid,
+            Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = "subscription_cycle" }
+        };
+
+        var provider = new Provider
+        {
+            Id = providerId,
+            Name = "Test Provider",
+            Enabled = true
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                PreviousAttributes = JObject.FromObject(new
+                {
+                    status = "unpaid"  // No valid transition
+                })
+            }
+        };
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
@@ -173,8 +240,58 @@ public class SubscriptionUpdatedHandlerTests
         // Assert
         Assert.False(provider.Enabled);
         await _providerService.Received(1).UpdateAsync(provider);
-        await _stripeFacade.Received(1).UpdateSubscription(subscriptionId,
-            Arg.Is<SubscriptionUpdateOptions>(o => o.CancelAt == frozenTime.AddDays(7)));
+        await _stripeFacade.DidNotReceive().UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_UnpaidProviderSubscription_WithNoPreviousAttributes_DisablesProviderOnly()
+    {
+        // Arrange
+        var providerId = Guid.NewGuid();
+        const string subscriptionId = "sub_123";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = StripeSubscriptionStatus.Unpaid,
+            Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = "subscription_cycle" }
+        };
+
+        var provider = new Provider
+        {
+            Id = providerId,
+            Name = "Test Provider",
+            Enabled = true
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                PreviousAttributes = null
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
+            .Returns(true);
+
+        _providerRepository.GetByIdAsync(providerId)
+            .Returns(provider);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        Assert.False(provider.Enabled);
+        await _providerService.Received(1).UpdateAsync(provider);
+        await _stripeFacade.DidNotReceive().UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
@@ -258,6 +375,45 @@ public class SubscriptionUpdatedHandlerTests
         // Assert
         await _providerRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
         await _providerService.DidNotReceive().UpdateAsync(Arg.Any<Provider>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_UnpaidProviderSubscription_WhenProviderNotFound_DoesNothing()
+    {
+        // Arrange
+        var providerId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = StripeSubscriptionStatus.Unpaid,
+            CurrentPeriodEnd = currentPeriodEnd,
+            Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = "subscription_cycle" }
+        };
+
+        var parsedEvent = new Event { Data = new EventData() };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
+            .Returns(true);
+
+        _providerRepository.GetByIdAsync(providerId)
+            .Returns((Provider)null);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _providerService.DidNotReceive().UpdateAsync(Arg.Any<Provider>());
+        await _stripeFacade.DidNotReceive().UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
