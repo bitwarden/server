@@ -1,11 +1,11 @@
 CREATE OR ALTER VIEW [dbo].[UserEmailDomainView]
 AS
-SELECT 
+SELECT
     Id,
     Email,
     SUBSTRING(Email, CHARINDEX('@', Email) + 1, LEN(Email)) AS EmailDomain
 FROM dbo.[User]
-WHERE Email IS NOT NULL 
+WHERE Email IS NOT NULL
     AND CHARINDEX('@', Email) > 0
 GO
 
@@ -14,7 +14,7 @@ IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationUser_Org
     BEGIN
         CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrganizationId_UserId]
             ON [dbo].[OrganizationUser] ([OrganizationId], [UserId])
-            INCLUDE ([Email], [Status], [Type], [ExternalId], [CreationDate], 
+            INCLUDE ([Email], [Status], [Type], [ExternalId], [CreationDate],
                 [RevisionDate], [Permissions], [ResetPasswordKey], [AccessSecretsManager])
     END
 GO
@@ -26,7 +26,7 @@ IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_User_Id_EmailDomain'
     END
 GO
 
-IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationDomain_Org_VerifiedDomain')
+IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationDomain_OrganizationId_VerifiedDate')
     BEGIN
         CREATE NONCLUSTERED INDEX [IX_OrganizationDomain_OrganizationId_VerifiedDate]
             ON [dbo].[OrganizationDomain] ([OrganizationId], [VerifiedDate])
@@ -44,8 +44,8 @@ BEGIN
     SET NOCOUNT ON
 
     -- Result Set 1: User Details (always returned)
-    SELECT * 
-    FROM [dbo].[OrganizationUserUserDetailsView] 
+    SELECT *
+    FROM [dbo].[OrganizationUserUserDetailsView]
     WHERE OrganizationId = @OrganizationId
 
     -- Result Set 2: Group associations (if requested)
@@ -57,7 +57,7 @@ BEGIN
         WHERE ou.OrganizationId = @OrganizationId
     END
 
-    -- Result Set 3: Collection associations (if requested)  
+    -- Result Set 3: Collection associations (if requested)
     IF @IncludeCollections = 1
     BEGIN
         SELECT cu.*
@@ -84,7 +84,7 @@ BEGIN
         FROM [dbo].[UserEmailDomainView] U
         WHERE EXISTS (
             SELECT 1
-            FROM [dbo].[OrganizationDomainView] OD 
+            FROM [dbo].[OrganizationDomainView] OD
             WHERE OD.[OrganizationId] = @OrganizationId
             AND OD.[VerifiedDate] IS NOT NULL
             AND OD.[DomainName] = U.[EmailDomain]
