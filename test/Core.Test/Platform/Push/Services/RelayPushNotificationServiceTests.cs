@@ -4,8 +4,8 @@ using System.Text.Json.Nodes;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.Platform.Push;
 using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -14,7 +14,6 @@ using Bit.Core.Vault.Entities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
-using Xunit;
 
 namespace Bit.Core.Test.Platform.Push.Services;
 
@@ -38,46 +37,18 @@ public class RelayPushNotificationServiceTests : PushTestBase
         GlobalSettings.Installation.IdentityUri = "https://localhost:8888";
     }
 
-    protected override RelayPushNotificationService CreateService()
+    protected override IPushEngine CreateService()
     {
         return new RelayPushNotificationService(
             HttpClientFactory,
             _deviceRepository,
             GlobalSettings,
             HttpContextAccessor,
-            NullLogger<RelayPushNotificationService>.Instance,
-            FakeTimeProvider
+            NullLogger<RelayPushNotificationService>.Instance
         );
     }
 
     protected override string ExpectedClientUrl() => "https://localhost:7777/push/send";
-
-    [Fact]
-    public async Task SendPayloadToInstallationAsync_ThrowsNotImplementedException()
-    {
-        var sut = CreateService();
-        await Assert.ThrowsAsync<NotImplementedException>(
-            async () => await sut.SendPayloadToInstallationAsync("installation_id", PushType.AuthRequest, new { }, null)
-        );
-    }
-
-    [Fact]
-    public async Task SendPayloadToUserAsync_ThrowsNotImplementedException()
-    {
-        var sut = CreateService();
-        await Assert.ThrowsAsync<NotImplementedException>(
-            async () => await sut.SendPayloadToUserAsync("user_id", PushType.AuthRequest, new { }, null)
-        );
-    }
-
-    [Fact]
-    public async Task SendPayloadToOrganizationAsync_ThrowsNotImplementedException()
-    {
-        var sut = CreateService();
-        await Assert.ThrowsAsync<NotImplementedException>(
-            async () => await sut.SendPayloadToOrganizationAsync("organization_id", PushType.AuthRequest, new { }, null)
-        );
-    }
 
     protected override JsonNode GetPushSyncCipherCreatePayload(Cipher cipher, Guid collectionIds)
     {
@@ -520,7 +491,7 @@ public class RelayPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushPendingSecurityTasksResponsePayload(Guid userId)
+    protected override JsonNode GetPushRefreshSecurityTasksResponsePayload(Guid userId)
     {
         return new JsonObject
         {

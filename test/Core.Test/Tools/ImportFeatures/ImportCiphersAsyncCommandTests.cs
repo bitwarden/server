@@ -31,7 +31,7 @@ public class ImportCiphersAsyncCommandTests
         SutProvider<ImportCiphersCommand> sutProvider)
     {
         sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.PersonalOwnership)
+            .AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.OrganizationDataOwnership)
             .Returns(false);
 
         sutProvider.GetDependency<IFolderRepository>()
@@ -51,7 +51,7 @@ public class ImportCiphersAsyncCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ImportIntoIndividualVaultAsync_WithPolicyRequirementsEnabled_WithDisablePersonalOwnershipPolicyDisabled_Success(
+    public async Task ImportIntoIndividualVaultAsync_WithPolicyRequirementsEnabled_WithOrganizationDataOwnershipPolicyDisabled_Success(
         Guid importingUserId,
         List<CipherDetails> ciphers,
         SutProvider<ImportCiphersCommand> sutProvider)
@@ -61,8 +61,10 @@ public class ImportCiphersAsyncCommandTests
             .Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<PersonalOwnershipPolicyRequirement>(importingUserId)
-            .Returns(new PersonalOwnershipPolicyRequirement { DisablePersonalOwnership = false });
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(importingUserId)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(
+                OrganizationDataOwnershipState.Disabled,
+                []));
 
         sutProvider.GetDependency<IFolderRepository>()
             .GetManyByUserIdAsync(importingUserId)
@@ -89,7 +91,7 @@ public class ImportCiphersAsyncCommandTests
         ciphers.ForEach(c => c.UserId = userId);
 
         sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(userId, PolicyType.PersonalOwnership)
+            .AnyPoliciesApplicableToUserAsync(userId, PolicyType.OrganizationDataOwnership)
             .Returns(true);
 
         var folderRelationships = new List<KeyValuePair<int, int>>();
@@ -101,7 +103,7 @@ public class ImportCiphersAsyncCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ImportIntoIndividualVaultAsync_WithPolicyRequirementsEnabled_WithDisablePersonalOwnershipPolicyEnabled_ThrowsBadRequestException(
+    public async Task ImportIntoIndividualVaultAsync_WithPolicyRequirementsEnabled_WithOrganizationDataOwnershipPolicyEnabled_ThrowsBadRequestException(
         List<Folder> folders,
         List<CipherDetails> ciphers,
         SutProvider<ImportCiphersCommand> sutProvider)
@@ -115,8 +117,10 @@ public class ImportCiphersAsyncCommandTests
             .Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<PersonalOwnershipPolicyRequirement>(userId)
-            .Returns(new PersonalOwnershipPolicyRequirement { DisablePersonalOwnership = true });
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(
+                OrganizationDataOwnershipState.Enabled,
+                [Guid.NewGuid()]));
 
         var folderRelationships = new List<KeyValuePair<int, int>>();
 

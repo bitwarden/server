@@ -1,11 +1,14 @@
-﻿using System.Net;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Net;
 using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
 using Azure.Storage.Queues;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
-using Bit.Core.AdminConsole.Models.Data.Integrations;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
@@ -24,6 +27,7 @@ using Bit.Core.Auth.UserFeatures;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.TrialInitiation;
+using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
@@ -44,7 +48,6 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.ImportFeatures;
-using Bit.Core.Tools.ReportFeatures;
 using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
@@ -118,7 +121,6 @@ public static class ServiceCollectionExtensions
         services.AddTrialInitiationServices();
         services.AddOrganizationServices(globalSettings);
         services.AddPolicyServices();
-        services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IGroupService, GroupService>();
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
@@ -236,6 +238,7 @@ public static class ServiceCollectionExtensions
         });
         services.AddScoped<IPaymentService, StripePaymentService>();
         services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
+        services.AddScoped<ITwoFactorEmailService, TwoFactorEmailService>();
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
@@ -289,7 +292,7 @@ public static class ServiceCollectionExtensions
             if (CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
                 CoreHelpers.SettingHasValue(globalSettings.Installation.Key))
             {
-                services.AddKeyedSingleton<IPushNotificationService, RelayPushNotificationService>("implementation");
+                services.TryAddEnumerable(ServiceDescriptor.Singleton<IPushEngine, RelayPushNotificationService>());
                 services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
             }
             else
@@ -300,20 +303,20 @@ public static class ServiceCollectionExtensions
             if (CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
                 CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
             {
-                services.AddKeyedSingleton<IPushNotificationService, NotificationsApiPushNotificationService>("implementation");
+                services.TryAddEnumerable(ServiceDescriptor.Singleton<IPushEngine, NotificationsApiPushNotificationService>());
             }
         }
         else
         {
             services.AddSingleton<INotificationHubPool, NotificationHubPool>();
             services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
-            services.AddKeyedSingleton<IPushNotificationService, NotificationHubPushNotificationService>("implementation");
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IPushEngine, NotificationHubPushNotificationService>());
+            services.TryAddSingleton<IPushRelayer, NotificationHubPushNotificationService>();
             if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
             {
                 services.AddKeyedSingleton("notifications",
                     (_, _) => new QueueClient(globalSettings.Notifications.ConnectionString, "notifications"));
-                services.AddKeyedSingleton<IPushNotificationService, AzureQueuePushNotificationService>(
-                    "implementation");
+                services.TryAddEnumerable(ServiceDescriptor.Singleton<IPushEngine, AzureQueuePushNotificationService>());
             }
         }
 
@@ -367,7 +370,6 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<IMailService, NoopMailService>();
         services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
-        services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
         services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
         services.AddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
         services.AddSingleton<ILicensingService, NoopLicensingService>();
@@ -377,6 +379,8 @@ public static class ServiceCollectionExtensions
     public static IdentityBuilder AddCustomIdentityServices(
         this IServiceCollection services, GlobalSettings globalSettings)
     {
+        services.TryAddTransient(typeof(IOtpTokenProvider<>), typeof(OtpTokenProvider<>));
+
         services.AddScoped<IOrganizationDuoUniversalTokenProvider, OrganizationDuoUniversalTokenProvider>();
         services.Configure<PasswordHasherOptions>(options => options.IterationCount = PasswordValidationConstants.PasswordHasherKdfIterations);
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
@@ -551,7 +555,8 @@ public static class ServiceCollectionExtensions
             if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
                 CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.EventTopicName))
             {
-                services.AddKeyedSingleton<IEventWriteService, AzureServiceBusEventWriteService>("broadcast");
+                services.AddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
+                services.AddKeyedSingleton<IEventWriteService, EventIntegrationEventWriteService>("broadcast");
             }
             else
             {
@@ -564,7 +569,8 @@ public static class ServiceCollectionExtensions
 
             if (IsRabbitMqEnabled(globalSettings))
             {
-                services.AddKeyedSingleton<IEventWriteService, RabbitMqEventWriteService>("broadcast");
+                services.AddSingleton<IEventIntegrationPublisher, RabbitMqService>();
+                services.AddKeyedSingleton<IEventWriteService, EventIntegrationEventWriteService>("broadcast");
             }
             else
             {
@@ -586,13 +592,15 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IEventRepository, TableStorageRepos.EventRepository>();
         services.AddSingleton<AzureTableStorageEventHandler>();
         services.AddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
-
         services.AddSingleton<IHostedService>(provider =>
             new AzureServiceBusEventListenerService(
                 handler: provider.GetRequiredService<AzureTableStorageEventHandler>(),
-                logger: provider.GetRequiredService<ILogger<AzureServiceBusEventListenerService>>(),
+                serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
+                subscriptionName: globalSettings.EventLogging.AzureServiceBus.EventRepositorySubscriptionName,
                 globalSettings: globalSettings,
-                subscriptionName: globalSettings.EventLogging.AzureServiceBus.EventRepositorySubscriptionName));
+                logger: provider.GetRequiredService<ILogger<AzureServiceBusEventListenerService>>()
+            )
+        );
 
         return services;
     }
@@ -608,31 +616,35 @@ public static class ServiceCollectionExtensions
     {
         var routingKey = integrationType.ToRoutingKey();
 
-        services.AddSingleton<IIntegrationPublisher, AzureServiceBusIntegrationPublisher>();
-
         services.AddKeyedSingleton<IEventMessageHandler>(routingKey, (provider, _) =>
             new EventIntegrationHandler<TConfig>(
                 integrationType,
-                provider.GetRequiredService<IIntegrationPublisher>(),
-                provider.GetRequiredService<IOrganizationIntegrationConfigurationRepository>(),
+                provider.GetRequiredService<IEventIntegrationPublisher>(),
+                provider.GetRequiredService<IIntegrationFilterService>(),
+                provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
                 provider.GetRequiredService<IUserRepository>(),
-                provider.GetRequiredService<IOrganizationRepository>()));
+                provider.GetRequiredService<IOrganizationRepository>(),
+                provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()));
 
         services.AddSingleton<IHostedService>(provider =>
             new AzureServiceBusEventListenerService(
                 handler: provider.GetRequiredKeyedService<IEventMessageHandler>(routingKey),
-                logger: provider.GetRequiredService<ILogger<AzureServiceBusEventListenerService>>(),
+                serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
+                subscriptionName: eventSubscriptionName,
                 globalSettings: globalSettings,
-                subscriptionName: eventSubscriptionName));
+                logger: provider.GetRequiredService<ILogger<AzureServiceBusEventListenerService>>()
+            )
+        );
 
         services.AddSingleton<IIntegrationHandler<TConfig>, THandler>();
-
         services.AddSingleton<IHostedService>(provider =>
             new AzureServiceBusIntegrationListenerService(
                 handler: provider.GetRequiredService<IIntegrationHandler<TConfig>>(),
+                topicName: globalSettings.EventLogging.AzureServiceBus.IntegrationTopicName,
                 subscriptionName: integrationSubscriptionName,
-                logger: provider.GetRequiredService<ILogger<AzureServiceBusIntegrationListenerService>>(),
-                globalSettings: globalSettings));
+                maxRetries: globalSettings.EventLogging.AzureServiceBus.MaxRetries,
+                serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
+                logger: provider.GetRequiredService<ILogger<AzureServiceBusIntegrationListenerService>>()));
 
         return services;
     }
@@ -643,6 +655,13 @@ public static class ServiceCollectionExtensions
             !CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.EventTopicName))
             return services;
 
+        services.AddSingleton<IntegrationConfigurationDetailsCacheService>();
+        services.AddSingleton<IIntegrationConfigurationDetailsCache>(provider =>
+            provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
+        services.AddHostedService(provider => provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
+        services.AddSingleton<IIntegrationFilterService, IntegrationFilterService>();
+        services.AddSingleton<IAzureServiceBusService, AzureServiceBusService>();
+        services.AddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
         services.AddAzureServiceBusEventRepositoryListener(globalSettings);
 
         services.AddSlackService(globalSettings);
@@ -652,12 +671,20 @@ public static class ServiceCollectionExtensions
             integrationType: IntegrationType.Slack,
             globalSettings: globalSettings);
 
+        services.TryAddSingleton(TimeProvider.System);
         services.AddHttpClient(WebhookIntegrationHandler.HttpClientName);
         services.AddAzureServiceBusIntegration<WebhookIntegrationConfigurationDetails, WebhookIntegrationHandler>(
             eventSubscriptionName: globalSettings.EventLogging.AzureServiceBus.WebhookEventSubscriptionName,
             integrationSubscriptionName: globalSettings.EventLogging.AzureServiceBus.WebhookIntegrationSubscriptionName,
             integrationType: IntegrationType.Webhook,
             globalSettings: globalSettings);
+
+        services.AddAzureServiceBusIntegration<WebhookIntegrationConfigurationDetails, WebhookIntegrationHandler>(
+            eventSubscriptionName: globalSettings.EventLogging.AzureServiceBus.HecEventSubscriptionName,
+            integrationSubscriptionName: globalSettings.EventLogging.AzureServiceBus.HecIntegrationSubscriptionName,
+            integrationType: IntegrationType.Hec,
+            globalSettings: globalSettings);
+
         return services;
     }
 
@@ -669,9 +696,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IHostedService>(provider =>
             new RabbitMqEventListenerService(
                 provider.GetRequiredService<EventRepositoryHandler>(),
-                provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
-                globalSettings,
-                globalSettings.EventLogging.RabbitMq.EventRepositoryQueueName));
+                globalSettings.EventLogging.RabbitMq.EventRepositoryQueueName,
+                provider.GetRequiredService<IRabbitMqService>(),
+                provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>()));
 
         return services;
     }
@@ -680,29 +707,29 @@ public static class ServiceCollectionExtensions
         string eventQueueName,
         string integrationQueueName,
         string integrationRetryQueueName,
-        string integrationDeadLetterQueueName,
-        IntegrationType integrationType,
-        GlobalSettings globalSettings)
+        int maxRetries,
+        IntegrationType integrationType)
         where TConfig : class
         where THandler : class, IIntegrationHandler<TConfig>
     {
         var routingKey = integrationType.ToRoutingKey();
 
-        services.AddSingleton<IIntegrationPublisher, RabbitMqIntegrationPublisher>();
         services.AddKeyedSingleton<IEventMessageHandler>(routingKey, (provider, _) =>
             new EventIntegrationHandler<TConfig>(
                 integrationType,
-                provider.GetRequiredService<IIntegrationPublisher>(),
-                provider.GetRequiredService<IOrganizationIntegrationConfigurationRepository>(),
+                provider.GetRequiredService<IEventIntegrationPublisher>(),
+                provider.GetRequiredService<IIntegrationFilterService>(),
+                provider.GetRequiredService<IIntegrationConfigurationDetailsCache>(),
                 provider.GetRequiredService<IUserRepository>(),
-                provider.GetRequiredService<IOrganizationRepository>()));
+                provider.GetRequiredService<IOrganizationRepository>(),
+                provider.GetRequiredService<ILogger<EventIntegrationHandler<TConfig>>>()));
 
         services.AddSingleton<IHostedService>(provider =>
             new RabbitMqEventListenerService(
                 provider.GetRequiredKeyedService<IEventMessageHandler>(routingKey),
-                provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
-                globalSettings,
-                eventQueueName));
+                eventQueueName,
+                provider.GetRequiredService<IRabbitMqService>(),
+                provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>()));
 
         services.AddSingleton<IIntegrationHandler<TConfig>, THandler>();
         services.AddSingleton<IHostedService>(provider =>
@@ -711,9 +738,10 @@ public static class ServiceCollectionExtensions
                 routingKey: routingKey,
                 queueName: integrationQueueName,
                 retryQueueName: integrationRetryQueueName,
-                deadLetterQueueName: integrationDeadLetterQueueName,
-                globalSettings: globalSettings,
-                logger: provider.GetRequiredService<ILogger<RabbitMqIntegrationListenerService>>()));
+                maxRetries: maxRetries,
+                rabbitMqService: provider.GetRequiredService<IRabbitMqService>(),
+                logger: provider.GetRequiredService<ILogger<RabbitMqIntegrationListenerService>>(),
+                timeProvider: provider.GetRequiredService<TimeProvider>()));
 
         return services;
     }
@@ -725,6 +753,13 @@ public static class ServiceCollectionExtensions
             return services;
         }
 
+        services.AddSingleton<IntegrationConfigurationDetailsCacheService>();
+        services.AddSingleton<IIntegrationConfigurationDetailsCache>(provider =>
+            provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
+        services.AddHostedService(provider => provider.GetRequiredService<IntegrationConfigurationDetailsCacheService>());
+        services.AddSingleton<IIntegrationFilterService, IntegrationFilterService>();
+        services.AddSingleton<IRabbitMqService, RabbitMqService>();
+        services.AddSingleton<IEventIntegrationPublisher, RabbitMqService>();
         services.AddRabbitMqEventRepositoryListener(globalSettings);
 
         services.AddSlackService(globalSettings);
@@ -732,18 +767,23 @@ public static class ServiceCollectionExtensions
             globalSettings.EventLogging.RabbitMq.SlackEventsQueueName,
             globalSettings.EventLogging.RabbitMq.SlackIntegrationQueueName,
             globalSettings.EventLogging.RabbitMq.SlackIntegrationRetryQueueName,
-            globalSettings.EventLogging.RabbitMq.IntegrationDeadLetterQueueName,
-            IntegrationType.Slack,
-            globalSettings);
+            globalSettings.EventLogging.RabbitMq.MaxRetries,
+            IntegrationType.Slack);
 
         services.AddHttpClient(WebhookIntegrationHandler.HttpClientName);
         services.AddRabbitMqIntegration<WebhookIntegrationConfigurationDetails, WebhookIntegrationHandler>(
             globalSettings.EventLogging.RabbitMq.WebhookEventsQueueName,
             globalSettings.EventLogging.RabbitMq.WebhookIntegrationQueueName,
             globalSettings.EventLogging.RabbitMq.WebhookIntegrationRetryQueueName,
-            globalSettings.EventLogging.RabbitMq.IntegrationDeadLetterQueueName,
-            IntegrationType.Webhook,
-            globalSettings);
+            globalSettings.EventLogging.RabbitMq.MaxRetries,
+            IntegrationType.Webhook);
+
+        services.AddRabbitMqIntegration<WebhookIntegrationConfigurationDetails, WebhookIntegrationHandler>(
+            globalSettings.EventLogging.RabbitMq.HecEventsQueueName,
+            globalSettings.EventLogging.RabbitMq.HecIntegrationQueueName,
+            globalSettings.EventLogging.RabbitMq.HecIntegrationRetryQueueName,
+            globalSettings.EventLogging.RabbitMq.MaxRetries,
+            IntegrationType.Hec);
 
         return services;
     }

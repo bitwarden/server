@@ -1,4 +1,7 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -193,7 +196,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected async Task FailAuthForLegacyUserAsync(User user, T context)
     {
         await BuildErrorResultAsync(
-            $"Encryption key migration is required. Please log in to the web vault at {_globalSettings.BaseServiceUri.VaultWithHash}",
+            $"Legacy encryption without a userkey is no longer supported. To recover your account, please contact support",
             false, context, user);
     }
 

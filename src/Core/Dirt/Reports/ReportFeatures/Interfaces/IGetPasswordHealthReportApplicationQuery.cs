@@ -1,6 +1,6 @@
-﻿using Bit.Core.Tools.Entities;
+﻿using Bit.Core.Dirt.Entities;
 
-namespace Bit.Core.Tools.ReportFeatures.Interfaces;
+namespace Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 
 public interface IGetPasswordHealthReportApplicationQuery
 {

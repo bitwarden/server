@@ -21,7 +21,7 @@ public class SendGridMailDeliveryService : IMailDeliveryService, IDisposable
         GlobalSettings globalSettings,
         IWebHostEnvironment hostingEnvironment,
         ILogger<SendGridMailDeliveryService> logger)
-        : this(new SendGridClient(globalSettings.Mail.SendGridApiKey),
+        : this(new SendGridClient(globalSettings.Mail.SendGridApiKey, globalSettings.Mail.SendGridApiHost),
              globalSettings, hostingEnvironment, logger)
     {
     }
