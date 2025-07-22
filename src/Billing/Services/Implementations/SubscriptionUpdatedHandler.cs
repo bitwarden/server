@@ -95,7 +95,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 }
             case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired when providerId.HasValue:
                 {
-                    await HandleUnpaidProviderSubscriptionAsync(providerId.Value, subscription);
+                    await HandleUnpaidProviderSubscriptionAsync(providerId.Value, parsedEvent, subscription);
                     break;
                 }
             case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired:
@@ -262,6 +262,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     private async Task HandleUnpaidProviderSubscriptionAsync(
         Guid providerId,
+        Event parsedEvent,
         Subscription subscription)
     {
         var providerPortalTakeover = _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
@@ -282,20 +283,29 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             provider.Enabled = false;
             await _providerService.UpdateAsync(provider);
 
-            if (subscription is
-                {
-                    Status: StripeSubscriptionStatus.Unpaid,
-                    LatestInvoice.BillingReason: "subscription_cycle" or "subscription_create"
-                })
+            if (parsedEvent.Data.PreviousAttributes != null)
             {
-                if (subscription.TestClock != null)
+                if (parsedEvent.Data.PreviousAttributes.ToObject<Subscription>() as Subscription is
+                    {
+                        Status:
+                            StripeSubscriptionStatus.Trialing or
+                            StripeSubscriptionStatus.Active or
+                            StripeSubscriptionStatus.PastDue
+                    } && subscription is
+                    {
+                        Status: StripeSubscriptionStatus.Unpaid,
+                        LatestInvoice.BillingReason: "subscription_cycle" or "subscription_create"
+                    })
                 {
-                    await WaitForTestClockToAdvanceAsync(subscription.TestClock);
-                }
+                    if (subscription.TestClock != null)
+                    {
+                        await WaitForTestClockToAdvanceAsync(subscription.TestClock);
+                    }
 
-                var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
-                await _stripeFacade.UpdateSubscription(subscription.Id,
-                    new SubscriptionUpdateOptions { CancelAt = now.AddDays(7) });
+                    var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+                    await _stripeFacade.UpdateSubscription(subscription.Id,
+                        new SubscriptionUpdateOptions { CancelAt = now.AddDays(7) });
+                }
             }
         }
         catch (Exception exception)
