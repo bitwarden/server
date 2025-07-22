@@ -960,62 +960,6 @@ public class OrganizationServiceTests
         Assert.Contains("Seat limit has been reached. Contact your provider to purchase additional seats.", failureMessage);
     }
 
-    private void RestoreRevokeUser_Setup(
-        Organization organization,
-        OrganizationUser? requestingOrganizationUser,
-        OrganizationUser targetOrganizationUser,
-        SutProvider<OrganizationService> sutProvider)
-    {
-        if (requestingOrganizationUser != null)
-        {
-            requestingOrganizationUser.OrganizationId = organization.Id;
-        }
-        targetOrganizationUser.OrganizationId = organization.Id;
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(requestingOrganizationUser != null && requestingOrganizationUser.Type is OrganizationUserType.Owner);
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(requestingOrganizationUser != null && (requestingOrganizationUser.Type is OrganizationUserType.Owner or OrganizationUserType.Admin));
-        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
-            .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>())
-            .Returns(true);
-    }
-
-    // [Theory, BitAutoData]
-    // public async Task RevokeUser_Success(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
-    //     [OrganizationUser] OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
-    // {
-    //     RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
-    //
-    //     await sutProvider.Sut.RevokeUserAsync(organizationUser, owner.Id);
-    //
-    //     await sutProvider.GetDependency<IOrganizationUserRepository>()
-    //         .Received(1)
-    //         .RevokeAsync(organizationUser.Id);
-    //     await sutProvider.GetDependency<IEventService>()
-    //         .Received(1)
-    //         .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
-    //     await sutProvider.GetDependency<IPushNotificationService>()
-    //         .Received(1)
-    //         .PushSyncOrgKeysAsync(organizationUser.UserId!.Value);
-    // }
-
-    // [Theory, BitAutoData]
-    // public async Task RevokeUser_WithEventSystemUser_Success(Organization organization, [OrganizationUser] OrganizationUser organizationUser, EventSystemUser eventSystemUser, SutProvider<OrganizationService> sutProvider)
-    // {
-    //     RestoreRevokeUser_Setup(organization, null, organizationUser, sutProvider);
-    //
-    //     await sutProvider.Sut.RevokeUserAsync(organizationUser, eventSystemUser);
-    //
-    //     await sutProvider.GetDependency<IOrganizationUserRepository>()
-    //         .Received(1)
-    //         .RevokeAsync(organizationUser.Id);
-    //     await sutProvider.GetDependency<IEventService>()
-    //         .Received(1)
-    //         .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, eventSystemUser);
-    //     await sutProvider.GetDependency<IPushNotificationService>()
-    //         .Received(1)
-    //         .PushSyncOrgKeysAsync(organizationUser.UserId!.Value);
-    // }
 
     [Theory]
     [BitAutoData(PlanType.TeamsAnnually)]
