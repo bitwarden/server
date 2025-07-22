@@ -311,7 +311,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("EventType")
+                    b.Property<int?>("EventType")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Filters")

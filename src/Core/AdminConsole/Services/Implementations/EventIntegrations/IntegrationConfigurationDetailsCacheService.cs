@@ -10,7 +10,7 @@ namespace Bit.Core.Services;
 
 public class IntegrationConfigurationDetailsCacheService : BackgroundService, IIntegrationConfigurationDetailsCache
 {
-    private readonly record struct IntegrationCacheKey(Guid OrganizationId, IntegrationType IntegrationType, EventType EventType);
+    private readonly record struct IntegrationCacheKey(Guid OrganizationId, IntegrationType IntegrationType, EventType? EventType);
     private readonly IOrganizationIntegrationConfigurationRepository _repository;
     private readonly ILogger<IntegrationConfigurationDetailsCacheService> _logger;
     private readonly TimeSpan _refreshInterval;
@@ -19,8 +19,7 @@ public class IntegrationConfigurationDetailsCacheService : BackgroundService, II
     public IntegrationConfigurationDetailsCacheService(
         IOrganizationIntegrationConfigurationRepository repository,
         GlobalSettings globalSettings,
-        ILogger<IntegrationConfigurationDetailsCacheService> logger
-    )
+        ILogger<IntegrationConfigurationDetailsCacheService> logger)
     {
         _repository = repository;
         _logger = logger;
@@ -32,10 +31,21 @@ public class IntegrationConfigurationDetailsCacheService : BackgroundService, II
         IntegrationType integrationType,
         EventType eventType)
     {
-        var key = new IntegrationCacheKey(organizationId, integrationType, eventType);
-        return _cache.TryGetValue(key, out var value)
-            ? value
-            : new List<OrganizationIntegrationConfigurationDetails>();
+        var specificKey = new IntegrationCacheKey(organizationId, integrationType, eventType);
+        var allEventsKey = new IntegrationCacheKey(organizationId, integrationType, null);
+
+        var results = new List<OrganizationIntegrationConfigurationDetails>();
+
+        if (_cache.TryGetValue(specificKey, out var specificConfigs))
+        {
+            results.AddRange(specificConfigs);
+        }
+        if (_cache.TryGetValue(allEventsKey, out var fallbackConfigs))
+        {
+            results.AddRange(fallbackConfigs);
+        }
+
+        return results;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
