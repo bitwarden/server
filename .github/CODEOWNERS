@@ -14,7 +14,7 @@
 .github/workflows/publish.yml @bitwarden/dept-bre
 
 ## These are shared workflows ##
-.github/workflows/_move_finalization_db_scripts.yml
+.github/workflows/_move_edd_db_scripts.yml
 .github/workflows/release.yml
 
 # Database Operations for database changes
@@ -50,11 +50,7 @@ src/Core/IdentityServer @bitwarden/team-auth-dev
 **/Tools @bitwarden/team-tools-dev
 
 # Dirt (Data Insights & Reporting) team
-src/Api/Controllers/Dirt @bitwarden/team-data-insights-and-reporting-dev
-src/Core/Dirt @bitwarden/team-data-insights-and-reporting-dev
-src/Infrastructure.Dapper/Dirt @bitwarden/team-data-insights-and-reporting-dev
-test/Api.Test/Dirt @bitwarden/team-data-insights-and-reporting-dev
-test/Core.Test/Dirt @bitwarden/team-data-insights-and-reporting-dev
+**/Dirt @bitwarden/team-data-insights-and-reporting-dev
 
 # Vault team
 **/Vault @bitwarden/team-vault-dev
