@@ -159,10 +159,6 @@ public static class FeatureFlagKeys
     public const string PM21881_ManagePaymentDetailsOutsideCheckout = "pm-21881-manage-payment-details-outside-checkout";
     public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
 
-    /* Data Insights and Reporting Team */
-    public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
-    public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
-
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";

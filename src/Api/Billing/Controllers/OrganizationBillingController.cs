@@ -382,4 +382,35 @@ public class OrganizationBillingController(
 
         return TypedResults.Ok(response);
     }
+
+
+    [HttpPost("change-frequency")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> ChangePlanSubscriptionFrequencyAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] ChangePlanFrequencyRequest request)
+    {
+        if (!await currentContext.EditSubscription(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        if (organization.PlanType == request.NewPlanType)
+        {
+            return Error.BadRequest("Organization is already on the requested plan frequency.");
+        }
+
+        await organizationBillingService.UpdateSubscriptionPlanFrequency(
+            organization,
+            request.NewPlanType);
+
+        return TypedResults.Ok();
+    }
 }
