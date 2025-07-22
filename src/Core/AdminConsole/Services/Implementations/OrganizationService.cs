@@ -324,8 +324,14 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
         }
 
+        _logger.LogInformation("{Method}: Invoking _paymentService.AdjustSeatsAsync with {AdditionalSeats} additional seats for Organization ({OrganizationID})",
+            nameof(AdjustSeatsAsync), additionalSeats, organization.Id);
+
         var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
         organization.Seats = (short?)newSeatTotal;
+
+        _logger.LogInformation("{Method}: Invoking _organizationRepository.ReplaceAsync with {Seats} seats for Organization ({OrganizationID})", nameof(AdjustSeatsAsync), organization.Seats, organization.Id); ;
+
         await ReplaceAndUpdateCacheAsync(organization);
 
         if (organization.Seats.HasValue && organization.MaxAutoscaleSeats.HasValue &&
@@ -1190,12 +1196,20 @@ public class OrganizationService : IOrganizationService
 
     public async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)
     {
-        await _organizationRepository.ReplaceAsync(org);
-        await _applicationCacheService.UpsertOrganizationAbilityAsync(org);
-
-        if (orgEvent.HasValue)
+        try
         {
-            await _eventService.LogOrganizationEventAsync(org, orgEvent.Value);
+            await _organizationRepository.ReplaceAsync(org);
+            await _applicationCacheService.UpsertOrganizationAbilityAsync(org);
+
+            if (orgEvent.HasValue)
+            {
+                await _eventService.LogOrganizationEventAsync(org, orgEvent.Value);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "An error occurred while calling {Method} for Organization ({OrganizationID})", nameof(ReplaceAndUpdateCacheAsync), org.Id);
+            throw;
         }
     }
 
