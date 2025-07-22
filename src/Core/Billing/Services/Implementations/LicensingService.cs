@@ -10,6 +10,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Licenses.Models;
 using Bit.Core.Billing.Licenses.Services;
 using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;

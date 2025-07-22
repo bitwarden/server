@@ -2,7 +2,7 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Models.Business;
-using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -23,11 +23,11 @@ namespace Bit.Core.Test.Billing.OrganizationFeatures.OrganizationLicenses;
 [SubscriptionInfoCustomize]
 [OrganizationLicenseCustomize]
 [SutProviderCustomize]
-public class CloudGetOrganizationLicenseQueryTests
+public class GetCloudOrganizationLicenseQueryTests
 {
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_InvalidInstallationId_Throws(SutProvider<CloudGetOrganizationLicenseQuery> sutProvider,
+    public async Task GetLicenseAsync_InvalidInstallationId_Throws(SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, int version)
     {
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).ReturnsNull();
@@ -38,7 +38,7 @@ public class CloudGetOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_DisabledOrganization_Throws(SutProvider<CloudGetOrganizationLicenseQuery> sutProvider,
+    public async Task GetLicenseAsync_DisabledOrganization_Throws(SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, Installation installation)
     {
         installation.Enabled = false;
@@ -51,7 +51,7 @@ public class CloudGetOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_CreatesAndReturns(SutProvider<CloudGetOrganizationLicenseQuery> sutProvider,
+    public async Task GetLicenseAsync_CreatesAndReturns(SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, Installation installation, SubscriptionInfo subInfo,
         byte[] licenseSignature)
     {
@@ -71,7 +71,7 @@ public class CloudGetOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_WhenFeatureFlagEnabled_CreatesToken(SutProvider<CloudGetOrganizationLicenseQuery> sutProvider,
+    public async Task GetLicenseAsync_WhenFeatureFlagEnabled_CreatesToken(SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, Installation installation, SubscriptionInfo subInfo,
         byte[] licenseSignature, string token)
     {
@@ -90,7 +90,7 @@ public class CloudGetOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_MSPManagedOrganization_UsesProviderSubscription(SutProvider<CloudGetOrganizationLicenseQuery> sutProvider,
+    public async Task GetLicenseAsync_MSPManagedOrganization_UsesProviderSubscription(SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, Installation installation, SubscriptionInfo subInfo,
         byte[] licenseSignature, Provider provider)
     {
