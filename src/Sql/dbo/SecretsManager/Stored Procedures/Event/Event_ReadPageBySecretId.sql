@@ -29,8 +29,8 @@ BEGIN
         e.SystemUser,
         e.DomainName,
         e.SecretId,
-        e.ProjectId,
-        e.ServiceAccountId
+        e.ServiceAccountId,
+        e.ProjectId
     FROM
         [dbo].[EventView] e
     WHERE
