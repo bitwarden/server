@@ -8,10 +8,31 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT
-        *
+  SELECT
+        e.Id,
+        e.Date,
+        e.Type,
+        e.UserId,
+        e.OrganizationId,
+        e.InstallationId,
+        e.ProviderId,
+        e.CipherId,
+        e.CollectionId,
+        e.PolicyId,
+        e.GroupId,
+        e.OrganizationUserId,
+        e.ProviderUserId,
+        e.ProviderOrganizationId,
+        e.DeviceType,
+        e.IpAddress,
+        e.ActingUserId,
+        e.SystemUser,
+        e.DomainName,
+        e.SecretId,
+        e.ProjectId,
+        e.ServiceAccountId
     FROM
-        [dbo].[EventView]
+        [dbo].[EventView] e
     WHERE
         [Date] >= @StartDate
         AND (@BeforeDate IS NOT NULL OR [Date] <= @EndDate)

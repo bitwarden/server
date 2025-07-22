@@ -34,8 +34,8 @@ public class TrashController : Controller
         _secretRepository = secretRepository;
         _emptyTrashCommand = emptyTrashCommand;
         _restoreTrashCommand = restoreTrashCommand;
-        _eventService = eventService;
         _userService = userService;
+        _eventService = eventService;
     }
 
     [HttpGet("secrets/{organizationId}/trash")]

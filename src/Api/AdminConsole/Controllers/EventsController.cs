@@ -9,6 +9,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Repositories;
@@ -142,16 +143,7 @@ public class EventsController : Controller
         }
         else
         {
-            if (!_currentContext.AccessSecretsManager(secret.OrganizationId))
-            {
-                throw new NotFoundException();
-            }
-
-            var userId = _userService.GetProperUserId(User)!.Value;
-            var isAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
-            var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, isAdmin);
-            var access = await _secretRepository.AccessToSecretAsync(secret.Id, userId, accessClient);
-            canViewLogs = access.Read;
+            canViewLogs = await CanViewSecretsLogs(secret);
         }
 
         if (!canViewLogs)
@@ -165,6 +157,19 @@ public class EventsController : Controller
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }
 
+    public async Task<bool> CanViewSecretsLogs(Secret secret)
+    {
+        if (!_currentContext.AccessSecretsManager(secret.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User)!.Value;
+        var isAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, isAdmin);
+        var access = await _secretRepository.AccessToSecretAsync(secret.Id, userId, accessClient);
+        return access.Read;
+    }
 
     [HttpGet("~/organization/{orgId}/projects/{id}/events")]
     public async Task<ListResponseModel<EventResponseModel>> GetProjects(
@@ -179,24 +184,9 @@ public class EventsController : Controller
             throw new NotFoundException();
         }
 
-        // Try to get project
-        var project = await _projectRepository.GetByIdAsync(projectGuid);
-        var orgIdForVerification = project?.OrganizationId ?? orgGuid;
-        var org = _currentContext.GetOrganization(orgIdForVerification);
+        var project = await GetProject(projectGuid, orgGuid);
+        await ValidateOrganization(project);
 
-        // Fallback project if it was deleted
-        project ??= new Core.SecretsManager.Entities.Project
-        {
-            Id = projectGuid,
-            OrganizationId = orgGuid
-        };
-
-        if (org == null || !await _currentContext.AccessEventLogs(org.Id))
-        {
-            throw new NotFoundException();
-        }
-
-        // Get logs
         var (fromDate, toDate) = ApiHelpers.GetDateRange(start, end);
         var result = await _eventRepository.GetManyByProjectAsync(
             project,
@@ -207,6 +197,34 @@ public class EventsController : Controller
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }
+
+    private async Task ValidateOrganization(Project project)
+    {
+        var org = _currentContext.GetOrganization(project.OrganizationId);
+
+        if (org == null || !await _currentContext.AccessEventLogs(org.Id))
+        {
+            throw new NotFoundException();
+        }
+    }
+
+    private async Task<Project> GetProject(Guid projectGuid, Guid orgGuid)
+    {
+        var project = await _projectRepository.GetByIdAsync(projectGuid);
+        if (project != null)
+        {
+            return project;
+        }
+
+        var fallbackProject = new Project
+        {
+            Id = projectGuid,
+            OrganizationId = orgGuid
+        };
+
+        return fallbackProject;
+    }
+
 
     [HttpGet("~/organizations/{orgId}/users/{id}/events")]
     public async Task<ListResponseModel<EventResponseModel>> GetOrganizationUser(string orgId, string id,
