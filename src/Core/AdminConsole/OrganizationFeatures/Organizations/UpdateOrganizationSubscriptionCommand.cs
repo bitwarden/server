@@ -28,7 +28,7 @@ public class UpdateOrganizationSubscriptionCommand(IPaymentService paymentServic
             catch (Exception ex)
             {
                 logger.LogError(ex,
-                    "Failed for organization {organizationId}",
+                    "Failed to update organization {organizationId} subscription.",
                     subscriptionUpdate.Organization.Id);
             }
         }
