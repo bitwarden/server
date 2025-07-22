@@ -157,20 +157,6 @@ public class EventsController : Controller
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }
 
-    public async Task<bool> CanViewSecretsLogs(Secret secret)
-    {
-        if (!_currentContext.AccessSecretsManager(secret.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var userId = _userService.GetProperUserId(User)!.Value;
-        var isAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, isAdmin);
-        var access = await _secretRepository.AccessToSecretAsync(secret.Id, userId, accessClient);
-        return access.Read;
-    }
-
     [HttpGet("~/organization/{orgId}/projects/{id}/events")]
     public async Task<ListResponseModel<EventResponseModel>> GetProjects(
         string id,
@@ -197,34 +183,6 @@ public class EventsController : Controller
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }
-
-    private async Task ValidateOrganization(Project project)
-    {
-        var org = _currentContext.GetOrganization(project.OrganizationId);
-
-        if (org == null || !await _currentContext.AccessEventLogs(org.Id))
-        {
-            throw new NotFoundException();
-        }
-    }
-
-    private async Task<Project> GetProject(Guid projectGuid, Guid orgGuid)
-    {
-        var project = await _projectRepository.GetByIdAsync(projectGuid);
-        if (project != null)
-        {
-            return project;
-        }
-
-        var fallbackProject = new Project
-        {
-            Id = projectGuid,
-            OrganizationId = orgGuid
-        };
-
-        return fallbackProject;
-    }
-
 
     [HttpGet("~/organizations/{orgId}/users/{id}/events")]
     public async Task<ListResponseModel<EventResponseModel>> GetOrganizationUser(string orgId, string id,
@@ -278,5 +236,49 @@ public class EventsController : Controller
             new PageOptions { ContinuationToken = continuationToken });
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
+    }
+
+    [ApiExplorerSettings(IgnoreApi = true)]
+    private async Task ValidateOrganization(Project project)
+    {
+        var org = _currentContext.GetOrganization(project.OrganizationId);
+
+        if (org == null || !await _currentContext.AccessEventLogs(org.Id))
+        {
+            throw new NotFoundException();
+        }
+    }
+
+    [ApiExplorerSettings(IgnoreApi = true)]
+    private async Task<Project> GetProject(Guid projectGuid, Guid orgGuid)
+    {
+        var project = await _projectRepository.GetByIdAsync(projectGuid);
+        if (project != null)
+        {
+            return project;
+        }
+
+        var fallbackProject = new Project
+        {
+            Id = projectGuid,
+            OrganizationId = orgGuid
+        };
+
+        return fallbackProject;
+    }
+
+    [ApiExplorerSettings(IgnoreApi = true)]
+    private async Task<bool> CanViewSecretsLogs(Secret secret)
+    {
+        if (!_currentContext.AccessSecretsManager(secret.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User)!.Value;
+        var isAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, isAdmin);
+        var access = await _secretRepository.AccessToSecretAsync(secret.Id, userId, accessClient);
+        return access.Read;
     }
 }
