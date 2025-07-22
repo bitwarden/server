@@ -110,6 +110,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
         services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
         services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
+        services.AddSingleton<IOrganizationReportSummaryRepository, OrganizationReportSummaryRepository>();
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
 
