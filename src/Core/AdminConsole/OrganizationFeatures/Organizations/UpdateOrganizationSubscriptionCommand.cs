@@ -33,6 +33,11 @@ public class UpdateOrganizationSubscriptionCommand(IPaymentService paymentServic
             }
         }
 
+        if (successfulSyncs.Count == 0)
+        {
+            return;
+        }
+
         await repository.UpdateSuccessfulOrganizationSyncStatusAsync(successfulSyncs, timeProvider.GetUtcNow().UtcDateTime);
     }
 }

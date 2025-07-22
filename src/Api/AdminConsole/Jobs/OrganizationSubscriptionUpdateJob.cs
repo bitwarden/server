@@ -12,7 +12,7 @@ public class OrganizationSubscriptionUpdateJob(ILogger<OrganizationSubscriptionU
     IUpdateOrganizationSubscriptionCommand command,
     IFeatureService featureService) : BaseJob(logger)
 {
-    protected override async Task ExecuteJobAsync(IJobExecutionContext context)
+    protected override async Task ExecuteJobAsync(IJobExecutionContext _)
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization))
         {

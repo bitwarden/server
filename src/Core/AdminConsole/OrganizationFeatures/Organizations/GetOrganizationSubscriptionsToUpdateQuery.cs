@@ -19,8 +19,7 @@ public class GetOrganizationSubscriptionsToUpdateQuery(IOrganizationRepository o
         return organizationsToUpdateTask.Result.Select(o => new OrganizationSubscriptionUpdate
         {
             Organization = o,
-            Plan = plansTask.Result.GetPlan(o.PlanType),
-            Seats = o.Seats!.Value
+            Plan = plansTask.Result.GetPlan(o.PlanType)
         });
     }
 }
