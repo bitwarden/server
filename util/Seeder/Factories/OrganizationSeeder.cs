@@ -1,5 +1,7 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Models;
 
@@ -40,5 +42,165 @@ public static class OrgnaizationExtensions
             Type = OrganizationUserType.Admin,
             Status = OrganizationUserStatusType.Confirmed
         };
+    }
+
+    public static (List<User>, List<OrganizationUser>) CreateUsersWithDomainDistribution(this Organization organization, int userCount)
+    {
+        var claimedDomains = new[] { "example1.com", "example2.com", "example3.com" };
+        var unclaimedDomains = new[] { "example4.com", "example5.com", "example6.com" };
+
+        var users = new List<User>();
+        var orgUsers = new List<OrganizationUser>();
+
+        // Create sample custom permissions for Custom user types
+        var customPermissions = new Permissions
+        {
+            AccessEventLogs = true,
+            AccessImportExport = false,
+            AccessReports = true,
+            CreateNewCollections = true,
+            EditAnyCollection = false,
+            DeleteAnyCollection = false,
+            ManageGroups = false,
+            ManagePolicies = false,
+            ManageSso = false,
+            ManageUsers = false,
+            ManageResetPassword = false,
+            ManageScim = false
+        };
+
+        var customPermissionsJson = CoreHelpers.ClassToJsonData(customPermissions);
+
+        for (var i = 0; i < userCount; i++)
+        {
+            // 80% users have claimed domains, 20% have unclaimed domains
+            var useClaimedDomain = i < (userCount * 0.8);
+            string userDomain;
+
+            if (useClaimedDomain)
+            {
+                userDomain = claimedDomains[i % claimedDomains.Length];
+            }
+            else
+            {
+                userDomain = unclaimedDomains[i % unclaimedDomains.Length];
+            }
+
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                Name = $"User {i}",
+                Email = $"user{i}@{userDomain}",
+                ApiKey = "TEST",
+                SecurityStamp = "stamp",
+                CreationDate = DateTime.UtcNow,
+                RevisionDate = DateTime.UtcNow,
+                AccountRevisionDate = DateTime.UtcNow
+            };
+            users.Add(user);
+
+            // Create OrganizationUser with mixed types to test the optimization
+            var orgUser = organization.CreateOrganizationUser(user);
+            orgUser.Permissions = customPermissionsJson;
+
+            // Distribute user types: 50% Custom, 50% mixed other types
+            var userTypeDistribution = i % 2;
+            if (userTypeDistribution == 0) // 50% Custom users
+            {
+                orgUser.Type = OrganizationUserType.Custom;
+            }
+            else // 50% other types
+            {
+                var otherTypeDistribution = i % 6;
+                if (otherTypeDistribution < 2) // ~17% Admin users
+                {
+                    orgUser.Type = OrganizationUserType.Admin;
+                }
+                else if (otherTypeDistribution < 5) // ~25% User type
+                {
+                    orgUser.Type = OrganizationUserType.User;
+                }
+                else // ~8% Owner type
+                {
+                    orgUser.Type = OrganizationUserType.Owner;
+                }
+            }
+
+            orgUsers.Add(orgUser);
+        }
+
+        return (users, orgUsers);
+    }
+
+    public static List<OrganizationDomain> CreateOrganizationDomains(this Organization organization)
+    {
+        var claimedDomains = new[] { "example1.com", "example2.com", "example3.com" };
+        var organizationDomains = new List<OrganizationDomain>();
+
+        foreach (var claimedDomain in claimedDomains)
+        {
+            var orgDomain = new OrganizationDomain
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = organization.Id,
+                DomainName = claimedDomain,
+                Txt = $"bw={CoreHelpers.RandomString(44)}",
+                CreationDate = DateTime.UtcNow
+            };
+            orgDomain.SetNextRunDate(12);
+            orgDomain.SetVerifiedDate(); // Mark as claimed/verified
+            orgDomain.SetJobRunCount();
+            organizationDomains.Add(orgDomain);
+        }
+
+        return organizationDomains;
+    }
+
+    public static List<Collection> CreateCollections(this Organization organization)
+    {
+        var collectionNames = new[]
+        {
+            "Engineering",
+            "Marketing",
+            "Sales",
+            "HR",
+            "Finance",
+            "Legal",
+            "Operations",
+            "Customer Support",
+            "Product",
+            "Design"
+        };
+
+        return collectionNames.Select(name => new Collection
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            Name = name,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow
+        }).ToList();
+    }
+
+    public static List<Group> CreateGroups(this Organization organization)
+    {
+        var groupNames = new[]
+        {
+            "Administrators",
+            "Team Leads",
+            "Senior Engineers",
+            "Junior Engineers",
+            "Marketing Team",
+            "Sales Team",
+            "HR Team",
+            "Finance Team"
+        };
+
+        return groupNames.Select(name => new Group
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            Name = name
+        }).ToList();
     }
 }

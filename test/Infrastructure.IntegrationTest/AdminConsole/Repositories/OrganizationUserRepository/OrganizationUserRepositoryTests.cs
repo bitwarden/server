@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Diagnostics;
+using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
@@ -7,10 +9,11 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.OrganizationUserRepository;
 
-public class OrganizationUserRepositoryTests
+public class OrganizationUserRepositoryTests(ITestOutputHelper testOutputHelper)
 {
     [DatabaseTheory, DatabaseData]
     public async Task DeleteAsync_Works(IUserRepository userRepository,
@@ -475,8 +478,48 @@ public class OrganizationUserRepositoryTests
             AccessSecretsManager = false
         });
 
+        // Test original version
+        var stopwatch1 = Stopwatch.StartNew();
         var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organization.Id);
+        stopwatch1.Stop();
+        var originalQueryTime = stopwatch1.ElapsedMilliseconds;
 
+        // Test optimized version
+        var stopwatch2 = Stopwatch.StartNew();
+        var optimizedResponseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync_vNext(organization.Id);
+        stopwatch2.Stop();
+        var optimizedQueryTime = stopwatch2.ElapsedMilliseconds;
+
+        // Verify both results are identical
+        Assert.Equal(responseModel.Count, optimizedResponseModel.Count);
+
+        // Sort both results by Id to ensure consistent comparison
+        var sortedOriginal = responseModel.OrderBy(u => u.Id).ToList();
+        var sortedOptimized = optimizedResponseModel.OrderBy(u => u.Id).ToList();
+
+        // Compare using JSON serialization for comprehensive comparison
+        var originalJson = JsonSerializer.Serialize(sortedOriginal, new JsonSerializerOptions { WriteIndented = true });
+        var optimizedJson = JsonSerializer.Serialize(sortedOptimized, new JsonSerializerOptions { WriteIndented = true });
+
+        if (originalJson != optimizedJson)
+        {
+            testOutputHelper.WriteLine("❌ Results differ!");
+            testOutputHelper.WriteLine($"Original: {originalJson}");
+            testOutputHelper.WriteLine($"Optimized: {optimizedJson}");
+        }
+
+        Assert.Equal(originalJson, optimizedJson);
+
+        // Log benchmark results
+        testOutputHelper.WriteLine($"Benchmark results for GetManyByOrganizationWithClaimedDomainsAsync:");
+        testOutputHelper.WriteLine($"  Original version: {originalQueryTime}ms");
+        testOutputHelper.WriteLine($"  Optimized version: {optimizedQueryTime}ms");
+
+        var improvement = originalQueryTime > 0 ? ((double)(originalQueryTime - optimizedQueryTime) / originalQueryTime * 100) : 0;
+        testOutputHelper.WriteLine($"  Performance improvement: {improvement:F1}%");
+        testOutputHelper.WriteLine($"  Data identical: ✅");
+
+        // Verify test expectations
         Assert.NotNull(responseModel);
         Assert.Single(responseModel);
         Assert.Equal(orgUser1.Id, responseModel.Single().Id);
@@ -740,6 +783,230 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(orgUserCollection[2].OrganizationUser.Id, orgUser3.OrganizationUser.Id);
         Assert.Equal(collection3.Id, orgUser3.Collections.First().Id);
         Assert.Equal(group3.Id, group3Database.First());
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyDetailsByOrganizationAsync_WithGroupsAndCollections_ReturnsCorrectDetails(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository,
+        IGroupRepository groupRepository)
+    {
+        var requestTime = DateTime.UtcNow;
+
+        // Create test users
+        var user1 = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 1",
+            Email = $"test1+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST1",
+            SecurityStamp = "stamp1",
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 1,
+            KdfMemory = 2,
+            KdfParallelism = 3
+        });
+
+        var user2 = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 2",
+            Email = $"test2+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST2",
+            SecurityStamp = "stamp2",
+            Kdf = KdfType.Argon2id,
+            KdfIterations = 4,
+            KdfMemory = 5,
+            KdfParallelism = 6
+        });
+
+        // Create organization
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            BillingEmail = user1.Email,
+            Plan = "Test",
+            PrivateKey = "privatekey",
+            CreationDate = requestTime
+        });
+
+        // Create collections
+        var collection1 = await collectionRepository.CreateAsync(new Collection
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            Name = "Test Collection 1",
+            ExternalId = "external-collection-1",
+            CreationDate = requestTime,
+            RevisionDate = requestTime
+        });
+
+        var collection2 = await collectionRepository.CreateAsync(new Collection
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            Name = "Test Collection 2",
+            ExternalId = "external-collection-2",
+            CreationDate = requestTime,
+            RevisionDate = requestTime
+        });
+
+        // Create groups
+        var group1 = await groupRepository.CreateAsync(new Group
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            Name = "Test Group 1",
+            ExternalId = "external-group-1"
+        });
+
+        var group2 = await groupRepository.CreateAsync(new Group
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            Name = "Test Group 2",
+            ExternalId = "external-group-2"
+        });
+
+        // Create organization users with collections
+        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user1.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+            ResetPasswordKey = "resetpasswordkey1",
+            AccessSecretsManager = false
+        }, new List<CollectionAccessSelection>
+        {
+            new CollectionAccessSelection
+            {
+                Id = collection1.Id,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true
+            }
+        });
+
+        var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user2.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Admin,
+            ResetPasswordKey = "resetpasswordkey2",
+            AccessSecretsManager = false
+        }, new List<CollectionAccessSelection>
+        {
+            new CollectionAccessSelection
+            {
+                Id = collection2.Id,
+                ReadOnly = true,
+                HidePasswords = false,
+                Manage = false
+            }
+        });
+
+        // Assign users to groups
+        await organizationUserRepository.UpdateGroupsAsync(orgUser1, new List<Guid> { group1.Id });
+        await organizationUserRepository.UpdateGroupsAsync(orgUser2, new List<Guid> { group2.Id });
+
+        // Test original version
+        var stopwatch1 = Stopwatch.StartNew();
+        var result = await organizationUserRepository.GetManyDetailsByOrganizationAsync(organization.Id, includeGroups: true, includeCollections: true);
+        stopwatch1.Stop();
+        var originalQueryTime = stopwatch1.ElapsedMilliseconds;
+
+        // Test optimized version
+        var stopwatch2 = Stopwatch.StartNew();
+        var optimizedResult = await organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id, includeGroups: true, includeCollections: true);
+        stopwatch2.Stop();
+        var optimizedQueryTime = stopwatch2.ElapsedMilliseconds;
+
+        // Verify both results are identical
+        Assert.Equal(result.Count, optimizedResult.Count);
+
+        // Sort both results by UserId to ensure consistent comparison
+        var sortedResult = result.OrderBy(u => u.UserId).Select(u => new
+        {
+            u.Id,
+            u.UserId,
+            u.Name,
+            u.Email,
+            u.Type,
+            u.Status,
+            u.ExternalId,
+            u.Permissions,
+            u.ResetPasswordKey,
+            u.AccessSecretsManager,
+            Groups = u.Groups.OrderBy(g => g).ToList(),
+            Collections = u.Collections.OrderBy(c => c.Id).ToList()
+        }).ToList();
+
+        var sortedOptimizedResult = optimizedResult.OrderBy(u => u.UserId).Select(u => new
+        {
+            u.Id,
+            u.UserId,
+            u.Name,
+            u.Email,
+            u.Type,
+            u.Status,
+            u.ExternalId,
+            u.Permissions,
+            u.ResetPasswordKey,
+            u.AccessSecretsManager,
+            Groups = u.Groups.OrderBy(g => g).ToList(),
+            Collections = u.Collections.OrderBy(c => c.Id).ToList()
+        }).ToList();
+
+        // Compare using JSON serialization - much simpler and comprehensive
+        var originalJson = JsonSerializer.Serialize(sortedResult, new JsonSerializerOptions { WriteIndented = true });
+        var optimizedJson = JsonSerializer.Serialize(sortedOptimizedResult, new JsonSerializerOptions { WriteIndented = true });
+
+        if (originalJson != optimizedJson)
+        {
+            testOutputHelper.WriteLine("❌ Results differ!");
+            testOutputHelper.WriteLine($"Original: {originalJson}");
+            testOutputHelper.WriteLine($"Optimized: {optimizedJson}");
+        }
+
+        Assert.Equal(originalJson, optimizedJson);
+
+        // Log benchmark results
+        testOutputHelper.WriteLine($"Benchmark results for GetManyDetailsByOrganizationAsync:");
+        testOutputHelper.WriteLine($"  Original version: {originalQueryTime}ms");
+        testOutputHelper.WriteLine($"  Optimized version: {optimizedQueryTime}ms");
+
+        var improvement = originalQueryTime > 0 ? ((double)(originalQueryTime - optimizedQueryTime) / originalQueryTime * 100) : 0;
+        testOutputHelper.WriteLine($"  Performance improvement: {improvement:F1}%");
+        testOutputHelper.WriteLine($"  Data identical: ✅");
+
+        // Assert that query completed in reasonable time (less than 5 seconds)
+        Assert.True(originalQueryTime < 5000, $"Original query took too long: {originalQueryTime}ms");
+        Assert.True(optimizedQueryTime < 5000, $"Optimized query took too long: {optimizedQueryTime}ms");
+
+        // Cleanup test data (in reverse dependency order)
+        testOutputHelper.WriteLine("Cleaning up test data...");
+
+        // Delete organization users (this will cascade delete GroupUser and CollectionUsers associations)
+        await organizationUserRepository.DeleteManyAsync(new List<Guid> { orgUser1, orgUser2 });
+
+        // Delete groups
+        await groupRepository.DeleteAsync(group1);
+        await groupRepository.DeleteAsync(group2);
+
+        // Delete collections
+        await collectionRepository.DeleteAsync(collection1);
+        await collectionRepository.DeleteAsync(collection2);
+
+        // Delete organization
+        await organizationRepository.DeleteAsync(organization);
+
+        // Delete users
+        await userRepository.DeleteAsync(user1);
+        await userRepository.DeleteAsync(user2);
+
+        testOutputHelper.WriteLine("Test data cleanup completed.");
     }
 
     [DatabaseTheory, DatabaseData]
