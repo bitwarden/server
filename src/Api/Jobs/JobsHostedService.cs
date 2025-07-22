@@ -69,9 +69,7 @@ public class JobsHostedService : BaseJobsHostedService
         var updateOrgSubscriptionsTrigger = TriggerBuilder.Create()
             .WithIdentity("UpdateOrgSubscriptionsTrigger")
             .StartNow()
-            .WithSimpleSchedule(x => x
-                .WithIntervalInHours(24)
-                .RepeatForever())
+            .WithCronSchedule("0 0 */3 * * ?") // top of every 3rd hour
             .Build();
 
 
