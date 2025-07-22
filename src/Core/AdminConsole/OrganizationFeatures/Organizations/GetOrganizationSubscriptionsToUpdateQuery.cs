@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Models.Data.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
-using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Repositories;
 
@@ -19,7 +18,7 @@ public class GetOrganizationSubscriptionsToUpdateQuery(IOrganizationRepository o
         return organizationsToUpdateTask.Result.Select(o => new OrganizationSubscriptionUpdate
         {
             Organization = o,
-            Plan = plansTask.Result.GetPlan(o.PlanType)
+            Plan = plansTask.Result.FirstOrDefault(plan => plan.Type == o.PlanType)
         });
     }
 }
