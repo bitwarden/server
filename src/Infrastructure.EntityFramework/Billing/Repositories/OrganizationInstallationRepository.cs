@@ -2,8 +2,8 @@
 #nullable disable
 
 using AutoMapper;
-using Bit.Core.Billing.Entities;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Organizations.Entities;
+using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

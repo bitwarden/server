@@ -1,14 +1,12 @@
 ﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing.Models;
-using Bit.Core.Models.StaticStore;
-
-#nullable enable
+using Plan = Bit.Core.Billing.Pricing.Models.Plan;
 
 namespace Bit.Core.Billing.Pricing;
 
-public record PlanAdapter : Plan
+public record PlanAdapter : Core.Models.StaticStore.Plan
 {
-    public PlanAdapter(PlanDTO plan)
+    public PlanAdapter(Plan plan)
     {
         Type = ToPlanType(plan.LookupKey);
         ProductTier = ToProductTierType(Type);
@@ -88,7 +86,7 @@ public record PlanAdapter : Plan
             _ => throw new BillingException() // TODO: Flesh out
         };
 
-    private static PasswordManagerPlanFeatures ToPasswordManagerPlanFeatures(PlanDTO plan)
+    private static PasswordManagerPlanFeatures ToPasswordManagerPlanFeatures(Plan plan)
     {
         var stripePlanId = GetStripePlanId(plan.Seats);
         var stripeSeatPlanId = GetStripeSeatPlanId(plan.Seats);
@@ -128,7 +126,7 @@ public record PlanAdapter : Plan
         };
     }
 
-    private static SecretsManagerPlanFeatures ToSecretsManagerPlanFeatures(PlanDTO plan)
+    private static SecretsManagerPlanFeatures ToSecretsManagerPlanFeatures(Plan plan)
     {
         var seats = plan.SecretsManager!.Seats;
         var serviceAccounts = plan.SecretsManager.ServiceAccounts;
@@ -165,62 +163,62 @@ public record PlanAdapter : Plan
         };
     }
 
-    private static decimal? GetAdditionalPricePerServiceAccount(FreeOrScalableDTO freeOrScalable)
+    private static decimal? GetAdditionalPricePerServiceAccount(FreeOrScalable freeOrScalable)
         => freeOrScalable.FromScalable(x => x.Price);
 
-    private static decimal GetBasePrice(PurchasableDTO purchasable)
+    private static decimal GetBasePrice(Purchasable purchasable)
         => purchasable.FromPackaged(x => x.Price);
 
-    private static int GetBaseSeats(FreeOrScalableDTO freeOrScalable)
+    private static int GetBaseSeats(FreeOrScalable freeOrScalable)
         => freeOrScalable.Match(
             free => free.Quantity,
             scalable => scalable.Provided);
 
-    private static int GetBaseSeats(PurchasableDTO purchasable)
+    private static int GetBaseSeats(Purchasable purchasable)
         => purchasable.Match(
             free => free.Quantity,
             packaged => packaged.Quantity,
             scalable => scalable.Provided);
 
-    private static short GetBaseServiceAccount(FreeOrScalableDTO freeOrScalable)
+    private static short GetBaseServiceAccount(FreeOrScalable freeOrScalable)
         => freeOrScalable.Match(
             free => (short)free.Quantity,
             scalable => (short)scalable.Provided);
 
-    private static short? GetMaxSeats(PurchasableDTO purchasable)
+    private static short? GetMaxSeats(Purchasable purchasable)
         => purchasable.Match<short?>(
             free => (short)free.Quantity,
             packaged => (short)packaged.Quantity,
             _ => null);
 
-    private static short? GetMaxSeats(FreeOrScalableDTO freeOrScalable)
+    private static short? GetMaxSeats(FreeOrScalable freeOrScalable)
         => freeOrScalable.FromFree(x => (short)x.Quantity);
 
-    private static short? GetMaxServiceAccounts(FreeOrScalableDTO freeOrScalable)
+    private static short? GetMaxServiceAccounts(FreeOrScalable freeOrScalable)
         => freeOrScalable.FromFree(x => (short)x.Quantity);
 
-    private static decimal GetSeatPrice(PurchasableDTO purchasable)
+    private static decimal GetSeatPrice(Purchasable purchasable)
         => purchasable.Match(
             _ => 0,
             packaged => packaged.Additional?.Price ?? 0,
             scalable => scalable.Price);
 
-    private static decimal GetSeatPrice(FreeOrScalableDTO freeOrScalable)
+    private static decimal GetSeatPrice(FreeOrScalable freeOrScalable)
         => freeOrScalable.FromScalable(x => x.Price);
 
-    private static string? GetStripePlanId(PurchasableDTO purchasable)
+    private static string? GetStripePlanId(Purchasable purchasable)
         => purchasable.FromPackaged(x => x.StripePriceId);
 
-    private static string? GetStripeSeatPlanId(PurchasableDTO purchasable)
+    private static string? GetStripeSeatPlanId(Purchasable purchasable)
         => purchasable.Match(
             _ => null,
             packaged => packaged.Additional?.StripePriceId,
             scalable => scalable.StripePriceId);
 
-    private static string? GetStripeSeatPlanId(FreeOrScalableDTO freeOrScalable)
+    private static string? GetStripeSeatPlanId(FreeOrScalable freeOrScalable)
         => freeOrScalable.FromScalable(x => x.StripePriceId);
 
-    private static string? GetStripeServiceAccountPlanId(FreeOrScalableDTO freeOrScalable)
+    private static string? GetStripeServiceAccountPlanId(FreeOrScalable freeOrScalable)
         => freeOrScalable.FromScalable(x => x.StripePriceId);
 
     #endregion
