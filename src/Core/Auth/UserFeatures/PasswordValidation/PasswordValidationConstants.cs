@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Auth.PasswordValidation;
+﻿namespace Bit.Core.Auth.UserFeatures.PasswordValidation;
 
 public static class PasswordValidationConstants
 {

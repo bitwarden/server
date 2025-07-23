@@ -1,29 +1,35 @@
-﻿using Bit.Core.Entities;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.KeyManagement.Sends;
 
-public class SendPasswordHasher(IPasswordHasher<User> passwordHasher) : ISendPasswordHasher
+internal class SendPasswordHasher(IPasswordHasher<SendPasswordHasherMarker> passwordHasher) : ISendPasswordHasher
 {
+    private readonly IPasswordHasher<SendPasswordHasherMarker> _passwordHasher = passwordHasher;
+
     /// <summary>
-    /// Verifies an existing send password hash against a new input password hash.
+    /// <inheritdoc cref="ISendPasswordHasher.PasswordHashMatches"/>
     /// </summary>
-    public bool VerifyPasswordHash(string sendPasswordHash, string inputPasswordHash)
+    public bool PasswordHashMatches(string sendPasswordHash, string inputPasswordHash)
     {
         if (string.IsNullOrWhiteSpace(sendPasswordHash) || string.IsNullOrWhiteSpace(inputPasswordHash))
         {
             return false;
         }
-        var passwordResult = passwordHasher.VerifyHashedPassword(new User(), sendPasswordHash, inputPasswordHash);
 
+        var passwordResult = _passwordHasher.VerifyHashedPassword(SendPasswordHasherMarker.Instance, sendPasswordHash, inputPasswordHash);
+
+        /*
+            In our use-case we input a high-entropy, pre-hashed secret sent by the client. Thus, we don't really care
+            about if the hash needs to be rehashed. Sends also only live for 30 days max.
+        */
         return passwordResult is PasswordVerificationResult.Success or PasswordVerificationResult.SuccessRehashNeeded;
     }
 
     /// <summary>
-    /// Accepts a client hashed send password and returns a server hashed password.
+    /// <inheritdoc cref="ISendPasswordHasher.HashOfClientPasswordHash"/>
     /// </summary>
-    public string HashPasswordHash(string clientHashedPassword)
+    public string HashOfClientPasswordHash(string clientHashedPassword)
     {
-        return passwordHasher.HashPassword(new User(), clientHashedPassword);
+        return _passwordHasher.HashPassword(SendPasswordHasherMarker.Instance, clientHashedPassword);
     }
 }
