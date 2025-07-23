@@ -9,6 +9,11 @@ namespace Bit.Seeder.Recipes;
 
 public class OrganizationWithUsersRecipe(DatabaseContext db, ISeederCryptoService cryptoService, IPasswordHasher<User> passwordHasher)
 {
+    // Backward compatibility constructor for tests
+    public OrganizationWithUsersRecipe(DatabaseContext db) 
+        : this(db, new SeederCryptoService(), new PasswordHasher<User>())
+    {
+    }
     public Guid Seed(string name, int users, string domain, string defaultPassword = "Test123!@#")
     {
         // TODO: When Rust SDK is available, these crypto operations will use RustSeederCryptoService
