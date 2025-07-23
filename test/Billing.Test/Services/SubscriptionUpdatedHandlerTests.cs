@@ -19,7 +19,6 @@ using Newtonsoft.Json.Linq;
 using NSubstitute;
 using Quartz;
 using Stripe;
-using Stripe.TestHelpers;
 using Xunit;
 using Event = Stripe.Event;
 
@@ -35,14 +34,12 @@ public class SubscriptionUpdatedHandlerTests
     private readonly IUserService _userService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly ISchedulerFactory _schedulerFactory;
     private readonly IOrganizationEnableCommand _organizationEnableCommand;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
     private readonly IPricingClient _pricingClient;
     private readonly IFeatureService _featureService;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
-    private readonly ILogger<SubscriptionUpdatedHandler> _logger;
     private readonly IScheduler _scheduler;
     private readonly SubscriptionUpdatedHandler _sut;
 
@@ -56,17 +53,17 @@ public class SubscriptionUpdatedHandlerTests
         _userService = Substitute.For<IUserService>();
         _pushNotificationService = Substitute.For<IPushNotificationService>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
-        _schedulerFactory = Substitute.For<ISchedulerFactory>();
+        var schedulerFactory = Substitute.For<ISchedulerFactory>();
         _organizationEnableCommand = Substitute.For<IOrganizationEnableCommand>();
         _organizationDisableCommand = Substitute.For<IOrganizationDisableCommand>();
         _pricingClient = Substitute.For<IPricingClient>();
         _featureService = Substitute.For<IFeatureService>();
         _providerRepository = Substitute.For<IProviderRepository>();
         _providerService = Substitute.For<IProviderService>();
-        _logger = Substitute.For<ILogger<SubscriptionUpdatedHandler>>();
+        var logger = Substitute.For<ILogger<SubscriptionUpdatedHandler>>();
         _scheduler = Substitute.For<IScheduler>();
 
-        _schedulerFactory.GetScheduler().Returns(_scheduler);
+        schedulerFactory.GetScheduler().Returns(_scheduler);
 
         _sut = new SubscriptionUpdatedHandler(
             _stripeEventService,
@@ -77,14 +74,14 @@ public class SubscriptionUpdatedHandlerTests
             _userService,
             _pushNotificationService,
             _organizationRepository,
-            _schedulerFactory,
+            schedulerFactory,
             _organizationEnableCommand,
             _organizationDisableCommand,
             _pricingClient,
             _featureService,
             _providerRepository,
             _providerService,
-            _logger);
+            logger);
     }
 
     [Fact]
@@ -123,61 +120,53 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_UnpaidProviderSubscription_WithValidTransition_DisablesProviderAndSchedulesCancellation()
+    public async Task
+        HandleAsync_UnpaidProviderSubscription_WithManualSuspensionViaMetadata_DisablesProviderAndSchedulesCancellation()
     {
         // Arrange
         var providerId = Guid.NewGuid();
-        const string subscriptionId = "sub_123";
-        var frozenTime = DateTime.UtcNow;
+        var subscriptionId = "sub_test123";
 
-        var testClock = new TestClock
+        var previousSubscription = new Subscription
         {
-            Id = "clock_123",
-            Status = "ready",
-            FrozenTime = frozenTime
+            Id = subscriptionId,
+            Status = StripeSubscriptionStatus.Active,
+            Metadata = new Dictionary<string, string>
+            {
+                ["suspend_provider"] = null // This is the key part - metadata exists, but value is null
+            }
         };
 
-        var subscription = new Subscription
+        var currentSubscription = new Subscription
         {
             Id = subscriptionId,
             Status = StripeSubscriptionStatus.Unpaid,
-            Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
-            LatestInvoice = new Invoice { BillingReason = "subscription_cycle" },
-            TestClock = testClock
-        };
-
-        var provider = new Provider
-        {
-            Id = providerId,
-            Name = "Test Provider",
-            Enabled = true
+            CurrentPeriodEnd = DateTime.UtcNow.AddDays(30),
+            Metadata = new Dictionary<string, string>
+            {
+                ["providerId"] = providerId.ToString(),
+                ["suspend_provider"] = "true" // Now has a value, indicating manual suspension
+            },
+            TestClock = null
         };
 
         var parsedEvent = new Event
         {
+            Id = "evt_test123",
+            Type = HandledStripeWebhook.SubscriptionUpdated,
             Data = new EventData
             {
-                PreviousAttributes = JObject.FromObject(new
-                {
-                    status = "active"
-                })
+                Object = currentSubscription, PreviousAttributes = JObject.FromObject(previousSubscription)
             }
         };
 
-        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
-            .Returns(subscription);
+        var provider = new Provider { Id = providerId, Enabled = true };
 
-        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover).Returns(true);
+        _stripeEventService.GetSubscription(parsedEvent, true, Arg.Any<List<string>>()).Returns(currentSubscription);
+        _stripeEventUtilityService.GetIdsFromMetadata(currentSubscription.Metadata)
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
-
-        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
-            .Returns(true);
-
-        _providerRepository.GetByIdAsync(providerId)
-            .Returns(provider);
-
-        _stripeFacade.GetTestClock(testClock.Id)
-            .Returns(testClock);
+        _providerRepository.GetByIdAsync(providerId).Returns(provider);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -185,8 +174,74 @@ public class SubscriptionUpdatedHandlerTests
         // Assert
         Assert.False(provider.Enabled);
         await _providerService.Received(1).UpdateAsync(provider);
-        await _stripeFacade.Received(1).UpdateSubscription(subscriptionId,
-            Arg.Is<SubscriptionUpdateOptions>(o => o.CancelAt == frozenTime.AddDays(7)));
+
+        // Verify that UpdateSubscription was called with both CancelAt and the new metadata
+        await _stripeFacade.Received(1).UpdateSubscription(
+            subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.CancelAt.HasValue &&
+                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
+                options.Metadata != null &&
+                options.Metadata.ContainsKey("suspended_provider_via_webhook_at")));
+    }
+
+    [Fact]
+    public async Task
+        HandleAsync_UnpaidProviderSubscription_WithValidTransition_DisablesProviderAndSchedulesCancellation()
+    {
+        // Arrange
+        var providerId = Guid.NewGuid();
+        var subscriptionId = "sub_test123";
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = StripeSubscriptionStatus.Active,
+            Metadata = new Dictionary<string, string> { ["providerId"] = providerId.ToString() }
+        };
+
+        var currentSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = StripeSubscriptionStatus.Unpaid,
+            CurrentPeriodEnd = DateTime.UtcNow.AddDays(30),
+            Metadata = new Dictionary<string, string> { ["providerId"] = providerId.ToString() },
+            LatestInvoice = new Invoice { BillingReason = "subscription_cycle" },
+            TestClock = null
+        };
+
+        var parsedEvent = new Event
+        {
+            Id = "evt_test123",
+            Type = HandledStripeWebhook.SubscriptionUpdated,
+            Data = new EventData
+            {
+                Object = currentSubscription, PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        var provider = new Provider { Id = providerId, Enabled = true };
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover).Returns(true);
+        _stripeEventService.GetSubscription(parsedEvent, true, Arg.Any<List<string>>()).Returns(currentSubscription);
+        _stripeEventUtilityService.GetIdsFromMetadata(currentSubscription.Metadata)
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
+        _providerRepository.GetByIdAsync(providerId).Returns(provider);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        Assert.False(provider.Enabled);
+        await _providerService.Received(1).UpdateAsync(provider);
+
+        // Verify that UpdateSubscription was called with CancelAt but WITHOUT suspension metadata
+        await _stripeFacade.Received(1).UpdateSubscription(
+            subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.CancelAt.HasValue &&
+                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
+                (options.Metadata == null || !options.Metadata.ContainsKey("suspended_provider_via_webhook_at"))));
     }
 
     [Fact]
@@ -204,12 +259,7 @@ public class SubscriptionUpdatedHandlerTests
             LatestInvoice = new Invoice { BillingReason = "subscription_cycle" }
         };
 
-        var provider = new Provider
-        {
-            Id = providerId,
-            Name = "Test Provider",
-            Enabled = true
-        };
+        var provider = new Provider { Id = providerId, Name = "Test Provider", Enabled = true };
 
         var parsedEvent = new Event
         {
@@ -217,7 +267,7 @@ public class SubscriptionUpdatedHandlerTests
             {
                 PreviousAttributes = JObject.FromObject(new
                 {
-                    status = "unpaid"  // No valid transition
+                    status = "unpaid" // No valid transition
                 })
             }
         };
@@ -258,20 +308,9 @@ public class SubscriptionUpdatedHandlerTests
             LatestInvoice = new Invoice { BillingReason = "subscription_cycle" }
         };
 
-        var provider = new Provider
-        {
-            Id = providerId,
-            Name = "Test Provider",
-            Enabled = true
-        };
+        var provider = new Provider { Id = providerId, Name = "Test Provider", Enabled = true };
 
-        var parsedEvent = new Event
-        {
-            Data = new EventData
-            {
-                PreviousAttributes = null
-            }
-        };
+        var parsedEvent = new Event { Data = new EventData { PreviousAttributes = null } };
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
@@ -311,12 +350,7 @@ public class SubscriptionUpdatedHandlerTests
             LatestInvoice = new Invoice { BillingReason = "renewal" }
         };
 
-        var provider = new Provider
-        {
-            Id = providerId,
-            Name = "Test Provider",
-            Enabled = true
-        };
+        var provider = new Provider { Id = providerId, Name = "Test Provider", Enabled = true };
 
         var parsedEvent = new Event { Data = new EventData() };
 
@@ -431,10 +465,10 @@ public class SubscriptionUpdatedHandlerTests
             Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } },
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new() { Price = new Price { Id = IStripeEventUtilityService.PremiumPlanId } }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Price = new Price { Id = IStripeEventUtilityService.PremiumPlanId } }
+                ]
             }
         };
 
@@ -475,11 +509,7 @@ public class SubscriptionUpdatedHandlerTests
             Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } }
         };
 
-        var organization = new Organization
-        {
-            Id = organizationId,
-            PlanType = PlanType.EnterpriseAnnually2023
-        };
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.EnterpriseAnnually2023 };
         var parsedEvent = new Event { Data = new EventData() };
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
@@ -492,7 +522,7 @@ public class SubscriptionUpdatedHandlerTests
             .Returns(organization);
 
         _stripeFacade.ListInvoices(Arg.Any<InvoiceListOptions>())
-            .Returns(new StripeList<Invoice> { Data = new List<Invoice> { new Invoice { Id = "inv_123" } } });
+            .Returns(new StripeList<Invoice> { Data = [new Invoice { Id = "inv_123" }] });
 
         var plan = new Enterprise2023Plan(true);
         _pricingClient.GetPlanOrThrow(organization.PlanType)
@@ -574,7 +604,8 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenSubscriptionIsActive_AndOrganizationHasSecretsManagerTrial_AndRemovingSecretsManagerTrial_RemovesPasswordManagerCoupon()
+    public async Task
+        HandleAsync_WhenSubscriptionIsActive_AndOrganizationHasSecretsManagerTrial_AndRemovingSecretsManagerTrial_RemovesPasswordManagerCoupon()
     {
         // Arrange
         var organizationId = Guid.NewGuid();
@@ -586,34 +617,17 @@ public class SubscriptionUpdatedHandlerTests
             CustomerId = "cus_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new() { Plan = new Stripe.Plan { Id = "2023-enterprise-org-seat-annually" } }
-                }
+                Data = [new SubscriptionItem { Plan = new Plan { Id = "2023-enterprise-org-seat-annually" } }]
             },
             Customer = new Customer
             {
-                Balance = 0,
-                Discount = new Discount
-                {
-                    Coupon = new Coupon { Id = "sm-standalone" }
-                }
+                Balance = 0, Discount = new Discount { Coupon = new Coupon { Id = "sm-standalone" } }
             },
-            Discount = new Discount
-            {
-                Coupon = new Coupon { Id = "sm-standalone" }
-            },
-            Metadata = new Dictionary<string, string>
-            {
-                { "organizationId", organizationId.ToString() }
-            }
+            Discount = new Discount { Coupon = new Coupon { Id = "sm-standalone" } },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } }
         };
 
-        var organization = new Organization
-        {
-            Id = organizationId,
-            PlanType = PlanType.EnterpriseAnnually2023
-        };
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.EnterpriseAnnually2023 };
 
         var plan = new Enterprise2023Plan(true);
         _pricingClient.GetPlanOrThrow(organization.PlanType)
@@ -628,20 +642,14 @@ public class SubscriptionUpdatedHandlerTests
                 {
                     items = new
                     {
-                        data = new[]
-                        {
-                            new { plan = new { id = "secrets-manager-enterprise-seat-annually" } }
-                        }
+                        data = new[] { new { plan = new { id = "secrets-manager-enterprise-seat-annually" } } }
                     },
                     Items = new StripeList<SubscriptionItem>
                     {
-                        Data = new List<SubscriptionItem>
-                        {
-                            new SubscriptionItem
-                            {
-                                Plan = new Stripe.Plan { Id = "secrets-manager-enterprise-seat-annually" }
-                            }
-                        }
+                        Data =
+                        [
+                            new SubscriptionItem { Plan = new Plan { Id = "secrets-manager-enterprise-seat-annually" } }
+                        ]
                     }
                 })
             }
