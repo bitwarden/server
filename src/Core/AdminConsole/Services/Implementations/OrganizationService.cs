@@ -20,7 +20,6 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -325,8 +324,14 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
         }
 
+        _logger.LogInformation("{Method}: Invoking _paymentService.AdjustSeatsAsync with {AdditionalSeats} additional seats for Organization ({OrganizationID})",
+            nameof(AdjustSeatsAsync), additionalSeats, organization.Id);
+
         var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
         organization.Seats = (short?)newSeatTotal;
+
+        _logger.LogInformation("{Method}: Invoking _organizationRepository.ReplaceAsync with {Seats} seats for Organization ({OrganizationID})", nameof(AdjustSeatsAsync), organization.Seats, organization.Id); ;
+
         await ReplaceAndUpdateCacheAsync(organization);
 
         if (organization.Seats.HasValue && organization.MaxAutoscaleSeats.HasValue &&
@@ -393,155 +398,6 @@ public class OrganizationService : IOrganizationService
         catch (StripeException e)
         {
             throw new GatewayException(e.Message);
-        }
-    }
-
-    private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
-    {
-        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
-        {
-            throw new BadRequestException("You may not create an organization. You belong to an organization " +
-                                          "which has a policy that prohibits you from being a member of any other organization.");
-        }
-    }
-
-    /// <summary>
-    /// Create a new organization on a self-hosted instance
-    /// </summary>
-    public async Task<(Organization organization, OrganizationUser organizationUser)> SignUpAsync(
-        OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
-        string privateKey)
-    {
-        if (license.LicenseType != LicenseType.Organization)
-        {
-            throw new BadRequestException("Premium licenses cannot be applied to an organization. " +
-                                          "Upload this license from your personal account settings page.");
-        }
-
-        var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
-        var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception);
-
-        if (!canUse)
-        {
-            throw new BadRequestException(exception);
-        }
-
-        var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
-        if (enabledOrgs.Any(o => string.Equals(o.LicenseKey, license.LicenseKey)))
-        {
-            throw new BadRequestException("License is already in use by another organization.");
-        }
-
-        await ValidateSignUpPoliciesAsync(owner.Id);
-
-        var organization = claimsPrincipal != null
-            // If the ClaimsPrincipal exists (there's a token on the license), use it to build the organization.
-            ? OrganizationFactory.Create(owner, claimsPrincipal, publicKey, privateKey)
-            // If there's no ClaimsPrincipal (there's no token on the license), use the license to build the organization.
-            : OrganizationFactory.Create(owner, license, publicKey, privateKey);
-
-        var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
-
-        var dir = $"{_globalSettings.LicenseDirectory}/organization";
-        Directory.CreateDirectory(dir);
-        await using var fs = new FileStream(Path.Combine(dir, $"{organization.Id}.json"), FileMode.Create);
-        await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
-        return (result.organization, result.organizationUser);
-    }
-
-    /// <summary>
-    /// Private helper method to create a new organization.
-    /// This is common code used by both the cloud and self-hosted methods.
-    /// </summary>
-    private async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)>
-        SignUpAsync(Organization organization,
-            Guid ownerId, string ownerKey, string collectionName, bool withPayment)
-    {
-        try
-        {
-            await _organizationRepository.CreateAsync(organization);
-            await _organizationApiKeyRepository.CreateAsync(new OrganizationApiKey
-            {
-                OrganizationId = organization.Id,
-                ApiKey = CoreHelpers.SecureRandomString(30),
-                Type = OrganizationApiKeyType.Default,
-                RevisionDate = DateTime.UtcNow,
-            });
-            await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
-
-            // ownerId == default if the org is created by a provider - in this case it's created without an
-            // owner and the first owner is immediately invited afterwards
-            OrganizationUser orgUser = null;
-            if (ownerId != default)
-            {
-                orgUser = new OrganizationUser
-                {
-                    OrganizationId = organization.Id,
-                    UserId = ownerId,
-                    Key = ownerKey,
-                    AccessSecretsManager = organization.UseSecretsManager,
-                    Type = OrganizationUserType.Owner,
-                    Status = OrganizationUserStatusType.Confirmed,
-                    CreationDate = organization.CreationDate,
-                    RevisionDate = organization.CreationDate
-                };
-                orgUser.SetNewId();
-
-                await _organizationUserRepository.CreateAsync(orgUser);
-
-                var devices = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await _pushRegistrationService.AddUserRegistrationOrganizationAsync(devices,
-                    organization.Id.ToString());
-                await _pushNotificationService.PushSyncOrgKeysAsync(ownerId);
-            }
-
-            Collection defaultCollection = null;
-            if (!string.IsNullOrWhiteSpace(collectionName))
-            {
-                defaultCollection = new Collection
-                {
-                    Name = collectionName,
-                    OrganizationId = organization.Id,
-                    CreationDate = organization.CreationDate,
-                    RevisionDate = organization.CreationDate
-                };
-
-                // Give the owner Can Manage access over the default collection
-                List<CollectionAccessSelection> defaultOwnerAccess = null;
-                if (orgUser != null)
-                {
-                    defaultOwnerAccess =
-                    [
-                        new CollectionAccessSelection
-                        {
-                            Id = orgUser.Id,
-                            HidePasswords = false,
-                            ReadOnly = false,
-                            Manage = true
-                        }
-                    ];
-                }
-
-                await _collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);
-            }
-
-            return (organization, orgUser, defaultCollection);
-        }
-        catch
-        {
-            if (withPayment)
-            {
-                await _paymentService.CancelAndRecoverChargesAsync(organization);
-            }
-
-            if (organization.Id != default(Guid))
-            {
-                await _organizationRepository.DeleteAsync(organization);
-                await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
-            }
-
-            throw;
         }
     }
 
@@ -1338,22 +1194,22 @@ public class OrganizationService : IOrganizationService
         await _groupRepository.UpdateUsersAsync(group.Id, users);
     }
 
-    private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
-    {
-        var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
-        return devices
-            .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
-            .Select(d => d.Id.ToString());
-    }
-
     public async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)
     {
-        await _organizationRepository.ReplaceAsync(org);
-        await _applicationCacheService.UpsertOrganizationAbilityAsync(org);
-
-        if (orgEvent.HasValue)
+        try
         {
-            await _eventService.LogOrganizationEventAsync(org, orgEvent.Value);
+            await _organizationRepository.ReplaceAsync(org);
+            await _applicationCacheService.UpsertOrganizationAbilityAsync(org);
+
+            if (orgEvent.HasValue)
+            {
+                await _eventService.LogOrganizationEventAsync(org, orgEvent.Value);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "An error occurred while calling {Method} for Organization ({OrganizationID})", nameof(ReplaceAndUpdateCacheAsync), org.Id);
+            throw;
         }
     }
 

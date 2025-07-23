@@ -11,7 +11,7 @@ public class OrganizationIntegrationConfigurationDetails
     public Guid OrganizationId { get; set; }
     public Guid OrganizationIntegrationId { get; set; }
     public IntegrationType IntegrationType { get; set; }
-    public EventType EventType { get; set; }
+    public EventType? EventType { get; set; }
     public string? Configuration { get; set; }
     public string? Filters { get; set; }
     public string? IntegrationConfiguration { get; set; }
