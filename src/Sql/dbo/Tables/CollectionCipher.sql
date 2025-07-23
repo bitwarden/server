@@ -16,4 +16,3 @@ CREATE NONCLUSTERED INDEX IX_CollectionCipher_CollectionId_CipherId
     ON dbo.CollectionCipher (CollectionId, CipherId);
 
 GO
-UPDATE STATISTICS dbo.CollectionCipher IX_CollectionCipher_CollectionId_CipherId;

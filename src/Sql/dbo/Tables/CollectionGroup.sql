@@ -20,4 +20,3 @@ CREATE NONCLUSTERED INDEX IX_CollectionGroup_GroupId_ReadOnly
     INCLUDE (CollectionId);
 
 GO
-UPDATE STATISTICS dbo.CollectionGroup IX_CollectionGroup_GroupId_ReadOnly;
