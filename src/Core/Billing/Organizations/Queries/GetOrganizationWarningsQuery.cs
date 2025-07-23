@@ -12,7 +12,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Services;
 using Stripe;
-using static Bit.Core.Billing.Utilities;
 using FreeTrialWarning = Bit.Core.Billing.Organizations.Models.OrganizationWarnings.FreeTrialWarning;
 using InactiveSubscriptionWarning =
     Bit.Core.Billing.Organizations.Models.OrganizationWarnings.InactiveSubscriptionWarning;
@@ -113,50 +112,50 @@ public class GetOrganizationWarningsQuery(
         {
             // Member of an enabled, trialing organization.
             case true when subscription.Status is SubscriptionStatus.Trialing:
-            {
-                var hasUnverifiedBankAccount = await HasUnverifiedBankAccount(organization);
+                {
+                    var hasUnverifiedBankAccount = await HasUnverifiedBankAccount(organization);
 
-                var hasPaymentMethod =
-                    !string.IsNullOrEmpty(subscription.Customer.InvoiceSettings.DefaultPaymentMethodId) ||
-                    !string.IsNullOrEmpty(subscription.Customer.DefaultSourceId) ||
-                    hasUnverifiedBankAccount ||
-                    subscription.Customer.Metadata.ContainsKey(MetadataKeys.BraintreeCustomerId);
+                    var hasPaymentMethod =
+                        !string.IsNullOrEmpty(subscription.Customer.InvoiceSettings.DefaultPaymentMethodId) ||
+                        !string.IsNullOrEmpty(subscription.Customer.DefaultSourceId) ||
+                        hasUnverifiedBankAccount ||
+                        subscription.Customer.Metadata.ContainsKey(MetadataKeys.BraintreeCustomerId);
 
-                // If this member is the owner and there's no payment method on file, ask them to add one.
-                return isOrganizationOwner && !hasPaymentMethod
-                    ? new InactiveSubscriptionWarning { Resolution = "add_payment_method_optional_trial" }
-                    : null;
-            }
+                    // If this member is the owner and there's no payment method on file, ask them to add one.
+                    return isOrganizationOwner && !hasPaymentMethod
+                        ? new InactiveSubscriptionWarning { Resolution = "add_payment_method_optional_trial" }
+                        : null;
+                }
             // Member of disabled and unpaid or canceled organization.
             case false when subscription.Status is SubscriptionStatus.Unpaid or SubscriptionStatus.Canceled:
-            {
-                // If the organization is managed by a provider, return a warning asking them to contact the provider.
-                if (provider != null)
                 {
-                    return new InactiveSubscriptionWarning { Resolution = "contact_provider" };
-                }
-
-                /* If the organization is not managed by a provider and this user is the owner, return an action warning based
-                   on the subscription status. */
-                if (isOrganizationOwner)
-                {
-                    return subscription.Status switch
+                    // If the organization is managed by a provider, return a warning asking them to contact the provider.
+                    if (provider != null)
                     {
-                        SubscriptionStatus.Unpaid => new InactiveSubscriptionWarning
-                        {
-                            Resolution = "add_payment_method"
-                        },
-                        SubscriptionStatus.Canceled => new InactiveSubscriptionWarning
-                        {
-                            Resolution = "resubscribe"
-                        },
-                        _ => null
-                    };
-                }
+                        return new InactiveSubscriptionWarning { Resolution = "contact_provider" };
+                    }
 
-                // Otherwise, this member is not the owner, and we need to ask them to contact the owner.
-                return new InactiveSubscriptionWarning { Resolution = "contact_owner" };
-            }
+                    /* If the organization is not managed by a provider and this user is the owner, return an action warning based
+                       on the subscription status. */
+                    if (isOrganizationOwner)
+                    {
+                        return subscription.Status switch
+                        {
+                            SubscriptionStatus.Unpaid => new InactiveSubscriptionWarning
+                            {
+                                Resolution = "add_payment_method"
+                            },
+                            SubscriptionStatus.Canceled => new InactiveSubscriptionWarning
+                            {
+                                Resolution = "resubscribe"
+                            },
+                            _ => null
+                        };
+                    }
+
+                    // Otherwise, this member is not the owner, and we need to ask them to contact the owner.
+                    return new InactiveSubscriptionWarning { Resolution = "contact_owner" };
+                }
             default: return null;
         }
     }
