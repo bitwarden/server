@@ -5,12 +5,10 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Xunit;
 
-
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.CollectionRepository;
 
 public class CreateDefaultCollectionsTests
 {
-
     [DatabaseTheory, DatabaseData]
     public async Task CreateDefaultCollectionsAsync_ShouldCreateDefaultCollection_WhenUsersDoNotHaveDefaultCollection(
         IOrganizationRepository organizationRepository,
@@ -44,8 +42,9 @@ public class CreateDefaultCollectionsTests
 
         // Assert
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, resulOrganizationUsers, organizationId);
-    }
 
+        await CleanupAsync(organizationRepository, userRepository, organization, resulOrganizationUsers.Select(organizationUser => organizationUser.UserId));
+    }
 
     [DatabaseTheory, DatabaseData]
     public async Task CreateDefaultCollectionsAsync_ShouldNotCreateDefaultCollection_WhenUsersAlreadyHaveOne(
@@ -82,6 +81,8 @@ public class CreateDefaultCollectionsTests
 
         // Assert
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, resulOrganizationUsers, organizationId);
+
+        await CleanupAsync(organizationRepository, userRepository, organization, resulOrganizationUsers.Select(organizationUser => organizationUser.UserId));
     }
 
     private static async Task CreateUsersWithExistingDefaultCollectionsAsync(ICollectionRepository collectionRepository,
@@ -127,5 +128,23 @@ public class CreateDefaultCollectionsTests
         });
 
         return orgUser;
+    }
+
+    private static async Task CleanupAsync(IOrganizationRepository organizationRepository,
+        IUserRepository userRepository,
+        Organization organization,
+        IEnumerable<Guid?> userIds)
+    {
+        await organizationRepository.DeleteAsync(organization);
+
+        foreach (var userId in userIds)
+        {
+            if (userId == null)
+            {
+                continue;
+            }
+
+            await userRepository.DeleteAsync(new User() { Id = userId.Value });
+        }
     }
 }
