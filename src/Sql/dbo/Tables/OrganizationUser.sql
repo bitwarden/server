@@ -28,16 +28,17 @@ CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrganizationId]
     ON [dbo].[OrganizationUser]([OrganizationId] ASC);
 
 GO
-CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserId_Status_Filtered]
-    ON [dbo].[OrganizationUser] (UserId)
-    WHERE Status = 2;
-
-GO
 
 CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrganizationId_UserId]
     ON [dbo].[OrganizationUser] ([OrganizationId], [UserId])
     INCLUDE ([Email], [Status], [Type], [ExternalId], [CreationDate],
         [RevisionDate], [Permissions], [ResetPasswordKey], [AccessSecretsManager]);
+GO
+
+CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserId_Status_Filtered]
+    ON [dbo].[OrganizationUser] (UserId)
+    WHERE Status = 2;
+
 GO
 
 UPDATE STATISTICS dbo.OrganizationUser IX_OrganizationUser_UserId_Status_Filtered;
