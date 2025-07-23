@@ -112,17 +112,17 @@ public class GetOrganizationWarningsQueryTests
         sutProvider.GetDependency<ISetupIntentCache>().Get(organization.Id).Returns(setupIntentId);
         sutProvider.GetDependency<IStripeAdapter>().SetupIntentGet(setupIntentId, Arg.Is<SetupIntentGetOptions>(
             options => options.Expand.Contains("payment_method"))).Returns(new SetupIntent
-        {
-            Status = "requires_action",
-            NextAction = new SetupIntentNextAction
             {
-                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
-            },
-            PaymentMethod = new PaymentMethod
-            {
-                UsBankAccount = new PaymentMethodUsBankAccount()
-            }
-        });
+                Status = "requires_action",
+                NextAction = new SetupIntentNextAction
+                {
+                    VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
+                },
+                PaymentMethod = new PaymentMethod
+                {
+                    UsBankAccount = new PaymentMethodUsBankAccount()
+                }
+            });
 
         var response = await sutProvider.Sut.Run(organization);
 
