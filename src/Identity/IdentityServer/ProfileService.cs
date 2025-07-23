@@ -3,6 +3,7 @@
 
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Identity;
 using Bit.Core.Repositories;

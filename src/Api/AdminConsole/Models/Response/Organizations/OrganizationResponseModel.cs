@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;

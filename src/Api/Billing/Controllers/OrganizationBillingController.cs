@@ -6,7 +6,8 @@ using Bit.Api.Billing.Models.Responses;
 using Bit.Api.Billing.Queries.Organizations;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
@@ -380,5 +381,36 @@ public class OrganizationBillingController(
         var response = await organizationWarningsQuery.Run(organization);
 
         return TypedResults.Ok(response);
+    }
+
+
+    [HttpPost("change-frequency")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> ChangePlanSubscriptionFrequencyAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] ChangePlanFrequencyRequest request)
+    {
+        if (!await currentContext.EditSubscription(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        if (organization.PlanType == request.NewPlanType)
+        {
+            return Error.BadRequest("Organization is already on the requested plan frequency.");
+        }
+
+        await organizationBillingService.UpdateSubscriptionPlanFrequency(
+            organization,
+            request.NewPlanType);
+
+        return TypedResults.Ok();
     }
 }

@@ -36,6 +36,9 @@ public interface ISubscriberService
         ISubscriber subscriber,
         string paymentMethodNonce);
 
+    Task<Customer> CreateStripeCustomer(
+        ISubscriber subscriber);
+
     /// <summary>
     /// Retrieves a Stripe <see cref="Customer"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> property.
     /// </summary>

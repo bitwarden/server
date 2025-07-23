@@ -60,6 +60,7 @@ public static class StripeConstants
         public const string InvoiceApproved = "invoice_approved";
         public const string OrganizationId = "organizationId";
         public const string ProviderId = "providerId";
+        public const string Region = "region";
         public const string RetiredBraintreeCustomerId = "btCustomerId_old";
         public const string UserId = "userId";
     }
@@ -116,5 +117,12 @@ public static class StripeConstants
     {
         public const string Deferred = "deferred";
         public const string Immediately = "immediately";
+    }
+
+    public static class MissingPaymentMethodBehaviorOptions
+    {
+        public const string CreateInvoice = "create_invoice";
+        public const string Cancel = "cancel";
+        public const string Pause = "pause";
     }
 }
