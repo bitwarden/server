@@ -30,7 +30,6 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
 using static Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Helpers.InviteUserOrganizationValidationRequestHelpers;
-using OrganizationUserInvite = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 
@@ -54,7 +53,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -112,7 +111,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: orgUser.Email,
                     assignedCollections: [],
                     groups: [],
@@ -136,6 +135,14 @@ public class InviteOrganizationUserCommandTests
         sutProvider.GetDependency<IInviteUsersValidator>()
             .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
             .Returns(new Valid<InviteOrganizationUsersValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)));
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(0);
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -174,7 +181,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -201,6 +208,14 @@ public class InviteOrganizationUserCommandTests
             .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
             .Returns(new Invalid<InviteOrganizationUsersValidationRequest>(
                 new Error<InviteOrganizationUsersValidationRequest>(errorMessage, validationRequest)));
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(0);
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -241,7 +256,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -271,6 +286,14 @@ public class InviteOrganizationUserCommandTests
             .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
             .Returns(new Valid<InviteOrganizationUsersValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
                 .WithPasswordManagerUpdate(new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1))));
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(0);
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -310,7 +333,7 @@ public class InviteOrganizationUserCommandTests
         var request = new InviteOrganizationUsersRequest(
             invites:
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -342,6 +365,14 @@ public class InviteOrganizationUserCommandTests
                 GetInviteValidationRequestMock(request, inviteOrganization, organization)
                     .WithPasswordManagerUpdate(
                         new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1))));
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(0);
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -379,7 +410,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -412,6 +443,14 @@ public class InviteOrganizationUserCommandTests
             .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
             .Returns(new Valid<InviteOrganizationUsersValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)
                 .WithPasswordManagerUpdate(passwordManagerUpdate)));
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(0);
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -452,7 +491,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -469,6 +508,7 @@ public class InviteOrganizationUserCommandTests
             .AdjustSeats(request.Invites.Count(x => x.AccessSecretsManager));
 
         var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var orgRepository = sutProvider.GetDependency<IOrganizationRepository>();
 
         orgUserRepository
             .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
@@ -476,10 +516,12 @@ public class InviteOrganizationUserCommandTests
         orgUserRepository
             .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
             .Returns([ownerDetails]);
-        orgUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(1);
+        orgRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+        {
+            Sponsored = 0,
+            Users = 1
+        });
         orgUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id).Returns(1);
-
-        var orgRepository = sutProvider.GetDependency<IOrganizationRepository>();
 
         orgRepository.GetByIdAsync(organization.Id)
             .Returns(organization);
@@ -523,7 +565,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -565,6 +607,14 @@ public class InviteOrganizationUserCommandTests
         sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
             .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
             .Throws(new Exception("Something went wrong"));
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(0);
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -618,7 +668,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -670,6 +720,14 @@ public class InviteOrganizationUserCommandTests
                     Email = "provider@email.com"
                 }
             });
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(0);
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -709,7 +767,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -762,6 +820,14 @@ public class InviteOrganizationUserCommandTests
                 }
             });
 
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(0);
+
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
 
@@ -796,7 +862,7 @@ public class InviteOrganizationUserCommandTests
         var request = new InviteOrganizationUsersRequest(
             invites:
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -828,6 +894,14 @@ public class InviteOrganizationUserCommandTests
                 GetInviteValidationRequestMock(request, inviteOrganization, organization)
                     .WithPasswordManagerUpdate(
                         new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1))));
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(0);
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -867,7 +941,7 @@ public class InviteOrganizationUserCommandTests
         var request = new InviteOrganizationUsersRequest(
             invites:
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -899,6 +973,14 @@ public class InviteOrganizationUserCommandTests
                 GetInviteValidationRequestMock(request, inviteOrganization, organization)
                     .WithPasswordManagerUpdate(
                         new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1))));
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(0);
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);

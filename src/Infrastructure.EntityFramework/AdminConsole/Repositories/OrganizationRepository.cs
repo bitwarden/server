@@ -1,10 +1,14 @@
-﻿using AutoMapper;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using LinqToDB.Tools;
 using Microsoft.EntityFrameworkCore;
@@ -374,5 +378,29 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
     public Task EnableCollectionEnhancements(Guid organizationId)
     {
         throw new NotImplementedException("Collection enhancements migration is not yet supported for Entity Framework.");
+    }
+
+    public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var users = await dbContext.OrganizationUsers
+                .Where(ou => ou.OrganizationId == organizationId && ou.Status >= 0)
+                .CountAsync();
+
+            var sponsored = await dbContext.OrganizationSponsorships
+                .Where(os => os.SponsoringOrganizationId == organizationId &&
+                    os.IsAdminInitiated &&
+                    (os.ToDelete == false || (os.ToDelete == true && os.ValidUntil != null && os.ValidUntil > DateTime.UtcNow)) &&
+                    (os.SponsoredOrganizationId == null || (os.SponsoredOrganizationId != null && (os.ValidUntil == null || os.ValidUntil > DateTime.UtcNow))))
+                .CountAsync();
+
+            return new OrganizationSeatCounts
+            {
+                Users = users,
+                Sponsored = sponsored
+            };
+        }
     }
 }

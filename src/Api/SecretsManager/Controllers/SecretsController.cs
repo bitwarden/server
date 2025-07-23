@@ -1,4 +1,7 @@
-﻿using Bit.Api.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
@@ -109,7 +112,7 @@ public class SecretsController : Controller
         }
 
         var result = await _createSecretCommand.CreateAsync(secret, accessPoliciesUpdates);
-
+        await LogSecretEventAsync(secret, EventType.Secret_Created);
         // Creating a secret means you have read & write permission.
         return new SecretResponseModel(result, true, true);
     }
@@ -135,10 +138,7 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount)
-        {
-            await _eventService.LogServiceAccountSecretEventAsync(userId, secret, EventType.Secret_Retrieved);
-        }
+        await LogSecretEventAsync(secret, EventType.Secret_Retrieved);
 
         return new SecretResponseModel(secret, access.Read, access.Write);
     }
@@ -188,10 +188,10 @@ public class SecretsController : Controller
             {
                 throw new NotFoundException();
             }
-
         }
 
         var result = await _updateSecretCommand.UpdateAsync(updatedSecret, accessPoliciesUpdates);
+        await LogSecretEventAsync(secret, EventType.Secret_Edited);
 
         // Updating a secret means you have read & write permission.
         return new SecretResponseModel(result, true, true);
@@ -234,6 +234,7 @@ public class SecretsController : Controller
 
         await _deleteSecretCommand.DeleteSecrets(secretsToDelete);
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Secret.Id, r.Error));
+        await LogSecretsEventAsync(secretsToDelete, EventType.Secret_Deleted);
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 
@@ -253,7 +254,7 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        await LogSecretsRetrievalAsync(secrets);
+        await LogSecretsEventAsync(secrets, EventType.Secret_Retrieved);
 
         var responses = secrets.Select(s => new BaseSecretResponseModel(s));
         return new ListResponseModel<BaseSecretResponseModel>(responses);
@@ -290,18 +291,28 @@ public class SecretsController : Controller
 
         if (syncResult.HasChanges)
         {
-            await LogSecretsRetrievalAsync(syncResult.Secrets);
+            await LogSecretsEventAsync(syncResult.Secrets, EventType.Secret_Retrieved);
         }
 
         return new SecretsSyncResponseModel(syncResult.HasChanges, syncResult.Secrets);
     }
 
-    private async Task LogSecretsRetrievalAsync(IEnumerable<Secret> secrets)
+    private async Task LogSecretsEventAsync(IEnumerable<Secret> secrets, EventType eventType)
     {
-        if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount)
+        var userId = _userService.GetProperUserId(User)!.Value;
+
+        switch (_currentContext.IdentityClientType)
         {
-            var userId = _userService.GetProperUserId(User)!.Value;
-            await _eventService.LogServiceAccountSecretsEventAsync(userId, secrets, EventType.Secret_Retrieved);
+            case IdentityClientType.ServiceAccount:
+                await _eventService.LogServiceAccountSecretsEventAsync(userId, secrets, eventType);
+                break;
+            case IdentityClientType.User:
+                await _eventService.LogUserSecretsEventAsync(userId, secrets, eventType);
+                break;
         }
     }
+
+    private Task LogSecretEventAsync(Secret secret, EventType eventType) =>
+       LogSecretsEventAsync(new[] { secret }, eventType);
+
 }

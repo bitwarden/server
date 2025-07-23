@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.UserKey;
@@ -12,6 +13,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 
@@ -25,8 +27,9 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     /// https://github.com/dotnet/SqlClient/issues/54
     /// </summary>
     private string _marsConnectionString;
+    private readonly ILogger<OrganizationUserRepository> _logger;
 
-    public OrganizationUserRepository(GlobalSettings globalSettings)
+    public OrganizationUserRepository(GlobalSettings globalSettings, ILogger<OrganizationUserRepository> logger)
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
         var builder = new SqlConnectionStringBuilder(ConnectionString)
@@ -34,6 +37,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             MultipleActiveResultSets = true,
         };
         _marsConnectionString = builder.ToString();
+        _logger = logger;
     }
 
     public async Task<int> GetCountByOrganizationIdAsync(Guid organizationId)
@@ -82,19 +86,6 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var result = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[OrganizationUser_ReadCountByOrganizationIdEmail]",
                 new { OrganizationId = organizationId, Email = email, OnlyUsers = onlyRegisteredUsers },
-                commandType: CommandType.StoredProcedure);
-
-            return result;
-        }
-    }
-
-    public async Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var result = await connection.ExecuteScalarAsync<int>(
-                "[dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]",
-                new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
             return result;
@@ -277,6 +268,68 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups, bool includeCollections)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            // Use a single call that returns multiple result sets
+            var results = await connection.QueryMultipleAsync(
+                "[dbo].[OrganizationUserUserDetails_ReadByOrganizationId_V2]",
+                new
+                {
+                    OrganizationId = organizationId,
+                    IncludeGroups = includeGroups,
+                    IncludeCollections = includeCollections
+                },
+                commandType: CommandType.StoredProcedure);
+
+            // Read the user details (first result set)
+            var users = (await results.ReadAsync<OrganizationUserUserDetails>()).ToList();
+
+            // Read group associations (second result set, if requested)
+            Dictionary<Guid, List<Guid>>? userGroupMap = null;
+            if (includeGroups)
+            {
+                var groupUsers = await results.ReadAsync<GroupUser>();
+                userGroupMap = groupUsers
+                    .GroupBy(gu => gu.OrganizationUserId)
+                    .ToDictionary(g => g.Key, g => g.Select(gu => gu.GroupId).ToList());
+            }
+
+            // Read collection associations (third result set, if requested)
+            Dictionary<Guid, List<CollectionAccessSelection>>? userCollectionMap = null;
+            if (includeCollections)
+            {
+                var collectionUsers = await results.ReadAsync<CollectionUser>();
+                userCollectionMap = collectionUsers
+                    .GroupBy(cu => cu.OrganizationUserId)
+                    .ToDictionary(g => g.Key, g => g.Select(cu => new CollectionAccessSelection
+                    {
+                        Id = cu.CollectionId,
+                        ReadOnly = cu.ReadOnly,
+                        HidePasswords = cu.HidePasswords,
+                        Manage = cu.Manage
+                    }).ToList());
+            }
+
+            // Map the associations to users
+            foreach (var user in users)
+            {
+                if (userGroupMap != null)
+                {
+                    user.Groups = userGroupMap.GetValueOrDefault(user.Id, new List<Guid>());
+                }
+
+                if (userCollectionMap != null)
+                {
+                    user.Collections = userCollectionMap.GetValueOrDefault(user.Id, new List<CollectionAccessSelection>());
+                }
+            }
+
+            return users;
+        }
+    }
+
     public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null)
     {
@@ -318,6 +371,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     public async Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections)
     {
+        _logger.LogUserInviteStateDiagnostics(obj);
+
         obj.SetNewId();
         var objWithCollections = JsonSerializer.Deserialize<OrganizationUserWithCollections>(
             JsonSerializer.Serialize(obj))!;
@@ -336,6 +391,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     public async Task ReplaceAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections)
     {
+        _logger.LogUserInviteStateDiagnostics(obj);
+
         var objWithCollections = JsonSerializer.Deserialize<OrganizationUserWithCollections>(
             JsonSerializer.Serialize(obj))!;
         objWithCollections.Collections = collections.ToArrayTVP();
@@ -419,6 +476,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     public async Task<ICollection<Guid>?> CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
     {
+        _logger.LogUserInviteStateDiagnostics(organizationUsers);
+
         organizationUsers = organizationUsers.ToList();
         if (!organizationUsers.Any())
         {
@@ -443,6 +502,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     public async Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers)
     {
+        _logger.LogUserInviteStateDiagnostics(organizationUsers);
+
         organizationUsers = organizationUsers.ToList();
         if (!organizationUsers.Any())
         {
@@ -552,6 +613,19 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         {
             var results = await connection.QueryAsync<OrganizationUser>(
                 $"[{Schema}].[OrganizationUser_ReadByOrganizationIdWithClaimedDomains]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync_vNext(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUser>(
+                $"[{Schema}].[OrganizationUser_ReadByOrganizationIdWithClaimedDomains_V2]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 

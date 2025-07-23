@@ -1,4 +1,7 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
 using Bit.Core.Settings;

@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -70,8 +73,8 @@ public class RestoreOrganizationUserCommand(
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
-        var occupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-        var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
+        var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+        var availableSeats = organization.Seats.GetValueOrDefault(0) - seatCounts.Total;
 
         if (availableSeats < 1)
         {
@@ -163,8 +166,8 @@ public class RestoreOrganizationUserCommand(
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
-        var occupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-        var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
+        var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+        var availableSeats = organization.Seats.GetValueOrDefault(0) - seatCounts.Total;
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
         await organizationService.AutoAddSeatsAsync(organization, newSeatsRequired);
 
