@@ -10,7 +10,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.EntityFrameworkCore;
 using Quartz;
 using Stripe;
 using Stripe.TestHelpers;
