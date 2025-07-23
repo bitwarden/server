@@ -328,7 +328,9 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 {
                     var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(connection, transaction, organizationId);
 
-                    var missingDefaultCollectionUserIds = affectedOrgUserIds.Where(orgUserId => !orgUserIdWithDefaultCollection.Contains(orgUserId)).ToList();
+                    var missingDefaultCollectionUserIds = affectedOrgUserIds
+                        .Except(orgUserIdWithDefaultCollection)
+                        .ToList();
 
                     var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
 
