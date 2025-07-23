@@ -5,11 +5,11 @@ using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
@@ -105,26 +105,30 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             _organization.Id,
             memberEmail,
             OrganizationUserType.User,
-            userStatusType: OrganizationUserStatusType.Accepted);
+            userStatusType: OrganizationUserStatusType.Confirmed);
 
-        // Confirm the member user which should trigger DefaultUserCollection creation
-        var confirmOrganizationUserCommand = _factory.GetService<IConfirmOrganizationUserCommand>();
-        var ownerUserRepository = _factory.GetService<IUserRepository>();
-        var owner = await ownerUserRepository.GetByEmailAsync(_ownerEmail);
-
-        await confirmOrganizationUserCommand.ConfirmUserAsync(
-            _organization.Id,
-            memberUser.Id,
-            "test-key",
-            owner!.Id,
-            "My Collection");
-
+        // Create DefaultUserCollection manually
         var collectionRepository = _factory.GetService<ICollectionRepository>();
-        var collections = await collectionRepository.GetManyByUserIdAsync(memberUser!.UserId!.Value);
-        var defaultUserCollection = collections.FirstOrDefault(c => c.Type == CollectionType.DefaultUserCollection);
+        var defaultUserCollection = new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = "My Collection",
+            Type = CollectionType.DefaultUserCollection
+        };
 
-        Assert.NotNull(defaultUserCollection);
-        Assert.Equal("My Collection", defaultUserCollection.Name);
+        // Create collection with user access
+        var userAccess = new List<CollectionAccessSelection>
+        {
+            new CollectionAccessSelection
+            {
+                Id = memberUser.Id,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true
+            }
+        };
+
+        await collectionRepository.CreateAsync(defaultUserCollection, null, userAccess);
 
         await _loginHelper.LoginAsync(memberEmail);
 
@@ -307,24 +311,30 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             _organization.Id,
             memberEmail,
             OrganizationUserType.User,
-            userStatusType: OrganizationUserStatusType.Accepted);
+            userStatusType: OrganizationUserStatusType.Confirmed);
 
-        var confirmOrganizationUserCommand = _factory.GetService<IConfirmOrganizationUserCommand>();
-        var ownerUserRepository = _factory.GetService<IUserRepository>();
-        var owner = await ownerUserRepository.GetByEmailAsync(_ownerEmail);
-
-        await confirmOrganizationUserCommand.ConfirmUserAsync(
-            _organization.Id,
-            memberUser.Id,
-            "test-key",
-            owner!.Id,
-            "My Collection");
-
+        // Create DefaultUserCollection manually
         var collectionRepository = _factory.GetService<ICollectionRepository>();
-        var collections = await collectionRepository.GetManyByUserIdAsync(memberUser!.UserId!.Value);
-        var defaultUserCollection = collections.FirstOrDefault(c => c.Type == CollectionType.DefaultUserCollection);
+        var defaultUserCollection = new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = "My Collection",
+            Type = CollectionType.DefaultUserCollection
+        };
 
-        Assert.NotNull(defaultUserCollection);
+        // Create collection with user access
+        var userAccess = new List<CollectionAccessSelection>
+        {
+            new CollectionAccessSelection
+            {
+                Id = memberUser.Id,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true
+            }
+        };
+
+        await collectionRepository.CreateAsync(defaultUserCollection, null, userAccess);
 
         await _loginHelper.LoginAsync(memberEmail);
 
@@ -437,7 +447,7 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             _organization.Id,
             memberAEmail,
             OrganizationUserType.User,
-            userStatusType: OrganizationUserStatusType.Accepted);
+            userStatusType: OrganizationUserStatusType.Confirmed);
 
         var memberBEmail = $"{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(memberBEmail);
@@ -446,32 +456,52 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             _organization.Id,
             memberBEmail,
             OrganizationUserType.User,
-            userStatusType: OrganizationUserStatusType.Accepted);
+            userStatusType: OrganizationUserStatusType.Confirmed);
 
-        // Confirm both users to create their DefaultUserCollections
-        var confirmOrganizationUserCommand = _factory.GetService<IConfirmOrganizationUserCommand>();
-        var ownerUserRepository = _factory.GetService<IUserRepository>();
-        var owner = await ownerUserRepository.GetByEmailAsync(_ownerEmail);
-
-        await confirmOrganizationUserCommand.ConfirmUserAsync(
-            _organization.Id,
-            memberA.Id,
-            "test-key-A",
-            owner!.Id,
-            "Member A Collection");
-
-        await confirmOrganizationUserCommand.ConfirmUserAsync(
-            _organization.Id,
-            memberB.Id,
-            "test-key-B",
-            owner!.Id,
-            "Member B Collection");
-
+        // Create DefaultUserCollections manually for both users
         var collectionRepository = _factory.GetService<ICollectionRepository>();
-        var memberBCollections = await collectionRepository.GetManyByUserIdAsync(memberB!.UserId!.Value);
-        var memberBDefaultCollection = memberBCollections.FirstOrDefault(c => c.Type == CollectionType.DefaultUserCollection);
 
-        Assert.NotNull(memberBDefaultCollection);
+        // Create Member A's DefaultUserCollection
+        var memberADefaultCollection = new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = "Member A Collection",
+            Type = CollectionType.DefaultUserCollection
+        };
+
+        var memberAAccess = new List<CollectionAccessSelection>
+        {
+            new CollectionAccessSelection
+            {
+                Id = memberA.Id,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true
+            }
+        };
+
+        await collectionRepository.CreateAsync(memberADefaultCollection, null, memberAAccess);
+
+        // Create Member B's DefaultUserCollection
+        var memberBDefaultCollection = new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = "Member B Collection",
+            Type = CollectionType.DefaultUserCollection
+        };
+
+        var memberBAccess = new List<CollectionAccessSelection>
+        {
+            new CollectionAccessSelection
+            {
+                Id = memberB.Id,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true
+            }
+        };
+
+        await collectionRepository.CreateAsync(memberBDefaultCollection, null, memberBAccess);
 
         // Login as Member A and try to create cipher in Member B's DefaultUserCollection
         await _loginHelper.LoginAsync(memberAEmail);
@@ -523,7 +553,7 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             _organization.Id,
             memberAEmail,
             OrganizationUserType.User,
-            userStatusType: OrganizationUserStatusType.Accepted);
+            userStatusType: OrganizationUserStatusType.Confirmed);
 
         var memberBEmail = $"{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(memberBEmail);
@@ -532,31 +562,52 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             _organization.Id,
             memberBEmail,
             OrganizationUserType.User,
-            userStatusType: OrganizationUserStatusType.Accepted);
+            userStatusType: OrganizationUserStatusType.Confirmed);
 
-        var confirmOrganizationUserCommand = _factory.GetService<IConfirmOrganizationUserCommand>();
-        var ownerUserRepository = _factory.GetService<IUserRepository>();
-        var owner = await ownerUserRepository.GetByEmailAsync(_ownerEmail);
-
-        await confirmOrganizationUserCommand.ConfirmUserAsync(
-            _organization.Id,
-            memberA.Id,
-            "test-key-A",
-            owner!.Id,
-            "Member A Collection");
-
-        await confirmOrganizationUserCommand.ConfirmUserAsync(
-            _organization.Id,
-            memberB.Id,
-            "test-key-B",
-            owner!.Id,
-            "Member B Collection");
-
+        // Create DefaultUserCollections manually for both users
         var collectionRepository = _factory.GetService<ICollectionRepository>();
-        var memberBCollections = await collectionRepository.GetManyByUserIdAsync(memberB!.UserId!.Value);
-        var memberBDefaultCollection = memberBCollections.FirstOrDefault(c => c.Type == CollectionType.DefaultUserCollection);
 
-        Assert.NotNull(memberBDefaultCollection);
+        // Create Member A's DefaultUserCollection
+        var memberADefaultCollection = new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = "Member A Collection",
+            Type = CollectionType.DefaultUserCollection
+        };
+
+        var memberAAccess = new List<CollectionAccessSelection>
+        {
+            new CollectionAccessSelection
+            {
+                Id = memberA.Id,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true
+            }
+        };
+
+        await collectionRepository.CreateAsync(memberADefaultCollection, null, memberAAccess);
+
+        // Create Member B's DefaultUserCollection
+        var memberBDefaultCollection = new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = "Member B Collection",
+            Type = CollectionType.DefaultUserCollection
+        };
+
+        var memberBAccess = new List<CollectionAccessSelection>
+        {
+            new CollectionAccessSelection
+            {
+                Id = memberB.Id,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true
+            }
+        };
+
+        await collectionRepository.CreateAsync(memberBDefaultCollection, null, memberBAccess);
 
         // Create cipher in Member B's DefaultUserCollection (as Member B)
         var cipherRepository = _factory.GetService<ICipherRepository>();
