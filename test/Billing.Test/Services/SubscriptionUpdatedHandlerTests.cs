@@ -34,10 +34,8 @@ public class SubscriptionUpdatedHandlerTests
     private readonly IStripeFacade _stripeFacade;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
-    private readonly IProviderService _providerService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IProviderRepository _providerRepository;
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly IOrganizationEnableCommand _organizationEnableCommand;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
@@ -77,13 +75,11 @@ public class SubscriptionUpdatedHandlerTests
             _stripeEventService,
             _stripeEventUtilityService,
             _organizationService,
-            _providerService,
             _stripeFacade,
             _organizationSponsorshipRenewCommand,
             _userService,
             _pushNotificationService,
             _organizationRepository,
-            _providerRepository,
             _schedulerFactory,
             _organizationEnableCommand,
             _organizationDisableCommand,

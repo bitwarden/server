@@ -21,13 +21,11 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IOrganizationService _organizationService;
-    private readonly IProviderService _providerService;
     private readonly IStripeFacade _stripeFacade;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IProviderRepository _providerRepository;
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly IOrganizationEnableCommand _organizationEnableCommand;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
@@ -41,13 +39,11 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IStripeEventService stripeEventService,
         IStripeEventUtilityService stripeEventUtilityService,
         IOrganizationService organizationService,
-        IProviderService providerService,
         IStripeFacade stripeFacade,
         IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
         IUserService userService,
         IPushNotificationService pushNotificationService,
         IOrganizationRepository organizationRepository,
-        IProviderRepository providerRepository,
         ISchedulerFactory schedulerFactory,
         IOrganizationEnableCommand organizationEnableCommand,
         IOrganizationDisableCommand organizationDisableCommand,
