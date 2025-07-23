@@ -1,11 +1,11 @@
-#nullable disable
+﻿#nullable disable
 // FIXME: Update this file to be null safe and then delete the line above
 
 using System.Text.Json;
 using Bit.Core.Utilities;
-using Bit.Infrastructure.EntityFramework.Vault.Models;
-using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Enums;
+using Bit.Core.Vault.Models.Data;
+using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Factories;
@@ -46,7 +46,7 @@ public class CipherSeeder
                 }
             }
         };
-        
+
         var cipher = new Cipher
         {
             Id = CoreHelpers.GenerateComb(),
@@ -57,10 +57,10 @@ public class CipherSeeder
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow
         };
-        
+
         return cipher;
     }
-    
+
     /// <summary>
     /// Creates a secure note
     /// </summary>
@@ -78,7 +78,7 @@ public class CipherSeeder
             Notes = cryptoService.EncryptText(notes, encryptionKey),
             Type = SecureNoteType.Generic
         };
-        
+
         var cipher = new Cipher
         {
             Id = CoreHelpers.GenerateComb(),
@@ -89,10 +89,10 @@ public class CipherSeeder
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow
         };
-        
+
         return cipher;
     }
-    
+
     /// <summary>
     /// Creates a credit card item
     /// </summary>
@@ -121,7 +121,7 @@ public class CipherSeeder
             ExpYear = !string.IsNullOrEmpty(expYear) ? cryptoService.EncryptText(expYear, encryptionKey) : null,
             Code = !string.IsNullOrEmpty(code) ? cryptoService.EncryptText(code, encryptionKey) : null
         };
-        
+
         var cipher = new Cipher
         {
             Id = CoreHelpers.GenerateComb(),
@@ -132,10 +132,10 @@ public class CipherSeeder
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow
         };
-        
+
         return cipher;
     }
-    
+
     /// <summary>
     /// Creates an identity item
     /// </summary>
@@ -162,7 +162,7 @@ public class CipherSeeder
             Email = !string.IsNullOrEmpty(email) ? cryptoService.EncryptText(email, encryptionKey) : null,
             Phone = !string.IsNullOrEmpty(phone) ? cryptoService.EncryptText(phone, encryptionKey) : null
         };
-        
+
         var cipher = new Cipher
         {
             Id = CoreHelpers.GenerateComb(),
@@ -173,10 +173,10 @@ public class CipherSeeder
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow
         };
-        
+
         return cipher;
     }
-    
+
     /// <summary>
     /// Generates sample login data
     /// </summary>
@@ -195,7 +195,7 @@ public class CipherSeeder
             ("Apple ID", "apple@icloud.com", "https://appleid.apple.com", "Appl3!Cloud#ID"),
             ("Dropbox", "storage@user.com", "https://dropbox.com", "Dr0pb0x!Sync")
         };
-        
+
         public static readonly (string name, string content)[] SecureNotes = new[]
         {
             ("WiFi Password", "Network: HomeWiFi\nPassword: SuperSecure#WiFi2024\nRouter IP: 192.168.1.1"),
@@ -204,7 +204,7 @@ public class CipherSeeder
             ("Recovery Codes", "Google: 1234 5678\nGitHub: abcd efgh\nMicrosoft: 9876 5432"),
             ("Meeting Notes", "Project standup every Monday 9am\nZoom ID: 123-456-7890\nPasscode: Meet123")
         };
-        
+
         public static readonly (string name, string number, string holder, string brand)[] Cards = new[]
         {
             ("Personal Visa", "4111111111111111", "John Doe", "Visa"),
@@ -213,7 +213,7 @@ public class CipherSeeder
             ("Online Shopping", "6011000000000004", "Shop User", "Discover"),
             ("Backup Card", "4222222222222", "Emergency Fund", "Visa")
         };
-        
+
         public static readonly (string title, string first, string last, string email)[] Identities = new[]
         {
             ("Mr.", "John", "Doe", "john.doe@example.com"),

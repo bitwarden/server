@@ -1,6 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
-using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Seeder.Recipes;
 using Bit.Seeder.Services;
 using CommandDotNet;
@@ -75,12 +74,12 @@ public class Program
         var passwordHasher = scopedServices.GetRequiredService<IPasswordHasher<User>>();
 
         var recipe = new OrganizationWithUsersAndVaultItemsRecipe(db);
-        
+
         Console.WriteLine($"🚀 Creating organization '{name}' with {users} users and vault items...");
-        
+
         var (org, userCount, totalItemCount) = await recipe.CreateOrganizationWithUsersAndItems(
-            name, 
-            domain, 
+            name,
+            domain,
             password,
             cryptoService,
             dataProtection,
@@ -89,7 +88,7 @@ public class Program
             minItems,
             maxItems
         );
-        
+
         Console.WriteLine($"✅ Successfully created:");
         Console.WriteLine($"   - Organization: {org.Name} (ID: {org.Id})");
         Console.WriteLine($"   - Users: {userCount}");

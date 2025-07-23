@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Bit.Core.Enums;
 
@@ -19,7 +19,7 @@ public class RustSeederCryptoService : ISeederCryptoService
     //     int kdf_type,
     //     int iterations,
     //     out int key_length);
-    
+
     public byte[] DeriveKey(string password, string salt, KdfType kdf, int iterations)
     {
         // TODO: Replace with Rust SDK call
@@ -29,10 +29,10 @@ public class RustSeederCryptoService : ISeederCryptoService
         // Marshal.Copy(keyPtr, key, 0, keyLength);
         // free_buffer(keyPtr); // Rust must provide memory cleanup
         // return key;
-        
+
         throw new NotImplementedException("Waiting for Rust SDK implementation");
     }
-    
+
     public string ComputePasswordHash(byte[] masterKey, string password)
     {
         // TODO: Replace with Rust SDK call
@@ -41,10 +41,10 @@ public class RustSeederCryptoService : ISeederCryptoService
         // var hash = Marshal.PtrToStringUTF8(hashPtr);
         // free_string(hashPtr);
         // return hash;
-        
+
         throw new NotImplementedException("Waiting for Rust SDK implementation");
     }
-    
+
     public byte[] GenerateUserKey()
     {
         // TODO: Replace with Rust SDK call
@@ -54,10 +54,10 @@ public class RustSeederCryptoService : ISeederCryptoService
         // Marshal.Copy(keyPtr, key, 0, keyLength);
         // free_buffer(keyPtr);
         // return key;
-        
+
         throw new NotImplementedException("Waiting for Rust SDK implementation");
     }
-    
+
     public string EncryptUserKey(byte[] userKey, byte[] masterKey)
     {
         // TODO: Replace with Rust SDK call
@@ -67,10 +67,10 @@ public class RustSeederCryptoService : ISeederCryptoService
         // var encrypted = Marshal.PtrToStringUTF8(encryptedPtr);
         // free_string(encryptedPtr);
         // return encrypted;
-        
+
         throw new NotImplementedException("Waiting for Rust SDK implementation");
     }
-    
+
     public (string publicKey, string privateKey) GenerateUserKeyPair()
     {
         // TODO: Replace with Rust SDK call
@@ -80,10 +80,10 @@ public class RustSeederCryptoService : ISeederCryptoService
         // var privateKey = Marshal.PtrToStringUTF8(result.private_key);
         // free_keypair(result);
         // return (publicKey, privateKey);
-        
+
         throw new NotImplementedException("Waiting for Rust SDK implementation");
     }
-    
+
     public string EncryptPrivateKey(string privateKey, byte[] userKey)
     {
         // TODO: Replace with Rust SDK call
@@ -92,18 +92,18 @@ public class RustSeederCryptoService : ISeederCryptoService
         // var encrypted = Marshal.PtrToStringUTF8(encryptedPtr);
         // free_string(encryptedPtr);
         // return encrypted;
-        
+
         throw new NotImplementedException("Waiting for Rust SDK implementation");
     }
-    
+
     public byte[] GenerateOrganizationKey()
     {
         // TODO: Replace with Rust SDK call
         // Same pattern as GenerateUserKey
-        
+
         throw new NotImplementedException("Waiting for Rust SDK implementation");
     }
-    
+
     public string EncryptText(string plainText, byte[] key)
     {
         // TODO: Replace with Rust SDK call
@@ -112,7 +112,7 @@ public class RustSeederCryptoService : ISeederCryptoService
         // var encrypted = Marshal.PtrToStringUTF8(encryptedPtr);
         // free_string(encryptedPtr);
         // return encrypted;
-        
+
         throw new NotImplementedException("Waiting for Rust SDK implementation");
     }
 }

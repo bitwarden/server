@@ -1,11 +1,11 @@
-#nullable enable
+﻿#nullable enable
 
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Identity;
+using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Enums;
 using Bit.Seeder.Services;
-using Bit.Infrastructure.EntityFramework.Repositories;
-using Bit.Infrastructure.EntityFramework.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.DbSeederUtility;
 
@@ -17,7 +17,7 @@ public static class ServiceProviderFactory
     private static IServiceProvider? _cachedProvider;
     private static SeederEnvironment? _cachedEnvironment;
     private static DatabaseProvider? _cachedDatabase;
-    
+
     /// <summary>
     /// Gets or creates a service provider for the specified environment and database
     /// </summary>
@@ -30,17 +30,17 @@ public static class ServiceProviderFactory
         {
             return _cachedProvider;
         }
-        
+
         var services = new ServiceCollection();
         ServiceCollectionExtension.ConfigureServices(services, environment, database);
-        
+
         _cachedProvider = services.BuildServiceProvider();
         _cachedEnvironment = environment;
         _cachedDatabase = database;
-        
+
         return _cachedProvider;
     }
-    
+
     /// <summary>
     /// Creates a new scope and returns the required services for seeding operations
     /// </summary>
@@ -50,7 +50,7 @@ public static class ServiceProviderFactory
     {
         var provider = GetServiceProvider(environment, database);
         var scope = provider.CreateScope();
-        
+
         return new SeederServiceScope(scope);
     }
 }
@@ -61,23 +61,23 @@ public static class ServiceProviderFactory
 public class SeederServiceScope : IDisposable
 {
     private readonly IServiceScope _scope;
-    
+
     public DatabaseContext Database { get; }
     public ISeederCryptoService CryptoService { get; }
     public IDataProtectionService DataProtection { get; }
     public IPasswordHasher<User> PasswordHasher { get; }
-    
+
     internal SeederServiceScope(IServiceScope scope)
     {
         _scope = scope;
         var provider = scope.ServiceProvider;
-        
+
         Database = provider.GetRequiredService<DatabaseContext>();
         CryptoService = provider.GetRequiredService<ISeederCryptoService>();
         DataProtection = provider.GetRequiredService<IDataProtectionService>();
         PasswordHasher = provider.GetRequiredService<IPasswordHasher<User>>();
     }
-    
+
     public void Dispose()
     {
         _scope.Dispose();

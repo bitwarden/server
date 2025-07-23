@@ -12,11 +12,11 @@ public class OrganizationWithUsersRecipe(DatabaseContext db, ISeederCryptoServic
     public Guid Seed(string name, int users, string domain, string defaultPassword = "Test123!@#")
     {
         // TODO: When Rust SDK is available, these crypto operations will use RustSeederCryptoService
-        
+
         // Create organization with proper crypto keys
         var organizationSeeder = new OrganizationSeeder(cryptoService);
         var organization = organizationSeeder.CreateEnterpriseWithCrypto(name, domain, users);
-        
+
         // Create admin user with proper crypto
         var userSeeder = new UserSeeder(cryptoService);
         var user = CreateUserWithPasswordHasher(userSeeder, $"admin@{domain}", defaultPassword, passwordHasher);
@@ -43,7 +43,7 @@ public class OrganizationWithUsersRecipe(DatabaseContext db, ISeederCryptoServic
 
         return organization.Id;
     }
-    
+
     private User CreateUserWithPasswordHasher(UserSeeder userSeeder, string email, string password, IPasswordHasher<User> passwordHasher)
     {
         // The UserSeeder now properly handles double-hashing internally

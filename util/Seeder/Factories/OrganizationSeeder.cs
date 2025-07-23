@@ -9,22 +9,22 @@ namespace Bit.Seeder.Factories;
 public class OrganizationSeeder
 {
     private readonly ISeederCryptoService _cryptoService;
-    
+
     public OrganizationSeeder(ISeederCryptoService cryptoService)
     {
         _cryptoService = cryptoService;
     }
-    
+
     public Organization CreateEnterpriseWithCrypto(string name, string domain, int seats)
     {
         // TODO: When Rust SDK is available, ISeederCryptoService will have a RustSeederCryptoService 
         // implementation that calls the Rust SDK via P/Invoke. For now, using C# implementation.
-        
+
         // Generate organization crypto keys
         var orgKey = _cryptoService.GenerateOrganizationKey();
         var (publicKey, privateKey) = _cryptoService.GenerateUserKeyPair();
         var encryptedPrivateKey = _cryptoService.EncryptPrivateKey(privateKey, orgKey);
-        
+
         return new Organization
         {
             Id = Guid.NewGuid(),
@@ -37,7 +37,7 @@ public class OrganizationSeeder
             PrivateKey = encryptedPrivateKey,
         };
     }
-    
+
     // Static factory method for backward compatibility
     public static Organization CreateEnterprise(string name, string domain, int seats)
     {
@@ -77,18 +77,18 @@ public static class OrgnaizationExtensions
             Status = OrganizationUserStatusType.Confirmed
         };
     }
-    
+
     // Service-aware version that properly encrypts the organization key
-    public static OrganizationUser CreateOrganizationUser(this Organization organization, User user, 
+    public static OrganizationUser CreateOrganizationUser(this Organization organization, User user,
         byte[] organizationKey, byte[] userPublicKey, ISeederCryptoService cryptoService)
     {
         // TODO: When Rust SDK is available, this encryption will use RustSeederCryptoService
         // The organization key needs to be encrypted with the user's public key
         // For now, this is a placeholder showing where the integration would happen
-        
+
         // Future implementation would be:
         // var encryptedOrgKey = cryptoService.EncryptWithUserPublicKey(organizationKey, userPublicKey);
-        
+
         return new OrganizationUser
         {
             Id = Guid.NewGuid(),

@@ -8,39 +8,39 @@ namespace Bit.Seeder.Factories;
 public class UserSeeder
 {
     private readonly ISeederCryptoService _cryptoService;
-    
+
     public UserSeeder(ISeederCryptoService cryptoService)
     {
         _cryptoService = cryptoService;
     }
-    
+
     public User CreateUser(string email, string password = "Test123!@#", KdfType kdf = KdfType.PBKDF2_SHA256, int kdfIterations = 600_000)
     {
         // TODO: When Rust SDK is available, ISeederCryptoService will have a RustSeederCryptoService 
         // implementation that calls the Rust SDK via P/Invoke. For now, using C# implementation.
-        
+
         // Example of future Rust SDK call (currently in SeederCryptoService):
         // var masterKey = _cryptoService.DeriveKey(password, email, kdf, kdfIterations);
         // This would eventually call: RustSdk.DeriveKey(password, email, kdf, kdfIterations)
-        
+
         var salt = email; // Bitwarden uses email as salt
         var masterKey = _cryptoService.DeriveKey(password, salt, kdf, kdfIterations);
-        
+
         // IMPORTANT: Bitwarden uses double-hashing for password storage
         // 1. First create the Bitwarden hash (what the client sends during auth)
         var bitwardenHash = _cryptoService.ComputePasswordHash(masterKey, password);
-        
+
         // 2. Then hash that with Identity's PasswordHasher (what gets stored in DB)
         var tempUser = new User { Email = email };
         var identityPasswordHasher = new PasswordHasher<User>();
         var passwordHash = identityPasswordHasher.HashPassword(tempUser, bitwardenHash);
-        
+
         // Generate crypto keys
         var userKey = _cryptoService.GenerateUserKey();
         var encryptedUserKey = _cryptoService.EncryptUserKey(userKey, masterKey);
         var (publicKey, privateKey) = _cryptoService.GenerateUserKeyPair();
         var encryptedPrivateKey = _cryptoService.EncryptPrivateKey(privateKey, userKey);
-        
+
         return new User
         {
             Id = Guid.NewGuid(),
@@ -55,7 +55,7 @@ public class UserSeeder
             KdfIterations = kdfIterations,
         };
     }
-    
+
     // Static factory method for backward compatibility
     public static User CreateUser(string email)
     {
@@ -75,10 +75,10 @@ public class UserSeeder
             KdfIterations = 600_000,
         };
     }
-    
+
     // Static factory method used by complex recipes (OrganizationWithUsersAndVaultItemsRecipe)
     public static User CreateUser(
-        string email, 
+        string email,
         string password,
         ISeederCryptoService cryptoService,
         IDataProtectionService dataProtection,
@@ -88,23 +88,23 @@ public class UserSeeder
         // TODO: When Rust SDK is available, this will use RustSeederCryptoService
         // For now, delegating to instance method via temporary instance
         var seeder = new UserSeeder(cryptoService);
-        
+
         // Use the provided user key instead of generating a new one
         var salt = email; // Bitwarden uses email as salt
         var masterKey = cryptoService.DeriveKey(password, salt, KdfType.PBKDF2_SHA256, 600_000);
-        
+
         // IMPORTANT: Bitwarden uses double-hashing for password storage
         // 1. First create the Bitwarden hash (what the client sends during auth)
         var bitwardenHash = cryptoService.ComputePasswordHash(masterKey, password);
-        
+
         // 2. Then hash that with Identity's PasswordHasher (what gets stored in DB)
         var tempUser = new User { Email = email };
         var passwordHash = passwordHasher.HashPassword(tempUser, bitwardenHash);
-        
+
         var encryptedUserKey = cryptoService.EncryptUserKey(userKey, masterKey);
         var (publicKey, privateKey) = cryptoService.GenerateUserKeyPair();
         var encryptedPrivateKey = cryptoService.EncryptPrivateKey(privateKey, userKey);
-        
+
         return new User
         {
             Id = Guid.NewGuid(),
@@ -119,7 +119,7 @@ public class UserSeeder
             KdfIterations = 600_000,
         };
     }
-    
+
     private string GenerateApiKey()
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";

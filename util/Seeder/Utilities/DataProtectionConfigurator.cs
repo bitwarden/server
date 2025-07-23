@@ -1,6 +1,5 @@
-#nullable enable
+﻿#nullable enable
 
-using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -17,7 +16,7 @@ namespace Bit.Seeder.Utilities;
 public static class DataProtectionConfigurator
 {
     public static void ConfigureDataProtection(
-        IServiceCollection services, 
+        IServiceCollection services,
         GlobalSettings globalSettings,
         SeederEnvironment environment = SeederEnvironment.Auto)
     {
@@ -40,10 +39,10 @@ public static class DataProtectionConfigurator
                 break;
 
             case SeederEnvironment.SelfHosted:
-                var directory = globalSettings.DataProtection?.Directory 
+                var directory = globalSettings.DataProtection?.Directory
                     ?? "/etc/bitwarden/core/aspnet-dataprotection";
                 Console.WriteLine($"[Seeder] Using self-hosted data protection: {directory}");
-                
+
                 // Create directory if it doesn't exist
                 Directory.CreateDirectory(directory);
                 builder.PersistKeysToFileSystem(new DirectoryInfo(directory));
@@ -57,7 +56,7 @@ public static class DataProtectionConfigurator
                 }
 
                 Console.WriteLine("[Seeder] Using cloud data protection with Azure blob storage");
-                
+
                 // Get certificate for key protection
                 X509Certificate2? cert = null;
                 if (CoreHelpers.SettingHasValue(globalSettings.DataProtection?.CertificateThumbprint))
@@ -69,9 +68,9 @@ public static class DataProtectionConfigurator
                 else if (CoreHelpers.SettingHasValue(globalSettings.DataProtection?.CertificatePassword))
                 {
                     cert = CoreHelpers.GetBlobCertificateAsync(
-                        globalSettings.Storage.ConnectionString, 
+                        globalSettings.Storage.ConnectionString,
                         "certificates",
-                        "dataprotection.pfx", 
+                        "dataprotection.pfx",
                         globalSettings.DataProtection.CertificatePassword)
                         .GetAwaiter().GetResult();
                     Console.WriteLine("[Seeder] Using certificate from blob storage");
@@ -85,8 +84,8 @@ public static class DataProtectionConfigurator
 
                 builder
                     .PersistKeysToAzureBlobStorage(
-                        globalSettings.Storage.ConnectionString, 
-                        "aspnet-dataprotection", 
+                        globalSettings.Storage.ConnectionString,
+                        "aspnet-dataprotection",
                         "keys.xml")
                     .ProtectKeysWithCertificate(cert);
                 break;
@@ -94,7 +93,7 @@ public static class DataProtectionConfigurator
             case SeederEnvironment.Ephemeral:
                 var ephemeralDir = "/etc/bitwarden/core/aspnet-dataprotection";
                 Console.WriteLine($"[Seeder] Using ephemeral environment data protection: {ephemeralDir}");
-                
+
                 // Create directory if it doesn't exist (for local testing)
                 Directory.CreateDirectory(ephemeralDir);
                 builder.PersistKeysToFileSystem(new DirectoryInfo(ephemeralDir));

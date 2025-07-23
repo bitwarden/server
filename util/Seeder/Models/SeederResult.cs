@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 namespace Bit.Seeder.Models;
 
@@ -11,7 +11,7 @@ public class SeederResult
     public string? ErrorMessage { get; set; }
     public Exception? Exception { get; set; }
     public Dictionary<string, object> Data { get; set; } = new();
-    
+
     /// <summary>
     /// Creates a successful result
     /// </summary>
@@ -24,7 +24,7 @@ public class SeederResult
         }
         return result;
     }
-    
+
     /// <summary>
     /// Creates a failure result
     /// </summary>
@@ -45,7 +45,7 @@ public class SeederResult
 public class SeederResult<T> : SeederResult
 {
     public T? Value { get; set; }
-    
+
     /// <summary>
     /// Creates a successful result with data
     /// </summary>
@@ -57,7 +57,7 @@ public class SeederResult<T> : SeederResult
             Value = value
         };
     }
-    
+
     /// <summary>
     /// Creates a failure result
     /// </summary>

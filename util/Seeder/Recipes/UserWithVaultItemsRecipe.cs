@@ -1,8 +1,8 @@
-#nullable enable
+﻿#nullable enable
 
 using Bit.Infrastructure.EntityFramework.Models;
-using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Services;
 using LinqToDB.EntityFrameworkCore;
@@ -32,18 +32,18 @@ public class UserWithVaultItemsRecipe(DatabaseContext db)
     {
         // Generate user key - THIS IS THE KEY WE'LL USE FOR EVERYTHING
         var userKey = cryptoService.GenerateUserKey();
-        
+
         // Create the user with the same key
         var user = UserSeeder.CreateUser(email, password, cryptoService, dataProtection, passwordHasher, userKey);
-        
+
         // Save user first
         db.Users.Add(user);
         await db.SaveChangesAsync();
-        
+
         // Now create vault items with THE SAME userKey
         var ciphers = new List<Cipher>();
         var random = new Random();
-        
+
         // Create login items
         var logins = CipherSeeder.SampleData.Logins.OrderBy(_ => random.Next()).Take(loginCount);
         foreach (var (name, username, uri, samplePassword) in logins)
@@ -54,7 +54,7 @@ public class UserWithVaultItemsRecipe(DatabaseContext db)
                 notes: $"Created with {email}");
             ciphers.Add(cipher);
         }
-        
+
         // Create secure notes
         var notes = CipherSeeder.SampleData.SecureNotes.OrderBy(_ => random.Next()).Take(noteCount);
         foreach (var (name, content) in notes)
@@ -64,7 +64,7 @@ public class UserWithVaultItemsRecipe(DatabaseContext db)
                 user.Id, null, userKey, cryptoService);
             ciphers.Add(cipher);
         }
-        
+
         // Create cards
         var cards = CipherSeeder.SampleData.Cards.OrderBy(_ => random.Next()).Take(cardCount);
         foreach (var (name, number, holder, brand) in cards)
@@ -76,7 +76,7 @@ public class UserWithVaultItemsRecipe(DatabaseContext db)
                 notes: "Test card - do not use");
             ciphers.Add(cipher);
         }
-        
+
         // Create identities
         var identities = CipherSeeder.SampleData.Identities.OrderBy(_ => random.Next()).Take(identityCount);
         foreach (var (title, first, last, identityEmail) in identities)
@@ -88,23 +88,23 @@ public class UserWithVaultItemsRecipe(DatabaseContext db)
                 notes: "Sample identity data");
             ciphers.Add(cipher);
         }
-        
+
         // Bulk insert vault items
         if (ciphers.Any())
         {
             await db.BulkCopyAsync(ciphers);
         }
-        
+
         Console.WriteLine($"✅ Created user {email} with {ciphers.Count} vault items");
         Console.WriteLine($"   Password: {password}");
         Console.WriteLine($"   Logins: {loginCount}");
         Console.WriteLine($"   Secure Notes: {noteCount}");
         Console.WriteLine($"   Cards: {cardCount}");
         Console.WriteLine($"   Identities: {identityCount}");
-        
+
         return (user, ciphers.Count);
     }
-    
+
     /// <summary>
     /// Creates multiple users with vault items
     /// </summary>
@@ -119,7 +119,7 @@ public class UserWithVaultItemsRecipe(DatabaseContext db)
         int itemsPerUser = 5)
     {
         var totalItems = 0;
-        
+
         for (int i = 1; i <= userCount; i++)
         {
             var email = $"{emailPrefix}{i}@{domain}";
@@ -133,10 +133,10 @@ public class UserWithVaultItemsRecipe(DatabaseContext db)
                 noteCount: 2,
                 cardCount: 1,
                 identityCount: 1);
-                
+
             totalItems += itemCount;
         }
-        
+
         return totalItems;
     }
 }

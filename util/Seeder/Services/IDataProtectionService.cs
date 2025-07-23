@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 namespace Bit.Seeder.Services;
 
@@ -13,7 +13,7 @@ public interface IDataProtectionService
     /// <param name="value">The value to protect</param>
     /// <returns>Protected value with "P|" prefix, or original value if null/empty</returns>
     string Protect(string? value);
-    
+
     /// <summary>
     /// Unprotects a value retrieved from the database
     /// </summary>
