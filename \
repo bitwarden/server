@@ -1,0 +1,18 @@
+Check for unverified bank account in free trial and inactive subscription warnings.
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# Date:      Wed Jul 23 10:59:25 2025 -0500
+#
+# interactive rebase in progress; onto 829c3ed1d
+# Last commands done (2 commands done):
+#    pick d29d5da21 [NO LOGIC] Move query to core
+#    reword 07639d84f WIP
+# No commands remaining.
+# You are currently editing a commit while rebasing branch 'billing/PM-24067/bank-account-free-trial-warnings' on '829c3ed1d'.
+#
+# Changes to be committed:
+#	modified:   src/Core/Billing/Organizations/Queries/GetOrganizationWarningsQuery.cs
+#	modified:   test/Core.Test/Billing/Organizations/Queries/GetOrganizationWarningsQueryTests.cs
+#

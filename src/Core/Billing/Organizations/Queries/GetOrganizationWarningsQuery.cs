@@ -4,7 +4,9 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -19,6 +21,8 @@ using ResellerRenewalWarning =
 
 namespace Bit.Core.Billing.Organizations.Queries;
 
+using static StripeConstants;
+
 public interface IGetOrganizationWarningsQuery
 {
     Task<OrganizationWarnings> Run(
@@ -28,6 +32,7 @@ public interface IGetOrganizationWarningsQuery
 public class GetOrganizationWarningsQuery(
     ICurrentContext currentContext,
     IProviderRepository providerRepository,
+    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IGetOrganizationWarningsQuery
 {
@@ -67,7 +72,7 @@ public class GetOrganizationWarningsQuery(
 
         if (subscription is not
             {
-                Status: StripeConstants.SubscriptionStatus.Trialing,
+                Status: SubscriptionStatus.Trialing,
                 TrialEnd: not null,
                 Customer: not null
             })
@@ -77,10 +82,13 @@ public class GetOrganizationWarningsQuery(
 
         var customer = subscription.Customer;
 
+        var hasUnverifiedBankAccount = await HasUnverifiedBankAccount(organization);
+
         var hasPaymentMethod =
             !string.IsNullOrEmpty(customer.InvoiceSettings.DefaultPaymentMethodId) ||
             !string.IsNullOrEmpty(customer.DefaultSourceId) ||
-            customer.Metadata.ContainsKey(StripeConstants.MetadataKeys.BraintreeCustomerId);
+            hasUnverifiedBankAccount ||
+            customer.Metadata.ContainsKey(MetadataKeys.BraintreeCustomerId);
 
         if (hasPaymentMethod)
         {
@@ -99,49 +107,58 @@ public class GetOrganizationWarningsQuery(
         Provider? provider,
         Subscription subscription)
     {
-        if (organization.Enabled && subscription.Status is StripeConstants.SubscriptionStatus.Trialing)
-        {
-            var isStripeCustomerWithoutPayment =
-                subscription.Customer.InvoiceSettings.DefaultPaymentMethodId is null;
-            var isBraintreeCustomer =
-                subscription.Customer.Metadata.ContainsKey(BraintreeCustomerIdKey);
-            var hasNoPaymentMethod = isStripeCustomerWithoutPayment && !isBraintreeCustomer;
+        var isOrganizationOwner = await currentContext.OrganizationOwner(organization.Id);
 
-            if (hasNoPaymentMethod && await currentContext.OrganizationOwner(organization.Id))
+        switch (organization.Enabled)
+        {
+            // Member of an enabled, trialing organization.
+            case true when subscription.Status is SubscriptionStatus.Trialing:
             {
-                return new InactiveSubscriptionWarning { Resolution = "add_payment_method_optional_trial" };
+                var hasUnverifiedBankAccount = await HasUnverifiedBankAccount(organization);
+
+                var hasPaymentMethod =
+                    !string.IsNullOrEmpty(subscription.Customer.InvoiceSettings.DefaultPaymentMethodId) ||
+                    !string.IsNullOrEmpty(subscription.Customer.DefaultSourceId) ||
+                    hasUnverifiedBankAccount ||
+                    subscription.Customer.Metadata.ContainsKey(MetadataKeys.BraintreeCustomerId);
+
+                // If this member is the owner and there's no payment method on file, ask them to add one.
+                return isOrganizationOwner && !hasPaymentMethod
+                    ? new InactiveSubscriptionWarning { Resolution = "add_payment_method_optional_trial" }
+                    : null;
             }
-        }
-
-        if (organization.Enabled ||
-            subscription.Status is not StripeConstants.SubscriptionStatus.Unpaid
-                and not StripeConstants.SubscriptionStatus.Canceled)
-        {
-            return null;
-        }
-
-        if (provider != null)
-        {
-            return new InactiveSubscriptionWarning { Resolution = "contact_provider" };
-        }
-
-        if (await currentContext.OrganizationOwner(organization.Id))
-        {
-            return subscription.Status switch
+            // Member of disabled and unpaid or canceled organization.
+            case false when subscription.Status is SubscriptionStatus.Unpaid or SubscriptionStatus.Canceled:
             {
-                StripeConstants.SubscriptionStatus.Unpaid => new InactiveSubscriptionWarning
+                // If the organization is managed by a provider, return a warning asking them to contact the provider.
+                if (provider != null)
                 {
-                    Resolution = "add_payment_method"
-                },
-                StripeConstants.SubscriptionStatus.Canceled => new InactiveSubscriptionWarning
-                {
-                    Resolution = "resubscribe"
-                },
-                _ => null
-            };
-        }
+                    return new InactiveSubscriptionWarning { Resolution = "contact_provider" };
+                }
 
-        return new InactiveSubscriptionWarning { Resolution = "contact_owner" };
+                /* If the organization is not managed by a provider and this user is the owner, return an action warning based
+                   on the subscription status. */
+                if (isOrganizationOwner)
+                {
+                    return subscription.Status switch
+                    {
+                        SubscriptionStatus.Unpaid => new InactiveSubscriptionWarning
+                        {
+                            Resolution = "add_payment_method"
+                        },
+                        SubscriptionStatus.Canceled => new InactiveSubscriptionWarning
+                        {
+                            Resolution = "resubscribe"
+                        },
+                        _ => null
+                    };
+                }
+
+                // Otherwise, this member is not the owner, and we need to ask them to contact the owner.
+                return new InactiveSubscriptionWarning { Resolution = "contact_owner" };
+            }
+            default: return null;
+        }
     }
 
     private async Task<ResellerRenewalWarning?> GetResellerRenewalWarning(
@@ -156,7 +173,7 @@ public class GetOrganizationWarningsQuery(
             return null;
         }
 
-        if (subscription.CollectionMethod != StripeConstants.CollectionMethod.SendInvoice)
+        if (subscription.CollectionMethod != CollectionMethod.SendInvoice)
         {
             return null;
         }
@@ -166,8 +183,8 @@ public class GetOrganizationWarningsQuery(
         // ReSharper disable once ConvertIfStatementToSwitchStatement
         if (subscription is
             {
-                Status: StripeConstants.SubscriptionStatus.Trialing or StripeConstants.SubscriptionStatus.Active,
-                LatestInvoice: null or { Status: StripeConstants.InvoiceStatus.Paid }
+                Status: SubscriptionStatus.Trialing or SubscriptionStatus.Active,
+                LatestInvoice: null or { Status: InvoiceStatus.Paid }
             } && (subscription.CurrentPeriodEnd - now).TotalDays <= 14)
         {
             return new ResellerRenewalWarning
@@ -182,8 +199,8 @@ public class GetOrganizationWarningsQuery(
 
         if (subscription is
             {
-                Status: StripeConstants.SubscriptionStatus.Active,
-                LatestInvoice: { Status: StripeConstants.InvoiceStatus.Open, DueDate: not null }
+                Status: SubscriptionStatus.Active,
+                LatestInvoice: { Status: InvoiceStatus.Open, DueDate: not null }
             } && subscription.LatestInvoice.DueDate > now)
         {
             return new ResellerRenewalWarning
@@ -198,7 +215,7 @@ public class GetOrganizationWarningsQuery(
         }
 
         // ReSharper disable once InvertIf
-        if (subscription.Status == StripeConstants.SubscriptionStatus.PastDue)
+        if (subscription.Status == SubscriptionStatus.PastDue)
         {
             var openInvoices = await stripeAdapter.InvoiceSearchAsync(new InvoiceSearchOptions
             {
@@ -223,5 +240,23 @@ public class GetOrganizationWarningsQuery(
         }
 
         return null;
+    }
+
+    private async Task<bool> HasUnverifiedBankAccount(
+        Organization organization)
+    {
+        var setupIntentId = await setupIntentCache.Get(organization.Id);
+
+        if (string.IsNullOrEmpty(setupIntentId))
+        {
+            return false;
+        }
+
+        var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions
+        {
+            Expand = ["payment_method"]
+        });
+
+        return setupIntent.IsUnverifiedBankAccount();
     }
 }
