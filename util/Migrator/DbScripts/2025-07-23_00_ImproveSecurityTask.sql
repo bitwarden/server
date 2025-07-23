@@ -1,6 +1,7 @@
 CREATE OR ALTER PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
     @UserId UNIQUEIDENTIFIER,
     @Status TINYINT = NULL
+WITH RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON;
