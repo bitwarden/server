@@ -106,5 +106,5 @@ public class NoopSecretRepository : ISecretRepository
         return Task.FromResult(0);
     }
 
-    public Task<IEnumerable<Secret>> GetManyTrashedSecretsByIds(IEnumerable<Guid> ids) => throw new NotImplementedException();
+    public Task<IEnumerable<Secret>> GetManyTrashedSecretsByIds(IEnumerable<Guid> ids) => Task.FromResult<IEnumerable<Secret>>([]);
 }
