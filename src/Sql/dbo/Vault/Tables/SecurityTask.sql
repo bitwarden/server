@@ -26,3 +26,5 @@ CREATE NONCLUSTERED INDEX IX_SecurityTask_Status_OrgId_CreationDateDesc
     INCLUDE (CipherId, [Type], RevisionDate);
 
 GO
+
+UPDATE STATISTICS dbo.SecurityTask IX_SecurityTask_Status_OrgId_CreationDateDesc;

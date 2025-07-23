@@ -127,3 +127,14 @@ BEGIN
       INCLUDE (CipherId, [Type], RevisionDate);
 END
 GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID('dbo.CollectionCipher')
+        AND name = 'IX_CollectionCipher_CollectionId_CipherId'
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_CollectionCipher_CollectionId_CipherId
+        ON dbo.CollectionCipher (CollectionId, CipherId);
+END
