@@ -1,42 +1,40 @@
 ﻿// ReSharper disable InconsistentNaming
 
-#nullable enable
-
-using Bit.Api.Billing.Models.Responses.Organizations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Services;
 using Stripe;
 using static Bit.Core.Billing.Utilities;
-using FreeTrialWarning = Bit.Api.Billing.Models.Responses.Organizations.OrganizationWarningsResponse.FreeTrialWarning;
+using FreeTrialWarning = Bit.Core.Billing.Organizations.Models.OrganizationWarnings.FreeTrialWarning;
 using InactiveSubscriptionWarning =
-    Bit.Api.Billing.Models.Responses.Organizations.OrganizationWarningsResponse.InactiveSubscriptionWarning;
+    Bit.Core.Billing.Organizations.Models.OrganizationWarnings.InactiveSubscriptionWarning;
 using ResellerRenewalWarning =
-    Bit.Api.Billing.Models.Responses.Organizations.OrganizationWarningsResponse.ResellerRenewalWarning;
+    Bit.Core.Billing.Organizations.Models.OrganizationWarnings.ResellerRenewalWarning;
 
-namespace Bit.Api.Billing.Queries.Organizations;
+namespace Bit.Core.Billing.Organizations.Queries;
 
-public interface IOrganizationWarningsQuery
+public interface IGetOrganizationWarningsQuery
 {
-    Task<OrganizationWarningsResponse> Run(
+    Task<OrganizationWarnings> Run(
         Organization organization);
 }
 
-public class OrganizationWarningsQuery(
+public class GetOrganizationWarningsQuery(
     ICurrentContext currentContext,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService) : IOrganizationWarningsQuery
+    ISubscriberService subscriberService) : IGetOrganizationWarningsQuery
 {
-    public async Task<OrganizationWarningsResponse> Run(
+    public async Task<OrganizationWarnings> Run(
         Organization organization)
     {
-        var response = new OrganizationWarningsResponse();
+        var response = new OrganizationWarnings();
 
         var subscription =
             await subscriberService.GetSubscription(organization,

@@ -1,12 +1,12 @@
-﻿using Bit.Api.Billing.Queries.Organizations;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Services;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -15,17 +15,17 @@ using Stripe;
 using Stripe.TestHelpers;
 using Xunit;
 
-namespace Bit.Api.Test.Billing.Queries.Organizations;
+namespace Bit.Core.Test.Billing.Organizations.Queries;
 
 [SutProviderCustomize]
-public class OrganizationWarningsQueryTests
+public class GetOrganizationWarningsQueryTests
 {
     private static readonly string[] _requiredExpansions = ["customer", "latest_invoice", "test_clock"];
 
     [Theory, BitAutoData]
     public async Task Run_NoSubscription_NoWarnings(
         Organization organization,
-        SutProvider<OrganizationWarningsQuery> sutProvider)
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
         sutProvider.GetDependency<ISubscriberService>()
             .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
@@ -46,7 +46,7 @@ public class OrganizationWarningsQueryTests
     [Theory, BitAutoData]
     public async Task Run_Has_FreeTrialWarning(
         Organization organization,
-        SutProvider<OrganizationWarningsQuery> sutProvider)
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
         var now = DateTime.UtcNow;
 
@@ -82,7 +82,7 @@ public class OrganizationWarningsQueryTests
     [Theory, BitAutoData]
     public async Task Run_Has_InactiveSubscriptionWarning_ContactProvider(
         Organization organization,
-        SutProvider<OrganizationWarningsQuery> sutProvider)
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
         organization.Enabled = false;
 
@@ -109,7 +109,7 @@ public class OrganizationWarningsQueryTests
     [Theory, BitAutoData]
     public async Task Run_Has_InactiveSubscriptionWarning_AddPaymentMethod(
         Organization organization,
-        SutProvider<OrganizationWarningsQuery> sutProvider)
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
         organization.Enabled = false;
 
@@ -135,7 +135,7 @@ public class OrganizationWarningsQueryTests
     [Theory, BitAutoData]
     public async Task Run_Has_InactiveSubscriptionWarning_Resubscribe(
         Organization organization,
-        SutProvider<OrganizationWarningsQuery> sutProvider)
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
         organization.Enabled = false;
 
@@ -161,7 +161,7 @@ public class OrganizationWarningsQueryTests
     [Theory, BitAutoData]
     public async Task Run_Has_InactiveSubscriptionWarning_ContactOwner(
         Organization organization,
-        SutProvider<OrganizationWarningsQuery> sutProvider)
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
         organization.Enabled = false;
 
@@ -187,7 +187,7 @@ public class OrganizationWarningsQueryTests
     [Theory, BitAutoData]
     public async Task Run_Has_ResellerRenewalWarning_Upcoming(
         Organization organization,
-        SutProvider<OrganizationWarningsQuery> sutProvider)
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
         var now = DateTime.UtcNow;
 
@@ -225,7 +225,7 @@ public class OrganizationWarningsQueryTests
     [Theory, BitAutoData]
     public async Task Run_Has_ResellerRenewalWarning_Issued(
         Organization organization,
-        SutProvider<OrganizationWarningsQuery> sutProvider)
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
         var now = DateTime.UtcNow;
 
@@ -269,7 +269,7 @@ public class OrganizationWarningsQueryTests
     [Theory, BitAutoData]
     public async Task Run_Has_ResellerRenewalWarning_PastDue(
         Organization organization,
-        SutProvider<OrganizationWarningsQuery> sutProvider)
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
         var now = DateTime.UtcNow;
 

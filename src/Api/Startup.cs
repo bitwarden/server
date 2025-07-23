@@ -184,7 +184,6 @@ public class Startup
         services.AddImportServices();
         services.AddPhishingDomainServices(globalSettings);
 
-        services.AddBillingQueries();
         services.AddSendServices();
 
         // Authorization Handlers
