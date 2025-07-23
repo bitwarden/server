@@ -3,19 +3,19 @@ namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
 public class MasterPasswordPolicyData : IPolicyDataModel
 {
-    [JsonPropertyName("MinComplexity")]
+    [JsonPropertyName("minComplexity")]
     public int? MinComplexity { get; set; }
-    [JsonPropertyName("MinLength")]
+    [JsonPropertyName("minLength")]
     public int? MinLength { get; set; }
-    [JsonPropertyName("RequireLower")]
+    [JsonPropertyName("requireLower")]
     public bool? RequireLower { get; set; }
-    [JsonPropertyName("RequireUpper")]
+    [JsonPropertyName("requireUpper")]
     public bool? RequireUpper { get; set; }
-    [JsonPropertyName("RequireNumbers")]
+    [JsonPropertyName("requireNumbers")]
     public bool? RequireNumbers { get; set; }
-    [JsonPropertyName("RequireSpecial")]
+    [JsonPropertyName("requireSpecial")]
     public bool? RequireSpecial { get; set; }
-    [JsonPropertyName("EnforceOnLogin")]
+    [JsonPropertyName("enforceOnLogin")]
     public bool? EnforceOnLogin { get; set; }
 
     /// <summary>
