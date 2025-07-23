@@ -138,3 +138,16 @@ BEGIN
     CREATE NONCLUSTERED INDEX IX_CollectionCipher_CollectionId_CipherId
         ON dbo.CollectionCipher (CollectionId, CipherId);
 END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID('dbo.OrganizationUser')
+        AND name = 'IX_OrganizationUser_UserId_Status_Filtered'
+)
+BEGIN
+CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserId_Status_Filtered]
+    ON [dbo].[OrganizationUser] (UserId)
+    WHERE Status = 2;
+END
