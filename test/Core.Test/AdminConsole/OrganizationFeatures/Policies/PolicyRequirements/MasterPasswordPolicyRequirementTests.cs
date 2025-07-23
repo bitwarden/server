@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Test.AdminConsole.AutoFixture;
@@ -11,19 +12,38 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyRequire
 [SutProviderCustomize]
 public class MasterPasswordPolicyRequirementFactoryTests
 {
-    [Fact]
-    public void MasterPasswordPolicyData_CombineWith_Joins_Policy_Options()
+    [Theory, BitAutoData]
+    public void MasterPasswordPolicyData_CombineWith_Joins_Policy_Options(SutProvider<MasterPasswordPolicyRequirementFactory> sutProvider)
     {
-        var mpd1 = new MasterPasswordPolicyData { MinLength = 20, RequireLower = false, RequireSpecial = false };
-        var mpd2 = new MasterPasswordPolicyData { RequireLower = true };
-        var mpd3 = new MasterPasswordPolicyData { RequireSpecial = true };
+        var mpd1 = JsonSerializer.Serialize(new MasterPasswordPolicyData { MinLength = 20, RequireLower = false, RequireSpecial = false });
+        var mpd2 = JsonSerializer.Serialize(new MasterPasswordPolicyData { RequireLower = true });
+        var mpd3 = JsonSerializer.Serialize(new MasterPasswordPolicyData { RequireSpecial = true });
 
-        mpd1.CombineWith(mpd2);
-        mpd1.CombineWith(mpd3);
+        var policyDetails1 = new PolicyDetails
+        {
+            PolicyType = PolicyType.MasterPassword,
+            PolicyData = mpd1
+        };
 
-        Assert.Equal(20, mpd1.MinLength);
-        Assert.True(mpd1.RequireLower);
-        Assert.True(mpd1.RequireSpecial);
+        var policyDetails2 = new PolicyDetails
+        {
+            PolicyType = PolicyType.MasterPassword,
+            PolicyData = mpd2
+        };
+        var policyDetails3 = new PolicyDetails
+        {
+            PolicyType = PolicyType.MasterPassword,
+            PolicyData = mpd3
+        };
+
+
+        var actual = sutProvider.Sut.Create([policyDetails1, policyDetails2, policyDetails3]);
+
+        Assert.NotNull(actual);
+        Assert.True(actual.Enabled);
+        Assert.True(actual.EnforcedOptions.RequireLower);
+        Assert.True(actual.EnforcedOptions.RequireSpecial);
+        Assert.Equal(20, actual.EnforcedOptions.MinLength);
     }
 
     [Theory, BitAutoData]

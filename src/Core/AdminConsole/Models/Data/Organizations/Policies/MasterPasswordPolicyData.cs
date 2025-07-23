@@ -1,13 +1,21 @@
-﻿namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+﻿using System.Text.Json.Serialization;
+namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
 public class MasterPasswordPolicyData : IPolicyDataModel
 {
+    [JsonPropertyName("MinComplexity")]
     public int? MinComplexity { get; set; }
+    [JsonPropertyName("MinLength")]
     public int? MinLength { get; set; }
+    [JsonPropertyName("RequireLower")]
     public bool? RequireLower { get; set; }
+    [JsonPropertyName("RequireUpper")]
     public bool? RequireUpper { get; set; }
+    [JsonPropertyName("RequireNumbers")]
     public bool? RequireNumbers { get; set; }
+    [JsonPropertyName("RequireSpecial")]
     public bool? RequireSpecial { get; set; }
+    [JsonPropertyName("EnforceOnLogin")]
     public bool? EnforceOnLogin { get; set; }
 
     /// <summary>
