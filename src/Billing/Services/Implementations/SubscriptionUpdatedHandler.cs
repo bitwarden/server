@@ -190,7 +190,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     /// <summary>
     /// Checks if the provider subscription status has changed from a non-active to an active status type
-    /// If the previous status is already active(active,past-due,trialing) or cancelled, then this will return false.
+    /// If the previous status is already active(active,past-due,trialing),canceled,or null, then this will return false.
     /// </summary>
     /// <param name="parsedEvent">The event containing the previous subscription status</param>
     /// <param name="subscription">The current subscription status</param>
@@ -209,21 +209,12 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         return previousSubscription?.Status switch
         {
-            null
-                or StripeSubscriptionStatus.Canceled
-                or StripeSubscriptionStatus.Active
-                or StripeSubscriptionStatus.PastDue
-                or StripeSubscriptionStatus.Trialing => false,
-
-            _ => previousSubscription is
-            {
-                Status:
-                     StripeSubscriptionStatus.IncompleteExpired or
-                     StripeSubscriptionStatus.Paused or
-                     StripeSubscriptionStatus.Incomplete or
-                     StripeSubscriptionStatus.Unpaid
-            } &&
-                 subscription.Status == StripeSubscriptionStatus.Active
+            StripeSubscriptionStatus.IncompleteExpired
+                or StripeSubscriptionStatus.Paused
+                or StripeSubscriptionStatus.Incomplete
+                or StripeSubscriptionStatus.Unpaid
+                when subscription.Status == StripeSubscriptionStatus.Active => true,
+            _ => false
         };
     }
 
