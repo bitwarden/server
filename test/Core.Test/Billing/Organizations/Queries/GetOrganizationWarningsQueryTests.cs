@@ -110,7 +110,8 @@ public class GetOrganizationWarningsQueryTests
 
         sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(true);
         sutProvider.GetDependency<ISetupIntentCache>().Get(organization.Id).Returns(setupIntentId);
-        sutProvider.GetDependency<IStripeAdapter>().SetupIntentGet(setupIntentId).Returns(new SetupIntent
+        sutProvider.GetDependency<IStripeAdapter>().SetupIntentGet(setupIntentId, Arg.Is<SetupIntentGetOptions>(
+            options => options.Expand.Contains("payment_method"))).Returns(new SetupIntent
         {
             Status = "requires_action",
             NextAction = new SetupIntentNextAction
