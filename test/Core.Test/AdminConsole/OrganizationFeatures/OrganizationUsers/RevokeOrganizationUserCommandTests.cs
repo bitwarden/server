@@ -15,6 +15,7 @@ using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
+[SutProviderCustomize]
 public class RevokeOrganizationUserCommandTests
 {
 
@@ -74,9 +75,7 @@ public class RevokeOrganizationUserCommandTests
         }
         targetOrganizationUser.OrganizationId = organization.Id;
 
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(requestingOrganizationUser != null && requestingOrganizationUser.Type is OrganizationUserType.Owner);
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(requestingOrganizationUser != null && (requestingOrganizationUser.Type is OrganizationUserType.Owner or OrganizationUserType.Admin));
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
