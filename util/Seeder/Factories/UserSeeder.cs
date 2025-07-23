@@ -1,14 +1,66 @@
 ﻿using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.Models;
-using Bit.RustSDK;
+using Bit.Seeder.Services;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Seeder.Factories;
 
 public class UserSeeder
 {
+    private readonly ISeederCryptoService _cryptoService;
+    
+    public UserSeeder(ISeederCryptoService cryptoService)
+    {
+        _cryptoService = cryptoService;
+    }
+    
+    public User CreateUser(string email, string password = "Test123!@#", KdfType kdf = KdfType.PBKDF2_SHA256, int kdfIterations = 600_000)
+    {
+        // TODO: When Rust SDK is available, ISeederCryptoService will have a RustSeederCryptoService 
+        // implementation that calls the Rust SDK via P/Invoke. For now, using C# implementation.
+        
+        // Example of future Rust SDK call (currently in SeederCryptoService):
+        // var masterKey = _cryptoService.DeriveKey(password, email, kdf, kdfIterations);
+        // This would eventually call: RustSdk.DeriveKey(password, email, kdf, kdfIterations)
+        
+        var salt = email; // Bitwarden uses email as salt
+        var masterKey = _cryptoService.DeriveKey(password, salt, kdf, kdfIterations);
+        
+        // IMPORTANT: Bitwarden uses double-hashing for password storage
+        // 1. First create the Bitwarden hash (what the client sends during auth)
+        var bitwardenHash = _cryptoService.ComputePasswordHash(masterKey, password);
+        
+        // 2. Then hash that with Identity's PasswordHasher (what gets stored in DB)
+        var tempUser = new User { Email = email };
+        var identityPasswordHasher = new PasswordHasher<User>();
+        var passwordHash = identityPasswordHasher.HashPassword(tempUser, bitwardenHash);
+        
+        // Generate crypto keys
+        var userKey = _cryptoService.GenerateUserKey();
+        var encryptedUserKey = _cryptoService.EncryptUserKey(userKey, masterKey);
+        var (publicKey, privateKey) = _cryptoService.GenerateUserKeyPair();
+        var encryptedPrivateKey = _cryptoService.EncryptPrivateKey(privateKey, userKey);
+        
+        return new User
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            MasterPassword = passwordHash,
+            SecurityStamp = Guid.NewGuid().ToString(),
+            Key = encryptedUserKey,
+            PublicKey = publicKey,
+            PrivateKey = encryptedPrivateKey,
+            ApiKey = GenerateApiKey(),
+            Kdf = kdf,
+            KdfIterations = kdfIterations,
+        };
+    }
+    
+    // Static factory method for backward compatibility
     public static User CreateUser(string email)
     {
-        Console.WriteLine(NativeMethods.my_add(2, 3));
+        // TODO: This should be removed once all callers are updated to use DI
+        // For now, returning hardcoded values for backward compatibility
         return new User
         {
             Id = Guid.NewGuid(),
@@ -19,9 +71,60 @@ public class UserSeeder
             PublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Ww2chogqCpaAR7Uw448am4b7vDFXiM5kXjFlGfXBlrAdAqTTggEvTDlMNYqPlCo+mBM6iFmTTUY9rpZBvFskMnKvsvpJ47/fehAH2o2e3Ulv/5NFevaVCMCmpkBDtbMbO1A4a3btdRtCP8DsKWMefHauEpaoLxNTLWnOIZVfCMjsSgx2EvULHAZPTtbFwm4+UVKniM4ds4jvOsD85h4jn2aLs/jWJXFfxN8iVSqEqpC2TBvsPdyHb49xQoWWfF0Z6BiNqeNGKEU9Uos1pjL+kzhEzzSpH31PZT/ufJ/oo4+93wrUt57hb6f0jxiXhwd5yQ+9F6wVwpbfkq0IwhjOwIDAQAB",
             PrivateKey = "2.yN7l00BOlUE0Sb0M//Q53w==|EwKG/BduQRQ33Izqc/ogoBROIoI5dmgrxSo82sgzgAMIBt3A2FZ9vPRMY+GWT85JiqytDitGR3TqwnFUBhKUpRRAq4x7rA6A1arHrFp5Tp1p21O3SfjtvB3quiOKbqWk6ZaU1Np9HwqwAecddFcB0YyBEiRX3VwF2pgpAdiPbSMuvo2qIgyob0CUoC/h4Bz1be7Qa7B0Xw9/fMKkB1LpOm925lzqosyMQM62YpMGkjMsbZz0uPopu32fxzDWSPr+kekNNyLt9InGhTpxLmq1go/pXR2uw5dfpXc5yuta7DB0EGBwnQ8Vl5HPdDooqOTD9I1jE0mRyuBpWTTI3FRnu3JUh3rIyGBJhUmHqGZvw2CKdqHCIrQeQkkEYqOeJRJVdBjhv5KGJifqT3BFRwX/YFJIChAQpebNQKXe/0kPivWokHWwXlDB7S7mBZzhaAPidZvnuIhalE2qmTypDwHy22FyqV58T8MGGMchcASDi/QXI6kcdpJzPXSeU9o+NC68QDlOIrMVxKFeE7w7PvVmAaxEo0YwmuAzzKy9QpdlK0aab/xEi8V4iXj4hGepqAvHkXIQd+r3FNeiLfllkb61p6WTjr5urcmDQMR94/wYoilpG5OlybHdbhsYHvIzYoLrC7fzl630gcO6t4nM24vdB6Ymg9BVpEgKRAxSbE62Tqacxqnz9AcmgItb48NiR/He3n3ydGjPYuKk/ihZMgEwAEZvSlNxYONSbYrIGDtOY+8Nbt6KiH3l06wjZW8tcmFeVlWv+tWotnTY9IqlAfvNVTjtsobqtQnvsiDjdEVtNy/s2ci5TH+NdZluca2OVEr91Wayxh70kpM6ib4UGbfdmGgCo74gtKvKSJU0rTHakQ5L9JlaSDD5FamBRyI0qfL43Ad9qOUZ8DaffDCyuaVyuqk7cz9HwmEmvWU3VQ+5t06n/5kRDXttcw8w+3qClEEdGo1KeENcnXCB32dQe3tDTFpuAIMLqwXs6FhpawfZ5kPYvLPczGWaqftIs/RXJ/EltGc0ugw2dmTLpoQhCqrcKEBDoYVk0LDZKsnzitOGdi9mOWse7Se8798ib1UsHFUjGzISEt6upestxOeupSTOh0v4+AjXbDzRUyogHww3V+Bqg71bkcMxtB+WM+pn1XNbVTyl9NR040nhP7KEf6e9ruXAtmrBC2ah5cFEpLIot77VFZ9ilLuitSz+7T8n1yAh1IEG6xxXxninAZIzi2qGbH69O5RSpOJuJTv17zTLJQIIc781JwQ2TTwTGnx5wZLbffhCasowJKd2EVcyMJyhz6ru0PvXWJ4hUdkARJs3Xu8dus9a86N8Xk6aAPzBDqzYb1vyFIfBxP0oO8xFHgd30Cgmz8UrSE3qeWRrF8ftrI6xQnFjHBGWD/JWSvd6YMcQED0aVuQkuNW9ST/DzQThPzRfPUoiL10yAmV7Ytu4fR3x2sF0Yfi87YhHFuCMpV/DsqxmUizyiJuD938eRcH8hzR/VO53Qo3UIsqOLcyXtTv6THjSlTopQ+JOLOnHm1w8dzYbLN44OG44rRsbihMUQp+wUZ6bsI8rrOnm9WErzkbQFbrfAINdoCiNa6cimYIjvvnMTaFWNymqY1vZxGztQiMiHiHYwTfwHTXrb9j0uPM=|09J28iXv9oWzYtzK2LBT6Yht4IT4MijEkk0fwFdrVQ4=",
             ApiKey = "7gp59kKHt9kMlks0BuNC4IjNXYkljR",
-
             Kdf = KdfType.PBKDF2_SHA256,
             KdfIterations = 600_000,
         };
+    }
+    
+    // Static factory method used by complex recipes (OrganizationWithUsersAndVaultItemsRecipe)
+    public static User CreateUser(
+        string email, 
+        string password,
+        ISeederCryptoService cryptoService,
+        IDataProtectionService dataProtection,
+        IPasswordHasher<User> passwordHasher,
+        byte[] userKey)
+    {
+        // TODO: When Rust SDK is available, this will use RustSeederCryptoService
+        // For now, delegating to instance method via temporary instance
+        var seeder = new UserSeeder(cryptoService);
+        
+        // Use the provided user key instead of generating a new one
+        var salt = email; // Bitwarden uses email as salt
+        var masterKey = cryptoService.DeriveKey(password, salt, KdfType.PBKDF2_SHA256, 600_000);
+        
+        // IMPORTANT: Bitwarden uses double-hashing for password storage
+        // 1. First create the Bitwarden hash (what the client sends during auth)
+        var bitwardenHash = cryptoService.ComputePasswordHash(masterKey, password);
+        
+        // 2. Then hash that with Identity's PasswordHasher (what gets stored in DB)
+        var tempUser = new User { Email = email };
+        var passwordHash = passwordHasher.HashPassword(tempUser, bitwardenHash);
+        
+        var encryptedUserKey = cryptoService.EncryptUserKey(userKey, masterKey);
+        var (publicKey, privateKey) = cryptoService.GenerateUserKeyPair();
+        var encryptedPrivateKey = cryptoService.EncryptPrivateKey(privateKey, userKey);
+        
+        return new User
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            MasterPassword = passwordHash,
+            SecurityStamp = Guid.NewGuid().ToString(),
+            Key = encryptedUserKey,
+            PublicKey = publicKey,
+            PrivateKey = encryptedPrivateKey,
+            ApiKey = seeder.GenerateApiKey(),
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 600_000,
+        };
+    }
+    
+    private string GenerateApiKey()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        var random = new Random();
+        return new string(Enumerable.Repeat(chars, 30)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
     }
 }

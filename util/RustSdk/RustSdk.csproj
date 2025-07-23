@@ -9,6 +9,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <!-- For seeder-sdk integration - Copy native libraries when Rust SDK is built
   <ItemGroup>
     <Content Include="rust/target/debug/libsdk.dylib">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -22,5 +23,6 @@
       <PackageCopyToOutput>true</PackageCopyToOutput>
     </Content>
   </ItemGroup>
+  -->
 
 </Project>
