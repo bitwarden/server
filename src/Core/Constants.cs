@@ -115,7 +115,7 @@ public static class FeatureFlagKeys
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string ImportAsyncRefactor = "pm-22583-refactor-import-async";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
-    public const string MembersGetEndpointOptimization = "pm-21031-members-get-endpoint-optimization";
+    public const string MembersGetEndpointOptimization = "pm-23113-optimize-get-members-endpoint";
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
