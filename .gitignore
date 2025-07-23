@@ -226,4 +226,3 @@ bitwarden_license/src/Portal/Portal.zip
 bitwarden_license/src/Sso/Sso.zip
 **/src/**/flags.json
 NativeMethods.g.cs
-util/RustSdk/rust/target

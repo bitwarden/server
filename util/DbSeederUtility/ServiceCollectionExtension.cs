@@ -45,7 +45,7 @@ public static class ServiceCollectionExtension
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
         // Register ISeederCryptoService with feature flag support
-        // TODO: When Rust SDK is ready, check configuration to switch implementations
+        // TODO: Implement Rust SDK integration when SDK is ready
         if (configuration.GetValue<bool>("Seeder:UseRustSdk"))
         {
             // Future: Register Rust implementation

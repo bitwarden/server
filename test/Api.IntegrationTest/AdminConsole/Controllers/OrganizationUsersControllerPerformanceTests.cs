@@ -9,7 +9,7 @@ namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 
 public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOutputHelper)
 {
-    [Theory()]
+    [Theory(Skip = "Performance test")]
     [InlineData(100)]
     [InlineData(60000)]
     public async Task GetAsync(int seats)
