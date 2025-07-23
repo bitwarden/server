@@ -58,6 +58,7 @@ public class UserCollectionDetailsQuery : IQuery<CollectionDetails>
             ReadOnly = (bool?)x.cu.ReadOnly ?? (bool?)x.cg.ReadOnly ?? false,
             HidePasswords = (bool?)x.cu.HidePasswords ?? (bool?)x.cg.HidePasswords ?? false,
             Manage = (bool?)x.cu.Manage ?? (bool?)x.cg.Manage ?? false,
+            Type = x.c.Type
         });
     }
 }

@@ -243,7 +243,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         c.Name,
                         c.CreationDate,
                         c.RevisionDate,
-                        c.ExternalId
+                        c.ExternalId,
+                        c.Type
                     })
                     .Select(collectionGroup => new CollectionDetails
                     {
@@ -256,6 +257,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
                         HidePasswords = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
+                        Type = collectionGroup.Key.Type,
                     })
                     .ToList();
             }
