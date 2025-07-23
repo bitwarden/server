@@ -10,7 +10,7 @@ namespace Bit.Seeder.Recipes;
 public class OrganizationWithUsersRecipe(DatabaseContext db, ISeederCryptoService cryptoService, IPasswordHasher<User> passwordHasher)
 {
     // Backward compatibility constructor for tests
-    public OrganizationWithUsersRecipe(DatabaseContext db) 
+    public OrganizationWithUsersRecipe(DatabaseContext db)
         : this(db, new SeederCryptoService(), new PasswordHasher<User>())
     {
     }
