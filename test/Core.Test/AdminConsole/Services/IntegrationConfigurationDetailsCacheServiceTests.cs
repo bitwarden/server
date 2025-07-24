@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using System.Text.Json;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -28,16 +29,53 @@ public class IntegrationConfigurationDetailsCacheServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetConfigurationDetails_KeyExists_ReturnsExpectedList(OrganizationIntegrationConfigurationDetails config)
+    public async Task GetConfigurationDetails_SpecificKeyExists_ReturnsExpectedList(OrganizationIntegrationConfigurationDetails config)
     {
+        config.EventType = EventType.Cipher_Created;
         var sutProvider = GetSutProvider([config]);
         await sutProvider.Sut.RefreshAsync();
         var result = sutProvider.Sut.GetConfigurationDetails(
             config.OrganizationId,
             config.IntegrationType,
-            config.EventType);
+            EventType.Cipher_Created);
         Assert.Single(result);
         Assert.Same(config, result[0]);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetConfigurationDetails_AllEventsKeyExists_ReturnsExpectedList(OrganizationIntegrationConfigurationDetails config)
+    {
+        config.EventType = null;
+        var sutProvider = GetSutProvider([config]);
+        await sutProvider.Sut.RefreshAsync();
+        var result = sutProvider.Sut.GetConfigurationDetails(
+            config.OrganizationId,
+            config.IntegrationType,
+            EventType.Cipher_Created);
+        Assert.Single(result);
+        Assert.Same(config, result[0]);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetConfigurationDetails_BothSpecificAndAllEventsKeyExists_ReturnsExpectedList(
+        OrganizationIntegrationConfigurationDetails specificConfig,
+        OrganizationIntegrationConfigurationDetails allKeysConfig
+        )
+    {
+        specificConfig.EventType = EventType.Cipher_Created;
+        allKeysConfig.EventType = null;
+        allKeysConfig.OrganizationId = specificConfig.OrganizationId;
+        allKeysConfig.IntegrationType = specificConfig.IntegrationType;
+
+        var sutProvider = GetSutProvider([specificConfig, allKeysConfig]);
+        await sutProvider.Sut.RefreshAsync();
+        var result = sutProvider.Sut.GetConfigurationDetails(
+            specificConfig.OrganizationId,
+            specificConfig.IntegrationType,
+            EventType.Cipher_Created);
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, r => r.Template == specificConfig.Template);
+        Assert.Contains(result, r => r.Template == allKeysConfig.Template);
     }
 
     [Theory, BitAutoData]
@@ -48,9 +86,11 @@ public class IntegrationConfigurationDetailsCacheServiceTests
         var result = sutProvider.Sut.GetConfigurationDetails(
             Guid.NewGuid(),
             config.IntegrationType,
-            config.EventType);
+            config.EventType ?? EventType.Cipher_Created);
         Assert.Empty(result);
     }
+
+
 
     [Theory, BitAutoData]
     public async Task GetConfigurationDetails_ReturnsCachedValue_EvenIfRepositoryChanges(OrganizationIntegrationConfigurationDetails config)
@@ -67,7 +107,7 @@ public class IntegrationConfigurationDetailsCacheServiceTests
         var result = sutProvider.Sut.GetConfigurationDetails(
             config.OrganizationId,
             config.IntegrationType,
-            config.EventType);
+            config.EventType ?? EventType.Cipher_Created);
         Assert.Single(result);
         Assert.NotEqual("Changed", result[0].Template); // should not yet pick up change from repository
 
@@ -76,7 +116,7 @@ public class IntegrationConfigurationDetailsCacheServiceTests
         result = sutProvider.Sut.GetConfigurationDetails(
             config.OrganizationId,
             config.IntegrationType,
-            config.EventType);
+            config.EventType ?? EventType.Cipher_Created);
         Assert.Single(result);
         Assert.Equal("Changed", result[0].Template); // Should have the new value
     }
@@ -94,7 +134,7 @@ public class IntegrationConfigurationDetailsCacheServiceTests
         var results = sutProvider.Sut.GetConfigurationDetails(
             config1.OrganizationId,
             config1.IntegrationType,
-            config1.EventType);
+            config1.EventType ?? EventType.Cipher_Created);
 
         Assert.Equal(2, results.Count);
         Assert.Contains(results, r => r.Template == config1.Template);
