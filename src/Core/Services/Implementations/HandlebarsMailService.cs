@@ -634,6 +634,10 @@ public class HandlebarsMailService : IMailService
         {
             templateFileSuffix = ".txt";
         }
+        if (!templateName.EndsWith(".html") && !templateName.EndsWith(".txt"))
+        {
+            return null; // Or throw a meaningful exception if required
+        }
         var suffixPosition = templateName.LastIndexOf(templateFileSuffix);
         var templateNameNoSuffix = templateName.Substring(0, suffixPosition);
         var templatePathNoSuffix = templateNameNoSuffix.Replace(".", "/");
