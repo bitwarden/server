@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
@@ -291,20 +290,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         {
             var dbContext = GetDatabaseContext(scope);
             var query = CollectionAdminDetailsQuery.ByOrganizationId(organizationId, userId).Run(dbContext);
-
-            return await FetchCollectionsWithPermissionsAsync(dbContext, query, includeAccessRelationships);
-        }
-    }
-
-    public async Task<ICollection<CollectionAdminDetails>> GetManySharedCollectionsByOrganizationIdWithPermissionsAsync(
-        Guid organizationId, Guid userId, bool includeAccessRelationships)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var query = CollectionAdminDetailsQuery.ByOrganizationId(organizationId, userId)
-                .Run(dbContext)
-                .Where(c => c.Type != CollectionType.DefaultUserCollection);
 
             return await FetchCollectionsWithPermissionsAsync(dbContext, query, includeAccessRelationships);
         }
