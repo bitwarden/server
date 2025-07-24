@@ -604,6 +604,12 @@ public class HandlebarsMailService : IMailService
 
     private async Task<string?> ReadSourceAsync(string templateName)
     {
+        var diskSource = await ReadSourceFromDiskAsync(templateName);
+        if (!string.IsNullOrWhiteSpace(diskSource))
+        {
+            return diskSource;
+        }
+
         var assembly = typeof(HandlebarsMailService).GetTypeInfo().Assembly;
         var fullTemplateName = $"{Namespace}.{templateName}.hbs";
         if (!assembly.GetManifestResourceNames().Any(f => f == fullTemplateName))
@@ -615,6 +621,30 @@ public class HandlebarsMailService : IMailService
         {
             return await sr.ReadToEndAsync();
         }
+    }
+
+    private async Task<string?> ReadSourceFromDiskAsync(string templateName)
+    {
+        if (!_globalSettings.SelfHosted)
+        {
+            return null;
+        }
+        var templateFileSuffix = ".html";
+        if (templateName.EndsWith(".txt"))
+        {
+            templateFileSuffix = ".txt";
+        }
+        var suffixPosition = templateName.LastIndexOf(templateFileSuffix);
+        var templateNameNoSuffix = templateName.Substring(0, suffixPosition);
+        var templatePathNoSuffix = templateNameNoSuffix.Replace(".", "/");
+        var diskPath = $"{_globalSettings.MailTemplateDirectory}/{templatePathNoSuffix}{templateFileSuffix}.hbs";
+        var directory = Path.GetDirectoryName(diskPath);
+        if (Directory.Exists(directory) && File.Exists(diskPath))
+        {
+            var fileContents = await File.ReadAllTextAsync(diskPath);
+            return fileContents;
+        }
+        return null;
     }
 
     private async Task RegisterHelpersAndPartialsAsync()
