@@ -56,11 +56,13 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
         _organizationService = organizationService;
+        _providerService = providerService;
         _stripeFacade = stripeFacade;
         _organizationSponsorshipRenewCommand = organizationSponsorshipRenewCommand;
         _userService = userService;
         _pushNotificationService = pushNotificationService;
         _organizationRepository = organizationRepository;
+        _providerRepository = providerRepository;
         _schedulerFactory = schedulerFactory;
         _organizationEnableCommand = organizationEnableCommand;
         _organizationDisableCommand = organizationDisableCommand;
@@ -126,13 +128,34 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                     }
                     break;
                 }
+            case StripeSubscriptionStatus.Active when providerId.HasValue:
+                {
+                    var providerPortalTakeover = _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
+                    if (!providerPortalTakeover)
+                    {
+                        break;
+                    }
+                    var provider = await _providerRepository.GetByIdAsync(providerId.Value);
+                    if (provider != null)
+                    {
+                        provider.Enabled = true;
+                        await _providerService.UpdateAsync(provider);
+
+                        if (IsProviderSubscriptionNowActive(parsedEvent, subscription))
+                        {
+                            // Update the CancelAtPeriodEnd subscription option to prevent the now active provider subscription from being cancelled
+                            var subscriptionUpdateOptions = new SubscriptionUpdateOptions { CancelAtPeriodEnd = false };
+                            await _stripeFacade.UpdateSubscription(subscription.Id, subscriptionUpdateOptions);
+                        }
+                    }
+                    break;
+                }
             case StripeSubscriptionStatus.Active:
                 {
                     if (userId.HasValue)
                     {
                         await _userService.EnablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
                     }
-
                     break;
                 }
         }
@@ -168,6 +191,36 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         {
             await _stripeFacade.VoidInvoice(invoice.Id);
         }
+    }
+
+    /// <summary>
+    /// Checks if the provider subscription status has changed from a non-active to an active status type
+    /// If the previous status is already active(active,past-due,trialing),canceled,or null, then this will return false.
+    /// </summary>
+    /// <param name="parsedEvent">The event containing the previous subscription status</param>
+    /// <param name="subscription">The current subscription status</param>
+    /// <returns>A boolean that represents whether the event status has changed from a non-active status to an active status</returns>
+    private static bool IsProviderSubscriptionNowActive(Event parsedEvent, Subscription subscription)
+    {
+        if (parsedEvent.Data.PreviousAttributes == null)
+        {
+            return false;
+        }
+
+        var previousSubscription = parsedEvent
+            .Data
+            .PreviousAttributes
+            .ToObject<Subscription>() as Subscription;
+
+        return previousSubscription?.Status switch
+        {
+            StripeSubscriptionStatus.IncompleteExpired
+                or StripeSubscriptionStatus.Paused
+                or StripeSubscriptionStatus.Incomplete
+                or StripeSubscriptionStatus.Unpaid
+                when subscription.Status == StripeSubscriptionStatus.Active => true,
+            _ => false
+        };
     }
 
     /// <summary>
