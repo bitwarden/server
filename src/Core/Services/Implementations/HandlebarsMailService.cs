@@ -639,6 +639,10 @@ public class HandlebarsMailService : IMailService
             return null; // Or throw a meaningful exception if required
         }
         var suffixPosition = templateName.LastIndexOf(templateFileSuffix);
+        if (suffixPosition == -1)
+        {
+            return null; // Suffix not found, return null
+        }
         var templateNameNoSuffix = templateName.Substring(0, suffixPosition);
         var templatePathNoSuffix = templateNameNoSuffix.Replace(".", "/");
         var diskPath = $"{_globalSettings.MailTemplateDirectory}/{templatePathNoSuffix}{templateFileSuffix}.hbs";
