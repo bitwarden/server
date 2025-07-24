@@ -173,12 +173,12 @@ public class CollectionsControllerTests
             .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByOrganizationIdAsync(organization.Id)
+            .GetManySharedCollectionsByOrganizationIdAsync(organization.Id)
             .Returns(collections);
 
         var response = await sutProvider.Sut.Get(organization.Id);
 
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdAsync(organization.Id);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManySharedCollectionsByOrganizationIdAsync(organization.Id);
 
         Assert.Equal(collections.Count, response.Data.Count());
     }
