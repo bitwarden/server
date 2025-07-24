@@ -8,6 +8,7 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
@@ -38,8 +39,8 @@ public interface IUserService
     Task<IdentityResult> ConvertToKeyConnectorAsync(User user);
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
-    Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword, string key,
-        KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism);
+    Task<IdentityResult> ChangeKdfAsync(User user, string masterPasswordAuthenticationHash, string newMasterPasswordAuthenticationHash, string masterKeyEncryptedUserKey,
+        KdfSettings kdf, MasterPasswordAuthenticationData authenticationData, MasterPasswordUnlockData unlockData);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
     Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type);

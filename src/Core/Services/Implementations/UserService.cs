@@ -24,6 +24,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -779,17 +780,36 @@ public class UserService : UserManager<User>, IUserService
         return IdentityResult.Success;
     }
 
-    public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword,
-        string key, KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism)
+    public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPasswordAuthenticationHash, string newMasterPasswordAuthenticationHash,
+        string masterKeyEncryptedUserKey, KdfSettings kdf, MasterPasswordAuthenticationData authenticationData, MasterPasswordUnlockData unlockData)
     {
         if (user == null)
         {
             throw new ArgumentNullException(nameof(user));
         }
 
-        if (await CheckPasswordAsync(user, masterPassword))
+        if (authenticationData != null && unlockData != null)
         {
-            var result = await UpdatePasswordHash(user, newMasterPassword);
+            // Prevent a de-synced salt value from creating an un-decryptable unlock method 
+            authenticationData.ValidateSaltUnchangedForUser(user);
+            unlockData.ValidateSaltUnchangedForUser(user);
+
+            // Currently KDF settings are not saved separately for authentication and unlock and must therefore be equal
+            if (!authenticationData.Kdf.Equals(unlockData.Kdf))
+            {
+                throw new BadRequestException("KDF settings must be equal for authentication and unlock.");
+            }
+
+            // If both authentication and unlock data are present, use them instead of the deprecated values.
+            kdf = authenticationData.Kdf;
+            newMasterPasswordAuthenticationHash = authenticationData.MasterPasswordAuthenticationHash;
+            masterKeyEncryptedUserKey = unlockData.MasterKeyWrappedUserKey;
+        }
+
+
+        if (await CheckPasswordAsync(user, masterPasswordAuthenticationHash))
+        {
+            var result = await UpdatePasswordHash(user, newMasterPasswordAuthenticationHash);
             if (!result.Succeeded)
             {
                 return result;
@@ -798,11 +818,11 @@ public class UserService : UserManager<User>, IUserService
             var now = DateTime.UtcNow;
             user.RevisionDate = user.AccountRevisionDate = now;
             user.LastKdfChangeDate = now;
-            user.Key = key;
-            user.Kdf = kdf;
-            user.KdfIterations = kdfIterations;
-            user.KdfMemory = kdfMemory;
-            user.KdfParallelism = kdfParallelism;
+            user.Key = masterKeyEncryptedUserKey;
+            user.Kdf = kdf.KdfType;
+            user.KdfIterations = kdf.Iterations;
+            user.KdfMemory = kdf.Memory;
+            user.KdfParallelism = kdf.Parallelism;
             await _userRepository.ReplaceAsync(user);
             await _pushService.PushLogOutAsync(user.Id);
             return IdentityResult.Success;
