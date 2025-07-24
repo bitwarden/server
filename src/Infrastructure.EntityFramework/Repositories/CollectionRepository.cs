@@ -217,8 +217,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         {
             var dbContext = GetDatabaseContext(scope);
             var query = from c in dbContext.Collections
-                        where c.OrganizationId == organizationId &&
-                            c.Type != CollectionType.DefaultUserCollection
+                        where c.OrganizationId == organizationId
                         select c;
             var collections = await query.ToArrayAsync();
             return collections;
@@ -293,106 +292,21 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             var dbContext = GetDatabaseContext(scope);
             var query = CollectionAdminDetailsQuery.ByOrganizationId(organizationId, userId).Run(dbContext);
 
-            ICollection<CollectionAdminDetails> collections;
+            return await FetchCollectionsWithPermissionsAsync(dbContext, query, includeAccessRelationships);
+        }
+    }
 
-            // SQLite does not support the GROUP BY clause
-            if (dbContext.Database.IsSqlite())
-            {
-                collections = (await query.ToListAsync())
-                    .GroupBy(c => new
-                    {
-                        c.Id,
-                        c.OrganizationId,
-                        c.Name,
-                        c.CreationDate,
-                        c.RevisionDate,
-                        c.ExternalId,
-                        c.Unmanaged
-                    }).Select(collectionGroup => new CollectionAdminDetails
-                    {
-                        Id = collectionGroup.Key.Id,
-                        OrganizationId = collectionGroup.Key.OrganizationId,
-                        Name = collectionGroup.Key.Name,
-                        CreationDate = collectionGroup.Key.CreationDate,
-                        RevisionDate = collectionGroup.Key.RevisionDate,
-                        ExternalId = collectionGroup.Key.ExternalId,
-                        ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
-                        HidePasswords =
-                            Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
-                        Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
-                        Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
-                        Unmanaged = collectionGroup.Key.Unmanaged
-                    }).ToList();
-            }
-            else
-            {
-                collections = await (from c in query
-                                     group c by new
-                                     {
-                                         c.Id,
-                                         c.OrganizationId,
-                                         c.Name,
-                                         c.CreationDate,
-                                         c.RevisionDate,
-                                         c.ExternalId,
-                                         c.Unmanaged
-                                     }
-                    into collectionGroup
-                                     select new CollectionAdminDetails
-                                     {
-                                         Id = collectionGroup.Key.Id,
-                                         OrganizationId = collectionGroup.Key.OrganizationId,
-                                         Name = collectionGroup.Key.Name,
-                                         CreationDate = collectionGroup.Key.CreationDate,
-                                         RevisionDate = collectionGroup.Key.RevisionDate,
-                                         ExternalId = collectionGroup.Key.ExternalId,
-                                         ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
-                                         HidePasswords =
-                                             Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
-                                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
-                                         Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
-                                         Unmanaged = collectionGroup.Key.Unmanaged
-                                     }).ToListAsync();
-            }
+    public async Task<ICollection<CollectionAdminDetails>> GetManySharedCollectionsByOrganizationIdWithPermissionsAsync(
+        Guid organizationId, Guid userId, bool includeAccessRelationships)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = CollectionAdminDetailsQuery.ByOrganizationId(organizationId, userId)
+                .Run(dbContext)
+                .Where(c => c.Type != CollectionType.DefaultUserCollection);
 
-            if (!includeAccessRelationships)
-            {
-                return collections;
-            }
-
-            var groups = (from c in collections
-                          join cg in dbContext.CollectionGroups on c.Id equals cg.CollectionId
-                          group cg by cg.CollectionId into g
-                          select g).ToList();
-
-            var users = (from c in collections
-                         join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
-                         group cu by cu.CollectionId into u
-                         select u).ToList();
-
-            foreach (var collection in collections)
-            {
-                collection.Groups = groups
-                    .FirstOrDefault(g => g.Key == collection.Id)?
-                    .Select(g => new CollectionAccessSelection
-                    {
-                        Id = g.GroupId,
-                        HidePasswords = g.HidePasswords,
-                        ReadOnly = g.ReadOnly,
-                        Manage = g.Manage,
-                    }).ToList() ?? new List<CollectionAccessSelection>();
-                collection.Users = users
-                    .FirstOrDefault(u => u.Key == collection.Id)?
-                    .Select(c => new CollectionAccessSelection
-                    {
-                        Id = c.OrganizationUserId,
-                        HidePasswords = c.HidePasswords,
-                        ReadOnly = c.ReadOnly,
-                        Manage = c.Manage
-                    }).ToList() ?? new List<CollectionAccessSelection>();
-            }
-
-            return collections;
+            return await FetchCollectionsWithPermissionsAsync(dbContext, query, includeAccessRelationships);
         }
     }
 
@@ -768,5 +682,109 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         var toDelete = existingCollectionUsers.Values.Where(cu => !requestedUserIds.Contains(cu.OrganizationUserId));
         dbContext.CollectionUsers.RemoveRange(toDelete);
         // SaveChangesAsync is expected to be called outside this method
+    }
+
+    private async Task<ICollection<CollectionAdminDetails>> FetchCollectionsWithPermissionsAsync(DatabaseContext dbContext, IQueryable<CollectionAdminDetails> query, bool includeAccessRelationships)
+    {
+        ICollection<CollectionAdminDetails> collections;
+
+        // SQLite does not support the GROUP BY clause
+        if (dbContext.Database.IsSqlite())
+        {
+            collections = (await query.ToListAsync())
+                .GroupBy(c => new
+                {
+                    c.Id,
+                    c.OrganizationId,
+                    c.Name,
+                    c.CreationDate,
+                    c.RevisionDate,
+                    c.ExternalId,
+                    c.Unmanaged
+                }).Select(collectionGroup => new CollectionAdminDetails
+                {
+                    Id = collectionGroup.Key.Id,
+                    OrganizationId = collectionGroup.Key.OrganizationId,
+                    Name = collectionGroup.Key.Name,
+                    CreationDate = collectionGroup.Key.CreationDate,
+                    RevisionDate = collectionGroup.Key.RevisionDate,
+                    ExternalId = collectionGroup.Key.ExternalId,
+                    ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
+                    HidePasswords =
+                        Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                    Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
+                    Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
+                    Unmanaged = collectionGroup.Key.Unmanaged
+                }).ToList();
+        }
+        else
+        {
+            collections = await (from c in query
+                                 group c by new
+                                 {
+                                     c.Id,
+                                     c.OrganizationId,
+                                     c.Name,
+                                     c.CreationDate,
+                                     c.RevisionDate,
+                                     c.ExternalId,
+                                     c.Unmanaged
+                                 }
+                into collectionGroup
+                                 select new CollectionAdminDetails
+                                 {
+                                     Id = collectionGroup.Key.Id,
+                                     OrganizationId = collectionGroup.Key.OrganizationId,
+                                     Name = collectionGroup.Key.Name,
+                                     CreationDate = collectionGroup.Key.CreationDate,
+                                     RevisionDate = collectionGroup.Key.RevisionDate,
+                                     ExternalId = collectionGroup.Key.ExternalId,
+                                     ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
+                                     HidePasswords =
+                                         Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                                     Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
+                                     Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
+                                     Unmanaged = collectionGroup.Key.Unmanaged
+                                 }).ToListAsync();
+        }
+
+        if (!includeAccessRelationships)
+        {
+            return collections;
+        }
+
+        var groups = (from c in collections
+                      join cg in dbContext.CollectionGroups on c.Id equals cg.CollectionId
+                      group cg by cg.CollectionId into g
+                      select g).ToList();
+
+        var users = (from c in collections
+                     join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
+                     group cu by cu.CollectionId into u
+                     select u).ToList();
+
+        foreach (var collection in collections)
+        {
+            collection.Groups = groups
+                .FirstOrDefault(g => g.Key == collection.Id)?
+                .Select(g => new CollectionAccessSelection
+                {
+                    Id = g.GroupId,
+                    HidePasswords = g.HidePasswords,
+                    ReadOnly = g.ReadOnly,
+                    Manage = g.Manage,
+                }).ToList() ?? new List<CollectionAccessSelection>();
+            collection.Users = users
+                .FirstOrDefault(u => u.Key == collection.Id)?
+                .Select(c => new CollectionAccessSelection
+                {
+                    Id = c.OrganizationUserId,
+                    HidePasswords = c.HidePasswords,
+                    ReadOnly = c.ReadOnly,
+                    Manage = c.Manage
+                }).ToList() ?? new List<CollectionAccessSelection>();
+        }
+
+        return collections;
     }
 }

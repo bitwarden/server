@@ -191,7 +191,7 @@ public class OrganizationUserRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyDetailsByOrganizationAsync_WithIncludeCollections_ExcludesDefaultCollections(
+    public async Task GetManyDetailsByOrganizationAsync_WithIncludeCollections_Success(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -231,7 +231,7 @@ public class OrganizationUserRepositoryTests
         var defaultCollection = await collectionRepository.CreateAsync(new Collection
         {
             OrganizationId = organization.Id,
-            Name = "Default Collection",
+            Name = "My Items",
             Type = CollectionType.DefaultUserCollection,
             DefaultUserCollectionEmail = user.Email
         });
@@ -265,10 +265,9 @@ public class OrganizationUserRepositoryTests
         var orgUserWithCollections = organizationUsers.First();
         Assert.NotNull(orgUserWithCollections.Collections);
 
-        // Should only include the regular collection, not the default collection
-        Assert.Single(orgUserWithCollections.Collections);
-        Assert.Equal(regularCollection.Id, orgUserWithCollections.Collections.First().Id);
-        Assert.DoesNotContain(orgUserWithCollections.Collections, c => c.Id == defaultCollection.Id);
+        Assert.Equal(2, orgUserWithCollections.Collections.Count);
+        Assert.Contains(orgUserWithCollections.Collections, c => c.Id == regularCollection.Id);
+        Assert.Contains(orgUserWithCollections.Collections, c => c.Id == defaultCollection.Id);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -596,7 +595,7 @@ public class OrganizationUserRepositoryTests
             RevisionDate = requestTime
         });
 
-        // Create a default user collection that should be excluded from admin results
+        // Create a default user collection
         var defaultCollection = await collectionRepository.CreateAsync(new Collection
         {
             Id = CoreHelpers.GenerateComb(),
@@ -722,12 +721,10 @@ public class OrganizationUserRepositoryTests
         var group1Database = await groupRepository.GetManyIdsByUserIdAsync(orgUserCollection[0].OrganizationUser.Id);
         Assert.Equal(orgUserCollection[0].OrganizationUser.Id, orgUser1.OrganizationUser.Id);
 
-        // Should only return the regular collection, not the default collection (even though both were assigned)
-        Assert.Single(orgUser1.Collections);
-        Assert.Equal(collection1.Id, orgUser1.Collections.First().Id);
-        Assert.DoesNotContain(orgUser1.Collections, c => c.Id == defaultCollection.Id);
+        Assert.Equal(2, orgUser1.Collections.Count);
+        Assert.Contains(orgUser1.Collections, c => c.Id == collection1.Id);
+        Assert.Contains(orgUser1.Collections, c => c.Id == defaultCollection.Id);
         Assert.Equal(group1.Id, group1Database.First());
-
 
         var orgUser2 = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUserCollection[1].OrganizationUser.Id);
         var group2Database = await groupRepository.GetManyIdsByUserIdAsync(orgUserCollection[1].OrganizationUser.Id);
