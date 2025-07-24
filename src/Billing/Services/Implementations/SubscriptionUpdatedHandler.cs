@@ -130,6 +130,11 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 }
             case StripeSubscriptionStatus.Active when providerId.HasValue:
                 {
+                    var providerPortalTakeover = _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
+                    if (!providerPortalTakeover)
+                    {
+                        break;
+                    }
                     var provider = await _providerRepository.GetByIdAsync(providerId.Value);
                     if (provider != null)
                     {
