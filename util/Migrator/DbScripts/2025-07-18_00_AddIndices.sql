@@ -6,7 +6,6 @@ IF NOT EXISTS (SELECT *
     BEGIN
         CREATE NONCLUSTERED INDEX [IX_OrganizationUser_EmailOrganizationIdStatus]
             ON [dbo].[OrganizationUser]([email] ASC, [organizationid] ASC, [status] ASC)
-            WITH (online = ON);
     END
 
 go
@@ -19,7 +18,6 @@ IF NOT EXISTS (SELECT *
     BEGIN
         CREATE NONCLUSTERED INDEX [IX_ProviderOrganization_OrganizationIdProviderId]
             ON [dbo].[ProviderOrganization]([organizationid] ASC, [providerid] ASC)
-            WITH (online = ON);
     END
 
 go
@@ -31,7 +29,6 @@ IF NOT EXISTS (SELECT *
     BEGIN
         CREATE NONCLUSTERED INDEX [IX_ProviderUser_UserIdProviderId]
             ON [dbo].[ProviderUser]([userid] ASC, [providerid] ASC)
-            WITH (online = ON);
     END
 
 go
