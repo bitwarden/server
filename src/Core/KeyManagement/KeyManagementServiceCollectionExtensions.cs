@@ -1,7 +1,7 @@
 ﻿using Bit.Core.KeyManagement.Commands;
 using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Kdf;
-using Bit.Core.KeyManagement.UserKey.Implementations;
+using Bit.Core.KeyManagement.Kdf.Implementations;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.KeyManagement;
