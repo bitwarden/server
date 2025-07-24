@@ -137,13 +137,34 @@ public class CurrentContext : ICurrentContext
 
         var claimsDict = user.Claims.GroupBy(c => c.Type).ToDictionary(c => c.Key, c => c.Select(v => v));
 
+        ClientId = GetClaimValue(claimsDict, "client_id");
+
+        var clientType = GetClaimValue(claimsDict, Claims.Type);
+        if (clientType != null)
+        {
+            Enum.TryParse(clientType, out IdentityClientType c);
+            IdentityClientType = c;
+        }
+
+        if (IdentityClientType == IdentityClientType.Send)
+        {
+            // For the Send client, we don't need to set any User specific properties on the context
+            // so just short circuit and return here.
+            return Task.FromResult(0);
+        }
+
+        if (IdentityClientType == IdentityClientType.ServiceAccount)
+        {
+            ServiceAccountOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
+        }
+
+
         var subject = GetClaimValue(claimsDict, "sub");
         if (Guid.TryParse(subject, out var subIdGuid))
         {
             UserId = subIdGuid;
         }
 
-        ClientId = GetClaimValue(claimsDict, "client_id");
         var clientSubject = GetClaimValue(claimsDict, "client_sub");
         var orgApi = false;
         if (clientSubject != null)
@@ -163,18 +184,6 @@ public class CurrentContext : ICurrentContext
                     orgApi = true;
                 }
             }
-        }
-
-        var clientType = GetClaimValue(claimsDict, Claims.Type);
-        if (clientType != null)
-        {
-            Enum.TryParse(clientType, out IdentityClientType c);
-            IdentityClientType = c;
-        }
-
-        if (IdentityClientType == IdentityClientType.ServiceAccount)
-        {
-            ServiceAccountOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
         }
 
         DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
