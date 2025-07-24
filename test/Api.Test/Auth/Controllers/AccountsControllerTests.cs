@@ -10,6 +10,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -33,6 +34,7 @@ public class AccountsControllerTests : IDisposable
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
+    private readonly IChangeKdfCommand _changeKdfCommand;
 
 
     public AccountsControllerTests()
@@ -47,7 +49,7 @@ public class AccountsControllerTests : IDisposable
         _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
-
+        _changeKdfCommand = Substitute.For<IChangeKdfCommand>();
 
         _sut = new AccountsController(
             _organizationService,
@@ -59,7 +61,8 @@ public class AccountsControllerTests : IDisposable
             _tdeOffboardingPasswordCommand,
             _twoFactorIsEnabledQuery,
             _featureService,
-            _twoFactorEmailService
+            _twoFactorEmailService,
+            _changeKdfCommand
         );
     }
 
@@ -245,7 +248,13 @@ public class AccountsControllerTests : IDisposable
         _userService.ChangePasswordAsync(user, default, default, default, default)
                     .Returns(Task.FromResult(IdentityResult.Success));
 
-        await _sut.PostPassword(new PasswordRequestModel());
+        await _sut.PostPassword(new PasswordRequestModel
+        {
+            MasterPasswordHash = "masterPasswordHash",
+            NewMasterPasswordHash = "newMasterPasswordHash",
+            MasterPasswordHint = "masterPasswordHint",
+            Key = "key"
+        });
 
         await _userService.Received(1).ChangePasswordAsync(user, default, default, default, default);
     }
@@ -256,7 +265,13 @@ public class AccountsControllerTests : IDisposable
         ConfigureUserServiceToReturnNullPrincipal();
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => _sut.PostPassword(new PasswordRequestModel())
+            () => _sut.PostPassword(new PasswordRequestModel
+            {
+                MasterPasswordHash = "masterPasswordHash",
+                NewMasterPasswordHash = "newMasterPasswordHash",
+                MasterPasswordHint = "masterPasswordHint",
+                Key = "key"
+            })
         );
     }
 
@@ -269,7 +284,13 @@ public class AccountsControllerTests : IDisposable
                     .Returns(Task.FromResult(IdentityResult.Failed()));
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => _sut.PostPassword(new PasswordRequestModel())
+            () => _sut.PostPassword(new PasswordRequestModel
+            {
+                MasterPasswordHash = "masterPasswordHash",
+                NewMasterPasswordHash = "newMasterPasswordHash",
+                MasterPasswordHint = "masterPasswordHint",
+                Key = "key"
+            })
         );
     }
 

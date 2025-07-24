@@ -16,6 +16,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -39,7 +40,7 @@ public class AccountsController : Controller
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
-
+    private readonly IChangeKdfCommand _changeKdfCommand;
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -51,7 +52,8 @@ public class AccountsController : Controller
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IFeatureService featureService,
-        ITwoFactorEmailService twoFactorEmailService
+        ITwoFactorEmailService twoFactorEmailService,
+        IChangeKdfCommand changeKdfCommand
         )
     {
         _organizationService = organizationService;
@@ -64,7 +66,7 @@ public class AccountsController : Controller
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _featureService = featureService;
         _twoFactorEmailService = twoFactorEmailService;
-
+        _changeKdfCommand = changeKdfCommand;
     }
 
 
@@ -265,7 +267,7 @@ public class AccountsController : Controller
         }
 
 
-        var result = await _userService.ChangeKdfAsync(user, model.MasterPasswordHash,
+        var result = await _changeKdfCommand.ChangeKdfAsync(user, model.MasterPasswordHash,
             model.NewMasterPasswordHash, model.Key, model.ToKdfSettings(), model.AuthenticationData.ToData(), model.UnlockData?.ToData());
         if (result.Succeeded)
         {
