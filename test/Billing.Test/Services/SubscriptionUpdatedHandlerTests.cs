@@ -17,6 +17,7 @@ using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using Quartz;
 using Stripe;
 using Stripe.TestHelpers;
@@ -54,8 +55,10 @@ public class SubscriptionUpdatedHandlerTests
         _stripeFacade = Substitute.For<IStripeFacade>();
         _organizationSponsorshipRenewCommand = Substitute.For<IOrganizationSponsorshipRenewCommand>();
         _userService = Substitute.For<IUserService>();
+        _providerService = Substitute.For<IProviderService>();
         _pushNotificationService = Substitute.For<IPushNotificationService>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
+        _providerRepository = Substitute.For<IProviderRepository>();
         _schedulerFactory = Substitute.For<ISchedulerFactory>();
         _organizationEnableCommand = Substitute.For<IOrganizationEnableCommand>();
         _organizationDisableCommand = Substitute.For<IOrganizationDisableCommand>();
@@ -662,5 +665,355 @@ public class SubscriptionUpdatedHandlerTests
         // Assert
         await _stripeFacade.Received(1).DeleteCustomerDiscount(subscription.CustomerId);
         await _stripeFacade.Received(1).DeleteSubscriptionDiscount(subscription.Id);
+    }
+
+    [Theory]
+    [MemberData(nameof(GetNonActiveSubscriptions))]
+    public async Task
+        HandleAsync_ActiveProviderSubscriptionEvent_AndPreviousSubscriptionStatusWasNonActive_EnableProviderAndUpdateSubscription(
+            Subscription previousSubscription)
+    {
+        // Arrange
+        var (providerId, newSubscription, provider, parsedEvent) =
+            CreateProviderTestInputsForUpdatedActiveSubscriptionStatus(previousSubscription);
+
+        _stripeEventService
+            .GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(newSubscription);
+
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
+
+        _providerRepository
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(provider);
+        _stripeFacade
+            .UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(newSubscription);
+        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
+            .Returns(true);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeEventService
+            .Received(1)
+            .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
+        _stripeEventUtilityService
+            .Received(1)
+            .GetIdsFromMetadata(newSubscription.Metadata);
+        await _providerRepository
+            .Received(1)
+            .GetByIdAsync(providerId);
+        await _providerService
+            .Received(1)
+            .UpdateAsync(Arg.Is<Provider>(p => p.Id == providerId && p.Enabled == true));
+        await _stripeFacade
+            .Received(1)
+            .UpdateSubscription(newSubscription.Id,
+                Arg.Is<SubscriptionUpdateOptions>(options => options.CancelAtPeriodEnd == false));
+        _featureService
+            .Received(1)
+            .IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
+    }
+
+
+    [Fact]
+    public async Task
+        HandleAsync_ActiveProviderSubscriptionEvent_AndPreviousSubscriptionStatusWasCanceled_EnableProvider()
+    {
+        // Arrange
+        var previousSubscription = new Subscription { Id = "sub_123", Status = StripeSubscriptionStatus.Canceled };
+        var (providerId, newSubscription, provider, parsedEvent) =
+            CreateProviderTestInputsForUpdatedActiveSubscriptionStatus(previousSubscription);
+
+        _stripeEventService
+            .GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(newSubscription);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
+        _providerRepository
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(provider);
+        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
+            .Returns(true);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeEventService
+            .Received(1)
+            .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
+        _stripeEventUtilityService
+            .Received(1)
+            .GetIdsFromMetadata(newSubscription.Metadata);
+        await _providerRepository.Received(1).GetByIdAsync(providerId);
+        await _providerService
+            .Received(1)
+            .UpdateAsync(Arg.Is<Provider>(p => p.Id == providerId && p.Enabled == true));
+        await _stripeFacade
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscription(Arg.Any<string>());
+        _featureService
+            .Received(1)
+            .IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
+    }
+
+    [Fact]
+    public async Task
+        HandleAsync_ActiveProviderSubscriptionEvent_AndPreviousSubscriptionStatusWasAlreadyActive_EnableProvider()
+    {
+        // Arrange
+        var previousSubscription = new Subscription { Id = "sub_123", Status = StripeSubscriptionStatus.Active };
+        var (providerId, newSubscription, provider, parsedEvent) =
+            CreateProviderTestInputsForUpdatedActiveSubscriptionStatus(previousSubscription);
+
+        _stripeEventService
+            .GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(newSubscription);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
+        _providerRepository
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(provider);
+        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
+            .Returns(true);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeEventService
+            .Received(1)
+            .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
+        _stripeEventUtilityService
+            .Received(1)
+            .GetIdsFromMetadata(newSubscription.Metadata);
+        await _providerRepository.Received(1).GetByIdAsync(providerId);
+        await _providerService
+            .Received(1)
+            .UpdateAsync(Arg.Is<Provider>(p => p.Id == providerId && p.Enabled == true));
+        await _stripeFacade
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscription(Arg.Any<string>());
+        _featureService
+            .Received(1)
+            .IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
+    }
+
+    [Fact]
+    public async Task
+        HandleAsync_ActiveProviderSubscriptionEvent_AndPreviousSubscriptionStatusWasTrailing_EnableProvider()
+    {
+        // Arrange
+        var previousSubscription = new Subscription { Id = "sub_123", Status = StripeSubscriptionStatus.Trialing };
+        var (providerId, newSubscription, provider, parsedEvent) =
+            CreateProviderTestInputsForUpdatedActiveSubscriptionStatus(previousSubscription);
+
+        _stripeEventService
+            .GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(newSubscription);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
+        _providerRepository
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(provider);
+        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
+            .Returns(true);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeEventService
+            .Received(1)
+            .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
+        _stripeEventUtilityService
+            .Received(1)
+            .GetIdsFromMetadata(newSubscription.Metadata);
+        await _providerRepository.Received(1).GetByIdAsync(providerId);
+        await _providerService
+            .Received(1)
+            .UpdateAsync(Arg.Is<Provider>(p => p.Id == providerId && p.Enabled == true));
+        await _stripeFacade
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscription(Arg.Any<string>());
+        _featureService
+            .Received(1)
+            .IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
+    }
+
+    [Fact]
+    public async Task
+        HandleAsync_ActiveProviderSubscriptionEvent_AndPreviousSubscriptionStatusWasPastDue_EnableProvider()
+    {
+        // Arrange
+        var previousSubscription = new Subscription { Id = "sub_123", Status = StripeSubscriptionStatus.PastDue };
+        var (providerId, newSubscription, provider, parsedEvent) =
+            CreateProviderTestInputsForUpdatedActiveSubscriptionStatus(previousSubscription);
+
+
+        _stripeEventService
+            .GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(newSubscription);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
+        _providerRepository
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(provider);
+        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
+            .Returns(true);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeEventService
+            .Received(1)
+            .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
+        _stripeEventUtilityService
+            .Received(1)
+            .GetIdsFromMetadata(newSubscription.Metadata);
+        await _providerRepository
+            .Received(1)
+            .GetByIdAsync(Arg.Any<Guid>());
+        await _providerService
+            .Received(1)
+            .UpdateAsync(Arg.Is<Provider>(p => p.Id == providerId && p.Enabled == true));
+        await _stripeFacade
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscription(Arg.Any<string>());
+        _featureService
+            .Received(1)
+            .IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ActiveProviderSubscriptionEvent_AndProviderDoesNotExist_NoChanges()
+    {
+        // Arrange
+        var previousSubscription = new Subscription { Id = "sub_123", Status = StripeSubscriptionStatus.Unpaid };
+        var (providerId, newSubscription, _, parsedEvent) =
+            CreateProviderTestInputsForUpdatedActiveSubscriptionStatus(previousSubscription);
+
+        _stripeEventService
+            .GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(newSubscription);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
+        _providerRepository
+            .GetByIdAsync(Arg.Any<Guid>())
+            .ReturnsNull();
+        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
+            .Returns(true);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeEventService
+            .Received(1)
+            .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
+        _stripeEventUtilityService
+            .Received(1)
+            .GetIdsFromMetadata(newSubscription.Metadata);
+        await _providerRepository
+            .Received(1)
+            .GetByIdAsync(providerId);
+        await _providerService
+            .DidNotReceive()
+            .UpdateAsync(Arg.Any<Provider>());
+        await _stripeFacade
+            .DidNotReceive()
+            .UpdateSubscription(Arg.Any<string>());
+        _featureService
+            .Received(1)
+            .IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ActiveProviderSubscriptionEvent_WithNoPreviousAttributes_EnableProvider()
+    {
+        // Arrange
+        var (providerId, newSubscription, provider, parsedEvent) =
+            CreateProviderTestInputsForUpdatedActiveSubscriptionStatus(null);
+
+        _stripeEventService
+            .GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(newSubscription);
+        _stripeEventUtilityService
+            .GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, null, providerId));
+        _providerRepository
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(provider);
+        _featureService.IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover)
+            .Returns(true);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeEventService
+            .Received(1)
+            .GetSubscription(parsedEvent, true, Arg.Any<List<string>>());
+        _stripeEventUtilityService
+            .Received(1)
+            .GetIdsFromMetadata(newSubscription.Metadata);
+        await _providerRepository
+            .Received(1)
+            .GetByIdAsync(Arg.Any<Guid>());
+        await _providerService
+            .Received(1)
+            .UpdateAsync(Arg.Is<Provider>(p => p.Id == providerId && p.Enabled == true));
+        await _stripeFacade
+            .DidNotReceive()
+            .UpdateSubscription(Arg.Any<string>());
+        _featureService
+            .Received(1)
+            .IsEnabled(FeatureFlagKeys.PM21821_ProviderPortalTakeover);
+    }
+
+    private static (Guid providerId, Subscription newSubscription, Provider provider, Event parsedEvent)
+        CreateProviderTestInputsForUpdatedActiveSubscriptionStatus(Subscription? previousSubscription)
+    {
+        var providerId = Guid.NewGuid();
+        var newSubscription = new Subscription
+        {
+            Id = previousSubscription?.Id ?? "sub_123",
+            Status = StripeSubscriptionStatus.Active,
+            Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
+        };
+
+        var provider = new Provider { Id = providerId, Enabled = false };
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = newSubscription,
+                PreviousAttributes =
+                    previousSubscription == null ? null : JObject.FromObject(previousSubscription)
+            }
+        };
+        return (providerId, newSubscription, provider, parsedEvent);
+    }
+
+    public static IEnumerable<object[]> GetNonActiveSubscriptions()
+    {
+        return new List<object[]>
+        {
+            new object[] { new Subscription { Id = "sub_123", Status = StripeSubscriptionStatus.Unpaid }, },
+            new object[] { new Subscription { Id = "sub_123", Status = StripeSubscriptionStatus.Incomplete }, },
+            new object[] { new Subscription { Id = "sub_123", Status = StripeSubscriptionStatus.IncompleteExpired }, },
+            new object[] { new Subscription { Id = "sub_123", Status = StripeSubscriptionStatus.Paused }, },
+        };
     }
 }

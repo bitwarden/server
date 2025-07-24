@@ -33,6 +33,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IPreviewTaxAmountCommand, PreviewTaxAmountCommand>();
         services.AddPaymentOperations();
         services.AddOrganizationLicenseCommandsQueries();
+        services.AddTransient<IGetOrganizationWarningsQuery, GetOrganizationWarningsQuery>();
     }
 
     private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)
