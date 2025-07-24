@@ -14,6 +14,4 @@ BEGIN
         [dbo].[Collection] C ON CU.[CollectionId] = C.[Id]
     INNER JOIN
         @OrganizationUserIds OUI ON OUI.[Id] = OU.[Id]
-    WHERE
-        C.[Type] != 1 -- Exclude DefaultUserCollection
 END
