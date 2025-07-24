@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using Bit.Core.Models.Api;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
@@ -13,7 +12,7 @@ namespace Bit.Api.Tools.Models.Response;
 
 public class SendAccessResponseModel : ResponseModel
 {
-    public SendAccessResponseModel(Send send, GlobalSettings globalSettings)
+    public SendAccessResponseModel(Send send)
         : base("send-access")
     {
         if (send == null)
