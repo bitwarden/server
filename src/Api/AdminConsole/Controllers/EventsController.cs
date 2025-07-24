@@ -115,18 +115,18 @@ public class EventsController : Controller
 
     [HttpGet("~/organization/{orgId}/secrets/{id}/events")]
     public async Task<ListResponseModel<EventResponseModel>> GetSecrets(
-        string id, string orgId,
+        Guid id, Guid orgId,
         [FromQuery] DateTime? start = null,
         [FromQuery] DateTime? end = null,
         [FromQuery] string continuationToken = null)
     {
-        if (!Guid.TryParse(id, out var secretGuid) || !Guid.TryParse(orgId, out var orgGuid))
+        if (id == Guid.Empty || orgId == Guid.Empty)
         {
             throw new NotFoundException();
         }
 
-        var secret = await _secretRepository.GetByIdAsync(secretGuid);
-        var orgIdForVerification = secret?.OrganizationId ?? orgGuid;
+        var secret = await _secretRepository.GetByIdAsync(id);
+        var orgIdForVerification = secret?.OrganizationId ?? orgId;
         var secretOrg = _currentContext.GetOrganization(orgIdForVerification);
 
         if (secretOrg == null || !await _currentContext.AccessEventLogs(secretOrg.Id))
@@ -138,7 +138,7 @@ public class EventsController : Controller
 
         if (secret == null)
         {
-            secret = new Core.SecretsManager.Entities.Secret { Id = secretGuid, OrganizationId = orgGuid };
+            secret = new Core.SecretsManager.Entities.Secret { Id = id, OrganizationId = orgId };
             canViewLogs = secretOrg.Type is Core.Enums.OrganizationUserType.Admin or Core.Enums.OrganizationUserType.Owner;
         }
         else
@@ -159,18 +159,18 @@ public class EventsController : Controller
 
     [HttpGet("~/organization/{orgId}/projects/{id}/events")]
     public async Task<ListResponseModel<EventResponseModel>> GetProjects(
-        string id,
-        string orgId,
+        Guid id,
+        Guid orgId,
         [FromQuery] DateTime? start = null,
         [FromQuery] DateTime? end = null,
         [FromQuery] string continuationToken = null)
     {
-        if (!Guid.TryParse(id, out var projectGuid) || !Guid.TryParse(orgId, out var orgGuid))
+        if (id == Guid.Empty || orgId == Guid.Empty)
         {
             throw new NotFoundException();
         }
 
-        var project = await GetProject(projectGuid, orgGuid);
+        var project = await GetProject(id, orgId);
         await ValidateOrganization(project);
 
         var (fromDate, toDate) = ApiHelpers.GetDateRange(start, end);
