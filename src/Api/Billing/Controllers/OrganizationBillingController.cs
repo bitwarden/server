@@ -3,10 +3,10 @@ using System.Diagnostics;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Api.Billing.Queries.Organizations;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
@@ -28,7 +28,7 @@ public class OrganizationBillingController(
     ICurrentContext currentContext,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
-    IOrganizationWarningsQuery organizationWarningsQuery,
+    IGetOrganizationWarningsQuery getOrganizationWarningsQuery,
     IPaymentService paymentService,
     IPricingClient pricingClient,
     ISubscriberService subscriberService,
@@ -363,7 +363,7 @@ public class OrganizationBillingController(
     public async Task<IResult> GetWarningsAsync([FromRoute] Guid organizationId)
     {
         /*
-         * We'll keep these available at the User level, because we're hiding any pertinent information and
+         * We'll keep these available at the User level because we're hiding any pertinent information, and
          * we want to throw as few errors as possible since these are not core features.
          */
         if (!await currentContext.OrganizationUser(organizationId))
@@ -378,8 +378,39 @@ public class OrganizationBillingController(
             return Error.NotFound();
         }
 
-        var response = await organizationWarningsQuery.Run(organization);
+        var warnings = await getOrganizationWarningsQuery.Run(organization);
 
-        return TypedResults.Ok(response);
+        return TypedResults.Ok(warnings);
+    }
+
+
+    [HttpPost("change-frequency")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> ChangePlanSubscriptionFrequencyAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] ChangePlanFrequencyRequest request)
+    {
+        if (!await currentContext.EditSubscription(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        if (organization.PlanType == request.NewPlanType)
+        {
+            return Error.BadRequest("Organization is already on the requested plan frequency.");
+        }
+
+        await organizationBillingService.UpdateSubscriptionPlanFrequency(
+            organization,
+            request.NewPlanType);
+
+        return TypedResults.Ok();
     }
 }

@@ -1,7 +1,6 @@
-﻿#nullable enable
-namespace Bit.Api.Billing.Models.Responses.Organizations;
+﻿namespace Bit.Core.Billing.Organizations.Models;
 
-public record OrganizationWarningsResponse
+public record OrganizationWarnings
 {
     public FreeTrialWarning? FreeTrial { get; set; }
     public InactiveSubscriptionWarning? InactiveSubscription { get; set; }
