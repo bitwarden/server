@@ -634,15 +634,12 @@ public class HandlebarsMailService : IMailService
         {
             templateFileSuffix = ".txt";
         }
-        if (!templateName.EndsWith(".html") && !templateName.EndsWith(".txt"))
+        else if (!templateName.EndsWith(".html"))
         {
-            return null; // Or throw a meaningful exception if required
+            // unexpected suffix
+            return null;
         }
         var suffixPosition = templateName.LastIndexOf(templateFileSuffix);
-        if (suffixPosition == -1)
-        {
-            return null; // Suffix not found, return null
-        }
         var templateNameNoSuffix = templateName.Substring(0, suffixPosition);
         var templatePathNoSuffix = templateNameNoSuffix.Replace(".", "/");
         var diskPath = $"{_globalSettings.MailTemplateDirectory}/{templatePathNoSuffix}{templateFileSuffix}.hbs";
