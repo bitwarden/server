@@ -648,7 +648,7 @@ public class CiphersController : Controller
         if (await CanEditAllCiphersAsync(organizationId))
         {
             // TODO: This can likely be optimized to only query the requested ciphers and then checking they belong to the org
-            var orgCollections = (await _collectionRepository.GetManyByOrganizationIdAsync(organizationId)).ToDictionary(c => c.Id);
+            var orgCollections = (await _collectionRepository.GetManySharedCollectionsByOrganizationIdAsync(organizationId)).ToDictionary(c => c.Id);
 
             // Ensure all requested collections are in orgCollections
             if (collectionIds.Any(c => !orgCollections.ContainsKey(c)))
