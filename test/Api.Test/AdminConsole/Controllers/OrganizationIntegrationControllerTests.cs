@@ -26,6 +26,60 @@ public class OrganizationIntegrationControllerTests
     };
 
     [Theory, BitAutoData]
+    public async Task GetAsync_UserIsNotOrganizationAdmin_ThrowsNotFound(
+        SutProvider<OrganizationIntegrationController> sutProvider,
+        Guid organizationId)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(organizationId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_IntegrationsExist_ReturnsIntegrations(
+        SutProvider<OrganizationIntegrationController> sutProvider,
+        Guid organizationId,
+        List<OrganizationIntegration> integrations)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetManyByOrganizationAsync(organizationId)
+            .Returns(integrations);
+
+        var result = await sutProvider.Sut.GetAsync(organizationId);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
+            .GetManyByOrganizationAsync(organizationId);
+
+        Assert.Equal(integrations.Count, result.Count);
+        Assert.All(result, r => Assert.IsType<OrganizationIntegrationResponseModel>(r));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_NoIntegrations_ReturnsEmptyList(
+        SutProvider<OrganizationIntegrationController> sutProvider,
+        Guid organizationId)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetManyByOrganizationAsync(organizationId)
+            .Returns([]);
+
+        var result = await sutProvider.Sut.GetAsync(organizationId);
+
+        Assert.Empty(result);
+    }
+
+    [Theory, BitAutoData]
     public async Task CreateAsync_Webhook_AllParamsProvided_Succeeds(
         SutProvider<OrganizationIntegrationController> sutProvider,
         Guid organizationId)
