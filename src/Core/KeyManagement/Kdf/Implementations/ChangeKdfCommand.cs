@@ -2,14 +2,13 @@
 
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
 
-namespace Bit.Core.KeyManagement.UserKey.Implementations;
+namespace Bit.Core.KeyManagement.Kdf.Implementations;
 
 /// <inheritdoc />
 public class ChangeKdfCommand : IChangeKdfCommand
