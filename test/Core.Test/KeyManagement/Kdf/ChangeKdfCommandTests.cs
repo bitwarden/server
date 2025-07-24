@@ -73,31 +73,38 @@ public class ChangeKdfCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task ChangeKdfAsync_WithAuthenticationAndUnlockData_UpdatesUserCorrectly(SutProvider<ChangeKdfCommand> sutProvider, User user, KdfSettings kdf)
+    public async Task ChangeKdfAsync_WithAuthenticationAndUnlockData_UpdatesUserCorrectly(SutProvider<ChangeKdfCommand> sutProvider, User user)
     {
+        var constantKdf = new KdfSettings
+        {
+            KdfType = Enums.KdfType.Argon2id,
+            Iterations = 5,
+            Memory = 1024,
+            Parallelism = 4
+        };
         var authenticationData = new MasterPasswordAuthenticationData
         {
-            Kdf = kdf,
+            Kdf = constantKdf,
             MasterPasswordAuthenticationHash = "new-auth-hash",
             Salt = user.GetMasterPasswordSalt()
         };
         var unlockData = new MasterPasswordUnlockData
         {
-            Kdf = kdf,
+            Kdf = constantKdf,
             MasterKeyWrappedUserKey = "new-wrapped-key",
             Salt = user.GetMasterPasswordSalt()
         };
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>()).Returns(Task.FromResult(true));
         sutProvider.GetDependency<IUserService>().UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>()).Returns(Task.FromResult(IdentityResult.Success));
 
-        await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", "should-be-overwritten", "should-be-overwritten", kdf, authenticationData, unlockData);
+        await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", "should-be-overwritten", "should-be-overwritten", constantKdf, authenticationData, unlockData);
 
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(Arg.Is<User>(u =>
             u.Id == user.Id
-            && u.Kdf == kdf.KdfType
-            && u.KdfIterations == kdf.Iterations
-            && u.KdfMemory == kdf.Memory
-            && u.KdfParallelism == kdf.Parallelism
+            && u.Kdf == constantKdf.KdfType
+            && u.KdfIterations == constantKdf.Iterations
+            && u.KdfMemory == constantKdf.Memory
+            && u.KdfParallelism == constantKdf.Parallelism
             && u.Key == "new-wrapped-key"
         ));
     }
