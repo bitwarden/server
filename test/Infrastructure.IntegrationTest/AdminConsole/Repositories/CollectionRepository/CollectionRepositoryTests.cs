@@ -525,7 +525,7 @@ public class CollectionRepositoryTests
         var collection3 = new Collection { Name = "Collection 3", OrganizationId = organization.Id, };
         await collectionRepository.CreateAsync(collection3, null, null);
 
-        // Create a default user collection (should not be returned by this method)
+        // Create a default user collection
         var defaultCollection = new Collection
         {
             Name = "My Items",
@@ -537,14 +537,12 @@ public class CollectionRepositoryTests
         var collections = await collectionRepository.GetManyByOrganizationIdAsync(organization.Id);
 
         Assert.NotNull(collections);
-        Assert.Equal(3, collections.Count); // Should only return the 3 shared collections, excluding the default user collection
+        Assert.Equal(4, collections.Count);
         Assert.All(collections, c => Assert.Equal(organization.Id, c.OrganizationId));
-        Assert.All(collections, c => Assert.NotEqual(CollectionType.DefaultUserCollection, c.Type));
 
-        // Verify specific collections are returned
         Assert.Contains(collections, c => c.Name == "Collection 1");
         Assert.Contains(collections, c => c.Name == "Collection 2");
         Assert.Contains(collections, c => c.Name == "Collection 3");
-        Assert.DoesNotContain(collections, c => c.Name == "My Items");
+        Assert.Contains(collections, c => c.Name == "My Items");
     }
 }

@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Collection_ReadByOrganizationId]
+CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -11,3 +11,4 @@ BEGIN
     WHERE
         [OrganizationId] = @OrganizationId
 END
+GO

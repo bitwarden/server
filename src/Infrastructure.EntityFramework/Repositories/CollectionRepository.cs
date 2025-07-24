@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
@@ -217,8 +216,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         {
             var dbContext = GetDatabaseContext(scope);
             var query = from c in dbContext.Collections
-                        where c.OrganizationId == organizationId &&
-                            c.Type != CollectionType.DefaultUserCollection
+                        where c.OrganizationId == organizationId
                         select c;
             var collections = await query.ToArrayAsync();
             return collections;
