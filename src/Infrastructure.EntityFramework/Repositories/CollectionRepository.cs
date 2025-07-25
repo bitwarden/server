@@ -231,7 +231,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             var dbContext = GetDatabaseContext(scope);
             var query = from c in dbContext.Collections
                         where c.OrganizationId == organizationId &&
-                            c.Type != CollectionType.DefaultUserCollection
+                            c.Type == CollectionType.SharedCollection
                         select c;
             var collections = await query.ToArrayAsync();
             return collections;
