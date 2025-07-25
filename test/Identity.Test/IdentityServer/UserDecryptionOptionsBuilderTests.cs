@@ -28,6 +28,8 @@ public class UserDecryptionOptionsBuilderTests
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _loginApprovingClientTypes = Substitute.For<ILoginApprovingClientTypes>();
         _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository, _loginApprovingClientTypes);
+        var user = new User();
+        _builder.ForUser(user);
     }
 
     [Theory]
@@ -284,5 +286,33 @@ public class UserDecryptionOptionsBuilderTests
         var result = await _builder.ForUser(user).WithSso(ssoConfig).BuildAsync();
 
         Assert.True(result.TrustedDeviceOption?.HasAdminApproval);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Build_WhenUserHasNoMasterPassword_ShouldReturnNoMasterPasswordUnlock(User user)
+    {
+        user.MasterPassword = null;
+
+        var result = await _builder.ForUser(user).BuildAsync();
+
+        Assert.False(result.HasMasterPassword);
+        Assert.Null(result.MasterPasswordUnlock);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Build_WhenUserHasMasterPassword_ShouldReturnMasterPasswordUnlock(User user)
+    {
+        user.Email = "test@example.COM";
+
+        var result = await _builder.ForUser(user).BuildAsync();
+
+        Assert.True(result.HasMasterPassword);
+        Assert.NotNull(result.MasterPasswordUnlock);
+        Assert.Equal(user.Kdf, result.MasterPasswordUnlock.Kdf.KdfType);
+        Assert.Equal(user.KdfIterations, result.MasterPasswordUnlock.Kdf.Iterations);
+        Assert.Equal(user.KdfMemory, result.MasterPasswordUnlock.Kdf.Memory);
+        Assert.Equal(user.KdfParallelism, result.MasterPasswordUnlock.Kdf.Parallelism);
+        Assert.Equal("test@example.com", result.MasterPasswordUnlock.Salt);
+        Assert.Equal(user.Key, result.MasterPasswordUnlock.MasterKeyEncryptedUserKey);
     }
 }
