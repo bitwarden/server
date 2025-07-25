@@ -150,12 +150,12 @@ public static class LoggerFactoryExtensions
 
         if (logSentryWarning)
         {
-            serilog.Warning("Sentry for logging has been deprecated. Read more: https://bitwarden.com/help/releasenotes/#2025.8.0");
+            serilog.Warning("Sentry for logging has been deprecated. Read more: https://btwrdn.com/log-deprecation");
         }
 
         if (logSyslogWarning)
         {
-            serilog.Warning("Syslog for logging has been deprecated. Read more: https://bitwarden.com/help/releasenotes/#2025.8.0");
+            serilog.Warning("Syslog for logging has been deprecated. Read more: https://btwrdn.com/log-deprecation");
         }
 
         builder.AddSerilog(serilog);
