@@ -1113,7 +1113,7 @@ public class CiphersController : Controller
     }
 
     [HttpPost("purge")]
-    public async Task PostPurge([FromBody] SecretVerificationRequestModel model, string organizationId = null)
+    public async Task PostPurge([FromBody] SecretVerificationRequestModel model, Guid? organizationId = null)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -1128,24 +1128,22 @@ public class CiphersController : Controller
             throw new BadRequestException(ModelState);
         }
 
-        // Check if the user is claimed by any organization.
-        if (await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
+        if (organizationId == null)
         {
-            throw new BadRequestException("Cannot purge accounts owned by an organization. Contact your organization administrator for additional details.");
-        }
-
-        if (string.IsNullOrWhiteSpace(organizationId))
-        {
+            // Check if the user is claimed by any organization.
+            if (await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
+            {
+                throw new BadRequestException("Cannot purge accounts owned by an organization. Contact your organization administrator for additional details.");
+            }
             await _cipherRepository.DeleteByUserIdAsync(user.Id);
         }
         else
         {
-            var orgId = new Guid(organizationId);
-            if (!await _currentContext.EditAnyCollection(orgId))
+            if (!await _currentContext.EditAnyCollection(organizationId!.Value))
             {
                 throw new NotFoundException();
             }
-            await _cipherService.PurgeAsync(orgId);
+            await _cipherService.PurgeAsync(organizationId!.Value);
         }
     }
 
