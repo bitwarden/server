@@ -7,6 +7,23 @@ namespace Bit.Core.Test.AdminConsole.Helpers;
 public static class PermissionsHelpers
 {
     /// <summary>
+    /// Sets the specified permission.
+    /// </summary>
+    /// <param name="permissionName">The permission name specified as a string - using `nameof` is highly recommended.</param>
+    /// <param name="value">The value to set the permission to.</param>
+    /// <returns>No value; this mutates the permissions object.</returns>
+    public static void SetPermission(this Permissions permissions, string permissionName, bool value)
+    {
+        var prop = typeof(Permissions).GetProperty(permissionName);
+        if (prop == null)
+        {
+            throw new NullReferenceException("Invalid property name.");
+        }
+
+        prop.SetValue(permissions, true);
+    }
+
+    /// <summary>
     /// Return a new Permission object with inverted permissions.
     /// This is useful to test negative cases, e.g. "all other permissions should fail".
     /// </summary>
