@@ -71,7 +71,7 @@ services:
       - mysql
 
   mariadb:
-    image: mariadb:10
+    image: mariadb:11
     ports:
       - 4306:3306
     environment:
