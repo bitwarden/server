@@ -65,7 +65,7 @@ public class CollectionsController : Controller
     [ProducesResponseType(typeof(ListResponseModel<CollectionResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
     {
-        var collections = await _collectionRepository.GetManyByOrganizationIdAsync(
+        var collections = await _collectionRepository.GetManySharedCollectionsByOrganizationIdAsync(
             _currentContext.OrganizationId.Value);
         // TODO: Get all CollectionGroup associations for the organization and marry them up here for the response.
         var collectionResponses = collections.Select(c => new CollectionResponseModel(c, null));

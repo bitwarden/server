@@ -16,9 +16,15 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
 
     /// <summary>
     /// Return all collections that belong to the organization. Does not include any permission details or group/user
-    /// access relationships. Excludes default collections (My Items collections).
+    /// access relationships.
     /// </summary>
     Task<ICollection<Collection>> GetManyByOrganizationIdAsync(Guid organizationId);
+
+    /// <inheritdoc cref="GetManyByOrganizationIdAsync"/>
+    /// <remarks>
+    /// Excludes default collections (My Items collections) - used by Admin Console Collections tab.
+    /// </remarks>
+    Task<ICollection<Collection>> GetManySharedCollectionsByOrganizationIdAsync(Guid organizationId);
 
     /// <summary>
     /// Return all shared collections that belong to the organization. Includes group/user access relationships for each collection.

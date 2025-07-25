@@ -441,13 +441,15 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                             : new List<Guid>(),
 
                         Collections = includeCollections
-                            ? ou.CollectionUsers.Select(cu => new CollectionAccessSelection
-                            {
-                                Id = cu.CollectionId,
-                                ReadOnly = cu.ReadOnly,
-                                HidePasswords = cu.HidePasswords,
-                                Manage = cu.Manage
-                            }).ToList()
+                            ? ou.CollectionUsers
+                                .Where(cu => cu.Collection.Type == CollectionType.SharedCollection)
+                                .Select(cu => new CollectionAccessSelection
+                                {
+                                    Id = cu.CollectionId,
+                                    ReadOnly = cu.ReadOnly,
+                                    HidePasswords = cu.HidePasswords,
+                                    Manage = cu.Manage
+                                }).ToList()
                             : new List<CollectionAccessSelection>()
                     };
 

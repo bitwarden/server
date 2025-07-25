@@ -217,8 +217,21 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         {
             var dbContext = GetDatabaseContext(scope);
             var query = from c in dbContext.Collections
+                        where c.OrganizationId == organizationId
+                        select c;
+            var collections = await query.ToArrayAsync();
+            return collections;
+        }
+    }
+
+    public async Task<ICollection<Core.Entities.Collection>> GetManySharedCollectionsByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from c in dbContext.Collections
                         where c.OrganizationId == organizationId &&
-                            c.Type != CollectionType.DefaultUserCollection
+                            c.Type == CollectionType.SharedCollection
                         select c;
             var collections = await query.ToArrayAsync();
             return collections;
