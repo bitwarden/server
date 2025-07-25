@@ -4,6 +4,7 @@ using Bit.Core.Entities;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
@@ -674,9 +675,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
                 if (cc?.CollectionId != null)
                 {
-                    var list = tempCollections[cipher.Id];
-                    if (!list.Contains(cc.CollectionId))
-                        list.Add(cc.CollectionId);
+                    tempCollections[cipher.Id].AddIfNotExists(cc.CollectionId);
                 }
 
                 return details;
@@ -688,7 +687,9 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
         // now assign each List<Guid> back to the array property in one shot
         foreach (var kv in dict)
+        {
             kv.Value.CollectionIds = tempCollections[kv.Key].ToArray();
+        }
 
         return dict.Values.ToList();
     }

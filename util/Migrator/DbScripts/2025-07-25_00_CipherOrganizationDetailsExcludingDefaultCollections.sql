@@ -35,27 +35,26 @@ BEGIN
     SET NOCOUNT ON;
 
     SELECT
-        Id,
-        UserId,
-        OrganizationId,
+        [Id],
+        [UserId],
+        [OrganizationId],
         [Type],
         [Data],
         [Attachments],
-        CreationDate,
-        RevisionDate,
-        DeletedDate,
-        Reprompt,
+        [CreationDate],
+        [RevisionDate],
+        [DeletedDate],
+        [Reprompt],
         [Key],
-        OrganizationUseTotp,
-        CollectionId
+        [OrganizationUseTotp],
+        [CollectionId]
     FROM dbo.OrganizationCipherDetailsWithCollectionsView
-    WHERE OrganizationId = @OrganizationId
-      AND (CollectionId IS NULL       -- no collections
-           OR CollectionType <> 1);  -- or at least one non-default
+    WHERE [OrganizationId] = @OrganizationId
+      AND ([CollectionId] IS NULL       -- no collections
+           OR [CollectionType] <> 1);  -- or at least one non-default
 END;
 GO
 
-GO
 CREATE NONCLUSTERED INDEX IX_Cipher_OrganizationId_Filtered_OrgCiphersOnly
     ON [dbo].[Cipher] ([OrganizationId])
     INCLUDE ([Id], [Type], [Data], [Attachments], [CreationDate], [RevisionDate], [DeletedDate], [Reprompt], [Key])
