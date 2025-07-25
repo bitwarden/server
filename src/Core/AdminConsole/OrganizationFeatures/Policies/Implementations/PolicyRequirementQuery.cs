@@ -13,18 +13,9 @@ public class PolicyRequirementQuery(
 {
     public async Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement
     {
-        var factory = factories.OfType<IPolicyRequirementFactory<T>>().SingleOrDefault();
-        if (factory is null)
-        {
-            throw new NotImplementedException("No Requirement Factory found for " + typeof(T));
-        }
-
         var policyDetails = await GetPolicyDetails(userId);
-        var filteredPolicies = policyDetails
-            .Where(p => p.PolicyType == factory.PolicyType)
-            .Where(factory.Enforce);
-        var requirement = factory.Create(filteredPolicies);
-        return requirement;
+
+        return PolicyRequirementBuilder.Build<T>(factories, policyDetails);
     }
 
     private Task<IEnumerable<PolicyDetails>> GetPolicyDetails(Guid userId)
