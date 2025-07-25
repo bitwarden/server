@@ -1025,6 +1025,36 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("OrganizationReport", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationReportSummary", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContentEncryptionKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OrganizationReportId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SummaryDetails")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdateDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationReportId");
+
+                    b.ToTable("OrganizationReportSummaries");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.PasswordHealthReportApplication", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2657,6 +2687,17 @@ namespace Bit.SqliteMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationReportSummary", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationReport", "OrganizationReport")
+                        .WithMany()
+                        .HasForeignKey("OrganizationReportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("OrganizationReport");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.PasswordHealthReportApplication", b =>

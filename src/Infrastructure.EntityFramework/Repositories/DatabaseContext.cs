@@ -88,6 +88,8 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationReport> OrganizationReports { get; set; }
     public DbSet<OrganizationApplication> OrganizationApplications { get; set; }
 
+    public DbSet<OrganizationReportSummary> OrganizationReportSummaries { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         // Scans and loads all configurations implementing the `IEntityTypeConfiguration` from the
