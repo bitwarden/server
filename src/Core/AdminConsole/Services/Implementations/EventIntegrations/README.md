@@ -401,13 +401,14 @@ code locally that accesses ASB resources.
 
 ## ServiceCollectionExtensions
 In our `ServiceCollectionExtensions`, we pull all the above pieces together to start listeners on each message
-tier with handlers to process the integration. There are a number of helper methods in here to make this simple
-to add a new integration - one call per platform.
+tier with handlers to process the integration. There are helper methods in here to make this simple
+to add a new integration - one call per messaging platform.
 
-Also note that if an integration needs a custom singleton / service defined, the add listeners method is a
-good place to set that up. For instance, `SlackIntegrationHandler` needs a `SlackService`, so the singleton
-declaration is right above the add integration method for slack. Same thing for webhooks when it comes to
-defining a custom HttpClient by name.
+Also note that if an integration needs a custom singleton / service defined, we add that in
+`AddEventIntegrationServices`. This method is called by both of the add listeners methods, which ensures that we have
+one common place to set up cross-messaging-platform dependencies. For instance, `SlackIntegrationHandler` needs
+a `SlackService`, so `AddEventIntegrationServices` has a call to `AddSlackService`. Same thing for webhooks when it
+comes to defining a custom HttpClient by name.
 
 1. In `AddRabbitMqListeners` add the integration:
 ``` csharp
@@ -421,7 +422,7 @@ defining a custom HttpClient by name.
 
 2. In `AddAzureServiceBusListeners` add the integration:
 ``` csharp
-services.AddAzureServiceBusIntegration<ExampleIntegrationConfigurationDetails, ExampleIntegrationHandler>(
+        services.AddAzureServiceBusIntegration<ExampleIntegrationConfigurationDetails, ExampleIntegrationHandler>(
             eventSubscriptionName: globalSettings.EventLogging.AzureServiceBus.ExampleEventSubscriptionName,
             integrationSubscriptionName: globalSettings.EventLogging.AzureServiceBus.ExampleIntegrationSubscriptionName,
             integrationType: IntegrationType.Example,
