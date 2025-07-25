@@ -23,7 +23,7 @@ AS
     INNER JOIN [dbo].[Organization] O ON C.[OrganizationId] = O.[Id]
     LEFT JOIN [dbo].[CollectionCipher] CC ON CC.[CipherId] = C.[Id]
     LEFT JOIN [dbo].[Collection] COL ON CC.[CollectionId] = COL.[Id]
-    WHERE C.[UserId] IS NULL; -- Organization ciphers only
+    WHERE C.[UserId] IS NULL -- Organization ciphers only
     AND O.[Enabled] = 1; -- Only enabled organizations
 GO
 
