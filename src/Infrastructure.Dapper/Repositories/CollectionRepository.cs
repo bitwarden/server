@@ -319,37 +319,31 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             return;
         }
 
-        using (var connection = new SqlConnection(ConnectionString))
+        await using var connection = new SqlConnection(ConnectionString);
+        connection.Open();
+        await using var transaction = connection.BeginTransaction();
+        try
         {
-            connection.Open();
-            using (var transaction = connection.BeginTransaction())
+            var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(connection, transaction, organizationId);
+
+            var missingDefaultCollectionUserIds = affectedOrgUserIds.Except(orgUserIdWithDefaultCollection);
+
+            var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
+
+            if (!collectionUsers.Any() || !collections.Any())
             {
-                try
-                {
-                    var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(connection, transaction, organizationId);
-
-                    var missingDefaultCollectionUserIds = affectedOrgUserIds
-                        .Except(orgUserIdWithDefaultCollection)
-                        .ToList();
-
-                    var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
-
-                    if (!collectionUsers.Any() || !collections.Any())
-                    {
-                        return;
-                    }
-
-                    await CreateCollectionsAsync(connection, transaction, collections);
-                    await CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
-
-                    transaction.Commit();
-                }
-                catch
-                {
-                    transaction.Rollback();
-                    throw;
-                }
+                return;
             }
+
+            await CreateCollectionsAsync(connection, transaction, collections);
+            await CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
+
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
         }
     }
 
@@ -378,7 +372,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         return organizationUserIds.ToHashSet();
     }
 
-    private (List<CollectionUser> collectionUser, List<Collection> collection) BuildDefaultCollectionForUsers(Guid organizationId, List<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
+    private (List<CollectionUser> collectionUser, List<Collection> collection) BuildDefaultCollectionForUsers(Guid organizationId, IEnumerable<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
     {
         var collectionUsers = new List<CollectionUser>();
         var collections = new List<Collection>();
@@ -414,12 +408,10 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
     private async Task CreateCollectionsUsersAsync(SqlConnection connection, SqlTransaction transaction, List<CollectionUser> collectionUsers)
     {
-        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-        {
-            bulkCopy.DestinationTableName = "[dbo].[CollectionUser]";
-            var dataTable = BuildCollectionsUsersTable(bulkCopy, collectionUsers);
-            await bulkCopy.WriteToServerAsync(dataTable);
-        }
+        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction);
+        bulkCopy.DestinationTableName = "[dbo].[CollectionUser]";
+        var dataTable = BuildCollectionsUsersTable(bulkCopy, collectionUsers);
+        await bulkCopy.WriteToServerAsync(dataTable);
     }
 
     private DataTable BuildCollectionsUsersTable(SqlBulkCopy bulkCopy, List<CollectionUser> collectionUsers)
@@ -466,12 +458,10 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
     private async Task CreateCollectionsAsync(SqlConnection connection, SqlTransaction transaction, IEnumerable<Collection> collections)
     {
-        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-        {
-            bulkCopy.DestinationTableName = "[dbo].[Collection]";
-            var dataTable = BuildCollectionsTable(bulkCopy, collections);
-            await bulkCopy.WriteToServerAsync(dataTable);
-        }
+        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction);
+        bulkCopy.DestinationTableName = "[dbo].[Collection]";
+        var dataTable = BuildCollectionsTable(bulkCopy, collections);
+        await bulkCopy.WriteToServerAsync(dataTable);
     }
 
     private DataTable BuildCollectionsTable(SqlBulkCopy bulkCopy, IEnumerable<Collection> collections)

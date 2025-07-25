@@ -783,26 +783,24 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             return;
         }
 
-        using (var scope = ServiceScopeFactory.CreateScope())
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(dbContext, organizationId);
+
+        var missingDefaultCollectionUserIds = affectedOrgUserIds.Except(orgUserIdWithDefaultCollection);
+
+        var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
+
+        if (!collectionUsers.Any() || !collections.Any())
         {
-            var dbContext = GetDatabaseContext(scope);
-
-            var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(dbContext, organizationId);
-
-            var missingDefaultCollectionUserIds = affectedOrgUserIds.Where(orgUserId => !orgUserIdWithDefaultCollection.Contains(orgUserId)).ToList();
-
-            var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
-
-            if (!collectionUsers.Any() || !collections.Any())
-            {
-                return;
-            }
-
-            await dbContext.BulkCopyAsync(collections);
-            await dbContext.BulkCopyAsync(collectionUsers);
-
-            await dbContext.SaveChangesAsync();
+            return;
         }
+
+        await dbContext.BulkCopyAsync(collections);
+        await dbContext.BulkCopyAsync(collectionUsers);
+
+        await dbContext.SaveChangesAsync();
     }
 
     private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(DatabaseContext dbContext, Guid organizationId)
@@ -828,7 +826,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         return results.ToHashSet();
     }
 
-    private (List<CollectionUser> collectionUser, List<Collection> collection) BuildDefaultCollectionForUsers(Guid organizationId, List<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
+    private (List<CollectionUser> collectionUser, List<Collection> collection) BuildDefaultCollectionForUsers(Guid organizationId, IEnumerable<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
     {
         var collectionUsers = new List<CollectionUser>();
         var collections = new List<Collection>();
