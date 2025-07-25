@@ -23,6 +23,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
+using Bit.Core.Auth.UserFeatures.PasswordValidation;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.TrialInitiation;
@@ -381,7 +382,7 @@ public static class ServiceCollectionExtensions
         services.TryAddTransient(typeof(IOtpTokenProvider<>), typeof(OtpTokenProvider<>));
 
         services.AddScoped<IOrganizationDuoUniversalTokenProvider, OrganizationDuoUniversalTokenProvider>();
-        services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
+        services.Configure<PasswordHasherOptions>(options => options.IterationCount = PasswordValidationConstants.PasswordHasherKdfIterations);
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
         {
             options.TokenLifespan = TimeSpan.FromDays(30);

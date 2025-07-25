@@ -152,7 +152,15 @@ public class ProviderService : IProviderService
             throw new ArgumentException("Cannot create provider this way.");
         }
 
+        var existingProvider = await _providerRepository.GetByIdAsync(provider.Id);
+        var enabledStatusChanged = existingProvider != null && existingProvider.Enabled != provider.Enabled;
+
         await _providerRepository.ReplaceAsync(provider);
+
+        if (enabledStatusChanged && (provider.Type == ProviderType.Msp || provider.Type == ProviderType.BusinessUnit))
+        {
+            await UpdateClientOrganizationsEnabledStatusAsync(provider.Id, provider.Enabled);
+        }
     }
 
     public async Task<List<ProviderUser>> InviteUserAsync(ProviderUserInvite<string> invite)
@@ -726,6 +734,22 @@ public class ProviderService : IProviderService
                 break;
             default:
                 throw new BadRequestException($"Unsupported provider type {providerType}.");
+        }
+    }
+
+    private async Task UpdateClientOrganizationsEnabledStatusAsync(Guid providerId, bool enabled)
+    {
+        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
+
+        foreach (var providerOrganization in providerOrganizations)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
+            if (organization != null && organization.Enabled != enabled)
+            {
+                organization.Enabled = enabled;
+                await _organizationRepository.ReplaceAsync(organization);
+                await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            }
         }
     }
 }
