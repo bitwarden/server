@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Entities;
@@ -219,5 +220,36 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
 
             return result.SingleOrDefault() ?? new OrganizationSeatCounts();
         }
+    }
+
+    public async Task<IEnumerable<Organization>> GetOrganizationsForSubscriptionSyncAsync()
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        return await connection.QueryAsync<Organization>(
+            "[dbo].[Organization_GetOrganizationsForSubscriptionSync]",
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task UpdateSuccessfulOrganizationSyncStatusAsync(IEnumerable<Guid> successfulOrganizations, DateTime syncDate)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync("[dbo].[Organization_UpdateSubscriptionStatus]",
+            new
+            {
+                SuccessfulOrganizations = JsonSerializer.Serialize(successfulOrganizations),
+                SyncDate = syncDate
+            },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
+            new { OrganizationId = organizationId, SeatsToAdd = increaseAmount, RequestDate = requestDate },
+            commandType: CommandType.StoredProcedure);
     }
 }

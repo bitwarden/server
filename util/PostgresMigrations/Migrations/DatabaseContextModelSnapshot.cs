@@ -207,6 +207,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<long?>("Storage")
                         .HasColumnType("bigint");
 
+                    b.Property<bool>("SyncSeats")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("TwoFactorProviders")
                         .HasColumnType("text");
 

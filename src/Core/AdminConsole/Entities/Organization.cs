@@ -123,6 +123,11 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// </summary>
     public bool UseAdminSponsoredFamilies { get; set; }
 
+    /// <summary>
+    /// If set to true, organization needs their seat count synced with their subscription
+    /// </summary>
+    public bool SyncSeats { get; set; }
+
     public void SetNewId()
     {
         if (Id == default(Guid))
