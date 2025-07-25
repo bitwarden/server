@@ -64,10 +64,19 @@ public class Startup
             config.Filters.Add(new ModelStateValidationFilterAttribute());
         });
 
-        services.AddSwaggerGen(c =>
+        services.AddSwaggerGen(config =>
         {
-            c.SchemaFilter<EnumSchemaFilter>();
-            c.SwaggerDoc("v1", new OpenApiInfo { Title = "Bitwarden Identity", Version = "v1" });
+            config.SchemaFilter<EnumSchemaFilter>();
+            config.SchemaFilter<EncryptedStringSchemaFilter>();
+
+            // These two filters require debug symbols/git, so only add them in development mode
+            if (Environment.IsDevelopment())
+            {
+                config.DocumentFilter<GitCommitDocumentFilter>();
+                config.OperationFilter<SourceFileLineOperationFilter>();
+            }
+
+            config.SwaggerDoc("v1", new OpenApiInfo { Title = "Bitwarden Identity", Version = "v1" });
         });
 
         if (!globalSettings.SelfHosted)
