@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Scim.Models;
 using Bit.Scim.Users.Interfaces;
 using Bit.Scim.Utilities;
@@ -22,29 +21,28 @@ namespace Bit.Scim.Controllers.v2;
 public class UsersController : Controller
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IOrganizationService _organizationService;
     private readonly IGetUsersListQuery _getUsersListQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IPatchUserCommand _patchUserCommand;
     private readonly IPostUserCommand _postUserCommand;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
+    private readonly IRevokeOrganizationUserCommand _revokeOrganizationUserCommand;
 
-    public UsersController(
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationService organizationService,
+    public UsersController(IOrganizationUserRepository organizationUserRepository,
         IGetUsersListQuery getUsersListQuery,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IPatchUserCommand patchUserCommand,
         IPostUserCommand postUserCommand,
-        IRestoreOrganizationUserCommand restoreOrganizationUserCommand)
+        IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
+        IRevokeOrganizationUserCommand revokeOrganizationUserCommand)
     {
         _organizationUserRepository = organizationUserRepository;
-        _organizationService = organizationService;
         _getUsersListQuery = getUsersListQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _patchUserCommand = patchUserCommand;
         _postUserCommand = postUserCommand;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
+        _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
     }
 
     [HttpGet("{id}")]
@@ -101,7 +99,7 @@ public class UsersController : Controller
         }
         else if (!model.Active && orgUser.Status != OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RevokeUserAsync(orgUser, EventSystemUser.SCIM);
+            await _revokeOrganizationUserCommand.RevokeUserAsync(orgUser, EventSystemUser.SCIM);
         }
 
         // Have to get full details object for response model
