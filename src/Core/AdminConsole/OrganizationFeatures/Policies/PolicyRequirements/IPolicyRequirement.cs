@@ -9,3 +9,18 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements
 /// affects. You may represent the impact of the policy in any way that makes sense for the domain.
 /// </summary>
 public interface IPolicyRequirement;
+
+// my test
+public interface ISinglePolicyRequirement : IPolicyRequirement //<out T> where T : ISinglePolicyRequirement<T>
+{
+    // static abstract T Create(PolicyDetails policyDetails);
+}
+
+public interface IAggregatePolicyRequirement : IPolicyRequirement //<out T> where T : IAggregatePolicyRequirement<T>
+{
+    // static abstract T Create(IEnumerable<PolicyDetails> policyDetails);
+}
+
+// decided not to put create method on the object b/c then you can't link it to its definition unless you
+// put the generic type on the definition, or the policyType on the object, and in both cases you may as well
+// then put it all in the def and save the hassle

@@ -19,13 +19,6 @@ public abstract class BasePolicyRequirementFactory<T> : IPolicyRequirementFactor
         [OrganizationUserType.Owner, OrganizationUserType.Admin];
 
     /// <summary>
-    /// User statuses that are exempt from policy enforcement.
-    /// Invited and Revoked users are exempt by default, which is appropriate in the majority of cases.
-    /// </summary>
-    protected virtual IEnumerable<OrganizationUserStatusType> ExemptStatuses { get; } =
-        [OrganizationUserStatusType.Invited, OrganizationUserStatusType.Revoked];
-
-    /// <summary>
     /// Whether a Provider User for the organization is exempt from policy enforcement.
     /// Provider Users are exempt by default, which is appropriate in the majority of cases.
     /// </summary>
@@ -36,9 +29,8 @@ public abstract class BasePolicyRequirementFactory<T> : IPolicyRequirementFactor
 
     public bool Enforce(PolicyDetails policyDetails)
         => !policyDetails.HasRole(ExemptRoles) &&
-            !policyDetails.HasStatus(ExemptStatuses) &&
             (!policyDetails.IsProvider || !ExemptProviders);
 
     /// <inheritdoc />
-    public abstract T Create(IEnumerable<PolicyDetails> policyDetails);
+    public abstract T Create(PolicyDetails policyDetails);
 }

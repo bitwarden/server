@@ -1,39 +1,41 @@
-﻿#nullable enable
-
-using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
-/// <summary>
-/// An interface that defines how to create a single <see cref="IPolicyRequirement"/> from a sequence of
-/// <see cref="PolicyDetails"/>.
-/// </summary>
-/// <typeparam name="T">The <see cref="IPolicyRequirement"/> that the factory produces.</typeparam>
-/// <remarks>
-/// See <see cref="BasePolicyRequirementFactory{T}"/> for a simple base implementation suitable for most policies.
-/// </remarks>
-public interface IPolicyRequirementFactory<out T> where T : IPolicyRequirement
+public interface IPolicyRequirementFactory
 {
     /// <summary>
-    /// The <see cref="PolicyType"/> that the requirement relates to.
+    /// The PolicyType this factory is for.
     /// </summary>
     PolicyType PolicyType { get; }
 
     /// <summary>
-    /// A predicate that determines whether a policy should be enforced against the user.
+    /// Return true if the role is exempt from the policy.
     /// </summary>
-    /// <remarks>Use this to exempt users based on their role, status or other attributes.</remarks>
-    /// <param name="policyDetails">Policy details for the defined PolicyType.</param>
-    /// <returns>True if the policy should be enforced against the user, false otherwise.</returns>
-    bool Enforce(PolicyDetails policyDetails);
+    /// <returns></returns>
+    bool ExemptRoles(OrganizationUserType role);
 
     /// <summary>
-    /// A reducer method that creates a single <see cref="IPolicyRequirement"/> from a set of PolicyDetails.
+    /// True if providers are exempt from the policy.
     /// </summary>
-    /// <param name="policyDetails">
-    /// PolicyDetails for the specified PolicyType, after they have been filtered by the Enforce predicate. That is,
-    /// this is the final interface to be called.
-    /// </param>
+    bool ExemptProviders { get; }
+
+    // TODO: how to disambiguate from enforce ON accept vs. enforce in the accepted status
+    /// <summary>
+    /// If true, the policy will be enforced against users as soon as they move into an accepted state.
+    /// If false, the policy will not be enforced against accepted users; the user must be confirmed.
+    /// </summary>
+    bool EnforceWhenAccepted { get; }
+}
+
+public interface ISinglePolicyRequirementFactory<out T> : IPolicyRequirementFactory where T : ISinglePolicyRequirement
+{
+    T Create(PolicyDetails? policyDetails = null);
+}
+
+public interface IAggregatePolicyRequirementFactory<out T> : IPolicyRequirementFactory where T : IAggregatePolicyRequirement
+{
     T Create(IEnumerable<PolicyDetails> policyDetails);
 }

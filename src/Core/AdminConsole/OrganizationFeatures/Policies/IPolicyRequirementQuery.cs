@@ -1,18 +1,32 @@
-﻿#nullable enable
-
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
 public interface IPolicyRequirementQuery
 {
     /// <summary>
-    /// Get a policy requirement for a specific user.
-    /// The policy requirement represents how one or more policy types should be enforced against the user.
-    /// It will always return a value even if there are no policies that should be enforced.
-    /// This should be used for all policy checks.
+    /// Get a Policy Requirement specific to a particular OrganizationUser and organization.
+    /// This
     /// </summary>
-    /// <param name="userId">The user that you need to enforce the policy against.</param>
-    /// <typeparam name="T">The IPolicyRequirement that corresponds to the policy you want to enforce.</typeparam>
-    Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement;
+    /// <remarks>
+    /// This will not take into account any policies from other organizations that may affect the user.
+    /// Only use this when you want to limit your check to a specific organization's policy.
+    /// </remarks>
+    Task<T> GetRequirementAsync<T>(Guid organizationUserId) where T : ISinglePolicyRequirement<T>;
+    Task<Dictionary<Guid, T>> GetRequirementAsync<T>(IEnumerable<Guid> organizationUserIds) where T : ISinglePolicyRequirement<T>;
+
+    /// <summary>
+    /// Get an aggregated Policy Requirement, which combines all policies that apply to the user
+    /// in all organizations they are a member of.
+    /// </summary>
+    /// <remarks>
+    /// This is often used when checking a user action for compliance with any applicable policies, and you are not
+    /// concerned with any particular organization.
+    /// </remarks>
+    Task<T> GetAggregateRequirement<T>(Guid userId) where T : IAggregatePolicyRequirement<T>;
+
+    /// <summary>
+    /// Get a Policy Requirement specific to a particular OrganizationUser and organization,
+    /// before the user is given access to organization resources by being accepted, confirmed, or restored.
+    /// </summary>
+    Task<T> GetPreAccessRequirement<T>(Guid organizationUserId) where T : ISinglePolicyRequirement<T>;
+    Task<Dictionary<Guid, T>> GetPreAccessRequirement<T>(IEnumerable<Guid> organizationUserIds) where T : ISinglePolicyRequirement<T>;
 }
