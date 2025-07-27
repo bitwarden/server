@@ -42,13 +42,13 @@ public class SendOrganizationInvitesCommand(
         var orgUserEmails = orgUsersList.Select(ou => ou.Email).ToList();
         var existingUsers = await userRepository.GetManyByEmailsAsync(orgUserEmails);
 
-        // hash existing users emails list for O(1) lookups
-        var existingUserEmailsHashSet = new HashSet<string>(existingUsers.Select(u => u.Email));
+        // Create a dictionary to capture both email and id for O(1) lookups
+        var existingUserEmailIdDict = existingUsers.ToDictionary(u => u.Email, u => u.Id);
 
         // Create a dictionary of org user guids and bools for whether or not they have an existing BW user
         var orgUserHasExistingUserDict = orgUsersList.ToDictionary(
             ou => ou.Id,
-            ou => existingUserEmailsHashSet.Contains(ou.Email)
+            ou => ou.Email != null && existingUserEmailIdDict.ContainsKey(ou.Email)
         );
 
         // Determine if org has SSO enabled and if user is required to login with SSO
@@ -66,6 +66,8 @@ public class SendOrganizationInvitesCommand(
         {
             var orgUserInviteTokenable = orgUserInviteTokenableFactory.CreateToken(orgUser);
             var protectedToken = dataProtectorTokenFactory.Protect(orgUserInviteTokenable);
+            var associatedUserId = orgUser.Email != null && existingUserEmailIdDict.TryGetValue(orgUser.Email, out var id) ? id : (Guid?)null;
+            orgUser.UserId = associatedUserId;
             return (orgUser, new ExpiringToken(protectedToken, orgUserInviteTokenable.ExpirationDate));
         }
 
