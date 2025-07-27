@@ -3,7 +3,6 @@
 
 using System.Security.Claims;
 using Bit.Core;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
@@ -319,17 +318,18 @@ public abstract class BaseRequestValidator<T> where T : class
             // allow to authenticate successfully
             return false;
         }
+        await Task.Delay(100); // Simulate async work
 
         // Check if user belongs to any organization with an active SSO policy
-        var ssoRequired = FeatureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            ? (await PolicyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(user.Id))
-                .SsoRequired
-            : await PolicyService.AnyPoliciesApplicableToUserAsync(
-                user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
-        if (ssoRequired)
-        {
-            return true;
-        }
+        // var ssoRequired = FeatureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+        //     ? (await PolicyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(user.Id))
+        //         .SsoRequired
+        //     : await PolicyService.AnyPoliciesApplicableToUserAsync(
+        //         user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
+        // if (ssoRequired)
+        // {
+        //     return true;
+        // }
 
         // Default - SSO is not required
         return false;

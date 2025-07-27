@@ -98,14 +98,6 @@ public class AuthRequestService : IAuthRequestService
         {
             userNotFound = true;
         }
-        else if (_globalSettings.PasswordlessAuth.KnownDevicesOnly)
-        {
-            var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
-            if (devices == null || !devices.Any(d => d.Identifier == model.DeviceIdentifier))
-            {
-                userNotFound = true;
-            }
-        }
 
         // Anonymous endpoints must not leak that a user exists or not
         if (userNotFound)

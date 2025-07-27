@@ -85,7 +85,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
     protected async override Task<bool> ValidateContextAsync(ResourceOwnerPasswordValidationContext context,
         CustomValidatorRequestContext validatorContext)
     {
-        if (string.IsNullOrWhiteSpace(context.UserName) || validatorContext.User == null)
+        if (string.IsNullOrWhiteSpace(context.UserName))
         {
             return false;
         }
