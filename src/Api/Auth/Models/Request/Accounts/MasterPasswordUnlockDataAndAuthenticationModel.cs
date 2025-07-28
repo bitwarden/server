@@ -44,9 +44,9 @@ public class MasterPasswordUnlockAndAuthenticationData : IValidatableObject
         }
     }
 
-    public Core.KeyManagement.Models.Data.MasterPasswordUnlockAndAuthenticationData ToUnlockData()
+    public MasterPasswordUnlockAndAuthenticationData ToUnlockData()
     {
-        var data = new Core.KeyManagement.Models.Data.MasterPasswordUnlockAndAuthenticationData
+        var data = new MasterPasswordUnlockAndAuthenticationData
         {
             KdfType = KdfType,
             KdfIterations = KdfIterations,
