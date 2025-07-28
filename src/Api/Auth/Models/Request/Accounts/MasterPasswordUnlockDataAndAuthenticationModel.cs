@@ -2,11 +2,12 @@
 
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
-public class MasterPasswordUnlockAndAuthenticationData : IValidatableObject
+public class MasterPasswordUnlockAndAuthenticationDataModel : IValidatableObject
 {
     public required KdfType KdfType { get; set; }
     public required int KdfIterations { get; set; }

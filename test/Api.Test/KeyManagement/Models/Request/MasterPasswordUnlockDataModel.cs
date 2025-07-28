@@ -18,7 +18,7 @@ public class MasterPasswordUnlockDataModelTests
     [InlineData(KdfType.Argon2id, 3, 64, 4)]
     public void Validate_Success(KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
-        var model = new MasterPasswordUnlockAndAuthenticationData
+        var model = new MasterPasswordUnlockAndAuthenticationDataModel
         {
             KdfType = kdfType,
             KdfIterations = kdfIterations,
@@ -43,7 +43,7 @@ public class MasterPasswordUnlockDataModelTests
     [InlineData((KdfType)2, 2, 64, 4)]
     public void Validate_Failure(KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
-        var model = new MasterPasswordUnlockAndAuthenticationData
+        var model = new MasterPasswordUnlockAndAuthenticationDataModel
         {
             KdfType = kdfType,
             KdfIterations = kdfIterations,
@@ -59,7 +59,7 @@ public class MasterPasswordUnlockDataModelTests
         Assert.NotNull(result.First().ErrorMessage);
     }
 
-    private static List<ValidationResult> Validate(MasterPasswordUnlockAndAuthenticationData model)
+    private static List<ValidationResult> Validate(MasterPasswordUnlockAndAuthenticationDataModel model)
     {
         var results = new List<ValidationResult>();
         Validator.TryValidateObject(model, new ValidationContext(model), results, true);
