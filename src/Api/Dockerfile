@@ -59,6 +59,7 @@ COPY --from=build /source/src/Api/out /app
 COPY ./src/Api/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 #RUN apk add --no-cache tzdata
+
 HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
