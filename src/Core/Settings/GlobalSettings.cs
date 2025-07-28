@@ -288,6 +288,7 @@ public class GlobalSettings : IGlobalSettings
         public AzureServiceBusSettings AzureServiceBus { get; set; } = new AzureServiceBusSettings();
         public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
         public int IntegrationCacheRefreshIntervalMinutes { get; set; } = 10;
+        public int MaxRetries { get; set; } = 3;
 
         public class AzureServiceBusSettings
         {
@@ -295,7 +296,6 @@ public class GlobalSettings : IGlobalSettings
             private string _eventTopicName;
             private string _integrationTopicName;
 
-            public int MaxRetries { get; set; } = 3;
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
             public virtual string SlackEventSubscriptionName { get; set; } = "events-slack-subscription";
             public virtual string SlackIntegrationSubscriptionName { get; set; } = "integration-slack-subscription";
@@ -331,7 +331,6 @@ public class GlobalSettings : IGlobalSettings
             private string _eventExchangeName;
             private string _integrationExchangeName;
 
-            public int MaxRetries { get; set; } = 3;
             public int RetryTiming { get; set; } = 30000; // 30s
             public bool UseDelayPlugin { get; set; } = false;
             public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
