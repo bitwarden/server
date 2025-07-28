@@ -128,7 +128,7 @@ public static class Helpers
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             var escapedArgs = cmd.Replace("\"", "\\\"");
-            process.StartInfo.FileName = "/bin/bash";
+            process.StartInfo.FileName = "/bin/sh";
             process.StartInfo.Arguments = $"-c \"{escapedArgs}\"";
         }
         else

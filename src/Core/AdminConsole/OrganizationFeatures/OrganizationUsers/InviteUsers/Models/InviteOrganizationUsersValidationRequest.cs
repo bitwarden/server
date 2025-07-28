@@ -32,7 +32,7 @@ public class InviteOrganizationUsersValidationRequest
         SecretsManagerSubscriptionUpdate = smSubscriptionUpdate;
     }
 
-    public OrganizationUserInvite[] Invites { get; init; } = [];
+    public OrganizationUserInviteCommandModel[] Invites { get; init; } = [];
     public InviteOrganization InviteOrganization { get; init; }
     public Guid PerformedBy { get; init; }
     public DateTimeOffset PerformedAt { get; init; }

@@ -1,8 +1,8 @@
-﻿#nullable enable
-using Bit.Api.Billing.Attributes;
+﻿using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Utilities;
@@ -19,6 +19,7 @@ public class ProviderBillingVNextController(
     IGetBillingAddressQuery getBillingAddressQuery,
     IGetCreditQuery getCreditQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
+    IProviderService providerService,
     IUpdateBillingAddressCommand updateBillingAddressCommand,
     IUpdatePaymentMethodCommand updatePaymentMethodCommand,
     IVerifyBankAccountCommand verifyBankAccountCommand) : BaseBillingController
@@ -82,6 +83,15 @@ public class ProviderBillingVNextController(
     {
         var (paymentMethod, billingAddress) = request.ToDomain();
         var result = await updatePaymentMethodCommand.Run(provider, paymentMethod, billingAddress);
+        // TODO: Temporary until we can send Provider notifications from the Billing API
+        if (!provider.Enabled)
+        {
+            await result.TapAsync(async _ =>
+            {
+                provider.Enabled = true;
+                await providerService.UpdateAsync(provider);
+            });
+        }
         return Handle(result);
     }
 
