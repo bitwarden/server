@@ -10,18 +10,9 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 
-public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class OrganizationUserControllerTests(ApiApplicationFactory apiApplicationFactory) : IntegrationTestBase(apiApplicationFactory)
 {
-    public OrganizationUserControllerTests(ApiApplicationFactory apiFactory)
-    {
-        _factory = apiFactory;
-        _client = _factory.CreateClient();
-        _loginHelper = new LoginHelper(_factory, _client);
-    }
-
-    private readonly HttpClient _client;
-    private readonly ApiApplicationFactory _factory;
-    private readonly LoginHelper _loginHelper;
+    private LoginHelper _loginHelper;
 
     private Organization _organization = null!;
     private string _ownerEmail = null!;
@@ -31,7 +22,7 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
     [InlineData(OrganizationUserType.Custom)]
     public async Task BulkDeleteAccount_WhenUserCannotManageUsers_ReturnsForbiddenResponse(OrganizationUserType organizationUserType)
     {
-        var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+        var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory,
             _organization.Id, organizationUserType, new Permissions { ManageUsers = false });
 
         await _loginHelper.LoginAsync(userEmail);
@@ -41,7 +32,7 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             Ids = new List<Guid> { Guid.NewGuid() }
         };
 
-        var httpResponse = await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/remove", request);
+        var httpResponse = await Client.PostAsJsonAsync($"organizations/{_organization.Id}/users/remove", request);
 
         Assert.Equal(HttpStatusCode.Forbidden, httpResponse.StatusCode);
     }
@@ -51,14 +42,14 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
     [InlineData(OrganizationUserType.Custom)]
     public async Task DeleteAccount_WhenUserCannotManageUsers_ReturnsForbiddenResponse(OrganizationUserType organizationUserType)
     {
-        var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+        var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory,
             _organization.Id, organizationUserType, new Permissions { ManageUsers = false });
 
         await _loginHelper.LoginAsync(userEmail);
 
         var userToRemove = Guid.NewGuid();
 
-        var httpResponse = await _client.DeleteAsync($"organizations/{_organization.Id}/users/{userToRemove}");
+        var httpResponse = await Client.DeleteAsync($"organizations/{_organization.Id}/users/{userToRemove}");
 
         Assert.Equal(HttpStatusCode.Forbidden, httpResponse.StatusCode);
     }
@@ -68,7 +59,7 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
     [InlineData(OrganizationUserType.Custom)]
     public async Task GetAccountRecoveryDetails_WithoutManageResetPasswordPermission_ReturnsForbiddenResponse(OrganizationUserType organizationUserType)
     {
-        var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+        var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory,
             _organization.Id, organizationUserType, new Permissions { ManageUsers = false });
 
         await _loginHelper.LoginAsync(userEmail);
@@ -79,23 +70,21 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         };
 
         var httpResponse =
-            await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/account-recovery-details", request);
+            await Client.PostAsJsonAsync($"organizations/{_organization.Id}/users/account-recovery-details", request);
 
         Assert.Equal(HttpStatusCode.Forbidden, httpResponse.StatusCode);
     }
 
-    public async Task InitializeAsync()
+    public override async Task InitializeAsync()
     {
+        await base.InitializeAsync();
+
+        _loginHelper = new LoginHelper(Factory, Client);
+
         _ownerEmail = $"org-user-integration-test-{Guid.NewGuid()}@bitwarden.com";
-        await _factory.LoginWithNewAccount(_ownerEmail);
+        await Factory.LoginWithNewAccount(_ownerEmail);
 
-        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
+        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(Factory, plan: PlanType.EnterpriseAnnually2023,
             ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
-    }
-
-    public Task DisposeAsync()
-    {
-        _client.Dispose();
-        return Task.CompletedTask;
     }
 }
