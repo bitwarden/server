@@ -8,12 +8,16 @@ public class UserSeeder
 {
     public static User CreateUser(string email)
     {
+        var nativeService = RustSdkServiceFactory.CreateSingleton();
         Console.WriteLine(NativeMethods.my_add(2, 3));
+
+        var password = nativeService.HashPassword(email, "asdfasdfasdf");
+
         return new User
         {
             Id = Guid.NewGuid(),
             Email = email,
-            MasterPassword = "AQAAAAIAAYagAAAAEBATmF66OHMpHuHKc1CsGZQ1ltHUHyhYK+7e4re3bVFi16SOpLpDfzdFswnvFQs2Rg==",
+            MasterPassword = password,
             SecurityStamp = "4830e359-e150-4eae-be2a-996c81c5e609",
             Key = "2.z/eLKFhd62qy9RzXu3UHgA==|fF6yNupiCIguFKSDTB3DoqcGR0Xu4j+9VlnMyT5F3PaWIcGhzQKIzxdB95nhslaCQv3c63M7LBnvzVo1J9SUN85RMbP/57bP1HvhhU1nvL8=|IQPtf8v7k83MFZEhazSYXSdu98BBU5rqtvC4keVWyHM=",
             PublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Ww2chogqCpaAR7Uw448am4b7vDFXiM5kXjFlGfXBlrAdAqTTggEvTDlMNYqPlCo+mBM6iFmTTUY9rpZBvFskMnKvsvpJ47/fehAH2o2e3Ulv/5NFevaVCMCmpkBDtbMbO1A4a3btdRtCP8DsKWMefHauEpaoLxNTLWnOIZVfCMjsSgx2EvULHAZPTtbFwm4+UVKniM4ds4jvOsD85h4jn2aLs/jWJXFfxN8iVSqEqpC2TBvsPdyHb49xQoWWfF0Z6BiNqeNGKEU9Uos1pjL+kzhEzzSpH31PZT/ufJ/oo4+93wrUt57hb6f0jxiXhwd5yQ+9F6wVwpbfkq0IwhjOwIDAQAB",
