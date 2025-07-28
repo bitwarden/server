@@ -3,8 +3,10 @@
 
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Providers;
+using Bit.Api.KeyManagement.Models.Response;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
@@ -13,6 +15,7 @@ namespace Bit.Api.Models.Response;
 public class ProfileResponseModel : ResponseModel
 {
     public ProfileResponseModel(User user,
+        UserAccountKeysData userAccountKeysData,
         IEnumerable<OrganizationUserOrganizationDetails> organizationsUserDetails,
         IEnumerable<ProviderUserProviderDetails> providerUserDetails,
         IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
@@ -35,6 +38,7 @@ public class ProfileResponseModel : ResponseModel
         TwoFactorEnabled = twoFactorEnabled;
         Key = user.Key;
         PrivateKey = user.PrivateKey;
+        AccountKeys = new PrivateKeysResponseModel(userAccountKeysData);
         SecurityStamp = user.SecurityStamp;
         ForcePasswordReset = user.ForcePasswordReset;
         UsesKeyConnector = user.UsesKeyConnector;
@@ -60,7 +64,9 @@ public class ProfileResponseModel : ResponseModel
     public string Culture { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public string Key { get; set; }
+    [Obsolete("Use AccountKeys instead.")]
     public string PrivateKey { get; set; }
+    public PrivateKeysResponseModel AccountKeys { get; set; }
     public string SecurityStamp { get; set; }
     public bool ForcePasswordReset { get; set; }
     public bool UsesKeyConnector { get; set; }
