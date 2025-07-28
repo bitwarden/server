@@ -145,6 +145,55 @@ public class OrganizationBillingService(
         {
             await subscriberService.UpdatePaymentSource(organization, tokenizedPaymentSource);
             await subscriberService.UpdateTaxInformation(organization, taxInformation);
+            await UpdateMissingPaymentMethodBehaviourAsync(organization);
+        }
+    }
+
+    public async Task UpdateSubscriptionPlanFrequency(
+        Organization organization, PlanType newPlanType)
+    {
+        ArgumentNullException.ThrowIfNull(organization);
+
+        var subscription = await subscriberService.GetSubscriptionOrThrow(organization);
+        var subscriptionItems = subscription.Items.Data;
+
+        var newPlan = await pricingClient.GetPlanOrThrow(newPlanType);
+        var oldPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+
+        // Build the subscription update options
+        var subscriptionItemOptions = new List<SubscriptionItemOptions>();
+        foreach (var item in subscriptionItems)
+        {
+            var subscriptionItemOption = new SubscriptionItemOptions
+            {
+                Id = item.Id,
+                Quantity = item.Quantity,
+                Price = item.Price.Id == oldPlan.SecretsManager.StripeSeatPlanId ? newPlan.SecretsManager.StripeSeatPlanId : newPlan.PasswordManager.StripeSeatPlanId
+            };
+
+            subscriptionItemOptions.Add(subscriptionItemOption);
+        }
+        var updateOptions = new SubscriptionUpdateOptions
+        {
+            Items = subscriptionItemOptions,
+            ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations
+        };
+
+        try
+        {
+            // Update the subscription in Stripe
+            await stripeAdapter.SubscriptionUpdateAsync(subscription.Id, updateOptions);
+            organization.PlanType = newPlan.Type;
+            await organizationRepository.ReplaceAsync(organization);
+        }
+        catch (StripeException stripeException)
+        {
+            logger.LogError(stripeException, "Failed to update subscription plan for subscriber ({SubscriberID}): {Error}",
+                organization.Id, stripeException.Message);
+
+            throw new BillingException(
+                message: "An error occurred while updating the subscription plan",
+                innerException: stripeException);
         }
     }
 
@@ -543,6 +592,25 @@ public class OrganizationBillingService(
         var couponAppliesTo = customer.Discount?.Coupon?.AppliesTo?.Products;
 
         return subscriptionProductIds.Intersect(couponAppliesTo ?? []).Any();
+    }
+
+    private async Task UpdateMissingPaymentMethodBehaviourAsync(Organization organization)
+    {
+        var subscription = await subscriberService.GetSubscriptionOrThrow(organization);
+        if (subscription.TrialSettings?.EndBehavior?.MissingPaymentMethod == StripeConstants.MissingPaymentMethodBehaviorOptions.Cancel)
+        {
+            var options = new SubscriptionUpdateOptions
+            {
+                TrialSettings = new SubscriptionTrialSettingsOptions
+                {
+                    EndBehavior = new SubscriptionTrialSettingsEndBehaviorOptions
+                    {
+                        MissingPaymentMethod = StripeConstants.MissingPaymentMethodBehaviorOptions.CreateInvoice
+                    }
+                }
+            };
+            await stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, options);
+        }
     }
 
     #endregion

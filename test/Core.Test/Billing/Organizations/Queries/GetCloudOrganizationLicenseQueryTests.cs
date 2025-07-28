@@ -18,7 +18,7 @@ using NSubstitute.ReturnsExtensions;
 using Stripe;
 using Xunit;
 
-namespace Bit.Core.Test.Billing.OrganizationFeatures.OrganizationLicenses;
+namespace Bit.Core.Test.Billing.Organizations.Queries;
 
 [SubscriptionInfoCustomize]
 [OrganizationLicenseCustomize]
