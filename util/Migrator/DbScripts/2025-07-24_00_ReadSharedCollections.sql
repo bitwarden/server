@@ -25,7 +25,7 @@ BEGIN
         [dbo].[CollectionView]
     WHERE
         [OrganizationId] = @OrganizationId AND
-        [Type] = 0 -- DefaultUserCollection only
+        [Type] = 0 -- SharedCollections only
 END
 GO
 
