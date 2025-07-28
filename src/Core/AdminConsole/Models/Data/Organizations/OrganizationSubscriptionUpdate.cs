@@ -3,7 +3,7 @@ using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.AdminConsole.Models.Data.Organizations;
 
-public class OrganizationSubscriptionUpdate
+public record OrganizationSubscriptionUpdate
 {
     public required Organization Organization { get; set; }
     public int Seats => Organization.Seats ?? 0;
