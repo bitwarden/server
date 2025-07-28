@@ -67,7 +67,7 @@ public class CollectionsControllerTests
 
         await sutProvider.GetDependency<IUpdateCollectionCommand>()
             .Received(1)
-            .UpdateAsync(ExpectedCollection(), Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+            .UpdateAsync(ExpectedCollection(), collection, Arg.Any<IEnumerable<CollectionAccessSelection>>(),
                 Arg.Any<IEnumerable<CollectionAccessSelection>>());
     }
 

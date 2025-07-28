@@ -27,7 +27,7 @@ public class UpdateCollectionCommand : IUpdateCollectionCommand
         _collectionRepository = collectionRepository;
     }
 
-    public async Task<Collection> UpdateAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
+    public async Task<Collection> UpdateAsync(Collection collection, Collection existingCollection, IEnumerable<CollectionAccessSelection> groups = null,
         IEnumerable<CollectionAccessSelection> users = null)
     {
         if (collection.Type == CollectionType.DefaultUserCollection)
@@ -39,6 +39,11 @@ public class UpdateCollectionCommand : IUpdateCollectionCommand
         if (org == null)
         {
             throw new BadRequestException("Organization not found");
+        }
+
+        if (!string.IsNullOrEmpty(collection.DefaultUserCollectionEmail) || string.IsNullOrEmpty(collection.Name))
+        {
+            collection.Name = existingCollection.Name;
         }
 
         var groupsList = groups?.ToList();

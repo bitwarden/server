@@ -9,7 +9,6 @@ namespace Bit.Api.Models.Request;
 
 public class CollectionRequestModel
 {
-    [Required]
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Name { get; set; }
@@ -28,7 +27,10 @@ public class CollectionRequestModel
 
     public virtual Collection ToCollection(Collection existingCollection)
     {
-        existingCollection.Name = Name;
+        if (string.IsNullOrEmpty(existingCollection.DefaultUserCollectionEmail) && !string.IsNullOrEmpty(existingCollection.Name))
+        {
+            existingCollection.Name = Name;
+        }
         existingCollection.ExternalId = ExternalId;
         return existingCollection;
     }

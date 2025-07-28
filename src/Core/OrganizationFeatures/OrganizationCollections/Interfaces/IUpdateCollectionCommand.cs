@@ -15,6 +15,6 @@ public interface IUpdateCollectionCommand
     /// <param name="groups">(Optional) The groups that will have access to the collection.</param>
     /// <param name="users">(Optional) The users that will have access to the collection.</param>
     /// <returns>The updated collection.</returns>
-    Task<Collection> UpdateAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
+    Task<Collection> UpdateAsync(Collection collection, Collection existingCollection, IEnumerable<CollectionAccessSelection> groups = null,
         IEnumerable<CollectionAccessSelection> users = null);
 }

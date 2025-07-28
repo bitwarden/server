@@ -29,7 +29,7 @@ public class UpdateCollectionCommandTests
             .Returns(organization);
         var utcNow = DateTime.UtcNow;
 
-        await sutProvider.Sut.UpdateAsync(collection, null, null);
+        await sutProvider.Sut.UpdateAsync(collection, collection, null, null);
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
@@ -58,7 +58,7 @@ public class UpdateCollectionCommandTests
             .Returns(organization);
         var utcNow = DateTime.UtcNow;
 
-        await sutProvider.Sut.UpdateAsync(collection, groups, users);
+        await sutProvider.Sut.UpdateAsync(collection, collection, groups, users);
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
@@ -87,7 +87,7 @@ public class UpdateCollectionCommandTests
             .Returns(organization);
         var utcNow = DateTime.UtcNow;
 
-        await sutProvider.Sut.UpdateAsync(collection, groups, users);
+        await sutProvider.Sut.UpdateAsync(collection, collection, groups, users);
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
@@ -106,7 +106,7 @@ public class UpdateCollectionCommandTests
     public async Task UpdateAsync_WithNonExistingOrganizationId_ThrowsBadRequest(
         Collection collection, SutProvider<UpdateCollectionCommand> sutProvider)
     {
-        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(collection));
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(collection, collection));
         Assert.Contains("Organization not found", ex.Message);
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -130,7 +130,7 @@ public class UpdateCollectionCommandTests
             .GetByIdAsync(organization.Id)
             .Returns(organization);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(collection, null, users));
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(collection, collection, null, users));
         Assert.Contains("At least one member or group must have can manage permission.", ex.Message);
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -154,7 +154,7 @@ public class UpdateCollectionCommandTests
             new() { Id = Guid.NewGuid(), Manage = true, HidePasswords = true }
         };
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(collection, invalidGroups, null));
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(collection, collection, invalidGroups, null));
         Assert.Contains("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.", ex.Message);
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -176,16 +176,103 @@ public class UpdateCollectionCommandTests
             .GetByIdAsync(organization.Id)
             .Returns(organization);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(collection));
-        Assert.Contains("You cannot edit a collection with the type as DefaultUserCollection.", ex.Message);
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(collection, collection));
+        Assert.Contains("You cannot edit a collection with the type as DefaultUserCollection", ex.Message);
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceAsync(default);
-        await sutProvider.GetDependency<ICollectionRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(default, default, default);
         await sutProvider.GetDependency<IEventService>()
             .DidNotReceiveWithAnyArgs()
             .LogCollectionEventAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WithDefaultUserCollectionEmail_PreservesOriginalName(
+        Organization organization, Collection collection, SutProvider<UpdateCollectionCommand> sutProvider)
+    {
+        // Arrange
+        var originalName = "Original Collection Name";
+        var newName = "New Collection Name";
+        collection.DefaultUserCollectionEmail = "user@example.com";
+        collection.Name = newName;
+
+        var existingCollection = new Collection
+        {
+            Id = collection.Id,
+            Name = originalName,
+            DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail,
+            OrganizationId = collection.OrganizationId
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(collection, existingCollection, null, null);
+
+        // Assert
+        Assert.Equal(originalName, collection.Name);
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(1)
+            .ReplaceAsync(collection, null, null);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WithNullName_PreservesOriginalName(
+        Organization organization, Collection collection, SutProvider<UpdateCollectionCommand> sutProvider)
+    {
+        // Arrange
+        var originalName = "Original Collection Name";
+        collection.Name = null; // Simulating null name from request model
+
+        var existingCollection = new Collection
+        {
+            Id = collection.Id,
+            Name = originalName,
+            OrganizationId = collection.OrganizationId
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(collection, existingCollection, null, null);
+
+        // Assert
+        Assert.Equal(originalName, collection.Name);
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(1)
+            .ReplaceAsync(collection, null, null);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WithEmptyName_PreservesOriginalName(
+        Organization organization, Collection collection, SutProvider<UpdateCollectionCommand> sutProvider)
+    {
+        // Arrange
+        var originalName = "Original Collection Name";
+        collection.Name = ""; // Simulating empty name from request model
+
+        var existingCollection = new Collection
+        {
+            Id = collection.Id,
+            Name = originalName,
+            OrganizationId = collection.OrganizationId
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(collection, existingCollection, null, null);
+
+        // Assert
+        Assert.Equal(originalName, collection.Name);
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(1)
+            .ReplaceAsync(collection, null, null);
     }
 }
