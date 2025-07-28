@@ -1,5 +1,4 @@
 ﻿using System.Data;
-using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Entities;
@@ -238,7 +237,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         await connection.ExecuteAsync("[dbo].[Organization_UpdateSubscriptionStatus]",
             new
             {
-                SuccessfulOrganizations = JsonSerializer.Serialize(successfulOrganizations),
+                SuccessfulOrganizations = successfulOrganizations.ToGuidIdArrayTVP(),
                 SyncDate = syncDate
             },
             commandType: CommandType.StoredProcedure);
