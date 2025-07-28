@@ -1,6 +1,5 @@
 ﻿using System.Data;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.AdminConsole.Helpers;
@@ -18,7 +17,7 @@ public static class BulkResourceCreationService
 
     private static DataTable BuildCollectionsUsersTable(SqlBulkCopy bulkCopy, IEnumerable<CollectionUser> collectionUsers, string errorMessage)
     {
-        var collectionUser = collectionUsers.First();
+        var collectionUser = collectionUsers.FirstOrDefault();
 
         if (collectionUser == null)
         {
@@ -27,25 +26,26 @@ public static class BulkResourceCreationService
 
         var table = new DataTable("CollectionUserDataTable");
 
-        var collectionIdColumn = new DataColumn(nameof(collectionUser.CollectionId), typeof(Guid));
+        var collectionIdColumn = new DataColumn(nameof(collectionUser.CollectionId), collectionUser.CollectionId.GetType());
         table.Columns.Add(collectionIdColumn);
-
-        var orgUserIdColumn = new DataColumn(nameof(collectionUser.OrganizationUserId), typeof(Guid));
+        var orgUserIdColumn = new DataColumn(nameof(collectionUser.OrganizationUserId), collectionUser.OrganizationUserId.GetType());
         table.Columns.Add(orgUserIdColumn);
-
-        var readOnlyColumn = new DataColumn(nameof(collectionUser.ReadOnly), typeof(bool));
+        var readOnlyColumn = new DataColumn(nameof(collectionUser.ReadOnly), collectionUser.ReadOnly.GetType());
         table.Columns.Add(readOnlyColumn);
-
-        var hidePasswordsColumn = new DataColumn(nameof(collectionUser.HidePasswords), typeof(bool));
+        var hidePasswordsColumn = new DataColumn(nameof(collectionUser.HidePasswords), collectionUser.HidePasswords.GetType());
         table.Columns.Add(hidePasswordsColumn);
-
-        var manageColumn = new DataColumn(nameof(collectionUser.Manage), typeof(bool));
+        var manageColumn = new DataColumn(nameof(collectionUser.Manage), collectionUser.Manage.GetType());
         table.Columns.Add(manageColumn);
 
         foreach (DataColumn col in table.Columns)
         {
             bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
         }
+
+        var keys = new DataColumn[2];
+        keys[0] = collectionIdColumn;
+        keys[1] = orgUserIdColumn;
+        table.PrimaryKey = keys;
 
         foreach (var collectionUserRecord in collectionUsers)
         {
@@ -73,7 +73,7 @@ public static class BulkResourceCreationService
 
     private static DataTable BuildCollectionsTable(SqlBulkCopy bulkCopy, IEnumerable<Collection> collections, string errorMessage)
     {
-        var collection = collections.First();
+        var collection = collections.FirstOrDefault();
 
         if (collection == null)
         {
@@ -86,7 +86,7 @@ public static class BulkResourceCreationService
         collectionsTable.Columns.Add(idColumn);
         var organizationIdColumn = new DataColumn(nameof(collection.OrganizationId), collection.OrganizationId.GetType());
         collectionsTable.Columns.Add(organizationIdColumn);
-        var nameColumn = new DataColumn(nameof(collection.Name), typeof(string));
+        var nameColumn = new DataColumn(nameof(collection.Name), collection.Name.GetType());
         collectionsTable.Columns.Add(nameColumn);
         var creationDateColumn = new DataColumn(nameof(collection.CreationDate), collection.CreationDate.GetType());
         collectionsTable.Columns.Add(creationDateColumn);
@@ -94,7 +94,7 @@ public static class BulkResourceCreationService
         collectionsTable.Columns.Add(revisionDateColumn);
         var externalIdColumn = new DataColumn(nameof(collection.ExternalId), typeof(string));
         collectionsTable.Columns.Add(externalIdColumn);
-        var typeColumn = new DataColumn(nameof(collection.Type), typeof(CollectionType));
+        var typeColumn = new DataColumn(nameof(collection.Type), collection.Type.GetType());
         collectionsTable.Columns.Add(typeColumn);
         var defaultUserCollectionEmailColumn = new DataColumn(nameof(collection.DefaultUserCollectionEmail), typeof(string));
         collectionsTable.Columns.Add(defaultUserCollectionEmailColumn);
