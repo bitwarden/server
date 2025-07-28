@@ -95,7 +95,7 @@ public class CollectionsController : Controller
         }
         var updatedCollection = model.ToCollection(existingCollection);
         var associations = model.Groups?.Select(c => c.ToCollectionAccessSelection()).ToList();
-        await _updateCollectionCommand.UpdateAsync(updatedCollection, existingCollection, associations, null);
+        await _updateCollectionCommand.UpdateAsync(updatedCollection, associations, null);
         var response = new CollectionResponseModel(updatedCollection, associations);
         return new JsonResult(response);
     }

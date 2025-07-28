@@ -185,7 +185,7 @@ public class CollectionsController : Controller
 
         var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
         var users = model.Users?.Select(g => g.ToSelectionReadOnly());
-        await _updateCollectionCommand.UpdateAsync(model.ToCollection(collection), collection, groups, users);
+        await _updateCollectionCommand.UpdateAsync(model.ToCollection(collection), groups, users);
 
         if (!_currentContext.UserId.HasValue || (_currentContext.GetOrganization(collection.OrganizationId) == null && await _currentContext.ProviderUserForOrgAsync(collection.OrganizationId)))
         {
