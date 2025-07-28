@@ -2,8 +2,8 @@
 #nullable disable
 
 using System.Data;
-using Bit.Core.Billing.Entities;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Organizations.Entities;
+using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
