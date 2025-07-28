@@ -12,13 +12,13 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.AdminConsole.Utilities.Errors;
 using Bit.Core.AdminConsole.Utilities.Validation;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
-using OrganizationUserInvite = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 
@@ -70,6 +70,40 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 return new Failure<ScimInviteOrganizationUsersResponse>(
                     new InvalidResultTypeError<ScimInviteOrganizationUsersResponse>(
                         new ScimInviteOrganizationUsersResponse()));
+        }
+    }
+
+    public async Task<CommandResult<InviteOrganizationUsersResponse>> InviteImportedOrganizationUsersAsync(InviteOrganizationUsersRequest request)
+    {
+        var result = await InviteOrganizationUsersAsync(request);
+
+        switch (result)
+        {
+            case Failure<InviteOrganizationUsersResponse> failure:
+                return new Failure<InviteOrganizationUsersResponse>(
+                        new Error<InviteOrganizationUsersResponse>(
+                            failure.Error.Message,
+                            new InviteOrganizationUsersResponse(failure.Error.ErroredValue.InvitedUsers, request.InviteOrganization.OrganizationId)
+                            )
+                        );
+
+            case Success<InviteOrganizationUsersResponse> success when success.Value.InvitedUsers.Any():
+
+                List<(OrganizationUser, EventType, EventSystemUser, DateTime?)> events = new List<(OrganizationUser, EventType, EventSystemUser, DateTime?)>();
+                foreach (var user in success.Value.InvitedUsers)
+                {
+                    events.Add((user, EventType.OrganizationUser_Invited, EventSystemUser.PublicApi, request.PerformedAt.UtcDateTime));
+                }
+
+                await eventService.LogOrganizationUserEventsAsync(events);
+
+                return new Success<InviteOrganizationUsersResponse>(new InviteOrganizationUsersResponse(success.Value.InvitedUsers, request.InviteOrganization.OrganizationId)
+                );
+
+            default:
+                return new Failure<InviteOrganizationUsersResponse>(
+                    new InvalidResultTypeError<InviteOrganizationUsersResponse>(
+                        new InviteOrganizationUsersResponse(request.InviteOrganization.OrganizationId)));
         }
     }
 
@@ -140,7 +174,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 organizationId: organization!.Id));
     }
 
-    private async Task<IEnumerable<OrganizationUserInvite>> FilterExistingUsersAsync(InviteOrganizationUsersRequest request)
+    private async Task<IEnumerable<OrganizationUserInviteCommandModel>> FilterExistingUsersAsync(InviteOrganizationUsersRequest request)
     {
         var existingEmails = new HashSet<string>(await organizationUserRepository.SelectKnownEmailsAsync(
                 request.InviteOrganization.OrganizationId, request.Invites.Select(i => i.Email), false),

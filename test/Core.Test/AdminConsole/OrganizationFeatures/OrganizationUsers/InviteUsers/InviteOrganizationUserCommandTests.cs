@@ -29,7 +29,6 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
 using static Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Helpers.InviteUserOrganizationValidationRequestHelpers;
-using OrganizationUserInvite = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 
@@ -53,7 +52,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -107,7 +106,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: orgUser.Email,
                     assignedCollections: [],
                     groups: [],
@@ -177,7 +176,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -252,7 +251,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -329,7 +328,7 @@ public class InviteOrganizationUserCommandTests
         var request = new InviteOrganizationUsersRequest(
             invites:
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -406,7 +405,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -484,7 +483,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -558,7 +557,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -657,7 +656,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -756,7 +755,7 @@ public class InviteOrganizationUserCommandTests
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -851,7 +850,7 @@ public class InviteOrganizationUserCommandTests
         var request = new InviteOrganizationUsersRequest(
             invites:
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
@@ -930,7 +929,7 @@ public class InviteOrganizationUserCommandTests
         var request = new InviteOrganizationUsersRequest(
             invites:
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: user.Email,
                     assignedCollections: [],
                     groups: [],
