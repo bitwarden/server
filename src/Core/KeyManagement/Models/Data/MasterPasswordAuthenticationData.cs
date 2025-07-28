@@ -10,7 +10,6 @@ public class MasterPasswordAuthenticationData
     public required string MasterPasswordAuthenticationHash { get; init; }
     public required string Salt { get; init; }
 
-
     public void ValidateSaltUnchangedForUser(User user)
     {
         if (user.GetMasterPasswordSalt() != Salt)
