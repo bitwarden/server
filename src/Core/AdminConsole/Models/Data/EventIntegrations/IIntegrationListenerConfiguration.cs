@@ -2,7 +2,7 @@
 
 namespace Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
-public interface IntegrationListenerConfiguration : EventListenerConfiguration
+public interface IIntegrationListenerConfiguration : IEventListenerConfiguration
 {
     public IntegrationType IntegrationType { get; }
     public string IntegrationQueueName { get; }

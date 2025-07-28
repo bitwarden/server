@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace Bit.Core.Services;
 
 public class AzureServiceBusIntegrationListenerService<TConfiguration> : BackgroundService
-    where TConfiguration : IntegrationListenerConfiguration
+    where TConfiguration : IIntegrationListenerConfiguration
 {
     private readonly int _maxRetries;
     private readonly IAzureServiceBusService _serviceBusService;

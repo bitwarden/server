@@ -871,7 +871,7 @@ public static class ServiceCollectionExtensions
     private static IServiceCollection AddAzureServiceBusIntegration<TConfig, TListenerConfig>(this IServiceCollection services,
         TListenerConfig listenerConfiguration)
         where TConfig : class
-        where TListenerConfig : IntegrationListenerConfiguration
+        where TListenerConfig : IIntegrationListenerConfiguration
     {
         services.TryAddKeyedSingleton<IEventMessageHandler>(serviceKey: listenerConfiguration.RoutingKey, implementationFactory: (provider, _) =>
             new EventIntegrationHandler<TConfig>(
@@ -973,7 +973,7 @@ public static class ServiceCollectionExtensions
     private static IServiceCollection AddRabbitMqIntegration<TConfig, TListenerConfig>(this IServiceCollection services,
         TListenerConfig listenerConfiguration)
         where TConfig : class
-        where TListenerConfig : IntegrationListenerConfiguration
+        where TListenerConfig : IIntegrationListenerConfiguration
     {
         services.TryAddKeyedSingleton<IEventMessageHandler>(serviceKey: listenerConfiguration.RoutingKey, implementationFactory: (provider, _) =>
             new EventIntegrationHandler<TConfig>(

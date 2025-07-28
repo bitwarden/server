@@ -4,7 +4,7 @@ using Bit.Core.Settings;
 namespace Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
 public class HecListenerConfiguration(GlobalSettings globalSettings)
-    : ListenerConfiguration(globalSettings), IntegrationListenerConfiguration
+    : ListenerConfiguration(globalSettings), IIntegrationListenerConfiguration
 {
     public IntegrationType IntegrationType
     {
@@ -26,7 +26,7 @@ public class HecListenerConfiguration(GlobalSettings globalSettings)
         get => _globalSettings.EventLogging.RabbitMq.HecIntegrationRetryQueueName;
     }
 
-    public string EventSubscriotionName
+    public string EventSubscriptionName
     {
         get => _globalSettings.EventLogging.AzureServiceBus.HecEventSubscriptionName;
     }

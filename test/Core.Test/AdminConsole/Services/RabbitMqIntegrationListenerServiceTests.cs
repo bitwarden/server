@@ -43,7 +43,7 @@ public class RabbitMqIntegrationListenerServiceTests
         await sutProvider.GetDependency<IRabbitMqService>().Received(1).CreateIntegrationQueuesAsync(
             Arg.Is(_config.IntegrationQueueName),
             Arg.Is(_config.IntegrationRetryQueueName),
-            Arg.Is(((IntegrationListenerConfiguration)_config).RoutingKey),
+            Arg.Is(((IIntegrationListenerConfiguration)_config).RoutingKey),
             Arg.Is(cancellationToken)
         );
     }

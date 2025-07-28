@@ -4,7 +4,7 @@ using Bit.Core.Settings;
 namespace Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
 public class WebhookListenerConfiguration(GlobalSettings globalSettings)
-    : ListenerConfiguration(globalSettings), IntegrationListenerConfiguration
+    : ListenerConfiguration(globalSettings), IIntegrationListenerConfiguration
 {
     public IntegrationType IntegrationType
     {
@@ -26,7 +26,7 @@ public class WebhookListenerConfiguration(GlobalSettings globalSettings)
         get => _globalSettings.EventLogging.RabbitMq.WebhookIntegrationRetryQueueName;
     }
 
-    public string EventSubscriotionName
+    public string EventSubscriptionName
     {
         get => _globalSettings.EventLogging.AzureServiceBus.WebhookEventSubscriptionName;
     }

@@ -4,7 +4,7 @@ using Bit.Core.Settings;
 namespace Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
 public class SlackListenerConfiguration(GlobalSettings globalSettings) :
-    ListenerConfiguration(globalSettings), IntegrationListenerConfiguration
+    ListenerConfiguration(globalSettings), IIntegrationListenerConfiguration
 {
     public IntegrationType IntegrationType
     {
@@ -26,7 +26,7 @@ public class SlackListenerConfiguration(GlobalSettings globalSettings) :
         get => _globalSettings.EventLogging.RabbitMq.SlackIntegrationRetryQueueName;
     }
 
-    public string EventSubscriotionName
+    public string EventSubscriptionName
     {
         get => _globalSettings.EventLogging.AzureServiceBus.SlackEventSubscriptionName;
     }

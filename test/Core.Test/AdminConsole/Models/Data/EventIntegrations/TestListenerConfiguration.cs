@@ -2,10 +2,10 @@
 
 namespace Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
-public class TestListenerConfiguration : IntegrationListenerConfiguration
+public class TestListenerConfiguration : IIntegrationListenerConfiguration
 {
     public string EventQueueName => "event_queue";
-    public string EventSubscriotionName => "event_subscriotion";
+    public string EventSubscriptionName => "event_subscription";
     public string EventTopicName => "event_topic";
     public IntegrationType IntegrationType => IntegrationType.Webhook;
     public string IntegrationQueueName => "integration_queue";

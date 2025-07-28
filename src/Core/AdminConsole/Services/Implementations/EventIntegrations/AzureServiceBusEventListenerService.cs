@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace Bit.Core.Services;
 
 public class AzureServiceBusEventListenerService<TConfiguration> : EventLoggingListenerService
-    where TConfiguration : EventListenerConfiguration
+    where TConfiguration : IEventListenerConfiguration
 {
     private readonly ServiceBusProcessor _processor;
 
@@ -20,7 +20,7 @@ public class AzureServiceBusEventListenerService<TConfiguration> : EventLoggingL
     {
         _processor = serviceBusService.CreateProcessor(
             topicName: configuration.EventTopicName,
-            subscriptionName: configuration.EventSubscriotionName,
+            subscriptionName: configuration.EventSubscriptionName,
             new ServiceBusProcessorOptions());
     }
 

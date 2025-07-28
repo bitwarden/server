@@ -32,7 +32,7 @@ public class AzureServiceBusEventListenerServiceTests
 
         sutProvider.GetDependency<IAzureServiceBusService>().Received(1).CreateProcessor(
             Arg.Is(_config.EventTopicName),
-            Arg.Is(_config.EventSubscriotionName),
+            Arg.Is(_config.EventSubscriptionName),
             Arg.Any<ServiceBusProcessorOptions>()
         );
     }

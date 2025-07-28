@@ -11,7 +11,7 @@ using RabbitMQ.Client.Events;
 namespace Bit.Core.Services;
 
 public class RabbitMqIntegrationListenerService<TConfiguration> : BackgroundService
-    where TConfiguration : IntegrationListenerConfiguration
+    where TConfiguration : IIntegrationListenerConfiguration
 {
     private readonly int _maxRetries;
     private readonly string _queueName;

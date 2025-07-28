@@ -9,7 +9,7 @@ using RabbitMQ.Client.Events;
 namespace Bit.Core.Services;
 
 public class RabbitMqEventListenerService<TConfiguration> : EventLoggingListenerService
-    where TConfiguration : EventListenerConfiguration
+    where TConfiguration : IEventListenerConfiguration
 {
     private readonly Lazy<Task<IChannel>> _lazyChannel;
     private readonly string _queueName;
