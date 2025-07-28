@@ -4,7 +4,7 @@
 using Bit.Core.IdentityServer;
 using Bit.Core.Platform.Installations;
 using Duende.IdentityServer.Models;
-using IdentityModel;
+using Duende.IdentityModel;
 
 namespace Bit.Identity.IdentityServer.ClientProviders;
 

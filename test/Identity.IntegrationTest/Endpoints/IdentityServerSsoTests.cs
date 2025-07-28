@@ -19,7 +19,7 @@ using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Helpers;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
-using IdentityModel;
+using Duende.IdentityModel;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using Xunit;

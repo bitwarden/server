@@ -15,7 +15,7 @@ using Bit.Core.Settings;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
 using HandlebarsDotNet;
-using IdentityModel;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.Identity;
 
 #nullable enable

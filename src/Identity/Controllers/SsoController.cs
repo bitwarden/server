@@ -10,7 +10,7 @@ using Bit.Core.Repositories;
 using Bit.Identity.Models;
 using Duende.IdentityServer;
 using Duende.IdentityServer.Services;
-using IdentityModel;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
