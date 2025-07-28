@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Azure.Messaging.ServiceBus;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -14,18 +15,26 @@ namespace Bit.Core.Test.Services;
 [SutProviderCustomize]
 public class AzureServiceBusEventListenerServiceTests
 {
-    private readonly IEventMessageHandler _handler = Substitute.For<IEventMessageHandler>();
-    private readonly ILogger<AzureServiceBusEventListenerService> _logger =
-        Substitute.For<ILogger<AzureServiceBusEventListenerService>>();
     private const string _messageId = "messageId";
+    private readonly TestListenerConfiguration _config = new();
 
-    private SutProvider<AzureServiceBusEventListenerService> GetSutProvider()
+    private SutProvider<AzureServiceBusEventListenerService<TestListenerConfiguration>> GetSutProvider()
     {
-        return new SutProvider<AzureServiceBusEventListenerService>()
-            .SetDependency(_handler)
-            .SetDependency(_logger)
-            .SetDependency("test-subscription", "subscriptionName")
+        return new SutProvider<AzureServiceBusEventListenerService<TestListenerConfiguration>>()
+            .SetDependency(_config)
             .Create();
+    }
+
+    [Fact]
+    public void Constructor_CreatesProcessor()
+    {
+        var sutProvider = GetSutProvider();
+
+        sutProvider.GetDependency<IAzureServiceBusService>().Received(1).CreateProcessor(
+            Arg.Is(_config.EventTopicName),
+            Arg.Is(_config.EventSubscriotionName),
+            Arg.Any<ServiceBusProcessorOptions>()
+        );
     }
 
     [Theory, BitAutoData]
@@ -35,7 +44,7 @@ public class AzureServiceBusEventListenerServiceTests
 
         await sutProvider.Sut.ProcessErrorAsync(args);
 
-        _logger.Received(1).Log(
+        sutProvider.GetDependency<ILogger<AzureServiceBusEventListenerService<TestListenerConfiguration>>>().Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Any<object>(),
@@ -49,7 +58,7 @@ public class AzureServiceBusEventListenerServiceTests
         var sutProvider = GetSutProvider();
         await sutProvider.Sut.ProcessReceivedMessageAsync(string.Empty, _messageId);
 
-        _logger.Received(1).Log(
+        sutProvider.GetDependency<ILogger<AzureServiceBusEventListenerService<TestListenerConfiguration>>>().Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Any<object>(),
@@ -63,7 +72,7 @@ public class AzureServiceBusEventListenerServiceTests
         var sutProvider = GetSutProvider();
         await sutProvider.Sut.ProcessReceivedMessageAsync("{ Inavlid JSON }", _messageId);
 
-        _logger.Received(1).Log(
+        sutProvider.GetDependency<ILogger<AzureServiceBusEventListenerService<TestListenerConfiguration>>>().Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Is<object>(o => o.ToString().Contains("Invalid JSON")),
@@ -80,7 +89,7 @@ public class AzureServiceBusEventListenerServiceTests
             _messageId
         );
 
-        _logger.Received(1).Log(
+        sutProvider.GetDependency<ILogger<AzureServiceBusEventListenerService<TestListenerConfiguration>>>().Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Any<object>(),
@@ -97,7 +106,7 @@ public class AzureServiceBusEventListenerServiceTests
             _messageId
         );
 
-        _logger.Received(1).Log(
+        sutProvider.GetDependency<ILogger<AzureServiceBusEventListenerService<TestListenerConfiguration>>>().Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Any<object>(),
