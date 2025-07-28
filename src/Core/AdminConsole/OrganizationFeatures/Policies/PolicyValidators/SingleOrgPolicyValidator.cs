@@ -59,12 +59,22 @@ public class SingleOrgPolicyValidator : IPolicyValidator
 
     public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IMetadata? metadata)
     {
+        var singleOrganizationPolicyMetadata = BuildMetadata(metadata);
+
+        // We can use it here.
+        var defaultCollectionName = singleOrganizationPolicyMetadata?.DefaultCollectionName;
+
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {
             var currentUser = _currentContext.UserId ?? Guid.Empty;
             var isOwnerOrProvider = await _currentContext.OrganizationOwner(policyUpdate.OrganizationId);
             await RevokeNonCompliantUsersAsync(policyUpdate.OrganizationId, policyUpdate.PerformedBy ?? new StandardUser(currentUser, isOwnerOrProvider));
         }
+    }
+
+    private SingleOrganizationPolicyMetadataModel? BuildMetadata(IMetadata? metadata)
+    {
+        return (SingleOrganizationPolicyMetadataModel?)metadata;
     }
 
     private async Task RevokeNonCompliantUsersAsync(Guid organizationId, IActingUser performedBy)
