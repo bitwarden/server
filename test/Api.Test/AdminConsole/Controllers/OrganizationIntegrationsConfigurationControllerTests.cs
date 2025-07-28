@@ -142,6 +142,131 @@ public class OrganizationIntegrationsConfigurationControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetAsync_ConfigurationsExist_Succeeds(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration,
+        List<OrganizationIntegrationConfiguration> organizationIntegrationConfigurations)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .GetManyByIntegrationAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegrationConfigurations);
+
+        var result = await sutProvider.Sut.GetAsync(organizationId, organizationIntegration.Id);
+        Assert.NotNull(result);
+        Assert.Equal(organizationIntegrationConfigurations.Count, result.Count);
+        Assert.All(result, r => Assert.IsType<OrganizationIntegrationConfigurationResponseModel>(r));
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
+            .GetByIdAsync(organizationIntegration.Id);
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .GetManyByIntegrationAsync(organizationIntegration.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_NoConfigurationsExist_ReturnsEmptyList(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration)
+    {
+        organizationIntegration.OrganizationId = organizationId;
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .GetManyByIntegrationAsync(Arg.Any<Guid>())
+            .Returns([]);
+
+        var result = await sutProvider.Sut.GetAsync(organizationId, organizationIntegration.Id);
+        Assert.NotNull(result);
+        Assert.Empty(result);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
+            .GetByIdAsync(organizationIntegration.Id);
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .GetManyByIntegrationAsync(organizationIntegration.Id);
+    }
+
+    // [Theory, BitAutoData]
+    // public async Task GetAsync_IntegrationConfigurationDoesNotExist_ThrowsNotFound(
+    //     SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+    //     Guid organizationId,
+    //     OrganizationIntegration organizationIntegration)
+    // {
+    //     organizationIntegration.OrganizationId = organizationId;
+    //     sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+    //     sutProvider.GetDependency<ICurrentContext>()
+    //         .OrganizationOwner(organizationId)
+    //         .Returns(true);
+    //     sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+    //         .GetByIdAsync(Arg.Any<Guid>())
+    //         .Returns(organizationIntegration);
+    //     sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+    //         .GetByIdAsync(Arg.Any<Guid>())
+    //         .ReturnsNull();
+    //
+    //     await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetAsync(organizationId, Guid.Empty, Guid.Empty));
+    // }
+    //
+    [Theory, BitAutoData]
+    public async Task GetAsync_IntegrationDoesNotExist_ThrowsNotFound(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetAsync(organizationId, Guid.NewGuid()));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_IntegrationDoesNotBelongToOrganization_ThrowsNotFound(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration organizationIntegration)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(organizationIntegration);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetAsync(organizationId, organizationIntegration.Id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_UserIsNotOrganizationAdmin_ThrowsNotFound(
+        SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
+        Guid organizationId)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetAsync(organizationId, Guid.NewGuid()));
+    }
+
+    [Theory, BitAutoData]
     public async Task PostAsync_AllParamsProvided_Slack_Succeeds(
         SutProvider<OrganizationIntegrationConfigurationController> sutProvider,
         Guid organizationId,

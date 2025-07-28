@@ -2,6 +2,7 @@
 #nullable disable
 
 using Stripe;
+using Stripe.TestHelpers;
 
 namespace Bit.Billing.Services;
 
@@ -96,6 +97,12 @@ public interface IStripeFacade
 
     Task<Discount> DeleteSubscriptionDiscount(
         string subscriptionId,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
+
+    Task<TestClock> GetTestClock(
+        string testClockId,
+        TestClockGetOptions testClockGetOptions = null,
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
 }
