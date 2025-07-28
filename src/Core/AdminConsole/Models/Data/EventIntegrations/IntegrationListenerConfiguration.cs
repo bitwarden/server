@@ -9,8 +9,8 @@ public interface IntegrationListenerConfiguration : EventListenerConfiguration
     public string IntegrationRetryQueueName { get; }
     public string IntegrationSubscriptionName { get; }
     public string IntegrationTopicName { get; }
-
     public int MaxRetries { get; }
+
     public string RoutingKey
     {
         get => IntegrationType.ToRoutingKey();

@@ -15,10 +15,12 @@ public abstract class ListenerConfiguration
     {
         get => _globalSettings.EventLogging.MaxRetries;
     }
+
     public string EventTopicName
     {
         get => _globalSettings.EventLogging.AzureServiceBus.EventTopicName;
     }
+
     public string IntegrationTopicName
     {
         get => _globalSettings.EventLogging.AzureServiceBus.IntegrationTopicName;
