@@ -5,6 +5,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    -- Get users in the given organization (@OrganizationId) by matching either on UserId or Email.
     ;WITH GivenOrgUsers AS (
         SELECT
                 OU.[UserId],
@@ -24,6 +25,7 @@ BEGIN
         WHERE OU.[OrganizationId] = @OrganizationId
     ),
 
+    -- Retrieve all organization users that match on either UserId or Email from GivenOrgUsers.
     AllOrgUsers AS (
         SELECT
             OU.[Id] AS [OrganizationUserId],
@@ -48,6 +50,7 @@ BEGIN
             INNER JOIN GivenOrgUsers AU ON AU.[Email] = OU.[Email]
     )
 
+    -- Return policy details for each matching organization user.
     SELECT
         OU.[OrganizationUserId],
         P.[OrganizationId],
@@ -56,6 +59,7 @@ BEGIN
             OU.[OrganizationUserType],
             OU.[OrganizationUserStatus],
             OU.[OrganizationUserPermissionsData],
+            -- Check if user is a provider for the organization
             CASE
                 WHEN EXISTS (
                     SELECT 1
