@@ -105,8 +105,9 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
             where ou.OrganizationId == organizationId
             from u in dbContext.Users
             where
-                u.Email == ou.Email
-                || ou.UserId == u.Id
+                (u.Email == ou.Email && ou.Email != null)
+                || (ou.UserId == u.Id && ou.UserId != null)
+
             select new
             {
                 ou.Id,
@@ -115,39 +116,33 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                 u.Email
             };
 
-        var orgUsersLinkedByEmail = from row in dbContext.OrganizationUsers
-                .Join(
-                    givenOrgUsers,
-                    ou => ou.UserId,
-                    gou => gou.UserId,
-                    (ou, gou) => new { ou, gou }
-                )
-                                    select new
-                                    {
-                                        row.ou.Id,
-                                        row.ou.OrganizationId,
-                                        row.gou.UserId,
-                                        row.ou.Type,
-                                        row.ou.Status,
-                                        row.ou.Permissions
-                                    };
+        var orgUsersLinkedByUserId =
+            from ou in dbContext.OrganizationUsers
+            join gou in givenOrgUsers
+                on ou.UserId equals gou.UserId
+            select new
+            {
+                ou.Id,
+                ou.OrganizationId,
+                gou.UserId,
+                ou.Type,
+                ou.Status,
+                ou.Permissions
+            };
 
-        var orgUsersLinkedByUserId = from row in dbContext.OrganizationUsers
-                .Join(
-                    givenOrgUsers,
-                    ou => ou.Email,
-                    gou => gou.Email,
-                    (ou, gou) => new { ou, gou }
-                )
-                                     select new
-                                     {
-                                         row.ou.Id,
-                                         row.ou.OrganizationId,
-                                         row.gou.UserId,
-                                         row.ou.Type,
-                                         row.ou.Status,
-                                         row.ou.Permissions
-                                     };
+        var orgUsersLinkedByEmail =
+            from ou in dbContext.OrganizationUsers
+            join gou in givenOrgUsers
+                on ou.Email equals gou.Email
+            select new
+            {
+                ou.Id,
+                ou.OrganizationId,
+                gou.UserId,
+                ou.Type,
+                ou.Status,
+                ou.Permissions
+            };
 
         var allAffectedOrgUsers = orgUsersLinkedByEmail.Union(orgUsersLinkedByUserId);
 
