@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Identity;
 namespace Bit.Core.KeyManagement.Kdf;
 
 /// <summary>
+/// Command to change the Key Derivation Function (KDF) settings for a user. This includes 
+/// changing the masterpassword authentication hash, and the masterkey encrypted userkey.
+/// The salt must not change during the KDF change.
 /// </summary>
 public interface IChangeKdfCommand
 {
