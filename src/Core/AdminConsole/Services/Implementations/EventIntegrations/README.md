@@ -402,7 +402,7 @@ code locally that accesses ASB resources.
 ## ListenerConfiguration
 
 New integrations will need their own subclass of `ListenerConfiguration` which also conforms to
-`IntegrationListenerConfiguration`. This class provides a way of accessing the previously configured
+`IIntegrationListenerConfiguration`. This class provides a way of accessing the previously configured
 RabbitMQ queues and ASB subscriptions by referring to the values created in `GlobalSettings`. This new
 listener configuration will be used to type the listener and provide the means to access the necessary
 configurations for the integration.
