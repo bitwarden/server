@@ -266,7 +266,6 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-
         var result = await _changeKdfCommand.ChangeKdfAsync(user, model.MasterPasswordHash,
             model.NewMasterPasswordHash, model.Key, model.ToKdfSettings(), model.AuthenticationData.ToData(), model.UnlockData?.ToData());
         if (result.Succeeded)
