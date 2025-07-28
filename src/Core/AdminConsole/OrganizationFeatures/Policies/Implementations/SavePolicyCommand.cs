@@ -42,7 +42,7 @@ public class SavePolicyCommand : ISavePolicyCommand
         _policyValidators = policyValidatorsDict;
     }
 
-    public async Task<Policy> SaveAsync(PolicyUpdate policyUpdate)
+    public async Task<Policy> SaveAsync(PolicyUpdate policyUpdate, IMetadata? metadata)
     {
         var org = await _applicationCacheService.GetOrganizationAbilityAsync(policyUpdate.OrganizationId);
         if (org == null)
@@ -57,7 +57,7 @@ public class SavePolicyCommand : ISavePolicyCommand
 
         if (_policyValidators.TryGetValue(policyUpdate.Type, out var validator))
         {
-            await RunValidatorAsync(validator, policyUpdate);
+            await RunValidatorAsync(validator, policyUpdate, metadata);
         }
 
         var policy = await _policyRepository.GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, policyUpdate.Type)
@@ -78,7 +78,7 @@ public class SavePolicyCommand : ISavePolicyCommand
         return policy;
     }
 
-    private async Task RunValidatorAsync(IPolicyValidator validator, PolicyUpdate policyUpdate)
+    private async Task RunValidatorAsync(IPolicyValidator validator, PolicyUpdate policyUpdate, IMetadata? metadata)
     {
         var savedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(policyUpdate.OrganizationId);
         // Note: policies may be missing from this dict if they have never been enabled
@@ -125,6 +125,6 @@ public class SavePolicyCommand : ISavePolicyCommand
         }
 
         // Run side effects
-        await validator.OnSaveSideEffectsAsync(policyUpdate, currentPolicy);
+        await validator.OnSaveSideEffectsAsync(policyUpdate, currentPolicy, metadata);
     }
 }

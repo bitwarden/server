@@ -139,7 +139,7 @@ public class VerifyOrganizationDomainCommand(
                 Type = PolicyType.SingleOrg,
                 Enabled = true,
                 PerformedBy = actingUser
-            });
+            }, null);
 
     private async Task SendVerifiedDomainUserEmailAsync(OrganizationDomain domain)
     {

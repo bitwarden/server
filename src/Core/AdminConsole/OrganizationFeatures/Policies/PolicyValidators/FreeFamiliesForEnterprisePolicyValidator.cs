@@ -17,7 +17,7 @@ public class FreeFamiliesForEnterprisePolicyValidator(
     public PolicyType Type => PolicyType.FreeFamiliesSponsorshipPolicy;
     public IEnumerable<PolicyType> RequiredPolicies => [];
 
-    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IMetadata? metadata)
     {
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {

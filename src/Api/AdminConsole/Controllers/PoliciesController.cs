@@ -209,7 +209,7 @@ public class PoliciesController : Controller
         }
 
         var policyUpdate = await model.ToPolicyUpdateAsync(orgId, _currentContext);
-        var policy = await _savePolicyCommand.SaveAsync(policyUpdate);
+        var policy = await _savePolicyCommand.SaveAsync(policyUpdate, null);
         return new PolicyResponseModel(policy);
     }
 }

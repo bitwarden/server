@@ -39,5 +39,6 @@ public interface IPolicyValidator
     /// </summary>
     /// <param name="policyUpdate">The policy update request</param>
     /// <param name="currentPolicy">The current policy, if any</param>
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy);
+    /// <param name="metadata"></param>
+    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IMetadata? metadata);
 }

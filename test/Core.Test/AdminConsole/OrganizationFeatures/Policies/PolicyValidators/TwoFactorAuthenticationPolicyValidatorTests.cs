@@ -54,7 +54,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
                 (orgUserDetailUserWithout2Fa, false),
             });
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy, null));
 
         Assert.Equal(TwoFactorAuthenticationPolicyValidator.NonCompliantMembersWillLoseAccessMessage, exception.Message);
     }
@@ -111,7 +111,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
             .Returns(new CommandResult());
 
         // Act
-        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
+        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy, null);
 
         // Assert
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()

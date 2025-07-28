@@ -126,7 +126,7 @@ public class SingleOrgPolicyValidatorTests
             .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
             .Returns(new CommandResult());
 
-        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
+        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy, null);
 
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .Received(1)

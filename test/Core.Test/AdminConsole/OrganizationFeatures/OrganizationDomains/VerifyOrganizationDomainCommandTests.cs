@@ -185,10 +185,10 @@ public class VerifyOrganizationDomainCommandTests
         await sutProvider.GetDependency<ISavePolicyCommand>()
             .Received(1)
             .SaveAsync(Arg.Is<PolicyUpdate>(x => x.Type == PolicyType.SingleOrg &&
-                x.OrganizationId == domain.OrganizationId &&
-                x.Enabled &&
-                x.PerformedBy is StandardUser &&
-                x.PerformedBy.UserId == userId));
+                                                 x.OrganizationId == domain.OrganizationId &&
+                                                 x.Enabled &&
+                                                 x.PerformedBy is StandardUser &&
+                                                 x.PerformedBy.UserId == userId), null);
     }
 
     [Theory, BitAutoData]
@@ -210,7 +210,7 @@ public class VerifyOrganizationDomainCommandTests
 
         await sutProvider.GetDependency<ISavePolicyCommand>()
             .DidNotReceive()
-            .SaveAsync(Arg.Any<PolicyUpdate>());
+            .SaveAsync(Arg.Any<PolicyUpdate>(), null);
     }
 
     [Theory, BitAutoData]

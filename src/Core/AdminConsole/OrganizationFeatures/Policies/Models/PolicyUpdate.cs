@@ -28,3 +28,26 @@ public record PolicyUpdate
         Data = CoreHelpers.ClassToJsonData(dataModel);
     }
 }
+
+
+
+public class ProtoTypeEnvelopeModel<TDateType>(TDateType data, IMetadata metadata)
+{
+    public TDateType Data { get; set; } = data;
+
+    public IMetadata Metadata { get; set; } = metadata;
+}
+
+public class SingleOrganizationPolicyMetadataModel : IMetadata
+{
+    public SingleOrganizationPolicyMetadataModel(string defaultCollectionName)
+    {
+        DefaultCollectionName = defaultCollectionName;
+    }
+
+    public string DefaultCollectionName { get; set; }
+}
+
+public interface IMetadata
+{
+}

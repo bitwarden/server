@@ -7,6 +7,7 @@ using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
@@ -85,10 +86,10 @@ public class PoliciesController : Controller
     [ProducesResponseType(typeof(PolicyResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<IActionResult> Put(PolicyType type, [FromBody] PolicyUpdateRequestModel model)
+    public async Task<IActionResult> Put(PolicyType type, [FromBody] ProtoTypeEnvelopeModel<PolicyUpdateRequestModel> model)
     {
-        var policyUpdate = model.ToPolicyUpdate(_currentContext.OrganizationId!.Value, type);
-        var policy = await _savePolicyCommand.SaveAsync(policyUpdate);
+        var policyUpdate = model.Data.ToPolicyUpdate(_currentContext.OrganizationId!.Value, type);
+        var policy = await _savePolicyCommand.SaveAsync(policyUpdate, model.Metadata);
 
         var response = new PolicyResponseModel(policy);
         return new JsonResult(response);

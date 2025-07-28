@@ -34,5 +34,5 @@ public class RequireSsoPolicyValidator : IPolicyValidator
         return "";
     }
 
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
+    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IMetadata? metadata) => Task.FromResult(0);
 }

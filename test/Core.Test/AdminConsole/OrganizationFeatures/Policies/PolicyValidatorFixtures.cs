@@ -21,7 +21,7 @@ public class FakeSingleOrgPolicyValidator : IPolicyValidator
         return ValidateAsyncMock(policyUpdate, currentPolicy);
     }
 
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IMetadata? metadata)
     {
         OnSaveSideEffectsAsyncMock(policyUpdate, currentPolicy);
         return Task.FromResult(0);
@@ -32,12 +32,12 @@ public class FakeRequireSsoPolicyValidator : IPolicyValidator
     public PolicyType Type => PolicyType.RequireSso;
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
     public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
+    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IMetadata? metadata) => Task.FromResult(0);
 }
 public class FakeVaultTimeoutPolicyValidator : IPolicyValidator
 {
     public PolicyType Type => PolicyType.MaximumVaultTimeout;
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
     public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
+    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IMetadata? metadata) => Task.FromResult(0);
 }

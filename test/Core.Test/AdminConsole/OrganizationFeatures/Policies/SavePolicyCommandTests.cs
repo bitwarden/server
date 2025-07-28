@@ -33,7 +33,7 @@ public class SavePolicyCommandTests
 
         var creationDate = sutProvider.GetDependency<FakeTimeProvider>().Start;
 
-        await sutProvider.Sut.SaveAsync(policyUpdate);
+        await sutProvider.Sut.SaveAsync(policyUpdate, null);
 
         await fakePolicyValidator.ValidateAsyncMock.Received(1).Invoke(policyUpdate, null);
         fakePolicyValidator.OnSaveSideEffectsAsyncMock.Received(1).Invoke(policyUpdate, null);
@@ -70,7 +70,7 @@ public class SavePolicyCommandTests
         var creationDate = currentPolicy.CreationDate;
         var revisionDate = sutProvider.GetDependency<FakeTimeProvider>().Start;
 
-        await sutProvider.Sut.SaveAsync(policyUpdate);
+        await sutProvider.Sut.SaveAsync(policyUpdate, null);
 
         await fakePolicyValidator.ValidateAsyncMock.Received(1).Invoke(policyUpdate, currentPolicy);
         fakePolicyValidator.OnSaveSideEffectsAsyncMock.Received(1).Invoke(policyUpdate, currentPolicy);
@@ -108,7 +108,7 @@ public class SavePolicyCommandTests
             .Returns(Task.FromResult<OrganizationAbility?>(null));
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveAsync(policyUpdate));
+            () => sutProvider.Sut.SaveAsync(policyUpdate, null));
 
         Assert.Contains("Organization not found", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
@@ -127,7 +127,7 @@ public class SavePolicyCommandTests
             });
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveAsync(policyUpdate));
+            () => sutProvider.Sut.SaveAsync(policyUpdate, null));
 
         Assert.Contains("cannot use policies", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
@@ -148,7 +148,7 @@ public class SavePolicyCommandTests
             .Returns([]);
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveAsync(policyUpdate));
+            () => sutProvider.Sut.SaveAsync(policyUpdate, null));
 
         Assert.Contains("Turn on the Single organization policy because it is required for the Require single sign-on authentication policy", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
@@ -170,7 +170,7 @@ public class SavePolicyCommandTests
             .Returns([singleOrgPolicy]);
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveAsync(policyUpdate));
+            () => sutProvider.Sut.SaveAsync(policyUpdate, null));
 
         Assert.Contains("Turn on the Single organization policy because it is required for the Require single sign-on authentication policy", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
@@ -191,7 +191,7 @@ public class SavePolicyCommandTests
             .GetManyByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns([singleOrgPolicy]);
 
-        await sutProvider.Sut.SaveAsync(policyUpdate);
+        await sutProvider.Sut.SaveAsync(policyUpdate, null);
         await AssertPolicySavedAsync(sutProvider, policyUpdate);
     }
 
@@ -212,7 +212,7 @@ public class SavePolicyCommandTests
             .Returns([currentPolicy, requireSsoPolicy]);
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveAsync(policyUpdate));
+            () => sutProvider.Sut.SaveAsync(policyUpdate, null));
 
         Assert.Contains("Turn off the Require single sign-on authentication policy because it requires the Single organization policy", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
@@ -237,7 +237,7 @@ public class SavePolicyCommandTests
             .Returns([currentPolicy, requireSsoPolicy, vaultTimeoutPolicy]);
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveAsync(policyUpdate));
+            () => sutProvider.Sut.SaveAsync(policyUpdate, null));
 
         Assert.Contains("Turn off all of the policies that require the Single organization policy", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
@@ -259,7 +259,7 @@ public class SavePolicyCommandTests
             .GetManyByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns([currentPolicy, requireSsoPolicy]);
 
-        await sutProvider.Sut.SaveAsync(policyUpdate);
+        await sutProvider.Sut.SaveAsync(policyUpdate, null);
 
         await AssertPolicySavedAsync(sutProvider, policyUpdate);
     }
@@ -275,7 +275,7 @@ public class SavePolicyCommandTests
         sutProvider.GetDependency<IPolicyRepository>().GetManyByOrganizationIdAsync(policyUpdate.OrganizationId).Returns([]);
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveAsync(policyUpdate));
+            () => sutProvider.Sut.SaveAsync(policyUpdate, null));
 
         Assert.Contains("Validation error!", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);

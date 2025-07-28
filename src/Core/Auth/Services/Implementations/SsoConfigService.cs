@@ -73,7 +73,7 @@ public class SsoConfigService : ISsoConfigService
                 OrganizationId = config.OrganizationId,
                 Type = PolicyType.SingleOrg,
                 Enabled = true
-            });
+            }, null);
 
             var resetPasswordPolicy = new PolicyUpdate
             {
@@ -82,14 +82,14 @@ public class SsoConfigService : ISsoConfigService
                 Enabled = true,
             };
             resetPasswordPolicy.SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = true });
-            await _savePolicyCommand.SaveAsync(resetPasswordPolicy);
+            await _savePolicyCommand.SaveAsync(resetPasswordPolicy, null);
 
             await _savePolicyCommand.SaveAsync(new()
             {
                 OrganizationId = config.OrganizationId,
                 Type = PolicyType.RequireSso,
                 Enabled = true
-            });
+            }, null);
         }
 
         await LogEventsAsync(config, oldConfig);

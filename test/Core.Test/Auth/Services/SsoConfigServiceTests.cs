@@ -342,24 +342,21 @@ public class SsoConfigServiceTests
         await sutProvider.GetDependency<ISavePolicyCommand>().Received(1)
             .SaveAsync(
                 Arg.Is<PolicyUpdate>(t => t.Type == PolicyType.SingleOrg &&
-                    t.OrganizationId == organization.Id &&
-                    t.Enabled)
-            );
+                                          t.OrganizationId == organization.Id &&
+                                          t.Enabled), null);
 
         await sutProvider.GetDependency<ISavePolicyCommand>().Received(1)
             .SaveAsync(
                 Arg.Is<PolicyUpdate>(t => t.Type == PolicyType.ResetPassword &&
-                    t.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled &&
-                    t.OrganizationId == organization.Id &&
-                    t.Enabled)
-            );
+                                          t.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled &&
+                                          t.OrganizationId == organization.Id &&
+                                          t.Enabled), null);
 
         await sutProvider.GetDependency<ISavePolicyCommand>().Received(1)
             .SaveAsync(
                 Arg.Is<PolicyUpdate>(t => t.Type == PolicyType.RequireSso &&
-                    t.OrganizationId == organization.Id &&
-                    t.Enabled)
-            );
+                                          t.OrganizationId == organization.Id &&
+                                          t.Enabled), null);
 
         await sutProvider.GetDependency<ISsoConfigRepository>().ReceivedWithAnyArgs()
             .UpsertAsync(default);
