@@ -911,6 +911,17 @@ public class OrganizationUserRepositoryTests
             RevisionDate = requestTime
         });
 
+        var defaultUserCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            Name = "My Items",
+            Type = CollectionType.DefaultUserCollection,
+            DefaultUserCollectionEmail = user1.Email,
+            CreationDate = requestTime,
+            RevisionDate = requestTime
+        });
+
         // Create organization user with both groups and collections using CreateManyAsync
         var createOrgUserWithCollections = new List<CreateOrganizationUser>
         {
@@ -939,6 +950,13 @@ public class OrganizationUserRepositoryTests
                         Id = collection2.Id,
                         ReadOnly = false,
                         HidePasswords = true,
+                        Manage = true
+                    },
+                    new CollectionAccessSelection
+                    {
+                        Id = defaultUserCollection.Id,
+                        ReadOnly = false,
+                        HidePasswords = false,
                         Manage = true
                     }
                 ],
@@ -969,6 +987,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(2, user1Result.Collections.Count());
         Assert.Contains(user1Result.Collections, c => c.Id == collection1.Id);
         Assert.Contains(user1Result.Collections, c => c.Id == collection2.Id);
+        Assert.DoesNotContain(user1Result.Collections, c => c.Id == defaultUserCollection.Id);
     }
 
     [DatabaseTheory, DatabaseData]
