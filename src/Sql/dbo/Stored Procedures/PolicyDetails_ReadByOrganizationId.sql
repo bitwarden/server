@@ -6,7 +6,6 @@ BEGIN
     SET NOCOUNT ON;
 
     -- Get users in the given organization (@OrganizationId) by matching either on UserId or Email.
-    -- Get users in the given organization (@OrganizationId) by matching either on UserId or Email.
     ;WITH GivenOrgUsers AS (
         SELECT
             OU.[UserId],
