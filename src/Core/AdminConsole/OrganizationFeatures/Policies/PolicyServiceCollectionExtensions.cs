@@ -27,6 +27,8 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyValidator, ResetPasswordPolicyValidator>();
         services.AddScoped<IPolicyValidator, MaximumVaultTimeoutPolicyValidator>();
         services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
+        services.AddScoped<IPolicyValidator, ProtoTypeOrganizationDataOwnershipPolicyValidator>();
+        services.AddScoped<IPolicyValidator, PrototypeRequireTwoFactorPolicyValidator>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)

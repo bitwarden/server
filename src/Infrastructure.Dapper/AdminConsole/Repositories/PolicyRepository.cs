@@ -73,4 +73,10 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
             return results.ToList();
         }
     }
+
+    public Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetailsByOrganizationIdAsync(Guid organizationId,
+        PolicyType policyType)
+    {
+        return Task.FromResult(new List<OrganizationPolicyDetails>().AsEnumerable());
+    }
 }
