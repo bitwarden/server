@@ -8,8 +8,8 @@ BEGIN
     -- Get users in the given organization (@OrganizationId) by matching either on UserId or Email.
     ;WITH GivenOrgUsers AS (
         SELECT
-                OU.[UserId],
-                U.[Email]
+            OU.[UserId],
+            U.[Email]
          FROM [dbo].[OrganizationUserView] OU
             INNER JOIN [dbo].[UserView] U ON U.[Id] = OU.[UserId]
          WHERE OU.[OrganizationId] = @OrganizationId
@@ -17,9 +17,8 @@ BEGIN
          UNION ALL
 
         SELECT
-            OU.[Id] AS [OrganizationUserId],
-                    U.[Id] AS [UserId],
-                    U.[Email]
+            U.[Id] AS [UserId],
+            U.[Email]
         FROM [dbo].[OrganizationUserView] OU
             INNER JOIN [dbo].[UserView] U ON U.[Email] = OU.[Email]
         WHERE OU.[OrganizationId] = @OrganizationId
