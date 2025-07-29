@@ -27,7 +27,7 @@ public class CollectionRequestModel
 
     public virtual Collection ToCollection(Collection existingCollection)
     {
-        if (string.IsNullOrEmpty(existingCollection.DefaultUserCollectionEmail) && !string.IsNullOrEmpty(existingCollection.Name))
+        if (string.IsNullOrEmpty(existingCollection.DefaultUserCollectionEmail) && !string.IsNullOrEmpty(Name))
         {
             existingCollection.Name = Name;
         }
