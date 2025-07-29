@@ -49,6 +49,7 @@ public class CollectionsControllerTests
     public async Task Put_Success(Collection collection, CollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
+        collection.DefaultUserCollectionEmail = null;
         Collection ExpectedCollection() => Arg.Is<Collection>(c => c.Id == collection.Id &&
             c.Name == collectionRequest.Name && c.ExternalId == collectionRequest.ExternalId &&
             c.OrganizationId == collection.OrganizationId);
