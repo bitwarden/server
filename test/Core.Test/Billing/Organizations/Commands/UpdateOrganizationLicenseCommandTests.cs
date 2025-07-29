@@ -14,7 +14,7 @@ using NSubstitute;
 using Xunit;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
-namespace Bit.Core.Test.Billing.OrganizationFeatures.OrganizationLicenses;
+namespace Bit.Core.Test.Billing.Organizations.Commands;
 
 [SutProviderCustomize]
 public class UpdateOrganizationLicenseCommandTests
