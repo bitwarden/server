@@ -1,4 +1,35 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUserUserDetails_ReadByOrganizationId_V2]
+CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadByOrganizationId]
+    @OrganizationId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[CollectionView]
+    WHERE
+        [OrganizationId] = @OrganizationId
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadSharedCollectionsByOrganizationId]
+    @OrganizationId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[CollectionView]
+    WHERE
+        [OrganizationId] = @OrganizationId AND
+        [Type] = 0 -- SharedCollections only
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUserUserDetails_ReadByOrganizationId_V2]
     @OrganizationId UNIQUEIDENTIFIER,
     @IncludeGroups BIT = 0,
     @IncludeCollections BIT = 0
@@ -31,3 +62,4 @@ BEGIN
             AND c.Type = 0 -- SharedCollections only
     END
 END
+GO

@@ -1,13 +1,15 @@
 ﻿#nullable enable
 
 using System.Text;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
 namespace Bit.Core.Services;
 
-public class RabbitMqEventListenerService : EventLoggingListenerService
+public class RabbitMqEventListenerService<TConfiguration> : EventLoggingListenerService
+    where TConfiguration : IEventListenerConfiguration
 {
     private readonly Lazy<Task<IChannel>> _lazyChannel;
     private readonly string _queueName;
@@ -15,12 +17,11 @@ public class RabbitMqEventListenerService : EventLoggingListenerService
 
     public RabbitMqEventListenerService(
         IEventMessageHandler handler,
-        string queueName,
+        TConfiguration configuration,
         IRabbitMqService rabbitMqService,
-        ILogger<RabbitMqEventListenerService> logger) : base(handler, logger)
+        ILogger<RabbitMqEventListenerService<TConfiguration>> logger) : base(handler, logger)
     {
-        _logger = logger;
-        _queueName = queueName;
+        _queueName = configuration.EventQueueName;
         _rabbitMqService = rabbitMqService;
         _lazyChannel = new Lazy<Task<IChannel>>(() => _rabbitMqService.CreateChannelAsync());
     }
