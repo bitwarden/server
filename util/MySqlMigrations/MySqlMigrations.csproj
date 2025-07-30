@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <Compile Include="..\EfShared\MigrationBuilderExtensions.cs" />
+    <Compile Remove="Migrations\DatabaseContextModelSnapshot.cs" />
   </ItemGroup>
 
   <ItemGroup>
