@@ -37,7 +37,7 @@ then
     mkdir -p /etc/bitwarden/ca-certificates
     chown -R $USERNAME:$GROUPNAME /etc/bitwarden
 
-    if [[ -f "/etc/bitwarden/kerberos/bitwarden.keytab" && -f "/etc/bitwarden/kerberos/krb5.conf" ]]; then
+    if [ -f "/etc/bitwarden/kerberos/bitwarden.keytab" ] && [ -f "/etc/bitwarden/kerberos/krb5.conf" ]; then
         chown -R $USERNAME:$GROUPNAME /etc/bitwarden/kerberos
     fi
 
@@ -46,7 +46,7 @@ else
     gosu_cmd=""
 fi
 
-if [[ -f "/etc/bitwarden/kerberos/bitwarden.keytab" && -f "/etc/bitwarden/kerberos/krb5.conf" ]]; then
+if [ -f "/etc/bitwarden/kerberos/bitwarden.keytab" ] && [ -f "/etc/bitwarden/kerberos/krb5.conf" ]; then
     cp -f /etc/bitwarden/kerberos/krb5.conf /etc/krb5.conf
     $gosu_cmd kinit $globalSettings__kerberosUser -k -t /etc/bitwarden/kerberos/bitwarden.keytab
 fi
