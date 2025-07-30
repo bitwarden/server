@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
@@ -1789,5 +1790,123 @@ public class CiphersControllerTests
         );
     }
 
-}
+    [Theory, BitAutoData]
+    public async Task PostPurge_WhenUserNotFound_ThrowsUnauthorizedAccessException(
+        SecretVerificationRequestModel model,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns((User)null);
 
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.PostPurge(model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostPurge_WhenUserVerificationFails_ThrowsBadRequestException(
+        User user,
+        SecretVerificationRequestModel model,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        sutProvider.GetDependency<IUserService>()
+            .VerifySecretAsync(user, model.Secret)
+            .Returns(false);
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PostPurge(model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostPurge_UserPurge_WithClaimedUser_ThrowsBadRequestException(
+        User user,
+        SecretVerificationRequestModel model,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        sutProvider.GetDependency<IUserService>()
+            .VerifySecretAsync(user, model.Secret)
+            .Returns(true);
+        sutProvider.GetDependency<IUserService>()
+            .IsClaimedByAnyOrganizationAsync(user.Id)
+            .Returns(true);
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PostPurge(model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostPurge_UserPurge_WithUnclaimedUser_Successful(
+        User user,
+        SecretVerificationRequestModel model,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        sutProvider.GetDependency<IUserService>()
+            .VerifySecretAsync(user, model.Secret)
+            .Returns(true);
+        sutProvider.GetDependency<IUserService>()
+            .IsClaimedByAnyOrganizationAsync(user.Id)
+            .Returns(false);
+
+        await sutProvider.Sut.PostPurge(model);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .DeleteByUserIdAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostPurge_OrganizationPurge_WithEditAnyCollectionPermission_Successful(
+        User user,
+        SecretVerificationRequestModel model,
+        Guid organizationId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        sutProvider.GetDependency<IUserService>()
+            .VerifySecretAsync(user, model.Secret)
+            .Returns(true);
+        sutProvider.GetDependency<IUserService>()
+            .IsClaimedByAnyOrganizationAsync(user.Id)
+            .Returns(true);
+        sutProvider.GetDependency<ICurrentContext>()
+            .EditAnyCollection(organizationId)
+            .Returns(true);
+
+        await sutProvider.Sut.PostPurge(model, organizationId);
+
+        await sutProvider.GetDependency<ICipherService>()
+            .Received(1)
+            .PurgeAsync(organizationId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostPurge_OrganizationPurge_WithInsufficientPermissions_ThrowsNotFoundException(
+        User user,
+        Guid organizationId,
+        SecretVerificationRequestModel model,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        sutProvider.GetDependency<IUserService>()
+            .VerifySecretAsync(user, model.Secret)
+            .Returns(true);
+        sutProvider.GetDependency<IUserService>()
+            .IsClaimedByAnyOrganizationAsync(user.Id)
+            .Returns(false);
+        sutProvider.GetDependency<ICurrentContext>()
+            .EditAnyCollection(organizationId)
+            .Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostPurge(model, organizationId));
+    }
+}

@@ -2,27 +2,26 @@
 
 using System.Text;
 using Azure.Messaging.ServiceBus;
-using Bit.Core.Settings;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
-public class AzureServiceBusEventListenerService : EventLoggingListenerService
+public class AzureServiceBusEventListenerService<TConfiguration> : EventLoggingListenerService
+    where TConfiguration : IEventListenerConfiguration
 {
     private readonly ServiceBusProcessor _processor;
 
     public AzureServiceBusEventListenerService(
+        TConfiguration configuration,
         IEventMessageHandler handler,
         IAzureServiceBusService serviceBusService,
-        string subscriptionName,
-        GlobalSettings globalSettings,
-        ILogger<AzureServiceBusEventListenerService> logger) : base(handler, logger)
+        ILogger<AzureServiceBusEventListenerService<TConfiguration>> logger) : base(handler, logger)
     {
         _processor = serviceBusService.CreateProcessor(
-            globalSettings.EventLogging.AzureServiceBus.EventTopicName,
-            subscriptionName,
+            topicName: configuration.EventTopicName,
+            subscriptionName: configuration.EventSubscriptionName,
             new ServiceBusProcessorOptions());
-        _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
