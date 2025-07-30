@@ -38,7 +38,7 @@ public class OrganizationReportRepository :
             var dbContext = GetDatabaseContext(scope);
             var result = await dbContext.OrganizationReports
                 .Where(p => p.OrganizationId == organizationId)
-                .OrderByDescending(p => p.Date)
+                .OrderByDescending(p => p.RevisionDate)
                 .Take(1)
                 .FirstOrDefaultAsync();
 

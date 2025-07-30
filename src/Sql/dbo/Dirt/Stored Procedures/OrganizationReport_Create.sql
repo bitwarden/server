@@ -1,10 +1,12 @@
 CREATE PROCEDURE [dbo].[OrganizationReport_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
-    @Date DATETIME2(7),
     @ReportData NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @ContentEncryptionKey VARCHAR(MAX)
+    @SummaryData NVARCHAR(MAX),
+    @ApplicationData NVARCHAR(MAX),
+    @RevisionDate DATETIME2(7)
 AS
     SET NOCOUNT ON;
 
@@ -14,7 +16,10 @@ AS
         [Date],
         [ReportData],
         [CreationDate],
-        [ContentEncryptionKey]
+        [ContentEncryptionKey],
+        [SummaryData],
+        [ApplicationData],
+        [RevisionDate]
     )
     VALUES (
         @Id,
@@ -22,5 +27,8 @@ AS
         @Date,
         @ReportData,
         @CreationDate,
-        @ContentEncryptionKey
+        @ContentEncryptionKey,
+        @SummaryData,
+        @ApplicationData,
+        @RevisionDate
     );

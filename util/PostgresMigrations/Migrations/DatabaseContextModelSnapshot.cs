@@ -1013,6 +1013,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ApplicationData")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("ContentEncryptionKey")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1020,13 +1024,17 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("ReportData")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SummaryData")
                         .IsRequired()
                         .HasColumnType("text");
 
