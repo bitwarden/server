@@ -17,11 +17,15 @@ namespace Bit.Core.Test.Services;
 public class RabbitMqEventListenerServiceTests
 {
     private readonly TestListenerConfiguration _config = new();
+    private readonly ILogger _logger = Substitute.For<ILogger>();
 
     private SutProvider<RabbitMqEventListenerService<TestListenerConfiguration>> GetSutProvider()
     {
+        var loggerFactory = Substitute.For<ILoggerFactory>();
+        loggerFactory.CreateLogger<object>().ReturnsForAnyArgs(_logger);
         return new SutProvider<RabbitMqEventListenerService<TestListenerConfiguration>>()
             .SetDependency(_config)
+            .SetDependency(loggerFactory)
             .Create();
     }
 
@@ -53,7 +57,7 @@ public class RabbitMqEventListenerServiceTests
 
         await sutProvider.Sut.ProcessReceivedMessageAsync(eventArgs);
 
-        sutProvider.GetDependency<ILogger<RabbitMqEventListenerService<TestListenerConfiguration>>>().Received(1).Log(
+        _logger.Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Any<object>(),
@@ -76,7 +80,7 @@ public class RabbitMqEventListenerServiceTests
 
         await sutProvider.Sut.ProcessReceivedMessageAsync(eventArgs);
 
-        sutProvider.GetDependency<ILogger<RabbitMqEventListenerService<TestListenerConfiguration>>>().Received(1).Log(
+        _logger.Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Is<object>(o => o.ToString().Contains("Invalid JSON")),
@@ -99,7 +103,7 @@ public class RabbitMqEventListenerServiceTests
 
         await sutProvider.Sut.ProcessReceivedMessageAsync(eventArgs);
 
-        sutProvider.GetDependency<ILogger<RabbitMqEventListenerService<TestListenerConfiguration>>>().Received(1).Log(
+        _logger.Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Any<object>(),
@@ -122,7 +126,7 @@ public class RabbitMqEventListenerServiceTests
 
         await sutProvider.Sut.ProcessReceivedMessageAsync(eventArgs);
 
-        sutProvider.GetDependency<ILogger<RabbitMqEventListenerService<TestListenerConfiguration>>>().Received(1).Log(
+        _logger.Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Any<object>(),

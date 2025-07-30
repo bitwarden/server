@@ -4,6 +4,7 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using RabbitMQ.Client;
@@ -17,14 +18,18 @@ public class RabbitMqIntegrationListenerServiceTests
 {
     private readonly DateTime _now = new DateTime(2014, 3, 2, 1, 0, 0, DateTimeKind.Utc);
     private readonly IIntegrationHandler _handler = Substitute.For<IIntegrationHandler>();
+    private readonly ILogger _logger = Substitute.For<ILogger>();
     private readonly IRabbitMqService _rabbitMqService = Substitute.For<IRabbitMqService>();
     private readonly TestListenerConfiguration _config = new();
 
     private SutProvider<RabbitMqIntegrationListenerService<TestListenerConfiguration>> GetSutProvider()
     {
+        var loggerFactory = Substitute.For<ILoggerFactory>();
+        loggerFactory.CreateLogger<object>().ReturnsForAnyArgs(_logger);
         var sutProvider = new SutProvider<RabbitMqIntegrationListenerService<TestListenerConfiguration>>()
             .SetDependency(_config)
             .SetDependency(_handler)
+            .SetDependency(loggerFactory)
             .SetDependency(_rabbitMqService)
             .WithFakeTimeProvider()
             .Create();
@@ -81,6 +86,13 @@ public class RabbitMqIntegrationListenerServiceTests
             Arg.Is(AssertHelper.AssertPropertyEqual(expected, new[] { "DelayUntilDate" })),
             Arg.Any<CancellationToken>());
 
+        _logger.Received().Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o => o.ToString().Contains("Non-retryable failure")),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
+
         await _rabbitMqService.DidNotReceiveWithAnyArgs()
             .RepublishToRetryQueueAsync(default, default);
         await _rabbitMqService.DidNotReceiveWithAnyArgs()
@@ -118,6 +130,13 @@ public class RabbitMqIntegrationListenerServiceTests
             Arg.Any<IChannel>(),
             Arg.Is(AssertHelper.AssertPropertyEqual(expected, new[] { "DelayUntilDate" })),
             Arg.Any<CancellationToken>());
+
+        _logger.Received().Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o => o.ToString().Contains("Max retry attempts reached")),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
 
         await _rabbitMqService.DidNotReceiveWithAnyArgs()
             .RepublishToRetryQueueAsync(default, default);
