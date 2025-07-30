@@ -24,7 +24,7 @@ public class AzureServiceBusIntegrationListenerService<TConfiguration> : Backgro
     {
         _handler = handler;
         _logger = loggerFactory.CreateLogger(
-            categoryName: $"Bit.Core.Services.AzureServiceBusIntegrationListenerService.{configuration.IntegrationSubscriptionName}");
+            categoryName: $"{this.GetType().FullName}.{configuration.IntegrationSubscriptionName}");
         _maxRetries = configuration.MaxRetries;
         _serviceBusService = serviceBusService;
 

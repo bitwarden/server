@@ -39,7 +39,7 @@ public class RabbitMqIntegrationListenerService<TConfiguration> : BackgroundServ
         _timeProvider = timeProvider;
         _lazyChannel = new Lazy<Task<IChannel>>(() => _rabbitMqService.CreateChannelAsync());
         _logger = loggerFactory.CreateLogger(
-            categoryName: $"Bit.Core.Services.RabbitMqIntegrationListenerService.{configuration.IntegrationQueueName}"); ;
+            categoryName: $"{this.GetType().FullName}.{configuration.IntegrationQueueName}"); ;
     }
 
     public override async Task StartAsync(CancellationToken cancellationToken)

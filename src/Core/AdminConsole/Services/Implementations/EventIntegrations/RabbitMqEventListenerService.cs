@@ -71,6 +71,6 @@ public class RabbitMqEventListenerService<TConfiguration> : EventLoggingListener
     private static ILogger CreateLogger(ILoggerFactory loggerFactory, TConfiguration configuration)
     {
         return loggerFactory.CreateLogger(
-            categoryName: $"Bit.Core.Services.RabbitMqEventListenerService.{configuration.EventQueueName}");
+            categoryName: $"{typeof(RabbitMqEventListenerService<>).FullName}.{configuration.EventQueueName}");
     }
 }
