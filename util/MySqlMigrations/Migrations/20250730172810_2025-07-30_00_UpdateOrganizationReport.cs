@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Bit.MySqlMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class UpdateOrganizationReport : Migration
+public partial class _20250730_00_UpdateOrganizationReport : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)

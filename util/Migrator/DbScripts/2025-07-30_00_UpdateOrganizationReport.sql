@@ -1,7 +1,11 @@
-IF OBJECT_ID('dbo.OrganizationReport') IS NULL
+DROP INDEX [IX_OrganizationReport_OrganizationId_Date] ON [dbo].[OrganizationReport];
+GO
+
+
+IF OBJECT_ID('dbo.OrganizationReport') IS NOT NULL
 BEGIN
 ALTER TABLE [dbo].[OrganizationReport]
-DROP COLUMN [Date];
+    DROP COLUMN [Date];
 END
 GO
 
@@ -13,6 +17,12 @@ ALTER TABLE [dbo].[OrganizationReport]
         [RevisionDate] DATETIME2 (7) NOT NULL;
 END
 GO
+
+
+CREATE NONCLUSTERED INDEX [IX_OrganizationReport_OrganizationId_CreationDate]
+    ON [dbo].[OrganizationReport]([OrganizationId] ASC, [CreationDate] DESC);
+GO
+
 
 CREATE OR ALTER VIEW [dbo].[OrganizationReportView]
 AS

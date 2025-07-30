@@ -1,24 +1,28 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class UpdateOrganizationReport : Migration
+public partial class _20250730_00_UpdateOrganizationReport : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.AlterDatabase()
+            .Annotation("Npgsql:CollationDefinition:postgresIndetermanisticCollation", "en-u-ks-primary,en-u-ks-primary,icu,False");
+
         migrationBuilder.CreateTable(
             name: "Cache",
             columns: table => new
             {
-                Id = table.Column<string>(type: "TEXT", maxLength: 449, nullable: false),
-                Value = table.Column<byte[]>(type: "BLOB", nullable: false),
-                ExpiresAtTime = table.Column<DateTime>(type: "TEXT", nullable: false),
-                SlidingExpirationInSeconds = table.Column<long>(type: "INTEGER", nullable: true),
-                AbsoluteExpiration = table.Column<DateTime>(type: "TEXT", nullable: true)
+                Id = table.Column<string>(type: "character varying(449)", maxLength: 449, nullable: false),
+                Value = table.Column<byte[]>(type: "bytea", nullable: false),
+                ExpiresAtTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                SlidingExpirationInSeconds = table.Column<long>(type: "bigint", nullable: true),
+                AbsoluteExpiration = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
             },
             constraints: table =>
             {
@@ -29,17 +33,17 @@ public partial class UpdateOrganizationReport : Migration
             name: "ClientOrganizationMigrationRecord",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                ProviderId = table.Column<Guid>(type: "TEXT", nullable: false),
-                PlanType = table.Column<byte>(type: "INTEGER", nullable: false),
-                Seats = table.Column<int>(type: "INTEGER", nullable: false),
-                MaxStorageGb = table.Column<short>(type: "INTEGER", nullable: true),
-                GatewayCustomerId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                GatewaySubscriptionId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                ExpirationDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                MaxAutoscaleSeats = table.Column<int>(type: "INTEGER", nullable: true),
-                Status = table.Column<byte>(type: "INTEGER", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                ProviderId = table.Column<Guid>(type: "uuid", nullable: false),
+                PlanType = table.Column<byte>(type: "smallint", nullable: false),
+                Seats = table.Column<int>(type: "integer", nullable: false),
+                MaxStorageGb = table.Column<short>(type: "smallint", nullable: true),
+                GatewayCustomerId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                GatewaySubscriptionId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                ExpirationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                MaxAutoscaleSeats = table.Column<int>(type: "integer", nullable: true),
+                Status = table.Column<byte>(type: "smallint", nullable: false)
             },
             constraints: table =>
             {
@@ -50,27 +54,27 @@ public partial class UpdateOrganizationReport : Migration
             name: "Event",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                Date = table.Column<DateTime>(type: "TEXT", nullable: false),
-                Type = table.Column<int>(type: "INTEGER", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: true),
-                InstallationId = table.Column<Guid>(type: "TEXT", nullable: true),
-                ProviderId = table.Column<Guid>(type: "TEXT", nullable: true),
-                CipherId = table.Column<Guid>(type: "TEXT", nullable: true),
-                CollectionId = table.Column<Guid>(type: "TEXT", nullable: true),
-                PolicyId = table.Column<Guid>(type: "TEXT", nullable: true),
-                GroupId = table.Column<Guid>(type: "TEXT", nullable: true),
-                OrganizationUserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                ProviderUserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                ProviderOrganizationId = table.Column<Guid>(type: "TEXT", nullable: true),
-                DeviceType = table.Column<byte>(type: "INTEGER", nullable: true),
-                IpAddress = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                ActingUserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                SystemUser = table.Column<byte>(type: "INTEGER", nullable: true),
-                DomainName = table.Column<string>(type: "TEXT", nullable: true),
-                SecretId = table.Column<Guid>(type: "TEXT", nullable: true),
-                ServiceAccountId = table.Column<Guid>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                Date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                Type = table.Column<int>(type: "integer", nullable: false),
+                UserId = table.Column<Guid>(type: "uuid", nullable: true),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
+                InstallationId = table.Column<Guid>(type: "uuid", nullable: true),
+                ProviderId = table.Column<Guid>(type: "uuid", nullable: true),
+                CipherId = table.Column<Guid>(type: "uuid", nullable: true),
+                CollectionId = table.Column<Guid>(type: "uuid", nullable: true),
+                PolicyId = table.Column<Guid>(type: "uuid", nullable: true),
+                GroupId = table.Column<Guid>(type: "uuid", nullable: true),
+                OrganizationUserId = table.Column<Guid>(type: "uuid", nullable: true),
+                ProviderUserId = table.Column<Guid>(type: "uuid", nullable: true),
+                ProviderOrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
+                DeviceType = table.Column<byte>(type: "smallint", nullable: true),
+                IpAddress = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                ActingUserId = table.Column<Guid>(type: "uuid", nullable: true),
+                SystemUser = table.Column<byte>(type: "smallint", nullable: true),
+                DomainName = table.Column<string>(type: "text", nullable: true),
+                SecretId = table.Column<Guid>(type: "uuid", nullable: true),
+                ServiceAccountId = table.Column<Guid>(type: "uuid", nullable: true)
             },
             constraints: table =>
             {
@@ -81,18 +85,18 @@ public partial class UpdateOrganizationReport : Migration
             name: "Grant",
             columns: table => new
             {
-                Id = table.Column<int>(type: "INTEGER", nullable: false)
-                    .Annotation("Sqlite:Autoincrement", true),
-                Key = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                Type = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                SubjectId = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
-                SessionId = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                ClientId = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                Description = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                ExpirationDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                ConsumedDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                Data = table.Column<string>(type: "TEXT", nullable: false)
+                Id = table.Column<int>(type: "integer", nullable: false)
+                    .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                Key = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                Type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                SubjectId = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                SessionId = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                ClientId = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                Description = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                ExpirationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                ConsumedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                Data = table.Column<string>(type: "text", nullable: false)
             },
             constraints: table =>
             {
@@ -103,12 +107,12 @@ public partial class UpdateOrganizationReport : Migration
             name: "Installation",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                Key = table.Column<string>(type: "TEXT", maxLength: 150, nullable: false),
-                Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                LastActivityDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                Key = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                Enabled = table.Column<bool>(type: "boolean", nullable: false),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                LastActivityDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
             },
             constraints: table =>
             {
@@ -119,64 +123,64 @@ public partial class UpdateOrganizationReport : Migration
             name: "Organization",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                Identifier = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                Name = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                BusinessName = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                BusinessAddress1 = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                BusinessAddress2 = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                BusinessAddress3 = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                BusinessCountry = table.Column<string>(type: "TEXT", maxLength: 2, nullable: true),
-                BusinessTaxNumber = table.Column<string>(type: "TEXT", maxLength: 30, nullable: true),
-                BillingEmail = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                Plan = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                PlanType = table.Column<byte>(type: "INTEGER", nullable: false),
-                Seats = table.Column<int>(type: "INTEGER", nullable: true),
-                MaxCollections = table.Column<short>(type: "INTEGER", nullable: true),
-                UsePolicies = table.Column<bool>(type: "INTEGER", nullable: false),
-                UseSso = table.Column<bool>(type: "INTEGER", nullable: false),
-                UseKeyConnector = table.Column<bool>(type: "INTEGER", nullable: false),
-                UseScim = table.Column<bool>(type: "INTEGER", nullable: false),
-                UseGroups = table.Column<bool>(type: "INTEGER", nullable: false),
-                UseDirectory = table.Column<bool>(type: "INTEGER", nullable: false),
-                UseEvents = table.Column<bool>(type: "INTEGER", nullable: false),
-                UseTotp = table.Column<bool>(type: "INTEGER", nullable: false),
-                Use2fa = table.Column<bool>(type: "INTEGER", nullable: false),
-                UseApi = table.Column<bool>(type: "INTEGER", nullable: false),
-                UseResetPassword = table.Column<bool>(type: "INTEGER", nullable: false),
-                UseSecretsManager = table.Column<bool>(type: "INTEGER", nullable: false),
-                SelfHost = table.Column<bool>(type: "INTEGER", nullable: false),
-                UsersGetPremium = table.Column<bool>(type: "INTEGER", nullable: false),
-                UseCustomPermissions = table.Column<bool>(type: "INTEGER", nullable: false),
-                Storage = table.Column<long>(type: "INTEGER", nullable: true),
-                MaxStorageGb = table.Column<short>(type: "INTEGER", nullable: true),
-                Gateway = table.Column<byte>(type: "INTEGER", nullable: true),
-                GatewayCustomerId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                GatewaySubscriptionId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                ReferenceData = table.Column<string>(type: "TEXT", nullable: true),
-                Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                LicenseKey = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                PublicKey = table.Column<string>(type: "TEXT", nullable: true),
-                PrivateKey = table.Column<string>(type: "TEXT", nullable: true),
-                TwoFactorProviders = table.Column<string>(type: "TEXT", nullable: true),
-                ExpirationDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                MaxAutoscaleSeats = table.Column<int>(type: "INTEGER", nullable: true),
-                OwnersNotifiedOfAutoscaling = table.Column<DateTime>(type: "TEXT", nullable: true),
-                Status = table.Column<byte>(type: "INTEGER", nullable: false),
-                UsePasswordManager = table.Column<bool>(type: "INTEGER", nullable: false),
-                SmSeats = table.Column<int>(type: "INTEGER", nullable: true),
-                SmServiceAccounts = table.Column<int>(type: "INTEGER", nullable: true),
-                MaxAutoscaleSmSeats = table.Column<int>(type: "INTEGER", nullable: true),
-                MaxAutoscaleSmServiceAccounts = table.Column<int>(type: "INTEGER", nullable: true),
-                LimitCollectionCreation = table.Column<bool>(type: "INTEGER", nullable: false),
-                LimitCollectionDeletion = table.Column<bool>(type: "INTEGER", nullable: false),
-                AllowAdminAccessToAllCollectionItems = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: true),
-                LimitItemDeletion = table.Column<bool>(type: "INTEGER", nullable: false),
-                UseRiskInsights = table.Column<bool>(type: "INTEGER", nullable: false),
-                UseOrganizationDomains = table.Column<bool>(type: "INTEGER", nullable: false),
-                UseAdminSponsoredFamilies = table.Column<bool>(type: "INTEGER", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                Identifier = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true, collation: "postgresIndetermanisticCollation"),
+                Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                BusinessName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                BusinessAddress1 = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                BusinessAddress2 = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                BusinessAddress3 = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                BusinessCountry = table.Column<string>(type: "character varying(2)", maxLength: 2, nullable: true),
+                BusinessTaxNumber = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
+                BillingEmail = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                Plan = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                PlanType = table.Column<byte>(type: "smallint", nullable: false),
+                Seats = table.Column<int>(type: "integer", nullable: true),
+                MaxCollections = table.Column<short>(type: "smallint", nullable: true),
+                UsePolicies = table.Column<bool>(type: "boolean", nullable: false),
+                UseSso = table.Column<bool>(type: "boolean", nullable: false),
+                UseKeyConnector = table.Column<bool>(type: "boolean", nullable: false),
+                UseScim = table.Column<bool>(type: "boolean", nullable: false),
+                UseGroups = table.Column<bool>(type: "boolean", nullable: false),
+                UseDirectory = table.Column<bool>(type: "boolean", nullable: false),
+                UseEvents = table.Column<bool>(type: "boolean", nullable: false),
+                UseTotp = table.Column<bool>(type: "boolean", nullable: false),
+                Use2fa = table.Column<bool>(type: "boolean", nullable: false),
+                UseApi = table.Column<bool>(type: "boolean", nullable: false),
+                UseResetPassword = table.Column<bool>(type: "boolean", nullable: false),
+                UseSecretsManager = table.Column<bool>(type: "boolean", nullable: false),
+                SelfHost = table.Column<bool>(type: "boolean", nullable: false),
+                UsersGetPremium = table.Column<bool>(type: "boolean", nullable: false),
+                UseCustomPermissions = table.Column<bool>(type: "boolean", nullable: false),
+                Storage = table.Column<long>(type: "bigint", nullable: true),
+                MaxStorageGb = table.Column<short>(type: "smallint", nullable: true),
+                Gateway = table.Column<byte>(type: "smallint", nullable: true),
+                GatewayCustomerId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                GatewaySubscriptionId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                ReferenceData = table.Column<string>(type: "text", nullable: true),
+                Enabled = table.Column<bool>(type: "boolean", nullable: false),
+                LicenseKey = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                PublicKey = table.Column<string>(type: "text", nullable: true),
+                PrivateKey = table.Column<string>(type: "text", nullable: true),
+                TwoFactorProviders = table.Column<string>(type: "text", nullable: true),
+                ExpirationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                MaxAutoscaleSeats = table.Column<int>(type: "integer", nullable: true),
+                OwnersNotifiedOfAutoscaling = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                Status = table.Column<byte>(type: "smallint", nullable: false),
+                UsePasswordManager = table.Column<bool>(type: "boolean", nullable: false),
+                SmSeats = table.Column<int>(type: "integer", nullable: true),
+                SmServiceAccounts = table.Column<int>(type: "integer", nullable: true),
+                MaxAutoscaleSmSeats = table.Column<int>(type: "integer", nullable: true),
+                MaxAutoscaleSmServiceAccounts = table.Column<int>(type: "integer", nullable: true),
+                LimitCollectionCreation = table.Column<bool>(type: "boolean", nullable: false),
+                LimitCollectionDeletion = table.Column<bool>(type: "boolean", nullable: false),
+                AllowAdminAccessToAllCollectionItems = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                LimitItemDeletion = table.Column<bool>(type: "boolean", nullable: false),
+                UseRiskInsights = table.Column<bool>(type: "boolean", nullable: false),
+                UseOrganizationDomains = table.Column<bool>(type: "boolean", nullable: false),
+                UseAdminSponsoredFamilies = table.Column<bool>(type: "boolean", nullable: false)
             },
             constraints: table =>
             {
@@ -187,20 +191,20 @@ public partial class UpdateOrganizationReport : Migration
             name: "OrganizationMemberBaseDetails",
             columns: table => new
             {
-                UserGuid = table.Column<Guid>(type: "TEXT", nullable: true),
-                UserName = table.Column<string>(type: "TEXT", nullable: true),
-                Email = table.Column<string>(type: "TEXT", nullable: true),
-                TwoFactorProviders = table.Column<string>(type: "TEXT", nullable: true),
-                UsesKeyConnector = table.Column<bool>(type: "INTEGER", nullable: false),
-                ResetPasswordKey = table.Column<string>(type: "TEXT", nullable: true),
-                CollectionId = table.Column<Guid>(type: "TEXT", nullable: true),
-                GroupId = table.Column<Guid>(type: "TEXT", nullable: true),
-                GroupName = table.Column<string>(type: "TEXT", nullable: true),
-                CollectionName = table.Column<string>(type: "TEXT", nullable: true),
-                ReadOnly = table.Column<bool>(type: "INTEGER", nullable: true),
-                HidePasswords = table.Column<bool>(type: "INTEGER", nullable: true),
-                Manage = table.Column<bool>(type: "INTEGER", nullable: true),
-                CipherId = table.Column<Guid>(type: "TEXT", nullable: false)
+                UserGuid = table.Column<Guid>(type: "uuid", nullable: true),
+                UserName = table.Column<string>(type: "text", nullable: true),
+                Email = table.Column<string>(type: "text", nullable: true),
+                TwoFactorProviders = table.Column<string>(type: "text", nullable: true),
+                UsesKeyConnector = table.Column<bool>(type: "boolean", nullable: false),
+                ResetPasswordKey = table.Column<string>(type: "text", nullable: true),
+                CollectionId = table.Column<Guid>(type: "uuid", nullable: true),
+                GroupId = table.Column<Guid>(type: "uuid", nullable: true),
+                GroupName = table.Column<string>(type: "text", nullable: true),
+                CollectionName = table.Column<string>(type: "text", nullable: true),
+                ReadOnly = table.Column<bool>(type: "boolean", nullable: true),
+                HidePasswords = table.Column<bool>(type: "boolean", nullable: true),
+                Manage = table.Column<bool>(type: "boolean", nullable: true),
+                CipherId = table.Column<Guid>(type: "uuid", nullable: false)
             },
             constraints: table =>
             {
@@ -210,26 +214,26 @@ public partial class UpdateOrganizationReport : Migration
             name: "Provider",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                Name = table.Column<string>(type: "TEXT", nullable: true),
-                BusinessName = table.Column<string>(type: "TEXT", nullable: true),
-                BusinessAddress1 = table.Column<string>(type: "TEXT", nullable: true),
-                BusinessAddress2 = table.Column<string>(type: "TEXT", nullable: true),
-                BusinessAddress3 = table.Column<string>(type: "TEXT", nullable: true),
-                BusinessCountry = table.Column<string>(type: "TEXT", nullable: true),
-                BusinessTaxNumber = table.Column<string>(type: "TEXT", nullable: true),
-                BillingEmail = table.Column<string>(type: "TEXT", nullable: true),
-                BillingPhone = table.Column<string>(type: "TEXT", nullable: true),
-                Status = table.Column<byte>(type: "INTEGER", nullable: false),
-                UseEvents = table.Column<bool>(type: "INTEGER", nullable: false),
-                Type = table.Column<byte>(type: "INTEGER", nullable: false),
-                Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                Gateway = table.Column<byte>(type: "INTEGER", nullable: true),
-                GatewayCustomerId = table.Column<string>(type: "TEXT", nullable: true),
-                GatewaySubscriptionId = table.Column<string>(type: "TEXT", nullable: true),
-                DiscountId = table.Column<string>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                Name = table.Column<string>(type: "text", nullable: true),
+                BusinessName = table.Column<string>(type: "text", nullable: true),
+                BusinessAddress1 = table.Column<string>(type: "text", nullable: true),
+                BusinessAddress2 = table.Column<string>(type: "text", nullable: true),
+                BusinessAddress3 = table.Column<string>(type: "text", nullable: true),
+                BusinessCountry = table.Column<string>(type: "text", nullable: true),
+                BusinessTaxNumber = table.Column<string>(type: "text", nullable: true),
+                BillingEmail = table.Column<string>(type: "text", nullable: true),
+                BillingPhone = table.Column<string>(type: "text", nullable: true),
+                Status = table.Column<byte>(type: "smallint", nullable: false),
+                UseEvents = table.Column<bool>(type: "boolean", nullable: false),
+                Type = table.Column<byte>(type: "smallint", nullable: false),
+                Enabled = table.Column<bool>(type: "boolean", nullable: false),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                Gateway = table.Column<byte>(type: "smallint", nullable: true),
+                GatewayCustomerId = table.Column<string>(type: "text", nullable: true),
+                GatewaySubscriptionId = table.Column<string>(type: "text", nullable: true),
+                DiscountId = table.Column<string>(type: "text", nullable: true)
             },
             constraints: table =>
             {
@@ -240,12 +244,12 @@ public partial class UpdateOrganizationReport : Migration
             name: "TaxRate",
             columns: table => new
             {
-                Id = table.Column<string>(type: "TEXT", maxLength: 40, nullable: false),
-                Country = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                State = table.Column<string>(type: "TEXT", maxLength: 2, nullable: true),
-                PostalCode = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
-                Rate = table.Column<decimal>(type: "TEXT", nullable: false),
-                Active = table.Column<bool>(type: "INTEGER", nullable: false)
+                Id = table.Column<string>(type: "character varying(40)", maxLength: 40, nullable: false),
+                Country = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                State = table.Column<string>(type: "character varying(2)", maxLength: 2, nullable: true),
+                PostalCode = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+                Rate = table.Column<decimal>(type: "numeric", nullable: false),
+                Active = table.Column<bool>(type: "boolean", nullable: false)
             },
             constraints: table =>
             {
@@ -256,49 +260,49 @@ public partial class UpdateOrganizationReport : Migration
             name: "User",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                Name = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                EmailVerified = table.Column<bool>(type: "INTEGER", nullable: false),
-                MasterPassword = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
-                MasterPasswordHint = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                Culture = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
-                SecurityStamp = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                TwoFactorProviders = table.Column<string>(type: "TEXT", nullable: true),
-                TwoFactorRecoveryCode = table.Column<string>(type: "TEXT", maxLength: 32, nullable: true),
-                EquivalentDomains = table.Column<string>(type: "TEXT", nullable: true),
-                ExcludedGlobalEquivalentDomains = table.Column<string>(type: "TEXT", nullable: true),
-                AccountRevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                Key = table.Column<string>(type: "TEXT", nullable: true),
-                PublicKey = table.Column<string>(type: "TEXT", nullable: true),
-                PrivateKey = table.Column<string>(type: "TEXT", nullable: true),
-                Premium = table.Column<bool>(type: "INTEGER", nullable: false),
-                PremiumExpirationDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                RenewalReminderDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                Storage = table.Column<long>(type: "INTEGER", nullable: true),
-                MaxStorageGb = table.Column<short>(type: "INTEGER", nullable: true),
-                Gateway = table.Column<byte>(type: "INTEGER", nullable: true),
-                GatewayCustomerId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                GatewaySubscriptionId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                ReferenceData = table.Column<string>(type: "TEXT", nullable: true),
-                LicenseKey = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                ApiKey = table.Column<string>(type: "TEXT", maxLength: 30, nullable: false),
-                Kdf = table.Column<byte>(type: "INTEGER", nullable: false),
-                KdfIterations = table.Column<int>(type: "INTEGER", nullable: false),
-                KdfMemory = table.Column<int>(type: "INTEGER", nullable: true),
-                KdfParallelism = table.Column<int>(type: "INTEGER", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                ForcePasswordReset = table.Column<bool>(type: "INTEGER", nullable: false),
-                UsesKeyConnector = table.Column<bool>(type: "INTEGER", nullable: false),
-                FailedLoginCount = table.Column<int>(type: "INTEGER", nullable: false),
-                LastFailedLoginDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                AvatarColor = table.Column<string>(type: "TEXT", maxLength: 7, nullable: true),
-                LastPasswordChangeDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                LastKdfChangeDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                LastKeyRotationDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                LastEmailChangeDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                VerifyDevices = table.Column<bool>(type: "INTEGER", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false, collation: "postgresIndetermanisticCollation"),
+                EmailVerified = table.Column<bool>(type: "boolean", nullable: false),
+                MasterPassword = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
+                MasterPasswordHint = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                Culture = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+                SecurityStamp = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                TwoFactorProviders = table.Column<string>(type: "text", nullable: true),
+                TwoFactorRecoveryCode = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
+                EquivalentDomains = table.Column<string>(type: "text", nullable: true),
+                ExcludedGlobalEquivalentDomains = table.Column<string>(type: "text", nullable: true),
+                AccountRevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                Key = table.Column<string>(type: "text", nullable: true),
+                PublicKey = table.Column<string>(type: "text", nullable: true),
+                PrivateKey = table.Column<string>(type: "text", nullable: true),
+                Premium = table.Column<bool>(type: "boolean", nullable: false),
+                PremiumExpirationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                RenewalReminderDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                Storage = table.Column<long>(type: "bigint", nullable: true),
+                MaxStorageGb = table.Column<short>(type: "smallint", nullable: true),
+                Gateway = table.Column<byte>(type: "smallint", nullable: true),
+                GatewayCustomerId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                GatewaySubscriptionId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                ReferenceData = table.Column<string>(type: "text", nullable: true),
+                LicenseKey = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                ApiKey = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                Kdf = table.Column<byte>(type: "smallint", nullable: false),
+                KdfIterations = table.Column<int>(type: "integer", nullable: false),
+                KdfMemory = table.Column<int>(type: "integer", nullable: true),
+                KdfParallelism = table.Column<int>(type: "integer", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                ForcePasswordReset = table.Column<bool>(type: "boolean", nullable: false),
+                UsesKeyConnector = table.Column<bool>(type: "boolean", nullable: false),
+                FailedLoginCount = table.Column<int>(type: "integer", nullable: false),
+                LastFailedLoginDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                AvatarColor = table.Column<string>(type: "character varying(7)", maxLength: 7, nullable: true),
+                LastPasswordChangeDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                LastKdfChangeDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                LastKeyRotationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                LastEmailChangeDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                VerifyDevices = table.Column<bool>(type: "boolean", nullable: false)
             },
             constraints: table =>
             {
@@ -309,14 +313,14 @@ public partial class UpdateOrganizationReport : Migration
             name: "Collection",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Name = table.Column<string>(type: "TEXT", nullable: false),
-                ExternalId = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                Type = table.Column<int>(type: "INTEGER", nullable: false),
-                DefaultUserCollectionEmail = table.Column<string>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Name = table.Column<string>(type: "text", nullable: false),
+                ExternalId = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                Type = table.Column<int>(type: "integer", nullable: false),
+                DefaultUserCollectionEmail = table.Column<string>(type: "text", nullable: true)
             },
             constraints: table =>
             {
@@ -333,12 +337,12 @@ public partial class UpdateOrganizationReport : Migration
             name: "Group",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                ExternalId = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                ExternalId = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -355,11 +359,11 @@ public partial class UpdateOrganizationReport : Migration
             name: "OrganizationApiKey",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Type = table.Column<byte>(type: "INTEGER", nullable: false),
-                ApiKey = table.Column<string>(type: "TEXT", maxLength: 30, nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Type = table.Column<byte>(type: "smallint", nullable: false),
+                ApiKey = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -376,12 +380,12 @@ public partial class UpdateOrganizationReport : Migration
             name: "OrganizationApplication",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Applications = table.Column<string>(type: "TEXT", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                ContentEncryptionKey = table.Column<string>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Applications = table.Column<string>(type: "text", nullable: false),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                ContentEncryptionKey = table.Column<string>(type: "text", nullable: false)
             },
             constraints: table =>
             {
@@ -398,11 +402,11 @@ public partial class UpdateOrganizationReport : Migration
             name: "OrganizationConnection",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                Type = table.Column<byte>(type: "INTEGER", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                Config = table.Column<string>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                Type = table.Column<byte>(type: "smallint", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Enabled = table.Column<bool>(type: "boolean", nullable: false),
+                Config = table.Column<string>(type: "text", nullable: true)
             },
             constraints: table =>
             {
@@ -419,15 +423,15 @@ public partial class UpdateOrganizationReport : Migration
             name: "OrganizationDomain",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Txt = table.Column<string>(type: "TEXT", nullable: false),
-                DomainName = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                VerifiedDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                NextRunDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                LastCheckedDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                JobRunCount = table.Column<int>(type: "INTEGER", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Txt = table.Column<string>(type: "text", nullable: false),
+                DomainName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                VerifiedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                NextRunDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                LastCheckedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                JobRunCount = table.Column<int>(type: "integer", nullable: false)
             },
             constraints: table =>
             {
@@ -444,11 +448,11 @@ public partial class UpdateOrganizationReport : Migration
             name: "OrganizationInstallation",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                InstallationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                InstallationId = table.Column<Guid>(type: "uuid", nullable: false),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
             },
             constraints: table =>
             {
@@ -471,12 +475,12 @@ public partial class UpdateOrganizationReport : Migration
             name: "OrganizationIntegration",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Type = table.Column<int>(type: "INTEGER", nullable: false),
-                Configuration = table.Column<string>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Type = table.Column<int>(type: "integer", nullable: false),
+                Configuration = table.Column<string>(type: "text", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -493,15 +497,15 @@ public partial class UpdateOrganizationReport : Migration
             name: "OrganizationReport",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Date = table.Column<DateTime>(type: "TEXT", nullable: false),
-                SummaryData = table.Column<string>(type: "TEXT", nullable: false),
-                ReportData = table.Column<string>(type: "TEXT", nullable: false),
-                ApplicationData = table.Column<string>(type: "TEXT", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                ContentEncryptionKey = table.Column<string>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                SummaryData = table.Column<string>(type: "text", nullable: false),
+                ReportData = table.Column<string>(type: "text", nullable: false),
+                ApplicationData = table.Column<string>(type: "text", nullable: false),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                ContentEncryptionKey = table.Column<string>(type: "text", nullable: false)
             },
             constraints: table =>
             {
@@ -518,18 +522,18 @@ public partial class UpdateOrganizationReport : Migration
             name: "OrganizationSponsorship",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                SponsoringOrganizationId = table.Column<Guid>(type: "TEXT", nullable: true),
-                SponsoringOrganizationUserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                SponsoredOrganizationId = table.Column<Guid>(type: "TEXT", nullable: true),
-                FriendlyName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                OfferedToEmail = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                PlanSponsorshipType = table.Column<byte>(type: "INTEGER", nullable: true),
-                LastSyncDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                ValidUntil = table.Column<DateTime>(type: "TEXT", nullable: true),
-                ToDelete = table.Column<bool>(type: "INTEGER", nullable: false),
-                IsAdminInitiated = table.Column<bool>(type: "INTEGER", nullable: false),
-                Notes = table.Column<string>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                SponsoringOrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
+                SponsoringOrganizationUserId = table.Column<Guid>(type: "uuid", nullable: false),
+                SponsoredOrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
+                FriendlyName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                OfferedToEmail = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                PlanSponsorshipType = table.Column<byte>(type: "smallint", nullable: true),
+                LastSyncDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                ValidUntil = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                ToDelete = table.Column<bool>(type: "boolean", nullable: false),
+                IsAdminInitiated = table.Column<bool>(type: "boolean", nullable: false),
+                Notes = table.Column<string>(type: "text", nullable: true)
             },
             constraints: table =>
             {
@@ -540,7 +544,7 @@ public partial class UpdateOrganizationReport : Migration
                     principalTable: "Organization",
                     principalColumn: "Id");
                 table.ForeignKey(
-                    name: "FK_OrganizationSponsorship_Organization_SponsoringOrganizationId",
+                    name: "FK_OrganizationSponsorship_Organization_SponsoringOrganization~",
                     column: x => x.SponsoringOrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id");
@@ -550,11 +554,11 @@ public partial class UpdateOrganizationReport : Migration
             name: "PasswordHealthReportApplication",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Uri = table.Column<string>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Uri = table.Column<string>(type: "text", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -571,13 +575,13 @@ public partial class UpdateOrganizationReport : Migration
             name: "Policy",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Type = table.Column<byte>(type: "INTEGER", nullable: false),
-                Data = table.Column<string>(type: "TEXT", nullable: true),
-                Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Type = table.Column<byte>(type: "smallint", nullable: false),
+                Data = table.Column<string>(type: "text", nullable: true),
+                Enabled = table.Column<bool>(type: "boolean", nullable: false),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -594,12 +598,12 @@ public partial class UpdateOrganizationReport : Migration
             name: "Project",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Name = table.Column<string>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                DeletedDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Name = table.Column<string>(type: "text", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                DeletedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
             },
             constraints: table =>
             {
@@ -616,14 +620,14 @@ public partial class UpdateOrganizationReport : Migration
             name: "Secret",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Key = table.Column<string>(type: "TEXT", nullable: true),
-                Value = table.Column<string>(type: "TEXT", nullable: true),
-                Note = table.Column<string>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                DeletedDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Key = table.Column<string>(type: "text", nullable: true),
+                Value = table.Column<string>(type: "text", nullable: true),
+                Note = table.Column<string>(type: "text", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                DeletedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
             },
             constraints: table =>
             {
@@ -640,11 +644,11 @@ public partial class UpdateOrganizationReport : Migration
             name: "ServiceAccount",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Name = table.Column<string>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Name = table.Column<string>(type: "text", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -661,13 +665,13 @@ public partial class UpdateOrganizationReport : Migration
             name: "SsoConfig",
             columns: table => new
             {
-                Id = table.Column<long>(type: "INTEGER", nullable: false)
-                    .Annotation("Sqlite:Autoincrement", true),
-                Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Data = table.Column<string>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<long>(type: "bigint", nullable: false)
+                    .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                Enabled = table.Column<bool>(type: "boolean", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Data = table.Column<string>(type: "text", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -684,17 +688,17 @@ public partial class UpdateOrganizationReport : Migration
             name: "ProviderInvoiceItem",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                ProviderId = table.Column<Guid>(type: "TEXT", nullable: false),
-                InvoiceId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                InvoiceNumber = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                ClientId = table.Column<Guid>(type: "TEXT", nullable: true),
-                ClientName = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                PlanName = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                AssignedSeats = table.Column<int>(type: "INTEGER", nullable: false),
-                UsedSeats = table.Column<int>(type: "INTEGER", nullable: false),
-                Total = table.Column<decimal>(type: "TEXT", nullable: false),
-                Created = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                ProviderId = table.Column<Guid>(type: "uuid", nullable: false),
+                InvoiceId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                InvoiceNumber = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                ClientId = table.Column<Guid>(type: "uuid", nullable: true),
+                ClientName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                PlanName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                AssignedSeats = table.Column<int>(type: "integer", nullable: false),
+                UsedSeats = table.Column<int>(type: "integer", nullable: false),
+                Total = table.Column<decimal>(type: "numeric", nullable: false),
+                Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -711,13 +715,13 @@ public partial class UpdateOrganizationReport : Migration
             name: "ProviderOrganization",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                ProviderId = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Key = table.Column<string>(type: "TEXT", nullable: true),
-                Settings = table.Column<string>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                ProviderId = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                Key = table.Column<string>(type: "text", nullable: true),
+                Settings = table.Column<string>(type: "text", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -740,12 +744,12 @@ public partial class UpdateOrganizationReport : Migration
             name: "ProviderPlan",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                ProviderId = table.Column<Guid>(type: "TEXT", nullable: false),
-                PlanType = table.Column<byte>(type: "INTEGER", nullable: false),
-                SeatMinimum = table.Column<int>(type: "INTEGER", nullable: true),
-                PurchasedSeats = table.Column<int>(type: "INTEGER", nullable: true),
-                AllocatedSeats = table.Column<int>(type: "INTEGER", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                ProviderId = table.Column<Guid>(type: "uuid", nullable: false),
+                PlanType = table.Column<byte>(type: "smallint", nullable: false),
+                SeatMinimum = table.Column<int>(type: "integer", nullable: true),
+                PurchasedSeats = table.Column<int>(type: "integer", nullable: true),
+                AllocatedSeats = table.Column<int>(type: "integer", nullable: true)
             },
             constraints: table =>
             {
@@ -762,19 +766,19 @@ public partial class UpdateOrganizationReport : Migration
             name: "Cipher",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: true),
-                Type = table.Column<byte>(type: "INTEGER", nullable: false),
-                Data = table.Column<string>(type: "TEXT", nullable: true),
-                Favorites = table.Column<string>(type: "TEXT", nullable: true),
-                Folders = table.Column<string>(type: "TEXT", nullable: true),
-                Attachments = table.Column<string>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                DeletedDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                Reprompt = table.Column<byte>(type: "INTEGER", nullable: true),
-                Key = table.Column<string>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                UserId = table.Column<Guid>(type: "uuid", nullable: true),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
+                Type = table.Column<byte>(type: "smallint", nullable: false),
+                Data = table.Column<string>(type: "text", nullable: true),
+                Favorites = table.Column<string>(type: "text", nullable: true),
+                Folders = table.Column<string>(type: "text", nullable: true),
+                Attachments = table.Column<string>(type: "text", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                DeletedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                Reprompt = table.Column<byte>(type: "smallint", nullable: true),
+                Key = table.Column<string>(type: "text", nullable: true)
             },
             constraints: table =>
             {
@@ -795,18 +799,18 @@ public partial class UpdateOrganizationReport : Migration
             name: "Device",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Name = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                Type = table.Column<byte>(type: "INTEGER", nullable: false),
-                Identifier = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                PushToken = table.Column<string>(type: "TEXT", maxLength: 255, nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                EncryptedUserKey = table.Column<string>(type: "TEXT", nullable: true),
-                EncryptedPublicKey = table.Column<string>(type: "TEXT", nullable: true),
-                EncryptedPrivateKey = table.Column<string>(type: "TEXT", nullable: true),
-                Active = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                Type = table.Column<byte>(type: "smallint", nullable: false),
+                Identifier = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                PushToken = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                EncryptedUserKey = table.Column<string>(type: "text", nullable: true),
+                EncryptedPublicKey = table.Column<string>(type: "text", nullable: true),
+                EncryptedPrivateKey = table.Column<string>(type: "text", nullable: true),
+                Active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
             },
             constraints: table =>
             {
@@ -823,18 +827,18 @@ public partial class UpdateOrganizationReport : Migration
             name: "EmergencyAccess",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                GrantorId = table.Column<Guid>(type: "TEXT", nullable: false),
-                GranteeId = table.Column<Guid>(type: "TEXT", nullable: true),
-                Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                KeyEncrypted = table.Column<string>(type: "TEXT", nullable: true),
-                Type = table.Column<byte>(type: "INTEGER", nullable: false),
-                Status = table.Column<byte>(type: "INTEGER", nullable: false),
-                WaitTimeDays = table.Column<int>(type: "INTEGER", nullable: false),
-                RecoveryInitiatedDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                LastNotificationDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                GrantorId = table.Column<Guid>(type: "uuid", nullable: false),
+                GranteeId = table.Column<Guid>(type: "uuid", nullable: true),
+                Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                KeyEncrypted = table.Column<string>(type: "text", nullable: true),
+                Type = table.Column<byte>(type: "smallint", nullable: false),
+                Status = table.Column<byte>(type: "smallint", nullable: false),
+                WaitTimeDays = table.Column<int>(type: "integer", nullable: false),
+                RecoveryInitiatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                LastNotificationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -856,11 +860,11 @@ public partial class UpdateOrganizationReport : Migration
             name: "Folder",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Name = table.Column<string>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                Name = table.Column<string>(type: "text", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -877,19 +881,19 @@ public partial class UpdateOrganizationReport : Migration
             name: "OrganizationUser",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                Key = table.Column<string>(type: "TEXT", nullable: true),
-                ResetPasswordKey = table.Column<string>(type: "TEXT", nullable: true),
-                Status = table.Column<short>(type: "INTEGER", nullable: false),
-                Type = table.Column<byte>(type: "INTEGER", nullable: false),
-                ExternalId = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                Permissions = table.Column<string>(type: "TEXT", nullable: true),
-                AccessSecretsManager = table.Column<bool>(type: "INTEGER", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                UserId = table.Column<Guid>(type: "uuid", nullable: true),
+                Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                Key = table.Column<string>(type: "text", nullable: true),
+                ResetPasswordKey = table.Column<string>(type: "text", nullable: true),
+                Status = table.Column<short>(type: "smallint", nullable: false),
+                Type = table.Column<byte>(type: "smallint", nullable: false),
+                ExternalId = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                Permissions = table.Column<string>(type: "text", nullable: true),
+                AccessSecretsManager = table.Column<bool>(type: "boolean", nullable: false)
             },
             constraints: table =>
             {
@@ -911,16 +915,16 @@ public partial class UpdateOrganizationReport : Migration
             name: "ProviderUser",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                ProviderId = table.Column<Guid>(type: "TEXT", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                Email = table.Column<string>(type: "TEXT", nullable: true),
-                Key = table.Column<string>(type: "TEXT", nullable: true),
-                Status = table.Column<byte>(type: "INTEGER", nullable: false),
-                Type = table.Column<byte>(type: "INTEGER", nullable: false),
-                Permissions = table.Column<string>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                ProviderId = table.Column<Guid>(type: "uuid", nullable: false),
+                UserId = table.Column<Guid>(type: "uuid", nullable: true),
+                Email = table.Column<string>(type: "text", nullable: true),
+                Key = table.Column<string>(type: "text", nullable: true),
+                Status = table.Column<byte>(type: "smallint", nullable: false),
+                Type = table.Column<byte>(type: "smallint", nullable: false),
+                Permissions = table.Column<string>(type: "text", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -942,23 +946,23 @@ public partial class UpdateOrganizationReport : Migration
             name: "Send",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: true),
-                Type = table.Column<byte>(type: "INTEGER", nullable: false),
-                Data = table.Column<string>(type: "TEXT", nullable: true),
-                Key = table.Column<string>(type: "TEXT", nullable: true),
-                Password = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
-                Emails = table.Column<string>(type: "TEXT", maxLength: 1024, nullable: true),
-                MaxAccessCount = table.Column<int>(type: "INTEGER", nullable: true),
-                AccessCount = table.Column<int>(type: "INTEGER", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                ExpirationDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                DeletionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                Disabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                HideEmail = table.Column<bool>(type: "INTEGER", nullable: true),
-                CipherId = table.Column<Guid>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                UserId = table.Column<Guid>(type: "uuid", nullable: true),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
+                Type = table.Column<byte>(type: "smallint", nullable: false),
+                Data = table.Column<string>(type: "text", nullable: true),
+                Key = table.Column<string>(type: "text", nullable: true),
+                Password = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
+                Emails = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
+                MaxAccessCount = table.Column<int>(type: "integer", nullable: true),
+                AccessCount = table.Column<int>(type: "integer", nullable: false),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                ExpirationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                DeletionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                Disabled = table.Column<bool>(type: "boolean", nullable: false),
+                HideEmail = table.Column<bool>(type: "boolean", nullable: true),
+                CipherId = table.Column<Guid>(type: "uuid", nullable: true)
             },
             constraints: table =>
             {
@@ -979,12 +983,12 @@ public partial class UpdateOrganizationReport : Migration
             name: "SsoUser",
             columns: table => new
             {
-                Id = table.Column<long>(type: "INTEGER", nullable: false)
-                    .Annotation("Sqlite:Autoincrement", true),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: true),
-                ExternalId = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<long>(type: "bigint", nullable: false)
+                    .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
+                ExternalId = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true, collation: "postgresIndetermanisticCollation"),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -1006,19 +1010,19 @@ public partial class UpdateOrganizationReport : Migration
             name: "Transaction",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: true),
-                Type = table.Column<byte>(type: "INTEGER", nullable: false),
-                Amount = table.Column<decimal>(type: "TEXT", nullable: false),
-                Refunded = table.Column<bool>(type: "INTEGER", nullable: true),
-                RefundedAmount = table.Column<decimal>(type: "TEXT", nullable: true),
-                Details = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                PaymentMethodType = table.Column<byte>(type: "INTEGER", nullable: true),
-                Gateway = table.Column<byte>(type: "INTEGER", nullable: true),
-                GatewayId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                ProviderId = table.Column<Guid>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                UserId = table.Column<Guid>(type: "uuid", nullable: true),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
+                Type = table.Column<byte>(type: "smallint", nullable: false),
+                Amount = table.Column<decimal>(type: "numeric", nullable: false),
+                Refunded = table.Column<bool>(type: "boolean", nullable: true),
+                RefundedAmount = table.Column<decimal>(type: "numeric", nullable: true),
+                Details = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                PaymentMethodType = table.Column<byte>(type: "smallint", nullable: true),
+                Gateway = table.Column<byte>(type: "smallint", nullable: true),
+                GatewayId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                ProviderId = table.Column<Guid>(type: "uuid", nullable: true)
             },
             constraints: table =>
             {
@@ -1044,20 +1048,20 @@ public partial class UpdateOrganizationReport : Migration
             name: "WebAuthnCredential",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                Name = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                PublicKey = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                CredentialId = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                Counter = table.Column<int>(type: "INTEGER", nullable: false),
-                Type = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
-                AaGuid = table.Column<Guid>(type: "TEXT", nullable: false),
-                EncryptedUserKey = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
-                EncryptedPrivateKey = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
-                EncryptedPublicKey = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
-                SupportsPrf = table.Column<bool>(type: "INTEGER", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                PublicKey = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                CredentialId = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                Counter = table.Column<int>(type: "integer", nullable: false),
+                Type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                AaGuid = table.Column<Guid>(type: "uuid", nullable: false),
+                EncryptedUserKey = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                EncryptedPrivateKey = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                EncryptedPublicKey = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                SupportsPrf = table.Column<bool>(type: "boolean", nullable: false),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -1074,11 +1078,11 @@ public partial class UpdateOrganizationReport : Migration
             name: "CollectionGroups",
             columns: table => new
             {
-                CollectionId = table.Column<Guid>(type: "TEXT", nullable: false),
-                GroupId = table.Column<Guid>(type: "TEXT", nullable: false),
-                ReadOnly = table.Column<bool>(type: "INTEGER", nullable: false),
-                HidePasswords = table.Column<bool>(type: "INTEGER", nullable: false),
-                Manage = table.Column<bool>(type: "INTEGER", nullable: false)
+                CollectionId = table.Column<Guid>(type: "uuid", nullable: false),
+                GroupId = table.Column<Guid>(type: "uuid", nullable: false),
+                ReadOnly = table.Column<bool>(type: "boolean", nullable: false),
+                HidePasswords = table.Column<bool>(type: "boolean", nullable: false),
+                Manage = table.Column<bool>(type: "boolean", nullable: false)
             },
             constraints: table =>
             {
@@ -1101,20 +1105,20 @@ public partial class UpdateOrganizationReport : Migration
             name: "OrganizationIntegrationConfiguration",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationIntegrationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                EventType = table.Column<int>(type: "INTEGER", nullable: false),
-                Configuration = table.Column<string>(type: "TEXT", nullable: true),
-                Template = table.Column<string>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                Filters = table.Column<string>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationIntegrationId = table.Column<Guid>(type: "uuid", nullable: false),
+                EventType = table.Column<int>(type: "integer", nullable: false),
+                Configuration = table.Column<string>(type: "text", nullable: true),
+                Template = table.Column<string>(type: "text", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                Filters = table.Column<string>(type: "text", nullable: true)
             },
             constraints: table =>
             {
                 table.PrimaryKey("PK_OrganizationIntegrationConfiguration", x => x.Id);
                 table.ForeignKey(
-                    name: "FK_OrganizationIntegrationConfiguration_OrganizationIntegration_OrganizationIntegrationId",
+                    name: "FK_OrganizationIntegrationConfiguration_OrganizationIntegratio~",
                     column: x => x.OrganizationIntegrationId,
                     principalTable: "OrganizationIntegration",
                     principalColumn: "Id",
@@ -1125,8 +1129,8 @@ public partial class UpdateOrganizationReport : Migration
             name: "ProjectSecret",
             columns: table => new
             {
-                ProjectsId = table.Column<Guid>(type: "TEXT", nullable: false),
-                SecretsId = table.Column<Guid>(type: "TEXT", nullable: false)
+                ProjectsId = table.Column<Guid>(type: "uuid", nullable: false),
+                SecretsId = table.Column<Guid>(type: "uuid", nullable: false)
             },
             constraints: table =>
             {
@@ -1149,16 +1153,16 @@ public partial class UpdateOrganizationReport : Migration
             name: "ApiKey",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                ServiceAccountId = table.Column<Guid>(type: "TEXT", nullable: true),
-                Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                ClientSecretHash = table.Column<string>(type: "TEXT", maxLength: 128, nullable: true),
-                Scope = table.Column<string>(type: "TEXT", maxLength: 4000, nullable: false),
-                EncryptedPayload = table.Column<string>(type: "TEXT", maxLength: 4000, nullable: false),
-                Key = table.Column<string>(type: "TEXT", nullable: false),
-                ExpireAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                ServiceAccountId = table.Column<Guid>(type: "uuid", nullable: true),
+                Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                ClientSecretHash = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                Scope = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: false),
+                EncryptedPayload = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: false),
+                Key = table.Column<string>(type: "text", nullable: false),
+                ExpireAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -1174,8 +1178,8 @@ public partial class UpdateOrganizationReport : Migration
             name: "CollectionCipher",
             columns: table => new
             {
-                CollectionId = table.Column<Guid>(type: "TEXT", nullable: false),
-                CipherId = table.Column<Guid>(type: "TEXT", nullable: false)
+                CollectionId = table.Column<Guid>(type: "uuid", nullable: false),
+                CipherId = table.Column<Guid>(type: "uuid", nullable: false)
             },
             constraints: table =>
             {
@@ -1198,13 +1202,13 @@ public partial class UpdateOrganizationReport : Migration
             name: "SecurityTask",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                CipherId = table.Column<Guid>(type: "TEXT", nullable: true),
-                Type = table.Column<byte>(type: "INTEGER", nullable: false),
-                Status = table.Column<byte>(type: "INTEGER", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                CipherId = table.Column<Guid>(type: "uuid", nullable: true),
+                Type = table.Column<byte>(type: "smallint", nullable: false),
+                Status = table.Column<byte>(type: "smallint", nullable: false),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
             constraints: table =>
             {
@@ -1227,23 +1231,23 @@ public partial class UpdateOrganizationReport : Migration
             name: "AuthRequest",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: true),
-                Type = table.Column<byte>(type: "INTEGER", nullable: false),
-                RequestDeviceIdentifier = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                RequestDeviceType = table.Column<byte>(type: "INTEGER", nullable: false),
-                RequestIpAddress = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                RequestCountryName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
-                ResponseDeviceId = table.Column<Guid>(type: "TEXT", nullable: true),
-                AccessCode = table.Column<string>(type: "TEXT", maxLength: 25, nullable: true),
-                PublicKey = table.Column<string>(type: "TEXT", nullable: true),
-                Key = table.Column<string>(type: "TEXT", nullable: true),
-                MasterPasswordHash = table.Column<string>(type: "TEXT", nullable: true),
-                Approved = table.Column<bool>(type: "INTEGER", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                ResponseDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                AuthenticationDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
+                Type = table.Column<byte>(type: "smallint", nullable: false),
+                RequestDeviceIdentifier = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                RequestDeviceType = table.Column<byte>(type: "smallint", nullable: false),
+                RequestIpAddress = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                RequestCountryName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                ResponseDeviceId = table.Column<Guid>(type: "uuid", nullable: true),
+                AccessCode = table.Column<string>(type: "character varying(25)", maxLength: 25, nullable: true),
+                PublicKey = table.Column<string>(type: "text", nullable: true),
+                Key = table.Column<string>(type: "text", nullable: true),
+                MasterPasswordHash = table.Column<string>(type: "text", nullable: true),
+                Approved = table.Column<bool>(type: "boolean", nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                ResponseDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                AuthenticationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
             },
             constraints: table =>
             {
@@ -1270,18 +1274,18 @@ public partial class UpdateOrganizationReport : Migration
             name: "AccessPolicy",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                GroupId = table.Column<Guid>(type: "TEXT", nullable: true),
-                GrantedProjectId = table.Column<Guid>(type: "TEXT", nullable: true),
-                GrantedSecretId = table.Column<Guid>(type: "TEXT", nullable: true),
-                GrantedServiceAccountId = table.Column<Guid>(type: "TEXT", nullable: true),
-                ServiceAccountId = table.Column<Guid>(type: "TEXT", nullable: true),
-                OrganizationUserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                Read = table.Column<bool>(type: "INTEGER", nullable: false),
-                Write = table.Column<bool>(type: "INTEGER", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                Discriminator = table.Column<string>(type: "TEXT", maxLength: 34, nullable: false)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                GroupId = table.Column<Guid>(type: "uuid", nullable: true),
+                GrantedProjectId = table.Column<Guid>(type: "uuid", nullable: true),
+                GrantedSecretId = table.Column<Guid>(type: "uuid", nullable: true),
+                GrantedServiceAccountId = table.Column<Guid>(type: "uuid", nullable: true),
+                ServiceAccountId = table.Column<Guid>(type: "uuid", nullable: true),
+                OrganizationUserId = table.Column<Guid>(type: "uuid", nullable: true),
+                Read = table.Column<bool>(type: "boolean", nullable: false),
+                Write = table.Column<bool>(type: "boolean", nullable: false),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                Discriminator = table.Column<string>(type: "character varying(34)", maxLength: 34, nullable: false)
             },
             constraints: table =>
             {
@@ -1325,11 +1329,11 @@ public partial class UpdateOrganizationReport : Migration
             name: "CollectionUsers",
             columns: table => new
             {
-                CollectionId = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationUserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                ReadOnly = table.Column<bool>(type: "INTEGER", nullable: false),
-                HidePasswords = table.Column<bool>(type: "INTEGER", nullable: false),
-                Manage = table.Column<bool>(type: "INTEGER", nullable: false)
+                CollectionId = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationUserId = table.Column<Guid>(type: "uuid", nullable: false),
+                ReadOnly = table.Column<bool>(type: "boolean", nullable: false),
+                HidePasswords = table.Column<bool>(type: "boolean", nullable: false),
+                Manage = table.Column<bool>(type: "boolean", nullable: false)
             },
             constraints: table =>
             {
@@ -1352,8 +1356,8 @@ public partial class UpdateOrganizationReport : Migration
             name: "GroupUser",
             columns: table => new
             {
-                GroupId = table.Column<Guid>(type: "TEXT", nullable: false),
-                OrganizationUserId = table.Column<Guid>(type: "TEXT", nullable: false)
+                GroupId = table.Column<Guid>(type: "uuid", nullable: false),
+                OrganizationUserId = table.Column<Guid>(type: "uuid", nullable: false)
             },
             constraints: table =>
             {
@@ -1376,17 +1380,17 @@ public partial class UpdateOrganizationReport : Migration
             name: "Notification",
             columns: table => new
             {
-                Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                Priority = table.Column<byte>(type: "INTEGER", nullable: false),
-                Global = table.Column<bool>(type: "INTEGER", nullable: false),
-                ClientType = table.Column<byte>(type: "INTEGER", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                OrganizationId = table.Column<Guid>(type: "TEXT", nullable: true),
-                Title = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                Body = table.Column<string>(type: "TEXT", maxLength: 3000, nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                TaskId = table.Column<Guid>(type: "TEXT", nullable: true)
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                Priority = table.Column<byte>(type: "smallint", nullable: false),
+                Global = table.Column<bool>(type: "boolean", nullable: false),
+                ClientType = table.Column<byte>(type: "smallint", nullable: false),
+                UserId = table.Column<Guid>(type: "uuid", nullable: true),
+                OrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
+                Title = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                Body = table.Column<string>(type: "character varying(3000)", maxLength: 3000, nullable: true),
+                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                TaskId = table.Column<Guid>(type: "uuid", nullable: true)
             },
             constraints: table =>
             {
@@ -1413,10 +1417,10 @@ public partial class UpdateOrganizationReport : Migration
             name: "NotificationStatus",
             columns: table => new
             {
-                NotificationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                ReadDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                DeletedDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                NotificationId = table.Column<Guid>(type: "uuid", nullable: false),
+                UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                ReadDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                DeletedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
             },
             constraints: table =>
             {
@@ -1584,7 +1588,7 @@ public partial class UpdateOrganizationReport : Migration
             column: "OrganizationUserId");
 
         migrationBuilder.CreateIndex(
-            name: "IX_Notification_ClientType_Global_UserId_OrganizationId_Priority_CreationDate",
+            name: "IX_Notification_ClientType_Global_UserId_OrganizationId_Priori~",
             table: "Notification",
             columns: new[] { "ClientType", "Global", "UserId", "OrganizationId", "Priority", "CreationDate" },
             descending: new[] { false, false, false, false, true, true });
@@ -1612,7 +1616,8 @@ public partial class UpdateOrganizationReport : Migration
         migrationBuilder.CreateIndex(
             name: "IX_Organization_Id_Enabled",
             table: "Organization",
-            columns: new[] { "Id", "Enabled" });
+            columns: new[] { "Id", "Enabled" })
+            .Annotation("Npgsql:IndexInclude", new[] { "UseTotp" });
 
         migrationBuilder.CreateIndex(
             name: "IX_OrganizationApiKey_OrganizationId",
@@ -1661,7 +1666,7 @@ public partial class UpdateOrganizationReport : Migration
             unique: true);
 
         migrationBuilder.CreateIndex(
-            name: "IX_OrganizationIntegrationConfiguration_OrganizationIntegrationId",
+            name: "IX_OrganizationIntegrationConfiguration_OrganizationIntegratio~",
             table: "OrganizationIntegrationConfiguration",
             column: "OrganizationIntegrationId");
 
@@ -1831,7 +1836,8 @@ public partial class UpdateOrganizationReport : Migration
             name: "IX_SsoUser_OrganizationId_ExternalId",
             table: "SsoUser",
             columns: new[] { "OrganizationId", "ExternalId" },
-            unique: true);
+            unique: true)
+            .Annotation("Npgsql:IndexInclude", new[] { "UserId" });
 
         migrationBuilder.CreateIndex(
             name: "IX_SsoUser_OrganizationId_UserId",
