@@ -43,7 +43,7 @@ public class AzureServiceBusEventListenerService<TConfiguration> : EventLoggingL
     private static ILogger CreateLogger(ILoggerFactory loggerFactory, TConfiguration configuration)
     {
         return loggerFactory.CreateLogger(
-            categoryName: $"{typeof(AzureServiceBusEventListenerService<>).FullName}.{configuration.EventQueueName}");
+            categoryName: $"{typeof(AzureServiceBusEventListenerService<>).FullName}.{configuration.EventSubscriptionName}");
     }
 
     internal Task ProcessErrorAsync(ProcessErrorEventArgs args)
