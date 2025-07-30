@@ -15,21 +15,14 @@ public class OrganizationDataOwnershipPolicyValidator(
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
     : OrganizationPolicyValidator(policyRepository, factories)
 {
-    private readonly ICollectionRepository _collectionRepository = collectionRepository;
     public override PolicyType Type => PolicyType.OrganizationDataOwnership;
 
     public override IEnumerable<PolicyType> RequiredPolicies => [];
 
-    public override Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
-    {
-        // Logic: Validate anything needed for this policy enabling or disabling.
-
-        return Task.FromResult("");
-    }
+    public override Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
 
     public override async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
-
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {
             await UpsertDefaultCollectionsForUsersAsync(policyUpdate);
@@ -41,7 +34,7 @@ public class OrganizationDataOwnershipPolicyValidator(
     {
         var requirements = await GetUserPolicyRequirementsByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(policyUpdate.OrganizationId, policyUpdate.Type);
 
-        await _collectionRepository.UpsertDefaultCollectionsAsync(
+        await collectionRepository.UpsertDefaultCollectionsAsync(
             policyUpdate.OrganizationId,
             GetUserOrgIds(policyUpdate, requirements),
             GetDefaultUserCollectionName());
