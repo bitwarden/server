@@ -3,6 +3,8 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -42,6 +44,7 @@ public class BaseRequestValidatorTests
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserDecryptionOptionsBuilder _userDecryptionOptionsBuilder;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IAuthRequestRepository _authRequestRepository;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -62,6 +65,7 @@ public class BaseRequestValidatorTests
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _userDecryptionOptionsBuilder = Substitute.For<IUserDecryptionOptionsBuilder>();
         _policyRequirementQuery = Substitute.For<IPolicyRequirementQuery>();
+        _authRequestRepository = Substitute.For<IAuthRequestRepository>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -78,7 +82,8 @@ public class BaseRequestValidatorTests
             _featureService,
             _ssoConfigRepository,
             _userDecryptionOptionsBuilder,
-            _policyRequirementQuery);
+            _policyRequirementQuery,
+            _authRequestRepository);
     }
 
     /* Logic path
@@ -173,6 +178,99 @@ public class BaseRequestValidatorTests
 
         // Assert
         Assert.False(context.GrantResult.IsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_ValidatedAuthRequest_ConsumedOnSuccess(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        // 1 -> to pass
+        _sut.isValid = true;
+
+        var authRequest = new AuthRequest
+        {
+            Type = AuthRequestType.AuthenticateAndUnlock,
+            RequestDeviceIdentifier = "",
+            RequestIpAddress = "1.1.1.1",
+            AccessCode = "password",
+            PublicKey = "test_public_key",
+            CreationDate = DateTime.UtcNow.AddMinutes(-5),
+            ResponseDate = DateTime.UtcNow.AddMinutes(-2),
+            Approved = true,
+            AuthenticationDate = null, // unused
+            UserId = requestContext.User.Id,
+        };
+        requestContext.ValidatedAuthRequest = authRequest;
+
+        // 2 -> will result to false with no extra configuration
+        // 3 -> set two factor to be false
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+
+        // 4 -> set up device validator to pass
+        _deviceValidator.ValidateRequestDeviceAsync(Arg.Any<ValidatedTokenRequest>(), Arg.Any<CustomValidatorRequestContext>())
+            .Returns(Task.FromResult(true));
+
+        // 5 -> not legacy user
+        _userService.IsLegacyUser(Arg.Any<string>())
+            .Returns(false);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError);
+
+        // Check that the auth request was consumed
+        await _authRequestRepository.Received(1).ReplaceAsync(Arg.Is<AuthRequest>(ar =>
+            ar.AuthenticationDate.HasValue));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_ValidatedAuthRequest_NotConsumed_When2faRequired(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        // 1 -> to pass
+        _sut.isValid = true;
+
+        var authRequest = new AuthRequest
+        {
+            Type = AuthRequestType.AuthenticateAndUnlock,
+            RequestDeviceIdentifier = "",
+            RequestIpAddress = "1.1.1.1",
+            AccessCode = "password",
+            PublicKey = "test_public_key",
+            CreationDate = DateTime.UtcNow.AddMinutes(-5),
+            ResponseDate = DateTime.UtcNow.AddMinutes(-2),
+            Approved = true,
+            AuthenticationDate = null, // unused
+            UserId = requestContext.User.Id,
+        };
+        requestContext.ValidatedAuthRequest = authRequest;
+
+        // 2 -> will result to false with no extra configuration
+        // 3 -> set two factor to be required
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert we errored for 2fa requirement
+        Assert.True(context.GrantResult.IsError);
+
+        // Assert that the auth request was NOT consumed
+        await _authRequestRepository.DidNotReceive().ReplaceAsync(Arg.Any<AuthRequest>());
     }
 
     // Test grantTypes that require SSO when a user is in an organization that requires it
