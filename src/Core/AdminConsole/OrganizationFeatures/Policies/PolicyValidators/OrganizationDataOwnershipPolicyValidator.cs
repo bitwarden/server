@@ -6,13 +6,15 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
 public class OrganizationDataOwnershipPolicyValidator(
     IPolicyRepository policyRepository,
     ICollectionRepository collectionRepository,
-    IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
+    IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories,
+    IFeatureService featureService)
     : OrganizationPolicyValidator(policyRepository, factories)
 {
     public override PolicyType Type => PolicyType.OrganizationDataOwnership;
@@ -23,6 +25,11 @@ public class OrganizationDataOwnershipPolicyValidator(
 
     public override async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
+        if (!featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
+        {
+            return;
+        }
+
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {
             await UpsertDefaultCollectionsForUsersAsync(policyUpdate);
