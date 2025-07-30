@@ -5,6 +5,7 @@ using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
@@ -25,7 +26,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
     private readonly ILoginApprovingClientTypes _loginApprovingClientTypes;
 
     private UserDecryptionOptions _options = new UserDecryptionOptions();
-    private User? _user;
+    private User _user = null!;
     private SsoConfig? _ssoConfig;
     private Device? _device;
 
@@ -44,7 +45,6 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
 
     public IUserDecryptionOptionsBuilder ForUser(User user)
     {
-        _options.HasMasterPassword = user.HasMasterPassword();
         _user = user;
         return this;
     }
@@ -72,6 +72,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
 
     public async Task<UserDecryptionOptions> BuildAsync()
     {
+        BuildMasterPasswordUnlock();
         BuildKeyConnectorOptions();
         await BuildTrustedDeviceOptions();
 
@@ -101,7 +102,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
         }
 
         var isTdeActive = _ssoConfig.GetData() is { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption };
-        var isTdeOffboarding = _user != null && !_user.HasMasterPassword() && _device != null && _device.IsTrusted() && !isTdeActive;
+        var isTdeOffboarding = !_user.HasMasterPassword() && _device != null && _device.IsTrusted() && !isTdeActive;
         if (!isTdeActive && !isTdeOffboarding)
         {
             return;
@@ -116,7 +117,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
         }
 
         var hasLoginApprovingDevice = false;
-        if (_device != null && _user != null)
+        if (_device != null)
         {
             var allDevices = await _deviceRepository.GetManyByUserIdAsync(_user.Id);
             // Checks if the current user has any devices that are capable of approving login with device requests except for
@@ -134,16 +135,12 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             hasManageResetPasswordPermission = await _currentContext.ManageResetPassword(_ssoConfig!.OrganizationId);
         }
 
-        var hasAdminApproval = false;
-        if (_user != null)
-        {
-            // If sso configuration data is not null then I know for sure that ssoConfiguration isn't null
-            var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(_ssoConfig.OrganizationId, _user.Id);
+        // If sso configuration data is not null then I know for sure that ssoConfiguration isn't null
+        var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(_ssoConfig.OrganizationId, _user.Id);
 
-            hasManageResetPasswordPermission |= organizationUser != null && (organizationUser.Type == OrganizationUserType.Owner || organizationUser.Type == OrganizationUserType.Admin);
-            // They are only able to be approved by an admin if they have enrolled is reset password
-            hasAdminApproval = organizationUser != null && !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
-        }
+        hasManageResetPasswordPermission |= organizationUser != null && (organizationUser.Type == OrganizationUserType.Owner || organizationUser.Type == OrganizationUserType.Admin);
+        // They are only able to be approved by an admin if they have enrolled is reset password
+        var hasAdminApproval = organizationUser != null && !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
 
         _options.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(
             hasAdminApproval,
@@ -152,5 +149,29 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             isTdeOffboarding,
             encryptedPrivateKey,
             encryptedUserKey);
+    }
+
+    private void BuildMasterPasswordUnlock()
+    {
+        if (_user.HasMasterPassword())
+        {
+            _options.HasMasterPassword = true;
+            _options.MasterPasswordUnlock = new MasterPasswordUnlockResponseModel
+            {
+                Kdf = new MasterPasswordUnlockKdfResponseModel
+                {
+                    KdfType = _user.Kdf,
+                    Iterations = _user.KdfIterations,
+                    Memory = _user.KdfMemory,
+                    Parallelism = _user.KdfParallelism
+                },
+                MasterKeyEncryptedUserKey = _user.Key!,
+                Salt = _user.Email.ToLowerInvariant()
+            };
+        }
+        else
+        {
+            _options.HasMasterPassword = false;
+        }
     }
 }

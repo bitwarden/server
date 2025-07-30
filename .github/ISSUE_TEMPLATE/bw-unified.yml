@@ -1,4 +1,3 @@
-name: Bitwarden Unified Bug Report
 name: Bitwarden Unified Deployment Bug Report
 description: File a bug report
 labels: [bug, bw-unified-deploy]

@@ -441,13 +441,15 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                             : new List<Guid>(),
 
                         Collections = includeCollections
-                            ? ou.CollectionUsers.Select(cu => new CollectionAccessSelection
-                            {
-                                Id = cu.CollectionId,
-                                ReadOnly = cu.ReadOnly,
-                                HidePasswords = cu.HidePasswords,
-                                Manage = cu.Manage
-                            }).ToList()
+                            ? ou.CollectionUsers
+                                .Where(cu => cu.Collection.Type == CollectionType.SharedCollection)
+                                .Select(cu => new CollectionAccessSelection
+                                {
+                                    Id = cu.CollectionId,
+                                    ReadOnly = cu.ReadOnly,
+                                    HidePasswords = cu.HidePasswords,
+                                    Manage = cu.Manage
+                                }).ToList()
                             : new List<CollectionAccessSelection>()
                     };
 
@@ -514,9 +516,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         {
             var dbContext = GetDatabaseContext(scope);
 
-            var existingCollectionUsers = await dbContext.CollectionUsers
-                .Where(cu => cu.OrganizationUserId == obj.Id)
-                .ToListAsync();
+            // Retrieve all collection assignments, excluding DefaultUserCollection
+            var existingCollectionUsers = await (from cu in dbContext.CollectionUsers
+                                                 join c in dbContext.Collections on cu.CollectionId equals c.Id
+                                                 where cu.OrganizationUserId == obj.Id && c.Type != CollectionType.DefaultUserCollection
+                                                 select cu).ToListAsync();
 
             foreach (var requestedCollection in requestedCollections)
             {
