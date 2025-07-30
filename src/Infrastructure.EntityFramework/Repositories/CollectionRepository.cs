@@ -711,6 +711,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
+    public Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName) => throw new NotImplementedException();
+
     private static async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups)
     {
         var existingCollectionGroups = await dbContext.CollectionGroups

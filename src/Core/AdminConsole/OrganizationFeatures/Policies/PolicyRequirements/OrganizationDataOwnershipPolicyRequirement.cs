@@ -25,6 +25,7 @@ public enum OrganizationDataOwnershipState
 public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
 {
     private readonly IEnumerable<Guid> _organizationIdsWithPolicyEnabled;
+    private readonly Dictionary<Guid, Guid> _organizationUserIdsByOrgId;
 
     /// <param name="organizationDataOwnershipState">
     /// The organization data ownership state for the user.
@@ -32,11 +33,16 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
     /// <param name="organizationIdsWithPolicyEnabled">
     /// The collection of Organization IDs that have the Organization Data Ownership policy enabled.
     /// </param>
+    /// <param name="organizationUserIdsByOrgId">
+    /// A dictionary with the OrganizationId as the key and the OrganizationUserId as the value.
+    /// </param>
     public OrganizationDataOwnershipPolicyRequirement(
         OrganizationDataOwnershipState organizationDataOwnershipState,
-        IEnumerable<Guid> organizationIdsWithPolicyEnabled)
+        IEnumerable<Guid> organizationIdsWithPolicyEnabled,
+        Dictionary<Guid, Guid> organizationUserIdsByOrgId)
     {
         _organizationIdsWithPolicyEnabled = organizationIdsWithPolicyEnabled ?? [];
+        _organizationUserIdsByOrgId = organizationUserIdsByOrgId ?? new();
         State = organizationDataOwnershipState;
     }
 
@@ -52,6 +58,18 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
     {
         return _organizationIdsWithPolicyEnabled.Contains(organizationId);
     }
+
+    /// <summary>
+    /// Return the OrganizationUserId for the given OrganizationId.
+    /// </summary>
+    public Guid? GetOrganizationUserId(Guid organizationId)
+    {
+        if (_organizationUserIdsByOrgId.TryGetValue(organizationId, out var orgUserId))
+        {
+            return orgUserId;
+        }
+        return null;
+    }
 }
 
 public class OrganizationDataOwnershipPolicyRequirementFactory : BasePolicyRequirementFactory<OrganizationDataOwnershipPolicyRequirement>
@@ -63,10 +81,18 @@ public class OrganizationDataOwnershipPolicyRequirementFactory : BasePolicyRequi
         var organizationDataOwnershipState = policyDetails.Any()
             ? OrganizationDataOwnershipState.Enabled
             : OrganizationDataOwnershipState.Disabled;
-        var organizationIdsWithPolicyEnabled = policyDetails.Select(p => p.OrganizationId).ToHashSet();
+
+        var organizationIdsWithPolicyEnabled = policyDetails
+            .Select(p => p.OrganizationId)
+            .ToHashSet();
+
+        var organizationUserIdsByOrgId = policyDetails
+            .GroupBy(p => p.OrganizationId)
+            .ToDictionary(g => g.Key, g => g.First().OrganizationUserId);
 
         return new OrganizationDataOwnershipPolicyRequirement(
             organizationDataOwnershipState,
-            organizationIdsWithPolicyEnabled);
+            organizationIdsWithPolicyEnabled,
+            organizationUserIdsByOrgId);
     }
 }
