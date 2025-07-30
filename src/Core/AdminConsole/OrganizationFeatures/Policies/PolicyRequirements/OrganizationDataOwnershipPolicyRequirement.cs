@@ -41,8 +41,8 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
         IEnumerable<Guid> organizationIdsWithPolicyEnabled,
         Dictionary<Guid, Guid> organizationUserIdsByOrgId)
     {
-        _organizationIdsWithPolicyEnabled = organizationIdsWithPolicyEnabled ?? [];
-        _organizationUserIdsByOrgId = organizationUserIdsByOrgId ?? new();
+        _organizationIdsWithPolicyEnabled = organizationIdsWithPolicyEnabled;
+        _organizationUserIdsByOrgId = organizationUserIdsByOrgId;
         State = organizationDataOwnershipState;
     }
 
