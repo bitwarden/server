@@ -11,6 +11,7 @@
     "ckolkman.vscode-postgres",
 
     "ms-dotnettools.csharp",
-    "adrianwilczynski.user-secrets"
+    "adrianwilczynski.user-secrets",
+    "systemticks.c4-dsl-extension"
   ]
 }
