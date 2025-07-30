@@ -324,13 +324,26 @@ public class DeviceValidatorTests
         Assert.True(result);
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(false, false)]
+    [BitAutoData(true, false)]
+    [BitAutoData(true, true)]
+    [BitAutoData(true, false)]
+
     public async void ValidateRequestDeviceAsync_IsAuthRequest_UnknownDevice_Errors(
+        bool twoFactoRequired, bool ssoRequired,
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
         // Arrange
-        ArrangeForHandleNewDeviceVerificationTest(context, request);
+        request.GrantType = "password";
+        context.TwoFactorRequired = twoFactoRequired;
+        context.SsoRequired = ssoRequired;
+        if (context.User != null)
+        {
+            context.User.CreationDate = DateTime.UtcNow - TimeSpan.FromDays(365);
+        }
+
         AddValidDeviceToRequest(request);
         _deviceRepository.GetByIdentifierAsync(context.Device.Identifier, context.User.Id)
             .Returns(null as Device);
