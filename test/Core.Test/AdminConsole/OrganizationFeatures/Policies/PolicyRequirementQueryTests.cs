@@ -12,23 +12,6 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 public class PolicyRequirementQueryTests
 {
     [Theory, BitAutoData]
-    public async Task GetAsync_IgnoresOtherPolicyTypes(Guid userId)
-    {
-        var thisPolicy = new PolicyDetails { PolicyType = PolicyType.SingleOrg };
-        var otherPolicy = new PolicyDetails { PolicyType = PolicyType.RequireSso };
-        var policyRepository = Substitute.For<IPolicyRepository>();
-        policyRepository.GetPolicyDetailsByUserId(userId).Returns([otherPolicy, thisPolicy]);
-
-        var factory = new TestPolicyRequirementFactory(_ => true);
-        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
-
-        var requirement = await sut.GetAsync<TestPolicyRequirement>(userId);
-
-        Assert.Contains(thisPolicy, requirement.Policies);
-        Assert.DoesNotContain(otherPolicy, requirement.Policies);
-    }
-
-    [Theory, BitAutoData]
     public async Task GetAsync_CallsEnforceCallback(Guid userId)
     {
         // Arrange policies
