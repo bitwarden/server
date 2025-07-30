@@ -1,6 +1,5 @@
 {
   "recommendations": [
-    "nick-rudenko.back-n-forth",
     "streetsidesoftware.code-spell-checker",
     "MS-vsliveshare.vsliveshare",
 
@@ -12,7 +11,6 @@
     "ckolkman.vscode-postgres",
 
     "ms-dotnettools.csharp",
-    "formulahendry.dotnet-test-explorer",
     "adrianwilczynski.user-secrets"
   ]
 }
