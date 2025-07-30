@@ -56,7 +56,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
-            policyRequirementQuery)
+            policyRequirementQuery,
+            authRequestRepository)
     {
         _userManager = userManager;
         _currentContext = currentContext;
@@ -108,8 +109,11 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             // Auth request is non-null so validate it
             if (authRequest.IsValidForAuthentication(validatorContext.User.Id, context.Password))
             {
-                authRequest.AuthenticationDate = DateTime.UtcNow;
-                await _authRequestRepository.ReplaceAsync(authRequest);
+                // We save the validated auth request so that we can set it's authentication date
+                // later on only upon successful authentication.
+                // For example, 2FA requires a resubmission so we can't mark the auth request
+                // as authenticated here.
+                validatorContext.ValidatedAuthRequest = authRequest;
                 return true;
             }
 
