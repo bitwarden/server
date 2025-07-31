@@ -35,10 +35,6 @@ public interface IOrganizationService
         IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
         bool overwriteExisting, EventSystemUser eventSystemUser);
     Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
-    Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId);
-    Task RevokeUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser);
-    Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
-        IEnumerable<Guid> organizationUserIds, Guid? revokingUserId);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
     Task<(bool canScale, string failureReason)> CanScaleAsync(Organization organization, int seatsToAdd);
 
