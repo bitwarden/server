@@ -16,6 +16,8 @@ on:
     branches:
       - "main"
 
+permissions: {}
+
 jobs:
   check-run:
     name: Check PR run
