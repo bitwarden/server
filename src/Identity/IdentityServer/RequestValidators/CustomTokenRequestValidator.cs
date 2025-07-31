@@ -45,7 +45,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IUpdateInstallationCommand updateInstallationCommand,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        IAuthRequestRepository authRequestRepository)
         : base(
             userManager,
             userService,
@@ -61,7 +62,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
-            policyRequirementQuery)
+            policyRequirementQuery,
+            authRequestRepository)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
@@ -95,10 +97,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
                 context.Result.CustomResponse = new Dictionary<string, object> { { "encrypted_payload", payload } };
 
             }
-            if (FeatureService.IsEnabled(FeatureFlagKeys.RecordInstallationLastActivityDate)
-                && context.Result.ValidatedRequest.ClientId.StartsWith("installation"))
+            if (context.Result.ValidatedRequest.ClientId.StartsWith("installation"))
             {
-                var installationIdPart = clientId.Split(".")[1];
                 await RecordActivityForInstallation(clientId.Split(".")[1]);
             }
             return;

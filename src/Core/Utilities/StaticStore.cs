@@ -1,4 +1,7 @@
-﻿using System.Collections.Immutable;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Collections.Immutable;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models.StaticStore.Plans;

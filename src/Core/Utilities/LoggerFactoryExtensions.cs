@@ -30,7 +30,7 @@ public static class LoggerFactoryExtensions
     public static ILoggingBuilder AddSerilog(
         this ILoggingBuilder builder,
         WebHostBuilderContext context,
-        Func<LogEvent, IGlobalSettings, bool> filter = null)
+        Func<LogEvent, IGlobalSettings, bool>? filter = null)
     {
         var globalSettings = new GlobalSettings();
         ConfigurationBinder.Bind(context.Configuration.GetSection("GlobalSettings"), globalSettings);
@@ -54,19 +54,27 @@ public static class LoggerFactoryExtensions
             return filter(e, globalSettings);
         }
 
+        var logSentryWarning = false;
+        var logSyslogWarning = false;
+
+        // Path format is the only required option for file logging, we will use that as
+        // the keystone for if they have configured the new location.
+        var newPathFormat = context.Configuration["Logging:PathFormat"];
+
         var config = new LoggerConfiguration()
             .MinimumLevel.Verbose()
             .Enrich.FromLogContext()
             .Filter.ByIncludingOnly(inclusionPredicate);
 
-        if (CoreHelpers.SettingHasValue(globalSettings?.Sentry.Dsn))
+        if (CoreHelpers.SettingHasValue(globalSettings.Sentry.Dsn))
         {
             config.WriteTo.Sentry(globalSettings.Sentry.Dsn)
                 .Enrich.FromLogContext()
                 .Enrich.WithProperty("Project", globalSettings.ProjectName);
         }
-        else if (CoreHelpers.SettingHasValue(globalSettings?.Syslog.Destination))
+        else if (CoreHelpers.SettingHasValue(globalSettings.Syslog.Destination))
         {
+            logSyslogWarning = true;
             // appending sitename to project name to allow easier identification in syslog.
             var appName = $"{globalSettings.SiteName}-{globalSettings.ProjectName}";
             if (globalSettings.Syslog.Destination.Equals("local", StringComparison.OrdinalIgnoreCase))
@@ -104,9 +112,13 @@ public static class LoggerFactoryExtensions
                             certProvider: new CertificateFileProvider(globalSettings.Syslog.CertificatePath,
                                                                       globalSettings.Syslog?.CertificatePassword ?? string.Empty));
                     }
-
                 }
             }
+        }
+        else if (!string.IsNullOrEmpty(newPathFormat))
+        {
+            // Use new location
+            builder.AddFile(context.Configuration.GetSection("Logging"));
         }
         else if (CoreHelpers.SettingHasValue(globalSettings.LogDirectory))
         {
@@ -135,6 +147,17 @@ public static class LoggerFactoryExtensions
         }
 
         var serilog = config.CreateLogger();
+
+        if (logSentryWarning)
+        {
+            serilog.Warning("Sentry for logging has been deprecated. Read more: https://btwrdn.com/log-deprecation");
+        }
+
+        if (logSyslogWarning)
+        {
+            serilog.Warning("Syslog for logging has been deprecated. Read more: https://btwrdn.com/log-deprecation");
+        }
+
         builder.AddSerilog(serilog);
 
         return builder;

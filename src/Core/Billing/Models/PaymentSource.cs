@@ -1,4 +1,7 @@
-﻿using Bit.Core.Billing.Extensions;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Enums;
 
 namespace Bit.Core.Billing.Models;

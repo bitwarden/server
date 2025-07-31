@@ -1,9 +1,10 @@
 ﻿using System.Text;
-using Bit.Core.AdminConsole.Models.Data.Integrations;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -14,23 +15,22 @@ namespace Bit.Core.Test.Services;
 [SutProviderCustomize]
 public class RabbitMqIntegrationListenerServiceTests
 {
-    private const int _maxRetries = 3;
-    private const string _queueName = "test_queue";
-    private const string _retryQueueName = "test_queue_retry";
-    private const string _routingKey = "test_routing_key";
+    private readonly DateTime _now = new DateTime(2014, 3, 2, 1, 0, 0, DateTimeKind.Utc);
     private readonly IIntegrationHandler _handler = Substitute.For<IIntegrationHandler>();
     private readonly IRabbitMqService _rabbitMqService = Substitute.For<IRabbitMqService>();
+    private readonly TestListenerConfiguration _config = new();
 
-    private SutProvider<RabbitMqIntegrationListenerService> GetSutProvider()
+    private SutProvider<RabbitMqIntegrationListenerService<TestListenerConfiguration>> GetSutProvider()
     {
-        return new SutProvider<RabbitMqIntegrationListenerService>()
+        var sutProvider = new SutProvider<RabbitMqIntegrationListenerService<TestListenerConfiguration>>()
+            .SetDependency(_config)
             .SetDependency(_handler)
             .SetDependency(_rabbitMqService)
-            .SetDependency(_queueName, "queueName")
-            .SetDependency(_retryQueueName, "retryQueueName")
-            .SetDependency(_routingKey, "routingKey")
-            .SetDependency(_maxRetries, "maxRetries")
+            .WithFakeTimeProvider()
             .Create();
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+
+        return sutProvider;
     }
 
     [Fact]
@@ -40,10 +40,10 @@ public class RabbitMqIntegrationListenerServiceTests
         var cancellationToken = CancellationToken.None;
         await sutProvider.Sut.StartAsync(cancellationToken);
 
-        await _rabbitMqService.Received(1).CreateIntegrationQueuesAsync(
-            Arg.Is(_queueName),
-            Arg.Is(_retryQueueName),
-            Arg.Is(_routingKey),
+        await sutProvider.GetDependency<IRabbitMqService>().Received(1).CreateIntegrationQueuesAsync(
+            Arg.Is(_config.IntegrationQueueName),
+            Arg.Is(_config.IntegrationRetryQueueName),
+            Arg.Is(((IIntegrationListenerConfiguration)_config).RoutingKey),
             Arg.Is(cancellationToken)
         );
     }
@@ -55,7 +55,7 @@ public class RabbitMqIntegrationListenerServiceTests
         var cancellationToken = CancellationToken.None;
         await sutProvider.Sut.StartAsync(cancellationToken);
 
-        message.DelayUntilDate = DateTime.UtcNow.AddMinutes(-1);
+        message.DelayUntilDate = null;
         message.RetryCount = 0;
         var eventArgs = new BasicDeliverEventArgs(
             consumerTag: string.Empty,
@@ -94,8 +94,8 @@ public class RabbitMqIntegrationListenerServiceTests
         var cancellationToken = CancellationToken.None;
         await sutProvider.Sut.StartAsync(cancellationToken);
 
-        message.DelayUntilDate = DateTime.UtcNow.AddMinutes(-1);
-        message.RetryCount = _maxRetries;
+        message.DelayUntilDate = null;
+        message.RetryCount = _config.MaxRetries;
         var eventArgs = new BasicDeliverEventArgs(
             consumerTag: string.Empty,
             deliveryTag: 0,
@@ -132,7 +132,7 @@ public class RabbitMqIntegrationListenerServiceTests
         var cancellationToken = CancellationToken.None;
         await sutProvider.Sut.StartAsync(cancellationToken);
 
-        message.DelayUntilDate = DateTime.UtcNow.AddMinutes(-1);
+        message.DelayUntilDate = null;
         message.RetryCount = 0;
         var eventArgs = new BasicDeliverEventArgs(
             consumerTag: string.Empty,
@@ -145,7 +145,7 @@ public class RabbitMqIntegrationListenerServiceTests
         );
         var result = new IntegrationHandlerResult(false, message);
         result.Retryable = true;
-        result.DelayUntilDate = DateTime.UtcNow.AddMinutes(1);
+        result.DelayUntilDate = _now.AddMinutes(1);
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
         var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
@@ -173,7 +173,7 @@ public class RabbitMqIntegrationListenerServiceTests
         var cancellationToken = CancellationToken.None;
         await sutProvider.Sut.StartAsync(cancellationToken);
 
-        message.DelayUntilDate = DateTime.UtcNow.AddMinutes(-1);
+        message.DelayUntilDate = null;
         var eventArgs = new BasicDeliverEventArgs(
             consumerTag: string.Empty,
             deliveryTag: 0,
@@ -205,7 +205,7 @@ public class RabbitMqIntegrationListenerServiceTests
         var cancellationToken = CancellationToken.None;
         await sutProvider.Sut.StartAsync(cancellationToken);
 
-        message.DelayUntilDate = DateTime.UtcNow.AddMinutes(1);
+        message.DelayUntilDate = _now.AddMinutes(1);
         var eventArgs = new BasicDeliverEventArgs(
             consumerTag: string.Empty,
             deliveryTag: 0,

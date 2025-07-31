@@ -1,7 +1,7 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine3.21 AS build
 
 # Docker buildx supplies the value for this arg
 ARG TARGETPLATFORM
@@ -9,11 +9,11 @@ ARG TARGETPLATFORM
 # Determine proper runtime value for .NET
 # We put the value in a file to be read by later layers.
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
-    RID=linux-x64 ; \
+    RID=linux-musl-x64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
-    RID=linux-arm64 ; \
+    RID=linux-musl-arm64 ; \
     elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
-    RID=linux-arm ; \
+    RID=linux-musl-arm ; \
     fi \
     && echo "RID=$RID" > /tmp/rid.txt
 
@@ -38,18 +38,19 @@ RUN . /tmp/rid.txt && dotnet publish \
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.21
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden" com.bitwarden.project="setup"
-
 ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+RUN apk add --no-cache curl \
     openssl \
-    gosu \
-    && rm -rf /var/lib/apt/lists/*
+    icu-libs \
+    tzdata \
+    shadow \
+    && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu
 
 # Copy app from the build stage
 WORKDIR /app

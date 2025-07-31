@@ -31,13 +31,15 @@ public static class OrganizationTestHelpers
     /// Creates an Enterprise organization.
     /// </summary>
     public static Task<Organization> CreateTestOrganizationAsync(this IOrganizationRepository organizationRepository,
+        int? seatCount = null,
         string identifier = "test")
         => organizationRepository.CreateAsync(new Organization
         {
             Name = $"{identifier}-{Guid.NewGuid()}",
             BillingEmail = "billing@example.com", // TODO: EF does not enforce this being NOT NULL
             Plan = "Enterprise (Annually)", // TODO: EF does not enforce this being NOT NULl
-            PlanType = PlanType.EnterpriseAnnually
+            PlanType = PlanType.EnterpriseAnnually,
+            Seats = seatCount
         });
 
     /// <summary>

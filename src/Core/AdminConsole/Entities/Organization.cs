@@ -4,9 +4,9 @@ using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 
@@ -122,6 +122,11 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// If set to true, admins can initiate organization-issued sponsorships.
     /// </summary>
     public bool UseAdminSponsoredFamilies { get; set; }
+
+    /// <summary>
+    /// If set to true, organization needs their seat count synced with their subscription
+    /// </summary>
+    public bool SyncSeats { get; set; }
 
     public void SetNewId()
     {

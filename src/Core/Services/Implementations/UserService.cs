@@ -1,5 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Reflection;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
@@ -12,10 +13,10 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
@@ -29,12 +30,9 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Bit.Core.Utilities;
-using Bit.Core.Vault.Repositories;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -44,12 +42,11 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Bit.Core.Services;
 
-public class UserService : UserManager<User>, IUserService, IDisposable
+public class UserService : UserManager<User>, IUserService
 {
     private const string PremiumPlanId = "premium-annually";
 
     private readonly IUserRepository _userRepository;
-    private readonly ICipherRepository _cipherRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
@@ -65,17 +62,14 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IPaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
-    private readonly IDataProtector _organizationServiceDataProtector;
     private readonly IFido2 _fido2;
     private readonly ICurrentContext _currentContext;
     private readonly IGlobalSettings _globalSettings;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
-    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly IPremiumUserBillingService _premiumUserBillingService;
-    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDistributedCache _distributedCache;
@@ -83,7 +77,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public UserService(
         IUserRepository userRepository,
-        ICipherRepository cipherRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationDomainRepository organizationDomainRepository,
@@ -101,7 +94,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         ILicensingService licenseService,
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
-        IDataProtectionProvider dataProtectionProvider,
         IPaymentService paymentService,
         IPolicyRepository policyRepository,
         IPolicyService policyService,
@@ -111,10 +103,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IFeatureService featureService,
         IPremiumUserBillingService premiumUserBillingService,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDistributedCache distributedCache,
@@ -131,7 +121,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
               logger)
     {
         _userRepository = userRepository;
-        _cipherRepository = cipherRepository;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
         _organizationDomainRepository = organizationDomainRepository;
@@ -147,18 +136,14 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _paymentService = paymentService;
         _policyRepository = policyRepository;
         _policyService = policyService;
-        _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
-            "OrganizationServiceDataProtector");
         _fido2 = fido2;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
-        _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _premiumUserBillingService = premiumUserBillingService;
-        _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _distributedCache = distributedCache;
@@ -352,52 +337,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
-    }
-
-    public async Task SendTwoFactorEmailAsync(User user, bool authentication = true)
-    {
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-        if (provider == null || provider.MetaData == null || !provider.MetaData.TryGetValue("Email", out var emailValue))
-        {
-            throw new ArgumentNullException("No email.");
-        }
-
-        var email = ((string)emailValue).ToLowerInvariant();
-        var token = await base.GenerateTwoFactorTokenAsync(user,
-            CoreHelpers.CustomProviderName(TwoFactorProviderType.Email));
-
-        var deviceType = _currentContext.DeviceType?.GetType().GetMember(_currentContext.DeviceType?.ToString())
-            .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName() ?? "Unknown Browser";
-
-        await _mailService.SendTwoFactorEmailAsync(
-            email, user.Email, token, _currentContext.IpAddress, deviceType, authentication);
-    }
-
-    public async Task SendNewDeviceVerificationEmailAsync(User user)
-    {
-        ArgumentNullException.ThrowIfNull(user);
-
-        var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-            "otp:" + user.Email);
-
-        var deviceType = _currentContext.DeviceType?.GetType().GetMember(_currentContext.DeviceType?.ToString())
-            .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName() ?? "Unknown Browser";
-
-        await _mailService.SendTwoFactorEmailAsync(
-            user.Email, user.Email, token, _currentContext.IpAddress, deviceType);
-    }
-
-    public async Task<bool> VerifyTwoFactorEmailAsync(User user, string token)
-    {
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-        if (provider == null || provider.MetaData == null || !provider.MetaData.TryGetValue("Email", out var emailValue))
-        {
-            throw new ArgumentNullException("No email.");
-        }
-
-        var email = ((string)emailValue).ToLowerInvariant();
-        return await base.VerifyTwoFactorTokenAsync(user,
-            CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), token);
     }
 
     public async Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user)
@@ -1469,20 +1408,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         return isVerified;
-    }
-
-    public async Task ResendNewDeviceVerificationEmail(string email, string secret)
-    {
-        var user = await _userRepository.GetByEmailAsync(email);
-        if (user == null)
-        {
-            return;
-        }
-
-        if (await VerifySecretAsync(user, secret))
-        {
-            await SendNewDeviceVerificationEmailAsync(user);
-        }
     }
 
     public async Task<bool> ActiveNewDeviceVerificationException(Guid userId)

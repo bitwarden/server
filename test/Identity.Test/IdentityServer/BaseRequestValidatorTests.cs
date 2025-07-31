@@ -3,10 +3,14 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Response;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -27,6 +31,9 @@ namespace Bit.Identity.Test.IdentityServer;
 
 public class BaseRequestValidatorTests
 {
+    private static readonly string _mockEncryptedString =
+        "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+
     private UserManager<User> _userManager;
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
@@ -42,6 +49,7 @@ public class BaseRequestValidatorTests
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserDecryptionOptionsBuilder _userDecryptionOptionsBuilder;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IAuthRequestRepository _authRequestRepository;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -62,6 +70,7 @@ public class BaseRequestValidatorTests
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _userDecryptionOptionsBuilder = Substitute.For<IUserDecryptionOptionsBuilder>();
         _policyRequirementQuery = Substitute.For<IPolicyRequirementQuery>();
+        _authRequestRepository = Substitute.For<IAuthRequestRepository>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -78,7 +87,8 @@ public class BaseRequestValidatorTests
             _featureService,
             _ssoConfigRepository,
             _userDecryptionOptionsBuilder,
-            _policyRequirementQuery);
+            _policyRequirementQuery,
+            _authRequestRepository);
     }
 
     /* Logic path
@@ -173,6 +183,99 @@ public class BaseRequestValidatorTests
 
         // Assert
         Assert.False(context.GrantResult.IsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_ValidatedAuthRequest_ConsumedOnSuccess(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        // 1 -> to pass
+        _sut.isValid = true;
+
+        var authRequest = new AuthRequest
+        {
+            Type = AuthRequestType.AuthenticateAndUnlock,
+            RequestDeviceIdentifier = "",
+            RequestIpAddress = "1.1.1.1",
+            AccessCode = "password",
+            PublicKey = "test_public_key",
+            CreationDate = DateTime.UtcNow.AddMinutes(-5),
+            ResponseDate = DateTime.UtcNow.AddMinutes(-2),
+            Approved = true,
+            AuthenticationDate = null, // unused
+            UserId = requestContext.User.Id,
+        };
+        requestContext.ValidatedAuthRequest = authRequest;
+
+        // 2 -> will result to false with no extra configuration
+        // 3 -> set two factor to be false
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+
+        // 4 -> set up device validator to pass
+        _deviceValidator.ValidateRequestDeviceAsync(Arg.Any<ValidatedTokenRequest>(), Arg.Any<CustomValidatorRequestContext>())
+            .Returns(Task.FromResult(true));
+
+        // 5 -> not legacy user
+        _userService.IsLegacyUser(Arg.Any<string>())
+            .Returns(false);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError);
+
+        // Check that the auth request was consumed
+        await _authRequestRepository.Received(1).ReplaceAsync(Arg.Is<AuthRequest>(ar =>
+            ar.AuthenticationDate.HasValue));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_ValidatedAuthRequest_NotConsumed_When2faRequired(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        // 1 -> to pass
+        _sut.isValid = true;
+
+        var authRequest = new AuthRequest
+        {
+            Type = AuthRequestType.AuthenticateAndUnlock,
+            RequestDeviceIdentifier = "",
+            RequestIpAddress = "1.1.1.1",
+            AccessCode = "password",
+            PublicKey = "test_public_key",
+            CreationDate = DateTime.UtcNow.AddMinutes(-5),
+            ResponseDate = DateTime.UtcNow.AddMinutes(-2),
+            Approved = true,
+            AuthenticationDate = null, // unused
+            UserId = requestContext.User.Id,
+        };
+        requestContext.ValidatedAuthRequest = authRequest;
+
+        // 2 -> will result to false with no extra configuration
+        // 3 -> set two factor to be required
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert we errored for 2fa requirement
+        Assert.True(context.GrantResult.IsError);
+
+        // Assert that the auth request was NOT consumed
+        await _authRequestRepository.DidNotReceive().ReplaceAsync(Arg.Any<AuthRequest>());
     }
 
     // Test grantTypes that require SSO when a user is in an organization that requires it
@@ -375,6 +478,102 @@ public class BaseRequestValidatorTests
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
         var expectedMessage = "Legacy encryption without a userkey is no longer supported. To recover your account, please contact support";
         Assert.Equal(expectedMessage, errorResponse.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_CustomResponse_NoMasterPassword_ShouldSetUserDecryptionOptions(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        _userDecryptionOptionsBuilder.ForUser(Arg.Any<User>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithDevice(Arg.Any<Device>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithSso(Arg.Any<SsoConfig>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredential(Arg.Any<WebAuthnCredential>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.BuildAsync().Returns(Task.FromResult(new UserDecryptionOptions
+        {
+            HasMasterPassword = false,
+            MasterPasswordUnlock = null
+        }));
+
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError);
+        var customResponse = context.GrantResult.CustomResponse;
+        Assert.Contains("UserDecryptionOptions", customResponse);
+        Assert.IsType<UserDecryptionOptions>(customResponse["UserDecryptionOptions"]);
+        var userDecryptionOptions = (UserDecryptionOptions)customResponse["UserDecryptionOptions"];
+        Assert.False(userDecryptionOptions.HasMasterPassword);
+        Assert.Null(userDecryptionOptions.MasterPasswordUnlock);
+    }
+
+    [Theory]
+    [BitAutoData(KdfType.PBKDF2_SHA256, 654_321, null, null)]
+    [BitAutoData(KdfType.Argon2id, 11, 128, 5)]
+    public async Task ValidateAsync_CustomResponse_MasterPassword_ShouldSetUserDecryptionOptions(
+        KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        _userDecryptionOptionsBuilder.ForUser(Arg.Any<User>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithDevice(Arg.Any<Device>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithSso(Arg.Any<SsoConfig>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.WithWebAuthnLoginCredential(Arg.Any<WebAuthnCredential>()).Returns(_userDecryptionOptionsBuilder);
+        _userDecryptionOptionsBuilder.BuildAsync().Returns(Task.FromResult(new UserDecryptionOptions
+        {
+            HasMasterPassword = true,
+            MasterPasswordUnlock = new MasterPasswordUnlockResponseModel
+            {
+                Kdf = new MasterPasswordUnlockKdfResponseModel
+                {
+                    KdfType = kdfType,
+                    Iterations = kdfIterations,
+                    Memory = kdfMemory,
+                    Parallelism = kdfParallelism
+                },
+                MasterKeyEncryptedUserKey = _mockEncryptedString,
+                Salt = "test@example.com"
+            }
+        }));
+
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError);
+        var customResponse = context.GrantResult.CustomResponse;
+        Assert.Contains("UserDecryptionOptions", customResponse);
+        Assert.IsType<UserDecryptionOptions>(customResponse["UserDecryptionOptions"]);
+        var userDecryptionOptions = (UserDecryptionOptions)customResponse["UserDecryptionOptions"];
+        Assert.True(userDecryptionOptions.HasMasterPassword);
+        Assert.NotNull(userDecryptionOptions.MasterPasswordUnlock);
+        Assert.Equal(kdfType, userDecryptionOptions.MasterPasswordUnlock.Kdf.KdfType);
+        Assert.Equal(kdfIterations, userDecryptionOptions.MasterPasswordUnlock.Kdf.Iterations);
+        Assert.Equal(kdfMemory, userDecryptionOptions.MasterPasswordUnlock.Kdf.Memory);
+        Assert.Equal(kdfParallelism, userDecryptionOptions.MasterPasswordUnlock.Kdf.Parallelism);
+        Assert.Equal(_mockEncryptedString, userDecryptionOptions.MasterPasswordUnlock.MasterKeyEncryptedUserKey);
+        Assert.Equal("test@example.com", userDecryptionOptions.MasterPasswordUnlock.Salt);
     }
 
     private BaseRequestValidationContextFake CreateContext(
