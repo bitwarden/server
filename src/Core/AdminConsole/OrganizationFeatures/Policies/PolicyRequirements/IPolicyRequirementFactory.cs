@@ -22,12 +22,12 @@ public interface IPolicyRequirementFactory
     /// </summary>
     bool ExemptProviders { get; }
 
-    // TODO: how to disambiguate from enforce ON accept vs. enforce in the accepted status
     /// <summary>
-    /// If true, the policy will be enforced against users as soon as they move into an accepted state.
-    /// If false, the policy will not be enforced against accepted users; the user must be confirmed.
+    /// If true, the policy will be enforced against users in the accepted status.
+    /// If false, the policy will not be enforced against accepted users; the user must be confirmed before they are
+    /// affected by the policy.
     /// </summary>
-    bool EnforceWhenAccepted { get; }
+    bool EnforceInAcceptedStatus { get; }
 }
 
 public interface ISinglePolicyRequirementFactory<out T> : IPolicyRequirementFactory where T : ISinglePolicyRequirement

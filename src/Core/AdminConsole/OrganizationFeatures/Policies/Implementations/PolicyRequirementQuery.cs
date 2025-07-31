@@ -12,13 +12,9 @@ public class PolicyRequirementQuery(
     IEnumerable<IPolicyRequirementFactory> policyRequirementFactories)
     : IPolicyRequirementQuery
 {
-
-    private Task<IEnumerable<PolicyDetails>> GetPolicyDetails(Guid userId)
-        => policyRepository.GetPolicyDetailsByUserId(userId);
-
     public async Task<T> GetRequirementAsync<T>(Guid organizationUserId) where T : ISinglePolicyRequirement
     {
-        var policyDetails = new PolicyDetails(); // TODO: should get by orgUserId
+        var policyDetails = new PolicyDetails(); // TODO: imagine this gets PolicyDetails by OrganizationUserId - for that user and that org only
         var factory = policyRequirementFactories.OfType<ISinglePolicyRequirementFactory<T>>().Single();
 
         return IsExempt(factory, policyDetails, filterStatus: true)
@@ -26,10 +22,12 @@ public class PolicyRequirementQuery(
             : factory.Create(policyDetails);
     }
 
+    // TODO: bulk implementation of GetRequirementAsync
     public Task<Dictionary<Guid, T>> GetRequirementAsync<T>(IEnumerable<Guid> organizationUserIds) where T : ISinglePolicyRequirement => throw new NotImplementedException();
 
     public async Task<T> GetAggregateRequirement<T>(Guid userId) where T : IAggregatePolicyRequirement
     {
+        // This is basically the method we already have today
         var policyDetails = await policyRepository.GetPolicyDetailsByUserId(userId);
         var factory = policyRequirementFactories.OfType<IAggregatePolicyRequirementFactory<T>>().Single();
 
@@ -39,17 +37,22 @@ public class PolicyRequirementQuery(
 
     public async Task<T> GetPreAccessRequirement<T>(Guid organizationUserId) where T : ISinglePolicyRequirement
     {
-        var policyDetails = await policyRepository.GetPolicyDetailsByUserId(organizationUserId); // TODO; by orguserid
-        var factory = policyRequirementFactories.OfType<IAggregatePolicyRequirementFactory<T>>().Single();
+        var policyDetails = new PolicyDetails(); // TODO: imagine this gets PolicyDetails by OrganizationUserId - for that user and that org only
+        var factory = policyRequirementFactories.OfType<ISinglePolicyRequirementFactory<T>>().Single();
 
-        // does NOT check status!
-        var filtered = policyDetails.Where(p => !IsExempt(factory, p, filterStatus: false));
-        return factory.Create(filtered);
+        // This is basically the same as GetRequirementAsync, except that it does NOT check status
+        return IsExempt(factory, policyDetails, filterStatus: false)
+            ? factory.Create()
+            : factory.Create(policyDetails);
     }
 
+    // TODO: bulk implementation
     public Task<Dictionary<Guid, T>> GetPreAccessRequirement<T>(IEnumerable<Guid> organizationUserIds) where T : ISinglePolicyRequirement => throw new NotImplementedException();
 
-    private bool IsExempt(IPolicyRequirementFactory factory, PolicyDetails policyDetails, bool filterStatus)
+    /// <summary>
+    /// Internal helper method to decide whether a policy should apply to a user, based on status, provider relationship, and role.
+    /// </summary>
+    private static bool IsExempt(IPolicyRequirementFactory factory, PolicyDetails policyDetails, bool filterStatus)
     {
         var isRoleExempt = factory.ExemptRoles(policyDetails.OrganizationUserType) ||
                            (factory.ExemptProviders && policyDetails.IsProvider);
@@ -60,7 +63,7 @@ public class PolicyRequirementQuery(
         }
 
         var isStatusExempt =
-            (!factory.EnforceWhenAccepted && policyDetails.OrganizationUserStatus == OrganizationUserStatusType.Accepted) ||
+            (!factory.EnforceInAcceptedStatus && policyDetails.OrganizationUserStatus == OrganizationUserStatusType.Accepted) ||
             policyDetails.OrganizationUserStatus is OrganizationUserStatusType.Invited or OrganizationUserStatusType.Revoked;
 
         return isStatusExempt;

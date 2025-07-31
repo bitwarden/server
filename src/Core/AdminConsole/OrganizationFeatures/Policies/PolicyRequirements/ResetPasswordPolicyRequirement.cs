@@ -17,7 +17,7 @@ public class ResetPasswordPolicyRequirementFactory : ISinglePolicyRequirementFac
     public PolicyType PolicyType => PolicyType.ResetPassword;
     public bool ExemptRoles(OrganizationUserType role) => false;
     public bool ExemptProviders => false;
-    public bool EnforceWhenAccepted => false;
+    public bool EnforceInAcceptedStatus => false;
 
     public ResetPasswordPolicyRequirement Create(PolicyDetails? policyDetails = null) => new()
     {

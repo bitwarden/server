@@ -1,72 +1,35 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
-/// <summary>
-/// Represents the Organization Data Ownership policy state.
-/// </summary>
-public enum OrganizationDataOwnershipState
+public class OrganizationDataOwnershipPolicyRequirement : ISinglePolicyRequirement
 {
-    /// <summary>
-    /// Organization Data Ownership is enforced- members are required to save items to an organization.
-    /// </summary>
-    Enabled = 1,
-
-    /// <summary>
-    /// Organization Data Ownership is not enforced- users can save items to their personal vault.
-    /// </summary>
-    Disabled = 2
+    public bool RequiresDefaultCollection { get; set; }
 }
 
-/// <summary>
-/// Policy requirements for the Organization data ownership policy
-/// </summary>
-public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
+public class OrganizationDataOwnershipPolicyAggregateRequirement : IAggregatePolicyRequirement
 {
-    private readonly IEnumerable<Guid> _organizationIdsWithPolicyEnabled;
-
-    /// <param name="organizationDataOwnershipState">
-    /// The organization data ownership state for the user.
-    /// </param>
-    /// <param name="organizationIdsWithPolicyEnabled">
-    /// The collection of Organization IDs that have the Organization Data Ownership policy enabled.
-    /// </param>
-    public OrganizationDataOwnershipPolicyRequirement(
-        OrganizationDataOwnershipState organizationDataOwnershipState,
-        IEnumerable<Guid> organizationIdsWithPolicyEnabled)
-    {
-        _organizationIdsWithPolicyEnabled = organizationIdsWithPolicyEnabled ?? [];
-        State = organizationDataOwnershipState;
-    }
-
-    /// <summary>
-    /// The Organization data ownership policy state for the user.
-    /// </summary>
-    public OrganizationDataOwnershipState State { get; }
-
-    /// <summary>
-    /// Returns true if the Organization Data Ownership policy is enforced in that organization.
-    /// </summary>
-    public bool RequiresDefaultCollection(Guid organizationId)
-    {
-        return _organizationIdsWithPolicyEnabled.Contains(organizationId);
-    }
+    public bool CanSavePersonallyOwnedItems { get; set; }
 }
 
-public class OrganizationDataOwnershipPolicyRequirementFactory : BasePolicyRequirementFactory<OrganizationDataOwnershipPolicyRequirement>
+public class OrganizationDataOwnershipPolicyRequirementFactory :
+    ISinglePolicyRequirementFactory<OrganizationDataOwnershipPolicyRequirement>,
+    IAggregatePolicyRequirementFactory<OrganizationDataOwnershipPolicyAggregateRequirement>
 {
-    public override PolicyType PolicyType => PolicyType.OrganizationDataOwnership;
+    public PolicyType PolicyType => PolicyType.OrganizationDataOwnership;
+    public bool ExemptRoles(OrganizationUserType role) => role is OrganizationUserType.Owner or OrganizationUserType.Admin;
+    public bool ExemptProviders => true;
+    public bool EnforceInAcceptedStatus => true;
 
-    public override OrganizationDataOwnershipPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
+    public OrganizationDataOwnershipPolicyRequirement Create(PolicyDetails? policyDetails = null) => new()
     {
-        var organizationDataOwnershipState = policyDetails.Any()
-            ? OrganizationDataOwnershipState.Enabled
-            : OrganizationDataOwnershipState.Disabled;
-        var organizationIdsWithPolicyEnabled = policyDetails.Select(p => p.OrganizationId).ToHashSet();
+        RequiresDefaultCollection = policyDetails is not null
+    };
 
-        return new OrganizationDataOwnershipPolicyRequirement(
-            organizationDataOwnershipState,
-            organizationIdsWithPolicyEnabled);
-    }
+    public OrganizationDataOwnershipPolicyAggregateRequirement Create(IEnumerable<PolicyDetails> policyDetails) => new()
+    {
+        CanSavePersonallyOwnedItems = policyDetails.Any()
+    };
 }

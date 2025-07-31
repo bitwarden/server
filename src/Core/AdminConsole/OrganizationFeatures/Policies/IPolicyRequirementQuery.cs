@@ -3,12 +3,10 @@
 public interface IPolicyRequirementQuery
 {
     /// <summary>
-    /// Get a Policy Requirement specific to a particular OrganizationUser and organization.
-    /// This
+    /// Get a Policy Requirement specific to an organization member and their organization.
     /// </summary>
     /// <remarks>
-    /// This will not take into account any policies from other organizations that may affect the user.
-    /// Only use this when you want to limit your check to a specific organization's policy.
+    /// Use case: enforce a policy of a specific organization against a user who has been accepted or confirmed to that organization.
     /// </remarks>
     Task<T> GetRequirementAsync<T>(Guid organizationUserId) where T : ISinglePolicyRequirement<T>;
     Task<Dictionary<Guid, T>> GetRequirementAsync<T>(IEnumerable<Guid> organizationUserIds) where T : ISinglePolicyRequirement<T>;
@@ -18,15 +16,16 @@ public interface IPolicyRequirementQuery
     /// in all organizations they are a member of.
     /// </summary>
     /// <remarks>
-    /// This is often used when checking a user action for compliance with any applicable policies, and you are not
-    /// concerned with any particular organization.
+    /// Use case: enforce all policies that may affect a user.
     /// </remarks>
     Task<T> GetAggregateRequirement<T>(Guid userId) where T : IAggregatePolicyRequirement<T>;
 
     /// <summary>
-    /// Get a Policy Requirement specific to a particular OrganizationUser and organization,
-    /// before the user is given access to organization resources by being accepted, confirmed, or restored.
+    /// Get a Policy Requirement specific to an organization before a member is allowed to join.
     /// </summary>
+    /// <remarks>
+    /// Use case: enforce a policy of a specific organization against a user as part of the accept or confirm flows.
+    /// </remarks>
     Task<T> GetPreAccessRequirement<T>(Guid organizationUserId) where T : ISinglePolicyRequirement<T>;
     Task<Dictionary<Guid, T>> GetPreAccessRequirement<T>(IEnumerable<Guid> organizationUserIds) where T : ISinglePolicyRequirement<T>;
 }
