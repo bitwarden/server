@@ -1,28 +1,40 @@
 ﻿using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 
 namespace Bit.RustSDK;
+
+public class UserKeys
+{
+    public required string MasterPasswordHash { get; set; }
+    public required string EncryptedUserKey { get; set; }
+    public required string PublicKey { get; set; }
+    public required string PrivateKey { get; set; }
+}
 
 /// <summary>
 /// Service implementation that provides a C# friendly interface to the Rust SDK
 /// </summary>
 public class RustSdkService
 {
-    /// <summary>
-    /// Adds two integers using the native implementation
-    /// </summary>
-    /// <param name="x">First integer</param>
-    /// <param name="y">Second integer</param>
-    /// <returns>The sum of x and y</returns>
-    public int Add(int x, int y)
+    private static readonly JsonSerializerOptions CaseInsensitiveOptions = new()
     {
-        try
+        PropertyNameCaseInsensitive = true
+    };
+
+    public unsafe UserKeys GenerateUserKeys(string email, string password)
+    {
+        var emailBytes = StringToRustString(email);
+        var passwordBytes = StringToRustString(password);
+
+        fixed (byte* emailPtr = emailBytes)
+        fixed (byte* passwordPtr = passwordBytes)
         {
-            return NativeMethods.my_add(x, y);
-        }
-        catch (Exception ex)
-        {
-            throw new RustSdkException($"Failed to perform addition operation: {ex.Message}", ex);
+            var resultPtr = NativeMethods.generate_user_keys(emailPtr, passwordPtr);
+
+            var result = TakeAndDestroyRustString(resultPtr);
+
+            return JsonSerializer.Deserialize<UserKeys>(result, CaseInsensitiveOptions)!;
         }
     }
 
@@ -38,8 +50,8 @@ public class RustSdkService
     public unsafe string HashPassword(string email, string password)
     {
         // Convert strings to null-terminated byte arrays
-        var emailBytes = Encoding.UTF8.GetBytes(email + '\0');
-        var passwordBytes = Encoding.UTF8.GetBytes(password + '\0');
+        var emailBytes = StringToRustString(email);
+        var passwordBytes = StringToRustString(password);
 
         try
         {
@@ -61,6 +73,11 @@ public class RustSdkService
         {
             throw new RustSdkException($"Failed to hash password: {ex.Message}", ex);
         }
+    }
+
+    private static byte[] StringToRustString(string str)
+    {
+        return Encoding.UTF8.GetBytes(str + '\0');
     }
 
     private static unsafe string TakeAndDestroyRustString(byte* ptr)

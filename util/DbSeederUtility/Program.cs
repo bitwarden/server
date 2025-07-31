@@ -1,7 +1,10 @@
-﻿using Bit.Infrastructure.EntityFramework.Repositories;
+﻿using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Recipes;
 using CommandDotNet;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.DbSeederUtility;
 
@@ -26,14 +29,17 @@ public class Program
         // Create service provider with necessary services
         var services = new ServiceCollection();
         ServiceCollectionExtension.ConfigureServices(services);
+        services.TryAddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+
         var serviceProvider = services.BuildServiceProvider();
 
         // Get a scoped DB context
         using var scope = serviceProvider.CreateScope();
         var scopedServices = scope.ServiceProvider;
         var db = scopedServices.GetRequiredService<DatabaseContext>();
+        var passwordHasher = scopedServices.GetRequiredService<IPasswordHasher<User>>();
 
-        var recipe = new OrganizationWithUsersRecipe(db);
+        var recipe = new OrganizationWithUsersRecipe(db, passwordHasher);
         recipe.Seed(name, users, domain);
     }
 }
