@@ -136,7 +136,11 @@ public class CipherService : ICipherService
         {
             if (cipher.OrganizationId.HasValue && collectionIds != null)
             {
-                var existingCollectionIds = (await _collectionRepository.GetManyByOrganizationIdAsync(cipher.OrganizationId.Value)).Select(c => c.Id);
+                var userCollections = await _collectionRepository.GetManyByUserIdAsync(savingUserId);
+                var existingCollectionIds = userCollections
+                    .Where(c => c.OrganizationId == cipher.OrganizationId.Value)
+                    .Select(c => c.Id)
+                    .ToList();
                 if (collectionIds.Except(existingCollectionIds).Any())
                 {
                     throw new BadRequestException("Specified CollectionId does not exist on the specified Organization.");
