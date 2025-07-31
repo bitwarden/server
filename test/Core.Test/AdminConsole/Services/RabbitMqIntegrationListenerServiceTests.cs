@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿#nullable enable
+
+using System.Text;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -39,6 +41,19 @@ public class RabbitMqIntegrationListenerServiceTests
     }
 
     [Fact]
+    public void Constructor_CreatesLogWithCorrectCategory()
+    {
+        var sutProvider = GetSutProvider();
+
+        var fullName = typeof(RabbitMqIntegrationListenerService<>).FullName ?? "";
+        var tickIndex = fullName.IndexOf('`');
+        var cleanedName = tickIndex >= 0 ? fullName.Substring(0, tickIndex) : fullName;
+        var categoryName = cleanedName + '.' + _config.IntegrationQueueName;
+
+        sutProvider.GetDependency<ILoggerFactory>().Received(1).CreateLogger(categoryName);
+    }
+
+    [Fact]
     public async Task StartAsync_CreatesQueues()
     {
         var sutProvider = GetSutProvider();
@@ -76,6 +91,7 @@ public class RabbitMqIntegrationListenerServiceTests
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
         var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
+        Assert.NotNull(expected);
 
         await sutProvider.Sut.ProcessReceivedMessageAsync(eventArgs, cancellationToken);
 
@@ -89,14 +105,14 @@ public class RabbitMqIntegrationListenerServiceTests
         _logger.Received().Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString().Contains("Non-retryable failure")),
+            Arg.Is<object>(o => (o.ToString() ?? "").Contains("Non-retryable failure")),
             Arg.Any<Exception?>(),
             Arg.Any<Func<object, Exception?, string>>());
 
         await _rabbitMqService.DidNotReceiveWithAnyArgs()
-            .RepublishToRetryQueueAsync(default, default);
+            .RepublishToRetryQueueAsync(Arg.Any<IChannel>(), Arg.Any<BasicDeliverEventArgs>());
         await _rabbitMqService.DidNotReceiveWithAnyArgs()
-            .PublishToRetryAsync(default, default, default);
+            .PublishToRetryAsync(Arg.Any<IChannel>(), Arg.Any<IntegrationMessage>(), Arg.Any<CancellationToken>());
     }
 
     [Theory, BitAutoData]
@@ -122,6 +138,7 @@ public class RabbitMqIntegrationListenerServiceTests
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
         var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
+        Assert.NotNull(expected);
 
         await sutProvider.Sut.ProcessReceivedMessageAsync(eventArgs, cancellationToken);
 
@@ -134,14 +151,14 @@ public class RabbitMqIntegrationListenerServiceTests
         _logger.Received().Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString().Contains("Max retry attempts reached")),
+            Arg.Is<object>(o => (o.ToString() ?? "").Contains("Max retry attempts reached")),
             Arg.Any<Exception?>(),
             Arg.Any<Func<object, Exception?, string>>());
 
         await _rabbitMqService.DidNotReceiveWithAnyArgs()
-            .RepublishToRetryQueueAsync(default, default);
+            .RepublishToRetryQueueAsync(Arg.Any<IChannel>(), Arg.Any<BasicDeliverEventArgs>());
         await _rabbitMqService.DidNotReceiveWithAnyArgs()
-            .PublishToRetryAsync(default, default, default);
+            .PublishToRetryAsync(Arg.Any<IChannel>(), Arg.Any<IntegrationMessage>(), Arg.Any<CancellationToken>());
     }
 
     [Theory, BitAutoData]
@@ -168,6 +185,7 @@ public class RabbitMqIntegrationListenerServiceTests
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
         var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
+        Assert.NotNull(expected);
 
         await sutProvider.Sut.ProcessReceivedMessageAsync(eventArgs, cancellationToken);
 
@@ -180,9 +198,9 @@ public class RabbitMqIntegrationListenerServiceTests
             Arg.Any<CancellationToken>());
 
         await _rabbitMqService.DidNotReceiveWithAnyArgs()
-            .RepublishToRetryQueueAsync(default, default);
+            .RepublishToRetryQueueAsync(Arg.Any<IChannel>(), Arg.Any<BasicDeliverEventArgs>());
         await _rabbitMqService.DidNotReceiveWithAnyArgs()
-            .PublishToDeadLetterAsync(default, default, default);
+            .PublishToDeadLetterAsync(Arg.Any<IChannel>(), Arg.Any<IntegrationMessage>(), Arg.Any<CancellationToken>());
     }
 
     [Theory, BitAutoData]
@@ -210,11 +228,11 @@ public class RabbitMqIntegrationListenerServiceTests
         await _handler.Received(1).HandleAsync(Arg.Is(message.ToJson()));
 
         await _rabbitMqService.DidNotReceiveWithAnyArgs()
-            .RepublishToRetryQueueAsync(default, default);
+            .RepublishToRetryQueueAsync(Arg.Any<IChannel>(), Arg.Any<BasicDeliverEventArgs>());
         await _rabbitMqService.DidNotReceiveWithAnyArgs()
-            .PublishToRetryAsync(default, default, default);
+            .PublishToRetryAsync(Arg.Any<IChannel>(), Arg.Any<IntegrationMessage>(), Arg.Any<CancellationToken>());
         await _rabbitMqService.DidNotReceiveWithAnyArgs()
-            .PublishToDeadLetterAsync(default, default, default);
+            .PublishToDeadLetterAsync(Arg.Any<IChannel>(), Arg.Any<IntegrationMessage>(), Arg.Any<CancellationToken>());
     }
 
     [Theory, BitAutoData]
@@ -240,10 +258,10 @@ public class RabbitMqIntegrationListenerServiceTests
         await _rabbitMqService.Received(1)
             .RepublishToRetryQueueAsync(Arg.Any<IChannel>(), Arg.Any<BasicDeliverEventArgs>());
 
-        await _handler.DidNotReceiveWithAnyArgs().HandleAsync(default);
+        await _handler.DidNotReceiveWithAnyArgs().HandleAsync(Arg.Any<string>());
         await _rabbitMqService.DidNotReceiveWithAnyArgs()
-            .PublishToRetryAsync(default, default, default);
+            .PublishToRetryAsync(Arg.Any<IChannel>(), Arg.Any<IntegrationMessage>(), Arg.Any<CancellationToken>());
         await _rabbitMqService.DidNotReceiveWithAnyArgs()
-            .PublishToDeadLetterAsync(default, default, default);
+            .PublishToDeadLetterAsync(Arg.Any<IChannel>(), Arg.Any<IntegrationMessage>(), Arg.Any<CancellationToken>());
     }
 }

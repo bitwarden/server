@@ -34,6 +34,19 @@ public class AzureServiceBusIntegrationListenerServiceTests
     }
 
     [Fact]
+    public void Constructor_CreatesLogWithCorrectCategory()
+    {
+        var sutProvider = GetSutProvider();
+
+        var fullName = typeof(AzureServiceBusIntegrationListenerService<>).FullName ?? "";
+        var tickIndex = fullName.IndexOf('`');
+        var cleanedName = tickIndex >= 0 ? fullName.Substring(0, tickIndex) : fullName;
+        var categoryName = cleanedName + '.' + _config.IntegrationSubscriptionName;
+
+        sutProvider.GetDependency<ILoggerFactory>().Received(1).CreateLogger(categoryName);
+    }
+
+    [Fact]
     public void Constructor_CreatesProcessor()
     {
         var sutProvider = GetSutProvider();
@@ -69,12 +82,13 @@ public class AzureServiceBusIntegrationListenerServiceTests
         result.Retryable = false;
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
-        var expected = (IntegrationMessage<WebhookIntegrationConfiguration>)IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson())!;
+        var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
+        Assert.NotNull(expected);
 
         Assert.False(await sutProvider.Sut.HandleMessageAsync(message.ToJson()));
 
         await _handler.Received(1).HandleAsync(Arg.Is(expected.ToJson()));
-        await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(default!);
+        await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(Arg.Any<IIntegrationMessage>());
     }
 
     [Theory, BitAutoData]
@@ -87,12 +101,13 @@ public class AzureServiceBusIntegrationListenerServiceTests
 
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
-        var expected = (IntegrationMessage<WebhookIntegrationConfiguration>)IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson())!;
+        var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
+        Assert.NotNull(expected);
 
         Assert.False(await sutProvider.Sut.HandleMessageAsync(message.ToJson()));
 
         await _handler.Received(1).HandleAsync(Arg.Is(expected.ToJson()));
-        await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(default!);
+        await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(Arg.Any<IIntegrationMessage>());
     }
 
     [Theory, BitAutoData]
@@ -105,7 +120,8 @@ public class AzureServiceBusIntegrationListenerServiceTests
         result.Retryable = true;
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
-        var expected = (IntegrationMessage<WebhookIntegrationConfiguration>)IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson())!;
+        var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
+        Assert.NotNull(expected);
 
         Assert.True(await sutProvider.Sut.HandleMessageAsync(message.ToJson()));
 
@@ -120,12 +136,13 @@ public class AzureServiceBusIntegrationListenerServiceTests
         var result = new IntegrationHandlerResult(true, message);
         _handler.HandleAsync(Arg.Any<string>()).Returns(result);
 
-        var expected = (IntegrationMessage<WebhookIntegrationConfiguration>)IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson())!;
+        var expected = IntegrationMessage<WebhookIntegrationConfiguration>.FromJson(message.ToJson());
+        Assert.NotNull(expected);
 
         Assert.True(await sutProvider.Sut.HandleMessageAsync(message.ToJson()));
 
         await _handler.Received(1).HandleAsync(Arg.Is(expected.ToJson()));
-        await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(default!);
+        await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(Arg.Any<IIntegrationMessage>());
     }
 
     [Fact]
@@ -143,6 +160,6 @@ public class AzureServiceBusIntegrationListenerServiceTests
             Arg.Any<Exception>(),
             Arg.Any<Func<object, Exception?, string>>());
 
-        await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(default!);
+        await _serviceBusService.DidNotReceiveWithAnyArgs().PublishToRetryAsync(Arg.Any<IIntegrationMessage>());
     }
 }

@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿#nullable enable
+
+using System.Text.Json;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
@@ -27,6 +29,19 @@ public class RabbitMqEventListenerServiceTests
             .SetDependency(_config)
             .SetDependency(loggerFactory)
             .Create();
+    }
+
+    [Fact]
+    public void Constructor_CreatesLogWithCorrectCategory()
+    {
+        var sutProvider = GetSutProvider();
+
+        var fullName = typeof(RabbitMqEventListenerService<>).FullName ?? "";
+        var tickIndex = fullName.IndexOf('`');
+        var cleanedName = tickIndex >= 0 ? fullName.Substring(0, tickIndex) : fullName;
+        var categoryName = cleanedName + '.' + _config.EventQueueName;
+
+        sutProvider.GetDependency<ILoggerFactory>().Received(1).CreateLogger(categoryName);
     }
 
     [Fact]
@@ -62,7 +77,7 @@ public class RabbitMqEventListenerServiceTests
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -83,9 +98,9 @@ public class RabbitMqEventListenerServiceTests
         _logger.Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString().Contains("Invalid JSON")),
+            Arg.Is<object>(o => (o.ToString() ?? "").Contains("Invalid JSON")),
             Arg.Any<Exception>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -108,7 +123,7 @@ public class RabbitMqEventListenerServiceTests
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -131,7 +146,7 @@ public class RabbitMqEventListenerServiceTests
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Theory, BitAutoData]

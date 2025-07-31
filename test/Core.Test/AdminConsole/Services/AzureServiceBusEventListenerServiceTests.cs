@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿#nullable enable
+
+using System.Text.Json;
 using Azure.Messaging.ServiceBus;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Models.Data;
@@ -30,6 +32,19 @@ public class AzureServiceBusEventListenerServiceTests
     }
 
     [Fact]
+    public void Constructor_CreatesLogWithCorrectCategory()
+    {
+        var sutProvider = GetSutProvider();
+
+        var fullName = typeof(AzureServiceBusEventListenerService<>).FullName ?? "";
+        var tickIndex = fullName.IndexOf('`');
+        var cleanedName = tickIndex >= 0 ? fullName.Substring(0, tickIndex) : fullName;
+        var categoryName = cleanedName + '.' + _config.EventSubscriptionName;
+
+        sutProvider.GetDependency<ILoggerFactory>().Received(1).CreateLogger(categoryName);
+    }
+
+    [Fact]
     public void Constructor_CreatesProcessor()
     {
         var sutProvider = GetSutProvider();
@@ -53,7 +68,7 @@ public class AzureServiceBusEventListenerServiceTests
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<Exception>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -67,21 +82,21 @@ public class AzureServiceBusEventListenerServiceTests
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
     public async Task ProcessReceivedMessageAsync_InvalidJson_LogsError()
     {
         var sutProvider = GetSutProvider();
-        await sutProvider.Sut.ProcessReceivedMessageAsync("{ Inavlid JSON }", _messageId);
+        await sutProvider.Sut.ProcessReceivedMessageAsync("{ Invalid JSON }", _messageId);
 
         _logger.Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString().Contains("Invalid JSON")),
+            Arg.Is<object>(o => (o.ToString() ?? "").Contains("Invalid JSON")),
             Arg.Any<Exception>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -98,7 +113,7 @@ public class AzureServiceBusEventListenerServiceTests
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -115,7 +130,7 @@ public class AzureServiceBusEventListenerServiceTests
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Theory, BitAutoData]
