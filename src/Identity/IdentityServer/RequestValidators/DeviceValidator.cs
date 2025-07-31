@@ -13,6 +13,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Identity.IdentityServer.Enums;
+using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.Extensions.Caching.Distributed;
 
@@ -39,7 +40,6 @@ public class DeviceValidator(
     private readonly ILogger<DeviceValidator> _logger = logger;
     private readonly ITwoFactorEmailService _twoFactorEmailService = twoFactorEmailService;
 
-    private const string PasswordGrantType = "password";
 
     public async Task<bool> ValidateRequestDeviceAsync(ValidatedTokenRequest request, CustomValidatorRequestContext context)
     {
@@ -75,7 +75,10 @@ public class DeviceValidator(
         // is not required for auth requests
         var rawAuthRequestId = request.Raw["AuthRequest"]?.ToLowerInvariant();
         var isAuthRequest = !string.IsNullOrEmpty(rawAuthRequestId);
-        if (request.GrantType == PasswordGrantType &&
+
+        // TODO: use request.validatedAuthRequest ?
+
+        if (request.GrantType == GrantType.ResourceOwnerPassword &&
             !isAuthRequest &&
             context is { TwoFactorRequired: false, SsoRequired: false } &&
             _globalSettings.EnableNewDeviceVerification)
@@ -95,7 +98,7 @@ public class DeviceValidator(
 
         // Device still unknown, but if we are in an auth request flow, this is not valid
         // as we only support auth request authN requests on known devices
-        if (request.GrantType == PasswordGrantType && isAuthRequest)
+        if (request.GrantType == GrantType.ResourceOwnerPassword && isAuthRequest)
         {
             (context.ValidationErrorResult, context.CustomResponse) =
                 BuildDeviceErrorResult(DeviceValidationResultType.AuthRequestFlowUnknownDevice);
