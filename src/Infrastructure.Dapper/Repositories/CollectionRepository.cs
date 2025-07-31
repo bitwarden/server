@@ -280,8 +280,6 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName) => throw new NotImplementedException();
-
     public async Task CreateUserAsync(Guid collectionId, Guid organizationUserId)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -328,7 +326,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName)
+    public async Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName)
     {
         if (!affectedOrgUserIds.Any())
         {
