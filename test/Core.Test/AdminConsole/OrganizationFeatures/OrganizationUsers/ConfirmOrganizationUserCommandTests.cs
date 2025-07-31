@@ -473,7 +473,7 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(user.Id)
+            .GetByOrganizationAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
                 [organization.Id]));
@@ -510,7 +510,7 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(user.Id)
+            .GetByOrganizationAsync<OrganizationDataOwnershipPolicyRequirement>(org.Id)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
                 [org.Id]));
@@ -538,7 +538,7 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(user.Id)
+            .GetByOrganizationAsync<OrganizationDataOwnershipPolicyRequirement>(org.Id)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
                 [Guid.NewGuid()]));
