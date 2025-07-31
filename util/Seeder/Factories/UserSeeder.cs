@@ -9,7 +9,7 @@ namespace Bit.Seeder.Factories;
 public class UserSeeder
 {
 
-    public static User CreateUser(IPasswordHasher<User> passwordHasher, string email)
+    public static (User user, string userKey) CreateUser(IPasswordHasher<User> passwordHasher, string email)
     {
         var nativeService = RustSdkServiceFactory.CreateSingleton();
         var keys = nativeService.GenerateUserKeys(email, "asdfasdfasdf");
@@ -31,6 +31,6 @@ public class UserSeeder
 
         user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);
 
-        return user;
+        return (user, keys.Key);
     }
 }

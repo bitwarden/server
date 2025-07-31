@@ -11,28 +11,28 @@ public class OrganizationWithUsersRecipe(DatabaseContext db, IPasswordHasher<Use
 {
     public Guid Seed(string name, int users, string domain)
     {
-        var organization = OrganizationSeeder.CreateEnterprise(name, domain, users);
-        var user = UserSeeder.CreateUser(passwordHasher, $"admin@{domain}");
-        var orgUser = organization.CreateOrganizationUser(user);
+        var (organization, orgKey) = OrganizationSeeder.CreateEnterprise(name, domain, users);
+        var (user, _) = UserSeeder.CreateUser(passwordHasher, $"admin@{domain}");
+        var orgUser = organization.CreateOrganizationUser(user, orgKey);
 
         var additionalUsers = new List<User>();
         var additionalOrgUsers = new List<OrganizationUser>();
         for (var i = 0; i < users; i++)
         {
-            var additionalUser = UserSeeder.CreateUser(passwordHasher, $"user{i}@{domain}");
+            var (additionalUser, _) = UserSeeder.CreateUser(passwordHasher, $"user{i}@{domain}");
             additionalUsers.Add(additionalUser);
-            additionalOrgUsers.Add(organization.CreateOrganizationUser(additionalUser));
+            additionalOrgUsers.Add(organization.CreateOrganizationUser(additionalUser, orgKey));
         }
 
-        //db.Add(organization);
+        db.Add(organization);
         db.Add(user);
-        //db.Add(orgUser);
+        db.Add(orgUser);
 
         db.SaveChanges();
 
         // Use LinqToDB's BulkCopy for significant better performance
-        //db.BulkCopy(additionalUsers);
-        //db.BulkCopy(additionalOrgUsers);
+        db.BulkCopy(additionalUsers);
+        db.BulkCopy(additionalOrgUsers);
 
         return organization.Id;
     }

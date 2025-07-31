@@ -7,7 +7,22 @@ namespace Bit.RustSDK;
 public class UserKeys
 {
     public required string MasterPasswordHash { get; set; }
+    /// <summary>
+    /// Base64 encoded UserKey
+    /// </summary>
+    public required string Key { get; set; }
     public required string EncryptedUserKey { get; set; }
+    public required string PublicKey { get; set; }
+    public required string PrivateKey { get; set; }
+}
+
+public class OrganizationKeys
+{
+    /// <summary>
+    /// Base64 encoded SymmetricCryptoKey
+    /// </summary>
+    public required string Key { get; set; }
+
     public required string PublicKey { get; set; }
     public required string PrivateKey { get; set; }
 }
@@ -38,42 +53,31 @@ public class RustSdkService
         }
     }
 
-    /// <summary>
-    /// Hashes a password using the native implementation
-    /// </summary>
-    /// <param name="email">User email</param>
-    /// <param name="password">User password</param>
-    /// <returns>The hashed password as a string</returns>
-    /// <exception cref="ArgumentNullException">Thrown when email or password is null</exception>
-    /// <exception cref="ArgumentException">Thrown when email or password is empty</exception>
-    /// <exception cref="RustSdkException">Thrown when the native operation fails</exception>
-    public unsafe string HashPassword(string email, string password)
+    public unsafe OrganizationKeys GenerateOrganizationKeys()
     {
-        // Convert strings to null-terminated byte arrays
-        var emailBytes = StringToRustString(email);
-        var passwordBytes = StringToRustString(password);
+        var resultPtr = NativeMethods.generate_organization_keys();
 
-        try
-        {
-            fixed (byte* emailPtr = emailBytes)
-            fixed (byte* passwordPtr = passwordBytes)
-            {
-                var resultPtr = NativeMethods.hash_password(emailPtr, passwordPtr);
+        var result = TakeAndDestroyRustString(resultPtr);
 
-                var result = TakeAndDestroyRustString(resultPtr);
+        return JsonSerializer.Deserialize<OrganizationKeys>(result, CaseInsensitiveOptions)!;
+    }
 
-                return result;
-            }
-        }
-        catch (RustSdkException)
+    public unsafe string GenerateUserOrganizationKey(string userKey, string orgKey)
+    {
+        var userKeyBytes = StringToRustString(userKey);
+        var orgKeyBytes = StringToRustString(orgKey);
+
+        fixed (byte* userKeyPtr = userKeyBytes)
+        fixed (byte* orgKeyPtr = orgKeyBytes)
         {
-            throw; // Re-throw our custom exceptions
-        }
-        catch (Exception ex)
-        {
-            throw new RustSdkException($"Failed to hash password: {ex.Message}", ex);
+            var resultPtr = NativeMethods.generate_user_organization_key(userKeyPtr, orgKeyPtr);
+
+            var result = TakeAndDestroyRustString(resultPtr);
+
+            return result;
         }
     }
+
 
     private static byte[] StringToRustString(string str)
     {

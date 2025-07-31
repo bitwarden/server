@@ -4,7 +4,12 @@ use std::{
     num::NonZeroU32,
 };
 
-use bitwarden_crypto::{HashPurpose, Kdf, MasterKey};
+use base64::{engine::general_purpose::STANDARD, Engine};
+
+use bitwarden_crypto::{
+    AsymmetricPublicCryptoKey, BitwardenLegacyKeyBytes, HashPurpose, Kdf, MasterKey,
+    SpkiPublicKeyBytes, SymmetricCryptoKey, UnsignedSharedKey, UserKey,
+};
 
 #[no_mangle]
 pub extern "C" fn my_add(x: i32, y: i32) -> i32 {
@@ -29,13 +34,14 @@ pub unsafe extern "C" fn generate_user_keys(
         .derive_master_key_hash(password.as_bytes(), HashPurpose::ServerAuthorization)
         .unwrap();
     let (user_key, encrypted_user_key) = master_key.make_user_key().unwrap();
-    let keys = user_key.make_key_pair().unwrap();
+    let keypair = user_key.make_key_pair().unwrap();
 
     let json = serde_json::json!({
         "masterPasswordHash": master_password_hash,
+        "key": user_key.0.to_base64(),
         "encryptedUserKey": encrypted_user_key.to_string(),
-        "publicKey": keys.public.to_string(),
-        "privateKey": keys.private.to_string(),
+        "publicKey": keypair.public.to_string(),
+        "privateKey": keypair.private.to_string(),
     })
     .to_string();
 
@@ -44,31 +50,51 @@ pub unsafe extern "C" fn generate_user_keys(
     result.into_raw()
 }
 
-/// # Safety
-///
-/// The `email` and `password` pointers must be valid null-terminated C strings.
-/// Both pointers must be non-null and point to valid memory for the duration of the function call.
 #[no_mangle]
-pub unsafe extern "C" fn hash_password(
-    email: *const c_char,
-    password: *const c_char,
+pub unsafe extern "C" fn generate_organization_keys() -> *const c_char {
+    let key = SymmetricCryptoKey::make_aes256_cbc_hmac_key();
+
+    let key = UserKey::new(key);
+    let keypair = key.make_key_pair().expect("Failed to generate key pair");
+
+    let json = serde_json::json!({
+        "key": key.0.to_base64(),
+        "publicKey": keypair.public.to_string(),
+        "privateKey": keypair.private.to_string(),
+    })
+    .to_string();
+
+    let result = CString::new(json).unwrap();
+
+    result.into_raw()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn generate_user_organization_key(
+    user_public_key: *const c_char,
+    organization_key: *const c_char,
 ) -> *const c_char {
-    let kdf = Kdf::PBKDF2 {
-        iterations: NonZeroU32::new(600_000).unwrap(),
-    };
+    let user_public_key = CStr::from_ptr(user_public_key).to_str().unwrap().to_owned();
+    let organization_key = CStr::from_ptr(organization_key)
+        .to_str()
+        .unwrap()
+        .to_owned();
 
-    let email = CStr::from_ptr(email).to_str().unwrap();
-    let password = CStr::from_ptr(password).to_str().unwrap();
+    let user_public_key = STANDARD.decode(user_public_key).unwrap();
+    let organization_key = STANDARD.decode(organization_key).unwrap();
 
-    let master_key = MasterKey::derive(password, email, &kdf).unwrap();
+    let encapsulation_key =
+        AsymmetricPublicCryptoKey::from_der(&SpkiPublicKeyBytes::from(user_public_key)).unwrap();
 
-    let res = master_key
-        .derive_master_key_hash(password.as_bytes(), HashPurpose::ServerAuthorization)
-        .unwrap();
+    let encrypted_key = UnsignedSharedKey::encapsulate_key_unsigned(
+        &SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(organization_key)).unwrap(),
+        &encapsulation_key,
+    )
+    .unwrap();
 
-    let res = CString::new(res).unwrap();
+    let result = CString::new(encrypted_key.to_string()).unwrap();
 
-    res.into_raw()
+    result.into_raw()
 }
 
 /// # Safety

@@ -1,7 +1,9 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Seeder.Recipes;
+using Microsoft.AspNetCore.Identity;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +20,8 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var seeder = new OrganizationWithUsersRecipe(db);
+        var passwordHasher = factory.Services.CreateScope().ServiceProvider.GetService<IPasswordHasher<User>>();
+        var seeder = new OrganizationWithUsersRecipe(db, passwordHasher);
 
         var orgId = seeder.Seed("Org", seats, "large.test");
 
