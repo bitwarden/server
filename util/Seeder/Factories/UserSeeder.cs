@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Enums;
-using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.RustSDK;
 using Microsoft.AspNetCore.Identity;
@@ -9,7 +8,7 @@ namespace Bit.Seeder.Factories;
 public class UserSeeder
 {
 
-    public static (User user, string userKey) CreateUser(IPasswordHasher<User> passwordHasher, string email)
+    public static (User user, string userKey) CreateUser(IPasswordHasher<Bit.Core.Entities.User> passwordHasher, string email)
     {
         var nativeService = RustSdkServiceFactory.CreateSingleton();
         var keys = nativeService.GenerateUserKeys(email, "asdfasdfasdf");
@@ -26,7 +25,7 @@ public class UserSeeder
             ApiKey = "7gp59kKHt9kMlks0BuNC4IjNXYkljR",
 
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 600_000,
+            KdfIterations = 5_000,
         };
 
         user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);

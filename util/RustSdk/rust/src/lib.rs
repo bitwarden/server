@@ -12,18 +12,13 @@ use bitwarden_crypto::{
 };
 
 #[no_mangle]
-pub extern "C" fn my_add(x: i32, y: i32) -> i32 {
-    x + y
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn generate_user_keys(
     email: *const c_char,
     password: *const c_char,
 ) -> *const c_char {
     // TODO: We might want to make KDF configurable in the future.
     let kdf = Kdf::PBKDF2 {
-        iterations: NonZeroU32::new(600_000).unwrap(),
+        iterations: NonZeroU32::new(5_000).unwrap(),
     };
 
     let email = CStr::from_ptr(email).to_str().unwrap();

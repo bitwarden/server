@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
-using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Core.Entities;
 using Bit.Seeder.Recipes;
 using Microsoft.AspNetCore.Identity;
 using Xunit;
@@ -11,7 +11,7 @@ namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 
 public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOutputHelper)
 {
-    [Theory()]
+    [Theory(Skip = "Performance test")]
     [InlineData(100)]
     [InlineData(60000)]
     public async Task GetAsync(int seats)
@@ -25,7 +25,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
 
         var orgId = seeder.Seed("Org", seats, "large.test");
 
-        var tokens = await factory.LoginAsync("admin@large.test", "c55hlJ/cfdvTd4awTXUqow6X3cOQCfGwn11o3HblnPs=");
+        var tokens = await factory.LoginAsync("admin@large.test", "bSHqHVEoRiTtaKuHNQv7R3NR1RulppzZrwMO7E2YsEI=");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
