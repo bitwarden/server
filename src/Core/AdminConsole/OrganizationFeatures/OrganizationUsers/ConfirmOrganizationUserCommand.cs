@@ -144,7 +144,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
                 await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email, orgUser.AccessSecretsManager);
-                await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
                 succeededUsers.Add(orgUser);
                 result.Add(Tuple.Create(orgUser, ""));
             }
@@ -155,6 +154,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         }
 
         await _organizationUserRepository.ReplaceManyAsync(succeededUsers);
+        await DeleteAndPushUserRegistrationAsync(organizationId, succeededUsers.Select(u => u.UserId!.Value));
 
         return result;
     }
@@ -208,12 +208,15 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         }
     }
 
-    private async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId)
+    private async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, IEnumerable<Guid> userIds)
     {
-        var devices = await GetUserDeviceIdsAsync(userId);
-        await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(devices,
-            organizationId.ToString());
-        await _pushNotificationService.PushSyncOrgKeysAsync(userId);
+        foreach (var userId in userIds)
+        {
+            var devices = await GetUserDeviceIdsAsync(userId);
+            await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(devices,
+                organizationId.ToString());
+            await _pushNotificationService.PushSyncOrgKeysAsync(userId);
+        }
     }
 
     private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)

@@ -4,6 +4,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
+using LinqToDB.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -256,7 +257,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         c.Name,
                         c.CreationDate,
                         c.RevisionDate,
-                        c.ExternalId
+                        c.ExternalId,
+                        c.Type
                     })
                     .Select(collectionGroup => new CollectionDetails
                     {
@@ -269,6 +271,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
                         HidePasswords = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
+                        Type = collectionGroup.Key.Type,
                     })
                     .ToList();
             }
@@ -281,7 +284,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                               c.Name,
                               c.CreationDate,
                               c.RevisionDate,
-                              c.ExternalId
+                              c.ExternalId,
+                              c.Type
                           } into collectionGroup
                           select new CollectionDetails
                           {
@@ -294,6 +298,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                               ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
                               HidePasswords = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                               Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
+                              Type = collectionGroup.Key.Type,
                           }).ToListAsync();
         }
     }
@@ -711,7 +716,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName) => throw new NotImplementedException();
 
     private static async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups)
     {
@@ -783,5 +787,89 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         var toDelete = existingCollectionUsers.Values.Where(cu => !requestedUserIds.Contains(cu.OrganizationUserId));
         dbContext.CollectionUsers.RemoveRange(toDelete);
         // SaveChangesAsync is expected to be called outside this method
+    }
+
+    public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName)
+    {
+        if (!affectedOrgUserIds.Any())
+        {
+            return;
+        }
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(dbContext, organizationId);
+
+        var missingDefaultCollectionUserIds = affectedOrgUserIds.Except(orgUserIdWithDefaultCollection);
+
+        var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
+
+        if (!collectionUsers.Any() || !collections.Any())
+        {
+            return;
+        }
+
+        await dbContext.BulkCopyAsync(collections);
+        await dbContext.BulkCopyAsync(collectionUsers);
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(DatabaseContext dbContext, Guid organizationId)
+    {
+        var results = await dbContext.OrganizationUsers
+                 .Where(ou => ou.OrganizationId == organizationId)
+                 .Join(
+                     dbContext.CollectionUsers,
+                     ou => ou.Id,
+                     cu => cu.OrganizationUserId,
+                     (ou, cu) => new { ou, cu }
+                 )
+                 .Join(
+                     dbContext.Collections,
+                     temp => temp.cu.CollectionId,
+                     c => c.Id,
+                     (temp, c) => new { temp.ou, Collection = c }
+                 )
+                 .Where(x => x.Collection.Type == CollectionType.DefaultUserCollection)
+                 .Select(x => x.ou.Id)
+                 .ToListAsync();
+
+        return results.ToHashSet();
+    }
+
+    private (List<CollectionUser> collectionUser, List<Collection> collection) BuildDefaultCollectionForUsers(Guid organizationId, IEnumerable<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
+    {
+        var collectionUsers = new List<CollectionUser>();
+        var collections = new List<Collection>();
+
+        foreach (var orgUserId in missingDefaultCollectionUserIds)
+        {
+            var collectionId = Guid.NewGuid();
+
+            collections.Add(new Collection
+            {
+                Id = collectionId,
+                OrganizationId = organizationId,
+                Name = defaultCollectionName,
+                CreationDate = DateTime.UtcNow,
+                RevisionDate = DateTime.UtcNow,
+                Type = CollectionType.DefaultUserCollection,
+                DefaultUserCollectionEmail = null
+
+            });
+
+            collectionUsers.Add(new CollectionUser
+            {
+                CollectionId = collectionId,
+                OrganizationUserId = orgUserId,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true,
+            });
+        }
+
+        return (collectionUsers, collections);
     }
 }

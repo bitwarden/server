@@ -12,6 +12,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
@@ -118,6 +119,11 @@ public class ConfirmOrganizationUserCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var userRepository = sutProvider.GetDependency<IUserRepository>();
 
+        var device = new Device() { Id = Guid.NewGuid(), UserId = user.Id, PushToken = "pushToken", Identifier = "identifier" };
+        sutProvider.GetDependency<IDeviceRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns([device]);
+
         org.PlanType = planType;
         orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
         orgUser.UserId = user.Id;
@@ -133,6 +139,12 @@ public class ConfirmOrganizationUserCommandTests
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
         await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email);
         await organizationUserRepository.Received(1).ReplaceManyAsync(Arg.Is<List<OrganizationUser>>(users => users.Contains(orgUser) && users.Count == 1));
+        await sutProvider.GetDependency<IPushRegistrationService>()
+            .Received(1)
+            .DeleteUserRegistrationOrganizationAsync(
+                Arg.Is<IEnumerable<string>>(ids => ids.Contains(device.Id.ToString()) && ids.Count() == 1),
+                org.Id.ToString());
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncOrgKeysAsync(user.Id);
     }
 
 
