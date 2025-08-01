@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.KeyManagement.SendPasswordHasherTests;
+namespace Bit.Core.Test.KeyManagement.Sends;
 
 [SutProviderCustomize]
 public class SendPasswordHasherTests
