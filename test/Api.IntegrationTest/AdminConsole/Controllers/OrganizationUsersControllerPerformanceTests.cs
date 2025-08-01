@@ -11,7 +11,7 @@ namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 
 public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOutputHelper)
 {
-    [Theory(Skip = "Performance test")]
+    [Theory()]
     [InlineData(100)]
     [InlineData(60000)]
     public async Task GetAsync(int seats)
@@ -25,7 +25,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
 
         var orgId = seeder.Seed("Org", seats, "large.test");
 
-        var tokens = await factory.LoginAsync("admin@large.test", "bSHqHVEoRiTtaKuHNQv7R3NR1RulppzZrwMO7E2YsEI=");
+        var tokens = await factory.LoginAsync("admin@large.test", "z0Cvc58Q/lLhEDgtGnuPIFS/INOZP2qFlzaqzvTNEJI=");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
