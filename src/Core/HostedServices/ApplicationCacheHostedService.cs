@@ -67,19 +67,25 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
 
     public virtual async Task StopAsync(CancellationToken cancellationToken)
     {
+        // Step 1: Signal ExecuteAsync to stop gracefully
+        _cts?.Cancel();
+
+        // Step 2: Wait for ExecuteAsync to finish cleanly
+        if (_executingTask != null)
+        {
+            await _executingTask;
+        }
+
+        // Step 3: Now safely dispose resources (ExecuteAsync is done)
         await _subscriptionReceiver.CloseAsync(cancellationToken);
         await _serviceBusClient.DisposeAsync();
-        _cts?.Cancel();
+        
+        // Step 4: Clean up subscription
         try
         {
             await _serviceBusAdministrationClient.DeleteSubscriptionAsync(_topicName, _subName, cancellationToken);
         }
         catch { }
-
-        if (_executingTask != null)
-        {
-            await _executingTask;
-        }
     }
 
     public virtual void Dispose()
@@ -87,29 +93,16 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
 
     private async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        try
+        await foreach (var message in _subscriptionReceiver.ReceiveMessagesAsync(cancellationToken))
         {
-            await foreach (var message in _subscriptionReceiver.ReceiveMessagesAsync(cancellationToken))
+            try
             {
-                try
-                {
-                    await ProcessMessageAsync(message, cancellationToken);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "Error processing messages in ApplicationCacheHostedService");
-                }
+                await ProcessMessageAsync(message, cancellationToken);
             }
-        }
-        catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested)
-        {
-            // Workaround: Alpine's faster shutdown timing can dispose receiver before loop exits.
-            _logger.LogInformation("ApplicationCache ServiceBus receiver disposed during graceful shutdown");
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            // Normal cancellation during shutdown.
-            _logger.LogInformation("ApplicationCache ServiceBus operation cancelled during graceful shutdown");
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error processing messages in ApplicationCacheHostedService");
+            }
         }
     }
 
