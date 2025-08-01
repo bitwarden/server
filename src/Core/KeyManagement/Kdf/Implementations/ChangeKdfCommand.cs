@@ -5,6 +5,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.KeyManagement.Kdf.Implementations;
 
@@ -15,13 +16,15 @@ public class ChangeKdfCommand : IChangeKdfCommand
     private readonly IPushNotificationService _pushService;
     private readonly IUserRepository _userRepository;
     private readonly IdentityErrorDescriber _identityErrorDescriber;
+    private readonly ILogger<ChangeKdfCommand> _logger;
 
-    public ChangeKdfCommand(IUserService userService, IPushNotificationService pushService, IUserRepository userRepository, IdentityErrorDescriber describer)
+    public ChangeKdfCommand(IUserService userService, IPushNotificationService pushService, IUserRepository userRepository, IdentityErrorDescriber describer, Logger<ChangeKdfCommand> logger)
     {
         _userService = userService;
         _pushService = pushService;
         _userRepository = userRepository;
         _identityErrorDescriber = describer;
+        _logger = logger;
     }
 
     public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPasswordAuthenticationHash, MasterPasswordAuthenticationData authenticationData, MasterPasswordUnlockData unlockData)
@@ -60,6 +63,7 @@ public class ChangeKdfCommand : IChangeKdfCommand
         var result = await _userService.UpdatePasswordHash(user, authenticationData.MasterPasswordAuthenticationHash);
         if (!result.Succeeded)
         {
+            _logger.LogWarning("Change KDF failed for user {userId}.", user.Id);
             return result;
         }
         // Salt is ensured to be the same as unlock data, and the value stored in the account and not updated.
