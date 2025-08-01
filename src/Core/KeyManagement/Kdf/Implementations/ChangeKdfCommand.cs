@@ -26,10 +26,7 @@ public class ChangeKdfCommand : IChangeKdfCommand
 
     public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPasswordAuthenticationHash, MasterPasswordAuthenticationData authenticationData, MasterPasswordUnlockData unlockData)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
         if (!await _userService.CheckPasswordAsync(user, masterPasswordAuthenticationHash))
         {
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());

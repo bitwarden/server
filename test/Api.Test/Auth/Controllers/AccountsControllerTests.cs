@@ -614,6 +614,30 @@ public class AccountsControllerTests : IDisposable
         await _twoFactorEmailService.Received(1).SendNewDeviceVerificationEmailAsync(user);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task PostKdf_WithNullAuthenticationData_ShouldFail(
+        User user, KdfRequestModel model)
+    {
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        model.AuthenticationData = null;
+
+        // Act
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostKdf_WithNullUnlockData_ShouldFail(
+        User user, KdfRequestModel model)
+    {
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        model.UnlockData = null;
+
+        // Act
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKdf(model));
+    }
+
     // Below are helper functions that currently belong to this
     // test class, but ultimately may need to be split out into
     // something greater in order to share common test steps with
