@@ -24,13 +24,27 @@ public class ChangeKdfCommandTests
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>()).Returns(Task.FromResult(true));
         sutProvider.GetDependency<IUserService>().UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>()).Returns(Task.FromResult(IdentityResult.Success));
 
-        await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", "newMasterPassword", "masterKeyWrappedUserKey", new KdfSettings
+        var kdf = new KdfSettings
         {
             KdfType = Enums.KdfType.Argon2id,
             Iterations = 4,
             Memory = 512,
             Parallelism = 4
-        }, null, null);
+        };
+        var authenticationData = new MasterPasswordAuthenticationData
+        {
+            Kdf = kdf,
+            MasterPasswordAuthenticationHash = "newMasterPassword",
+            Salt = user.GetMasterPasswordSalt()
+        };
+        var unlockData = new MasterPasswordUnlockData
+        {
+            Kdf = kdf,
+            MasterKeyWrappedUserKey = "masterKeyWrappedUserKey",
+            Salt = user.GetMasterPasswordSalt()
+        };
+
+        await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData);
 
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(Arg.Is<User>(u =>
             u.Id == user.Id
@@ -45,14 +59,28 @@ public class ChangeKdfCommandTests
     [BitAutoData]
     public async Task ChangeKdfAsync_UserIsNull_ThrowsArgumentNullException(SutProvider<ChangeKdfCommand> sutProvider)
     {
+        var kdf = new KdfSettings
+        {
+            KdfType = Enums.KdfType.Argon2id,
+            Iterations = 4,
+            Memory = 512,
+            Parallelism = 4
+        };
+        var authenticationData = new MasterPasswordAuthenticationData
+        {
+            Kdf = kdf,
+            MasterPasswordAuthenticationHash = "newMasterPassword",
+            Salt = "salt"
+        };
+        var unlockData = new MasterPasswordUnlockData
+        {
+            Kdf = kdf,
+            MasterKeyWrappedUserKey = "masterKeyWrappedUserKey",
+            Salt = "salt"
+        };
+
         await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-            await sutProvider.Sut.ChangeKdfAsync(null!, "masterPassword", "newMasterPassword", "masterKeyWrappedUserKey", new KdfSettings
-            {
-                KdfType = Enums.KdfType.Argon2id,
-                Iterations = 4,
-                Memory = 512,
-                Parallelism = 4
-            }, null, null));
+            await sutProvider.Sut.ChangeKdfAsync(null!, "masterPassword", authenticationData, unlockData));
     }
 
     [Theory]
@@ -60,13 +88,28 @@ public class ChangeKdfCommandTests
     public async Task ChangeKdfAsync_WrongPassword_ReturnsPasswordMismatch(SutProvider<ChangeKdfCommand> sutProvider, User user)
     {
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>()).Returns(Task.FromResult(false));
-        var result = await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", "newMasterPassword", "masterKeyWrappedUserKey", new KdfSettings
+
+        var kdf = new KdfSettings
         {
             KdfType = Enums.KdfType.Argon2id,
             Iterations = 4,
             Memory = 512,
             Parallelism = 4
-        }, null, null);
+        };
+        var authenticationData = new MasterPasswordAuthenticationData
+        {
+            Kdf = kdf,
+            MasterPasswordAuthenticationHash = "newMasterPassword",
+            Salt = user.GetMasterPasswordSalt()
+        };
+        var unlockData = new MasterPasswordUnlockData
+        {
+            Kdf = kdf,
+            MasterKeyWrappedUserKey = "masterKeyWrappedUserKey",
+            Salt = user.GetMasterPasswordSalt()
+        };
+
+        var result = await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData);
         Assert.False(result.Succeeded);
         Assert.Contains(result.Errors, e => e.Code == "PasswordMismatch");
     }
@@ -97,7 +140,7 @@ public class ChangeKdfCommandTests
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>()).Returns(Task.FromResult(true));
         sutProvider.GetDependency<IUserService>().UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>()).Returns(Task.FromResult(IdentityResult.Success));
 
-        await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", "should-be-overwritten", "should-be-overwritten", constantKdf, authenticationData, unlockData);
+        await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData);
 
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(Arg.Is<User>(u =>
             u.Id == user.Id
@@ -113,6 +156,8 @@ public class ChangeKdfCommandTests
     [BitAutoData]
     public async Task ChangeKdfAsync_KdfNotEqualBetweenAuthAndUnlock_ThrowsBadRequestException(SutProvider<ChangeKdfCommand> sutProvider, User user)
     {
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>()).Returns(Task.FromResult(true));
+
         var authenticationData = new MasterPasswordAuthenticationData
         {
             Kdf = new KdfSettings { KdfType = Enums.KdfType.Argon2id, Iterations = 4, Memory = 512, Parallelism = 4 },
@@ -126,14 +171,15 @@ public class ChangeKdfCommandTests
             Salt = user.GetMasterPasswordSalt()
         };
         await Assert.ThrowsAsync<BadRequestException>(async () =>
-            await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", "should-be-overwritten", "should-be-overwritten",
-                authenticationData.Kdf, authenticationData, unlockData));
+            await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData));
     }
 
     [Theory]
     [BitAutoData]
     public async Task ChangeKdfAsync_AuthDataSaltMismatch_Throws(SutProvider<ChangeKdfCommand> sutProvider, User user, KdfSettings kdf)
     {
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>()).Returns(Task.FromResult(true));
+
         var authenticationData = new MasterPasswordAuthenticationData
         {
             Kdf = kdf,
@@ -147,13 +193,15 @@ public class ChangeKdfCommandTests
             Salt = user.GetMasterPasswordSalt()
         };
         await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", "should-be-overwritten", "should-be-overwritten", kdf, authenticationData, unlockData));
+            await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData));
     }
 
     [Theory]
     [BitAutoData]
     public async Task ChangeKdfAsync_UnlockDataSaltMismatch_Throws(SutProvider<ChangeKdfCommand> sutProvider, User user, KdfSettings kdf)
     {
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>()).Returns(Task.FromResult(true));
+
         var authenticationData = new MasterPasswordAuthenticationData
         {
             Kdf = kdf,
@@ -167,7 +215,7 @@ public class ChangeKdfCommandTests
             Salt = "different-salt"
         };
         await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", "should-be-overwritten", "should-be-overwritten", kdf, authenticationData, unlockData));
+            await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData));
     }
 
     [Theory]
@@ -178,13 +226,27 @@ public class ChangeKdfCommandTests
         var failedResult = IdentityResult.Failed(new IdentityError { Code = "TestFail", Description = "Test fail" });
         sutProvider.GetDependency<IUserService>().UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>()).Returns(Task.FromResult(failedResult));
 
-        var result = await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", "newMasterPassword", "masterKeyWrappedUserKey", new KdfSettings
+        var kdf = new KdfSettings
         {
             KdfType = Enums.KdfType.Argon2id,
             Iterations = 4,
             Memory = 512,
             Parallelism = 4
-        }, null, null);
+        };
+        var authenticationData = new MasterPasswordAuthenticationData
+        {
+            Kdf = kdf,
+            MasterPasswordAuthenticationHash = "newMasterPassword",
+            Salt = user.GetMasterPasswordSalt()
+        };
+        var unlockData = new MasterPasswordUnlockData
+        {
+            Kdf = kdf,
+            MasterKeyWrappedUserKey = "masterKeyWrappedUserKey",
+            Salt = user.GetMasterPasswordSalt()
+        };
+
+        var result = await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData);
 
         Assert.False(result.Succeeded);
     }

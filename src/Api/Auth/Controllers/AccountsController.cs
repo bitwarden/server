@@ -266,8 +266,12 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _changeKdfCommand.ChangeKdfAsync(user, model.MasterPasswordHash,
-            model.NewMasterPasswordHash, model.Key, model.ToKdfSettings(), model.AuthenticationData.ToData(), model.UnlockData?.ToData());
+        if (model.AuthenticationData == null || model.UnlockData == null)
+        {
+            throw new BadRequestException("AuthenticationData and UnlockData must be provided.");
+        }
+
+        var result = await _changeKdfCommand.ChangeKdfAsync(user, model.MasterPasswordHash, model.AuthenticationData.ToData(), model.UnlockData.ToData());
         if (result.Succeeded)
         {
             return;

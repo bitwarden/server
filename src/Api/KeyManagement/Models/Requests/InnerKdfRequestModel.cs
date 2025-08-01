@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Api.KeyManagement.Models.Requests;
@@ -9,7 +10,9 @@ namespace Bit.Api.KeyManagement.Models.Requests;
 /// </summary>
 public class InnerKdfRequestModel
 {
+    [Required]
     public required KdfType KdfType { get; init; }
+    [Required]
     public required int Iterations { get; init; }
     public int? Memory { get; init; }
     public int? Parallelism { get; init; }

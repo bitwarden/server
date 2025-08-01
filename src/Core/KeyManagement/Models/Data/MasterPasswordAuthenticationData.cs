@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 
 namespace Bit.Core.KeyManagement.Models.Data;
 
