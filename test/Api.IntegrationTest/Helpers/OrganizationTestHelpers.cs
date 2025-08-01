@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
@@ -147,5 +148,24 @@ public static class OrganizationTestHelpers
 
         await groupRepository.CreateAsync(group, new List<CollectionAccessSelection>());
         return group;
+    }
+
+    /// <summary>
+    /// Enables the Organization Data Ownership policy for the specified organization.
+    /// </summary>
+    public static async Task EnableOrganizationDataOwnershipPolicyAsync<T>(
+        WebApplicationFactoryBase<T> factory,
+        Guid organizationId) where T : class
+    {
+        var policyRepository = factory.GetService<IPolicyRepository>();
+
+        var policy = new Policy
+        {
+            OrganizationId = organizationId,
+            Type = PolicyType.OrganizationDataOwnership,
+            Enabled = true
+        };
+
+        await policyRepository.CreateAsync(policy);
     }
 }

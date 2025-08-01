@@ -340,7 +340,7 @@ public class OrganizationUsersController : Controller
         [FromBody] OrganizationUserBulkConfirmRequestModel model)
     {
         var userId = _userService.GetProperUserId(User);
-        var results = await _confirmOrganizationUserCommand.ConfirmUsersAsync(orgId, model.ToDictionary(), userId.Value);
+        var results = await _confirmOrganizationUserCommand.ConfirmUsersAsync(orgId, model.ToDictionary(), userId.Value, model.DefaultUserCollectionName);
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));

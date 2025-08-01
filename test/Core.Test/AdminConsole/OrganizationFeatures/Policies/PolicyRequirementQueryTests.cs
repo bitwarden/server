@@ -79,4 +79,73 @@ public class PolicyRequirementQueryTests
 
         Assert.Empty(requirement.Policies);
     }
+
+    [Theory, BitAutoData]
+    public async Task GetByOrganizationAsync_IgnoresOtherPolicyTypes(Guid organizationId)
+    {
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var thisPolicy = new OrganizationPolicyDetails { PolicyType = PolicyType.SingleOrg, UserId = Guid.NewGuid() };
+        var otherPolicy = new OrganizationPolicyDetails { PolicyType = PolicyType.RequireSso, UserId = Guid.NewGuid() };
+        // Force the repository to return both policies even though that is not the expected result
+        policyRepository.GetPolicyDetailsByOrganizationIdAsync(organizationId, PolicyType.SingleOrg)
+            .Returns([thisPolicy, otherPolicy]);
+
+        var factory = new TestPolicyRequirementFactory(_ => true);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
+        var requirement = await sut.GetByOrganizationAsync<TestPolicyRequirement>(organizationId);
+
+        await policyRepository.Received(1).GetPolicyDetailsByOrganizationIdAsync(organizationId, PolicyType.SingleOrg);
+
+        Assert.Contains(thisPolicy, requirement.Policies.Cast<OrganizationPolicyDetails>());
+        Assert.DoesNotContain(otherPolicy, requirement.Policies.Cast<OrganizationPolicyDetails>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetByOrganizationAsync_CallsEnforceCallback(Guid organizationId)
+    {
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var thisPolicy = new OrganizationPolicyDetails { PolicyType = PolicyType.SingleOrg, UserId = Guid.NewGuid() };
+        var otherPolicy = new OrganizationPolicyDetails { PolicyType = PolicyType.SingleOrg, UserId = Guid.NewGuid() };
+        policyRepository.GetPolicyDetailsByOrganizationIdAsync(organizationId, PolicyType.SingleOrg).Returns([thisPolicy, otherPolicy]);
+
+        var callback = Substitute.For<Func<PolicyDetails, bool>>();
+        callback(Arg.Any<PolicyDetails>()).Returns(x => x.Arg<PolicyDetails>() == thisPolicy);
+
+        var factory = new TestPolicyRequirementFactory(callback);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
+        var requirement = await sut.GetByOrganizationAsync<TestPolicyRequirement>(organizationId);
+
+        Assert.Contains(thisPolicy, requirement.Policies.Cast<OrganizationPolicyDetails>());
+        Assert.DoesNotContain(otherPolicy, requirement.Policies.Cast<OrganizationPolicyDetails>());
+        callback.Received()(Arg.Is<PolicyDetails>(p => p == thisPolicy));
+        callback.Received()(Arg.Is<PolicyDetails>(p => p == otherPolicy));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetByOrganizationAsync_ThrowsIfNoFactoryRegistered(Guid organizationId)
+    {
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var sut = new PolicyRequirementQuery(policyRepository, []);
+
+        var exception = await Assert.ThrowsAsync<NotImplementedException>(()
+            => sut.GetByOrganizationAsync<TestPolicyRequirement>(organizationId));
+
+        Assert.Contains("No Requirement Factory found", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetByOrganizationAsync_HandlesNoPolicies(Guid organizationId)
+    {
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        policyRepository.GetPolicyDetailsByOrganizationIdAsync(organizationId, PolicyType.SingleOrg).Returns([]);
+
+        var factory = new TestPolicyRequirementFactory(x => x.IsProvider);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
+        var requirement = await sut.GetByOrganizationAsync<TestPolicyRequirement>(organizationId);
+
+        Assert.Empty(requirement.Policies);
+    }
 }
