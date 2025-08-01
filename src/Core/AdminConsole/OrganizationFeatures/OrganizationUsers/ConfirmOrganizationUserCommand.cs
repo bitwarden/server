@@ -11,7 +11,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -83,7 +82,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             throw new BadRequestException(error);
         }
 
-        await HandleSingleConfirmationSideEffectsAsync(organizationId, orgUser, defaultUserCollectionName);
+        await HandleConfirmationSideEffectsAsync(organizationId, confirmedOrganizationUsers: [orgUser], defaultUserCollectionName);
 
         return orgUser;
     }
@@ -93,14 +92,14 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     {
         var result = await SaveChangesToDatabaseAsync(organizationId, keys, confirmingUserId);
 
-        var succeededUsers = result
+        var confirmedOrganizationUsers = result
             .Where(r => string.IsNullOrEmpty(r.Item2))
             .Select(r => r.Item1)
             .ToList();
 
-        if (succeededUsers.Any())
+        if (confirmedOrganizationUsers.Count > 0)
         {
-            await HandleBulkConfirmationSideEffectsAsync(organizationId, succeededUsers, defaultUserCollectionName);
+            await HandleConfirmationSideEffectsAsync(organizationId, confirmedOrganizationUsers, defaultUserCollectionName);
         }
 
         return result;
@@ -245,16 +244,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             .Select(d => d.Id.ToString());
     }
 
-    private async Task HandleSingleConfirmationSideEffectsAsync(Guid organizationId, OrganizationUser organizationUser, string defaultUserCollectionName)
-    {
-        // Create DefaultUserCollection type collection for the user if the OrganizationDataOwnership policy is enabled for the organization
-        var requiresDefaultCollection = await OrganizationRequiresDefaultCollectionAsync(organizationId, defaultUserCollectionName);
-        if (requiresDefaultCollection)
-        {
-            await CreateSingleDefaultCollectionAsync(organizationId, organizationUser.Id, defaultUserCollectionName);
-        }
-    }
-
     private async Task<bool> OrganizationRequiresDefaultCollectionAsync(Guid organizationId, string defaultUserCollectionName)
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
@@ -274,30 +263,15 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         return organizationPolicyRequirement.RequiresDefaultCollection(organizationId);
     }
 
-    private async Task CreateSingleDefaultCollectionAsync(Guid organizationId, Guid organizationUserId, string defaultCollectionName)
-    {
-        var collection = new Collection
-        {
-            OrganizationId = organizationId,
-            Name = defaultCollectionName,
-            Type = CollectionType.DefaultUserCollection
-        };
-
-        var userAccess = new List<CollectionAccessSelection>
-        {
-            new CollectionAccessSelection
-            {
-                Id = organizationUserId,
-                ReadOnly = false,
-                HidePasswords = false,
-                Manage = true
-            }
-        };
-
-        await _collectionRepository.CreateAsync(collection, groups: null, users: userAccess);
-    }
-
-    private async Task HandleBulkConfirmationSideEffectsAsync(Guid organizationId, List<OrganizationUser> organizationUsers, string defaultUserCollectionName)
+    /// <summary>
+    /// Handles the side effects of confirming an organization user.
+    /// Creates a default collection for the user if the organization
+    /// has the OrganizationDataOwnership policy enabled.
+    /// </summary>
+    /// <param name="organizationId">The organization ID.</param>
+    /// <param name="confirmedOrganizationUsers">The confirmed organization users.</param>
+    /// <param name="defaultUserCollectionName">The encrypted default user collection name.</param>
+    private async Task HandleConfirmationSideEffectsAsync(Guid organizationId, IEnumerable<OrganizationUser> confirmedOrganizationUsers, string defaultUserCollectionName)
     {
         var requiresDefaultCollections = await OrganizationRequiresDefaultCollectionAsync(organizationId, defaultUserCollectionName);
         if (!requiresDefaultCollections)
@@ -305,7 +279,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        var organizationUserIds = organizationUsers.Select(u => u.Id).ToList();
+        var organizationUserIds = confirmedOrganizationUsers.Select(u => u.Id).ToList();
         await _collectionRepository.CreateDefaultCollectionsAsync(organizationId, organizationUserIds, defaultUserCollectionName);
     }
 }
