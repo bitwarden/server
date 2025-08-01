@@ -1,0 +1,19 @@
+[package]
+name = "sdk"
+publish = false
+
+version = "0.1.0"
+authors = ["Bitwarden Inc"]
+edition = "2021"
+homepage = "https://bitwarden.com"
+repository = "https://github.com/bitwarden/server"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+bitwarden-core = { git = "https://github.com/bitwarden/sdk-internal.git", rev = "b0c950dad701bc419c76e8a7d37bf5c17a6909d6" }
+bitwarden-crypto = { git = "https://github.com/bitwarden/sdk-internal.git", rev = "b0c950dad701bc419c76e8a7d37bf5c17a6909d6" }
+
+[build-dependencies]
+csbindgen = "=1.9.3"

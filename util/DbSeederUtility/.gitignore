@@ -1,0 +1,27 @@
+# Debug files
+seeder-debug-*.json
+
+# Test data
+*.csv
+
+# Backup files
+*.backup.*
+
+# Local configuration
+appsettings.local.json
+
+# Build artifacts
+bin/
+obj/
+
+# User-specific files
+*.user
+
+# VS Code
+.vscode/
+
+# JetBrains Rider
+.idea/
+
+# macOS
+.DS_Store
