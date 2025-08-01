@@ -12,3 +12,5 @@ provider = person "MSP" "And employee of a managed service provider" {
 }
 
 directory_connector -> server.api "Syncs users and groups to Bitwarden"
+
+!include "event_integrations/models.dsl"

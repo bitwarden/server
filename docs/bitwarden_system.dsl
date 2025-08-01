@@ -23,7 +23,6 @@ workspace "Bitwarden Server System" {
     # Include shared level relationships
     !include "shared.relationships.dsl"
 
-
     !include "admin_console/relationships.dsl"
     !include "auth/relationships.dsl"
     !include "billing/relationships.dsl"
@@ -49,6 +48,9 @@ workspace "Bitwarden Server System" {
     container server "Bitwarden_Server" {
       include *
     }
+
+    filtered Bitwarden_Server exclude "Self-Hosted-Only" "Cloud"
+    filtered Bitwarden_Server exclude "Cloud-Only" "Self-Hosted"
 
     // This is last to override team styles with common styles
     !include "shared.views.dsl"
