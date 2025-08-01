@@ -18,6 +18,27 @@ public class OrganizationIntegrationConfigurationController(
     IOrganizationIntegrationRepository integrationRepository,
     IOrganizationIntegrationConfigurationRepository integrationConfigurationRepository) : Controller
 {
+    [HttpGet("")]
+    public async Task<List<OrganizationIntegrationConfigurationResponseModel>> GetAsync(
+        Guid organizationId,
+        Guid integrationId)
+    {
+        if (!await HasPermission(organizationId))
+        {
+            throw new NotFoundException();
+        }
+        var integration = await integrationRepository.GetByIdAsync(integrationId);
+        if (integration == null || integration.OrganizationId != organizationId)
+        {
+            throw new NotFoundException();
+        }
+
+        var configurations = await integrationConfigurationRepository.GetManyByIntegrationAsync(integrationId);
+        return configurations
+            .Select(configuration => new OrganizationIntegrationConfigurationResponseModel(configuration))
+            .ToList();
+    }
+
     [HttpPost("")]
     public async Task<OrganizationIntegrationConfigurationResponseModel> CreateAsync(
         Guid organizationId,

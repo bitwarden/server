@@ -3,7 +3,8 @@
 
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Billing.Models.Business;
-using Bit.Core.Billing.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.OrganizationLicenses;
@@ -23,7 +24,7 @@ public class LicensesController : Controller
     private readonly IUserRepository _userRepository;
     private readonly IUserService _userService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
+    private readonly IGetCloudOrganizationLicenseQuery _getCloudOrganizationLicenseQuery;
     private readonly IValidateBillingSyncKeyCommand _validateBillingSyncKeyCommand;
     private readonly ICurrentContext _currentContext;
 
@@ -31,14 +32,14 @@ public class LicensesController : Controller
         IUserRepository userRepository,
         IUserService userService,
         IOrganizationRepository organizationRepository,
-        ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
+        IGetCloudOrganizationLicenseQuery getCloudOrganizationLicenseQuery,
         IValidateBillingSyncKeyCommand validateBillingSyncKeyCommand,
         ICurrentContext currentContext)
     {
         _userRepository = userRepository;
         _userService = userService;
         _organizationRepository = organizationRepository;
-        _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
+        _getCloudOrganizationLicenseQuery = getCloudOrganizationLicenseQuery;
         _validateBillingSyncKeyCommand = validateBillingSyncKeyCommand;
         _currentContext = currentContext;
     }
@@ -84,7 +85,7 @@ public class LicensesController : Controller
             throw new BadRequestException("Invalid Billing Sync Key");
         }
 
-        var license = await _cloudGetOrganizationLicenseQuery.GetLicenseAsync(organization, _currentContext.InstallationId.Value);
+        var license = await _getCloudOrganizationLicenseQuery.GetLicenseAsync(organization, _currentContext.InstallationId.Value);
         return license;
     }
 }
