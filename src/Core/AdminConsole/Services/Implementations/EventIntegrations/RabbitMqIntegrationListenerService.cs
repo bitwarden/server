@@ -20,14 +20,14 @@ public class RabbitMqIntegrationListenerService<TConfiguration> : BackgroundServ
     private readonly IIntegrationHandler _handler;
     private readonly Lazy<Task<IChannel>> _lazyChannel;
     private readonly IRabbitMqService _rabbitMqService;
-    private readonly ILogger<RabbitMqIntegrationListenerService<TConfiguration>> _logger;
+    private readonly ILogger _logger;
     private readonly TimeProvider _timeProvider;
 
     public RabbitMqIntegrationListenerService(
         IIntegrationHandler handler,
         TConfiguration configuration,
         IRabbitMqService rabbitMqService,
-        ILogger<RabbitMqIntegrationListenerService<TConfiguration>> logger,
+        ILoggerFactory loggerFactory,
         TimeProvider timeProvider)
     {
         _handler = handler;
@@ -36,9 +36,10 @@ public class RabbitMqIntegrationListenerService<TConfiguration> : BackgroundServ
         _retryQueueName = configuration.IntegrationRetryQueueName;
         _queueName = configuration.IntegrationQueueName;
         _rabbitMqService = rabbitMqService;
-        _logger = logger;
         _timeProvider = timeProvider;
         _lazyChannel = new Lazy<Task<IChannel>>(() => _rabbitMqService.CreateChannelAsync());
+        _logger = loggerFactory.CreateLogger(
+            categoryName: $"Bit.Core.Services.RabbitMqIntegrationListenerService.{configuration.IntegrationQueueName}"); ;
     }
 
     public override async Task StartAsync(CancellationToken cancellationToken)
