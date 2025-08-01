@@ -160,6 +160,7 @@ public static class FeatureFlagKeys
     public const string PM21383_GetProviderPriceFromStripe = "pm-21383-get-provider-price-from-stripe";
     public const string PM21881_ManagePaymentDetailsOutsideCheckout = "pm-21881-manage-payment-details-outside-checkout";
     public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
+    public const string PM21821_ShowProviderSuspendedModal = "show-provider-suspended-modal";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
