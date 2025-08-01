@@ -1,7 +1,7 @@
 !element server {
     azure_service_bus = container "Azure Service Bus" {
         description "AMQP service used for pub/sub architecture for Events and Integrations"
-        tags "Events", "Azure", "ASB"
+        tags "Events", "Azure", "ASB", "Cloud-Only"
 
         event_topic = component "Event Topic" {
             description "The main entry point for all events in the system. When an event occurs, it is published to this topic."
@@ -52,6 +52,7 @@
     rabbit_mq = container "RabbitMQ" {
         tags "Events"
         tags "RabbitMQ"
+        tags "Self-Hosted-Only"
 
         event_exchange = component "Event Exchange" {
             tags "Events", "Event Tier"
@@ -114,10 +115,16 @@
 }
 
 !element server.events_processor {
-    !docs "architecture.md"
+    tags "Cloud-Only"
 
     event_repository_handler = component "EventRepositoryHandler" {
         description "Handles all events, passing them off to the IEventWriteService with the `persistent` key for long term storage."
+    }
+    event_listener = component "AzureServiceBusEventListenerService" {
+        description "Listens to a specific subscription and passes off to a handler to handle events"
+    }
+    integration_listener = component "AzureServiceBusIntegrationListenerService" {
+        description "Listens to a specific subscription and passes off to a handler to handle IntegrationMessages"
     }
     event_integration_handler = component "EventIntegrationHandler" {
         description "Fetches the relevent configurations when an event comes in and hands the event to its paired integration handler for processing."
@@ -143,28 +150,42 @@
 }
 
 !element server.events {
+    event_listener = component "RabbitMqEventListenerService" {
+        description "Listens to a specific queue and passes off to a handler to handle events"
+    }
+    integration_listener = component "RabbitMqIntegrationListenerService" {
+        description "Listens to a specific queue and passes off to a handler to handle IntegrationMessages"
+    }
     event_repository_handler = component "EventRepositoryHandler" {
+        tags "Self-Hosted-Only"
         description "Handles all events, passing them off to the IEventWriteService with the `persistent` key for long term storage."
     }
     event_integration_handler = component "EventIntegrationHandler" {
+        tags "Self-Hosted-Only"
         description "Fetches the relevent configurations when an event comes in and hands the event to its paired integration handler for processing."
     }
     slack_integration_handler = component "SlackIntegrationHandler" {
+        tags "Self-Hosted-Only"
         description "Processes Slack IntegrationMessages, posting them to the configured channels."
     }
     webhook_integration_handler = component "WebhookIntegrationHandler" {
+        tags "Self-Hosted-Only"
         description "Processes Webhook and HEC IntegrationMessages, posting them to the configured URI."
     }
     integration_configuration_details_cache_service = component "IntegrationConfigurationDetailsCacheService" {
+        tags "Self-Hosted-Only"
         description "Caches all configurations for integrations in memory so that events can be handled without adding database load."
     }
     slack_service = component "SlackService" {
+        tags "Self-Hosted-Only"
         description "Handles all API interaction with Slack."
     }
     http_client = component "HttpClient" {
+        tags "Self-Hosted-Only"
         description "Performs any Http functions for Webhooks / HEC."
     }
     integration_filter_service = component "IntegrationFilterService" {
+        tags "Self-Hosted-Only"
         description "Processes filters from configurations to determine if an event should be processed out to the integration."
     }
 }

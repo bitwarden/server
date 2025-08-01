@@ -47,8 +47,10 @@ workspace "Bitwarden Server System" {
 
     container server "Bitwarden_Server" {
       include *
-      exclude server.rabbit_mq
     }
+
+    filtered Bitwarden_Server exclude "Self-Hosted-Only" "Cloud"
+    filtered Bitwarden_Server exclude "Cloud-Only" "Self-Hosted"
 
     // This is last to override team styles with common styles
     !include "shared.views.dsl"
