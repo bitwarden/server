@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_DeleteById]
+CREATE PROCEDURE [dbo].[OrganizationUser_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -16,6 +16,18 @@ BEGIN
         [dbo].[OrganizationUser]
     WHERE
         [Id] = @Id
+
+    UPDATE c
+    SET 
+        [DefaultUserCollectionEmail] = u.[Email],
+        [Type] = 0
+    FROM 
+        [dbo].[Collection] c
+        INNER JOIN [dbo].[CollectionUser] cu ON c.[Id] = cu.[CollectionId]
+        INNER JOIN [dbo].[User] u ON @UserId = u.[Id]
+    WHERE 
+        cu.[OrganizationUserId] = @Id
+        AND c.[Type] = 1
 
     IF @OrganizationId IS NOT NULL AND @UserId IS NOT NULL
     BEGIN
