@@ -79,7 +79,7 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
         // Step 3: Now safely dispose resources (ExecuteAsync is done)
         await _subscriptionReceiver.CloseAsync(cancellationToken);
         await _serviceBusClient.DisposeAsync();
-        
+
         // Step 4: Clean up subscription
         try
         {
