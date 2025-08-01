@@ -4,6 +4,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 
@@ -45,6 +46,11 @@ public class ChangeKdfCommand : IChangeKdfCommand
         if (!authenticationData.Kdf.Equals(unlockData.Kdf))
         {
             throw new BadRequestException("KDF settings must be equal for authentication and unlock.");
+        }
+        var validationErrors = KdfSettingsValidator.Validate(unlockData.Kdf);
+        if (validationErrors.Any())
+        {
+            throw new BadRequestException("KDF settings are invalid.");
         }
 
         // Update the user with the new KDF settings

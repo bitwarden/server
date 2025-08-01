@@ -251,4 +251,72 @@ public class ChangeKdfCommandTests
         Assert.False(result.Succeeded);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task ChangeKdfAsync_InvalidKdfSettings_ThrowsBadRequestException(SutProvider<ChangeKdfCommand> sutProvider, User user)
+    {
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>()).Returns(Task.FromResult(true));
+
+        // Create invalid KDF settings (iterations too low for PBKDF2)
+        var invalidKdf = new KdfSettings
+        {
+            KdfType = Enums.KdfType.PBKDF2_SHA256,
+            Iterations = 1000, // This is below the minimum of 600,000
+            Memory = null,
+            Parallelism = null
+        };
+
+        var authenticationData = new MasterPasswordAuthenticationData
+        {
+            Kdf = invalidKdf,
+            MasterPasswordAuthenticationHash = "new-auth-hash",
+            Salt = user.GetMasterPasswordSalt()
+        };
+        var unlockData = new MasterPasswordUnlockData
+        {
+            Kdf = invalidKdf,
+            MasterKeyWrappedUserKey = "new-wrapped-key",
+            Salt = user.GetMasterPasswordSalt()
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData));
+
+        Assert.Equal("KDF settings are invalid.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ChangeKdfAsync_InvalidArgon2Settings_ThrowsBadRequestException(SutProvider<ChangeKdfCommand> sutProvider, User user)
+    {
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>()).Returns(Task.FromResult(true));
+
+        // Create invalid Argon2 KDF settings (memory too high)
+        var invalidKdf = new KdfSettings
+        {
+            KdfType = Enums.KdfType.Argon2id,
+            Iterations = 3, // Valid
+            Memory = 2048, // This is above the maximum of 1024
+            Parallelism = 4 // Valid
+        };
+
+        var authenticationData = new MasterPasswordAuthenticationData
+        {
+            Kdf = invalidKdf,
+            MasterPasswordAuthenticationHash = "new-auth-hash",
+            Salt = user.GetMasterPasswordSalt()
+        };
+        var unlockData = new MasterPasswordUnlockData
+        {
+            Kdf = invalidKdf,
+            MasterKeyWrappedUserKey = "new-wrapped-key",
+            Salt = user.GetMasterPasswordSalt()
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData));
+
+        Assert.Equal("KDF settings are invalid.", exception.Message);
+    }
+
 }
