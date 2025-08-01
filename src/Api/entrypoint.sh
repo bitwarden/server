@@ -51,7 +51,4 @@ if [ -f "/etc/bitwarden/kerberos/bitwarden.keytab" ] && [ -f "/etc/bitwarden/ker
     $gosu_cmd kinit $globalSettings__kerberosUser -k -t /etc/bitwarden/kerberos/bitwarden.keytab
 fi
 
-# Sleep to account for Alpine faster start times, allowing container to initialize before .NET runtime
-sleep 5
-
 exec $gosu_cmd /app/Api
