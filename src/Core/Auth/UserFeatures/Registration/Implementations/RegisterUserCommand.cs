@@ -173,12 +173,10 @@ public class RegisterUserCommand : IRegisterUserCommand
 
     private bool IsOrgInviteTokenValid(string orgInviteToken, Guid orgUserId, string userEmail)
     {
-        // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-        var newOrgInviteTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+        var orgInviteTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
             _orgUserInviteTokenDataFactory, orgInviteToken, orgUserId, userEmail);
 
-        return newOrgInviteTokenValid || CoreHelpers.UserInviteTokenIsValid(
-            _organizationServiceDataProtector, orgInviteToken, userEmail, orgUserId, _globalSettings);
+        return orgInviteTokenValid;
     }
 
 
