@@ -28,7 +28,10 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         }
     }
 
-    public async Task<IEnumerable<ProjectPermissionDetails>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType)
+    public async Task<IEnumerable<ProjectPermissionDetails>> GetManyByOrganizationIdAsync(
+        Guid organizationId,
+        Guid userId,
+        AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
