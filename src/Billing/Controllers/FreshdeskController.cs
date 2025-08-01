@@ -153,7 +153,7 @@ public class FreshdeskController : Controller
         }
 
         // create the onyx `answer-with-citation` request
-        var onyxRequestModel = new OnyxAnswerWithCitationRequestModel(model.TicketDescriptionText);
+        var onyxRequestModel = new OnyxAnswerWithCitationRequestModel(model.TicketDescriptionText, _billingSettings.Onyx.PersonaId);
         var onyxRequest = new HttpRequestMessage(HttpMethod.Post,
                             string.Format("{0}/query/answer-with-citation", _billingSettings.Onyx.BaseUrl))
         {
