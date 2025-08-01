@@ -617,7 +617,7 @@ public class AccountsControllerTests : IDisposable
     [Theory]
     [BitAutoData]
     public async Task PostKdf_WithNullAuthenticationData_ShouldFail(
-        User user, KdfRequestModel model)
+        User user, PasswordRequestModel model)
     {
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         model.AuthenticationData = null;
@@ -629,7 +629,7 @@ public class AccountsControllerTests : IDisposable
     [Theory]
     [BitAutoData]
     public async Task PostKdf_WithNullUnlockData_ShouldFail(
-        User user, KdfRequestModel model)
+        User user, PasswordRequestModel model)
     {
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         model.UnlockData = null;
