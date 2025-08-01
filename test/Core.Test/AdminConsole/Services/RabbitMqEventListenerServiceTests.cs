@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿#nullable enable
+
+using System.Text.Json;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
@@ -17,12 +19,29 @@ namespace Bit.Core.Test.Services;
 public class RabbitMqEventListenerServiceTests
 {
     private readonly TestListenerConfiguration _config = new();
+    private readonly ILogger _logger = Substitute.For<ILogger>();
 
     private SutProvider<RabbitMqEventListenerService<TestListenerConfiguration>> GetSutProvider()
     {
+        var loggerFactory = Substitute.For<ILoggerFactory>();
+        loggerFactory.CreateLogger<object>().ReturnsForAnyArgs(_logger);
         return new SutProvider<RabbitMqEventListenerService<TestListenerConfiguration>>()
             .SetDependency(_config)
+            .SetDependency(loggerFactory)
             .Create();
+    }
+
+    [Fact]
+    public void Constructor_CreatesLogWithCorrectCategory()
+    {
+        var sutProvider = GetSutProvider();
+
+        var fullName = typeof(RabbitMqEventListenerService<>).FullName ?? "";
+        var tickIndex = fullName.IndexOf('`');
+        var cleanedName = tickIndex >= 0 ? fullName.Substring(0, tickIndex) : fullName;
+        var categoryName = cleanedName + '.' + _config.EventQueueName;
+
+        sutProvider.GetDependency<ILoggerFactory>().Received(1).CreateLogger(categoryName);
     }
 
     [Fact]
@@ -53,12 +72,12 @@ public class RabbitMqEventListenerServiceTests
 
         await sutProvider.Sut.ProcessReceivedMessageAsync(eventArgs);
 
-        sutProvider.GetDependency<ILogger<RabbitMqEventListenerService<TestListenerConfiguration>>>().Received(1).Log(
+        _logger.Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -76,12 +95,12 @@ public class RabbitMqEventListenerServiceTests
 
         await sutProvider.Sut.ProcessReceivedMessageAsync(eventArgs);
 
-        sutProvider.GetDependency<ILogger<RabbitMqEventListenerService<TestListenerConfiguration>>>().Received(1).Log(
+        _logger.Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString().Contains("Invalid JSON")),
+            Arg.Is<object>(o => (o.ToString() ?? "").Contains("Invalid JSON")),
             Arg.Any<Exception>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -99,12 +118,12 @@ public class RabbitMqEventListenerServiceTests
 
         await sutProvider.Sut.ProcessReceivedMessageAsync(eventArgs);
 
-        sutProvider.GetDependency<ILogger<RabbitMqEventListenerService<TestListenerConfiguration>>>().Received(1).Log(
+        _logger.Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -122,12 +141,12 @@ public class RabbitMqEventListenerServiceTests
 
         await sutProvider.Sut.ProcessReceivedMessageAsync(eventArgs);
 
-        sutProvider.GetDependency<ILogger<RabbitMqEventListenerService<TestListenerConfiguration>>>().Received(1).Log(
+        _logger.Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Theory, BitAutoData]
