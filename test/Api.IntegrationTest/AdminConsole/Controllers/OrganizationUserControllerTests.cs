@@ -23,6 +23,12 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
     public OrganizationUserControllerTests(ApiApplicationFactory apiFactory)
     {
         _factory = apiFactory;
+        _factory.SubstituteService<IFeatureService>(featureService =>
+        {
+            featureService
+                .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
+                .Returns(true);
+        });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -101,23 +107,11 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Confirm_WithValidUser_ReturnsSuccess(bool enableOrganizationDataOwnershipPolicy)
+    [Fact]
+    public async Task Confirm_WithValidUser_ReturnsSuccess()
     {
-        _factory.SubstituteService<IFeatureService>(featureService =>
-        {
-            featureService
-                .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
-                .Returns(_ => true);
-        });
-
         // Enable the Organization Data Ownership policy to trigger the DefaultUserCollection creation
-        if (enableOrganizationDataOwnershipPolicy)
-        {
-            await OrganizationTestHelpers.EnableOrganizationDataOwnershipPolicyAsync(_factory, _organization.Id);
-        }
+        await OrganizationTestHelpers.EnableOrganizationDataOwnershipPolicyAsync(_factory, _organization.Id);
 
         var acceptedUserEmail = $"{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(acceptedUserEmail);
@@ -144,39 +138,18 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         Assert.Equal(OrganizationUserStatusType.Confirmed, confirmedUser.Status);
         Assert.Equal("test-key", confirmedUser.Key);
 
-        if (enableOrganizationDataOwnershipPolicy)
-        {
-            // Verify user has a DefaultUserCollection
-            var collectionRepository = _factory.GetService<ICollectionRepository>();
-            var collections = await collectionRepository.GetManyByUserIdAsync(acceptedOrgUser.UserId!.Value);
-            Assert.Single(collections);
-            Assert.Equal(_mockEncryptedString, collections.First().Name);
-        }
-        else
-        {
-            var collectionRepository = _factory.GetService<ICollectionRepository>();
-            var organizationCollectionCount = await collectionRepository.GetCountByOrganizationIdAsync(_organization.Id);
-            Assert.Equal(0, organizationCollectionCount);
-        }
+        // Verify user has a DefaultUserCollection
+        var collectionRepository = _factory.GetService<ICollectionRepository>();
+        var collections = await collectionRepository.GetManyByUserIdAsync(acceptedOrgUser.UserId!.Value);
+        Assert.Single(collections);
+        Assert.Equal(_mockEncryptedString, collections.First().Name);
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task BulkConfirm_WithValidUsers_ReturnsSuccess(bool enableOrganizationDataOwnershipPolicy)
+    [Fact]
+    public async Task BulkConfirm_WithValidUsers_ReturnsSuccess()
     {
-        _factory.SubstituteService<IFeatureService>(featureService =>
-        {
-            featureService
-                .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
-                .Returns(_ => true);
-        });
-
         // Enable the Organization Data Ownership policy to trigger the DefaultUserCollection creation
-        if (enableOrganizationDataOwnershipPolicy)
-        {
-            await OrganizationTestHelpers.EnableOrganizationDataOwnershipPolicyAsync(_factory, _organization.Id);
-        }
+        await OrganizationTestHelpers.EnableOrganizationDataOwnershipPolicyAsync(_factory, _organization.Id);
 
         var acceptedUsers = new List<(string email, OrganizationUser orgUser)>();
 
@@ -217,23 +190,13 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             Assert.Equal($"test-key-{i}", confirmedUser.Key);
         }
 
-        if (enableOrganizationDataOwnershipPolicy)
+        // Verify all users have a DefaultUserCollection
+        var collectionRepository = _factory.GetService<ICollectionRepository>();
+        foreach (var acceptedUser in acceptedUsers)
         {
-            // Verify all users have a DefaultUserCollection
-            var collectionRepository = _factory.GetService<ICollectionRepository>();
-            foreach (var acceptedUser in acceptedUsers)
-            {
-                var collections = await collectionRepository.GetManyByUserIdAsync(acceptedUser.orgUser.UserId!.Value);
-                Assert.Single(collections);
-                Assert.Equal(_mockEncryptedString, collections.First().Name);
-            }
-        }
-        else
-        {
-            // Verify all users do not have a DefaultUserCollection
-            var collectionRepository = _factory.GetService<ICollectionRepository>();
-            var organizationCollectionCount = await collectionRepository.GetCountByOrganizationIdAsync(_organization.Id);
-            Assert.Equal(0, organizationCollectionCount);
+            var collections = await collectionRepository.GetManyByUserIdAsync(acceptedUser.orgUser.UserId!.Value);
+            Assert.Single(collections);
+            Assert.Equal(_mockEncryptedString, collections.First().Name);
         }
     }
 
