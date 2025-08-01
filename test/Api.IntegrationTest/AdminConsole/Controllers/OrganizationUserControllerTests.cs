@@ -20,6 +20,7 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
     private static readonly string _mockEncryptedString =
         "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
 
+
     public OrganizationUserControllerTests(ApiApplicationFactory apiFactory)
     {
         _factory = apiFactory;
@@ -110,19 +111,12 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
     [Fact]
     public async Task Confirm_WithValidUser_ReturnsSuccess()
     {
-        // Enable the Organization Data Ownership policy to trigger the DefaultUserCollection creation
         await OrganizationTestHelpers.EnableOrganizationDataOwnershipPolicyAsync(_factory, _organization.Id);
 
-        var acceptedUserEmail = $"{Guid.NewGuid()}@bitwarden.com";
-        await _factory.LoginWithNewAccount(acceptedUserEmail);
+        var acceptedOrgUser = (await CreateAcceptedUsersAsync(new[] { "test1@bitwarden.com" })).First();
 
-        var acceptedOrgUser = await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, acceptedUserEmail,
-            OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Accepted);
-
-        // Login as owner for confirmation
         await _loginHelper.LoginAsync(_ownerEmail);
 
-        // Confirm the user via the controller endpoint
         var confirmModel = new OrganizationUserConfirmRequestModel
         {
             Key = "test-key",
@@ -132,47 +126,27 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
 
         Assert.Equal(HttpStatusCode.OK, confirmResponse.StatusCode);
 
-        // Verify user status changed to confirmed
-        var orgUserRepository = _factory.GetService<IOrganizationUserRepository>();
-        var confirmedUser = await orgUserRepository.GetByIdAsync(acceptedOrgUser.Id);
-        Assert.Equal(OrganizationUserStatusType.Confirmed, confirmedUser.Status);
-        Assert.Equal("test-key", confirmedUser.Key);
-
-        // Verify user has a DefaultUserCollection
-        var collectionRepository = _factory.GetService<ICollectionRepository>();
-        var collections = await collectionRepository.GetManyByUserIdAsync(acceptedOrgUser.UserId!.Value);
-        Assert.Single(collections);
-        Assert.Equal(_mockEncryptedString, collections.First().Name);
+        await VerifyUserConfirmedAsync(acceptedOrgUser, "test-key");
+        await VerifyDefaultCollectionCreatedAsync(acceptedOrgUser);
     }
 
     [Fact]
     public async Task BulkConfirm_WithValidUsers_ReturnsSuccess()
     {
-        // Enable the Organization Data Ownership policy to trigger the DefaultUserCollection creation
+        const string testKeyFormat = "test-key-{0}";
         await OrganizationTestHelpers.EnableOrganizationDataOwnershipPolicyAsync(_factory, _organization.Id);
 
-        var acceptedUsers = new List<(string email, OrganizationUser orgUser)>();
+        var emails = new[] { "test1@example.com", "test2@example.com", "test3@example.com" };
+        var acceptedUsers = await CreateAcceptedUsersAsync(emails);
 
-        for (int i = 0; i < 3; i++)
-        {
-            var acceptedUserEmail = $"{Guid.NewGuid()}@bitwarden.com";
-            await _factory.LoginWithNewAccount(acceptedUserEmail);
-
-            var acceptedOrgUser = await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, acceptedUserEmail,
-                OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Accepted);
-
-            acceptedUsers.Add((acceptedUserEmail, acceptedOrgUser));
-        }
-
-        // Login as owner for confirmation
         await _loginHelper.LoginAsync(_ownerEmail);
 
         var bulkConfirmModel = new OrganizationUserBulkConfirmRequestModel
         {
-            Keys = acceptedUsers.Select((user, index) => new OrganizationUserBulkConfirmRequestModelEntry
+            Keys = acceptedUsers.Select((organizationUser, index) => new OrganizationUserBulkConfirmRequestModelEntry
             {
-                Id = user.orgUser.Id,
-                Key = $"test-key-{index}"
+                Id = organizationUser.Id,
+                Key = string.Format(testKeyFormat, index)
             }),
             DefaultUserCollectionName = _mockEncryptedString
         };
@@ -181,28 +155,66 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
 
         Assert.Equal(HttpStatusCode.OK, bulkConfirmResponse.StatusCode);
 
-        // Verify all users are confirmed with correct keys
-        var orgUserRepository = _factory.GetService<IOrganizationUserRepository>();
-        for (int i = 0; i < acceptedUsers.Count; i++)
-        {
-            var confirmedUser = await orgUserRepository.GetByIdAsync(acceptedUsers[i].orgUser.Id);
-            Assert.Equal(OrganizationUserStatusType.Confirmed, confirmedUser.Status);
-            Assert.Equal($"test-key-{i}", confirmedUser.Key);
-        }
-
-        // Verify all users have a DefaultUserCollection
-        var collectionRepository = _factory.GetService<ICollectionRepository>();
-        foreach (var acceptedUser in acceptedUsers)
-        {
-            var collections = await collectionRepository.GetManyByUserIdAsync(acceptedUser.orgUser.UserId!.Value);
-            Assert.Single(collections);
-            Assert.Equal(_mockEncryptedString, collections.First().Name);
-        }
+        await VerifyMultipleUsersConfirmedAsync(acceptedUsers.Select((organizationUser, index) =>
+            (organizationUser, string.Format(testKeyFormat, index))).ToList());
+        await VerifyMultipleUsersHaveDefaultCollectionsAsync(acceptedUsers);
     }
 
     public Task DisposeAsync()
     {
         _client.Dispose();
         return Task.CompletedTask;
+    }
+
+    private async Task<List<OrganizationUser>> CreateAcceptedUsersAsync(IEnumerable<string> emails)
+    {
+        var acceptedUsers = new List<OrganizationUser>();
+
+        foreach (var email in emails)
+        {
+            await _factory.LoginWithNewAccount(email);
+
+            var acceptedOrgUser = await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, email,
+                OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Accepted);
+
+            acceptedUsers.Add(acceptedOrgUser);
+        }
+
+        return acceptedUsers;
+    }
+
+    private async Task VerifyDefaultCollectionCreatedAsync(OrganizationUser orgUser)
+    {
+        var collectionRepository = _factory.GetService<ICollectionRepository>();
+        var collections = await collectionRepository.GetManyByUserIdAsync(orgUser.UserId!.Value);
+        Assert.Single(collections);
+        Assert.Equal(_mockEncryptedString, collections.First().Name);
+    }
+
+    private async Task VerifyUserConfirmedAsync(OrganizationUser orgUser, string expectedKey)
+    {
+        await VerifyMultipleUsersConfirmedAsync(new List<(OrganizationUser orgUser, string key)> { (orgUser, expectedKey) });
+    }
+
+    private async Task VerifyMultipleUsersConfirmedAsync(List<(OrganizationUser orgUser, string key)> acceptedOrganizationUsers)
+    {
+        var orgUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        for (int i = 0; i < acceptedOrganizationUsers.Count; i++)
+        {
+            var confirmedUser = await orgUserRepository.GetByIdAsync(acceptedOrganizationUsers[i].orgUser.Id);
+            Assert.Equal(OrganizationUserStatusType.Confirmed, confirmedUser.Status);
+            Assert.Equal(acceptedOrganizationUsers[i].key, confirmedUser.Key);
+        }
+    }
+
+    private async Task VerifyMultipleUsersHaveDefaultCollectionsAsync(List<OrganizationUser> acceptedOrganizationUsers)
+    {
+        var collectionRepository = _factory.GetService<ICollectionRepository>();
+        foreach (var acceptedOrganizationUser in acceptedOrganizationUsers)
+        {
+            var collections = await collectionRepository.GetManyByUserIdAsync(acceptedOrganizationUser.UserId!.Value);
+            Assert.Single(collections);
+            Assert.Equal(_mockEncryptedString, collections.First().Name);
+        }
     }
 }
