@@ -21,7 +21,6 @@ public class PolicyRequirementQuery(
 
         var policyDetails = await GetPolicyDetails(userId);
         var filteredPolicies = policyDetails
-            .Where(p => p.PolicyType == factory.PolicyType)
             .Where(factory.Enforce);
         var requirement = factory.Create(filteredPolicies);
         return requirement;

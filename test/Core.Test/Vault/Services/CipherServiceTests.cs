@@ -173,7 +173,8 @@ public class CipherServiceTests
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
-                [Guid.NewGuid()]));
+                [Guid.NewGuid()],
+                []));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null));
@@ -195,10 +196,13 @@ public class CipherServiceTests
             .IsEnabled(FeatureFlagKeys.PolicyRequirements)
             .Returns(true);
 
+
+
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Disabled,
+                [],
                 []));
 
         await sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null);
