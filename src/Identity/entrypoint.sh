@@ -58,6 +58,6 @@ if [ "$globalSettings__selfHosted" = "true" ]; then
 fi
 
 # Sleep to account for Alpine faster start times, allowing container to initialize before .NET runtime
-sleep 3
+sleep 5
 
 exec $gosu_cmd /app/Identity

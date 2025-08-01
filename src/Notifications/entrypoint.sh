@@ -42,4 +42,7 @@ else
     gosu_cmd=""
 fi
 
+# Sleep to account for Alpine faster start times, allowing container to initialize before .NET runtime
+sleep 5
+
 exec $gosu_cmd /app/Notifications

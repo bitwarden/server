@@ -52,6 +52,6 @@ if [ -f "/etc/bitwarden/kerberos/bitwarden.keytab" ] && [ -f "/etc/bitwarden/ker
 fi
 
 # Sleep to account for Alpine faster start times, allowing container to initialize before .NET runtime
-sleep 3
+sleep 5
 
 exec $gosu_cmd /app/Events
