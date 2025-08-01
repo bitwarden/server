@@ -18,7 +18,7 @@ public class ChangeKdfCommand : IChangeKdfCommand
     private readonly IdentityErrorDescriber _identityErrorDescriber;
     private readonly ILogger<ChangeKdfCommand> _logger;
 
-    public ChangeKdfCommand(IUserService userService, IPushNotificationService pushService, IUserRepository userRepository, IdentityErrorDescriber describer, Logger<ChangeKdfCommand> logger)
+    public ChangeKdfCommand(IUserService userService, IPushNotificationService pushService, IUserRepository userRepository, IdentityErrorDescriber describer, ILogger<ChangeKdfCommand> logger)
     {
         _userService = userService;
         _pushService = pushService;
