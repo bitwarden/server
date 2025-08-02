@@ -93,15 +93,39 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
 
     private async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        await foreach (var message in _subscriptionReceiver.ReceiveMessagesAsync(cancellationToken))
+        while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                await ProcessMessageAsync(message, cancellationToken);
+                var messages = await _subscriptionReceiver.ReceiveMessagesAsync(
+                    maxMessages: 1, 
+                    maxWaitTime: TimeSpan.FromSeconds(30), 
+                    cancellationToken);
+                    
+                if (messages?.Any() == true)
+                {
+                    foreach (var message in messages)
+                    {
+                        try
+                        {
+                            await ProcessMessageAsync(message, cancellationToken);
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError(e, "Error processing messages in ApplicationCacheHostedService");
+                        }
+                    }
+                }
             }
-            catch (Exception e)
+            catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogError(e, "Error processing messages in ApplicationCacheHostedService");
+                _logger.LogDebug("ServiceBus receiver disposed during Alpine container shutdown");
+                break;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogDebug("ServiceBus operation cancelled during Alpine container shutdown");
+                break;
             }
         }
     }
