@@ -98,10 +98,10 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
             try
             {
                 var messages = await _subscriptionReceiver.ReceiveMessagesAsync(
-                    maxMessages: 1, 
-                    maxWaitTime: TimeSpan.FromSeconds(30), 
+                    maxMessages: 1,
+                    maxWaitTime: TimeSpan.FromSeconds(30),
                     cancellationToken);
-                    
+
                 if (messages?.Any() == true)
                 {
                     foreach (var message in messages)
