@@ -86,11 +86,25 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                     await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 }
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // Normal cancellation during Alpine container shutdown
+                _logger.LogDebug("Azure Queue processing cancelled during shutdown");
+                break;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred processing message block.");
 
-                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    // Shutdown during error retry delay - exit gracefully
+                    break;
+                }
             }
         }
 
