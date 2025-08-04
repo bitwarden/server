@@ -39,8 +39,7 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
         {
             OrganizationId = request.OrganizationId,
             ReportData = request.ReportData,
-            RevisionDate = request.Date == default ? DateTime.UtcNow : request.Date,
-            CreationDate = DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow
         };
 
         organizationReport.SetNewId();
