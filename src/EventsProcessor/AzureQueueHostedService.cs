@@ -86,10 +86,9 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                     await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 }
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                // Normal cancellation during Alpine container shutdown
-                _logger.LogDebug("Azure Queue processing cancelled during shutdown");
+                _logger.LogDebug("Task.Delay cancelled during Alpine container shutdown");
                 break;
             }
             catch (Exception ex)
@@ -100,9 +99,9 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                 {
                     await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
-                    // Shutdown during error retry delay - exit gracefully
+                    _logger.LogDebug("Task.Delay cancelled during Alpine container shutdown");
                     break;
                 }
             }
