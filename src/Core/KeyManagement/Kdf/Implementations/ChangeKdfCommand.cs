@@ -66,18 +66,18 @@ public class ChangeKdfCommand : IChangeKdfCommand
         // Authentication
         // Note: This mutates the user but does not yet save it to DB. That is done atomically, later.
         // This entire operation MUST be atomic to prevent a user from being locked out of their account.
+        // Salt is ensured to be the same as unlock data, and the value stored in the account and not updated.
+        // KDF is ensured to be the same as unlock data above and updated below.
         var result = await _userService.UpdatePasswordHash(user, authenticationData.MasterPasswordAuthenticationHash);
         if (!result.Succeeded)
         {
             _logger.LogWarning("Change KDF failed for user {userId}.", user.Id);
             return result;
         }
-        // Salt is ensured to be the same as unlock data, and the value stored in the account and not updated.
-        // KDF is ensured to be the same as unlock data above and updated below.
 
-        user.Key = unlockData.MasterKeyWrappedUserKey;
         // Salt is ensured to be the same as authentication data, and the value stored in the account, and is not updated.
         // Kdf - These will be seperated in the future, but for now are ensured to be the same as authentication data above.
+        user.Key = unlockData.MasterKeyWrappedUserKey;
         user.Kdf = unlockData.Kdf.KdfType;
         user.KdfIterations = unlockData.Kdf.Iterations;
         user.KdfMemory = unlockData.Kdf.Memory;
