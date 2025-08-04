@@ -2,7 +2,7 @@
 using Bit.Core.Utilities;
 using Xunit;
 
-namespace Bit.Api.Test.Models.Request.Accounts;
+namespace Bit.Api.Test.Utilities;
 
 public class KdfSettingsValidatorTests
 {
