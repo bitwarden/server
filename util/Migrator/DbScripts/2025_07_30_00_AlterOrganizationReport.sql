@@ -2,7 +2,9 @@ IF EXISTS (
    SELECT * FROM sys.indexes WHERE name = 'IX_OrganizationReport_OrganizationId_Date'
    AND object_id = OBJECT_ID('dbo.OrganizationReport')
 )
+BEGIN
 DROP INDEX [IX_OrganizationReport_OrganizationId_Date] ON [dbo].[OrganizationReport];
+END
 GO
 
 IF COL_LENGTH('[dbo].[OrganizationReport]', 'Date') IS NOT NULL
@@ -21,8 +23,14 @@ ALTER TABLE [dbo].[OrganizationReport]
 END
 GO
 
-CREATE NONCLUSTERED INDEX [IX_OrganizationReport_OrganizationId_CreationDate]
-   ON [dbo].[OrganizationReport]([OrganizationId] ASC, [CreationDate] DESC);
+IF NOT EXISTS (
+   SELECT * FROM sys.indexes WHERE name = 'IX_OrganizationReport_OrganizationId_CreationDate'
+   AND object_id = OBJECT_ID('dbo.OrganizationReport')
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_OrganizationReport_OrganizationId_CreationDate]
+       ON [dbo].[OrganizationReport]([OrganizationId] ASC, [CreationDate] DESC);
+END
 GO
 
 CREATE OR ALTER VIEW [dbo].[OrganizationReportView]
@@ -43,8 +51,8 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
    @RevisionDate DATETIME2(7),
    @ContentEncryptionKey VARCHAR(MAX)
 AS
-   SET NOCOUNT ON;
-
+BEGIN
+    SET NOCOUNT ON;
 
 INSERT INTO [dbo].[OrganizationReport](
     [Id],
@@ -54,7 +62,7 @@ INSERT INTO [dbo].[OrganizationReport](
     [ApplicationData],
     [CreationDate],
     [RevisionDate],
-[ContentEncryptionKey]
+    [ContentEncryptionKey]
 )
 VALUES (
     @Id,
@@ -66,4 +74,5 @@ VALUES (
     @RevisionDate,
     @ContentEncryptionKey
     );
+END
 GO
