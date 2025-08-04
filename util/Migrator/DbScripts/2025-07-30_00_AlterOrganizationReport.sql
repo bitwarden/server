@@ -1,12 +1,11 @@
 IF EXISTS (
-  SELECT * FROM sys.indexes WHERE name = 'IX_OrganizationReport_OrganizationId_Date'
-  AND object_id = OBJECT_ID('dbo.OrganizationReport')
+ SELECT * FROM sys.indexes WHERE name = 'IX_OrganizationReport_OrganizationId_Date'
+ AND object_id = OBJECT_ID('dbo.OrganizationReport')
 )
 BEGIN
 DROP INDEX [IX_OrganizationReport_OrganizationId_Date] ON [dbo].[OrganizationReport];
 END
 GO
-
 
 IF COL_LENGTH('[dbo].[OrganizationReport]', 'Date') IS NOT NULL
 BEGIN
@@ -14,7 +13,6 @@ ALTER TABLE [dbo].[OrganizationReport]
 DROP COLUMN [Date];
 END
 GO
-
 
 IF OBJECT_ID('dbo.OrganizationReport') IS NOT NULL
 BEGIN
@@ -25,17 +23,25 @@ ALTER TABLE [dbo].[OrganizationReport]
 END
 GO
 
-
 IF NOT EXISTS (
-  SELECT * FROM sys.indexes WHERE name = 'IX_OrganizationReport_OrganizationId_CreationDate'
-  AND object_id = OBJECT_ID('dbo.OrganizationReport')
+ SELECT * FROM sys.indexes WHERE name = 'IX_OrganizationReport_OrganizationId_CreationDate'
+ AND object_id = OBJECT_ID('dbo.OrganizationReport')
 )
 BEGIN
-   CREATE NONCLUSTERED INDEX [IX_OrganizationReport_OrganizationId_CreationDate]
-      ON [dbo].[OrganizationReport]([OrganizationId] ASC, [CreationDate] DESC);
+  CREATE NONCLUSTERED INDEX [IX_OrganizationReport_OrganizationId_CreationDate]
+     ON [dbo].[OrganizationReport]([OrganizationId] ASC, [CreationDate] DESC);
 END
 GO
 
+IF NOT EXISTS (
+ SELECT * FROM sys.indexes WHERE name = 'IX_OrganizationReport_OrganizationId_CreationDate'
+ AND object_id = OBJECT_ID('dbo.OrganizationReport')
+)
+BEGIN
+CREATE NONCLUSTERED INDEX [IX_OrganizationReport_OrganizationId_RevisionDate]
+   ON [dbo].[OrganizationReport]([OrganizationId] ASC, [RevisionDate] DESC);
+END
+GO
 
 CREATE OR ALTER VIEW [dbo].[OrganizationReportView]
 AS
@@ -45,20 +51,18 @@ FROM
     [dbo].[OrganizationReport];
 GO
 
-
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
-  @Id UNIQUEIDENTIFIER OUTPUT,
-  @OrganizationId UNIQUEIDENTIFIER,
-  @SummaryData NVARCHAR(MAX),
-  @ReportData NVARCHAR(MAX),
-  @ApplicationData NVARCHAR(MAX),
-  @CreationDate DATETIME2(7),
-  @RevisionDate DATETIME2(7),
-  @ContentEncryptionKey VARCHAR(MAX)
+ @Id UNIQUEIDENTIFIER OUTPUT,
+ @OrganizationId UNIQUEIDENTIFIER,
+ @SummaryData NVARCHAR(MAX),
+ @ReportData NVARCHAR(MAX),
+ @ApplicationData NVARCHAR(MAX),
+ @CreationDate DATETIME2(7),
+ @RevisionDate DATETIME2(7),
+ @ContentEncryptionKey VARCHAR(MAX)
 AS
 BEGIN
-   SET NOCOUNT ON;
-
+  SET NOCOUNT ON;
 
 INSERT INTO [dbo].[OrganizationReport](
     [Id],
@@ -82,4 +86,3 @@ VALUES (
     );
 END
 GO
-
