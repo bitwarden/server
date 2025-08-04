@@ -3,7 +3,7 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Create]
     @OrganizationId UNIQUEIDENTIFIER,
     @ReportData NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @ContentEncryptionKey VARCHAR(MAX)
+    @ContentEncryptionKey VARCHAR(MAX),
     @SummaryData NVARCHAR(MAX),
     @ApplicationData NVARCHAR(MAX),
     @RevisionDate DATETIME2(7)
@@ -13,7 +13,6 @@ AS
     INSERT INTO [dbo].[OrganizationReport](
         [Id],
         [OrganizationId],
-        [Date],
         [ReportData],
         [CreationDate],
         [ContentEncryptionKey],
@@ -24,7 +23,6 @@ AS
     VALUES (
         @Id,
         @OrganizationId,
-        @Date,
         @ReportData,
         @CreationDate,
         @ContentEncryptionKey,
