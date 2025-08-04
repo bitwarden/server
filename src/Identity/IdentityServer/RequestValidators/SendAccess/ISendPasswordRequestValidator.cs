@@ -11,6 +11,6 @@ public interface ISendPasswordRequestValidator
     /// </summary>
     /// <param name="context">request context</param>
     /// <param name="resourcePassword">resource password authentication method containing the hash of the Send being retrieved</param>
-    /// <returns>true if password hashes match, false otherwise.</returns>
-    bool ValidateSendPassword(ExtensionGrantValidationContext context, ResourcePassword resourcePassword);
+    /// <returns>returns the result of the validation; A failed result will be an error a successful will contain the claims and a success</returns>
+    GrantValidationResult ValidateSendPassword(ExtensionGrantValidationContext context, ResourcePassword resourcePassword, Guid sendId);
 }

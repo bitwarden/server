@@ -5,7 +5,5 @@
 /// </summary>
 internal enum SendPasswordValidatorResultTypes
 {
-    SendPasswordNullOrEmpty,
-    RequestPasswordNullOrEmpty,
     RequestPasswordDoesNotMatch
 }
