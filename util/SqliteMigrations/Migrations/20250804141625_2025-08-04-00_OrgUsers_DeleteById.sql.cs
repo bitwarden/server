@@ -2,21 +2,20 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations
+namespace Bit.SqliteMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class _2025080400_OrgUsers_DeleteByIdsql : Migration
 {
     /// <inheritdoc />
-    public partial class _2025080400_OrgUsers_DeleteByIdsql : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
 
-        }
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
 
-        }
     }
 }

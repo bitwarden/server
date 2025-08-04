@@ -2,21 +2,20 @@
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations
+namespace Bit.PostgresMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class _20250804_01_OrgUsers_DeleteByIdssql : Migration
 {
     /// <inheritdoc />
-    public partial class _20250804_01_OrgUsers_DeleteByIdssql : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
 
-        }
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
 
-        }
     }
 }
