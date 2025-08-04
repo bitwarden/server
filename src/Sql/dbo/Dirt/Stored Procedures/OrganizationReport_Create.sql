@@ -8,6 +8,7 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Create]
     @ApplicationData NVARCHAR(MAX),
     @RevisionDate DATETIME2(7)
 AS
+BEGIN
     SET NOCOUNT ON;
 
     INSERT INTO [dbo].[OrganizationReport](
@@ -30,3 +31,4 @@ AS
         @ApplicationData,
         @RevisionDate
     );
+END
