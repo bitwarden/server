@@ -1,6 +1,6 @@
 IF EXISTS (
- SELECT * FROM sys.indexes WHERE name = 'IX_OrganizationReport_OrganizationId_Date'
- AND object_id = OBJECT_ID('dbo.OrganizationReport')
+SELECT * FROM sys.indexes WHERE name = 'IX_OrganizationReport_OrganizationId_Date'
+AND object_id = OBJECT_ID('dbo.OrganizationReport')
 )
 BEGIN
 DROP INDEX [IX_OrganizationReport_OrganizationId_Date] ON [dbo].[OrganizationReport];
@@ -24,22 +24,12 @@ END
 GO
 
 IF NOT EXISTS (
- SELECT * FROM sys.indexes WHERE name = 'IX_OrganizationReport_OrganizationId_CreationDate'
- AND object_id = OBJECT_ID('dbo.OrganizationReport')
-)
-BEGIN
-  CREATE NONCLUSTERED INDEX [IX_OrganizationReport_OrganizationId_CreationDate]
-     ON [dbo].[OrganizationReport]([OrganizationId] ASC, [CreationDate] DESC);
-END
-GO
-
-IF NOT EXISTS (
- SELECT * FROM sys.indexes WHERE name = 'IX_OrganizationReport_OrganizationId_CreationDate'
- AND object_id = OBJECT_ID('dbo.OrganizationReport')
+SELECT * FROM sys.indexes WHERE name = 'IX_OrganizationReport_OrganizationId_RevisionDate'
+AND object_id = OBJECT_ID('dbo.OrganizationReport')
 )
 BEGIN
 CREATE NONCLUSTERED INDEX [IX_OrganizationReport_OrganizationId_RevisionDate]
-   ON [dbo].[OrganizationReport]([OrganizationId] ASC, [RevisionDate] DESC);
+ ON [dbo].[OrganizationReport]([OrganizationId] ASC, [RevisionDate] DESC);
 END
 GO
 
@@ -52,37 +42,37 @@ FROM
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
- @Id UNIQUEIDENTIFIER OUTPUT,
- @OrganizationId UNIQUEIDENTIFIER,
- @SummaryData NVARCHAR(MAX),
- @ReportData NVARCHAR(MAX),
- @ApplicationData NVARCHAR(MAX),
- @CreationDate DATETIME2(7),
- @RevisionDate DATETIME2(7),
- @ContentEncryptionKey VARCHAR(MAX)
+   @Id UNIQUEIDENTIFIER OUTPUT,
+   @OrganizationId UNIQUEIDENTIFIER,
+   @ReportData NVARCHAR(MAX),
+   @CreationDate DATETIME2(7),
+   @ContentEncryptionKey VARCHAR(MAX),
+   @SummaryData NVARCHAR(MAX),
+   @ApplicationData NVARCHAR(MAX),
+   @RevisionDate DATETIME2(7)
 AS
 BEGIN
-  SET NOCOUNT ON;
+   SET NOCOUNT ON;
 
 INSERT INTO [dbo].[OrganizationReport](
     [Id],
     [OrganizationId],
-    [SummaryData],
     [ReportData],
-    [ApplicationData],
     [CreationDate],
-    [RevisionDate],
-[ContentEncryptionKey]
+    [ContentEncryptionKey],
+    [SummaryData],
+    [ApplicationData],
+[RevisionDate]
 )
 VALUES (
     @Id,
     @OrganizationId,
-    @SummaryData,
     @ReportData,
-    @ApplicationData,
     @CreationDate,
-    @RevisionDate,
-    @ContentEncryptionKey
+    @ContentEncryptionKey,
+    @SummaryData,
+    @ApplicationData,
+    @RevisionDate
     );
 END
 GO
