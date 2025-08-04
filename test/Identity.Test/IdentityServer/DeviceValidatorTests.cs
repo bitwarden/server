@@ -324,14 +324,26 @@ public class DeviceValidatorTests
         Assert.True(result);
     }
 
-    [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_IsAuthRequest_SavesDevice_ReturnsTrue(
+    [Theory]
+    [BitAutoData(false, false)]
+    [BitAutoData(true, false)]
+    [BitAutoData(true, true)]
+    [BitAutoData(true, false)]
+
+    public async void ValidateRequestDeviceAsync_IsAuthRequest_UnknownDevice_Errors(
+        bool twoFactoRequired, bool ssoRequired,
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
         // Arrange
-        context.KnownDevice = false;
-        ArrangeForHandleNewDeviceVerificationTest(context, request);
+        request.GrantType = "password";
+        context.TwoFactorRequired = twoFactoRequired;
+        context.SsoRequired = ssoRequired;
+        if (context.User != null)
+        {
+            context.User.CreationDate = DateTime.UtcNow - TimeSpan.FromDays(365);
+        }
+
         AddValidDeviceToRequest(request);
         _deviceRepository.GetByIdentifierAsync(context.Device.Identifier, context.User.Id)
             .Returns(null as Device);
@@ -342,8 +354,11 @@ public class DeviceValidatorTests
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
 
         // Assert
-        await _deviceService.Received(1).SaveAsync(context.Device);
-        Assert.True(result);
+        Assert.False(result);
+        Assert.NotNull(context.CustomResponse["ErrorModel"]);
+        var expectedErrorMessage = "auth request flow unsupported on unknown device";
+        var actualResponse = (ErrorResponseModel)context.CustomResponse["ErrorModel"];
+        Assert.Equal(expectedErrorMessage, actualResponse.Message);
     }
 
     [Theory, BitAutoData]

@@ -1,32 +1,37 @@
 ﻿#nullable enable
 
 using Azure.Messaging.ServiceBus;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
-public class AzureServiceBusIntegrationListenerService : BackgroundService
+public class AzureServiceBusIntegrationListenerService<TConfiguration> : BackgroundService
+    where TConfiguration : IIntegrationListenerConfiguration
 {
     private readonly int _maxRetries;
     private readonly IAzureServiceBusService _serviceBusService;
     private readonly IIntegrationHandler _handler;
     private readonly ServiceBusProcessor _processor;
-    private readonly ILogger<AzureServiceBusIntegrationListenerService> _logger;
+    private readonly ILogger _logger;
 
-    public AzureServiceBusIntegrationListenerService(IIntegrationHandler handler,
-        string topicName,
-        string subscriptionName,
-        int maxRetries,
+    public AzureServiceBusIntegrationListenerService(
+        TConfiguration configuration,
+        IIntegrationHandler handler,
         IAzureServiceBusService serviceBusService,
-        ILogger<AzureServiceBusIntegrationListenerService> logger)
+        ILoggerFactory loggerFactory)
     {
         _handler = handler;
-        _logger = logger;
-        _maxRetries = maxRetries;
+        _logger = loggerFactory.CreateLogger(
+            categoryName: $"Bit.Core.Services.AzureServiceBusIntegrationListenerService.{configuration.IntegrationSubscriptionName}");
+        _maxRetries = configuration.MaxRetries;
         _serviceBusService = serviceBusService;
 
-        _processor = _serviceBusService.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions());
+        _processor = _serviceBusService.CreateProcessor(
+            topicName: configuration.IntegrationTopicName,
+            subscriptionName: configuration.IntegrationSubscriptionName,
+            options: new ServiceBusProcessorOptions());
     }
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)

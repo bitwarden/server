@@ -109,7 +109,7 @@ public class CollectionsController : Controller
         var readAllAuthorized = (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadAll(orgId))).Succeeded;
         if (readAllAuthorized)
         {
-            orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgId);
+            orgCollections = await _collectionRepository.GetManySharedCollectionsByOrganizationIdAsync(orgId);
         }
         else
         {
