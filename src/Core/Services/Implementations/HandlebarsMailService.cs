@@ -496,7 +496,7 @@ public class HandlebarsMailService : IMailService
             SiteName = _globalSettings.SiteName,
             DeviceType = deviceType,
             TheDate = timestamp.ToLongDateString(),
-            TheTime = timestamp.ToString("hh:mm:ss.fff tt"),
+            TheTime = timestamp.ToString("hh:mm:ss tt"),
             TimeZone = _utcTimeZoneDisplay,
             IpAddress = ip
         };
