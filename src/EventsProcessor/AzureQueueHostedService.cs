@@ -101,8 +101,6 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                 }
                 catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
-                    // comment for build difference
-                    // remove after testing
                     _logger.LogDebug("Task.Delay cancelled during Alpine container shutdown");
                     break;
                 }
