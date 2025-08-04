@@ -5,7 +5,7 @@ namespace Bit.Api.KeyManagement.Models.Requests;
 
 public class MasterPasswordAuthenticationDataRequestModel
 {
-    public required InnerKdfRequestModel Kdf { get; init; }
+    public required KdfRequestModel Kdf { get; init; }
     public required string MasterPasswordAuthenticationHash { get; init; }
     [StringLength(256)] public required string Salt { get; init; }
 
