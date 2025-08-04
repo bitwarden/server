@@ -1017,7 +1017,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("ApplicationData")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("ContentEncryptionKey")
@@ -1038,7 +1037,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SummaryData")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");

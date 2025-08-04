@@ -1012,7 +1012,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("char(36)");
 
                     b.Property<string>("ApplicationData")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<string>("ContentEncryptionKey")
@@ -1033,7 +1032,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("SummaryData")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.HasKey("Id");
