@@ -95,8 +95,7 @@ public class DeviceValidator(
 
         // Device still unknown, but if we are in an auth request flow, this is not valid
         // as we only support auth request authN requests on known devices
-        if (request.GrantType == PasswordGrantType && isAuthRequest &&
-            context is { TwoFactorRequired: false, SsoRequired: false })
+        if (request.GrantType == PasswordGrantType && isAuthRequest)
         {
             (context.ValidationErrorResult, context.CustomResponse) =
                 BuildDeviceErrorResult(DeviceValidationResultType.AuthRequestFlowUnknownDevice);
