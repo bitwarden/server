@@ -5,6 +5,7 @@ using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Core.Utilities;
+using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess.Enums;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
@@ -17,9 +18,7 @@ public class SendAccessGrantValidator(
     IFeatureService _featureService)
 : IExtensionGrantValidator
 {
-    public const string GrantType = "send_access";
-
-    string IExtensionGrantValidator.GrantType => GrantType;
+    string IExtensionGrantValidator.GrantType => CustomGrantTypes.SendAccess;
 
     private static readonly Dictionary<SendGrantValidatorResultTypes, string>
     _sendGrantValidatorErrors = new()
@@ -34,12 +33,15 @@ public class SendAccessGrantValidator(
         // Check the feature flag
         if (!_featureService.IsEnabled(FeatureFlagKeys.SendAuthorization))
         {
-            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant);
+            context.Result = new GrantValidationResult(TokenRequestErrors.UnsupportedGrantType);
         }
+
         var sendIdGuid = GetRequestSendId(context);
         if (sendIdGuid == Guid.Empty)
         {
-            // Validation failed, result is already set in ValidateRequest
+            context.Result = new GrantValidationResult(
+                TokenRequestErrors.InvalidRequest,
+                errorDescription: _sendGrantValidatorErrors[SendGrantValidatorResultTypes.MissingSendId]);
             return;
         }
 
@@ -50,13 +52,13 @@ public class SendAccessGrantValidator(
         {
             case NeverAuthenticate:
                 // null send scenario.
-                // TODO: Add send enumeration protection here (primarily benefits self hosted instances).
-                // We should only map to password or email + OTP protected. If user submits password guess for a
-                // falsely protected send, then we will return invalid password.
-                // TODO: we should re-use _invalidGrantPasswordInvalid or similar error message here.
+                // TODO PM-22675: Add send enumeration protection here (primarily benefits self hosted instances).
+                // We should only map to password or email + OTP protected.
+                // If user submits password guess for a falsely protected send, then we will return invalid password.
+                // If user submits email + OTP guess for a falsely protected send, then we will return email sent, do not actually send an email.
                 context.Result = new GrantValidationResult(
                     TokenRequestErrors.InvalidRequest,
-                    _sendGrantValidatorErrors[SendGrantValidatorResultTypes.InvalidRequest]);
+                    errorDescription: _sendGrantValidatorErrors[SendGrantValidatorResultTypes.InvalidRequest]);
                 return;
 
             case NotAuthenticated:
@@ -65,16 +67,11 @@ public class SendAccessGrantValidator(
                 return;
 
             case ResourcePassword rp:
-                var passwordValid = _sendPasswordRequestValidator.ValidateSendPassword(context, rp);
-                if (!passwordValid)
-                {
-                    return;
-                }
-                context.Result = BuildBaseSuccessResult(sendIdGuid);
+                 // TODO PM-22675: Validate if the password is correct.
+                context.Result = _sendPasswordRequestValidator.ValidateSendPassword(context, rp, sendIdGuid);
                 return;
-
             case EmailOtp eo:
-                // TODO:  We will either send the OTP here or validate it based on if otp exists in the request.
+                // TODO PM-22678: We will either send the OTP here or validate it based on if otp exists in the request.
                 // SendOtpToEmail(eo.Emails) or ValidateOtp(eo.Emails);
                 break;
 
@@ -97,9 +94,6 @@ public class SendAccessGrantValidator(
 
         if (string.IsNullOrEmpty(sendId))
         {
-            context.Result = new GrantValidationResult(
-                TokenRequestErrors.InvalidRequest,
-                errorDescription: _sendGrantValidatorErrors[SendGrantValidatorResultTypes.MissingSendId]);
             return Guid.Empty;
         }
 
@@ -107,27 +101,23 @@ public class SendAccessGrantValidator(
 
         if (sendIdGuid == Guid.Empty)
         {
-            context.Result = new GrantValidationResult(
-                TokenRequestErrors.InvalidRequest,
-                errorDescription: _sendGrantValidatorErrors[SendGrantValidatorResultTypes.MissingSendId]);
             return Guid.Empty;
         }
 
         return sendIdGuid;
     }
 
-    private GrantValidationResult BuildBaseSuccessResult(Guid sendId)
+    private static GrantValidationResult BuildBaseSuccessResult(Guid sendId)
     {
         var claims = new List<Claim>
         {
-            // TODO: Add email claim when issuing access token for email + OTP send
             new(Claims.SendId, sendId.ToString()),
             new(Claims.Type, IdentityClientType.Send.ToString())
         };
 
         return new GrantValidationResult(
             subject: sendId.ToString(),
-            authenticationMethod: GrantType,
+            authenticationMethod: CustomGrantTypes.SendAccess,
             claims: claims);
     }
 }
