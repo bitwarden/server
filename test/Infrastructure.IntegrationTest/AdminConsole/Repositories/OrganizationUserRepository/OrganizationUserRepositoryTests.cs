@@ -83,6 +83,18 @@ public class OrganizationUserRepositoryTests
             OrganizationId = organization.Id
         });
 
+        // Create the CollectionUser entry for the defaultUserCollection
+        await collectionRepository.UpdateUsersAsync(defaultUserCollection.Id, new[]
+        {
+            new CollectionAccessSelection
+            {
+                Id = orgUser.Id,
+                HidePasswords = false,
+                ReadOnly = false,
+                Manage = true
+            },
+        });
+
         await organizationUserRepository.DeleteAsync(orgUser);
 
         var newUser = await userRepository.GetByIdAsync(user.Id);
