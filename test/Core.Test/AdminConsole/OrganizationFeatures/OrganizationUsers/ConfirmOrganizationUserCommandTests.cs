@@ -473,7 +473,7 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(user.Id)
+            .GetByOrganizationAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
                 [organization.Id]
@@ -482,15 +482,10 @@ public class ConfirmOrganizationUserCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
-            .CreateAsync(
-                Arg.Is<Collection>(c => c.Name == collectionName &&
-                    c.OrganizationId == organization.Id &&
-                    c.Type == CollectionType.DefaultUserCollection),
-                Arg.Is<IEnumerable<CollectionAccessSelection>>(groups => groups == null),
-                Arg.Is<IEnumerable<CollectionAccessSelection>>(u =>
-                    u.Count() == 1 &&
-                    u.First().Id == orgUser.Id &&
-                    u.First().Manage == true));
+            .CreateDefaultCollectionsAsync(
+                organization.Id,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.Id)),
+                collectionName);
     }
 
     [Theory, BitAutoData]
@@ -510,7 +505,7 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(user.Id)
+            .GetByOrganizationAsync<OrganizationDataOwnershipPolicyRequirement>(org.Id)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
                 [org.Id]
@@ -539,7 +534,7 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(user.Id)
+            .GetByOrganizationAsync<OrganizationDataOwnershipPolicyRequirement>(org.Id)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
                 [Guid.NewGuid()]
