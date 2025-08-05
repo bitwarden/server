@@ -75,10 +75,13 @@ public class OrganizationUserRepositoryTests
             Status = OrganizationUserStatusType.Confirmed,
         });
 
-        // Set the collection type to DefaultUserCollection in order to test migration to shared type
-        var defaultUserCollection = await collectionRepository.GetByIdAsync(user.Id);
-        defaultUserCollection.Type = CollectionType.DefaultUserCollection;
-        await collectionRepository.UpsertAsync(defaultUserCollection);
+        var defaultUserCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Test Collection",
+            Id = user.Id,
+            Type = CollectionType.DefaultUserCollection,
+            OrganizationId = organization.Id
+        });
 
         await organizationUserRepository.DeleteAsync(orgUser);
 

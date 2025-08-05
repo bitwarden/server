@@ -94,7 +94,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 .Where(c => c.Type == CollectionType.DefaultUserCollection &&
                         collectionUsers.Any(
                             cu => cu.CollectionId == c.Id && cu.OrganizationUserId == organizationUserId))
-                .FirstAsync();
+                .FirstOrDefaultAsync();
 
             collectionToUpdate.DefaultUserCollectionEmail = email;
             collectionToUpdate.Type = Core.Enums.CollectionType.SharedCollection;
