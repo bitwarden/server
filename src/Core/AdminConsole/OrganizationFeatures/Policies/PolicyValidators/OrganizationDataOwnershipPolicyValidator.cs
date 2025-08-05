@@ -48,7 +48,7 @@ public class OrganizationDataOwnershipPolicyValidator(
 
         if (!userOrgIds.Any())
         {
-            _logger.LogInformation($"No UserOrganizationIds found for {policyUpdate.OrganizationId}");
+            _logger.LogWarning($"No UserOrganizationIds found for {policyUpdate.OrganizationId}");
             return;
         }
 
@@ -65,7 +65,7 @@ public class OrganizationDataOwnershipPolicyValidator(
         return temporaryPlaceHolderValue;
     }
 
-    private static List<Guid> GetUserOrgIds(PolicyUpdate policyUpdate, IEnumerable<OrganizationDataOwnershipPolicyRequirement> requirements)
+    private List<Guid> GetUserOrgIds(PolicyUpdate policyUpdate, IEnumerable<OrganizationDataOwnershipPolicyRequirement> requirements)
     {
         var userOrgIds = new List<Guid>();
         foreach (var requirement in requirements)
@@ -75,6 +75,10 @@ public class OrganizationDataOwnershipPolicyValidator(
             if (userOrgId.HasValue)
             {
                 userOrgIds.Add(userOrgId.Value);
+            }
+            else
+            {
+                _logger.LogWarning("UserOrganizationId is null for organization {OrganizationId}", policyUpdate.OrganizationId);
             }
         }
         return userOrgIds;
