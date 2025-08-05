@@ -82,6 +82,10 @@ public class OrganizationUserBulkConfirmRequestModel
     [Required]
     public IEnumerable<OrganizationUserBulkConfirmRequestModelEntry> Keys { get; set; }
 
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string DefaultUserCollectionName { get; set; }
+
     public Dictionary<Guid, string> ToDictionary()
     {
         return Keys.ToDictionary(e => e.Id, e => e.Key);
