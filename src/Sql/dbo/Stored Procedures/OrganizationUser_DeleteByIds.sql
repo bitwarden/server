@@ -6,7 +6,8 @@ BEGIN
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @Ids
 
-    EXEC [dbo].[Collection_UpdateTypeForDeletedOrganizationUsers] @Ids
+    -- Migrate DefaultCollection to SharedCollection
+    EXEC [dbo].[OrganizationUser_MigrateDefaultCollection] @Ids
 
     DECLARE @UserAndOrganizationIds [dbo].[TwoGuidIdArray]
 
