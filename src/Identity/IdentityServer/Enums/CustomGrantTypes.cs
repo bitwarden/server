@@ -6,4 +6,6 @@ namespace Bit.Identity.IdentityServer.Enums;
 public static class CustomGrantTypes
 {
     public const string SendAccess = "send_access";
+    // TODO: PM-24471 replace magic string with a constant for webauthn
+    public const string WebAuthn = "webauthn";
 }
