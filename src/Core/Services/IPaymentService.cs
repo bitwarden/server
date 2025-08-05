@@ -25,6 +25,14 @@ public interface IPaymentService
         int? newlyPurchasedSecretsManagerSeats,
         int? newlyPurchasedAdditionalSecretsManagerServiceAccounts,
         int newlyPurchasedAdditionalStorage);
+
+    /// <summary>
+    /// Used to update the organization's password manager subscription
+    /// </summary>
+    /// <param name="organization"></param>
+    /// <param name="plan"></param>
+    /// <param name="additionalSeats">New seat total</param>
+    /// <returns></returns>
     Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats);
     Task<string> AdjustSmSeatsAsync(Organization organization, Plan plan, int additionalSeats);
     Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId);

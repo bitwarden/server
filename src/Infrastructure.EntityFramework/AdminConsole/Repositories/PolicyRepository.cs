@@ -94,4 +94,93 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                     };
         return await query.ToListAsync();
     }
+
+    public async Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetailsByOrganizationIdAsync(Guid organizationId, PolicyType policyType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var givenOrgUsers =
+            from ou in dbContext.OrganizationUsers
+            where ou.OrganizationId == organizationId
+            from u in dbContext.Users
+            where
+                (u.Email == ou.Email && ou.Email != null)
+                || (ou.UserId == u.Id && ou.UserId != null)
+
+            select new
+            {
+                ou.Id,
+                ou.OrganizationId,
+                UserId = u.Id,
+                u.Email
+            };
+
+        var orgUsersLinkedByUserId =
+            from ou in dbContext.OrganizationUsers
+            join gou in givenOrgUsers
+                on ou.UserId equals gou.UserId
+            select new
+            {
+                ou.Id,
+                ou.OrganizationId,
+                gou.UserId,
+                ou.Type,
+                ou.Status,
+                ou.Permissions
+            };
+
+        var orgUsersLinkedByEmail =
+            from ou in dbContext.OrganizationUsers
+            join gou in givenOrgUsers
+                on ou.Email equals gou.Email
+            select new
+            {
+                ou.Id,
+                ou.OrganizationId,
+                gou.UserId,
+                ou.Type,
+                ou.Status,
+                ou.Permissions
+            };
+
+        var allAffectedOrgUsers = orgUsersLinkedByEmail.Union(orgUsersLinkedByUserId);
+
+        var providerOrganizations = from pu in dbContext.ProviderUsers
+                                    join po in dbContext.ProviderOrganizations
+                                        on pu.ProviderId equals po.ProviderId
+                                    join ou in allAffectedOrgUsers
+                                        on pu.UserId equals ou.UserId
+                                    where pu.UserId == ou.UserId
+                                    select new
+                                    {
+                                        pu.UserId,
+                                        po.OrganizationId
+                                    };
+
+        var policyWithAffectedUsers =
+            from p in dbContext.Policies
+            join o in dbContext.Organizations
+                on p.OrganizationId equals o.Id
+            join ou in allAffectedOrgUsers
+                on o.Id equals ou.OrganizationId
+            where p.Enabled
+                   && o.Enabled
+                   && o.UsePolicies
+                   && p.Type == policyType
+            select new OrganizationPolicyDetails
+            {
+                UserId = ou.UserId,
+                OrganizationUserId = ou.Id,
+                OrganizationId = p.OrganizationId,
+                PolicyType = p.Type,
+                PolicyData = p.Data,
+                OrganizationUserType = ou.Type,
+                OrganizationUserStatus = ou.Status,
+                OrganizationUserPermissionsData = ou.Permissions,
+                IsProvider = providerOrganizations.Any(po => po.OrganizationId == p.OrganizationId)
+            };
+
+        return await policyWithAffectedUsers.ToListAsync();
+    }
 }
