@@ -81,6 +81,21 @@ public class SecurityTaskController : Controller
     }
 
     /// <summary>
+    /// Retrieves security task metrics for an organization.
+    /// </summary>
+    /// <param name="orgId">The organization Id</param>
+    [HttpGet("{orgId:guid}/metrics")]
+    public async Task<SecurityTasksMetricsResponseModel> GetTaskMetricsForOrg(
+        [FromRoute] Guid orgId)
+    {
+        var securityTasks = await _getTasksForOrganizationQuery.GetTasksAsync(orgId);
+        var totalTasksCount = securityTasks.Count;
+        var completedTasksCount = securityTasks.Count(x => x.Status == SecurityTaskStatus.Completed);
+
+        return new SecurityTasksMetricsResponseModel(completedTasksCount, totalTasksCount);
+    }
+
+    /// <summary>
     /// Bulk create security tasks for an organization.
     /// </summary>
     /// <param name="orgId"></param>
