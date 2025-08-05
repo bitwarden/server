@@ -482,7 +482,7 @@ public class ConfirmOrganizationUserCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
-            .CreateDefaultCollectionsAsync(
+            .UpsertDefaultCollectionsAsync(
                 organization.Id,
                 Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.Id)),
                 collectionName);

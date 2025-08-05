@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
@@ -208,8 +209,34 @@ public class PoliciesController : Controller
             throw new BadRequestException("Mismatched policy type");
         }
 
+
+
         var policyUpdate = await model.ToPolicyUpdateAsync(orgId, _currentContext);
+
+
         var policy = await _savePolicyCommand.SaveAsync(policyUpdate);
+
+        var savePolicyRequest = GetMockedSavePolicyRequest();
+
+        var mockReponse = await _savePolicyCommand.SavePrototypeAsync(savePolicyRequest);
+
         return new PolicyResponseModel(policy);
+    }
+
+    private static SavePolicyRequest GetMockedSavePolicyRequest()
+    {
+        var savePolicyRequest = new SavePolicyRequest(
+            new PolicyUpdate
+            {
+                OrganizationId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                Type = PolicyType.OrganizationDataOwnership,
+                Enabled = true,
+                Data = ""
+            },
+            new OrganizationModelOwnershipPolicyModel("Default Collection Name", executeSideEffect: true),
+            // This determine if we should execute the side effect
+            new PolicyContext(null)
+        );
+        return savePolicyRequest;
     }
 }
