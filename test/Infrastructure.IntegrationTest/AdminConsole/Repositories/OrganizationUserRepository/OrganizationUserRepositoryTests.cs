@@ -47,6 +47,52 @@ public class OrganizationUserRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task DeleteAsync_Migrates_UserDefaultCollection(IUserRepository userRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository
+        )
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            BillingEmail = user.Email, // TODO: EF does not enfore this being NOT NULL
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+        });
+
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+        });
+
+        // Set the collection type to DefaultUserCollection in order to test migration to shared type
+        var defaultUserCollection = await collectionRepository.GetByIdAsync(user.Id);
+        defaultUserCollection.Type = CollectionType.DefaultUserCollection;
+        await collectionRepository.UpsertAsync(defaultUserCollection);
+
+        await organizationUserRepository.DeleteAsync(orgUser);
+
+        var newUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(newUser);
+        Assert.NotEqual(newUser.AccountRevisionDate, user.AccountRevisionDate);
+
+        var updatedCollection = await collectionRepository.GetByIdAsync(user.Id);
+        Assert.Equal(CollectionType.DefaultUserCollection, updatedCollection.Type);
+        Assert.Equal(user.Email, updatedCollection.DefaultUserCollectionEmail);
+    }
+
+
+    [DatabaseTheory, DatabaseData]
     public async Task DeleteManyAsync_Works(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository)

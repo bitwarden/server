@@ -17,17 +17,9 @@ BEGIN
     WHERE
         [Id] = @Id
 
-    UPDATE c
-    SET 
-        [DefaultUserCollectionEmail] = u.[Email],
-        [Type] = 0
-    FROM 
-        [dbo].[Collection] c
-        INNER JOIN [dbo].[CollectionUser] cu ON c.[Id] = cu.[CollectionId]
-        INNER JOIN [dbo].[User] u ON @UserId = u.[Id]
-    WHERE 
-        cu.[OrganizationUserId] = @Id
-        AND c.[Type] = 1
+    DECLARE @Ids [dbo].[GuidIdArray]
+    INSERT INTO @Ids (Id) VALUES (@Id)
+    EXEC [dbo].[Collection_UpdateTypeForDeletedOrganizationUsers] @Ids
 
     IF @OrganizationId IS NOT NULL AND @UserId IS NOT NULL
     BEGIN
