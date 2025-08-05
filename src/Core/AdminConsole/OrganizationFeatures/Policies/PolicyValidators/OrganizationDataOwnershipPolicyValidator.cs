@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
@@ -14,9 +15,11 @@ public class OrganizationDataOwnershipPolicyValidator(
     IPolicyRepository policyRepository,
     ICollectionRepository collectionRepository,
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories,
-    IFeatureService featureService)
+    IFeatureService featureService,
+    ILogger<OrganizationDataOwnershipPolicyValidator> logger)
     : OrganizationPolicyValidator(policyRepository, factories)
 {
+    private readonly ILogger<OrganizationDataOwnershipPolicyValidator> _logger = logger;
     public override PolicyType Type => PolicyType.OrganizationDataOwnership;
 
     public override IEnumerable<PolicyType> RequiredPolicies => [];
@@ -41,15 +44,25 @@ public class OrganizationDataOwnershipPolicyValidator(
     {
         var requirements = await GetUserPolicyRequirementsByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(policyUpdate.OrganizationId, policyUpdate.Type);
 
+        var userOrgIds = GetUserOrgIds(policyUpdate, requirements);
+
+        if (!userOrgIds.Any())
+        {
+            _logger.LogInformation($"No UserOrganizationIds found for {policyUpdate.OrganizationId}");
+            return;
+        }
+
         await collectionRepository.UpsertDefaultCollectionsAsync(
             policyUpdate.OrganizationId,
-            GetUserOrgIds(policyUpdate, requirements),
+            userOrgIds,
             GetDefaultUserCollectionName());
     }
 
     private static string GetDefaultUserCollectionName()
     {
-        return "Default";
+        // TODO: https://bitwarden.atlassian.net/browse/PM-24279
+        const string temporaryPlaceHolderValue = "Default";
+        return temporaryPlaceHolderValue;
     }
 
     private static List<Guid> GetUserOrgIds(PolicyUpdate policyUpdate, IEnumerable<OrganizationDataOwnershipPolicyRequirement> requirements)
