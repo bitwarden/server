@@ -2,8 +2,10 @@
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Api.Models.Request;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -97,6 +99,98 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/account-recovery-details", request);
 
         Assert.Equal(HttpStatusCode.Forbidden, httpResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_WithExistingDefaultCollection_Success()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var (userEmail, organizationUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.User);
+
+        var groupRepository = _factory.GetService<IGroupRepository>();
+        var group = await groupRepository.CreateAsync(new Group
+        {
+            OrganizationId = _organization.Id,
+            Name = $"Test Group {Guid.NewGuid()}"
+        });
+
+        var collectionRepository = _factory.GetService<ICollectionRepository>();
+        var sharedCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = $"Test Collection {Guid.NewGuid()}",
+            Type = CollectionType.SharedCollection
+        });
+
+        var defaultCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = $"My Items {Guid.NewGuid()}",
+            Type = CollectionType.DefaultUserCollection
+        });
+
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        await organizationUserRepository.ReplaceAsync(organizationUser,
+            new List<CollectionAccessSelection>
+            {
+                new CollectionAccessSelection
+                {
+                    Id = defaultCollection.Id,
+                    ReadOnly = false,
+                    HidePasswords = false,
+                    Manage = true
+                }
+            });
+
+        var updateRequest = new OrganizationUserUpdateRequestModel
+        {
+            Type = OrganizationUserType.Custom,
+            Permissions = new Permissions
+            {
+                ManageGroups = true
+            },
+            Collections = new List<SelectionReadOnlyRequestModel>
+            {
+                new SelectionReadOnlyRequestModel
+                {
+                    Id = sharedCollection.Id,
+                    ReadOnly = true,
+                    HidePasswords = false,
+                    Manage = false
+                }
+            },
+            Groups = new List<Guid> { group.Id }
+        };
+
+        var httpResponse = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{organizationUser.Id}", updateRequest);
+
+        Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
+
+        // Verify the user was updated correctly
+        var updatedOrgUser = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(OrganizationUserType.Custom, updatedOrgUser.Type);
+        Assert.True(updatedOrgUser.GetPermissions().ManageGroups);
+
+        // Verify group access was added
+        var userGroups = await groupRepository.GetManyIdsByUserIdAsync(organizationUser.Id);
+        Assert.Contains(group.Id, userGroups);
+
+        // Verify collection access was updated correctly
+        var (_, collectionAccess) = await organizationUserRepository.GetByIdWithCollectionsAsync(organizationUser.Id);
+        var collectionIds = collectionAccess.Select(c => c.Id).ToHashSet();
+
+        // Should have both the default collection and the new collection
+        Assert.Contains(defaultCollection.Id, collectionIds);
+        Assert.Contains(sharedCollection.Id, collectionIds);
+
+        // Verify the new collection has the correct permissions
+        var newCollectionAccess = collectionAccess.First(c => c.Id == sharedCollection.Id);
+        Assert.True(newCollectionAccess.ReadOnly);
+        Assert.False(newCollectionAccess.HidePasswords);
+        Assert.False(newCollectionAccess.Manage);
     }
 
     public async Task InitializeAsync()
