@@ -89,7 +89,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
 
         if (collectionAccessList.Count != 0)
         {
-            await ValidateCollectionAccessAsync(originalOrganizationUser, collectionAccessList);
+            collectionAccessList = await ValidateAccessAndFilterDefaultUserCollectionsAsync(originalOrganizationUser, collectionAccessList);
         }
 
         if (groupAccess?.Any() == true)
@@ -179,8 +179,8 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         throw new BadRequestException("User can only be an admin of one free organization.");
     }
 
-    private async Task ValidateCollectionAccessAsync(OrganizationUser originalUser,
-        ICollection<CollectionAccessSelection> collectionAccess)
+    private async Task<List<CollectionAccessSelection>> ValidateAccessAndFilterDefaultUserCollectionsAsync(
+        OrganizationUser originalUser, List<CollectionAccessSelection> collectionAccess)
     {
         var collections = await _collectionRepository
             .GetManyByManyIdsAsync(collectionAccess.Select(c => c.Id));
@@ -200,10 +200,10 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             throw new NotFoundException();
         }
 
-        if (collections.Any(c => c.Type == CollectionType.DefaultUserCollection))
-        {
-            throw new BadRequestException("You cannot modify member access for collections with the type as DefaultUserCollection.");
-        }
+        // Filter out DefaultUserCollection types from being saved
+        return collectionAccess
+            .Where(cas => collections.Any(c => c.Id == cas.Id && c.Type != CollectionType.DefaultUserCollection))
+            .ToList();
     }
 
     private async Task ValidateGroupAccessAsync(OrganizationUser originalUser,
