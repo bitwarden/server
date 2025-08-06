@@ -1,27 +1,37 @@
- -- Stored procedure that filters out ciphers that ONLY belong to default collections
-CREATE PROCEDURE [dbo].[CipherOrganizationDetails_ReadByOrganizationIdExcludingDefaultCollections]
-    @OrganizationId UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON;
+CREATE OR ALTER PROCEDURE
+  [dbo].[CipherOrganizationDetails_ReadByOrganizationIdExcludingDefaultCollections]
+      @OrganizationId UNIQUEIDENTIFIER
+  AS
+  BEGIN
+      SET NOCOUNT ON;
 
-    SELECT
-        [Id],
-        [UserId],
-        [OrganizationId],
-        [Type],
-        [Data],
-        [Attachments],
-        [CreationDate],
-        [RevisionDate],
-        [DeletedDate],
-        [Reprompt],
-        [Key],
-        [OrganizationUseTotp],
-        [CollectionId]
-    FROM dbo.OrganizationCipherDetailsWithCollectionsView
-    WHERE [OrganizationId] = @OrganizationId
-      AND ([CollectionId] IS NULL       -- no collections
-           OR [CollectionType] <> 1);  -- or at least one non-default
-END;
-GO
+      WITH [NonDefaultCiphers] AS (
+          SELECT DISTINCT [Id]
+          FROM [dbo].[OrganizationCipherDetailsWithCollectionsView]
+          WHERE [OrganizationId] = @OrganizationId
+            AND ([CollectionId] IS NULL
+                 OR [CollectionType] <> 1)
+      )
+
+      SELECT
+          V.[Id],
+          V.[UserId],
+          V.[OrganizationId],
+          V.[Type],
+          V.[Data],
+          V.[Favorites],
+          V.[Folders],
+          V.[Attachments],
+          V.[CreationDate],
+          V.[RevisionDate],
+          V.[DeletedDate],
+          V.[Reprompt],
+          V.[Key],
+          V.[OrganizationUseTotp],
+          V.[CollectionId]  -- For Dapper splitOn parameter
+      FROM [dbo].[OrganizationCipherDetailsWithCollectionsView] V
+      INNER JOIN [NonDefaultCiphers] NDC ON V.[Id] = NDC.[Id]
+      WHERE V.[OrganizationId] = @OrganizationId
+      ORDER BY V.[RevisionDate] DESC;
+  END;
+  GO

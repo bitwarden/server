@@ -7,6 +7,8 @@ AS
       C.[Type],
       C.[Data],
       C.[Attachments],
+      C.[Favorites],
+      C.[Folders],
       C.[CreationDate],
       C.[RevisionDate],
       C.[DeletedDate],
