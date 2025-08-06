@@ -93,7 +93,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             // Update collection types for the default user collection
             var collections = await dbContext.Collections
                 .Where(c => c.CollectionUsers
-                    .Any(cu => cu.CollectionId == c.Id && cu.OrganizationUserId == c.OrganizationId))
+                    .Any(cu => cu.CollectionId == c.Id && c.OrganizationId == organizationId))
                 .ToListAsync();
 
             var collectionToUpdate = collections
