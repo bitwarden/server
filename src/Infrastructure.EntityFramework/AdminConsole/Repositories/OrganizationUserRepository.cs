@@ -86,8 +86,9 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
             var organizationId = orgUser?.OrganizationId;
             var userId = orgUser?.UserId;
-            var collectionUsers = dbContext.CollectionUsers
-                .Where(cu => cu.OrganizationUserId == organizationUserId);
+            var collectionUsers = await dbContext.CollectionUsers
+                .Where(cu => cu.OrganizationUserId == organizationUserId)
+                .ToListAsync();
 
             // Update collection types for the default user collection
             var collectionToUpdate = await dbContext.Collections
@@ -99,7 +100,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             if (collectionToUpdate != null)
             {
                 collectionToUpdate.DefaultUserCollectionEmail = email;
-                collectionToUpdate.Type = Core.Enums.CollectionType.SharedCollection;
+                collectionToUpdate.Type = CollectionType.SharedCollection;
                 dbContext.Collections.Update(collectionToUpdate);
             }
 

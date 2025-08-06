@@ -105,7 +105,7 @@ public class OrganizationUserRepositoryTests
 
         var updatedCollection = await collectionRepository.GetByIdAsync(defaultUserCollection.Id);
         Assert.NotNull(updatedCollection);
-        Assert.Equal(CollectionType.DefaultUserCollection, updatedCollection.Type);
+        Assert.Equal(CollectionType.SharedCollection, updatedCollection.Type);
         Assert.Equal(user.Email, updatedCollection.DefaultUserCollectionEmail);
     }
 
