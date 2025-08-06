@@ -101,98 +101,6 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         Assert.Equal(HttpStatusCode.Forbidden, httpResponse.StatusCode);
     }
 
-    [Fact]
-    public async Task Put_WithExistingDefaultCollection_Success()
-    {
-        await _loginHelper.LoginAsync(_ownerEmail);
-
-        var (userEmail, organizationUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
-            _organization.Id, OrganizationUserType.User);
-
-        var groupRepository = _factory.GetService<IGroupRepository>();
-        var group = await groupRepository.CreateAsync(new Group
-        {
-            OrganizationId = _organization.Id,
-            Name = $"Test Group {Guid.NewGuid()}"
-        });
-
-        var collectionRepository = _factory.GetService<ICollectionRepository>();
-        var sharedCollection = await collectionRepository.CreateAsync(new Collection
-        {
-            OrganizationId = _organization.Id,
-            Name = $"Test Collection {Guid.NewGuid()}",
-            Type = CollectionType.SharedCollection
-        });
-
-        var defaultCollection = await collectionRepository.CreateAsync(new Collection
-        {
-            OrganizationId = _organization.Id,
-            Name = $"My Items {Guid.NewGuid()}",
-            Type = CollectionType.DefaultUserCollection
-        });
-
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
-        await organizationUserRepository.ReplaceAsync(organizationUser,
-            new List<CollectionAccessSelection>
-            {
-                new CollectionAccessSelection
-                {
-                    Id = defaultCollection.Id,
-                    ReadOnly = false,
-                    HidePasswords = false,
-                    Manage = true
-                }
-            });
-
-        var updateRequest = new OrganizationUserUpdateRequestModel
-        {
-            Type = OrganizationUserType.Custom,
-            Permissions = new Permissions
-            {
-                ManageGroups = true
-            },
-            Collections = new List<SelectionReadOnlyRequestModel>
-            {
-                new SelectionReadOnlyRequestModel
-                {
-                    Id = sharedCollection.Id,
-                    ReadOnly = true,
-                    HidePasswords = false,
-                    Manage = false
-                }
-            },
-            Groups = new List<Guid> { group.Id }
-        };
-
-        var httpResponse = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{organizationUser.Id}", updateRequest);
-
-        Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
-
-        // Verify the user was updated correctly
-        var updatedOrgUser = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
-        Assert.NotNull(updatedOrgUser);
-        Assert.Equal(OrganizationUserType.Custom, updatedOrgUser.Type);
-        Assert.True(updatedOrgUser.GetPermissions().ManageGroups);
-
-        // Verify group access was added
-        var userGroups = await groupRepository.GetManyIdsByUserIdAsync(organizationUser.Id);
-        Assert.Contains(group.Id, userGroups);
-
-        // Verify collection access was updated correctly
-        var (_, collectionAccess) = await organizationUserRepository.GetByIdWithCollectionsAsync(organizationUser.Id);
-        var collectionIds = collectionAccess.Select(c => c.Id).ToHashSet();
-
-        // Should have both the default collection and the new collection
-        Assert.Contains(defaultCollection.Id, collectionIds);
-        Assert.Contains(sharedCollection.Id, collectionIds);
-
-        // Verify the new collection has the correct permissions
-        var newCollectionAccess = collectionAccess.First(c => c.Id == sharedCollection.Id);
-        Assert.True(newCollectionAccess.ReadOnly);
-        Assert.False(newCollectionAccess.HidePasswords);
-        Assert.False(newCollectionAccess.Manage);
-    }
-
     public async Task InitializeAsync()
     {
         _ownerEmail = $"org-user-integration-test-{Guid.NewGuid()}@bitwarden.com";
@@ -254,10 +162,136 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         await VerifyMultipleUsersHaveDefaultCollectionsAsync(acceptedUsers);
     }
 
+    [Fact]
+    public async Task Put_WithExistingDefaultCollection_Success()
+    {
+        // Arrange
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var (userEmail, organizationUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.User);
+
+        var (group, sharedCollection, defaultCollection) = await CreateTestDataAsync();
+        await AssignDefaultCollectionToUserAsync(organizationUser, defaultCollection);
+
+        // Act
+        var updateRequest = CreateUpdateRequest(sharedCollection, group);
+        var httpResponse = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{organizationUser.Id}", updateRequest);
+
+        Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
+
+        // Assert
+        await VerifyUserWasUpdatedCorrectlyAsync(organizationUser, expectedType: OrganizationUserType.Custom, expectedManageGroups: true);
+        await VerifyGroupAccessWasAddedAsync(organizationUser, [group]);
+        await VerifyCollectionAccessWasUpdatedCorrectlyAsync(organizationUser, sharedCollection.Id, defaultCollection.Id);
+    }
+
     public Task DisposeAsync()
     {
         _client.Dispose();
         return Task.CompletedTask;
+    }
+
+    private async Task<(Group group, Collection sharedCollection, Collection defaultCollection)> CreateTestDataAsync()
+    {
+        var groupRepository = _factory.GetService<IGroupRepository>();
+        var group = await groupRepository.CreateAsync(new Group
+        {
+            OrganizationId = _organization.Id,
+            Name = $"Test Group {Guid.NewGuid()}"
+        });
+
+        var collectionRepository = _factory.GetService<ICollectionRepository>();
+        var sharedCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = $"Test Collection {Guid.NewGuid()}",
+            Type = CollectionType.SharedCollection
+        });
+
+        var defaultCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = $"My Items {Guid.NewGuid()}",
+            Type = CollectionType.DefaultUserCollection
+        });
+
+        return (group, sharedCollection, defaultCollection);
+    }
+
+    private async Task AssignDefaultCollectionToUserAsync(OrganizationUser organizationUser, Collection defaultCollection)
+    {
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        await organizationUserRepository.ReplaceAsync(organizationUser,
+            new List<CollectionAccessSelection>
+            {
+                new CollectionAccessSelection
+                {
+                    Id = defaultCollection.Id,
+                    ReadOnly = false,
+                    HidePasswords = false,
+                    Manage = true
+                }
+            });
+    }
+
+    private static OrganizationUserUpdateRequestModel CreateUpdateRequest(Collection sharedCollection, Group group)
+    {
+        return new OrganizationUserUpdateRequestModel
+        {
+            Type = OrganizationUserType.Custom,
+            Permissions = new Permissions
+            {
+                ManageGroups = true
+            },
+            Collections = new List<SelectionReadOnlyRequestModel>
+            {
+                new SelectionReadOnlyRequestModel
+                {
+                    Id = sharedCollection.Id,
+                    ReadOnly = true,
+                    HidePasswords = false,
+                    Manage = false
+                }
+            },
+            Groups = new List<Guid> { group.Id }
+        };
+    }
+
+    private async Task VerifyUserWasUpdatedCorrectlyAsync(
+        OrganizationUser organizationUser,
+        OrganizationUserType expectedType,
+        bool expectedManageGroups)
+    {
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        var updatedOrgUser = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(expectedType, updatedOrgUser.Type);
+        Assert.Equal(expectedManageGroups, updatedOrgUser.GetPermissions().ManageGroups);
+    }
+
+    private async Task VerifyGroupAccessWasAddedAsync(
+        OrganizationUser organizationUser, IEnumerable<Group> groups)
+    {
+        var groupRepository = _factory.GetService<IGroupRepository>();
+        var userGroups = await groupRepository.GetManyIdsByUserIdAsync(organizationUser.Id);
+        Assert.All(groups, group => Assert.Contains(group.Id, userGroups));
+    }
+
+    private async Task VerifyCollectionAccessWasUpdatedCorrectlyAsync(
+        OrganizationUser organizationUser, Guid sharedCollectionId, Guid defaultCollectionId)
+    {
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        var (_, collectionAccess) = await organizationUserRepository.GetByIdWithCollectionsAsync(organizationUser.Id);
+        var collectionIds = collectionAccess.Select(c => c.Id).ToHashSet();
+
+        Assert.Contains(defaultCollectionId, collectionIds);
+        Assert.Contains(sharedCollectionId, collectionIds);
+
+        var newCollectionAccess = collectionAccess.First(c => c.Id == sharedCollectionId);
+        Assert.True(newCollectionAccess.ReadOnly);
+        Assert.False(newCollectionAccess.HidePasswords);
+        Assert.False(newCollectionAccess.Manage);
     }
 
     private async Task<List<OrganizationUser>> CreateAcceptedUsersAsync(IEnumerable<string> emails)
