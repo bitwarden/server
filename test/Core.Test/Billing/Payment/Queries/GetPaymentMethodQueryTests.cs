@@ -342,4 +342,232 @@ public class GetPaymentMethodQueryTests
         var maskedPayPalAccount = maskedPaymentMethod.AsT2;
         Assert.Equal("user@gmail.com", maskedPayPalAccount.Email);
     }
+
+    #region GetPaymentMethodDescription Tests
+
+    [Fact]
+    public void GetPaymentMethodDescription_PayPalAccount_ReturnsCorrectDescription()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.BraintreeCustomerId] = "braintree_customer_id"
+            }
+        };
+
+        // Act
+        var result = _query.GetPaymentMethodDescription(customer);
+
+        // Assert
+        Assert.Equal("PayPal account", result);
+    }
+
+    [Fact]
+    public void GetPaymentMethodDescription_CreditCard_ReturnsCorrectDescription()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            InvoiceSettings = new CustomerInvoiceSettings
+            {
+                DefaultPaymentMethod = new PaymentMethod
+                {
+                    Type = "card",
+                    Card = new PaymentMethodCard { Last4 = "1234" }
+                }
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = _query.GetPaymentMethodDescription(customer);
+
+        // Assert
+        Assert.Equal("Credit card ending in 1234", result);
+    }
+
+    [Fact]
+    public void GetPaymentMethodDescription_BankAccount_ReturnsCorrectDescription()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            InvoiceSettings = new CustomerInvoiceSettings
+            {
+                DefaultPaymentMethod = new PaymentMethod
+                {
+                    Type = "us_bank_account",
+                    UsBankAccount = new PaymentMethodUsBankAccount { Last4 = "5678" }
+                }
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = _query.GetPaymentMethodDescription(customer);
+
+        // Assert
+        Assert.Equal("Bank account ending in 5678", result);
+    }
+
+    [Fact]
+    public void GetPaymentMethodDescription_UnknownPaymentMethodType_ReturnsGenericDescription()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            InvoiceSettings = new CustomerInvoiceSettings
+            {
+                DefaultPaymentMethod = new PaymentMethod
+                {
+                    Type = "unknown_type"
+                }
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = _query.GetPaymentMethodDescription(customer);
+
+        // Assert
+        Assert.Equal("Payment method", result);
+    }
+
+    [Fact]
+    public void GetPaymentMethodDescription_DefaultSourceCard_ReturnsCorrectDescription()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            DefaultSource = new Card { Last4 = "9999" },
+            InvoiceSettings = new CustomerInvoiceSettings(),
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = _query.GetPaymentMethodDescription(customer);
+
+        // Assert
+        Assert.Equal("Credit card ending in 9999", result);
+    }
+
+    [Fact]
+    public void GetPaymentMethodDescription_DefaultSourceBankAccount_ReturnsCorrectDescription()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            DefaultSource = new BankAccount { Last4 = "8888" },
+            InvoiceSettings = new CustomerInvoiceSettings(),
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = _query.GetPaymentMethodDescription(customer);
+
+        // Assert
+        Assert.Equal("Bank account ending in 8888", result);
+    }
+
+    [Fact]
+    public void GetPaymentMethodDescription_NoPaymentMethod_ReturnsNull()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            InvoiceSettings = new CustomerInvoiceSettings(),
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = _query.GetPaymentMethodDescription(customer);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    #endregion
+
+    #region HasPaymentMethod Tests
+
+    [Fact]
+    public void HasPaymentMethod_PayPalAccount_ReturnsTrue()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.BraintreeCustomerId] = "braintree_customer_id"
+            }
+        };
+
+        // Act
+        var result = _query.HasPaymentMethod(customer);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void HasPaymentMethod_DefaultPaymentMethod_ReturnsTrue()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            InvoiceSettings = new CustomerInvoiceSettings
+            {
+                DefaultPaymentMethod = new PaymentMethod
+                {
+                    Type = "card"
+                }
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = _query.HasPaymentMethod(customer);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void HasPaymentMethod_DefaultSource_ReturnsTrue()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            DefaultSource = new Card(),
+            InvoiceSettings = new CustomerInvoiceSettings(),
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = _query.HasPaymentMethod(customer);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void HasPaymentMethod_NoPaymentMethod_ReturnsFalse()
+    {
+        // Arrange
+        var customer = new Customer
+        {
+            InvoiceSettings = new CustomerInvoiceSettings(),
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = _query.HasPaymentMethod(customer);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    #endregion
 }

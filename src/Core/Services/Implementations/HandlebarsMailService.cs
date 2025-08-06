@@ -415,6 +415,33 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendProviderInvoiceUpcoming(
+        IEnumerable<string> emails,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        string? collectionMethod = null,
+        bool hasPaymentMethod = true,
+        string? paymentMethodDescription = null)
+    {
+        var message = CreateDefaultMessage("Your Subscription Will Renew Soon", emails);
+        var model = new InvoiceUpcomingViewModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+            AmountDue = amount,
+            DueDate = dueDate,
+            Items = items,
+            MentionInvoices = false,
+            CollectionMethod = collectionMethod,
+            HasPaymentMethod = hasPaymentMethod,
+            PaymentMethodDescription = paymentMethodDescription
+        };
+        await AddMessageContentAsync(message, "ProviderInvoiceUpcoming", model);
+        message.Category = "ProviderInvoiceUpcoming";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices)
     {
         var message = CreateDefaultMessage("Payment Failed", email);
@@ -799,6 +826,19 @@ public class HandlebarsMailService : IMailService
             {
                 writer.WriteSafeString(string.Empty);
             }
+        });
+
+        // Equality comparison helper for conditional templates.
+        Handlebars.RegisterHelper("eq", (context, arguments) =>
+        {
+            if (arguments.Length != 2)
+            {
+                return false;
+            }
+
+            var value1 = arguments[0]?.ToString();
+            var value2 = arguments[1]?.ToString();
+            return string.Equals(value1, value2, StringComparison.OrdinalIgnoreCase);
         });
     }
 

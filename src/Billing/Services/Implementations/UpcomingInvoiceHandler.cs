@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
@@ -19,6 +20,7 @@ namespace Bit.Billing.Services.Implementations;
 
 public class UpcomingInvoiceHandler(
     IFeatureService featureService,
+    IGetPaymentMethodQuery getPaymentMethodQuery,
     ILogger<StripeEventProcessor> logger,
     IMailService mailService,
     IOrganizationRepository organizationRepository,
@@ -140,7 +142,7 @@ public class UpcomingInvoiceHandler(
 
             await AlignProviderTaxConcernsAsync(provider, subscription, parsedEvent.Id, setNonUSBusinessUseToReverseCharge);
 
-            await SendUpcomingInvoiceEmailsAsync(new List<string> { provider.BillingEmail }, invoice);
+            await SendProviderUpcomingInvoiceEmailsAsync(new List<string> { provider.BillingEmail }, invoice, subscription);
         }
     }
 
@@ -160,6 +162,38 @@ public class UpcomingInvoiceHandler(
                 true);
         }
     }
+
+
+    private async Task SendProviderUpcomingInvoiceEmailsAsync(IEnumerable<string> emails, Invoice invoice, Subscription subscription)
+    {
+        var validEmails = emails.Where(e => !string.IsNullOrEmpty(e));
+
+        var items = invoice.FormatForProvider(subscription);
+
+        if (invoice.NextPaymentAttempt.HasValue && invoice.AmountDue > 0)
+        {
+            var expandedSubscription = await stripeFacade.GetSubscription(subscription.Id, new SubscriptionGetOptions
+            {
+                Expand = ["customer.invoice_settings.default_payment_method", "customer.default_source"]
+            });
+
+            var collectionMethod = expandedSubscription.CollectionMethod;
+            var customer = expandedSubscription.Customer;
+            var hasPaymentMethod = getPaymentMethodQuery.HasPaymentMethod(customer);
+            var paymentMethodDescription = getPaymentMethodQuery.GetPaymentMethodDescription(customer);
+
+            await mailService.SendProviderInvoiceUpcoming(
+                validEmails,
+                invoice.AmountDue / 100M,
+                invoice.NextPaymentAttempt.Value,
+                items,
+                collectionMethod,
+                hasPaymentMethod,
+                paymentMethodDescription);
+        }
+    }
+
+
 
     private async Task AlignOrganizationTaxConcernsAsync(
         Organization organization,

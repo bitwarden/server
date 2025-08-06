@@ -8,12 +8,15 @@ using Bit.Core.Services;
 using Braintree;
 using Microsoft.Extensions.Logging;
 using Stripe;
+using Customer = Stripe.Customer;
 
 namespace Bit.Core.Billing.Payment.Queries;
 
 public interface IGetPaymentMethodQuery
 {
     Task<MaskedPaymentMethod?> Run(ISubscriber subscriber);
+    string? GetPaymentMethodDescription(Customer customer);
+    bool HasPaymentMethod(Customer customer);
 }
 
 public class GetPaymentMethodQuery(
@@ -96,5 +99,60 @@ public class GetPaymentMethodQuery(
         }
 
         return MaskedPaymentMethod.From(setupIntent);
+    }
+
+    public string? GetPaymentMethodDescription(Customer customer)
+    {
+        if (customer.Metadata?.ContainsKey(StripeConstants.MetadataKeys.BraintreeCustomerId) == true)
+        {
+            return "PayPal account";
+        }
+
+        if (customer.InvoiceSettings?.DefaultPaymentMethod != null)
+        {
+            var paymentMethod = customer.InvoiceSettings.DefaultPaymentMethod;
+            return paymentMethod.Type switch
+            {
+                "card" => $"Credit card ending in {paymentMethod.Card?.Last4}",
+                "us_bank_account" => $"Bank account ending in {paymentMethod.UsBankAccount?.Last4}",
+                _ => "Payment method"
+            };
+        }
+
+        if (customer.DefaultSource != null)
+        {
+            return customer.DefaultSource switch
+            {
+                Card card => $"Credit card ending in {card.Last4}",
+                BankAccount bankAccount => $"Bank account ending in {bankAccount.Last4}",
+                Source { Card: not null } source => $"Credit card ending in {source.Card.Last4}",
+                _ => "Payment method"
+            };
+        }
+
+        return null;
+    }
+
+    public bool HasPaymentMethod(Customer customer)
+    {
+        // Check for PayPal (Braintree) account
+        if (customer.Metadata?.ContainsKey(StripeConstants.MetadataKeys.BraintreeCustomerId) == true)
+        {
+            return true;
+        }
+
+        // Check for default payment method
+        if (customer.InvoiceSettings?.DefaultPaymentMethod != null)
+        {
+            return true;
+        }
+
+        // Check for default source
+        if (customer.DefaultSource != null)
+        {
+            return true;
+        }
+
+        return false;
     }
 }
