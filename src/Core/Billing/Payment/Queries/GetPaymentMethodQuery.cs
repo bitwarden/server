@@ -16,7 +16,7 @@ public interface IGetPaymentMethodQuery
 {
     Task<MaskedPaymentMethod?> Run(ISubscriber subscriber);
     string? GetPaymentMethodDescription(Customer customer);
-    bool HasPaymentMethod(Customer customer);
+    Task<bool> HasPaymentMethod(Customer customer, Guid? subscriberId = null);
 }
 
 public class GetPaymentMethodQuery(
@@ -133,24 +133,38 @@ public class GetPaymentMethodQuery(
         return null;
     }
 
-    public bool HasPaymentMethod(Customer customer)
+    public async Task<bool> HasPaymentMethod(Customer customer, Guid? subscriberId = null)
     {
-        // Check for PayPal (Braintree) account
         if (customer.Metadata?.ContainsKey(StripeConstants.MetadataKeys.BraintreeCustomerId) == true)
         {
             return true;
         }
 
-        // Check for default payment method
         if (customer.InvoiceSettings?.DefaultPaymentMethod != null)
         {
             return true;
         }
 
-        // Check for default source
         if (customer.DefaultSource != null)
         {
             return true;
+        }
+
+        if (subscriberId.HasValue)
+        {
+            var setupIntentId = await setupIntentCache.Get(subscriberId.Value);
+            if (!string.IsNullOrEmpty(setupIntentId))
+            {
+                var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions
+                {
+                    Expand = ["payment_method"]
+                });
+
+                if (setupIntent.IsUnverifiedBankAccount())
+                {
+                    return true;
+                }
+            }
         }
 
         return false;

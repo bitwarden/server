@@ -456,7 +456,6 @@ public class GetPaymentMethodQueryTests
     [Fact]
     public void GetPaymentMethodDescription_DefaultSourceBankAccount_ReturnsCorrectDescription()
     {
-        // Arrange
         var customer = new Customer
         {
             DefaultSource = new BankAccount { Last4 = "8888" },
@@ -464,27 +463,22 @@ public class GetPaymentMethodQueryTests
             Metadata = new Dictionary<string, string>()
         };
 
-        // Act
         var result = _query.GetPaymentMethodDescription(customer);
 
-        // Assert
         Assert.Equal("Bank account ending in 8888", result);
     }
 
     [Fact]
     public void GetPaymentMethodDescription_NoPaymentMethod_ReturnsNull()
     {
-        // Arrange
         var customer = new Customer
         {
             InvoiceSettings = new CustomerInvoiceSettings(),
             Metadata = new Dictionary<string, string>()
         };
 
-        // Act
         var result = _query.GetPaymentMethodDescription(customer);
 
-        // Assert
         Assert.Null(result);
     }
 
@@ -493,9 +487,8 @@ public class GetPaymentMethodQueryTests
     #region HasPaymentMethod Tests
 
     [Fact]
-    public void HasPaymentMethod_PayPalAccount_ReturnsTrue()
+    public async Task HasPaymentMethod_PayPalAccount_ReturnsTrue()
     {
-        // Arrange
         var customer = new Customer
         {
             Metadata = new Dictionary<string, string>
@@ -504,17 +497,14 @@ public class GetPaymentMethodQueryTests
             }
         };
 
-        // Act
-        var result = _query.HasPaymentMethod(customer);
+        var result = await _query.HasPaymentMethod(customer);
 
-        // Assert
         Assert.True(result);
     }
 
     [Fact]
-    public void HasPaymentMethod_DefaultPaymentMethod_ReturnsTrue()
+    public async Task HasPaymentMethod_DefaultPaymentMethod_ReturnsTrue()
     {
-        // Arrange
         var customer = new Customer
         {
             InvoiceSettings = new CustomerInvoiceSettings
@@ -527,17 +517,13 @@ public class GetPaymentMethodQueryTests
             Metadata = new Dictionary<string, string>()
         };
 
-        // Act
-        var result = _query.HasPaymentMethod(customer);
-
-        // Assert
+        var result = await _query.HasPaymentMethod(customer);
         Assert.True(result);
     }
 
     [Fact]
-    public void HasPaymentMethod_DefaultSource_ReturnsTrue()
+    public async Task HasPaymentMethod_DefaultSource_ReturnsTrue()
     {
-        // Arrange
         var customer = new Customer
         {
             DefaultSource = new Card(),
@@ -545,28 +531,60 @@ public class GetPaymentMethodQueryTests
             Metadata = new Dictionary<string, string>()
         };
 
-        // Act
-        var result = _query.HasPaymentMethod(customer);
-
-        // Assert
+        var result = await _query.HasPaymentMethod(customer);
         Assert.True(result);
     }
 
     [Fact]
-    public void HasPaymentMethod_NoPaymentMethod_ReturnsFalse()
+    public async Task HasPaymentMethod_NoPaymentMethod_ReturnsFalse()
     {
-        // Arrange
         var customer = new Customer
         {
             InvoiceSettings = new CustomerInvoiceSettings(),
             Metadata = new Dictionary<string, string>()
         };
 
-        // Act
-        var result = _query.HasPaymentMethod(customer);
+        var result = await _query.HasPaymentMethod(customer);
 
-        // Assert
         Assert.False(result);
+    }
+
+    [Fact]
+    public async Task HasPaymentMethod_SetupIntentUnverifiedBankAccount_ReturnsTrue()
+    {
+
+        var subscriberId = Guid.NewGuid();
+        var setupIntentId = "setup_intent_test";
+        var customer = new Customer
+        {
+            InvoiceSettings = new CustomerInvoiceSettings(),
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var setupIntent = new SetupIntent
+        {
+            Status = "requires_action",
+            NextAction = new SetupIntentNextAction
+            {
+                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
+            },
+            PaymentMethod = new PaymentMethod
+            {
+                Type = "us_bank_account",
+                UsBankAccount = new PaymentMethodUsBankAccount
+                {
+                    AccountType = "checking",
+                    BankName = "Test Bank",
+                    Last4 = "6789"
+                }
+            }
+        };
+
+        _setupIntentCache.Get(subscriberId).Returns(setupIntentId);
+        _stripeAdapter.SetupIntentGet(setupIntentId, Arg.Any<SetupIntentGetOptions>()).Returns(setupIntent);
+
+        var result = await _query.HasPaymentMethod(customer, subscriberId);
+        Assert.True(result);
     }
 
     #endregion

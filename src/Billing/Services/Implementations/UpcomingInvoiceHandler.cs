@@ -142,7 +142,7 @@ public class UpcomingInvoiceHandler(
 
             await AlignProviderTaxConcernsAsync(provider, subscription, parsedEvent.Id, setNonUSBusinessUseToReverseCharge);
 
-            await SendProviderUpcomingInvoiceEmailsAsync(new List<string> { provider.BillingEmail }, invoice, subscription);
+            await SendProviderUpcomingInvoiceEmailsAsync(new List<string> { provider.BillingEmail }, invoice, subscription, providerId.Value);
         }
     }
 
@@ -164,7 +164,7 @@ public class UpcomingInvoiceHandler(
     }
 
 
-    private async Task SendProviderUpcomingInvoiceEmailsAsync(IEnumerable<string> emails, Invoice invoice, Subscription subscription)
+    private async Task SendProviderUpcomingInvoiceEmailsAsync(IEnumerable<string> emails, Invoice invoice, Subscription subscription, Guid providerId)
     {
         var validEmails = emails.Where(e => !string.IsNullOrEmpty(e));
 
@@ -179,7 +179,7 @@ public class UpcomingInvoiceHandler(
 
             var collectionMethod = expandedSubscription.CollectionMethod;
             var customer = expandedSubscription.Customer;
-            var hasPaymentMethod = getPaymentMethodQuery.HasPaymentMethod(customer);
+            var hasPaymentMethod = await getPaymentMethodQuery.HasPaymentMethod(customer, providerId);
             var paymentMethodDescription = getPaymentMethodQuery.GetPaymentMethodDescription(customer);
 
             await mailService.SendProviderInvoiceUpcoming(

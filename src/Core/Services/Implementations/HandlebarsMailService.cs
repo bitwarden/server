@@ -672,6 +672,8 @@ public class HandlebarsMailService : IMailService
         Handlebars.RegisterTemplate("SecurityTasksHtmlLayout", securityTasksHtmlLayoutSource);
         var securityTasksTextLayoutSource = await ReadSourceAsync("Layouts.SecurityTasks.text");
         Handlebars.RegisterTemplate("SecurityTasksTextLayout", securityTasksTextLayoutSource);
+        var providerFullHtmlLayoutSource = await ReadSourceAsync("Layouts.ProviderFull.html");
+        Handlebars.RegisterTemplate("ProviderFull", providerFullHtmlLayoutSource);
 
         Handlebars.RegisterHelper("date", (writer, context, parameters) =>
         {
