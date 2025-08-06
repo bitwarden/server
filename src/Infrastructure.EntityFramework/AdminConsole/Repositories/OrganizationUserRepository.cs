@@ -93,13 +93,16 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var collectionToUpdate = await dbContext.Collections
                 .Where(c => c.Type == CollectionType.DefaultUserCollection &&
                         collectionUsers.Any(
-                            cu => cu.CollectionId == c.Id && cu.OrganizationUserId == organizationUserId))
+                            cu => cu.CollectionId == c.Id && cu.OrganizationUserId == c.OrganizationId))
                 .FirstOrDefaultAsync();
 
-            collectionToUpdate.DefaultUserCollectionEmail = email;
-            collectionToUpdate.Type = Core.Enums.CollectionType.SharedCollection;
+            if (collectionToUpdate != null)
+            {
+                collectionToUpdate.DefaultUserCollectionEmail = email;
+                collectionToUpdate.Type = Core.Enums.CollectionType.SharedCollection;
+                dbContext.Collections.Update(collectionToUpdate);
+            }
 
-            dbContext.Collections.Update(collectionToUpdate);
             dbContext.CollectionUsers.RemoveRange(collectionUsers);
 
             if (orgUser?.OrganizationId != null && orgUser?.UserId != null)
@@ -175,7 +178,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             }
         }
 
-        // end
         await dbContext.CollectionUsers
             .Where(cu => targetOrganizationUserIds.Contains(cu.OrganizationUserId))
             .ExecuteDeleteAsync();

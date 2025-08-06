@@ -37,6 +37,7 @@ public class OrganizationUserRepositoryTests
             OrganizationId = organization.Id,
             UserId = user.Id,
             Status = OrganizationUserStatusType.Confirmed,
+            Email = user.Email
         });
 
         await organizationUserRepository.DeleteAsync(orgUser);
@@ -73,6 +74,7 @@ public class OrganizationUserRepositoryTests
             OrganizationId = organization.Id,
             UserId = user.Id,
             Status = OrganizationUserStatusType.Confirmed,
+            Email = user.Email
         });
 
         var defaultUserCollection = await collectionRepository.CreateAsync(new Collection
@@ -84,7 +86,7 @@ public class OrganizationUserRepositoryTests
         });
 
         // Create the CollectionUser entry for the defaultUserCollection
-        await collectionRepository.UpdateUsersAsync(defaultUserCollection.Id, new[]
+        await collectionRepository.UpdateUsersAsync(defaultUserCollection.Id, new List<CollectionAccessSelection>()
         {
             new CollectionAccessSelection
             {
@@ -101,7 +103,8 @@ public class OrganizationUserRepositoryTests
         Assert.NotNull(newUser);
         Assert.NotEqual(newUser.AccountRevisionDate, user.AccountRevisionDate);
 
-        var updatedCollection = await collectionRepository.GetByIdAsync(user.Id);
+        var updatedCollection = await collectionRepository.GetByIdAsync(defaultUserCollection.Id);
+        Assert.NotNull(updatedCollection);
         Assert.Equal(CollectionType.DefaultUserCollection, updatedCollection.Type);
         Assert.Equal(user.Email, updatedCollection.DefaultUserCollectionEmail);
     }
@@ -140,6 +143,7 @@ public class OrganizationUserRepositoryTests
             OrganizationId = organization.Id,
             UserId = user1.Id,
             Status = OrganizationUserStatusType.Confirmed,
+            Email = user1.Email
         });
 
         var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
@@ -147,6 +151,7 @@ public class OrganizationUserRepositoryTests
             OrganizationId = organization.Id,
             UserId = user2.Id,
             Status = OrganizationUserStatusType.Confirmed,
+            Email = user2.Email
         });
 
         await organizationUserRepository.DeleteManyAsync(new List<Guid>
