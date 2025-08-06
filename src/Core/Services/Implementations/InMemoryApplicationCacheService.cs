@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Collections.Concurrent;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
@@ -15,10 +16,13 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderRepository _providerRepository;
     private DateTime _lastOrgAbilityRefresh = DateTime.MinValue;
-    private IDictionary<Guid, OrganizationAbility> _orgAbilities;
+    private DateTime _lastProviderAbilityRefresh = DateTime.MinValue;
+    private ConcurrentDictionary<Guid, OrganizationAbility> _orgAbilities;
     private TimeSpan _orgAbilitiesRefreshInterval = TimeSpan.FromMinutes(10);
+    private readonly SemaphoreSlim _orgInitLock = new(1, 1);
+    private readonly SemaphoreSlim _providerInitLock = new(1, 1);
 
-    private IDictionary<Guid, ProviderAbility> _providerAbilities;
+    private ConcurrentDictionary<Guid, ProviderAbility> _providerAbilities;
 
     public InMemoryApplicationCacheService(
         IOrganizationRepository organizationRepository, IProviderRepository providerRepository)
@@ -27,7 +31,7 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         _providerRepository = providerRepository;
     }
 
-    public virtual async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
+    public virtual async Task<ConcurrentDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
     {
         await InitOrganizationAbilitiesAsync();
         return _orgAbilities;
@@ -42,7 +46,7 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
     }
 #nullable disable
 
-    public virtual async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
+    public virtual async Task<ConcurrentDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
     {
         await InitProviderAbilitiesAsync();
         return _providerAbilities;
@@ -66,37 +70,69 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
 
     public virtual Task DeleteOrganizationAbilityAsync(Guid organizationId)
     {
-        _orgAbilities?.Remove(organizationId);
-
-        return Task.FromResult(0);
+        _orgAbilities?.TryRemove(organizationId, out _);
+        return Task.CompletedTask;
     }
 
     public virtual Task DeleteProviderAbilityAsync(Guid providerId)
     {
-        _providerAbilities?.Remove(providerId);
-
-        return Task.FromResult(0);
+        _providerAbilities?.TryRemove(providerId, out _);
+        return Task.CompletedTask;
     }
 
     private async Task InitOrganizationAbilitiesAsync()
     {
         var now = DateTime.UtcNow;
-        if (_orgAbilities == null || (now - _lastOrgAbilityRefresh) > _orgAbilitiesRefreshInterval)
+
+        if (_orgAbilities != null && (now - _lastOrgAbilityRefresh) <= _orgAbilitiesRefreshInterval)
         {
-            var abilities = await _organizationRepository.GetManyAbilitiesAsync();
-            _orgAbilities = abilities.ToDictionary(a => a.Id);
-            _lastOrgAbilityRefresh = now;
+            return;
+        }
+
+        await _orgInitLock.WaitAsync();
+        try
+        {
+            // Double-check after acquiring lock to avoid redundant refresh
+            now = DateTime.UtcNow;
+            if (_orgAbilities == null || (now - _lastOrgAbilityRefresh) > _orgAbilitiesRefreshInterval)
+            {
+                var abilities = await _organizationRepository.GetManyAbilitiesAsync();
+                _orgAbilities = new ConcurrentDictionary<Guid, OrganizationAbility>(
+                    abilities.ToDictionary(a => a.Id));
+                _lastOrgAbilityRefresh = now;
+            }
+        }
+        finally
+        {
+            _orgInitLock.Release();
         }
     }
 
     private async Task InitProviderAbilitiesAsync()
     {
         var now = DateTime.UtcNow;
-        if (_providerAbilities == null || (now - _lastOrgAbilityRefresh) > _orgAbilitiesRefreshInterval)
+
+        if (_providerAbilities != null && (now - _lastProviderAbilityRefresh) <= _orgAbilitiesRefreshInterval)
         {
-            var abilities = await _providerRepository.GetManyAbilitiesAsync();
-            _providerAbilities = abilities.ToDictionary(a => a.Id);
-            _lastOrgAbilityRefresh = now;
+            return;
+        }
+
+        await _providerInitLock.WaitAsync();
+        try
+        {
+            // Double-check after acquiring lock to avoid redundant refresh
+            now = DateTime.UtcNow;
+            if (_providerAbilities == null || (now - _lastProviderAbilityRefresh) > _orgAbilitiesRefreshInterval)
+            {
+                var abilities = await _providerRepository.GetManyAbilitiesAsync();
+                _providerAbilities = new ConcurrentDictionary<Guid, ProviderAbility>(
+                    abilities.ToDictionary(a => a.Id));
+                _lastProviderAbilityRefresh = now;
+            }
+        }
+        finally
+        {
+            _providerInitLock.Release();
         }
     }
 }

@@ -5,12 +5,12 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Identity.IdentityServer.RequestValidators;
+using Bit.Identity.Test.Helpers;
 using Bit.Identity.Test.Wrappers;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Duende.IdentityServer.Validation;
@@ -136,10 +136,7 @@ public class TwoFactorAuthenticationValidatorTests
             .Returns(Task.FromResult(organizationCollection));
 
         _applicationCacheService.GetOrganizationAbilitiesAsync()
-            .Returns(new Dictionary<Guid, OrganizationAbility>()
-            {
-                { orgUser.OrganizationId, new OrganizationAbility(organization)}
-            });
+            .Returns(OrganizationAbilityBuilder.BuildConcurrentDictionary(orgUser, organization));
 
         _organizationRepository.GetManyByUserIdAsync(Arg.Any<Guid>()).Returns([organization]);
 
@@ -151,6 +148,7 @@ public class TwoFactorAuthenticationValidatorTests
         Assert.NotNull(result.Item2);
         Assert.IsType<Organization>(result.Item2);
     }
+
 
     [Theory]
     [BitAutoData]

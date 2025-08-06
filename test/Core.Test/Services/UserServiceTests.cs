@@ -16,11 +16,11 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.Helpers;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -100,7 +100,7 @@ public class UserServiceTests
         orgUser.OrganizationId = organization.Id;
         organization.Enabled = orgEnabled;
         organization.UsersGetPremium = orgUsersGetPremium;
-        var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization) } };
+        var orgAbilities = OrganizationAbilityBuilder.BuildConcurrentDictionary(organization);
 
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>() { orgUser });
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
@@ -114,13 +114,14 @@ public class UserServiceTests
         orgUser.OrganizationId = organization.Id;
         organization.Enabled = true;
         organization.UsersGetPremium = true;
-        var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization) } };
+        var orgAbilities = OrganizationAbilityBuilder.BuildConcurrentDictionary(organization);
 
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>() { orgUser });
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
 
         Assert.True(await sutProvider.Sut.HasPremiumFromOrganization(user));
     }
+
 
     [Flags]
     public enum ShouldCheck

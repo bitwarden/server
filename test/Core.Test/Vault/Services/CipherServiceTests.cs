@@ -13,6 +13,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
+using Bit.Core.Test.Helpers;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
@@ -962,16 +963,7 @@ public class CipherServiceTests
             .Returns(user);
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilitiesAsync()
-            .Returns(new Dictionary<Guid, OrganizationAbility>
-            {
-                {
-                    organizationId, new OrganizationAbility
-                    {
-                        Id = organizationId,
-                        LimitItemDeletion = true
-                    }
-                }
-            });
+            .Returns(OrganizationAbilityBuilder.BuildConcurrentDictionary(organizationId));
 
         var revisionDate = previousRevisionDate + TimeSpan.FromMinutes(1);
         sutProvider.GetDependency<ICipherRepository>()
@@ -1024,16 +1016,7 @@ public class CipherServiceTests
             .Returns(user);
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilitiesAsync()
-            .Returns(new Dictionary<Guid, OrganizationAbility>
-            {
-                {
-                    organizationId, new OrganizationAbility
-                    {
-                        Id = organizationId,
-                        LimitItemDeletion = true
-                    }
-                }
-            });
+            .Returns(OrganizationAbilityBuilder.BuildConcurrentDictionary(organizationId));
 
         var result = await sutProvider.Sut.RestoreManyAsync(cipherIds, restoringUserId);
 
@@ -1624,16 +1607,7 @@ public class CipherServiceTests
             .Returns(user);
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilitiesAsync()
-            .Returns(new Dictionary<Guid, OrganizationAbility>
-            {
-                {
-                    organizationId, new OrganizationAbility
-                    {
-                        Id = organizationId,
-                        LimitItemDeletion = true
-                    }
-                }
-            });
+            .Returns(OrganizationAbilityBuilder.BuildConcurrentDictionary(organizationId));
 
         await sutProvider.Sut.DeleteManyAsync(cipherIds, deletingUserId, organizationId);
 
@@ -1672,16 +1646,7 @@ public class CipherServiceTests
             .Returns(user);
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilitiesAsync()
-            .Returns(new Dictionary<Guid, OrganizationAbility>
-            {
-                {
-                    organizationId, new OrganizationAbility
-                    {
-                        Id = organizationId,
-                        LimitItemDeletion = true
-                    }
-                }
-            });
+            .Returns(OrganizationAbilityBuilder.BuildConcurrentDictionary(organizationId));
 
         await sutProvider.Sut.DeleteManyAsync(cipherIds, deletingUserId, organizationId);
 
@@ -1975,16 +1940,7 @@ public class CipherServiceTests
             .Returns(user);
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilitiesAsync()
-            .Returns(new Dictionary<Guid, OrganizationAbility>
-            {
-                {
-                    organizationId, new OrganizationAbility
-                    {
-                        Id = organizationId,
-                        LimitItemDeletion = true
-                    }
-                }
-            });
+            .Returns(OrganizationAbilityBuilder.BuildConcurrentDictionary(organizationId));
 
         await sutProvider.Sut.SoftDeleteManyAsync(cipherIds, deletingUserId, organizationId, false);
 
@@ -2024,16 +1980,7 @@ public class CipherServiceTests
             .Returns(user);
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilitiesAsync()
-            .Returns(new Dictionary<Guid, OrganizationAbility>
-            {
-                {
-                    organizationId, new OrganizationAbility
-                    {
-                        Id = organizationId,
-                        LimitItemDeletion = true
-                    }
-                }
-            });
+            .Returns(OrganizationAbilityBuilder.BuildConcurrentDictionary(organizationId));
 
         await sutProvider.Sut.SoftDeleteManyAsync(cipherIds, deletingUserId, organizationId, false);
 
@@ -2048,6 +1995,7 @@ public class CipherServiceTests
             .Received(1)
             .PushSyncCiphersAsync(deletingUserId);
     }
+
 
     private async Task AssertNoActionsAsync(SutProvider<CipherService> sutProvider)
     {
