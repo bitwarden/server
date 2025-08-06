@@ -91,11 +91,14 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 .ToListAsync();
 
             // Update collection types for the default user collection
-            var collectionToUpdate = await dbContext.Collections
-                .Where(c => c.Type == CollectionType.DefaultUserCollection &&
-                        collectionUsers.Any(
-                            cu => cu.CollectionId == c.Id && cu.OrganizationUserId == c.OrganizationId))
-                .FirstOrDefaultAsync();
+            var collections = await dbContext.Collections
+                .Where(c => c.CollectionUsers
+                    .Any(cu => cu.CollectionId == c.Id && cu.OrganizationUserId == c.OrganizationId))
+                .ToListAsync();
+
+            var collectionToUpdate = collections
+                .Where(c => c.Type == CollectionType.DefaultUserCollection)
+                .FirstOrDefault();
 
             if (collectionToUpdate != null)
             {
