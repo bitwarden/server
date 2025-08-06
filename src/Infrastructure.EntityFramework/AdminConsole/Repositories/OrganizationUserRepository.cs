@@ -93,7 +93,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             // Update collection types for the default user collection
             var collections = await dbContext.Collections
                 .Where(c => c.CollectionUsers
-                    .Any(cu => cu.CollectionId == c.Id && c.OrganizationId == organizationId))
+                    .Any(cu =>
+                        c.Id == cu.CollectionId &&
+                        cu.OrganizationUserId == orgUser.Id &&
+                        c.OrganizationId == organizationId
+                    ))
                 .ToListAsync();
 
             var collectionToUpdate = collections
@@ -156,29 +160,27 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             .Include(ou => ou.User)
             .ToListAsync();
 
-        var userIds = organizationUsersToDelete
-            .Where(ou => ou.UserId != null)
-            .Select(ou => ou.UserId!.Value)
+        var collections = await dbContext.Collections
+            .Where(c => c.CollectionUsers
+                .Any(cu =>
+                    c.Id == cu.CollectionId &&
+                    organizationUsersToDelete.Any(ou => ou.Id == cu.OrganizationUserId)
+                ))
+            .ToListAsync();
+
+        var collectionsToUpdate = collections
+            .Where(c => c.Type == CollectionType.DefaultUserCollection)
             .ToList();
 
-        if (userIds.Any())
+        foreach (var collection in collectionsToUpdate)
         {
-            var collectionsToUpdate = await dbContext.Collections
-                .Where(c => c.Type == CollectionType.DefaultUserCollection &&
-                           dbContext.CollectionUsers.Any(cu => cu.CollectionId == c.Id &&
-                                                              targetOrganizationUserIds.Contains(cu.OrganizationUserId)))
-                .ToListAsync();
+            var orgUser = organizationUsersToDelete.FirstOrDefault(ou =>
+                dbContext.CollectionUsers.Any(cu => cu.CollectionId == collection.Id && cu.OrganizationUserId == ou.Id));
 
-            foreach (var collection in collectionsToUpdate)
+            if (orgUser?.User != null)
             {
-                var orgUser = organizationUsersToDelete.FirstOrDefault(ou =>
-                    dbContext.CollectionUsers.Any(cu => cu.CollectionId == collection.Id && cu.OrganizationUserId == ou.Id));
-
-                if (orgUser?.User != null)
-                {
-                    collection.DefaultUserCollectionEmail = orgUser.User.Email;
-                    collection.Type = Core.Enums.CollectionType.SharedCollection;
-                }
+                collection.DefaultUserCollectionEmail = orgUser.User.Email;
+                collection.Type = Core.Enums.CollectionType.SharedCollection;
             }
         }
 
