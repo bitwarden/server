@@ -67,7 +67,7 @@ public class SendAccessGrantValidator(
                 return;
 
             case ResourcePassword rp:
-                 // TODO PM-22675: Validate if the password is correct.
+                // TODO PM-22675: Validate if the password is correct.
                 context.Result = _sendPasswordRequestValidator.ValidateSendPassword(context, rp, sendIdGuid);
                 return;
             case EmailOtp eo:
@@ -96,15 +96,15 @@ public class SendAccessGrantValidator(
         {
             return Guid.Empty;
         }
-
-        var sendIdGuid = new Guid(CoreHelpers.Base64UrlDecode(sendId));
-
-        if (sendIdGuid == Guid.Empty)
+        try
+        {
+            var guidBytes = CoreHelpers.Base64UrlDecode(sendId);
+            return new Guid(guidBytes);
+        }
+        catch
         {
             return Guid.Empty;
         }
-
-        return sendIdGuid;
     }
 
     private static GrantValidationResult BuildBaseSuccessResult(Guid sendId)
