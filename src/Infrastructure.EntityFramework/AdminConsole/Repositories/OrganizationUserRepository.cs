@@ -163,8 +163,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         var collections = await dbContext.Collections
             .Where(c => c.CollectionUsers
                 .Any(cu =>
-                    c.Id == cu.CollectionId &&
-                    organizationUsersToDelete.Any(ou => ou.Id == cu.OrganizationUserId)
+                    c.Id == cu.CollectionId
+                    && targetOrganizationUserIds.Contains(cu.OrganizationUserId)
                 ))
             .ToListAsync();
 
