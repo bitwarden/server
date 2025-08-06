@@ -184,6 +184,14 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     {
         var collections = await _collectionRepository
             .GetManyByManyIdsAsync(collectionAccess.Select(c => c.Id));
+
+        ValidateCollections(originalUser, collectionAccess, collections);
+
+        return ExcludeDefaultUserCollections(collectionAccess, collections);
+    }
+
+    private static void ValidateCollections(OrganizationUser originalUser, List<CollectionAccessSelection> collectionAccess, ICollection<Collection> collections)
+    {
         var collectionIds = collections.Select(c => c.Id);
 
         var missingCollection = collectionAccess
@@ -199,12 +207,13 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             // Use generic error message to avoid enumeration
             throw new NotFoundException();
         }
-
-        // Filter out DefaultUserCollection types from being saved
-        return collectionAccess
-            .Where(cas => collections.Any(c => c.Id == cas.Id && c.Type != CollectionType.DefaultUserCollection))
-            .ToList();
     }
+
+    private static List<CollectionAccessSelection> ExcludeDefaultUserCollections(
+        List<CollectionAccessSelection> collectionAccess, ICollection<Collection> collections) =>
+            collectionAccess
+                .Where(cas => collections.Any(c => c.Id == cas.Id && c.Type != CollectionType.DefaultUserCollection))
+                .ToList();
 
     private async Task ValidateGroupAccessAsync(OrganizationUser originalUser,
         ICollection<Guid> groupAccess)
