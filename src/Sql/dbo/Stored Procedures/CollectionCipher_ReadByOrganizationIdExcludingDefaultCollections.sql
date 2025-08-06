@@ -1,4 +1,5 @@
-CREATE OR ALTER PROCEDURE
+ -- Stored procedure that filters out ciphers that ONLY belong to default collections
+CREATE PROCEDURE
   [dbo].[CipherOrganizationDetails_ReadByOrganizationIdExcludingDefaultCollections]
       @OrganizationId UNIQUEIDENTIFIER
   AS
