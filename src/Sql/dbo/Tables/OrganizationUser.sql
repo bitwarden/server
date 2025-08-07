@@ -35,3 +35,9 @@ CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrganizationId_UserId]
     INCLUDE ([Email], [Status], [Type], [ExternalId], [CreationDate],
         [RevisionDate], [Permissions], [ResetPasswordKey], [AccessSecretsManager]);
 GO
+
+CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserId_Status_Filtered]
+    ON [dbo].[OrganizationUser] (UserId)
+    WHERE Status = 2;
+
+GO
