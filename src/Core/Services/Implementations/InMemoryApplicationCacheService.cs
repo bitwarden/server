@@ -11,25 +11,21 @@ using Bit.Core.Repositories;
 
 namespace Bit.Core.Services;
 
-public class InMemoryApplicationCacheService : IApplicationCacheService
+public class InMemoryApplicationCacheService(
+    IOrganizationRepository organizationRepository,
+    IProviderRepository providerRepository)
+    : IApplicationCacheService
 {
-    private readonly IOrganizationRepository _organizationRepository;
-    private readonly IProviderRepository _providerRepository;
+    private readonly IOrganizationRepository _organizationRepository = organizationRepository;
+    private readonly IProviderRepository _providerRepository = providerRepository;
     private DateTime _lastOrgAbilityRefresh = DateTime.MinValue;
     private DateTime _lastProviderAbilityRefresh = DateTime.MinValue;
     private ConcurrentDictionary<Guid, OrganizationAbility> _orgAbilities;
-    private TimeSpan _orgAbilitiesRefreshInterval = TimeSpan.FromMinutes(10);
+    private readonly TimeSpan _refreshInterval = TimeSpan.FromMinutes(10);
     private readonly SemaphoreSlim _orgInitLock = new(1, 1);
     private readonly SemaphoreSlim _providerInitLock = new(1, 1);
 
     private ConcurrentDictionary<Guid, ProviderAbility> _providerAbilities;
-
-    public InMemoryApplicationCacheService(
-        IOrganizationRepository organizationRepository, IProviderRepository providerRepository)
-    {
-        _organizationRepository = organizationRepository;
-        _providerRepository = providerRepository;
-    }
 
     public virtual async Task<ConcurrentDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
     {
@@ -55,84 +51,89 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
     public virtual async Task UpsertProviderAbilityAsync(Provider provider)
     {
         await InitProviderAbilitiesAsync();
-        var newAbility = new ProviderAbility(provider);
-
-        _providerAbilities[provider.Id] = newAbility;
+        _providerAbilities.AddOrUpdate(
+            provider.Id,
+            _ => new ProviderAbility(provider),
+            (_, _) => new ProviderAbility(provider));
     }
 
     public virtual async Task UpsertOrganizationAbilityAsync(Organization organization)
     {
         await InitOrganizationAbilitiesAsync();
-        var newAbility = new OrganizationAbility(organization);
 
-        _orgAbilities[organization.Id] = newAbility;
+        _orgAbilities.AddOrUpdate(
+            organization.Id,
+            _ => new OrganizationAbility(organization),
+            (_, _) => new OrganizationAbility(organization));
     }
 
     public virtual Task DeleteOrganizationAbilityAsync(Guid organizationId)
     {
-        _orgAbilities?.TryRemove(organizationId, out _);
+        _orgAbilities.TryRemove(organizationId, out _);
         return Task.CompletedTask;
     }
 
     public virtual Task DeleteProviderAbilityAsync(Guid providerId)
     {
-        _providerAbilities?.TryRemove(providerId, out _);
+        _providerAbilities.TryRemove(providerId, out _);
         return Task.CompletedTask;
     }
 
-    private async Task InitOrganizationAbilitiesAsync()
-    {
-        var now = DateTime.UtcNow;
+    private async Task InitOrganizationAbilitiesAsync() =>
+        await InitAbilitiesAsync(
+            () => _orgAbilities,
+            dict => _orgAbilities = dict,
+            () => _lastOrgAbilityRefresh,
+            dt => _lastOrgAbilityRefresh = dt,
+            _orgInitLock,
+            async () => await _organizationRepository.GetManyAbilitiesAsync(),
+            _refreshInterval,
+            ability => ability.Id);
 
-        if (_orgAbilities != null && (now - _lastOrgAbilityRefresh) <= _orgAbilitiesRefreshInterval)
+    private async Task InitProviderAbilitiesAsync() =>
+       await InitAbilitiesAsync(
+            () => _providerAbilities,
+            concurrentDictionary => _providerAbilities = concurrentDictionary,
+            () => _lastProviderAbilityRefresh,
+            dateTime => _lastProviderAbilityRefresh = dateTime,
+            _providerInitLock,
+            async () => await _providerRepository.GetManyAbilitiesAsync(),
+            _refreshInterval,
+            ability => ability.Id);
+
+
+    private async Task InitAbilitiesAsync<TAbility>(
+        Func<ConcurrentDictionary<Guid, TAbility>> getCache,
+        Action<ConcurrentDictionary<Guid, TAbility>> setCache,
+        Func<DateTime> getLastRefresh,
+        Action<DateTime> setLastRefresh,
+        SemaphoreSlim @lock,
+        Func<Task<IEnumerable<TAbility>>> fetchFunc,
+        TimeSpan refreshInterval,
+        Func<TAbility, Guid> getId)
+    {
+        if (getCache() != null && (DateTime.UtcNow - getLastRefresh()) <= refreshInterval)
         {
             return;
         }
 
-        await _orgInitLock.WaitAsync();
+        await @lock.WaitAsync();
         try
         {
-            // Double-check after acquiring lock to avoid redundant refresh
-            now = DateTime.UtcNow;
-            if (_orgAbilities == null || (now - _lastOrgAbilityRefresh) > _orgAbilitiesRefreshInterval)
+            var now = DateTime.UtcNow;
+            if (getCache() == null || (now - getLastRefresh()) > refreshInterval)
             {
-                var abilities = await _organizationRepository.GetManyAbilitiesAsync();
-                _orgAbilities = new ConcurrentDictionary<Guid, OrganizationAbility>(
-                    abilities.ToDictionary(a => a.Id));
-                _lastOrgAbilityRefresh = now;
+                var sources = await fetchFunc();
+                var abilities = new ConcurrentDictionary<Guid, TAbility>(
+                    sources.ToDictionary(getId));
+                setCache(abilities);
+                setLastRefresh(now);
             }
         }
         finally
         {
-            _orgInitLock.Release();
+            @lock.Release();
         }
     }
 
-    private async Task InitProviderAbilitiesAsync()
-    {
-        var now = DateTime.UtcNow;
-
-        if (_providerAbilities != null && (now - _lastProviderAbilityRefresh) <= _orgAbilitiesRefreshInterval)
-        {
-            return;
-        }
-
-        await _providerInitLock.WaitAsync();
-        try
-        {
-            // Double-check after acquiring lock to avoid redundant refresh
-            now = DateTime.UtcNow;
-            if (_providerAbilities == null || (now - _lastProviderAbilityRefresh) > _orgAbilitiesRefreshInterval)
-            {
-                var abilities = await _providerRepository.GetManyAbilitiesAsync();
-                _providerAbilities = new ConcurrentDictionary<Guid, ProviderAbility>(
-                    abilities.ToDictionary(a => a.Id));
-                _lastProviderAbilityRefresh = now;
-            }
-        }
-        finally
-        {
-            _providerInitLock.Release();
-        }
-    }
 }
