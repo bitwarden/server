@@ -155,8 +155,7 @@ public class ReportsControllerTests
         var request = new AddOrganizationReportRequest
         {
             OrganizationId = Guid.NewGuid(),
-            ReportData = "Report Data",
-            Date = DateTime.UtcNow
+            ReportData = "Report Data"
         };
         await sutProvider.Sut.AddOrganizationReport(request);
 
@@ -165,8 +164,7 @@ public class ReportsControllerTests
             .Received(1)
             .AddOrganizationReportAsync(Arg.Is<AddOrganizationReportRequest>(_ =>
                 _.OrganizationId == request.OrganizationId &&
-                _.ReportData == request.ReportData &&
-                _.Date == request.Date));
+                _.ReportData == request.ReportData));
     }
 
     [Theory, BitAutoData]
@@ -178,8 +176,7 @@ public class ReportsControllerTests
         var request = new AddOrganizationReportRequest
         {
             OrganizationId = Guid.NewGuid(),
-            ReportData = "Report Data",
-            Date = DateTime.UtcNow
+            ReportData = "Report Data"
         };
         await Assert.ThrowsAsync<NotFoundException>(async () =>
             await sutProvider.Sut.AddOrganizationReport(request));
