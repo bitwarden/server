@@ -251,16 +251,22 @@ public class InMemoryApplicationCacheServiceTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetManyAbilitiesAsync()
             .Returns(organizationAbilities);
-        var tasks = Enumerable.Range(0, 100)
-            .Select(_ => Task.Run(() => sutProvider.Sut.GetOrganizationAbilitiesAsync()))
-            .ToArray();
+
+        var results = new ConcurrentBag<ConcurrentDictionary<Guid, OrganizationAbility>>();
 
         // Act
-        var results = await Task.WhenAll(tasks);
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, 100),
+            async (_, _) =>
+            {
+                var result = await sutProvider.Sut.GetOrganizationAbilitiesAsync();
+                results.Add(result);
+            });
 
         // Assert
-        var firstResult = results[0];
+        var firstResult = results.First();
         Assert.All(results, result => Assert.Same(firstResult, result));
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).GetManyAbilitiesAsync();
     }
+
 }
