@@ -1,5 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -10,6 +9,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.Helpers;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -155,20 +155,16 @@ public class PolicyServiceTests
         await sutProvider.GetDependency<IPolicyRequirementQuery>().DidNotReceive().GetAsync<MasterPasswordPolicyRequirement>(user.Id);
     }
 
-    private static void SetupOrg(SutProvider<PolicyService> sutProvider, Guid organizationId, Organization organization)
-    {
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organizationId)
-            .Returns(Task.FromResult(organization));
-    }
 
     private static void SetupUserPolicies(Guid userId, SutProvider<PolicyService> sutProvider)
     {
+        var mockedOrganizationId = Guid.NewGuid();
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.RequireSso)
             .Returns(new List<OrganizationUserPolicyDetails>
             {
-                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = false, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false},
+                new() { OrganizationId = mockedOrganizationId, PolicyType = PolicyType.RequireSso, PolicyEnabled = false, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false},
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false },
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = true }
             });
@@ -177,8 +173,12 @@ public class PolicyServiceTests
             .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.DisableSend)
             .Returns(new List<OrganizationUserPolicyDetails>
             {
-                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = false },
+                new() { OrganizationId = mockedOrganizationId, PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = false },
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = true }
             });
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(OrganizationAbilityBuilder.BuildConcurrentDictionary(mockedOrganizationId));
     }
 }
