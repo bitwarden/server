@@ -1,4 +1,5 @@
-﻿using Microsoft.OpenApi.Any;
+﻿using Bit.Core.KeyManagement.Models.Response;
+using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -21,6 +22,26 @@ public class EnumSchemaFilter : ISchemaFilter
             var array = new OpenApiArray();
             array.AddRange(Enum.GetNames(context.Type).Select(n => new OpenApiString(n)));
             schema.Extensions.Add("x-enum-varnames", array);
+        }
+    }
+}
+
+/// <summary>
+/// Adds x-sdk-wasm extension into the models that are used in the Bitwarden WASM SDK.
+/// </summary>
+public class SdkWasmSchemaFilter : ISchemaFilter
+{
+    public void Apply(OpenApiSchema schema, SchemaFilterContext context)
+    {
+        var sdkWasmTypes = new[]
+        {
+            typeof(UserDecryptionResponseModel), typeof(MasterPasswordUnlockResponseModel),
+            typeof(MasterPasswordUnlockKdfResponseModel)
+        };
+
+        if (sdkWasmTypes.Contains(context.Type))
+        {
+            schema.Extensions.Add("x-sdk-wasm", new OpenApiBoolean(true));
         }
     }
 }

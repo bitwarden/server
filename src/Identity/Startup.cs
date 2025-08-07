@@ -67,6 +67,7 @@ public class Startup
         services.AddSwaggerGen(c =>
         {
             c.SchemaFilter<EnumSchemaFilter>();
+            c.SchemaFilter<SdkWasmSchemaFilter>();
             c.SwaggerDoc("v1", new OpenApiInfo { Title = "Bitwarden Identity", Version = "v1" });
         });
 
