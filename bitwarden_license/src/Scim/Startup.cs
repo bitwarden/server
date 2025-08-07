@@ -1,8 +1,10 @@
 ﻿using System.Globalization;
+using Bit.Core;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Scim.Context;
@@ -63,6 +65,9 @@ public class Startup
             });
         });
 
+        // Rate Limiter
+        services.AddScimConcurrencyRateLimiter();
+
         // Identity
         services.AddCustomIdentityServices(globalSettings);
 
@@ -95,6 +100,7 @@ public class Startup
         IApplicationBuilder app,
         IWebHostEnvironment env,
         IHostApplicationLifetime appLifetime,
+        IFeatureService featureService,
         GlobalSettings globalSettings)
     {
         app.UseSerilog(env, appLifetime, globalSettings);
@@ -128,6 +134,12 @@ public class Startup
 
         // Add current context
         app.UseMiddleware<CurrentContextMiddleware>();
+
+        // Add Rate Limiter
+        if (featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization))
+        {
+            app.UseRateLimiter();
+        }
 
         // Add MVC to the request pipeline.
         app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());

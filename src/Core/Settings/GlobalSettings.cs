@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Auth.Settings;
 using Bit.Core.Settings.LoggingSettings;
 
@@ -521,7 +522,7 @@ public class GlobalSettings : IGlobalSettings
         /// The absolute path to a Certificate (DER or Base64 encoded with private key).
         /// </summary>
         /// <remarks>
-        /// The certificate path and <see cref="CertificatePassword"/> are passed into the <see cref="System.Security.Cryptography.X509Certificates.X509Certificate2.X509Certificate2(string, string)" />.
+        /// The certificate path and <see cref="CertificatePassword"/> are passed into the <see cref="X509Certificate2" />.
         /// The file format of the certificate may be binary encoded (DER) or base64. If the private key is encrypted, provide the password in <see cref="CertificatePassword"/>,
         /// </remarks>
         public string CertificatePath { get; set; }

@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -27,6 +28,7 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
     public static readonly Guid TestGroupId2 = Guid.Parse("562e5371-7020-40b6-b092-099ac66dbdf9");
     public static readonly Guid TestGroupId3 = Guid.Parse("362c2782-0f1f-4c86-95dd-edbdf7d6040b");
     public static readonly Guid TestOrganizationId1 = Guid.Parse("fb98e04f-0303-4914-9b37-a983943bf1ca");
+    public static readonly Guid TestOrganizationId2 = Guid.Parse("f47ac10b-58cc-4372-a567-0e02b2c3d479");
     public static readonly Guid TestOrganizationUserId1 = Guid.Parse("5d421196-8c59-485b-8926-2d6d0101e05f");
     public static readonly Guid TestOrganizationUserId2 = Guid.Parse("3a63d520-0d84-4679-b887-13fe2058d53b");
     public static readonly Guid TestOrganizationUserId3 = Guid.Parse("be2f9045-e2b6-4173-ad44-4c69c3ea8140");
@@ -203,7 +205,11 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
                 Name = "Test Organization 1",
                 BillingEmail = $"billing-email+{TestOrganizationId1}@example.com",
                 UseGroups = true,
+                PlanType = PlanType.EnterpriseAnnually2023,
                 Plan = "Enterprise",
+                Seats = 2,
+                GatewaySubscriptionId = "Not Null",
+                GatewayCustomerId = "Not null"
             },
         };
     }

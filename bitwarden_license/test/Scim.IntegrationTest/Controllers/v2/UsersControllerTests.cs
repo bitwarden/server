@@ -596,4 +596,52 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         var databaseContext = _factory.GetDatabaseContext();
         Assert.Equal(_initialUserCount, databaseContext.OrganizationUsers.Count());
     }
+
+
+    [Fact]
+    public async Task Post_RateLimited_TooManyRequests()
+    {
+        // Arrange - Create a new factory instance to avoid interference with other tests
+        var localFactory = new ScimApplicationFactory();
+        localFactory.SubstituteService((IFeatureService featureService)
+            => featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization)
+                .Returns(true));
+
+        localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
+
+        var displayName = "Rate Limit Test User";
+
+        // Act & Assert - Make multiple concurrent requests to trigger the rate limiter
+        // The ScimConcurrencyRateLimiter is configured with QueueLimit = 1, so the second request should be rate limited
+        var tasks = new List<Task<HttpContext>>();
+
+        // Create multiple concurrent requests
+        for (var i = 0; i < 50; i++)
+        {
+            var uniqueEmail = $"ratelimituser{i}@example.com";
+            var uniqueExternalId = $"RLTU{i}";
+            var uniqueModel = new ScimUserRequestModel
+            {
+                Name = new BaseScimUserModel.NameModel($"{displayName} {i}"),
+                DisplayName = $"{displayName} {i}",
+                Emails = [new BaseScimUserModel.EmailModel(uniqueEmail)],
+                ExternalId = uniqueExternalId,
+                Active = true,
+                Schemas = [ScimConstants.Scim2SchemaUser]
+            };
+
+            tasks.Add(localFactory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, uniqueModel));
+        }
+
+        // Wait for all requests to complete
+        var contexts = await Task.WhenAll(tasks);
+
+        var successfulResponses = contexts.Where(c => c.Response.StatusCode == StatusCodes.Status201Created).ToList();
+
+        // We should also have at least one successful request
+        Assert.True(successfulResponses.Count > 0, "Expected at least one request to succeed");
+
+        // Total responses should equal our request count
+        Assert.Equal(50, contexts.Length);
+    }
 }

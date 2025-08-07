@@ -58,30 +58,4 @@ public static class HttpContextExtensions
         Guid userId)
         => await httpContext.WithFeaturesCacheAsync(() =>
             providerUserRepository.GetManyOrganizationDetailsByUserAsync(userId, ProviderUserStatusType.Confirmed));
-
-
-    /// <summary>
-    /// Parses the {orgId} or {organizationId} route parameter into a Guid, or throws if neither are present or are not valid guids.
-    /// </summary>
-    /// <param name="httpContext"></param>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
-    public static Guid GetOrganizationId(this HttpContext httpContext)
-    {
-        var routeValues = httpContext.GetRouteData().Values;
-
-        routeValues.TryGetValue("orgId", out var orgIdParam);
-        if (orgIdParam != null && Guid.TryParse(orgIdParam.ToString(), out var orgId))
-        {
-            return orgId;
-        }
-
-        routeValues.TryGetValue("organizationId", out var organizationIdParam);
-        if (organizationIdParam != null && Guid.TryParse(organizationIdParam.ToString(), out var organizationId))
-        {
-            return organizationId;
-        }
-
-        throw new InvalidOperationException(NoOrgIdError);
-    }
 }
