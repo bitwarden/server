@@ -34,6 +34,7 @@ public class SendAccessGrantValidator(
         if (!_featureService.IsEnabled(FeatureFlagKeys.SendAuthorization))
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.UnsupportedGrantType);
+            return;
         }
 
         var sendIdGuid = GetRequestSendId(context);
@@ -73,7 +74,7 @@ public class SendAccessGrantValidator(
             case EmailOtp eo:
                 // TODO PM-22678: We will either send the OTP here or validate it based on if otp exists in the request.
                 // SendOtpToEmail(eo.Emails) or ValidateOtp(eo.Emails);
-                break;
+                // break;
 
             default:
                 // shouldn’t ever hit this
