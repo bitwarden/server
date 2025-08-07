@@ -1,25 +1,26 @@
-﻿using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Core.Entities;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Factories;
 using LinqToDB.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Seeder.Recipes;
 
-public class OrganizationWithUsersRecipe(DatabaseContext db)
+public class OrganizationWithUsersRecipe(DatabaseContext db, IPasswordHasher<User> passwordHasher)
 {
     public Guid Seed(string name, int users, string domain)
     {
-        var organization = OrganizationSeeder.CreateEnterprise(name, domain, users);
-        var user = UserSeeder.CreateUser($"admin@{domain}");
-        var orgUser = organization.CreateOrganizationUser(user);
+        var (organization, orgKey) = OrganizationSeeder.CreateEnterprise(name, domain, users);
+        var (user, _) = UserSeeder.CreateUser(passwordHasher, $"admin@{domain}");
+        var orgUser = organization.CreateOrganizationUser(user, orgKey);
 
         var additionalUsers = new List<User>();
         var additionalOrgUsers = new List<OrganizationUser>();
         for (var i = 0; i < users; i++)
         {
-            var additionalUser = UserSeeder.CreateUser($"user{i}@{domain}");
+            var (additionalUser, _) = UserSeeder.CreateUser(passwordHasher, $"user{i}@{domain}");
             additionalUsers.Add(additionalUser);
-            additionalOrgUsers.Add(organization.CreateOrganizationUser(additionalUser));
+            additionalOrgUsers.Add(organization.CreateOrganizationUser(additionalUser, orgKey));
         }
 
         db.Add(organization);
