@@ -125,7 +125,6 @@ public static class FeatureFlagKeys
     public const string BrowserExtensionLoginApproval = "pm-14938-browser-extension-login-approvals";
     public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
-    public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
 
     /* Autofill Team */
