@@ -1,8 +1,8 @@
-﻿namespace Bit.Api.Vault.Models.Response;
+﻿namespace Bit.Core.Vault.Entities;
 
-public class SecurityTasksMetricsResponseModel
+public class SecurityTaskMetrics
 {
-    public SecurityTasksMetricsResponseModel(int completedTasksCount, int totalTasksCount)
+    public SecurityTaskMetrics(int completedTasksCount, int totalTasksCount)
     {
         this.completedTasksCount = completedTasksCount;
         this.totalTasksCount = totalTasksCount;

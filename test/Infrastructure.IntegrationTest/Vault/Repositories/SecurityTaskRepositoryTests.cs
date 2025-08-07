@@ -266,4 +266,83 @@ public class SecurityTaskRepositoryTests
 
         Assert.Equal(2, taskIds.Count);
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetTaskMetricsAsync(
+        IOrganizationRepository organizationRepository,
+        ICipherRepository cipherRepository,
+        ISecurityTaskRepository securityTaskRepository)
+    {
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Test Plan",
+            BillingEmail = ""
+        });
+
+        var cipher1 = new Cipher { Type = CipherType.Login, OrganizationId = organization.Id, Data = "", };
+        await cipherRepository.CreateAsync(cipher1);
+
+        var cipher2 = new Cipher { Type = CipherType.Login, OrganizationId = organization.Id, Data = "", };
+        await cipherRepository.CreateAsync(cipher2);
+
+        var tasks = new List<SecurityTask>
+        {
+            new()
+            {
+                OrganizationId = organization.Id,
+                CipherId = cipher1.Id,
+                Status = SecurityTaskStatus.Pending,
+                Type = SecurityTaskType.UpdateAtRiskCredential,
+            },
+            new()
+            {
+                OrganizationId = organization.Id,
+                CipherId = cipher1.Id,
+                Status = SecurityTaskStatus.Completed,
+                Type = SecurityTaskType.UpdateAtRiskCredential,
+            },
+            new()
+            {
+                OrganizationId = organization.Id,
+                CipherId = cipher2.Id,
+                Status = SecurityTaskStatus.Completed,
+                Type = SecurityTaskType.UpdateAtRiskCredential,
+            },
+            new()
+            {
+                OrganizationId = organization.Id,
+                CipherId = cipher2.Id,
+                Status = SecurityTaskStatus.Pending,
+                Type = SecurityTaskType.UpdateAtRiskCredential,
+            }
+        };
+
+        await securityTaskRepository.CreateManyAsync(tasks);
+
+        var metrics = await securityTaskRepository.GetTaskMetricsAsync(organization.Id);
+
+        Assert.Equal(2, metrics.completedTasksCount);
+        Assert.Equal(4, metrics.totalTasksCount);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetZeroTaskMetricsAsync(
+        IOrganizationRepository organizationRepository,
+        ISecurityTaskRepository securityTaskRepository)
+    {
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Test Plan",
+            BillingEmail = ""
+        });
+
+        var metrics = await securityTaskRepository.GetTaskMetricsAsync(organization.Id);
+
+        Assert.Equal(0, metrics.completedTasksCount);
+        Assert.Equal(0, metrics.totalTasksCount);
+    }
 }

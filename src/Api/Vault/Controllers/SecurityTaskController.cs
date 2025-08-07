@@ -24,6 +24,7 @@ public class SecurityTaskController : Controller
     private readonly IGetTasksForOrganizationQuery _getTasksForOrganizationQuery;
     private readonly ICreateManyTasksCommand _createManyTasksCommand;
     private readonly ICreateManyTaskNotificationsCommand _createManyTaskNotificationsCommand;
+    private readonly IGetTaskMetricsForOrganizationQuery _getTaskMetricsForOrganizationQuery;
 
     public SecurityTaskController(
         IUserService userService,
@@ -31,7 +32,8 @@ public class SecurityTaskController : Controller
         IMarkTaskAsCompleteCommand markTaskAsCompleteCommand,
         IGetTasksForOrganizationQuery getTasksForOrganizationQuery,
         ICreateManyTasksCommand createManyTasksCommand,
-        ICreateManyTaskNotificationsCommand createManyTaskNotificationsCommand)
+        ICreateManyTaskNotificationsCommand createManyTaskNotificationsCommand,
+        IGetTaskMetricsForOrganizationQuery getTaskMetricsForOrganizationQuery)
     {
         _userService = userService;
         _getTaskDetailsForUserQuery = getTaskDetailsForUserQuery;
@@ -39,6 +41,7 @@ public class SecurityTaskController : Controller
         _getTasksForOrganizationQuery = getTasksForOrganizationQuery;
         _createManyTasksCommand = createManyTasksCommand;
         _createManyTaskNotificationsCommand = createManyTaskNotificationsCommand;
+        _getTaskMetricsForOrganizationQuery = getTaskMetricsForOrganizationQuery;
     }
 
     /// <summary>
@@ -85,14 +88,11 @@ public class SecurityTaskController : Controller
     /// </summary>
     /// <param name="orgId">The organization Id</param>
     [HttpGet("{orgId:guid}/metrics")]
-    public async Task<SecurityTasksMetricsResponseModel> GetTaskMetricsForOrg(
-        [FromRoute] Guid orgId)
+    public async Task<SecurityTaskMetrics> GetTaskMetricsForOrg([FromRoute] Guid orgId)
     {
-        var securityTasks = await _getTasksForOrganizationQuery.GetTasksAsync(orgId);
-        var totalTasksCount = securityTasks.Count;
-        var completedTasksCount = securityTasks.Count(x => x.Status == SecurityTaskStatus.Completed);
+        var metrics = await _getTaskMetricsForOrganizationQuery.GetTaskMetrics(orgId);
 
-        return new SecurityTasksMetricsResponseModel(completedTasksCount, totalTasksCount);
+        return metrics;
     }
 
     /// <summary>
