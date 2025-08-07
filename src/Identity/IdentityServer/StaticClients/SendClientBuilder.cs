@@ -1,4 +1,4 @@
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Identity.IdentityServer.Enums;

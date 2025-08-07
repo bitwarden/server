@@ -72,9 +72,9 @@ public class SendAccessGrantValidator(
                 context.Result = _sendPasswordRequestValidator.ValidateSendPassword(context, rp, sendIdGuid);
                 return;
             case EmailOtp eo:
-                // TODO PM-22678: We will either send the OTP here or validate it based on if otp exists in the request.
-                // SendOtpToEmail(eo.Emails) or ValidateOtp(eo.Emails);
-                // break;
+            // TODO PM-22678: We will either send the OTP here or validate it based on if otp exists in the request.
+            // SendOtpToEmail(eo.Emails) or ValidateOtp(eo.Emails);
+            // break;
 
             default:
                 // shouldn’t ever hit this

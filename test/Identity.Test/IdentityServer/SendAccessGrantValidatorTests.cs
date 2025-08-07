@@ -1,4 +1,4 @@
-using System.Collections.Specialized;
+﻿using System.Collections.Specialized;
 using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
@@ -138,7 +138,7 @@ public class SendAccessGrantValidatorTests
         Assert.Equal("Invalid request.", context.Result.ErrorDescription);
     }
 
-    [Theory,BitAutoData]
+    [Theory, BitAutoData]
     public async Task ValidateAsync_NotAuthenticatedMethod_ReturnsSuccess(
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         SutProvider<SendAccessGrantValidator> sutProvider,
