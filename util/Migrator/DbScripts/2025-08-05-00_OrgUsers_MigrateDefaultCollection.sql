@@ -6,7 +6,7 @@ BEGIN
 
     UPDATE c
     SET
-        [DefaultUserCollectionEmail] = u.[Email],
+        [DefaultUserCollectionEmail] = CASE WHEN c.[DefaultUserCollectionEmail] IS NULL THEN u.[Email] ELSE c.[DefaultUserCollectionEmail] END,
         [Type] = 0
     FROM
         [dbo].[Collection] c
