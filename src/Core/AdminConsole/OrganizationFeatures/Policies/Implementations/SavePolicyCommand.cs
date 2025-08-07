@@ -78,6 +78,30 @@ public class SavePolicyCommand : ISavePolicyCommand
         return policy;
     }
 
+    public async Task<Policy> SavePrototypeAsync(SavePolicyRequest policyRequest)
+    {
+        // This is just a prototype of how we can pass metadata through the command to the validator.
+        var policyUpdate = policyRequest.Data;
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, policyUpdate.Type)
+                     ?? new Policy
+                     {
+                         OrganizationId = policyUpdate.OrganizationId,
+                         Type = policyUpdate.Type,
+                         CreationDate = _timeProvider.GetUtcNow().UtcDateTime
+                     };
+
+        if (_policyValidators.TryGetValue(policyUpdate.Type, out var validator))
+        {
+
+            await validator.ProtoTypeOnSaveSideEffectsAsync(policyRequest, policy);
+        }
+
+        return policy;
+    }
+
+
+
+
     private async Task RunValidatorAsync(IPolicyValidator validator, PolicyUpdate policyUpdate)
     {
         var savedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(policyUpdate.OrganizationId);

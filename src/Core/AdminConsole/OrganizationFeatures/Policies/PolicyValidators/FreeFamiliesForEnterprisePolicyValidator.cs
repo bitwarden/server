@@ -25,6 +25,8 @@ public class FreeFamiliesForEnterprisePolicyValidator(
         }
     }
 
+    public Task ProtoTypeOnSaveSideEffectsAsync(SavePolicyRequest policyUpdate, Policy? currentPolicy) => throw new NotImplementedException();
+
     private async Task NotifiesUserWithApplicablePoliciesAsync(PolicyUpdate policy)
     {
         var organizationSponsorships = (await organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(policy.OrganizationId))

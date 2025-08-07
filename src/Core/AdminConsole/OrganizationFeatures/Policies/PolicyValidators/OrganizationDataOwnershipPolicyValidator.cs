@@ -26,6 +26,33 @@ public class OrganizationDataOwnershipPolicyValidator(
 
     public override Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
 
+    public override Task ProtoTypeOnSaveSideEffectsAsync(SavePolicyRequest policyRequest, Policy? currentPolicy)
+    {
+        var metadata = MapToOrganizationModelOwnershipPolicyModel(policyRequest.Metadata);
+
+
+        // Here we will have command data associated with this particular policy validator.
+        if (metadata!.ExecuteSideEffect)
+        {
+
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public static OrganizationModelOwnershipPolicyModel? MapToOrganizationModelOwnershipPolicyModel(IPolicyMetadataModel model)
+    {
+        if (model is OrganizationModelOwnershipPolicyModel ownershipModel)
+        {
+            return new OrganizationModelOwnershipPolicyModel(
+                defaultUserCollectionName: ownershipModel.DefaultUserCollectionName,
+                executeSideEffect: ownershipModel.ExecuteSideEffect
+            );
+        }
+
+        throw new InvalidOperationException($"Failure to map");
+    }
+
     public override async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
