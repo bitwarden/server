@@ -1,0 +1,39 @@
+{{#>BasicTextLayout}}
+{{#if (eq CollectionMethod "send_invoice")}}
+Your Bitwarden subscription is due for renewal soon. An invoice for {{usd AmountDue}} will be sent to you on {{date DueDate 'MMMM dd, yyyy'}}.
+{{else}}
+    {{#if HasPaymentMethod}}
+Your Bitwarden subscription is due for renewal soon. Your {{PaymentMethodDescription}} will be charged on {{date DueDate 'MMMM dd, yyyy'}} for:
+
+{{usd AmountDue}}
+    {{else}}
+Your Bitwarden subscription is due for renewal on {{date DueDate 'MMMM dd, yyyy'}}. To avoid any interruption in service, please add a payment method that can be charged for the following amount:
+
+{{usd AmountDue}}
+    {{/if}}
+{{/if}}
+{{#if Items}}
+{{#unless (eq CollectionMethod "send_invoice")}}
+
+Summary Of Charges
+------------------
+{{#each Items}}
+{{this}}
+{{/each}}
+{{/unless}}
+{{/if}}
+
+{{#if (eq CollectionMethod "send_invoice")}}
+You will receive an invoice that you can pay manually. You can view and manage your subscription by logging into the web app. For more information, please visit {{{UpdateBillingInfoUrl}}}.
+{{else}}
+    {{#if HasPaymentMethod}}
+To avoid any interruption in service, please ensure that your payment method on file is up to date and can be charged for the above amount.
+    {{/if}}
+
+You can manage your subscription, payment method, and invoices by logging into the web app. For more information, visit {{{UpdateBillingInfoUrl}}}.
+{{/if}}
+
+{{#unless (eq CollectionMethod "send_invoice")}}
+If you have any questions or problems, please contact Bitwarden Customer Support ({{{ContactUrl}}}).
+{{/unless}}
+{{/BasicTextLayout}}

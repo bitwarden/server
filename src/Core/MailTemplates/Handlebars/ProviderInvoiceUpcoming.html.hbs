@@ -1,0 +1,86 @@
+{{#>ProviderFull}}
+<table width="100%" cellpadding="0" cellspacing="0" style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 20px; -webkit-text-size-adjust: none;" valign="top">
+            {{#if (eq CollectionMethod "send_invoice")}}
+            Your Bitwarden subscription is due for renewal soon. On <strong>{{date DueDate 'MMMM dd, yyyy'}}</strong> we'll send you an invoice with a summary of the charges including tax.
+            {{else}}
+                {{#if HasPaymentMethod}}
+            Your Bitwarden subscription is due for renewal soon. Your {{PaymentMethodDescription}} will be charged on {{date DueDate 'MMMM dd, yyyy'}} for:
+                {{else}}
+            Your Bitwarden subscription is due for renewal on {{date DueDate 'MMMM dd, yyyy'}}. To avoid any interruption in service, please add a payment method that can be charged for the following amount:
+                {{/if}}
+            {{/if}}
+        </td>
+    </tr>
+    {{#unless (eq CollectionMethod "send_invoice")}}
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 32px; font-weight: bold; color: #333; line-height: 1.2; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 20px; -webkit-text-size-adjust: none;" valign="top">
+            {{usd AmountDue}}
+        </td>
+    </tr>
+    {{/unless}}
+    {{#if Items}}
+    {{#unless (eq CollectionMethod "send_invoice")}}
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 20px; -webkit-text-size-adjust: none;" valign="top">
+            <strong style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">Summary Of Charges</strong><br />
+            <div style="border-bottom: 1px solid #ddd; margin: 5px 0 10px 0; padding-bottom: 5px;"></div>
+            {{#each Items}}
+            {{this}}<br style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;" />
+            {{/each}}
+        </td>
+    </tr>
+    {{/unless}}
+    {{/if}}
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 20px; -webkit-text-size-adjust: none;" valign="top">
+            {{#if (eq CollectionMethod "send_invoice")}}
+            To avoid any interruption in service for you or your clients, please pay the invoice by the due date, or contact Bitwarden Customer Support to sign up for auto-pay.
+            {{else}}
+                {{#if HasPaymentMethod}}
+            To avoid any interruption in service, please ensure that your payment method on file is up to date and can be charged for the above amount.
+                {{/if}}
+            {{/if}}
+        </td>
+    </tr>
+    {{#unless (eq CollectionMethod "send_invoice")}}
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 20px; -webkit-text-size-adjust: none;" valign="top">
+            You can manage your subscription, payment method, and invoices by logging into the web app. For more information, visit <a href="{{{UpdateBillingInfoUrl}}}" style="color: #175DDC; text-decoration: underline;">bitwarden.com/help/update-billing-info</a>.
+        </td>
+    </tr>
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 20px; -webkit-text-size-adjust: none;" valign="top">
+            <table cellpadding="0" cellspacing="0" style="margin: 0;">
+                <tr>
+                    <td style="background-color: #175DDC; border-radius: 25px; padding: 12px 24px;">
+                        <a href="{{{UpdateBillingInfoUrl}}}" style="color: #ffffff; text-decoration: none; font-weight: 500; font-size: 16px;">Update payment method</a>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+    {{/unless}}
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 20px; -webkit-text-size-adjust: none;" valign="top">
+            {{#if (eq CollectionMethod "send_invoice")}}
+            <table cellpadding="0" cellspacing="0" style="margin: 0;">
+                <tr>
+                    <td style="background-color: #175DDC; border-radius: 25px; padding: 12px 24px;">
+                        <a href="{{{ContactUrl}}}" style="color: #ffffff; text-decoration: none; font-weight: 500; font-size: 16px;">Contact Bitwarden Support</a>
+                    </td>
+                </tr>
+            </table>
+            {{/if}}
+        </td>
+    </tr>
+    {{#unless (eq CollectionMethod "send_invoice")}}
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block last" style="font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 14px; font-weight: 400; color: #333; line-height: 20px; letter-spacing: 0px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0; -webkit-text-size-adjust: none;" valign="top">
+            If you have any questions or problems, please <a href="{{{ContactUrl}}}" style="color: #175DDC; text-decoration: underline; font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 400; line-height: 20px; letter-spacing: 0px;">contact Bitwarden Customer Support</a>.
+        </td>
+    </tr>
+    {{/unless}}
+</table>
+{{/ProviderFull}}
