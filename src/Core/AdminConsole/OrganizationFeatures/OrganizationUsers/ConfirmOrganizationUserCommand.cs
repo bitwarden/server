@@ -280,6 +280,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         }
 
         var organizationUserIds = confirmedOrganizationUsers.Select(u => u.Id).ToList();
-        await _collectionRepository.CreateDefaultCollectionsAsync(organizationId, organizationUserIds, defaultUserCollectionName);
+        await _collectionRepository.UpsertDefaultCollectionsAsync(organizationId, organizationUserIds, defaultUserCollectionName);
     }
 }

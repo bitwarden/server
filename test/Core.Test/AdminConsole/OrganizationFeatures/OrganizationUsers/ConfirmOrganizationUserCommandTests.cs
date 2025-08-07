@@ -476,13 +476,13 @@ public class ConfirmOrganizationUserCommandTests
             .GetByOrganizationAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
-                [organization.Id]));
-
+                [organization.Id]
+                , []));
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
-            .CreateDefaultCollectionsAsync(
+            .UpsertDefaultCollectionsAsync(
                 organization.Id,
                 Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.Id)),
                 collectionName);
@@ -508,7 +508,8 @@ public class ConfirmOrganizationUserCommandTests
             .GetByOrganizationAsync<OrganizationDataOwnershipPolicyRequirement>(org.Id)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
-                [org.Id]));
+                [org.Id]
+                , []));
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, "");
 
@@ -536,7 +537,8 @@ public class ConfirmOrganizationUserCommandTests
             .GetByOrganizationAsync<OrganizationDataOwnershipPolicyRequirement>(org.Id)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
-                [Guid.NewGuid()]));
+                [Guid.NewGuid()]
+                , []));
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
 
