@@ -464,6 +464,58 @@ public class EventService : IEventService
         await _eventWriteService.CreateManyAsync(eventMessages);
     }
 
+    public async Task LogUserProjectsEventAsync(Guid userId, IEnumerable<Project> projects, EventType type, DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var eventMessages = new List<IEvent>();
+
+        foreach (var project in projects)
+        {
+            if (!CanUseEvents(orgAbilities, project.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = project.OrganizationId,
+                Type = type,
+                ProjectId = project.Id,
+                UserId = userId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+    public async Task LogServiceAccountProjectsEventAsync(Guid serviceAccountId, IEnumerable<Project> projects, EventType type, DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var eventMessages = new List<IEvent>();
+
+        foreach (var project in projects)
+        {
+            if (!CanUseEvents(orgAbilities, project.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = project.OrganizationId,
+                Type = type,
+                ProjectId = project.Id,
+                ServiceAccountId = serviceAccountId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
     private async Task<Guid?> GetProviderIdAsync(Guid? orgId)
     {
         if (_currentContext == null || !orgId.HasValue)
