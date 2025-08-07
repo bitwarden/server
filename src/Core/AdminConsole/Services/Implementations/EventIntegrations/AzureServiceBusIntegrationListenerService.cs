@@ -14,16 +14,17 @@ public class AzureServiceBusIntegrationListenerService<TConfiguration> : Backgro
     private readonly IAzureServiceBusService _serviceBusService;
     private readonly IIntegrationHandler _handler;
     private readonly ServiceBusProcessor _processor;
-    private readonly ILogger<AzureServiceBusIntegrationListenerService<TConfiguration>> _logger;
+    private readonly ILogger _logger;
 
     public AzureServiceBusIntegrationListenerService(
         TConfiguration configuration,
         IIntegrationHandler handler,
         IAzureServiceBusService serviceBusService,
-        ILogger<AzureServiceBusIntegrationListenerService<TConfiguration>> logger)
+        ILoggerFactory loggerFactory)
     {
         _handler = handler;
-        _logger = logger;
+        _logger = loggerFactory.CreateLogger(
+            categoryName: $"Bit.Core.Services.AzureServiceBusIntegrationListenerService.{configuration.IntegrationSubscriptionName}");
         _maxRetries = configuration.MaxRetries;
         _serviceBusService = serviceBusService;
 

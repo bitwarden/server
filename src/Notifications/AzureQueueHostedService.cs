@@ -87,6 +87,11 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                     await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 }
             }
+            catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogDebug("Task.Delay cancelled during Alpine container shutdown");
+                break;
+            }
             catch (Exception e)
             {
                 _logger.LogError(e, "Error processing messages.");
