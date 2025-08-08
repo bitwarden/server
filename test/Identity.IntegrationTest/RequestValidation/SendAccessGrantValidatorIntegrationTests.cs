@@ -33,7 +33,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             {
                 // Mock feature service to return false
                 var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.SendAuthorization).Returns(false);
+                featureService.IsEnabled(FeatureFlagKeys.SendAccess).Returns(false);
                 services.AddSingleton(featureService);
             });
         }).CreateClient();
@@ -59,7 +59,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             {
                 // Mock feature service to return true
                 var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.SendAuthorization).Returns(true);
+                featureService.IsEnabled(FeatureFlagKeys.SendAccess).Returns(true);
                 services.AddSingleton(featureService);
 
                 // Mock send authentication query
@@ -90,7 +90,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             builder.ConfigureServices(services =>
             {
                 var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.SendAuthorization).Returns(true);
+                featureService.IsEnabled(FeatureFlagKeys.SendAccess).Returns(true);
                 services.AddSingleton(featureService);
             });
         }).CreateClient();
@@ -119,7 +119,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             builder.ConfigureServices(services =>
             {
                 var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.SendAuthorization).Returns(true);
+                featureService.IsEnabled(FeatureFlagKeys.SendAccess).Returns(true);
                 services.AddSingleton(featureService);
 
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
@@ -148,7 +148,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             builder.ConfigureServices(services =>
             {
                 var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.SendAuthorization).Returns(true);
+                featureService.IsEnabled(FeatureFlagKeys.SendAccess).Returns(true);
                 services.AddSingleton(featureService);
 
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
@@ -179,7 +179,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             builder.ConfigureServices(services =>
             {
                 var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.SendAuthorization).Returns(true);
+                featureService.IsEnabled(FeatureFlagKeys.SendAccess).Returns(true);
                 services.AddSingleton(featureService);
 
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();

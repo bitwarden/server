@@ -29,7 +29,7 @@ public class SendAccessGrantValidatorTests
     {
         // Arrange
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendAuthorization)
+            .IsEnabled(FeatureFlagKeys.SendAccess)
             .Returns(false);
 
         var context = new ExtensionGrantValidationContext
@@ -52,7 +52,7 @@ public class SendAccessGrantValidatorTests
     {
         // Arrange
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendAuthorization)
+            .IsEnabled(FeatureFlagKeys.SendAccess)
             .Returns(true);
 
         var context = new ExtensionGrantValidationContext
@@ -75,7 +75,7 @@ public class SendAccessGrantValidatorTests
     {
         // Arrange
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendAuthorization)
+            .IsEnabled(FeatureFlagKeys.SendAccess)
             .Returns(true);
 
         var context = new ExtensionGrantValidationContext();
@@ -275,7 +275,7 @@ public class SendAccessGrantValidatorTests
         ValidatedTokenRequest request)
     {
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendAuthorization)
+            .IsEnabled(FeatureFlagKeys.SendAccess)
             .Returns(true);
 
         var context = new ExtensionGrantValidationContext();

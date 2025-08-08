@@ -31,7 +31,7 @@ public class SendAccessGrantValidator(
     public async Task ValidateAsync(ExtensionGrantValidationContext context)
     {
         // Check the feature flag
-        if (!_featureService.IsEnabled(FeatureFlagKeys.SendAuthorization))
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SendAccess))
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.UnsupportedGrantType);
             return;
