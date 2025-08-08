@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.Import;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -66,7 +65,6 @@ public class ImportOrganizationUsersAndGroupsCommandTests
                 Users = existingUsers.Count,
                 Sponsored = 0
             });
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(org.Id).Returns(true);
         sutProvider.GetDependency<IOrganizationService>().InviteUsersAsync(org.Id, Guid.Empty, EventSystemUser.PublicApi,
                 Arg.Any<IEnumerable<(OrganizationUserInvite, string)>>())
             .Returns(orgUsers);
