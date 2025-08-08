@@ -48,7 +48,7 @@ public class StripePaymentServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
+            .CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
                 p.Currency == "usd" &&
                 p.SubscriptionDetails.Items.Any(x =>
                     x.Plan == familiesPlan.PasswordManager.StripePlanId &&
@@ -99,7 +99,7 @@ public class StripePaymentServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
+            .CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
                 p.Currency == "usd" &&
                 p.SubscriptionDetails.Items.Any(x =>
                     x.Plan == familiesPlan.PasswordManager.StripePlanId &&
@@ -151,7 +151,7 @@ public class StripePaymentServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
+            .CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
                 p.Currency == "usd" &&
                 p.SubscriptionDetails.Items.Any(x =>
                     x.Plan == "2021-family-for-enterprise-annually" &&
@@ -203,7 +203,7 @@ public class StripePaymentServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
+            .CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(p =>
                 p.Currency == "usd" &&
                 p.SubscriptionDetails.Items.Any(x =>
                     x.Plan == "2021-family-for-enterprise-annually" &&

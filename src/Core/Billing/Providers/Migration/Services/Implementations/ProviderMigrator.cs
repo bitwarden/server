@@ -256,7 +256,7 @@ public class ProviderMigrator(
 
             var customer = await providerBillingService.SetupCustomer(provider, taxInfo);
 
-            await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+            await stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions
             {
                 Coupon = StripeConstants.CouponIDs.LegacyMSPDiscount
             });
@@ -332,13 +332,13 @@ public class ProviderMigrator(
         var organizations = await GetClientsAsync(provider.Id);
 
         var organizationCustomers =
-            await Task.WhenAll(organizations.Select(organization => stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId)));
+            await Task.WhenAll(organizations.Select(organization => stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId)));
 
         var organizationCancellationCredit = organizationCustomers.Sum(customer => customer.Balance);
 
         if (organizationCancellationCredit != 0)
         {
-            await stripeAdapter.CustomerBalanceTransactionCreate(provider.GatewayCustomerId,
+            await stripeAdapter.CreateCustomerBalanceTransactionAsync(provider.GatewayCustomerId,
                 new CustomerBalanceTransactionCreateOptions
                 {
                     Amount = organizationCancellationCredit,
@@ -359,7 +359,7 @@ public class ProviderMigrator(
 
         if (legacyOrganizationCredit < 0)
         {
-            await stripeAdapter.CustomerBalanceTransactionCreate(provider.GatewayCustomerId,
+            await stripeAdapter.CreateCustomerBalanceTransactionAsync(provider.GatewayCustomerId,
                 new CustomerBalanceTransactionCreateOptions
                 {
                     Amount = legacyOrganizationCredit,

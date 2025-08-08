@@ -84,7 +84,7 @@ public class GetPaymentMethodQuery(
             return null;
         }
 
-        var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions
+        var setupIntent = await stripeAdapter.GetSetupIntentAsync(setupIntentId, new SetupIntentGetOptions
         {
             Expand = ["payment_method"]
         });

@@ -216,7 +216,7 @@ public class GetOrganizationWarningsQuery(
         // ReSharper disable once InvertIf
         if (subscription.Status == SubscriptionStatus.PastDue)
         {
-            var openInvoices = await stripeAdapter.InvoiceSearchAsync(new InvoiceSearchOptions
+            var openInvoices = await stripeAdapter.SearchInvoiceAsync(new InvoiceSearchOptions
             {
                 Query = $"subscription:'{subscription.Id}' status:'open'"
             });
@@ -251,7 +251,7 @@ public class GetOrganizationWarningsQuery(
             return false;
         }
 
-        var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions
+        var setupIntent = await stripeAdapter.GetSetupIntentAsync(setupIntentId, new SetupIntentGetOptions
         {
             Expand = ["payment_method"]
         });

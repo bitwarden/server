@@ -40,16 +40,16 @@ public class VerifyBankAccountCommand(
             return DefaultConflict;
         }
 
-        await stripeAdapter.SetupIntentVerifyMicroDeposit(setupIntentId,
+        await stripeAdapter.VerifySetupIntentMicrodepositsAsync(setupIntentId,
             new SetupIntentVerifyMicrodepositsOptions { DescriptorCode = descriptorCode });
 
-        var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId,
+        var setupIntent = await stripeAdapter.GetSetupIntentAsync(setupIntentId,
             new SetupIntentGetOptions { Expand = ["payment_method"] });
 
-        var paymentMethod = await stripeAdapter.PaymentMethodAttachAsync(setupIntent.PaymentMethodId,
+        var paymentMethod = await stripeAdapter.AttachPaymentMethodAsync(setupIntent.PaymentMethodId,
             new PaymentMethodAttachOptions { Customer = subscriber.GatewayCustomerId });
 
-        await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
+        await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId,
             new CustomerUpdateOptions
             {
                 InvoiceSettings = new CustomerInvoiceSettingsOptions

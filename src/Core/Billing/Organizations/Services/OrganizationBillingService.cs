@@ -104,7 +104,7 @@ public class OrganizationBillingService(
         var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
 
         var invoice = !string.IsNullOrEmpty(subscription.LatestInvoiceId)
-            ? await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions())
+            ? await stripeAdapter.GetInvoiceAsync(subscription.LatestInvoiceId, new InvoiceGetOptions())
             : null;
 
         return new OrganizationMetadata(
@@ -182,7 +182,7 @@ public class OrganizationBillingService(
         try
         {
             // Update the subscription in Stripe
-            await stripeAdapter.SubscriptionUpdateAsync(subscription.Id, updateOptions);
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
             organization.PlanType = newPlan.Type;
             await organizationRepository.ReplaceAsync(organization);
         }
@@ -321,7 +321,7 @@ public class OrganizationBillingService(
                 case PaymentMethodType.BankAccount:
                     {
                         var setupIntent =
-                            (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = paymentMethodToken }))
+                            (await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions { PaymentMethod = paymentMethodToken }))
                             .FirstOrDefault();
 
                         if (setupIntent == null)
@@ -355,7 +355,7 @@ public class OrganizationBillingService(
 
         try
         {
-            return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            return await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code ==
                                                       StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
@@ -509,7 +509,7 @@ public class OrganizationBillingService(
             };
         }
 
-        return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+        return await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
     }
 
     private async Task<Customer> GetCustomerWhileEnsuringCorrectTaxExemptionAsync(
@@ -534,14 +534,14 @@ public class OrganizationBillingService(
         customer = customer switch
         {
             { Address.Country: not "US", TaxExempt: not StripeConstants.TaxExempt.Reverse } => await
-                stripeAdapter.CustomerUpdateAsync(customer.Id,
+                stripeAdapter.UpdateCustomerAsync(customer.Id,
                     new CustomerUpdateOptions
                     {
                         Expand = expansions,
                         TaxExempt = StripeConstants.TaxExempt.Reverse
                     }),
             { Address.Country: "US", TaxExempt: StripeConstants.TaxExempt.Reverse } => await
-                stripeAdapter.CustomerUpdateAsync(customer.Id,
+                stripeAdapter.UpdateCustomerAsync(customer.Id,
                     new CustomerUpdateOptions
                     {
                         Expand = expansions,
@@ -609,7 +609,7 @@ public class OrganizationBillingService(
                     }
                 }
             };
-            await stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, options);
+            await stripeAdapter.UpdateSubscriptionAsync(organization.GatewaySubscriptionId, options);
         }
     }
 

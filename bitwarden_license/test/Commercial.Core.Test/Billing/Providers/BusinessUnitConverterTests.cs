@@ -142,11 +142,11 @@ public class BusinessUnitConverterTests
 
         await businessUnitConverter.FinalizeConversion(organization, userId, token, providerKey, organizationKey);
 
-        await _stripeAdapter.Received(2).CustomerUpdateAsync(subscription.CustomerId, Arg.Any<CustomerUpdateOptions>());
+        await _stripeAdapter.Received(2).UpdateCustomerAsync(subscription.CustomerId, Arg.Any<CustomerUpdateOptions>());
 
         var updatedPriceId = ProviderPriceAdapter.GetActivePriceId(provider, enterpriseAnnually.Type);
 
-        await _stripeAdapter.Received(1).SubscriptionUpdateAsync(subscription.Id, Arg.Is<SubscriptionUpdateOptions>(
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id, Arg.Is<SubscriptionUpdateOptions>(
             arguments =>
                 arguments.Items.Count == 2 &&
                 arguments.Items[0].Id == "subscription_item_id" &&

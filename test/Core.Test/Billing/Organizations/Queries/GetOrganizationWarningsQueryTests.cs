@@ -110,7 +110,7 @@ public class GetOrganizationWarningsQueryTests
 
         sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(true);
         sutProvider.GetDependency<ISetupIntentCache>().Get(organization.Id).Returns(setupIntentId);
-        sutProvider.GetDependency<IStripeAdapter>().SetupIntentGet(setupIntentId, Arg.Is<SetupIntentGetOptions>(
+        sutProvider.GetDependency<IStripeAdapter>().GetSetupIntentAsync(setupIntentId, Arg.Is<SetupIntentGetOptions>(
             options => options.Expand.Contains("payment_method"))).Returns(new SetupIntent
             {
                 Status = "requires_action",
@@ -380,7 +380,7 @@ public class GetOrganizationWarningsQueryTests
 
         var dueDate = now.AddDays(-10);
 
-        sutProvider.GetDependency<IStripeAdapter>().InvoiceSearchAsync(Arg.Is<InvoiceSearchOptions>(options =>
+        sutProvider.GetDependency<IStripeAdapter>().SearchInvoiceAsync(Arg.Is<InvoiceSearchOptions>(options =>
             options.Query == $"subscription:'{subscriptionId}' status:'open'")).Returns([
             new Invoice { DueDate = dueDate, Created = dueDate.AddDays(-30) }
         ]);

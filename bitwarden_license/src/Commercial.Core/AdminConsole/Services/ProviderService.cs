@@ -444,7 +444,7 @@ public class ProviderService : IProviderService
 
         if (!string.IsNullOrEmpty(organization.GatewayCustomerId))
         {
-            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            await _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Email = provider.BillingEmail
             });
@@ -504,7 +504,7 @@ public class ProviderService : IProviderService
 
     private async Task<SubscriptionItem> GetSubscriptionItemAsync(string subscriptionId, string oldPlanId)
     {
-        var subscriptionDetails = await _stripeAdapter.SubscriptionGetAsync(subscriptionId);
+        var subscriptionDetails = await _stripeAdapter.GetSubscriptionAsync(subscriptionId);
         return subscriptionDetails.Items.Data.FirstOrDefault(item => item.Price.Id == oldPlanId);
     }
 
@@ -514,7 +514,7 @@ public class ProviderService : IProviderService
         {
             if (subscriptionItem.Price.Id != extractedPlanType)
             {
-                await _stripeAdapter.SubscriptionUpdateAsync(subscriptionItem.Subscription,
+                await _stripeAdapter.UpdateSubscriptionAsync(subscriptionItem.Subscription,
                     new Stripe.SubscriptionUpdateOptions
                     {
                         Items = new List<Stripe.SubscriptionItemOptions>

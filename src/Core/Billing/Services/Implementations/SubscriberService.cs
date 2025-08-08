@@ -80,7 +80,7 @@ public class SubscriberService(
         {
             if (subscription.Metadata != null && subscription.Metadata.ContainsKey("organizationId"))
             {
-                await stripeAdapter.SubscriptionUpdateAsync(subscription.Id, new SubscriptionUpdateOptions
+                await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
                 {
                     Metadata = metadata
                 });
@@ -99,7 +99,7 @@ public class SubscriberService(
                 options.CancellationDetails.Feedback = offboardingSurveyResponse.Reason;
             }
 
-            await stripeAdapter.SubscriptionCancelAsync(subscription.Id, options);
+            await stripeAdapter.CancelSubscriptionAsync(subscription.Id, options);
         }
         else
         {
@@ -118,7 +118,7 @@ public class SubscriberService(
                 options.CancellationDetails.Feedback = offboardingSurveyResponse.Reason;
             }
 
-            await stripeAdapter.SubscriptionUpdateAsync(subscription.Id, options);
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, options);
         }
     }
 
@@ -229,7 +229,7 @@ public class SubscriberService(
             _ => throw new ArgumentOutOfRangeException(nameof(subscriber))
         };
 
-        var customer = await stripeAdapter.CustomerCreateAsync(options);
+        var customer = await stripeAdapter.CreateCustomerAsync(options);
 
         switch (subscriber)
         {
@@ -272,7 +272,7 @@ public class SubscriberService(
 
         try
         {
-            var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
+            var customer = await stripeAdapter.GetCustomerAsync(subscriber.GatewayCustomerId, customerGetOptions);
 
             if (customer != null)
             {
@@ -308,7 +308,7 @@ public class SubscriberService(
 
         try
         {
-            var customer = await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
+            var customer = await stripeAdapter.GetCustomerAsync(subscriber.GatewayCustomerId, customerGetOptions);
 
             if (customer != null)
             {
@@ -391,7 +391,7 @@ public class SubscriberService(
 
         try
         {
-            var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
+            var subscription = await stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
 
             if (subscription != null)
             {
@@ -427,7 +427,7 @@ public class SubscriberService(
 
         try
         {
-            var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
+            var subscription = await stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId, subscriptionGetOptions);
 
             if (subscription != null)
             {
@@ -531,23 +531,23 @@ public class SubscriberService(
                     switch (source)
                     {
                         case BankAccount:
-                            await stripeAdapter.BankAccountDeleteAsync(stripeCustomer.Id, source.Id);
+                            await stripeAdapter.DeleteBankAccountAsync(stripeCustomer.Id, source.Id);
                             break;
                         case Card:
-                            await stripeAdapter.CardDeleteAsync(stripeCustomer.Id, source.Id);
+                            await stripeAdapter.DeleteCardAsync(stripeCustomer.Id, source.Id);
                             break;
                     }
                 }
             }
 
-            var paymentMethods = stripeAdapter.PaymentMethodListAutoPagingAsync(new PaymentMethodListOptions
+            var paymentMethods = stripeAdapter.ListPaymentMethodsAutoPagingAsync(new PaymentMethodListOptions
             {
                 Customer = stripeCustomer.Id
             });
 
             await foreach (var paymentMethod in paymentMethods)
             {
-                await stripeAdapter.PaymentMethodDetachAsync(paymentMethod.Id);
+                await stripeAdapter.DetachPaymentMethodAsync(paymentMethod.Id);
             }
         }
     }
@@ -576,12 +576,12 @@ public class SubscriberService(
         {
             case PaymentMethodType.BankAccount:
                 {
-                    var getSetupIntentsForUpdatedPaymentMethod = stripeAdapter.SetupIntentList(new SetupIntentListOptions
+                    var getSetupIntentsForUpdatedPaymentMethod = stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions
                     {
                         PaymentMethod = token
                     });
 
-                    var getExistingSetupIntentsForCustomer = stripeAdapter.SetupIntentList(new SetupIntentListOptions
+                    var getExistingSetupIntentsForCustomer = stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions
                     {
                         Customer = subscriber.GatewayCustomerId
                     });
@@ -608,7 +608,7 @@ public class SubscriberService(
 
                     // Cancel the customer's other open setup intents.
                     var postProcessing = existingSetupIntentsForCustomer.Select(si =>
-                        stripeAdapter.SetupIntentCancel(si.Id,
+                        stripeAdapter.CancelSetupIntentAsync(si.Id,
                             new SetupIntentCancelOptions { CancellationReason = "abandoned" })).ToList();
 
                     // Remove the customer's other attached Stripe payment methods.
@@ -623,7 +623,7 @@ public class SubscriberService(
                 }
             case PaymentMethodType.Card:
                 {
-                    var getExistingSetupIntentsForCustomer = stripeAdapter.SetupIntentList(new SetupIntentListOptions
+                    var getExistingSetupIntentsForCustomer = stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions
                     {
                         Customer = subscriber.GatewayCustomerId
                     });
@@ -632,7 +632,7 @@ public class SubscriberService(
                     await RemoveStripePaymentMethodsAsync(customer);
 
                     // Attach the incoming payment method.
-                    await stripeAdapter.PaymentMethodAttachAsync(token,
+                    await stripeAdapter.AttachPaymentMethodAsync(token,
                         new PaymentMethodAttachOptions { Customer = subscriber.GatewayCustomerId });
 
                     // Find the customer's existing setup intents that should be canceled.
@@ -642,7 +642,7 @@ public class SubscriberService(
 
                     // Cancel the customer's other open setup intents.
                     var postProcessing = existingSetupIntentsForCustomer.Select(si =>
-                        stripeAdapter.SetupIntentCancel(si.Id,
+                        stripeAdapter.CancelSetupIntentAsync(si.Id,
                             new SetupIntentCancelOptions { CancellationReason = "abandoned" })).ToList();
 
                     var metadata = customer.Metadata;
@@ -654,7 +654,7 @@ public class SubscriberService(
                     }
 
                     // Set the customer's default payment method in Stripe and remove their Braintree customer ID.
-                    postProcessing.Add(stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId, new CustomerUpdateOptions
+                    postProcessing.Add(stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId, new CustomerUpdateOptions
                     {
                         InvoiceSettings = new CustomerInvoiceSettingsOptions
                         {
@@ -719,7 +719,7 @@ public class SubscriberService(
             Expand = ["subscriptions", "tax", "tax_ids"]
         });
 
-        customer = await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+        customer = await stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions
         {
             Address = new AddressOptions
             {
@@ -737,7 +737,7 @@ public class SubscriberService(
 
         if (taxId != null)
         {
-            await stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id);
+            await stripeAdapter.DeleteTaxIdAsync(customer.Id, taxId.Id);
         }
 
         if (!string.IsNullOrWhiteSpace(taxInformation.TaxId))
@@ -760,12 +760,12 @@ public class SubscriberService(
 
             try
             {
-                await stripeAdapter.TaxIdCreateAsync(customer.Id,
+                await stripeAdapter.CreateTaxIdAsync(customer.Id,
                     new TaxIdCreateOptions { Type = taxIdType, Value = taxInformation.TaxId });
 
                 if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
                 {
-                    await stripeAdapter.TaxIdCreateAsync(customer.Id,
+                    await stripeAdapter.CreateTaxIdAsync(customer.Id,
                         new TaxIdCreateOptions { Type = StripeConstants.TaxIdType.EUVAT, Value = $"ES{taxInformation.TaxId}" });
                 }
             }
@@ -814,7 +814,7 @@ public class SubscriberService(
                     Address.Country: not "US",
                     TaxExempt: not StripeConstants.TaxExempt.Reverse
                 }:
-                    await stripeAdapter.CustomerUpdateAsync(customer.Id,
+                    await stripeAdapter.UpdateCustomerAsync(customer.Id,
                         new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
                     break;
                 case
@@ -822,14 +822,14 @@ public class SubscriberService(
                     Address.Country: "US",
                     TaxExempt: StripeConstants.TaxExempt.Reverse
                 }:
-                    await stripeAdapter.CustomerUpdateAsync(customer.Id,
+                    await stripeAdapter.UpdateCustomerAsync(customer.Id,
                         new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.None });
                     break;
             }
 
             if (!subscription.AutomaticTax.Enabled)
             {
-                await stripeAdapter.SubscriptionUpdateAsync(subscription.Id,
+                await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
                     new SubscriptionUpdateOptions
                     {
                         AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
@@ -849,7 +849,7 @@ public class SubscriberService(
 
             if (automaticTaxShouldBeEnabled && !subscription.AutomaticTax.Enabled)
             {
-                await stripeAdapter.SubscriptionUpdateAsync(subscription.Id,
+                await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
                     new SubscriptionUpdateOptions
                     {
                         AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
@@ -872,15 +872,15 @@ public class SubscriberService(
 
         try
         {
-            await stripeAdapter.SetupIntentVerifyMicroDeposit(setupIntentId,
+            await stripeAdapter.VerifySetupIntentMicrodepositsAsync(setupIntentId,
                 new SetupIntentVerifyMicrodepositsOptions { DescriptorCode = descriptorCode });
 
-            var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId);
+            var setupIntent = await stripeAdapter.GetSetupIntentAsync(setupIntentId);
 
-            await stripeAdapter.PaymentMethodAttachAsync(setupIntent.PaymentMethodId,
+            await stripeAdapter.AttachPaymentMethodAsync(setupIntent.PaymentMethodId,
                 new PaymentMethodAttachOptions { Customer = subscriber.GatewayCustomerId });
 
-            await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
+            await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId,
                 new CustomerUpdateOptions
                 {
                     InvoiceSettings = new CustomerInvoiceSettingsOptions
@@ -919,7 +919,7 @@ public class SubscriberService(
 
         metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
 
-        await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+        await stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions
         {
             Metadata = metadata
         });
@@ -959,7 +959,7 @@ public class SubscriberService(
             return null;
         }
 
-        var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions
+        var setupIntent = await stripeAdapter.GetSetupIntentAsync(setupIntentId, new SetupIntentGetOptions
         {
             Expand = ["payment_method"]
         });
@@ -996,7 +996,7 @@ public class SubscriberService(
             metadata[BraintreeCustomerIdOldKey] = value;
             metadata[BraintreeCustomerIdKey] = null;
 
-            await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+            await stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions
             {
                 Metadata = metadata
             });
@@ -1013,18 +1013,18 @@ public class SubscriberService(
                 switch (source)
                 {
                     case BankAccount:
-                        await stripeAdapter.BankAccountDeleteAsync(customer.Id, source.Id);
+                        await stripeAdapter.DeleteBankAccountAsync(customer.Id, source.Id);
                         break;
                     case Card:
-                        await stripeAdapter.CardDeleteAsync(customer.Id, source.Id);
+                        await stripeAdapter.DeleteCardAsync(customer.Id, source.Id);
                         break;
                 }
             }
         }
 
-        var paymentMethods = await stripeAdapter.CustomerListPaymentMethods(customer.Id);
+        var paymentMethods = await stripeAdapter.ListCustomerPaymentMethods(customer.Id);
 
-        await Task.WhenAll(paymentMethods.Select(pm => stripeAdapter.PaymentMethodDetachAsync(pm.Id)));
+        await Task.WhenAll(paymentMethods.Select(pm => stripeAdapter.DetachPaymentMethodAsync(pm.Id)));
     }
 
     private async Task ReplaceBraintreePaymentMethodAsync(

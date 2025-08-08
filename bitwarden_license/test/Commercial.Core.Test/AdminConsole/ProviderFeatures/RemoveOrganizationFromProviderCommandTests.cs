@@ -132,7 +132,7 @@ public class RemoveOrganizationFromProviderCommandTests
                 Arg.Is<IEnumerable<string>>(emails => emails.FirstOrDefault() == "a@example.com"));
 
         await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
-            .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+            .UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
     }
 
     [Theory, BitAutoData]
@@ -157,18 +157,18 @@ public class RemoveOrganizationFromProviderCommandTests
             "b@example.com"
         ]);
 
-        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
+        sutProvider.GetDependency<IStripeAdapter>().GetSubscriptionAsync(organization.GatewaySubscriptionId)
             .Returns(GetSubscription(organization.GatewaySubscriptionId));
 
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        await stripeAdapter.Received(1).CustomerUpdateAsync(organization.GatewayCustomerId,
+        await stripeAdapter.Received(1).UpdateCustomerAsync(organization.GatewayCustomerId,
             Arg.Is<CustomerUpdateOptions>(options =>
                 options.Coupon == string.Empty && options.Email == "a@example.com"));
 
-        await stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
                 options.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&
                 options.DaysUntilDue == 30));
@@ -225,7 +225,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Description == string.Empty &&
             options.Email == organization.BillingEmail &&
             options.Expand[0] == "tax" &&
@@ -238,14 +238,14 @@ public class RemoveOrganizationFromProviderCommandTests
                 }
             });
 
-        stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
+        stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
         {
             Id = "subscription_id"
         });
 
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 
-        await stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+        await stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
             options.Customer == organization.GatewayCustomerId &&
             options.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&
             options.DaysUntilDue == 30 &&
@@ -314,7 +314,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Description == string.Empty &&
             options.Email == organization.BillingEmail &&
             options.Expand[0] == "tax" &&
@@ -327,7 +327,7 @@ public class RemoveOrganizationFromProviderCommandTests
                 }
             });
 
-        stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
+        stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
         {
             Id = "subscription_id"
         });
@@ -337,7 +337,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 
-        await stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(options =>
+        await stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(options =>
             options.Customer == organization.GatewayCustomerId &&
             options.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&
             options.DaysUntilDue == 30 &&
@@ -425,7 +425,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+        stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
             .Returns(new Customer
             {
                 Id = "customer_id",
@@ -435,7 +435,7 @@ public class RemoveOrganizationFromProviderCommandTests
                 }
             });
 
-        stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
+        stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
         {
             Id = "new_subscription_id"
         });

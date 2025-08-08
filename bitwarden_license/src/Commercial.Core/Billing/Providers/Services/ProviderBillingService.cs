@@ -61,14 +61,14 @@ public class ProviderBillingService(
         Organization organization,
         string key)
     {
-        await stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await stripeAdapter.UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             new SubscriptionUpdateOptions
             {
                 CancelAtPeriodEnd = false
             });
 
         var subscription =
-            await stripeAdapter.SubscriptionCancelAsync(organization.GatewaySubscriptionId,
+            await stripeAdapter.CancelSubscriptionAsync(organization.GatewaySubscriptionId,
                 new SubscriptionCancelOptions
                 {
                     CancellationDetails = new SubscriptionCancellationDetailsOptions
@@ -86,7 +86,7 @@ public class ProviderBillingService(
 
         if (!wasTrialing && subscription.LatestInvoice.Status == StripeConstants.InvoiceStatus.Draft)
         {
-            await stripeAdapter.InvoiceFinalizeInvoiceAsync(subscription.LatestInvoiceId,
+            await stripeAdapter.FinalizeInvoiceAsync(subscription.LatestInvoiceId,
                 new InvoiceFinalizeOptions { AutoAdvance = true });
         }
 
@@ -141,7 +141,7 @@ public class ProviderBillingService(
 
         if (clientCustomer.Balance != 0)
         {
-            await stripeAdapter.CustomerBalanceTransactionCreate(provider.GatewayCustomerId,
+            await stripeAdapter.CreateCustomerBalanceTransactionAsync(provider.GatewayCustomerId,
                 new CustomerBalanceTransactionCreateOptions
                 {
                     Amount = clientCustomer.Balance,
@@ -198,7 +198,7 @@ public class ProviderBillingService(
             ]
         };
 
-        await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId, updateOptions);
+        await stripeAdapter.UpdateSubscriptionAsync(provider.GatewaySubscriptionId, updateOptions);
 
         // Refactor later to ?ChangeClientPlanCommand? (ProviderPlanId, ProviderId, OrganizationId)
         // 1. Retrieve PlanType and PlanName for ProviderPlan
@@ -291,7 +291,7 @@ public class ProviderBillingService(
             customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
         }
 
-        var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+        var customer = await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
 
         organization.GatewayCustomerId = customer.Id;
 
@@ -594,7 +594,7 @@ public class ProviderBillingService(
                 case PaymentMethodType.BankAccount:
                     {
                         var setupIntent =
-                            (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = token }))
+                            (await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions { PaymentMethod = token }))
                             .FirstOrDefault();
 
                         if (setupIntent == null)
@@ -623,7 +623,7 @@ public class ProviderBillingService(
 
         try
         {
-            return await stripeAdapter.CustomerCreateAsync(options);
+            return await stripeAdapter.CreateCustomerAsync(options);
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code ==
                                                       StripeConstants.ErrorCodes.TaxIdInvalid)
@@ -648,7 +648,7 @@ public class ProviderBillingService(
                     case PaymentMethodType.BankAccount:
                         {
                             var setupIntentId = await setupIntentCache.Get(provider.Id);
-                            await stripeAdapter.SetupIntentCancel(setupIntentId,
+                            await stripeAdapter.CancelSetupIntentAsync(setupIntentId,
                                 new SetupIntentCancelOptions { CancellationReason = "abandoned" });
                             await setupIntentCache.Remove(provider.Id);
                             break;
@@ -707,7 +707,7 @@ public class ProviderBillingService(
         var setupIntentId = await setupIntentCache.Get(provider.Id);
 
         var setupIntent = !string.IsNullOrEmpty(setupIntentId)
-            ? await stripeAdapter.SetupIntentGet(setupIntentId, new SetupIntentGetOptions
+            ? await stripeAdapter.GetSetupIntentAsync(setupIntentId, new SetupIntentGetOptions
             {
                 Expand = ["payment_method"]
             })
@@ -760,7 +760,7 @@ public class ProviderBillingService(
 
         try
         {
-            var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+            var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
 
             if (subscription is
                 {
@@ -793,7 +793,7 @@ public class ProviderBillingService(
             subscriberService.UpdatePaymentSource(provider, tokenizedPaymentSource),
             subscriberService.UpdateTaxInformation(provider, taxInformation));
 
-        await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+        await stripeAdapter.UpdateSubscriptionAsync(provider.GatewaySubscriptionId,
             new SubscriptionUpdateOptions { CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically });
     }
 
@@ -876,7 +876,7 @@ public class ProviderBillingService(
 
         if (subscriptionItemOptionsList.Count > 0)
         {
-            await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+            await stripeAdapter.UpdateSubscriptionAsync(provider.GatewaySubscriptionId,
                 new SubscriptionUpdateOptions { Items = subscriptionItemOptionsList });
         }
     }
@@ -892,7 +892,7 @@ public class ProviderBillingService(
 
         var item = subscription.Items.First(item => item.Price.Id == priceId);
 
-        await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId, new SubscriptionUpdateOptions
+        await stripeAdapter.UpdateSubscriptionAsync(provider.GatewaySubscriptionId, new SubscriptionUpdateOptions
         {
             Items = [
                 new SubscriptionItemOptions

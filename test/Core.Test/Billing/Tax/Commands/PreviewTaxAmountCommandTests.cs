@@ -49,7 +49,7 @@ public class PreviewTaxAmountCommandTests
 
         var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.Currency == "usd" &&
                 options.CustomerDetails.Address.Country == "US" &&
                 options.CustomerDetails.Address.PostalCode == "12345" &&
@@ -90,7 +90,7 @@ public class PreviewTaxAmountCommandTests
 
         var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.Currency == "usd" &&
                 options.CustomerDetails.Address.Country == "US" &&
                 options.CustomerDetails.Address.PostalCode == "12345" &&
@@ -131,7 +131,7 @@ public class PreviewTaxAmountCommandTests
 
         var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.Currency == "usd" &&
                 options.CustomerDetails.Address.Country == "US" &&
                 options.CustomerDetails.Address.PostalCode == "12345" &&
@@ -175,7 +175,7 @@ public class PreviewTaxAmountCommandTests
 
         var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.Currency == "usd" &&
                 options.CustomerDetails.Address.Country == "CA" &&
                 options.CustomerDetails.Address.PostalCode == "12345" &&
@@ -220,7 +220,7 @@ public class PreviewTaxAmountCommandTests
 
         var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.Currency == "usd" &&
                 options.CustomerDetails.Address.Country == "CA" &&
                 options.CustomerDetails.Address.PostalCode == "12345" &&

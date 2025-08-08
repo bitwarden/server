@@ -109,7 +109,7 @@ public class PreviewTaxAmountCommand(
                 };
             }
 
-            var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
+            var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return Convert.ToDecimal(invoice.Tax) / 100;
         });
 }

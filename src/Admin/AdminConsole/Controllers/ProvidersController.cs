@@ -326,12 +326,12 @@ public class ProvidersController : Controller
 
                 if (_featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically))
                 {
-                    var customer = await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId);
+                    var customer = await _stripeAdapter.GetCustomerAsync(provider.GatewayCustomerId);
 
                     if (model.PayByInvoice != customer.ApprovedToPayByInvoice())
                     {
                         var approvedToPayByInvoice = model.PayByInvoice ? "1" : "0";
-                        await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+                        await _stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions
                         {
                             Metadata = new Dictionary<string, string>
                             {
@@ -386,7 +386,7 @@ public class ProvidersController : Controller
 
         var payByInvoice =
             _featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) &&
-            (await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)).ApprovedToPayByInvoice();
+            (await _stripeAdapter.GetCustomerAsync(provider.GatewayCustomerId)).ApprovedToPayByInvoice();
 
         return new ProviderEditModel(
             provider, users, providerOrganizations,

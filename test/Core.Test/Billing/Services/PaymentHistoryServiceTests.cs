@@ -20,7 +20,7 @@ public class PaymentHistoryServiceTests
         var subscriber = new Organization { GatewayCustomerId = "cus_id", GatewaySubscriptionId = "sub_id" };
         var invoices = new List<Invoice> { new() { Id = "in_id" } };
         var stripeAdapter = Substitute.For<IStripeAdapter>();
-        stripeAdapter.InvoiceListAsync(Arg.Any<StripeInvoiceListOptions>()).Returns(invoices);
+        stripeAdapter.ListInvoicesAsync(Arg.Any<StripeInvoiceListOptions>()).Returns(invoices);
         var transactionRepository = Substitute.For<ITransactionRepository>();
         var paymentHistoryService = new PaymentHistoryService(stripeAdapter, transactionRepository);
 
@@ -30,7 +30,7 @@ public class PaymentHistoryServiceTests
         // Assert
         Assert.NotEmpty(result);
         Assert.Single(result);
-        await stripeAdapter.Received(1).InvoiceListAsync(Arg.Any<StripeInvoiceListOptions>());
+        await stripeAdapter.Received(1).ListInvoicesAsync(Arg.Any<StripeInvoiceListOptions>());
     }
 
     [Fact]

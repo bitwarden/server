@@ -79,7 +79,7 @@ public class UpdatePaymentMethodCommandTests
             Status = "requires_action"
         };
 
-        _stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options =>
+        _stripeAdapter.ListSetupIntentsAsync(Arg.Is<SetupIntentListOptions>(options =>
             options.PaymentMethod == token && options.HasExpansions("data.payment_method"))).Returns([setupIntent]);
 
         var result = await _command.Run(organization,
@@ -138,7 +138,7 @@ public class UpdatePaymentMethodCommandTests
             Status = "requires_action"
         };
 
-        _stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options =>
+        _stripeAdapter.ListSetupIntentsAsync(Arg.Is<SetupIntentListOptions>(options =>
             options.PaymentMethod == token && options.HasExpansions("data.payment_method"))).Returns([setupIntent]);
 
         var result = await _command.Run(organization,
@@ -204,7 +204,7 @@ public class UpdatePaymentMethodCommandTests
             Status = "requires_action"
         };
 
-        _stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options =>
+        _stripeAdapter.ListSetupIntentsAsync(Arg.Is<SetupIntentListOptions>(options =>
             options.PaymentMethod == token && options.HasExpansions("data.payment_method"))).Returns([setupIntent]);
 
         var result = await _command.Run(organization,
@@ -223,7 +223,7 @@ public class UpdatePaymentMethodCommandTests
         Assert.False(maskedBankAccount.Verified);
 
         await _setupIntentCache.Received(1).Set(organization.Id, setupIntent.Id);
-        await _stripeAdapter.Received(1).CustomerUpdateAsync(customer.Id, Arg.Is<CustomerUpdateOptions>(options =>
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(customer.Id, Arg.Is<CustomerUpdateOptions>(options =>
             options.Metadata[MetadataKeys.BraintreeCustomerId] == string.Empty &&
             options.Metadata[MetadataKeys.RetiredBraintreeCustomerId] == "braintree_customer_id"));
     }
@@ -253,7 +253,7 @@ public class UpdatePaymentMethodCommandTests
         const string token = "TOKEN";
 
         _stripeAdapter
-            .PaymentMethodAttachAsync(token,
+            .AttachPaymentMethodAsync(token,
                 Arg.Is<PaymentMethodAttachOptions>(options => options.Customer == customer.Id))
             .Returns(new PaymentMethod
             {
@@ -282,7 +282,7 @@ public class UpdatePaymentMethodCommandTests
         Assert.Equal("9999", maskedCard.Last4);
         Assert.Equal("01/2028", maskedCard.Expiration);
 
-        await _stripeAdapter.Received(1).CustomerUpdateAsync(customer.Id,
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(customer.Id,
             Arg.Is<CustomerUpdateOptions>(options => options.InvoiceSettings.DefaultPaymentMethod == token));
     }
 
@@ -306,7 +306,7 @@ public class UpdatePaymentMethodCommandTests
         const string token = "TOKEN";
 
         _stripeAdapter
-            .PaymentMethodAttachAsync(token,
+            .AttachPaymentMethodAsync(token,
                 Arg.Is<PaymentMethodAttachOptions>(options => options.Customer == customer.Id))
             .Returns(new PaymentMethod
             {
@@ -335,10 +335,10 @@ public class UpdatePaymentMethodCommandTests
         Assert.Equal("9999", maskedCard.Last4);
         Assert.Equal("01/2028", maskedCard.Expiration);
 
-        await _stripeAdapter.Received(1).CustomerUpdateAsync(customer.Id,
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(customer.Id,
             Arg.Is<CustomerUpdateOptions>(options => options.InvoiceSettings.DefaultPaymentMethod == token));
 
-        await _stripeAdapter.Received(1).CustomerUpdateAsync(customer.Id,
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(customer.Id,
             Arg.Is<CustomerUpdateOptions>(options => options.Address.Country == "US" && options.Address.PostalCode == "12345"));
     }
 
@@ -459,7 +459,7 @@ public class UpdatePaymentMethodCommandTests
         var maskedPayPalAccount = maskedPaymentMethod.AsT2;
         Assert.Equal("user@gmail.com", maskedPayPalAccount.Email);
 
-        await _stripeAdapter.Received(1).CustomerUpdateAsync(customer.Id,
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(customer.Id,
             Arg.Is<CustomerUpdateOptions>(options =>
                 options.Metadata[MetadataKeys.BraintreeCustomerId] == "braintree_customer_id"));
     }

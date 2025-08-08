@@ -73,7 +73,7 @@ public class UpdateBillingAddressCommandTests
             }
         };
 
-        _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
             options.HasExpansions("subscriptions")
         )).Returns(customer);
@@ -84,7 +84,7 @@ public class UpdateBillingAddressCommandTests
         var output = result.AsT0;
         Assert.Equivalent(input, output);
 
-        await _stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
     }
 
@@ -131,7 +131,7 @@ public class UpdateBillingAddressCommandTests
             }
         };
 
-        _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
             options.HasExpansions("subscriptions")
         )).Returns(customer);
@@ -144,7 +144,7 @@ public class UpdateBillingAddressCommandTests
 
         await _subscriberService.Received(1).CreateStripeCustomer(organization);
 
-        await _stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
     }
 
@@ -192,7 +192,7 @@ public class UpdateBillingAddressCommandTests
             }
         };
 
-        _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
             options.HasExpansions("subscriptions", "tax_ids") &&
             options.TaxExempt == TaxExempt.None
@@ -204,7 +204,7 @@ public class UpdateBillingAddressCommandTests
         var output = result.AsT0;
         Assert.Equivalent(input, output);
 
-        await _stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
     }
 
@@ -260,7 +260,7 @@ public class UpdateBillingAddressCommandTests
             }
         };
 
-        _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
             options.HasExpansions("subscriptions", "tax_ids") &&
             options.TaxExempt == TaxExempt.None
@@ -272,10 +272,10 @@ public class UpdateBillingAddressCommandTests
         var output = result.AsT0;
         Assert.Equivalent(input, output);
 
-        await _stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
 
-        await _stripeAdapter.Received(1).TaxIdDeleteAsync(customer.Id, "tax_id_123");
+        await _stripeAdapter.Received(1).DeleteTaxIdAsync(customer.Id, "tax_id_123");
     }
 
     [Fact]
@@ -322,7 +322,7 @@ public class UpdateBillingAddressCommandTests
             }
         };
 
-        _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
             options.HasExpansions("subscriptions", "tax_ids") &&
             options.TaxExempt == TaxExempt.Reverse
@@ -334,7 +334,7 @@ public class UpdateBillingAddressCommandTests
         var output = result.AsT0;
         Assert.Equivalent(input, output);
 
-        await _stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
     }
 
@@ -384,14 +384,14 @@ public class UpdateBillingAddressCommandTests
             }
         };
 
-        _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
             options.HasExpansions("subscriptions", "tax_ids") &&
             options.TaxExempt == TaxExempt.Reverse
         )).Returns(customer);
 
         _stripeAdapter
-            .TaxIdCreateAsync(customer.Id,
+            .CreateTaxIdAsync(customer.Id,
                 Arg.Is<TaxIdCreateOptions>(options => options.Type == TaxIdType.EUVAT))
             .Returns(new TaxId { Type = TaxIdType.EUVAT, Value = "ESA12345678" });
 
@@ -401,10 +401,10 @@ public class UpdateBillingAddressCommandTests
         var output = result.AsT0;
         Assert.Equivalent(input with { TaxId = new TaxID(TaxIdType.EUVAT, "ESA12345678") }, output);
 
-        await _stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
 
-        await _stripeAdapter.Received(1).TaxIdCreateAsync(organization.GatewayCustomerId, Arg.Is<TaxIdCreateOptions>(
+        await _stripeAdapter.Received(1).CreateTaxIdAsync(organization.GatewayCustomerId, Arg.Is<TaxIdCreateOptions>(
             options => options.Type == TaxIdType.SpanishNIF &&
                        options.Value == input.TaxId.Value));
     }

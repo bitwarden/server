@@ -65,7 +65,7 @@ public class PremiumUserBillingService(
                 }
             };
 
-            customer = await stripeAdapter.CustomerCreateAsync(options);
+            customer = await stripeAdapter.CreateCustomerAsync(options);
 
             user.Gateway = GatewayType.Stripe;
             user.GatewayCustomerId = customer.Id;
@@ -78,7 +78,7 @@ public class PremiumUserBillingService(
                 Balance = customer.Balance + credit
             };
 
-            await stripeAdapter.CustomerUpdateAsync(customer.Id, options);
+            await stripeAdapter.UpdateCustomerAsync(customer.Id, options);
         }
     }
 
@@ -221,7 +221,7 @@ public class PremiumUserBillingService(
             case PaymentMethodType.BankAccount:
                 {
                     var setupIntent =
-                        (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = paymentMethodToken }))
+                        (await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions { PaymentMethod = paymentMethodToken }))
                         .FirstOrDefault();
 
                     if (setupIntent == null)
@@ -254,7 +254,7 @@ public class PremiumUserBillingService(
 
         try
         {
-            return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            return await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code ==
                                                       StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
@@ -339,11 +339,11 @@ public class PremiumUserBillingService(
             OffSession = true
         };
 
-        var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+        var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
 
         if (usingPayPal)
         {
-            await stripeAdapter.InvoiceUpdateAsync(subscription.LatestInvoiceId, new InvoiceUpdateOptions
+            await stripeAdapter.UpdateInvoiceAsync(subscription.LatestInvoiceId, new InvoiceUpdateOptions
             {
                 AutoAdvance = false
             });
@@ -379,6 +379,6 @@ public class PremiumUserBillingService(
             }
         };
 
-        return await stripeAdapter.CustomerUpdateAsync(customer.Id, options);
+        return await stripeAdapter.UpdateCustomerAsync(customer.Id, options);
     }
 }

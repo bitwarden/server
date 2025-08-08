@@ -56,10 +56,10 @@ public class VerifyBankAccountCommandTests
             Status = "requires_action"
         };
 
-        _stripeAdapter.SetupIntentGet(setupIntentId,
+        _stripeAdapter.GetSetupIntentAsync(setupIntentId,
             Arg.Is<SetupIntentGetOptions>(options => options.HasExpansions("payment_method"))).Returns(setupIntent);
 
-        _stripeAdapter.PaymentMethodAttachAsync(setupIntent.PaymentMethodId,
+        _stripeAdapter.AttachPaymentMethodAsync(setupIntent.PaymentMethodId,
                 Arg.Is<PaymentMethodAttachOptions>(options => options.Customer == organization.GatewayCustomerId))
             .Returns(setupIntent.PaymentMethod);
 
@@ -73,10 +73,10 @@ public class VerifyBankAccountCommandTests
         Assert.Equal("9999", maskedBankAccount.Last4);
         Assert.True(maskedBankAccount.Verified);
 
-        await _stripeAdapter.Received(1).SetupIntentVerifyMicroDeposit(setupIntent.Id,
+        await _stripeAdapter.Received(1).VerifySetupIntentMicrodepositsAsync(setupIntent.Id,
             Arg.Is<SetupIntentVerifyMicrodepositsOptions>(options => options.DescriptorCode == "DESCRIPTOR_CODE"));
 
-        await _stripeAdapter.Received(1).CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
             options => options.InvoiceSettings.DefaultPaymentMethod == setupIntent.PaymentMethodId));
     }
 }

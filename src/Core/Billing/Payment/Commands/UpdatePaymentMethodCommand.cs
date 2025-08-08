@@ -56,7 +56,7 @@ public class UpdatePaymentMethodCommand(
 
         if (billingAddress != null && customer.Address is not { Country: not null, PostalCode: not null })
         {
-            await stripeAdapter.CustomerUpdateAsync(customer.Id,
+            await stripeAdapter.UpdateCustomerAsync(customer.Id,
                 new CustomerUpdateOptions
                 {
                     Address = new AddressOptions
@@ -75,7 +75,7 @@ public class UpdatePaymentMethodCommand(
         Customer customer,
         string token)
     {
-        var setupIntents = await stripeAdapter.SetupIntentList(new SetupIntentListOptions
+        var setupIntents = await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions
         {
             Expand = ["data.payment_method"],
             PaymentMethod = token
@@ -104,9 +104,9 @@ public class UpdatePaymentMethodCommand(
         Customer customer,
         string token)
     {
-        var paymentMethod = await stripeAdapter.PaymentMethodAttachAsync(token, new PaymentMethodAttachOptions { Customer = customer.Id });
+        var paymentMethod = await stripeAdapter.AttachPaymentMethodAsync(token, new PaymentMethodAttachOptions { Customer = customer.Id });
 
-        await stripeAdapter.CustomerUpdateAsync(customer.Id,
+        await stripeAdapter.UpdateCustomerAsync(customer.Id,
             new CustomerUpdateOptions
             {
                 InvoiceSettings = new CustomerInvoiceSettingsOptions { DefaultPaymentMethod = token }
@@ -139,7 +139,7 @@ public class UpdatePaymentMethodCommand(
                 [StripeConstants.MetadataKeys.BraintreeCustomerId] = braintreeCustomer.Id
             };
 
-            await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions { Metadata = metadata });
+            await stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions { Metadata = metadata });
         }
 
         var payPalAccount = braintreeCustomer.DefaultPaymentMethod as PayPalAccount;
@@ -204,7 +204,7 @@ public class UpdatePaymentMethodCommand(
                 [StripeConstants.MetadataKeys.BraintreeCustomerId] = string.Empty
             };
 
-            await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions { Metadata = metadata });
+            await stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions { Metadata = metadata });
         }
     }
 }

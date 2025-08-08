@@ -23,7 +23,7 @@ public class PaymentHistoryService(
             return Array.Empty<BillingHistoryInfo.BillingInvoice>();
         }
 
-        var invoices = await stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
+        var invoices = await stripeAdapter.ListInvoicesAsync(new StripeInvoiceListOptions
         {
             Customer = subscriber.GatewayCustomerId,
             Limit = pageSize,

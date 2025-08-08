@@ -44,34 +44,34 @@ public class StripeAdapter : IStripeAdapter
     /**************
      ** CUSTOMER **
      **************/
-    public Task<Stripe.Customer> CustomerCreateAsync(Stripe.CustomerCreateOptions options)
+    public Task<Stripe.Customer> CreateCustomerAsync(Stripe.CustomerCreateOptions options)
     {
         return _customerService.CreateAsync(options);
     }
 
-    public Task<Stripe.Customer> CustomerGetAsync(string id, Stripe.CustomerGetOptions options = null)
+    public Task<Stripe.Customer> GetCustomerAsync(string id, Stripe.CustomerGetOptions options = null)
     {
         return _customerService.GetAsync(id, options);
     }
 
-    public Task<Stripe.Customer> CustomerUpdateAsync(string id, Stripe.CustomerUpdateOptions options = null)
+    public Task<Stripe.Customer> UpdateCustomerAsync(string id, Stripe.CustomerUpdateOptions options = null)
     {
         return _customerService.UpdateAsync(id, options);
     }
 
-    public Task<Stripe.Customer> CustomerDeleteAsync(string id)
+    public Task<Stripe.Customer> DeleteCustomerAsync(string id)
     {
         return _customerService.DeleteAsync(id);
     }
 
-    public async Task<List<PaymentMethod>> CustomerListPaymentMethods(string id,
+    public async Task<List<PaymentMethod>> ListCustomerPaymentMethods(string id,
         CustomerListPaymentMethodsOptions options = null)
     {
         var paymentMethods = await _customerService.ListPaymentMethodsAsync(id, options);
         return paymentMethods.Data;
     }
 
-    public async Task<CustomerBalanceTransaction> CustomerBalanceTransactionCreate(string customerId,
+    public async Task<CustomerBalanceTransaction> CreateCustomerBalanceTransactionAsync(string customerId,
         CustomerBalanceTransactionCreateOptions options)
     {
         return await _customerBalanceTransactionService.CreateAsync(customerId, options);
@@ -80,17 +80,17 @@ public class StripeAdapter : IStripeAdapter
     /******************
      ** SUBSCRIPTION **
      ******************/
-    public Task<Stripe.Subscription> SubscriptionCreateAsync(Stripe.SubscriptionCreateOptions options)
+    public Task<Stripe.Subscription> CreateSubscriptionAsync(Stripe.SubscriptionCreateOptions options)
     {
         return _subscriptionService.CreateAsync(options);
     }
 
-    public Task<Stripe.Subscription> SubscriptionGetAsync(string id, Stripe.SubscriptionGetOptions options = null)
+    public Task<Stripe.Subscription> GetSubscriptionAsync(string id, Stripe.SubscriptionGetOptions options = null)
     {
         return _subscriptionService.GetAsync(id, options);
     }
 
-    public async Task<Subscription> ProviderSubscriptionGetAsync(
+    public async Task<Subscription> GetProviderSubscriptionAsync(
         string id,
         Guid providerId,
         SubscriptionGetOptions options = null)
@@ -104,18 +104,18 @@ public class StripeAdapter : IStripeAdapter
         throw new InvalidOperationException("Subscription does not belong to the provider.");
     }
 
-    public Task<Stripe.Subscription> SubscriptionUpdateAsync(string id,
+    public Task<Stripe.Subscription> UpdateSubscriptionAsync(string id,
         Stripe.SubscriptionUpdateOptions options = null)
     {
         return _subscriptionService.UpdateAsync(id, options);
     }
 
-    public Task<Stripe.Subscription> SubscriptionCancelAsync(string Id, Stripe.SubscriptionCancelOptions options = null)
+    public Task<Stripe.Subscription> CancelSubscriptionAsync(string Id, Stripe.SubscriptionCancelOptions options = null)
     {
         return _subscriptionService.CancelAsync(Id, options);
     }
 
-    public async Task<List<Stripe.Subscription>> SubscriptionListAsync(StripeSubscriptionListOptions options)
+    public async Task<List<Stripe.Subscription>> ListSubscriptionsAsync(StripeSubscriptionListOptions options)
     {
         if (!options.SelectAll)
         {
@@ -134,17 +134,17 @@ public class StripeAdapter : IStripeAdapter
     /*************
      ** INVOICE **
      *************/
-    public Task<Stripe.Invoice> InvoiceUpcomingAsync(Stripe.UpcomingInvoiceOptions options)
+    public Task<Stripe.Invoice> GetUpcomingInvoiceAsync(Stripe.UpcomingInvoiceOptions options)
     {
         return _invoiceService.UpcomingAsync(options);
     }
 
-    public Task<Stripe.Invoice> InvoiceGetAsync(string id, Stripe.InvoiceGetOptions options)
+    public Task<Stripe.Invoice> GetInvoiceAsync(string id, Stripe.InvoiceGetOptions options)
     {
         return _invoiceService.GetAsync(id, options);
     }
 
-    public async Task<List<Stripe.Invoice>> InvoiceListAsync(StripeInvoiceListOptions options)
+    public async Task<List<Stripe.Invoice>> ListInvoicesAsync(StripeInvoiceListOptions options)
     {
         if (!options.SelectAll)
         {
@@ -163,42 +163,42 @@ public class StripeAdapter : IStripeAdapter
         return invoices;
     }
 
-    public Task<Invoice> InvoiceCreatePreviewAsync(InvoiceCreatePreviewOptions options)
+    public Task<Invoice> CreateInvoicePreviewAsync(InvoiceCreatePreviewOptions options)
     {
         return _invoiceService.CreatePreviewAsync(options);
     }
 
-    public async Task<List<Stripe.Invoice>> InvoiceSearchAsync(InvoiceSearchOptions options)
+    public async Task<List<Stripe.Invoice>> SearchInvoiceAsync(InvoiceSearchOptions options)
     {
         return (await _invoiceService.SearchAsync(options)).Data;
     }
 
-    public Task<Stripe.Invoice> InvoiceUpdateAsync(string id, Stripe.InvoiceUpdateOptions options)
+    public Task<Stripe.Invoice> UpdateInvoiceAsync(string id, Stripe.InvoiceUpdateOptions options)
     {
         return _invoiceService.UpdateAsync(id, options);
     }
 
-    public Task<Stripe.Invoice> InvoiceFinalizeInvoiceAsync(string id, Stripe.InvoiceFinalizeOptions options)
+    public Task<Stripe.Invoice> FinalizeInvoiceAsync(string id, Stripe.InvoiceFinalizeOptions options)
     {
         return _invoiceService.FinalizeInvoiceAsync(id, options);
     }
 
-    public Task<Stripe.Invoice> InvoiceSendInvoiceAsync(string id, Stripe.InvoiceSendOptions options)
+    public Task<Stripe.Invoice> SendInvoiceAsync(string id, Stripe.InvoiceSendOptions options)
     {
         return _invoiceService.SendInvoiceAsync(id, options);
     }
 
-    public Task<Stripe.Invoice> InvoicePayAsync(string id, Stripe.InvoicePayOptions options = null)
+    public Task<Stripe.Invoice> PayInvoiceAsync(string id, Stripe.InvoicePayOptions options = null)
     {
         return _invoiceService.PayAsync(id, options);
     }
 
-    public Task<Stripe.Invoice> InvoiceDeleteAsync(string id, Stripe.InvoiceDeleteOptions options = null)
+    public Task<Stripe.Invoice> DeleteInvoiceAsync(string id, Stripe.InvoiceDeleteOptions options = null)
     {
         return _invoiceService.DeleteAsync(id, options);
     }
 
-    public Task<Stripe.Invoice> InvoiceVoidInvoiceAsync(string id, Stripe.InvoiceVoidOptions options = null)
+    public Task<Stripe.Invoice> VoidInvoiceAsync(string id, Stripe.InvoiceVoidOptions options = null)
     {
         return _invoiceService.VoidInvoiceAsync(id, options);
     }
@@ -206,20 +206,20 @@ public class StripeAdapter : IStripeAdapter
     /********************
      ** PAYMENT METHOD **
      ********************/
-    public IEnumerable<Stripe.PaymentMethod> PaymentMethodListAutoPaging(Stripe.PaymentMethodListOptions options)
+    public IEnumerable<Stripe.PaymentMethod> ListPaymentMethodsAutoPaging(Stripe.PaymentMethodListOptions options)
     {
         return _paymentMethodService.ListAutoPaging(options);
     }
 
-    public IAsyncEnumerable<Stripe.PaymentMethod> PaymentMethodListAutoPagingAsync(Stripe.PaymentMethodListOptions options)
+    public IAsyncEnumerable<Stripe.PaymentMethod> ListPaymentMethodsAutoPagingAsync(Stripe.PaymentMethodListOptions options)
         => _paymentMethodService.ListAutoPagingAsync(options);
 
-    public Task<Stripe.PaymentMethod> PaymentMethodAttachAsync(string id, Stripe.PaymentMethodAttachOptions options = null)
+    public Task<Stripe.PaymentMethod> AttachPaymentMethodAsync(string id, Stripe.PaymentMethodAttachOptions options = null)
     {
         return _paymentMethodService.AttachAsync(id, options);
     }
 
-    public Task<Stripe.PaymentMethod> PaymentMethodDetachAsync(string id, Stripe.PaymentMethodDetachOptions options = null)
+    public Task<Stripe.PaymentMethod> DetachPaymentMethodAsync(string id, Stripe.PaymentMethodDetachOptions options = null)
     {
         return _paymentMethodService.DetachAsync(id, options);
     }
@@ -227,12 +227,12 @@ public class StripeAdapter : IStripeAdapter
     /************
      ** TAX ID **
      ************/
-    public Task<Stripe.TaxId> TaxIdCreateAsync(string id, Stripe.TaxIdCreateOptions options)
+    public Task<Stripe.TaxId> CreateTaxIdAsync(string id, Stripe.TaxIdCreateOptions options)
     {
         return _taxIdService.CreateAsync(id, options);
     }
 
-    public Task<Stripe.TaxId> TaxIdDeleteAsync(string customerId, string taxIdId,
+    public Task<Stripe.TaxId> DeleteTaxIdAsync(string customerId, string taxIdId,
         Stripe.TaxIdDeleteOptions options = null)
     {
         return _taxIdService.DeleteAsync(customerId, taxIdId);
@@ -241,12 +241,12 @@ public class StripeAdapter : IStripeAdapter
     /******************
      ** BANK ACCOUNT **
      ******************/
-    public Task<Stripe.BankAccount> BankAccountCreateAsync(string customerId, Stripe.BankAccountCreateOptions options = null)
+    public Task<Stripe.BankAccount> CreateBankAccountAsync(string customerId, Stripe.BankAccountCreateOptions options = null)
     {
         return _bankAccountService.CreateAsync(customerId, options);
     }
 
-    public Task<Stripe.BankAccount> BankAccountDeleteAsync(string customerId, string bankAccount, Stripe.BankAccountDeleteOptions options = null)
+    public Task<Stripe.BankAccount> DeleteBankAccountAsync(string customerId, string bankAccount, Stripe.BankAccountDeleteOptions options = null)
     {
         return _bankAccountService.DeleteAsync(customerId, bankAccount, options);
     }
@@ -254,12 +254,12 @@ public class StripeAdapter : IStripeAdapter
     /***********
      ** PRICE **
      ***********/
-    public async Task<Stripe.StripeList<Stripe.Price>> PriceListAsync(Stripe.PriceListOptions options = null)
+    public async Task<Stripe.StripeList<Stripe.Price>> ListPricesAsync(Stripe.PriceListOptions options = null)
     {
         return await _priceService.ListAsync(options);
     }
 
-    public Task<Price> PriceGetAsync(string id, PriceGetOptions options = null)
+    public Task<Price> GetPriceAsync(string id, PriceGetOptions options = null)
     {
         return _priceService.GetAsync(id, options);
     }
@@ -267,27 +267,29 @@ public class StripeAdapter : IStripeAdapter
     /******************
      ** SETUP INTENT **
      ******************/
-    public Task<SetupIntent> SetupIntentCreate(SetupIntentCreateOptions options)
-        => _setupIntentService.CreateAsync(options);
+    public Task<SetupIntent> CreateSetupIntentAsync(SetupIntentCreateOptions options)
+    {
+        return _setupIntentService.CreateAsync(options);
+    }
 
-    public async Task<List<SetupIntent>> SetupIntentList(SetupIntentListOptions options)
+    public async Task<List<SetupIntent>> ListSetupIntentsAsync(SetupIntentListOptions options)
     {
         var setupIntents = await _setupIntentService.ListAsync(options);
 
         return setupIntents.Data;
     }
 
-    public Task SetupIntentCancel(string id, SetupIntentCancelOptions options = null)
+    public Task CancelSetupIntentAsync(string id, SetupIntentCancelOptions options = null)
     {
         return _setupIntentService.CancelAsync(id, options);
     }
 
-    public Task<SetupIntent> SetupIntentGet(string id, SetupIntentGetOptions options = null)
+    public Task<SetupIntent> GetSetupIntentAsync(string id, SetupIntentGetOptions options = null)
     {
         return _setupIntentService.GetAsync(id, options);
     }
 
-    public Task SetupIntentVerifyMicroDeposit(string id, SetupIntentVerifyMicrodepositsOptions options)
+    public Task VerifySetupIntentMicrodepositsAsync(string id, SetupIntentVerifyMicrodepositsOptions options)
     {
         return _setupIntentService.VerifyMicrodepositsAsync(id, options);
     }
@@ -295,22 +297,22 @@ public class StripeAdapter : IStripeAdapter
     /*******************
      ** MISCELLANEOUS **
      *******************/
-    public Task<Stripe.StripeList<Stripe.Charge>> ChargeListAsync(Stripe.ChargeListOptions options)
+    public Task<Stripe.StripeList<Stripe.Charge>> ListChargesAsync(Stripe.ChargeListOptions options)
     {
         return _chargeService.ListAsync(options);
     }
 
-    public Task<Stripe.Refund> RefundCreateAsync(Stripe.RefundCreateOptions options)
+    public Task<Stripe.Refund> CreateRefundAsync(Stripe.RefundCreateOptions options)
     {
         return _refundService.CreateAsync(options);
     }
 
-    public Task<Stripe.Card> CardDeleteAsync(string customerId, string cardId, Stripe.CardDeleteOptions options = null)
+    public Task<Stripe.Card> DeleteCardAsync(string customerId, string cardId, Stripe.CardDeleteOptions options = null)
     {
         return _cardService.DeleteAsync(customerId, cardId, options);
     }
 
-    public async Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync()
+    public async Task<List<Stripe.TestHelpers.TestClock>> ListTestClocksAsync()
     {
         var items = new List<Stripe.TestHelpers.TestClock>();
         var options = new Stripe.TestHelpers.TestClockListOptions()

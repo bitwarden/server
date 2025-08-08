@@ -351,7 +351,7 @@ public class ToolsController : Controller
         options.Expand = new List<string>() { "data.customer", "data.latest_invoice" };
         options.SelectAll = false;
 
-        var subscriptions = await _stripeAdapter.SubscriptionListAsync(options);
+        var subscriptions = await _stripeAdapter.ListSubscriptionsAsync(options);
 
         options.StartingAfter = subscriptions.LastOrDefault()?.Id;
         options.EndingBefore = await StripeSubscriptionsGetHasPreviousPage(subscriptions, options) ?
@@ -362,8 +362,8 @@ public class ToolsController : Controller
         var model = new StripeSubscriptionsModel()
         {
             Items = subscriptions.Select(s => new StripeSubscriptionRowModel(s)).ToList(),
-            Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data,
-            TestClocks = isProduction ? new List<Stripe.TestHelpers.TestClock>() : await _stripeAdapter.TestClockListAsync(),
+            Prices = (await _stripeAdapter.ListPricesAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data,
+            TestClocks = isProduction ? new List<Stripe.TestHelpers.TestClock>() : await _stripeAdapter.ListTestClocksAsync(),
             Filter = options
         };
         return View(model);
@@ -376,15 +376,15 @@ public class ToolsController : Controller
         if (!ModelState.IsValid)
         {
             var isProduction = _environment.IsProduction();
-            model.Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data;
-            model.TestClocks = isProduction ? new List<Stripe.TestHelpers.TestClock>() : await _stripeAdapter.TestClockListAsync();
+            model.Prices = (await _stripeAdapter.ListPricesAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data;
+            model.TestClocks = isProduction ? new List<Stripe.TestHelpers.TestClock>() : await _stripeAdapter.ListTestClocksAsync();
             return View(model);
         }
 
         if (model.Action == StripeSubscriptionsAction.Export || model.Action == StripeSubscriptionsAction.BulkCancel)
         {
             var subscriptions = model.Filter.SelectAll ?
-                await _stripeAdapter.SubscriptionListAsync(model.Filter) :
+                await _stripeAdapter.ListSubscriptionsAsync(model.Filter) :
                 model.Items.Where(x => x.Selected).Select(x => x.Subscription);
 
             if (model.Action == StripeSubscriptionsAction.Export)
@@ -408,7 +408,7 @@ public class ToolsController : Controller
             {
                 if (!string.IsNullOrEmpty(model.Filter.StartingAfter))
                 {
-                    var subscription = await _stripeAdapter.SubscriptionGetAsync(model.Filter.StartingAfter);
+                    var subscription = await _stripeAdapter.GetSubscriptionAsync(model.Filter.StartingAfter);
                     if (subscription.Status == "canceled")
                     {
                         model.Filter.StartingAfter = null;
@@ -438,7 +438,7 @@ public class ToolsController : Controller
                 CurrentPeriodEndRange = options.CurrentPeriodEndRange,
                 Price = options.Price
             };
-            hasPreviousPage = (await _stripeAdapter.SubscriptionListAsync(previousPageSearchOptions)).Count > 0;
+            hasPreviousPage = (await _stripeAdapter.ListSubscriptionsAsync(previousPageSearchOptions)).Count > 0;
         }
         return hasPreviousPage;
     }
@@ -447,10 +447,10 @@ public class ToolsController : Controller
     {
         foreach (var s in subscriptions)
         {
-            await _stripeAdapter.SubscriptionCancelAsync(s.Id);
+            await _stripeAdapter.CancelSubscriptionAsync(s.Id);
             if (s.LatestInvoice?.Status == "open")
             {
-                await _stripeAdapter.InvoiceVoidInvoiceAsync(s.LatestInvoiceId);
+                await _stripeAdapter.VoidInvoiceAsync(s.LatestInvoiceId);
             }
         }
     }

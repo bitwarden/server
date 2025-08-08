@@ -82,7 +82,7 @@ public class OrganizationMigrator(
     {
         logger.LogInformation("CB: Cancelling subscription for organization ({OrganizationID})", organization.Id);
 
-        var subscription = await stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId);
+        var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId);
 
         if (subscription is
             {
@@ -92,10 +92,10 @@ public class OrganizationMigrator(
                     StripeConstants.SubscriptionStatus.Trialing
             })
         {
-            await stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+            await stripeAdapter.UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
                 new SubscriptionUpdateOptions { CancelAtPeriodEnd = false });
 
-            subscription = await stripeAdapter.SubscriptionCancelAsync(organization.GatewaySubscriptionId,
+            subscription = await stripeAdapter.CancelSubscriptionAsync(organization.GatewaySubscriptionId,
                 new SubscriptionCancelOptions
                 {
                     CancellationDetails = new SubscriptionCancellationDetailsOptions
@@ -119,7 +119,7 @@ public class OrganizationMigrator(
 
                 if (latestInvoice.Status == "draft")
                 {
-                    await stripeAdapter.InvoiceFinalizeInvoiceAsync(latestInvoice.Id,
+                    await stripeAdapter.FinalizeInvoiceAsync(latestInvoice.Id,
                         new InvoiceFinalizeOptions { AutoAdvance = true });
 
                     logger.LogInformation("CB: Finalized prorated invoice for organization ({OrganizationID})", organization.Id);
@@ -201,7 +201,7 @@ public class OrganizationMigrator(
                 throw new Exception();
             }
 
-            var customer = await stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId,
+            var customer = await stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId,
                 new CustomerGetOptions { Expand = ["default_source", "invoice_settings.default_payment_method"] });
 
             var collectionMethod =
@@ -252,7 +252,7 @@ public class OrganizationMigrator(
                 TrialPeriodDays = plan.TrialPeriodDays
             };
 
-            var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+            var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
 
             organization.GatewaySubscriptionId = subscription.Id;
 
