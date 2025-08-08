@@ -222,7 +222,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
         {
             new("grant_type", CustomGrantTypes.SendAccess),
             new("client_id", BitwardenClient.Send ),
-            new("scope", ApiScopes.Send),
+            new("scope", ApiScopes.ApiSendAccess),
             new("deviceType", ((int)DeviceType.FirefoxBrowser).ToString()),
             new("send_id", sendIdBase64)
         };

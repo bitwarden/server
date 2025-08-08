@@ -15,7 +15,7 @@
     "api.installation",
     "internal",
     "api.secrets",
-    "api.send",
+    "api.send.access",
     "offline_access"
   ],
   "claims_supported": [
@@ -33,8 +33,8 @@
     "providerprovideradmin",
     "providerserviceuser",
     "accesssecretsmanager",
-    "send_id",
     "sub",
+    "send_id",
     "organization"
   ],
   "grant_types_supported": [

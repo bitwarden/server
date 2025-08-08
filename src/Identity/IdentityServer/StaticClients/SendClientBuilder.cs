@@ -25,7 +25,7 @@ public static class SendClientBuilder
             AllowedCorsOrigins = [globalSettings.BaseServiceUri.Vault],
 
             // Setup API scopes that the client can request in the scope property of the token request.
-            AllowedScopes = [ApiScopes.Send],
+            AllowedScopes = [ApiScopes.ApiSendAccess],
         };
     }
 }

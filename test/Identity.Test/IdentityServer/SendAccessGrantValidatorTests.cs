@@ -299,7 +299,7 @@ public class SendAccessGrantValidatorTests
         {
             { "grant_type", CustomGrantTypes.SendAccess },
             { "client_id", BitwardenClient.Send },
-            { "scope", ApiScopes.Send },
+            { "scope", ApiScopes.ApiSendAccess },
             { "deviceType", ((int)DeviceType.FirefoxBrowser).ToString() },
             { "send_id", sendIdBase64 }
         };

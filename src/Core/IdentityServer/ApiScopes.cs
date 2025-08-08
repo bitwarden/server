@@ -11,7 +11,7 @@ public static class ApiScopes
     public const string ApiPush = "api.push";
     public const string ApiSecrets = "api.secrets";
     public const string Internal = "internal";
-    public const string Send = "api.send";
+    public const string ApiSendAccess = "api.send.access";
 
     public static IEnumerable<ApiScope> GetApiScopes()
     {
@@ -24,7 +24,7 @@ public static class ApiScopes
             new(ApiInstallation, "API Installation Access"),
             new(Internal, "Internal Access"),
             new(ApiSecrets, "Secrets Manager Access"),
-            new(Send, "Send Access"),
+            new(ApiSendAccess, "API Send Access"),
         };
     }
 }
