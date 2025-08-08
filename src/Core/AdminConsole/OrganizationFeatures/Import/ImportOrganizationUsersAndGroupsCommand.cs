@@ -238,7 +238,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
                 importUserData.ExistingExternalUsersIdDict.ContainsKey(u.ExternalId))
             .ToList();
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.DirectoryConnectorRemoveUsersFix) &&
+        if (_featureService.IsEnabled(FeatureFlagKeys.DirectoryConnectorPreventUserRemoval) &&
             usersToDelete.Any(u => !u.HasMasterPassword))
         {
             // Removing users without an MP will put their account in an unrecoverable state.

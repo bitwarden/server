@@ -30,7 +30,7 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
         {
             featureService.IsEnabled(FeatureFlagKeys.ImportAsyncRefactor)
                 .Returns(true);
-            featureService.IsEnabled(FeatureFlagKeys.DirectoryConnectorRemoveUsersFix)
+            featureService.IsEnabled(FeatureFlagKeys.DirectoryConnectorPreventUserRemoval)
                 .Returns(true);
         });
         _client = _factory.CreateClient();

@@ -116,7 +116,7 @@ public static class FeatureFlagKeys
     public const string ImportAsyncRefactor = "pm-22583-refactor-import-async";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string MembersGetEndpointOptimization = "pm-23113-optimize-get-members-endpoint";
-    public const string DirectoryConnectorRemoveUsersFix = "pm-24592-directory-connector-prevent-user-removal";
+    public const string DirectoryConnectorPreventUserRemoval = "pm-24592-directory-connector-prevent-user-removal";
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
