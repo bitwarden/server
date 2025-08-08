@@ -62,7 +62,8 @@ public static class OrganizationTestHelpers
         OrganizationUserType type,
         bool accessSecretsManager = false,
         Permissions? permissions = null,
-        OrganizationUserStatusType userStatusType = OrganizationUserStatusType.Confirmed
+        OrganizationUserStatusType userStatusType = OrganizationUserStatusType.Confirmed,
+        string? externalId = null
     ) where T : class
     {
         var userRepository = factory.GetService<IUserRepository>();
@@ -78,7 +79,7 @@ public static class OrganizationTestHelpers
             Key = null,
             Type = type,
             Status = userStatusType,
-            ExternalId = null,
+            ExternalId = externalId,
             AccessSecretsManager = accessSecretsManager,
             Email = userEmail
         };

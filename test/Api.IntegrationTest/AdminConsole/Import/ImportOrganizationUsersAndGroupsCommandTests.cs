@@ -27,8 +27,13 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
     {
         _factory = factory;
         _factory.SubstituteService((IFeatureService featureService)
-            => featureService.IsEnabled(FeatureFlagKeys.ImportAsyncRefactor)
-                .Returns(true));
+            =>
+        {
+            featureService.IsEnabled(FeatureFlagKeys.ImportAsyncRefactor)
+                .Returns(true);
+            featureService.IsEnabled(FeatureFlagKeys.DirectoryConnectorRemoveUsersFix)
+                .Returns(true);
+        });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -328,7 +333,7 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
         });
 
         await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, user.Email,
-            OrganizationUserType.User);
+            OrganizationUserType.User, externalId: "externalId");
 
         // ACT: an import request that would remove that member
         var request = new OrganizationImportRequestModel

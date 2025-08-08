@@ -1,5 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Models.Business;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.Import;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -18,7 +18,7 @@ using NSubstitute;
 using Xunit;
 using Organization = Bit.Core.AdminConsole.Entities.Organization;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationUsers;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Import;
 
 public class ImportOrganizationUsersAndGroupsCommandTests
 {
