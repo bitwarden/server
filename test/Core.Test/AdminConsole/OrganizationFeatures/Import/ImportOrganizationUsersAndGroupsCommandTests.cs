@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Import;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -21,7 +22,6 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Import;
 
 public class ImportOrganizationUsersAndGroupsCommandTests
 {
-
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>();
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
@@ -87,6 +87,38 @@ public class ImportOrganizationUsersAndGroupsCommandTests
 
         // Send events
         await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUserUserDetails, EventType, EventSystemUser, DateTime?)>>());
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task OverwriteExistingUsers_WhenRemovingUserWithoutMasterPassword_Throws(
+            SutProvider<ImportOrganizationUsersAndGroupsCommand> sutProvider,
+            Organization org, List<OrganizationUserUserDetails> existingUsers)
+    {
+        SetupOrganizationConfigForImport(sutProvider, org, existingUsers, []);
+
+        // Existing user does not have a master password
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.DirectoryConnectorPreventUserRemoval)
+            .Returns(true);
+        existingUsers.First().HasMasterPassword = false;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(existingUsers);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.ImportAsync(org.Id, [], [], [], true));
+
+        Assert.Contains("Sync failed. To proceed, disable the 'Remove and re-add users during next sync' setting and try again.", exception.Message);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
+            .UpsertAsync(default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
+            .UpsertManyAsync(default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(default);
+        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs()
+            .InviteUsersAsync(default, default, default, default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
             .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUserUserDetails, EventType, EventSystemUser, DateTime?)>>());
     }
 
