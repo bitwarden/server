@@ -553,59 +553,61 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             var entity = await dbContext.Ciphers.FindAsync(cipher.Id);
             if (entity != null)
             {
-                if (cipher.Favorite)
+                if (cipher.UserId.HasValue)
                 {
-                    if (cipher.Favorites == null)
+                    if (cipher.Favorite)
                     {
-                        var jsonObject = new JsonObject(new[]
+                        if (cipher.Favorites == null)
                         {
+                            var jsonObject = new JsonObject(new[]
+                            {
                             new KeyValuePair<string, JsonNode>(cipher.UserId.Value.ToString(), true),
                         });
-                        cipher.Favorites = JsonSerializer.Serialize(jsonObject);
+                            cipher.Favorites = JsonSerializer.Serialize(jsonObject);
+                        }
+                        else
+                        {
+                            var favorites = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, bool>>(cipher.Favorites);
+                            favorites.Add(cipher.UserId.Value, true);
+                            cipher.Favorites = JsonSerializer.Serialize(favorites);
+                        }
                     }
                     else
                     {
-                        var favorites = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, bool>>(cipher.Favorites);
-                        favorites.Add(cipher.UserId.Value, true);
-                        cipher.Favorites = JsonSerializer.Serialize(favorites);
-                    }
-                }
-                else
-                {
-                    if (cipher.Favorites != null && cipher.Favorites.Contains(cipher.UserId.Value.ToString()))
-                    {
-                        var favorites = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, bool>>(cipher.Favorites);
-                        favorites.Remove(cipher.UserId.Value);
-                        cipher.Favorites = JsonSerializer.Serialize(favorites);
-                    }
-                }
-                if (cipher.FolderId.HasValue)
-                {
-                    if (cipher.Folders == null)
-                    {
-                        var jsonObject = new JsonObject(new[]
+                        if (cipher.Favorites != null && cipher.Favorites.Contains(cipher.UserId.Value.ToString()))
                         {
+                            var favorites = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, bool>>(cipher.Favorites);
+                            favorites.Remove(cipher.UserId.Value);
+                            cipher.Favorites = JsonSerializer.Serialize(favorites);
+                        }
+                    }
+                    if (cipher.FolderId.HasValue)
+                    {
+                        if (cipher.Folders == null)
+                        {
+                            var jsonObject = new JsonObject(new[]
+                            {
                             new KeyValuePair<string, JsonNode>(cipher.UserId.Value.ToString(), cipher.FolderId),
                         });
-                        cipher.Folders = JsonSerializer.Serialize(jsonObject);
+                            cipher.Folders = JsonSerializer.Serialize(jsonObject);
+                        }
+                        else
+                        {
+                            var folders = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, Guid>>(cipher.Folders);
+                            folders.Add(cipher.UserId.Value, cipher.FolderId.Value);
+                            cipher.Folders = JsonSerializer.Serialize(folders);
+                        }
                     }
                     else
                     {
-                        var folders = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, Guid>>(cipher.Folders);
-                        folders.Add(cipher.UserId.Value, cipher.FolderId.Value);
-                        cipher.Folders = JsonSerializer.Serialize(folders);
+                        if (cipher.Folders != null && cipher.Folders.Contains(cipher.UserId.Value.ToString()))
+                        {
+                            var folders = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, Guid>>(cipher.Folders);
+                            folders.Remove(cipher.UserId.Value);
+                            cipher.Folders = JsonSerializer.Serialize(folders);
+                        }
                     }
                 }
-                else
-                {
-                    if (cipher.Folders != null && cipher.Folders.Contains(cipher.UserId.Value.ToString()))
-                    {
-                        var folders = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, Guid>>(cipher.Folders);
-                        folders.Remove(cipher.UserId.Value);
-                        cipher.Folders = JsonSerializer.Serialize(folders);
-                    }
-                }
-
                 // Check if this cipher is a part of an organization, and if so do
                 // not save the UserId into the database. This must be done after we
                 // set the user specific data like Folders and Favorites because
