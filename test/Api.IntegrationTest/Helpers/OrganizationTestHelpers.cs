@@ -110,7 +110,7 @@ public static class OrganizationTestHelpers
         await factory.LoginWithNewAccount(email);
 
         // Create organizationUser
-        var organizationUser = await OrganizationTestHelpers.CreateUserAsync(factory, organizationId, email, userType,
+        var organizationUser = await CreateUserAsync(factory, organizationId, email, userType,
             permissions: permissions);
 
         return (email, organizationUser);
