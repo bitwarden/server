@@ -3,6 +3,7 @@
 
 using System.Security.Claims;
 using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
@@ -257,22 +258,19 @@ public class AccountController : Controller
         // Lookup our user and external provider info
         // Note: the user will only exist if the user has already been provisioned and exists in the User table and the SSO user table.
         var (user, provider, providerUserId, claims, ssoConfigData) = await FindUserFromExternalProviderAsync(result);
+
+        // User does not exist in SSO User table. They could have an existing BW account in the User table.
         if (user == null)
         {
-            // User does not exist in SSO User table. They could have an existing BW account in the User table.
-
-            // This might be where you might initiate a custom workflow for user registration
-            // in this sample we don't show how that would be done, as our sample implementation
-            // simply auto-provisions new external user
+            // If we're manually linking to SSO, the user's external identifier will be passed as query string parameter.
             var userIdentifier = result.Properties.Items.Keys.Contains("user_identifier") ?
                 result.Properties.Items["user_identifier"] : null;
             user = await AutoProvisionUserAsync(provider, providerUserId, claims, userIdentifier, ssoConfigData);
         }
 
+        // User was JIT provisioned (this could be an existing user or a new user)
         if (user != null)
         {
-            // User was JIT provisioned (this could be an existing user or a new user)
-
             // This allows us to collect any additional claims or properties
             // for the specific protocols used and store them in the local auth cookie.
             // this is typically used to store data needed for signout from those protocols.
@@ -350,6 +348,10 @@ public class AccountController : Controller
         }
     }
 
+    /// <summary>
+    /// Attempts to map the external identity to a Bitwarden user, through the SsoUser table, which holds the `externalId`. 
+    /// The claims on the external identity are used to determine an `externalId`, and that is used to find the appropriate `SsoUser` and `User` records.
+    /// </summary>
     private async Task<(User user, string provider, string providerUserId, IEnumerable<Claim> claims, SsoConfigurationData config)>
         FindUserFromExternalProviderAsync(AuthenticateResult result)
     {
@@ -407,6 +409,20 @@ public class AccountController : Controller
         return (user, provider, providerUserId, claims, ssoConfigData);
     }
 
+    /// <summary>
+    /// Provision an SSO-linked Bitwarden user.
+    /// This handles three different scenarios:
+    /// 1. Creating an SsoUser link for an existing User and OrganizationUser
+    /// 2. Creating a new User and a new OrganizationUser, then establishing an SsoUser link
+    /// 3. Creating a new User for an existing OrganizationUser (created by invitation), then establishing an SsoUser link, and
+    /// </summary>
+    /// <param name="provider">The external identity provider.</param>
+    /// <param name="providerUserId">The external identity provider's user identifier.</param>
+    /// <param name="claims">The claims from the external IdP.</param>
+    /// <param name="userIdentifier">The user identifier used for manual SSO linking.</param>
+    /// <param name="config">The SSO configuration for the organization.</param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
     private async Task<User> AutoProvisionUserAsync(string provider, string providerUserId,
         IEnumerable<Claim> claims, string userIdentifier, SsoConfigurationData config)
     {
@@ -434,50 +450,15 @@ public class AccountController : Controller
         }
         else
         {
-            var split = userIdentifier.Split(",");
-            if (split.Length < 2)
-            {
-                throw new Exception(_i18nService.T("InvalidUserIdentifier"));
-            }
-            var userId = split[0];
-            var token = split[1];
-
-            var tokenOptions = new TokenOptions();
-
-            var claimedUser = await _userService.GetUserByIdAsync(userId);
-            if (claimedUser != null)
-            {
-                var tokenIsValid = await _userManager.VerifyUserTokenAsync(
-                    claimedUser, tokenOptions.PasswordResetTokenProvider, TokenPurposes.LinkSso, token);
-                if (tokenIsValid)
-                {
-                    existingUser = claimedUser;
-                }
-                else
-                {
-                    throw new Exception(_i18nService.T("UserIdAndTokenMismatch"));
-                }
-            }
+            existingUser = await GetUserFromManualLinkingToken(userIdentifier);
         }
 
-        OrganizationUser orgUser = null;
-        var organization = await _organizationRepository.GetByIdAsync(orgId);
-        if (organization == null)
-        {
-            throw new Exception(_i18nService.T("CouldNotFindOrganization", orgId));
-        }
+        // Try to find the OrganizationUser if it exists.
+        var (organization, orgUser) = await FindOrganizationUser(existingUser, email, orgId);
 
-        // Try to find OrgUser via existing User Id (accepted/confirmed user)
-        if (existingUser != null)
-        {
-            var orgUsersByUserId = await _organizationUserRepository.GetManyByUserAsync(existingUser.Id);
-            orgUser = orgUsersByUserId.SingleOrDefault(u => u.OrganizationId == orgId);
-        }
-
-        // If no Org User found by Existing User Id - search all organization users via email
-        orgUser ??= await _organizationUserRepository.GetByOrganizationEmailAsync(orgId, email);
-
-        // All Existing User flows handled below
+        //----------------------------------------------------
+        // Scenario 1: We've found the user in the User table
+        //----------------------------------------------------
         if (existingUser != null)
         {
             if (existingUser.UsesKeyConnector &&
@@ -486,6 +467,8 @@ public class AccountController : Controller
                 throw new Exception(_i18nService.T("UserAlreadyExistsKeyConnector"));
             }
 
+            // If the user already exists in Bitwarden, we require that the user already be in the org,
+            // and that they are either Accepted or Confirmed.
             if (orgUser == null)
             {
                 // Org User is not created - no invite has been sent
@@ -495,7 +478,11 @@ public class AccountController : Controller
             EnsureOrgUserStatusAllowed(orgUser.Status, organization.DisplayName(),
                 allowedStatuses: [OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]);
 
-            // Accepted or Confirmed - create SSO link and return;
+
+            // Since we're in the auto-provisioning logic, this means that the user exists, but they have not 
+            // authenticated with the org's SSO provider before now (otherwise we wouldn't be auto-provisioning them).
+            // We've verified that the user is Accepted or Confnirmed, so we can create an SsoUser link and proceed
+            // with authentication.
             await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId, orgUser);
             return existingUser;
         }
@@ -538,7 +525,9 @@ public class AccountController : Controller
             emailVerified = organizationDomain?.VerifiedDate.HasValue ?? false;
         }
 
-        // Create user record - all existing user flows are handled above
+        //--------------------------------------------------
+        // Scenarios 2 and 3: We need to register a new user
+        //--------------------------------------------------
         var user = new User
         {
             Name = name,
@@ -564,7 +553,11 @@ public class AccountController : Controller
             await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
         }
 
-        // Create Org User if null or else update existing Org User
+        //-----------------------------------------------------------------
+        // Scenario 2: We also need to create an OrganizationUser
+        // This means that an invitation was not sent for this user and we
+        // need to establish their invited status now.
+        //-----------------------------------------------------------------
         if (orgUser == null)
         {
             orgUser = new OrganizationUser
@@ -576,16 +569,75 @@ public class AccountController : Controller
             };
             await _organizationUserRepository.CreateAsync(orgUser);
         }
+        //-----------------------------------------------------------------
+        // Scenario 3: There is already an existing OrganizationUser
+        // That was established through an invitation. We just need to
+        // update the UserId now that we have created a User record.
+        //-----------------------------------------------------------------
         else
         {
             orgUser.UserId = user.Id;
             await _organizationUserRepository.ReplaceAsync(orgUser);
         }
 
-        // Create sso user record
+        // Create the SsoUser record to link the user to the SSO provider.
         await CreateSsoUserRecord(providerUserId, user.Id, orgId, orgUser);
 
         return user;
+    }
+
+    private async Task<User> GetUserFromManualLinkingToken(string userIdentifier)
+    {
+        User user = null;
+        var split = userIdentifier.Split(",");
+        if (split.Length < 2)
+        {
+            throw new Exception(_i18nService.T("InvalidUserIdentifier"));
+        }
+        var userId = split[0];
+        var token = split[1];
+
+        var tokenOptions = new TokenOptions();
+
+        var claimedUser = await _userService.GetUserByIdAsync(userId);
+        if (claimedUser != null)
+        {
+            var tokenIsValid = await _userManager.VerifyUserTokenAsync(
+                claimedUser, tokenOptions.PasswordResetTokenProvider, TokenPurposes.LinkSso, token);
+            if (tokenIsValid)
+            {
+                user = claimedUser;
+            }
+            else
+            {
+                throw new Exception(_i18nService.T("UserIdAndTokenMismatch"));
+            }
+        }
+        return user;
+    }
+
+    private async Task<(Organization, OrganizationUser)> FindOrganizationUser(User existingUser, string email, Guid orgId)
+    {
+        OrganizationUser orgUser = null;
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        if (organization == null)
+        {
+            throw new Exception(_i18nService.T("CouldNotFindOrganization", orgId));
+        }
+
+        // Try to find OrgUser via existing User Id.
+        // This covers any OrganizationUser state after they have accepted an invite.
+        if (existingUser != null)
+        {
+            var orgUsersByUserId = await _organizationUserRepository.GetManyByUserAsync(existingUser.Id);
+            orgUser = orgUsersByUserId.SingleOrDefault(u => u.OrganizationId == orgId);
+        }
+
+        // If no Org User found by Existing User Id - search all the organization's users via email.
+        // This covers users who are Invited but haven't accepted their invite yet.
+        orgUser ??= await _organizationUserRepository.GetByOrganizationEmailAsync(orgId, email);
+
+        return (organization, orgUser);
     }
 
     private void EnsureOrgUserStatusAllowed(
