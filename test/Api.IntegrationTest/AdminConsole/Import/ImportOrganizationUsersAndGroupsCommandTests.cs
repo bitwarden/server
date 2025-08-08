@@ -320,20 +320,8 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
     public async Task Import_Remove_Member_Without_Master_Password_Throws_400_Error()
     {
         // ARRANGE: a member without a master password
-        var userRepository = _factory.GetService<IUserRepository>();
-        var user = await userRepository.CreateAsync(new User
-        {
-            Email = Guid.NewGuid() + "@example.com",
-            Culture = "en-US",
-            SecurityStamp = "D7ZH62BWAZ5R5CASKULCDDIQGKDA2EJ6",
-            PublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwMj7W00xS7H0NWasGn7PfEq8VfH3fa5XuZucsKxLLRAHHZk0xGRZJH2lFIznizv3GpF8vzhHhe9VpmMkrdIa5oWhwHpy+D7Z1QCQxuUXzvMKpa95GOntr89nN/mWKpk6abjgjmDcqFJ0lhDqkKnDfes+d8BBd5oEA8p41/Ykz7OfG7AiktVBpTQFW09MQh1NOvcLxVgiUUVRPwNRKrOeCekWDtOjZhASMETv3kI1ogvhHukOQ3ztDzrxvmwnLQ+cXl1EeD8gQnGDp3QLiJqxPgh2EdmANh4IzjRexoDn6BqhRGqLLIoLAbbkoiNrd6NYujrWW0N8KMMoVEXuJL2g4wIDAQAB",
-            PrivateKey = "2.Ytudv+Qk3ET9hN8whqpuGg==|ijsFhmjaf1aaT9uz+IPhVTzMS+2W/ldAP8LdT5VyJaFdx4HSdLcWSZvz5xWuuW94zfv1Qh+p3iQIuZOr29G4jcx47rYtz4ssiFtB7Ia552ZeF+cb7uuVg40CIe7ycuJQITk00o8gots+wFnaEvk0Vjgycnqutm0jpeBJ1joWJWqTVgSsYdUGLu7PiJywQ9NgY4+bJXqadlcviS3rhPKJXtiXYJhqJqSw+vI0Yxp96MJ0HcFJk/LG22YJPTvL5kzuDq/Wzj40kj8blQ+ag+xHD4P/KJ/MppEB3OpDw3UoJ50Ek+YB9pOqGxZtvqMEzBDsgh0yoz1O992UnhaUqtJ5e9Bxy3PA6cJsdyn9npduNOreEb8vePCidN2XC+chjJpPFpjms9muHLKgfaTIfpiJA2Tz8E9dvSyhHHTE1mY+xEA7P08BYKN3LNoSGIjdiZuouJ1V/KZvCssDfVG1tli2qpnhTIh4m3rAMhbM8WW3B7wCV8N0MpcJJSvndkVcMgRbgWcbivLeXuKdE/K98n01RvOLSJyslhLGCGEQQKw6N3HQ2iELfv84YQZi2fjDK+OqAmXDq1pNcjKX2I8dqBwl31tPC8qSZiWnfinwLdqQTvSQjOIyAHb4sSjAwgdMbCRzUTChRr09l+PAZqGWdMC5N2Bw+bA8WP0l2Wdxuv9Abxl3F7xGeAA9Rw9PU5wGKujaMRmO4V9MFjNyyCcw4D9pzKMW6OUKsHsHE7tsG7KskCzksHzrZGawAt0S41BYQA/JwePCrD3F6dM92anlC1LfA00KJb0tmFdU0yJNmJfR+S78yn8yM6wDgIs2cFB3W1fYfpfUvQm+zzPoEQihNxBxnwFsBtMAOtPy54FjSzKmxsQTrYT9E6NFb8k6ZIIm2gNeOPK9OUJgjw+4g2BXErM6ikHTzM3xcaTq/cQaePZ52emndw1qOtdV06hr2EeuLM8frfLHpsknUe8JeYeW5p9E8QdZjjSN9034usdYNamUdxzmn/Mw/ar8z1xSKS6zcaQoTQ7aYLEX3dWJndc4W64HyiaRkLjO6qLUFeOerfz5UvcxxRY89eAA0KLC2xnGkBMOhXxYzIB3lF8Zxqb4JMhoBGw1n31TDfhRDGDHHEAsZuAIcH7aC5RDVxU08Jxmw4oLmeTDZA5BFcqp2A3fusNVZUnfpmMy6DCJyFprlRl8jSlJMAvhbxVuuLFDZnjl77Z2of796Ur6DgmNwYtMPNEntZPIcZ76VPLWAL8lqiRBm20c4qiwr5rNSr5kry9bR1EfXHwFRjy5pxFQ+5+ilpRl8WPfT/iUuORd8J2wnCmghm7uxiJd9t82kX0s6benhL29dQ1etqt5soX2RnlfKan16GVWoI3xrljIQrCAY4xpdptSpglOnrpSClbN1nhGkDfFPNq2pWhQrDbznDknAJ9MxQaVnLYPhn7I849GMd7EvpSkydwQu7QXn9+H4jxn6UEntNGxcL0xkG+xippvZEe+HBvcDD40efDQW1bDbILLjPb4rNRx4d3xaQnVNaF7L33osm5LgfXAQSwHJiURdkU4zmhtPP4zn0br0OdFlR3mPcrkeNeSvs7FxiKtD6n6s+av+4bKjbLL1OyuwmTnMilL6p+m8ldte0yos/r+zOuxWeI=|euhiXWXehYbFQhlAV6LIECSIPCIRaHbNdr9OI4cTPUM=",
-            ApiKey = "CfGrD4MoJu3NprOBZNL8tu5ocmtnmU",
-            KdfIterations = 600000
-        });
-
-        await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, user.Email,
-            OrganizationUserType.User, externalId: "externalId");
+        await OrganizationTestHelpers.CreateUserWithoutMasterPasswordAsync(_factory, Guid.NewGuid() + "@example.com",
+            _organization.Id);
 
         // ACT: an import request that would remove that member
         var request = new OrganizationImportRequestModel
