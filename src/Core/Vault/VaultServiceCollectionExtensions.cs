@@ -25,5 +25,6 @@ public static class VaultServiceCollectionExtensions
         services.AddScoped<ICreateManyTaskNotificationsCommand, CreateManyTaskNotificationsCommand>();
         services.AddScoped<ICreateManyTasksCommand, CreateManyTasksCommand>();
         services.AddScoped<IMarkNotificationsForTaskAsDeletedCommand, MarkNotificationsForTaskAsDeletedCommand>();
+        services.AddScoped<IGetTaskMetricsForOrganizationQuery, GetTaskMetricsForOrganizationQuery>();
     }
 }
