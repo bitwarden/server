@@ -89,6 +89,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
     public virtual IPhishingDomainSettings PhishingDomain { get; set; } = new PhishingDomainSettings();
 
+    public virtual int SendAccessTokenLifetimeInMinutes { get; set; } = 5;
     public virtual bool EnableEmailVerification { get; set; }
     public virtual string KdfDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }

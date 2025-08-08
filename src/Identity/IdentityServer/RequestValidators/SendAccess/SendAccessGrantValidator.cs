@@ -1,0 +1,124 @@
+﻿using System.Security.Claims;
+using Bit.Core;
+using Bit.Core.Identity;
+using Bit.Core.Services;
+using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
+using Bit.Core.Utilities;
+using Bit.Identity.IdentityServer.Enums;
+using Bit.Identity.IdentityServer.RequestValidators.SendAccess.Enums;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Validation;
+
+namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
+
+public class SendAccessGrantValidator(
+    ISendAuthenticationQuery _sendAuthenticationQuery,
+    ISendPasswordRequestValidator _sendPasswordRequestValidator,
+    IFeatureService _featureService)
+: IExtensionGrantValidator
+{
+    string IExtensionGrantValidator.GrantType => CustomGrantTypes.SendAccess;
+
+    private static readonly Dictionary<SendGrantValidatorResultTypes, string>
+    _sendGrantValidatorErrors = new()
+    {
+        { SendGrantValidatorResultTypes.MissingSendId, "send_id is required." },
+        { SendGrantValidatorResultTypes.InvalidRequest, "Invalid request." }
+    };
+
+
+    public async Task ValidateAsync(ExtensionGrantValidationContext context)
+    {
+        // Check the feature flag
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SendAccess))
+        {
+            context.Result = new GrantValidationResult(TokenRequestErrors.UnsupportedGrantType);
+            return;
+        }
+
+        var sendIdGuid = GetRequestSendId(context);
+        if (sendIdGuid == Guid.Empty)
+        {
+            context.Result = new GrantValidationResult(
+                TokenRequestErrors.InvalidRequest,
+                errorDescription: _sendGrantValidatorErrors[SendGrantValidatorResultTypes.MissingSendId]);
+            return;
+        }
+
+        // Look up send by id
+        var method = await _sendAuthenticationQuery.GetAuthenticationMethod(sendIdGuid);
+
+        switch (method)
+        {
+            case NeverAuthenticate:
+                // null send scenario.
+                // TODO PM-22675: Add send enumeration protection here (primarily benefits self hosted instances).
+                // We should only map to password or email + OTP protected.
+                // If user submits password guess for a falsely protected send, then we will return invalid password.
+                // If user submits email + OTP guess for a falsely protected send, then we will return email sent, do not actually send an email.
+                context.Result = new GrantValidationResult(
+                    TokenRequestErrors.InvalidRequest,
+                    errorDescription: _sendGrantValidatorErrors[SendGrantValidatorResultTypes.InvalidRequest]);
+                return;
+
+            case NotAuthenticated:
+                // automatically issue access token
+                context.Result = BuildBaseSuccessResult(sendIdGuid);
+                return;
+
+            case ResourcePassword rp:
+                // TODO PM-22675: Validate if the password is correct.
+                context.Result = _sendPasswordRequestValidator.ValidateSendPassword(context, rp, sendIdGuid);
+                return;
+            case EmailOtp eo:
+            // TODO PM-22678: We will either send the OTP here or validate it based on if otp exists in the request.
+            // SendOtpToEmail(eo.Emails) or ValidateOtp(eo.Emails);
+            // break;
+
+            default:
+                // shouldn’t ever hit this
+                throw new InvalidOperationException($"Unknown auth method: {method.GetType()}");
+        }
+    }
+
+    /// <summary>
+    /// tries to parse the send_id from the request.
+    /// If it is not present or invalid, sets the result to an error.
+    /// </summary>
+    /// <param name="context">request context</param>
+    /// <returns> the parsed sendId Guid or an empty guid otherwise</returns>
+    private static Guid GetRequestSendId(ExtensionGrantValidationContext context)
+    {
+        var request = context.Request.Raw;
+        var sendId = request.Get("send_id");
+
+        if (string.IsNullOrEmpty(sendId))
+        {
+            return Guid.Empty;
+        }
+        try
+        {
+            var guidBytes = CoreHelpers.Base64UrlDecode(sendId);
+            return new Guid(guidBytes);
+        }
+        catch
+        {
+            return Guid.Empty;
+        }
+    }
+
+    private static GrantValidationResult BuildBaseSuccessResult(Guid sendId)
+    {
+        var claims = new List<Claim>
+        {
+            new(Claims.SendId, sendId.ToString()),
+            new(Claims.Type, IdentityClientType.Send.ToString())
+        };
+
+        return new GrantValidationResult(
+            subject: sendId.ToString(),
+            authenticationMethod: CustomGrantTypes.SendAccess,
+            claims: claims);
+    }
+}

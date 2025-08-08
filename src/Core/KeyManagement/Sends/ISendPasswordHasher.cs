@@ -9,7 +9,6 @@ public interface ISendPasswordHasher
     /// <param name="sendPasswordHash">The send password that is hashed by the server.</param>
     /// <param name="clientPasswordHash">The user provided password hash that has not yet been hashed by the server for comparison.</param>
     /// <returns>true if hashes match false otherwise</returns>
-    /// <exception cref="InvalidOperationException">Thrown if the server password hash or client password hash is null or empty.</exception>
     bool PasswordHashMatches(string sendPasswordHash, string clientPasswordHash);
 
     /// <summary>
