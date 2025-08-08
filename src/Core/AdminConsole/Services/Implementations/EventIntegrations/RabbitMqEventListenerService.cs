@@ -19,7 +19,8 @@ public class RabbitMqEventListenerService<TConfiguration> : EventLoggingListener
         IEventMessageHandler handler,
         TConfiguration configuration,
         IRabbitMqService rabbitMqService,
-        ILogger<RabbitMqEventListenerService<TConfiguration>> logger) : base(handler, logger)
+        ILoggerFactory loggerFactory)
+        : base(handler, CreateLogger(loggerFactory, configuration))
     {
         _queueName = configuration.EventQueueName;
         _rabbitMqService = rabbitMqService;
@@ -65,5 +66,11 @@ public class RabbitMqEventListenerService<TConfiguration> : EventLoggingListener
             _lazyChannel.Value.Result.Dispose();
         }
         base.Dispose();
+    }
+
+    private static ILogger CreateLogger(ILoggerFactory loggerFactory, TConfiguration configuration)
+    {
+        return loggerFactory.CreateLogger(
+            categoryName: $"Bit.Core.Services.RabbitMqEventListenerService.{configuration.EventQueueName}");
     }
 }

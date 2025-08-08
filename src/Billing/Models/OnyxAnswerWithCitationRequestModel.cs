@@ -20,11 +20,12 @@ public class OnyxAnswerWithCitationRequestModel
     [JsonPropertyName("retrieval_options")]
     public RetrievalOptions RetrievalOptions { get; set; }
 
-    public OnyxAnswerWithCitationRequestModel(string message)
+    public OnyxAnswerWithCitationRequestModel(string message, int personaId = 1)
     {
         message = message.Replace(Environment.NewLine, " ").Replace('\r', ' ').Replace('\n', ' ');
         Messages = new List<Message>() { new Message() { MessageText = message } };
         RetrievalOptions = new RetrievalOptions();
+        PersonaId = personaId;
     }
 }
 
@@ -44,9 +45,6 @@ public class RetrievalOptions
 
     [JsonPropertyName("real_time")]
     public bool RealTime { get; set; } = true;
-
-    [JsonPropertyName("limit")]
-    public int? Limit { get; set; } = 3;
 }
 
 public class RetrievalOptionsRunSearch

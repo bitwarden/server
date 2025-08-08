@@ -29,7 +29,8 @@ public interface IConfirmOrganizationUserCommand
     /// <param name="organizationId">The ID of the organization.</param>
     /// <param name="keys">A dictionary mapping organization user IDs to their encrypted organization keys.</param>
     /// <param name="confirmingUserId">The ID of the user performing the confirmation.</param>
+    /// <param name="defaultUserCollectionName">Optional encrypted collection name for creating default collections.</param>
     /// <returns>A list of tuples containing the organization user and an error message (if any).</returns>
     Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
-        Guid confirmingUserId);
+        Guid confirmingUserId, string defaultUserCollectionName = null);
 }
