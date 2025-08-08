@@ -4,10 +4,10 @@ public class SecurityTaskMetrics
 {
     public SecurityTaskMetrics(int completedTasksCount, int totalTasksCount)
     {
-        this.completedTasksCount = completedTasksCount;
-        this.totalTasksCount = totalTasksCount;
+        CompletedTasksCount = completedTasksCount;
+        TotalTasksCount = totalTasksCount;
     }
 
-    public int completedTasksCount { get; set; }
-    public int totalTasksCount { get; set; }
+    public int CompletedTasksCount { get; set; }
+    public int TotalTasksCount { get; set; }
 }
