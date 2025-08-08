@@ -106,7 +106,10 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
             if (collectionToUpdate != null)
             {
-                collectionToUpdate.DefaultUserCollectionEmail = email;
+                if (string.IsNullOrEmpty(collectionToUpdate.DefaultUserCollectionEmail))
+                {
+                    collectionToUpdate.DefaultUserCollectionEmail = email;
+                }
                 collectionToUpdate.Type = CollectionType.SharedCollection;
                 dbContext.Collections.Update(collectionToUpdate);
             }
@@ -179,7 +182,10 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
             if (orgUser?.User != null)
             {
-                collection.DefaultUserCollectionEmail = orgUser.User.Email;
+                if (string.IsNullOrEmpty(collection.DefaultUserCollectionEmail))
+                {
+                    collection.DefaultUserCollectionEmail = orgUser.User.Email;
+                }
                 collection.Type = Core.Enums.CollectionType.SharedCollection;
             }
         }
