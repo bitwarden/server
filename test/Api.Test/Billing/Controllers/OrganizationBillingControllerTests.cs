@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -107,7 +108,7 @@ public class OrganizationBillingControllerTests
         // Manually create a BillingHistoryInfo object to avoid requiring AutoFixture to create HttpResponseHeaders
         var billingInfo = new BillingHistoryInfo();
 
-        sutProvider.GetDependency<IPaymentService>().GetBillingHistoryAsync(organization).Returns(billingInfo);
+        sutProvider.GetDependency<IStripePaymentService>().GetBillingHistoryAsync(organization).Returns(billingInfo);
 
         // Act
         var result = await sutProvider.Sut.GetHistoryAsync(organizationId);

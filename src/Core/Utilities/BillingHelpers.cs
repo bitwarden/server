@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 
@@ -6,7 +7,7 @@ namespace Bit.Core.Utilities;
 
 public static class BillingHelpers
 {
-    internal static async Task<string> AdjustStorageAsync(IPaymentService paymentService, IStorableSubscriber storableSubscriber,
+    internal static async Task<string> AdjustStorageAsync(IStripePaymentService paymentService, IStorableSubscriber storableSubscriber,
         short storageAdjustmentGb, string storagePlanId)
     {
         if (storableSubscriber == null)

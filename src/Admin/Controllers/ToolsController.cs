@@ -9,6 +9,7 @@ using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Platform.Installations;
@@ -33,7 +34,7 @@ public class ToolsController : Controller
     private readonly IInstallationRepository _installationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProviderUserRepository _providerUserRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IWebHostEnvironment _environment;
 
@@ -46,7 +47,7 @@ public class ToolsController : Controller
         IInstallationRepository installationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IStripeAdapter stripeAdapter,
         IWebHostEnvironment environment)
     {

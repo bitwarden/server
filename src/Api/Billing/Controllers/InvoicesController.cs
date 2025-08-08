@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Requests;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
@@ -20,7 +21,7 @@ public class InvoicesController : BaseBillingController
         [FromBody] PreviewOrganizationInvoiceRequestBody model,
         [FromServices] ICurrentContext currentContext,
         [FromServices] IOrganizationRepository organizationRepository,
-        [FromServices] IPaymentService paymentService)
+        [FromServices] IStripePaymentService paymentService)
     {
         Organization organization = null;
         if (model.OrganizationId != default)

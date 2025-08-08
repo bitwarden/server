@@ -29,7 +29,7 @@ public class OrganizationBillingController(
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
     IGetOrganizationWarningsQuery getOrganizationWarningsQuery,
-    IPaymentService paymentService,
+    IStripePaymentService paymentService,
     IPricingClient pricingClient,
     ISubscriberService subscriberService,
     IPaymentHistoryService paymentHistoryService,

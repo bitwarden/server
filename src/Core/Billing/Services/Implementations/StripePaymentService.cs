@@ -21,6 +21,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -28,9 +29,9 @@ using Stripe;
 using PaymentMethod = Stripe.PaymentMethod;
 using StaticStore = Bit.Core.Models.StaticStore;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Billing.Services.Implementations;
 
-public class StripePaymentService : IPaymentService
+public class StripePaymentService : IStripePaymentService
 {
     private const string SecretsManagerStandaloneDiscountId = "sm-standalone";
 
@@ -76,7 +77,7 @@ public class StripePaymentService : IPaymentService
     {
         var existingPlan = await _pricingClient.GetPlanOrThrow(org.PlanType);
         var sponsoredPlan = sponsorship?.PlanSponsorshipType != null ?
-            Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value) :
+            Core.Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value) :
             null;
         var subscriptionUpdate = new SponsorOrganizationSubscriptionUpdate(existingPlan, sponsoredPlan, applySponsorship);
 
@@ -124,7 +125,7 @@ public class StripePaymentService : IPaymentService
         var subUpdateOptions = new SubscriptionUpdateOptions
         {
             Items = updatedItemOptions,
-            ProrationBehavior = invoiceNow ? Constants.AlwaysInvoice : Constants.CreateProrations,
+            ProrationBehavior = invoiceNow ? Core.Constants.AlwaysInvoice : Core.Constants.CreateProrations,
             DaysUntilDue = daysUntilDue ?? 1,
             CollectionMethod = "send_invoice"
         };
@@ -1109,7 +1110,7 @@ public class StripePaymentService : IPaymentService
 
         if (isSponsored)
         {
-            var sponsoredPlan = Utilities.StaticStore.GetSponsoredPlan(parameters.PasswordManager.SponsoredPlan.Value);
+            var sponsoredPlan = Core.Utilities.StaticStore.GetSponsoredPlan(parameters.PasswordManager.SponsoredPlan.Value);
             options.SubscriptionDetails.Items.Add(
                 new() { Quantity = 1, Plan = sponsoredPlan.StripePlanId }
             );

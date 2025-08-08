@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -58,7 +59,7 @@ public class ImportOrganizationUsersAndGroupsCommandTests
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
 
-        sutProvider.GetDependency<IPaymentService>().HasSecretsManagerStandalone(org).Returns(true);
+        sutProvider.GetDependency<IStripePaymentService>().HasSecretsManagerStandalone(org).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id).Returns(existingUsers);
         sutProvider.GetDependency<IOrganizationRepository>().GetOccupiedSeatCountByOrganizationIdAsync(org.Id).Returns(
             new OrganizationSeatCounts

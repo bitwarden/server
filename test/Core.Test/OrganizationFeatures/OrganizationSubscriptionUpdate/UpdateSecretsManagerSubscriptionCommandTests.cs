@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -86,9 +87,9 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        await sutProvider.GetDependency<IPaymentService>().Received(1)
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1)
             .AdjustSmSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
-        await sutProvider.GetDependency<IPaymentService>().Received(1)
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1)
             .AdjustServiceAccountsAsync(organization, plan, update.SmServiceAccountsExcludingBase);
 
         // TODO: call ReferenceEventService - see AC-1481
@@ -136,9 +137,9 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        await sutProvider.GetDependency<IPaymentService>().Received(1)
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1)
             .AdjustSmSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
-        await sutProvider.GetDependency<IPaymentService>().Received(1)
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1)
             .AdjustServiceAccountsAsync(organization, plan, update.SmServiceAccountsExcludingBase);
 
         // TODO: call ReferenceEventService - see AC-1481
@@ -258,7 +259,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        await sutProvider.GetDependency<IPaymentService>().Received(1).AdjustServiceAccountsAsync(
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1).AdjustServiceAccountsAsync(
             Arg.Is<Organization>(o => o.Id == organizationId),
             plan,
             expectedSmServiceAccountsExcludingBase);
@@ -766,9 +767,9 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
     private static async Task VerifyDependencyNotCalledAsync(SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceive()
             .AdjustSmSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-        await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
         // TODO: call ReferenceEventService - see AC-1481
         await sutProvider.GetDependency<IMailService>().DidNotReceive()

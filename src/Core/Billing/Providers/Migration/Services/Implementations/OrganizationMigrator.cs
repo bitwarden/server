@@ -8,6 +8,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Migration.Models;
 using Bit.Core.Billing.Providers.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

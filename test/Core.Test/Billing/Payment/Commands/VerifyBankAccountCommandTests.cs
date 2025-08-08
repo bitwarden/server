@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Payment.Commands;
+using Bit.Core.Billing.Services;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Extensions;
 using Microsoft.Extensions.Logging;

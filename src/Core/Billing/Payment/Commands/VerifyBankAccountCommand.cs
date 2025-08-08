@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;

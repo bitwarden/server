@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Services;
 using Stripe;

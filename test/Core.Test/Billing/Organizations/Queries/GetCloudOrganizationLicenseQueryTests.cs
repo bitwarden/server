@@ -57,7 +57,7 @@ public class GetCloudOrganizationLicenseQueryTests
     {
         installation.Enabled = true;
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
-        sutProvider.GetDependency<IPaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
+        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
         sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
 
         var result = await sutProvider.Sut.GetLicenseAsync(organization, installationId);
@@ -77,7 +77,7 @@ public class GetCloudOrganizationLicenseQueryTests
     {
         installation.Enabled = true;
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
-        sutProvider.GetDependency<IPaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
+        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
         sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
         sutProvider.GetDependency<ILicensingService>()
             .CreateOrganizationTokenAsync(organization, installationId, subInfo)
@@ -106,7 +106,7 @@ public class GetCloudOrganizationLicenseQueryTests
         installation.Enabled = true;
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
         sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
-        sutProvider.GetDependency<IPaymentService>().GetSubscriptionAsync(provider).Returns(subInfo);
+        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(provider).Returns(subInfo);
         sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
 
         var result = await sutProvider.Sut.GetLicenseAsync(organization, installationId);

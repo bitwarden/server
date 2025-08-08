@@ -4,7 +4,7 @@
 using Bit.Core.Models.BitStripe;
 using Stripe;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Billing.Services.Implementations;
 
 public class StripeAdapter : IStripeAdapter
 {

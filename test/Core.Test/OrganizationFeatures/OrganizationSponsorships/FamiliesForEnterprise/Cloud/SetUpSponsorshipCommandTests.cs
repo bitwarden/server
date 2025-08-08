@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
@@ -82,7 +83,7 @@ public class SetUpSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
 
     private static async Task AssertDidNotSetUpAsync(SutProvider<SetUpSponsorshipCommand> sutProvider)
     {
-        await sutProvider.GetDependency<IPaymentService>()
+        await sutProvider.GetDependency<IStripePaymentService>()
             .DidNotReceiveWithAnyArgs()
             .SponsorOrganizationAsync(default, default);
         await sutProvider.GetDependency<IOrganizationRepository>()

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Commands;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Services;

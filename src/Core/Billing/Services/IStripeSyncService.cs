@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Services;
+﻿namespace Bit.Core.Billing.Services;
 
 public interface IStripeSyncService
 {

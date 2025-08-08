@@ -72,7 +72,7 @@ public class AccountsController(
     [HttpGet("subscription")]
     public async Task<SubscriptionResponseModel> GetSubscriptionAsync(
         [FromServices] GlobalSettings globalSettings,
-        [FromServices] IPaymentService paymentService)
+        [FromServices] IStripePaymentService paymentService)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -188,7 +188,7 @@ public class AccountsController(
     [HttpGet("tax")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<TaxInfoResponseModel> GetTaxInfoAsync(
-        [FromServices] IPaymentService paymentService)
+        [FromServices] IStripePaymentService paymentService)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -204,7 +204,7 @@ public class AccountsController(
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task PutTaxInfoAsync(
         [FromBody] TaxInfoUpdateRequestModel model,
-        [FromServices] IPaymentService paymentService)
+        [FromServices] IStripePaymentService paymentService)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)

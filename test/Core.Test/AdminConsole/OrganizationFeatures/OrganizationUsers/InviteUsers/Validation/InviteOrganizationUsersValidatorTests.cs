@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.M
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Models.StaticStore.Plans;
+using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
@@ -50,7 +51,7 @@ public class InviteOrganizationUsersValidatorTests
             OccupiedSmSeats = 9
         };
 
-        sutProvider.GetDependency<IPaymentService>()
+        sutProvider.GetDependency<IStripePaymentService>()
             .HasSecretsManagerStandalone(request.InviteOrganization)
             .Returns(true);
 
@@ -96,7 +97,7 @@ public class InviteOrganizationUsersValidatorTests
             OccupiedSmSeats = 9
         };
 
-        sutProvider.GetDependency<IPaymentService>()
+        sutProvider.GetDependency<IStripePaymentService>()
             .HasSecretsManagerStandalone(request.InviteOrganization)
             .Returns(true);
 
@@ -140,7 +141,7 @@ public class InviteOrganizationUsersValidatorTests
             OccupiedSmSeats = 4
         };
 
-        sutProvider.GetDependency<IPaymentService>()
+        sutProvider.GetDependency<IStripePaymentService>()
             .HasSecretsManagerStandalone(request.InviteOrganization)
             .Returns(true);
 

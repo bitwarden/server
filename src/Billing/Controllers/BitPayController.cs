@@ -28,7 +28,7 @@ public class BitPayController : Controller
     private readonly IUserRepository _userRepository;
     private readonly IProviderRepository _providerRepository;
     private readonly IMailService _mailService;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly ILogger<BitPayController> _logger;
     private readonly IPremiumUserBillingService _premiumUserBillingService;
 
@@ -40,7 +40,7 @@ public class BitPayController : Controller
         IUserRepository userRepository,
         IProviderRepository providerRepository,
         IMailService mailService,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         ILogger<BitPayController> logger,
         IPremiumUserBillingService premiumUserBillingService)
     {

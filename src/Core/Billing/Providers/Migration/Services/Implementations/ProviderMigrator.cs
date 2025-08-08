@@ -12,6 +12,7 @@ using Bit.Core.Billing.Providers.Migration.Models;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -25,7 +26,7 @@ public class ProviderMigrator(
     ILogger<ProviderMigrator> logger,
     IMigrationTrackerCache migrationTrackerCache,
     IOrganizationRepository organizationRepository,
-    IPaymentService paymentService,
+    IStripePaymentService paymentService,
     IProviderBillingService providerBillingService,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderRepository providerRepository,

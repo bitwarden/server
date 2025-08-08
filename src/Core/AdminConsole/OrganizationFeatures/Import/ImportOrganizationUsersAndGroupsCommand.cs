@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -23,7 +24,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IGroupRepository _groupRepository;
     private readonly IEventService _eventService;
     private readonly ICurrentContext _currentContext;
@@ -35,7 +36,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
 
     public ImportOrganizationUsersAndGroupsCommand(IOrganizationRepository organizationRepository,
             IOrganizationUserRepository organizationUserRepository,
-            IPaymentService paymentService,
+            IStripePaymentService paymentService,
             IGroupRepository groupRepository,
             IEventService eventService,
             ICurrentContext currentContext,

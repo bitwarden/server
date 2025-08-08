@@ -21,6 +21,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -48,7 +49,7 @@ public class OrganizationService : IOrganizationService
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
     private readonly ISsoUserRepository _ssoUserRepository;
@@ -74,7 +75,7 @@ public class OrganizationService : IOrganizationService
         IPushNotificationService pushNotificationService,
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IPolicyRepository policyRepository,
         IPolicyService policyService,
         ISsoUserRepository ssoUserRepository,
