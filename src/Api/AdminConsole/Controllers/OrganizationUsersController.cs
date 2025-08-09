@@ -464,7 +464,7 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpPut("{id}/reset-password")]
-    [Authorize<ManageAccountRecoveryRequirement>]
+    [Authorize<ManageAccountRecoveryRequirement>]   // note: the command has additional permissions checks
     public async Task PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
     {
         // Get the users role, since provider users aren't a member of the organization we use the owner check
