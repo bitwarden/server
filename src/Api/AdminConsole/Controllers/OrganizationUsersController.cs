@@ -11,6 +11,7 @@ using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
@@ -68,6 +69,7 @@ public class OrganizationUsersController : Controller
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
     private readonly IRevokeOrganizationUserCommand _revokeOrganizationUserCommand;
+    private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -95,7 +97,8 @@ public class OrganizationUsersController : Controller
         IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
         IInitPendingOrganizationCommand initPendingOrganizationCommand,
         IRevokeOrganizationUserCommand revokeOrganizationUserCommand,
-        IResendOrganizationInviteCommand resendOrganizationInviteCommand)
+        IResendOrganizationInviteCommand resendOrganizationInviteCommand,
+        IAdminRecoverAccountCommand adminRecoverAccountCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -124,6 +127,7 @@ public class OrganizationUsersController : Controller
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
+        _adminRecoverAccountCommand = adminRecoverAccountCommand;
     }
 
     [HttpGet("{id}")]
@@ -476,7 +480,7 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _userService.AdminResetPasswordAsync(orgUserType.Value, orgId, id, model.NewMasterPasswordHash, model.Key);
+        var result = await _adminRecoverAccountCommand.AdminResetPasswordAsync(orgUserType.Value, orgId, id, model.NewMasterPasswordHash, model.Key);
         if (result.Succeeded)
         {
             return;

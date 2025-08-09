@@ -60,7 +60,6 @@ public class UserService : UserManager<User>, IUserService
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IPaymentService _paymentService;
-    private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
     private readonly IFido2 _fido2;
     private readonly ICurrentContext _currentContext;
@@ -95,7 +94,6 @@ public class UserService : UserManager<User>, IUserService
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
         IPaymentService paymentService,
-        IPolicyRepository policyRepository,
         IPolicyService policyService,
         IFido2 fido2,
         ICurrentContext currentContext,
@@ -134,7 +132,6 @@ public class UserService : UserManager<User>, IUserService
         _eventService = eventService;
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
-        _policyRepository = policyRepository;
         _policyService = policyService;
         _fido2 = fido2;
         _currentContext = currentContext;
@@ -674,83 +671,6 @@ public class UserService : UserManager<User>, IUserService
         }
 
         return null;
-    }
-
-    public async Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType callingUserType, Guid orgId, Guid id, string newMasterPassword, string key)
-    {
-        // Org must be able to use reset password
-        var org = await _organizationRepository.GetByIdAsync(orgId);
-        if (org == null || !org.UseResetPassword)
-        {
-            throw new BadRequestException("Organization does not allow password reset.");
-        }
-
-        // Enterprise policy must be enabled
-        var resetPasswordPolicy =
-            await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
-        if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled)
-        {
-            throw new BadRequestException("Organization does not have the password reset policy enabled.");
-        }
-
-        // Org User must be confirmed and have a ResetPasswordKey
-        var orgUser = await _organizationUserRepository.GetByIdAsync(id);
-        if (orgUser == null || orgUser.Status != OrganizationUserStatusType.Confirmed ||
-            orgUser.OrganizationId != orgId || string.IsNullOrEmpty(orgUser.ResetPasswordKey) ||
-            !orgUser.UserId.HasValue)
-        {
-            throw new BadRequestException("Organization User not valid");
-        }
-
-        // Calling User must be of higher/equal user type to reset user's password
-        var canAdjustPassword = false;
-        switch (callingUserType)
-        {
-            case OrganizationUserType.Owner:
-                canAdjustPassword = true;
-                break;
-            case OrganizationUserType.Admin:
-                canAdjustPassword = orgUser.Type != OrganizationUserType.Owner;
-                break;
-            case OrganizationUserType.Custom:
-                canAdjustPassword = orgUser.Type != OrganizationUserType.Owner &&
-                    orgUser.Type != OrganizationUserType.Admin;
-                break;
-        }
-
-        if (!canAdjustPassword)
-        {
-            throw new BadRequestException("Calling user does not have permission to reset this user's master password");
-        }
-
-        var user = await GetUserByIdAsync(orgUser.UserId.Value);
-        if (user == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (user.UsesKeyConnector)
-        {
-            throw new BadRequestException("Cannot reset password of a user with Key Connector.");
-        }
-
-        var result = await UpdatePasswordHash(user, newMasterPassword);
-        if (!result.Succeeded)
-        {
-            return result;
-        }
-
-        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.LastPasswordChangeDate = user.RevisionDate;
-        user.ForcePasswordReset = true;
-        user.Key = key;
-
-        await _userRepository.ReplaceAsync(user);
-        await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
-        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
-        await _pushService.PushLogOutAsync(user.Id);
-
-        return IdentityResult.Success;
     }
 
     public async Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint)
