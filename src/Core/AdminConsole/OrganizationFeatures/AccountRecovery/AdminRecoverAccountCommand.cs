@@ -18,7 +18,8 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
     IPushNotificationService pushNotificationService,
     IUserService userService) : IAdminRecoverAccountCommand
 {
-    public async Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType callingUserType, Guid orgId, Guid id, string newMasterPassword, string key)
+    public async Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType callingUserType, Guid orgId,
+        Guid organizationUserId, string newMasterPassword, string key)
     {
         // Org must be able to use reset password
         var org = await organizationRepository.GetByIdAsync(orgId);
@@ -36,7 +37,7 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
         }
 
         // Org User must be confirmed and have a ResetPasswordKey
-        var orgUser = await organizationUserRepository.GetByIdAsync(id);
+        var orgUser = await organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null || orgUser.Status != OrganizationUserStatusType.Confirmed ||
             orgUser.OrganizationId != orgId || string.IsNullOrEmpty(orgUser.ResetPasswordKey) ||
             !orgUser.UserId.HasValue)
