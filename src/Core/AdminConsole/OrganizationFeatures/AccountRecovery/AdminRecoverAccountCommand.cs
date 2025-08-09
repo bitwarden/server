@@ -24,7 +24,7 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
     IProviderOrganizationRepository providerOrganizationRepository,
     ICurrentContext currentContext) : IAdminRecoverAccountCommand
 {
-    public async Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType callingUserType, Guid orgId,
+    public async Task<IdentityResult> RecoverAccountAsync(OrganizationUserType callingUserType, Guid orgId,
         Guid organizationUserId, string newMasterPassword, string key)
     {
         // Org must be able to use reset password

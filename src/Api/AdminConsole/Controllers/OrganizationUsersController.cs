@@ -476,7 +476,7 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _adminRecoverAccountCommand.AdminResetPasswordAsync(orgUserType.Value, orgId, id, model.NewMasterPasswordHash, model.Key);
+        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(orgUserType.Value, orgId, id, model.NewMasterPasswordHash, model.Key);
         if (result.Succeeded)
         {
             return;
