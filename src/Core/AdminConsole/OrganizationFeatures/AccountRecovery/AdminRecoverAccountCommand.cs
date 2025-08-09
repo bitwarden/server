@@ -1,5 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
@@ -16,7 +19,10 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
     IMailService mailService,
     IEventService eventService,
     IPushNotificationService pushNotificationService,
-    IUserService userService) : IAdminRecoverAccountCommand
+    IUserService userService,
+    IProviderUserRepository providerUserRepository,
+    IProviderOrganizationRepository providerOrganizationRepository,
+    ICurrentContext currentContext) : IAdminRecoverAccountCommand
 {
     public async Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType callingUserType, Guid orgId,
         Guid organizationUserId, string newMasterPassword, string key)
@@ -61,6 +67,10 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
                 break;
         }
 
+        // Check if the target user is a providerUser for this organization - if so, the Calling User must also be
+        // part of the provider
+        await CheckProviderPermissionsAsync(orgId, orgUser);
+
         if (!canAdjustPassword)
         {
             throw new BadRequestException("Calling user does not have permission to reset this user's master password");
@@ -94,5 +104,36 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
         await pushNotificationService.PushLogOutAsync(user.Id);
 
         return IdentityResult.Success;
+    }
+
+    private async Task CheckProviderPermissionsAsync(Guid orgId, OrganizationUser targetOrganizationUser)
+    {
+        var providerOrg = await providerOrganizationRepository.GetByOrganizationId(orgId);
+        if (providerOrg == null)
+        {
+            return;
+        }
+
+        var providerUsers = await providerUserRepository.GetManyByProviderAsync(providerOrg.ProviderId);
+
+        // Check if the target user is a providerUser (in any status to be safe)
+        var targetUserIsProvider = providerUsers.Any(pu => pu.UserId == targetOrganizationUser.UserId!.Value);
+
+        // If the target user is a provider, the calling user must also be a provider for this organization
+        if (targetUserIsProvider)
+        {
+            if (!currentContext.UserId.HasValue)
+            {
+                throw new BadRequestException("Calling user does not have permission to reset this user's master password");
+            }
+
+            var callingUserIsProvider = providerUsers.Any(pu =>
+                pu.UserId == currentContext.UserId.Value && pu.Status == ProviderUserStatusType.Confirmed);
+
+            if (!callingUserIsProvider)
+            {
+                throw new BadRequestException("Calling user does not have permission to reset this user's master password");
+            }
+        }
     }
 }

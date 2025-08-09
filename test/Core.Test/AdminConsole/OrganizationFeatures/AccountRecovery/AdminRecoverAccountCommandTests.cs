@@ -1,7 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -88,7 +91,8 @@ public class AdminRecoverAccountCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, Guid.NewGuid(), newMasterPassword, key));
+            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, Guid.NewGuid(),
+                newMasterPassword, key));
         Assert.Equal("Organization does not allow password reset.", exception.Message);
     }
 
@@ -179,6 +183,7 @@ public class AdminRecoverAccountCommandTests
         organizationUser.Status = OrganizationUserStatusType.Invited;
         organizationUser.OrganizationId = organization.Id;
         organizationUser.ResetPasswordKey = "test-key";
+        organizationUser.UserId = Guid.NewGuid();
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
@@ -427,6 +432,57 @@ public class AdminRecoverAccountCommandTests
 
         // Assert
         Assert.True(result.Succeeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AdminResetPasswordAsync_CallingUserNotProviderForTargetUser_ThrowsBadRequest(
+        OrganizationUserType callingUserType,
+        string newMasterPassword,
+        string key,
+        Organization organization,
+        Policy resetPasswordPolicy,
+        OrganizationUser organizationUser,
+        User user,
+        ProviderUser providerUser,
+        ProviderOrganization providerOrganization,
+        SutProvider<AdminRecoverAccountCommand> sutProvider)
+    {
+        // Arrange
+        SetupValidOrganization(sutProvider, organization);
+        SetupValidPolicy(sutProvider, resetPasswordPolicy, organization.Id);
+        SetupValidOrganizationUser(sutProvider, organizationUser, organization.Id, callingUserType);
+        SetupValidUser(sutProvider, user, organizationUser.UserId.Value);
+        SetupSuccessfulPasswordUpdate(sutProvider, user, newMasterPassword);
+
+        // Setup provider relationship - the target user is a provider for the organization
+        providerUser.UserId = organizationUser.UserId.Value;
+        providerUser.ProviderId = providerOrganization.ProviderId;
+        providerUser.Status = ProviderUserStatusType.Confirmed;
+        providerOrganization.OrganizationId = organization.Id;
+
+        // Mock the provider organization repository to return the provider organization
+        sutProvider.GetDependency<IProviderOrganizationRepository>()
+            .GetByOrganizationId(organization.Id)
+            .Returns(providerOrganization);
+
+        // Mock the current context to return a calling user ID
+        var callingUserId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId
+            .Returns(callingUserId);
+
+        // Mock the provider user repository to return the provider user for the target user
+        // and no provider user for the calling user
+        var providerUsers = new List<ProviderUser> { providerUser };
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByProviderAsync(providerOrganization.ProviderId)
+            .Returns(providerUsers);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
+        Assert.Equal("Calling user does not have permission to reset this user's master password", exception.Message);
     }
 
     private void SetupValidOrganization(SutProvider<AdminRecoverAccountCommand> sutProvider, Organization organization)
