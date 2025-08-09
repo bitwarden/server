@@ -545,7 +545,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendAdminResetPasswordEmailAsync(string email, string userName, string orgName)
+    public async Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName)
     {
         var message = CreateDefaultMessage("Your admin has initiated account recovery", email);
         var model = new AdminResetPasswordViewModel()
