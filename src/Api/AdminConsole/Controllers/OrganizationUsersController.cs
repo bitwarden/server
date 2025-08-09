@@ -468,19 +468,18 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpPut("{id}/reset-password")]
-    [Authorize<ManageAccountRecoveryRequirement>]   // note: the command has additional permissions checks
+    [Authorize<ManageAccountRecoveryRequirement>]
     public async Task PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
     {
-        // Get the users role, since provider users aren't a member of the organization we use the owner check
-        var orgUserType = await _currentContext.OrganizationOwner(orgId)
-            ? OrganizationUserType.Owner
-            : _currentContext.Organizations?.FirstOrDefault(o => o.Id == orgId)?.Type;
-        if (orgUserType == null)
+        var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
         {
             throw new NotFoundException();
         }
 
-        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(orgUserType.Value, orgId, id, model.NewMasterPasswordHash, model.Key);
+        await _authorizationService.AuthorizeOrThrowAsync(User, targetOrganizationUser, new RecoverAccountAuthorizationRequirement());
+
+        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(orgId, targetOrganizationUser, model.NewMasterPasswordHash, model.Key);
         if (result.Succeeded)
         {
             return;
