@@ -24,7 +24,7 @@ public class AdminRecoverAccountCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task AdminResetPasswordAsync_ValidRequest_Success(
+    public async Task RecoverAccountAsync_ValidRequest_Success(
         OrganizationUserType callingUserType,
         string newMasterPassword,
         string key,
@@ -55,7 +55,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AdminResetPasswordAsync_OrganizationDoesNotExist_ThrowsBadRequest(
+    public async Task RecoverAccountAsync_OrganizationDoesNotExist_ThrowsBadRequest(
         OrganizationUserType callingUserType,
         string newMasterPassword,
         string key,
@@ -76,7 +76,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AdminResetPasswordAsync_OrganizationDoesNotAllowResetPassword_ThrowsBadRequest(
+    public async Task RecoverAccountAsync_OrganizationDoesNotAllowResetPassword_ThrowsBadRequest(
         OrganizationUserType callingUserType,
         string newMasterPassword,
         string key,
@@ -98,7 +98,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AdminResetPasswordAsync_PolicyDoesNotExist_ThrowsBadRequest(
+    public async Task RecoverAccountAsync_PolicyDoesNotExist_ThrowsBadRequest(
         OrganizationUserType callingUserType,
         string newMasterPassword,
         string key,
@@ -120,7 +120,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AdminResetPasswordAsync_PolicyNotEnabled_ThrowsBadRequest(
+    public async Task RecoverAccountAsync_PolicyNotEnabled_ThrowsBadRequest(
         OrganizationUserType callingUserType,
         string newMasterPassword,
         string key,
@@ -144,7 +144,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AdminResetPasswordAsync_OrganizationUserDoesNotExist_ThrowsBadRequest(
+    public async Task RecoverAccountAsync_OrganizationUserDoesNotExist_ThrowsBadRequest(
         OrganizationUserType callingUserType,
         string newMasterPassword,
         string key,
@@ -168,7 +168,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AdminResetPasswordAsync_OrganizationUserNotConfirmed_ThrowsBadRequest(
+    public async Task RecoverAccountAsync_OrganizationUserNotConfirmed_ThrowsBadRequest(
         OrganizationUserType callingUserType,
         string newMasterPassword,
         string key,
@@ -196,7 +196,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AdminResetPasswordAsync_OrganizationUserWrongOrganization_ThrowsBadRequest(
+    public async Task RecoverAccountAsync_OrganizationUserWrongOrganization_ThrowsBadRequest(
         OrganizationUserType callingUserType,
         string newMasterPassword,
         string key,
@@ -224,7 +224,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AdminResetPasswordAsync_OrganizationUserNoResetPasswordKey_ThrowsBadRequest(
+    public async Task RecoverAccountAsync_OrganizationUserNoResetPasswordKey_ThrowsBadRequest(
         OrganizationUserType callingUserType,
         string newMasterPassword,
         string key,
@@ -252,7 +252,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AdminResetPasswordAsync_OrganizationUserNoUserId_ThrowsBadRequest(
+    public async Task RecoverAccountAsync_OrganizationUserNoUserId_ThrowsBadRequest(
         OrganizationUserType callingUserType,
         string newMasterPassword,
         string key,
@@ -282,7 +282,7 @@ public class AdminRecoverAccountCommandTests
     [BitAutoData(OrganizationUserType.Admin, OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Custom, OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Custom, OrganizationUserType.Admin)]
-    public async Task AdminResetPasswordAsync_InsufficientPermissions_ThrowsBadRequest(
+    public async Task RecoverAccountAsync_InsufficientPermissions_ThrowsBadRequest(
         OrganizationUserType callingUserType,
         OrganizationUserType targetUserType,
         string newMasterPassword,
@@ -312,7 +312,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AdminResetPasswordAsync_UserDoesNotExist_ThrowsNotFoundException(
+    public async Task RecoverAccountAsync_UserDoesNotExist_ThrowsNotFoundException(
         OrganizationUserType callingUserType,
         string newMasterPassword,
         string key,
@@ -336,7 +336,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AdminResetPasswordAsync_UserUsesKeyConnector_ThrowsBadRequest(
+    public async Task RecoverAccountAsync_UserUsesKeyConnector_ThrowsBadRequest(
         OrganizationUserType callingUserType,
         string newMasterPassword,
         string key,
@@ -363,7 +363,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AdminResetPasswordAsync_PasswordUpdateFails_ReturnsFailure(
+    public async Task RecoverAccountAsync_PasswordUpdateFails_ReturnsFailure(
         OrganizationUserType callingUserType,
         string newMasterPassword,
         string key,
@@ -402,7 +402,7 @@ public class AdminRecoverAccountCommandTests
     [BitAutoData(OrganizationUserType.Admin, OrganizationUserType.User)]
     [BitAutoData(OrganizationUserType.Custom, OrganizationUserType.Custom)]
     [BitAutoData(OrganizationUserType.Custom, OrganizationUserType.User)]
-    public async Task AdminResetPasswordAsync_ValidPermissionCombinations_Success(
+    public async Task RecoverAccountAsync_ValidPermissionCombinations_Success(
         OrganizationUserType callingUserType,
         OrganizationUserType targetUserType,
         string newMasterPassword,
@@ -436,7 +436,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AdminResetPasswordAsync_CallingUserNotProviderForTargetUser_ThrowsBadRequest(
+    public async Task RecoverAccountAsync_CallingUserNotProviderForTargetUser_ThrowsBadRequest(
         OrganizationUserType callingUserType,
         string newMasterPassword,
         string key,
