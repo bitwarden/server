@@ -5,6 +5,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 
 public interface IAdminRecoverAccountCommand
 {
-    Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType callingUserType, Guid orgId, Guid organizationUserId,
+    Task<IdentityResult> RecoverAccountAsync(OrganizationUserType callingUserType, Guid orgId, Guid organizationUserId,
         string newMasterPassword, string key);
 }

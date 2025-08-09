@@ -42,7 +42,7 @@ public class AdminRecoverAccountCommandTests
         SetupSuccessfulPasswordUpdate(sutProvider, user, newMasterPassword);
 
         // Act
-        var result = await sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id,
+        var result = await sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id,
             organizationUser.Id, newMasterPassword, key);
 
         // Assert
@@ -69,7 +69,7 @@ public class AdminRecoverAccountCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, orgId, Guid.NewGuid(),
+            sutProvider.Sut.RecoverAccountAsync(callingUserType, orgId, Guid.NewGuid(),
                 newMasterPassword, key));
         Assert.Equal("Organization does not allow password reset.", exception.Message);
     }
@@ -91,7 +91,7 @@ public class AdminRecoverAccountCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, Guid.NewGuid(),
+            sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, Guid.NewGuid(),
                 newMasterPassword, key));
         Assert.Equal("Organization does not allow password reset.", exception.Message);
     }
@@ -113,7 +113,7 @@ public class AdminRecoverAccountCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, Guid.NewGuid(),
+            sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, Guid.NewGuid(),
                 newMasterPassword, key));
         Assert.Equal("Organization does not have the password reset policy enabled.", exception.Message);
     }
@@ -137,7 +137,7 @@ public class AdminRecoverAccountCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, Guid.NewGuid(),
+            sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, Guid.NewGuid(),
                 newMasterPassword, key));
         Assert.Equal("Organization does not have the password reset policy enabled.", exception.Message);
     }
@@ -162,7 +162,7 @@ public class AdminRecoverAccountCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, orgUserId, newMasterPassword, key));
+            sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, orgUserId, newMasterPassword, key));
         Assert.Equal("Organization User not valid", exception.Message);
     }
 
@@ -190,7 +190,7 @@ public class AdminRecoverAccountCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
+            sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
         Assert.Equal("Organization User not valid", exception.Message);
     }
 
@@ -218,7 +218,7 @@ public class AdminRecoverAccountCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
+            sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
         Assert.Equal("Organization User not valid", exception.Message);
     }
 
@@ -246,7 +246,7 @@ public class AdminRecoverAccountCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
+            sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
         Assert.Equal("Organization User not valid", exception.Message);
     }
 
@@ -274,7 +274,7 @@ public class AdminRecoverAccountCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
+            sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
         Assert.Equal("Organization User not valid", exception.Message);
     }
 
@@ -306,7 +306,7 @@ public class AdminRecoverAccountCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
+            sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
         Assert.Equal("Calling user does not have permission to reset this user's master password", exception.Message);
     }
 
@@ -331,7 +331,7 @@ public class AdminRecoverAccountCommandTests
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
+            sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
     }
 
     [Theory]
@@ -357,7 +357,7 @@ public class AdminRecoverAccountCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
+            sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
         Assert.Equal("Cannot reset password of a user with Key Connector.", exception.Message);
     }
 
@@ -385,7 +385,7 @@ public class AdminRecoverAccountCommandTests
             .Returns(failedResult);
 
         // Act
-        var result = await sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key);
+        var result = await sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key);
 
         // Assert
         Assert.False(result.Succeeded);
@@ -428,7 +428,7 @@ public class AdminRecoverAccountCommandTests
         SetupSuccessfulPasswordUpdate(sutProvider, user, newMasterPassword);
 
         // Act
-        var result = await sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key);
+        var result = await sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key);
 
         // Assert
         Assert.True(result.Succeeded);
@@ -481,7 +481,7 @@ public class AdminRecoverAccountCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AdminResetPasswordAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
+            sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
         Assert.Equal("Calling user does not have permission to reset this user's master password", exception.Message);
     }
 
