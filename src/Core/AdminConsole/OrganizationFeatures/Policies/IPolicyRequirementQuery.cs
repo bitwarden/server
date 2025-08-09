@@ -17,12 +17,11 @@ public interface IPolicyRequirementQuery
     Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement;
 
     /// <summary>
-    /// Get a policy requirement for a specific organization.
-    /// This returns the policy requirement that represents the policy state for the entire organization.
-    /// It will always return a value even if there are no policies that should be enforced.
-    /// This should be used for organization-level policy checks.
+    /// Get all organization user IDs within an organization that are affected by a given policy type.
+    /// Respects role/status/provider exemptions via the policy factory's Enforce predicate.
     /// </summary>
-    /// <param name="organizationId">The organization to check policies for.</param>
-    /// <typeparam name="T">The IPolicyRequirement that corresponds to the policy you want to enforce.</typeparam>
-    Task<T> GetByOrganizationAsync<T>(Guid organizationId) where T : IPolicyRequirement;
+    /// <param name="organizationId">The organization to check.</param>
+    /// <typeparam name="T">The IPolicyRequirement that corresponds to the policy type to evaluate.</typeparam>
+    /// <returns>Organization user IDs for whom the policy applies within the organization.</returns>
+    Task<IEnumerable<Guid>> GetManyByOrganizationIdAsync<T>(Guid organizationId) where T : IPolicyRequirement;
 }

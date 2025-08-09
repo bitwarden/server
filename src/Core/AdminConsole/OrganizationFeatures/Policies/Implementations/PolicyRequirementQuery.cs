@@ -28,7 +28,8 @@ public class PolicyRequirementQuery(
         return requirement;
     }
 
-    public async Task<T> GetByOrganizationAsync<T>(Guid organizationId) where T : IPolicyRequirement
+    public async Task<IEnumerable<Guid>> GetManyByOrganizationIdAsync<T>(Guid organizationId)
+        where T : IPolicyRequirement
     {
         var factory = factories.OfType<IPolicyRequirementFactory<T>>().SingleOrDefault();
         if (factory is null)
@@ -37,13 +38,14 @@ public class PolicyRequirementQuery(
         }
 
         var organizationPolicyDetails = await GetOrganizationPolicyDetails(organizationId, factory.PolicyType);
-        var filteredPolicies = organizationPolicyDetails
-            .Cast<PolicyDetails>()
-            .Where(policyDetails => policyDetails.PolicyType == factory.PolicyType)
+
+        var eligibleOrganizationUserIds = organizationPolicyDetails
+            .Where(p => p.PolicyType == factory.PolicyType)
             .Where(factory.Enforce)
+            .Select(p => p.OrganizationUserId)
             .ToList();
-        var requirement = factory.Create(filteredPolicies);
-        return requirement;
+
+        return eligibleOrganizationUserIds;
     }
 
     private Task<IEnumerable<PolicyDetails>> GetPolicyDetails(Guid userId)
