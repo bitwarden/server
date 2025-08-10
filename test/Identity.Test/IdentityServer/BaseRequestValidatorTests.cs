@@ -50,6 +50,7 @@ public class BaseRequestValidatorTests
     private readonly IUserDecryptionOptionsBuilder _userDecryptionOptionsBuilder;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IAuthRequestRepository _authRequestRepository;
+    private readonly IMailService _mailService;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -71,6 +72,7 @@ public class BaseRequestValidatorTests
         _userDecryptionOptionsBuilder = Substitute.For<IUserDecryptionOptionsBuilder>();
         _policyRequirementQuery = Substitute.For<IPolicyRequirementQuery>();
         _authRequestRepository = Substitute.For<IAuthRequestRepository>();
+        _mailService = Substitute.For<IMailService>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -88,7 +90,8 @@ public class BaseRequestValidatorTests
             _ssoConfigRepository,
             _userDecryptionOptionsBuilder,
             _policyRequirementQuery,
-            _authRequestRepository);
+            _authRequestRepository,
+            _mailService);
     }
 
     /* Logic path
@@ -276,6 +279,91 @@ public class BaseRequestValidatorTests
 
         // Assert that the auth request was NOT consumed
         await _authRequestRepository.DidNotReceive().ReplaceAsync(Arg.Any<AuthRequest>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_TwoFactorTokenInvalid_ShouldSendFailedTwoFactorEmail(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        var user = requestContext.User;
+        
+        // 1 -> initial validation passes
+        _sut.isValid = true;
+
+        // 2 -> set up 2FA as required
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
+
+        // 3 -> provide invalid 2FA token
+        tokenRequest.Raw["TwoFactorToken"] = "invalid_token";
+        tokenRequest.Raw["TwoFactorProvider"] = "0"; // Email provider
+        
+        // 4 -> set up 2FA verification to fail
+        _twoFactorAuthenticationValidator
+            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Email, "invalid_token")
+            .Returns(Task.FromResult(false));
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        // Verify that the failed 2FA email was sent
+        await _mailService.Received(1)
+            .SendFailedTwoFactorAttemptEmailAsync(
+                user.Email, 
+                Arg.Any<DateTime>(), 
+                Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_TwoFactorRememberTokenExpired_ShouldNotSendFailedTwoFactorEmail(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        var user = requestContext.User;
+        
+        // 1 -> initial validation passes
+        _sut.isValid = true;
+
+        // 2 -> set up 2FA as required
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
+
+        // 3 -> provide invalid remember token (remember token expired)
+        tokenRequest.Raw["TwoFactorToken"] = "expired_remember_token";
+        tokenRequest.Raw["TwoFactorProvider"] = "5"; // Remember provider (Remember = 5)
+        
+        // 4 -> set up remember token verification to fail
+        _twoFactorAuthenticationValidator
+            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Remember, "expired_remember_token")
+            .Returns(Task.FromResult(false));
+
+        // 5 -> set up dummy BuildTwoFactorResultAsync
+        var twoFactorResultDict = new Dictionary<string, object>
+        {
+            { "TwoFactorProviders", new[] { "0", "1" } },
+            { "TwoFactorProviders2", new Dictionary<string, object>() }
+        };
+        _twoFactorAuthenticationValidator
+            .BuildTwoFactorResultAsync(user, null)
+            .Returns(Task.FromResult(twoFactorResultDict));
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        // Verify that the failed 2FA email was NOT sent for remember token expiration
+        await _mailService.DidNotReceive()
+            .SendFailedTwoFactorAttemptEmailAsync(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
     }
 
     // Test grantTypes that require SSO when a user is in an organization that requires it
@@ -599,13 +687,5 @@ public class BaseRequestValidatorTests
             Substitute.For<IdentityErrorDescriber>(),
             Substitute.For<IServiceProvider>(),
             Substitute.For<ILogger<UserManager<User>>>());
-    }
-
-    private void AddValidDeviceToRequest(ValidatedTokenRequest request)
-    {
-        request.Raw["DeviceIdentifier"] = "DeviceIdentifier";
-        request.Raw["DeviceType"] = "Android"; // must be valid device type
-        request.Raw["DeviceName"] = "DeviceName";
-        request.Raw["DevicePushToken"] = "DevicePushToken";
     }
 }
