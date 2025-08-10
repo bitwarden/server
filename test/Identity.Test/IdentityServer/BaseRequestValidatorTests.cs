@@ -294,16 +294,19 @@ public class BaseRequestValidatorTests
         // 1 -> initial validation passes
         _sut.isValid = true;
 
-        // 2 -> set up 2FA as required
+        // 2 -> enable the FailedTwoFactorEmail feature flag
+        _featureService.IsEnabled(FeatureFlagKeys.FailedTwoFactorEmail).Returns(true);
+
+        // 3 -> set up 2FA as required
         _twoFactorAuthenticationValidator
             .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
             .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
 
-        // 3 -> provide invalid 2FA token
+        // 4 -> provide invalid 2FA token
         tokenRequest.Raw["TwoFactorToken"] = "invalid_token";
         tokenRequest.Raw["TwoFactorProvider"] = "0"; // Email provider
         
-        // 4 -> set up 2FA verification to fail
+        // 5 -> set up 2FA verification to fail
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Email, "invalid_token")
             .Returns(Task.FromResult(false));
@@ -333,21 +336,24 @@ public class BaseRequestValidatorTests
         // 1 -> initial validation passes
         _sut.isValid = true;
 
-        // 2 -> set up 2FA as required
+        // 2 -> enable the FailedTwoFactorEmail feature flag  
+        _featureService.IsEnabled(FeatureFlagKeys.FailedTwoFactorEmail).Returns(true);
+
+        // 3 -> set up 2FA as required
         _twoFactorAuthenticationValidator
             .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
             .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
 
-        // 3 -> provide invalid remember token (remember token expired)
+        // 4 -> provide invalid remember token (remember token expired)
         tokenRequest.Raw["TwoFactorToken"] = "expired_remember_token";
         tokenRequest.Raw["TwoFactorProvider"] = "5"; // Remember provider (Remember = 5)
         
-        // 4 -> set up remember token verification to fail
+        // 5 -> set up remember token verification to fail
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Remember, "expired_remember_token")
             .Returns(Task.FromResult(false));
 
-        // 5 -> set up dummy BuildTwoFactorResultAsync
+        // 6 -> set up dummy BuildTwoFactorResultAsync
         var twoFactorResultDict = new Dictionary<string, object>
         {
             { "TwoFactorProviders", new[] { "0", "1" } },

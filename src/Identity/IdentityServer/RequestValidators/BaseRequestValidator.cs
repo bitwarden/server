@@ -163,7 +163,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 else
                 {
-                    await _mailService.SendFailedTwoFactorAttemptEmailAsync(user.Email, DateTime.UtcNow, CurrentContext.IpAddress);
+                    await SendFailedTwoFactorEmail(user);
                     await UpdateFailedAuthDetailsAsync(user);
                     await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                 }
@@ -375,6 +375,14 @@ public abstract class BaseRequestValidator<T> where T : class
         user.FailedLoginCount = ++user.FailedLoginCount;
         user.LastFailedLoginDate = user.RevisionDate = utcNow;
         await _userRepository.ReplaceAsync(user);
+    }
+
+    private async Task SendFailedTwoFactorEmail(User user)
+    {
+        if (FeatureService.IsEnabled(FeatureFlagKeys.FailedTwoFactorEmail))
+        {
+            await _mailService.SendFailedTwoFactorAttemptEmailAsync(user.Email, DateTime.UtcNow, CurrentContext.IpAddress);
+        }
     }
 
     private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicyAsync(User user)
