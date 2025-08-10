@@ -193,7 +193,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-        public async Task SendFailedTwoFactorAttemptEmailAsync(string email, DateTime utcNow, string ip)
+    public async Task SendFailedTwoFactorAttemptEmailAsync(string email, DateTime utcNow, string ip)
     {
         var message = CreateDefaultMessage("Failed login attempts detected", email);
         var model = new FailedAuthAttemptModel()

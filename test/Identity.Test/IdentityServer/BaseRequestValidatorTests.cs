@@ -290,7 +290,7 @@ public class BaseRequestValidatorTests
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         var user = requestContext.User;
-        
+
         // 1 -> initial validation passes
         _sut.isValid = true;
 
@@ -305,7 +305,7 @@ public class BaseRequestValidatorTests
         // 4 -> provide invalid 2FA token
         tokenRequest.Raw["TwoFactorToken"] = "invalid_token";
         tokenRequest.Raw["TwoFactorProvider"] = "0"; // Email provider
-        
+
         // 5 -> set up 2FA verification to fail
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Email, "invalid_token")
@@ -318,8 +318,8 @@ public class BaseRequestValidatorTests
         // Verify that the failed 2FA email was sent
         await _mailService.Received(1)
             .SendFailedTwoFactorAttemptEmailAsync(
-                user.Email, 
-                Arg.Any<DateTime>(), 
+                user.Email,
+                Arg.Any<DateTime>(),
                 Arg.Any<string>());
     }
 
@@ -332,7 +332,7 @@ public class BaseRequestValidatorTests
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         var user = requestContext.User;
-        
+
         // 1 -> initial validation passes
         _sut.isValid = true;
 
@@ -347,7 +347,7 @@ public class BaseRequestValidatorTests
         // 4 -> provide invalid remember token (remember token expired)
         tokenRequest.Raw["TwoFactorToken"] = "expired_remember_token";
         tokenRequest.Raw["TwoFactorProvider"] = "5"; // Remember provider (Remember = 5)
-        
+
         // 5 -> set up remember token verification to fail
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Remember, "expired_remember_token")
