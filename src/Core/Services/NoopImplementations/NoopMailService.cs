@@ -92,6 +92,11 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendFailedTwoFactorAttemptEmailAsync(string email, DateTime utcNow, string ip)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendWelcomeEmailAsync(User user)
     {
         return Task.FromResult(0);

@@ -36,6 +36,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IAuthRequestRepository _authRequestRepository;
+    private readonly IMailService _mailService;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -61,7 +62,8 @@ public abstract class BaseRequestValidator<T> where T : class
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IPolicyRequirementQuery policyRequirementQuery,
-        IAuthRequestRepository authRequestRepository
+        IAuthRequestRepository authRequestRepository,
+        IMailService mailService
         )
     {
         _userManager = userManager;
@@ -80,6 +82,7 @@ public abstract class BaseRequestValidator<T> where T : class
         UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
         PolicyRequirementQuery = policyRequirementQuery;
         _authRequestRepository = authRequestRepository;
+        _mailService = mailService;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -160,6 +163,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 else
                 {
+                    await _mailService.SendFailedTwoFactorAttemptEmailAsync(user.Email, DateTime.UtcNow, CurrentContext.IpAddress);
                     await UpdateFailedAuthDetailsAsync(user);
                     await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                 }

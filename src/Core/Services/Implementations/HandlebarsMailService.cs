@@ -193,6 +193,23 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+        public async Task SendFailedTwoFactorAttemptEmailAsync(string email, DateTime utcNow, string ip)
+    {
+        var message = CreateDefaultMessage("Failed login attempts detected", email);
+        var model = new FailedAuthAttemptModel()
+        {
+            TheDate = utcNow.ToLongDateString(),
+            TheTime = utcNow.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+            IpAddress = ip,
+            AffectedEmail = email
+
+        };
+        await AddMessageContentAsync(message, "Auth.FailedTwoFactorAttempt", model);
+        message.Category = "FailedTwoFactorAttempt";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendMasterPasswordHintEmailAsync(string email, string hint)
     {
         var message = CreateDefaultMessage("Your Master Password Hint", email);
