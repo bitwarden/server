@@ -255,11 +255,12 @@ public class AccountController : Controller
         var externalClaims = result.Principal.Claims.Select(c => $"{c.Type}: {c.Value}");
         _logger.LogDebug("External claims: {@claims}", externalClaims);
 
-        // Lookup our user and external provider info
-        // Note: the user will only exist if the user has already been provisioned and exists in the User table and the SSO user table.
+        // See if the user has logged in with this SSO provider before and has already been provisioned.
+        // This is signified by the user existing in the User table and the SSOUser table for the SSO provider they're using.
         var (user, provider, providerUserId, claims, ssoConfigData) = await FindUserFromExternalProviderAsync(result);
 
-        // User does not exist in SSO User table. They could have an existing BW account in the User table.
+        // The user has not authenticated with this SSO provider before.
+        // They could have an existing Bitwarden account in the User table though.
         if (user == null)
         {
             // If we're manually linking to SSO, the user's external identifier will be passed as query string parameter.
@@ -268,7 +269,9 @@ public class AccountController : Controller
             user = await AutoProvisionUserAsync(provider, providerUserId, claims, userIdentifier, ssoConfigData);
         }
 
-        // User was JIT provisioned (this could be an existing user or a new user)
+        // Either the user already authenticated with the SSO provider, or we've just provisioned them.
+        // Either way, we have associated the SSO login with a Bitwarden user.
+        // We will now sign the Bitwarden user in.
         if (user != null)
         {
             // This allows us to collect any additional claims or properties
@@ -413,8 +416,11 @@ public class AccountController : Controller
     /// Provision an SSO-linked Bitwarden user.
     /// This handles three different scenarios:
     /// 1. Creating an SsoUser link for an existing User and OrganizationUser
+    ///     - User is a member of the organization, but hasn't authenticated with the org's SSO provider before.
     /// 2. Creating a new User and a new OrganizationUser, then establishing an SsoUser link
-    /// 3. Creating a new User for an existing OrganizationUser (created by invitation), then establishing an SsoUser link, and
+    ///     - User is joining the organization through JIT provisioning, without a pending invitation
+    /// 3. Creating a new User for an existing OrganizationUser (created by invitation), then establishing an SsoUser link
+    ///     - User is signing in with a pending invitation.
     /// </summary>
     /// <param name="provider">The external identity provider.</param>
     /// <param name="providerUserId">The external identity provider's user identifier.</param>
