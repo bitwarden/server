@@ -581,7 +581,7 @@ public static class ServiceCollectionExtensions
             services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("storage");
             services.TryAddKeyedSingleton<IEventWriteService, NoopEventWriteService>("broadcast");
         }
-        
+
         services.TryAddScoped<IEventWriteService, EventRouteService>();
         return services;
     }
