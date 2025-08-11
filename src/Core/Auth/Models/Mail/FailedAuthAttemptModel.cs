@@ -9,5 +9,5 @@ namespace Bit.Core.Auth.Models.Mail;
 public class FailedAuthAttemptModel : NewDeviceLoggedInModel
 {
     public string AffectedEmail { get; set; }
-    public TwoFactorProviderType TwoFactorType { get; set;  }
+    public TwoFactorProviderType TwoFactorType { get; set; }
 }

@@ -304,7 +304,7 @@ public class BaseRequestValidatorTests
 
         // 4 -> provide invalid 2FA token
         tokenRequest.Raw["TwoFactorToken"] = "invalid_token";
-        tokenRequest.Raw["TwoFactorProvider"] = TwoFactorProviderType.Email.ToString(); 
+        tokenRequest.Raw["TwoFactorProvider"] = TwoFactorProviderType.Email.ToString();
 
         // 5 -> set up 2FA verification to fail
         _twoFactorAuthenticationValidator
