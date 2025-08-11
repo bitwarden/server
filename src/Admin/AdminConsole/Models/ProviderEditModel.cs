@@ -90,6 +90,7 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         switch (Type)
         {
             case ProviderType.Msp:
+            case ProviderType.BusinessUnit:
                 existingProvider.Gateway = Gateway;
                 existingProvider.GatewayCustomerId = GatewayCustomerId;
                 existingProvider.GatewaySubscriptionId = GatewaySubscriptionId;
