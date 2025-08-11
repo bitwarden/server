@@ -304,7 +304,7 @@ public class BaseRequestValidatorTests
 
         // 4 -> provide invalid 2FA token
         tokenRequest.Raw["TwoFactorToken"] = "invalid_token";
-        tokenRequest.Raw["TwoFactorProvider"] = "0"; // Email provider
+        tokenRequest.Raw["TwoFactorProvider"] = TwoFactorProviderType.Email.ToString(); 
 
         // 5 -> set up 2FA verification to fail
         _twoFactorAuthenticationValidator
@@ -319,6 +319,7 @@ public class BaseRequestValidatorTests
         await _mailService.Received(1)
             .SendFailedTwoFactorAttemptEmailAsync(
                 user.Email,
+                TwoFactorProviderType.Email,
                 Arg.Any<DateTime>(),
                 Arg.Any<string>());
     }
@@ -346,7 +347,7 @@ public class BaseRequestValidatorTests
 
         // 4 -> provide invalid remember token (remember token expired)
         tokenRequest.Raw["TwoFactorToken"] = "expired_remember_token";
-        tokenRequest.Raw["TwoFactorProvider"] = "5"; // Remember provider (Remember = 5)
+        tokenRequest.Raw["TwoFactorProvider"] = "5"; // Remember provider
 
         // 5 -> set up remember token verification to fail
         _twoFactorAuthenticationValidator
@@ -369,7 +370,7 @@ public class BaseRequestValidatorTests
         // Assert
         // Verify that the failed 2FA email was NOT sent for remember token expiration
         await _mailService.DidNotReceive()
-            .SendFailedTwoFactorAttemptEmailAsync(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
+            .SendFailedTwoFactorAttemptEmailAsync(Arg.Any<string>(), Arg.Any<TwoFactorProviderType>(), Arg.Any<DateTime>(), Arg.Any<string>());
     }
 
     // Test grantTypes that require SSO when a user is in an organization that requires it
