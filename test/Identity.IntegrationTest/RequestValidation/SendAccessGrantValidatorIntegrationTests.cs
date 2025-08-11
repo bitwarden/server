@@ -110,7 +110,32 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
     }
 
     [Fact]
-    public async Task SendAccessGrant_NeverAuthenticateSend_ReturnsInvalidRequest()
+    public async Task SendAccessGrant_EmptySendGuid_ReturnsInvalidGrant()
+    {
+        // Arrange
+        var sendId = Guid.Empty;
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                var featureService = Substitute.For<IFeatureService>();
+                featureService.IsEnabled(FeatureFlagKeys.SendAccess).Returns(true);
+                services.AddSingleton(featureService);
+            });
+        }).CreateClient();
+
+        var requestBody = CreateTokenRequestBody(sendId);
+
+        // Act
+        var response = await client.PostAsync("/connect/token", requestBody);
+
+        // Assert
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("invalid_grant", content);
+    }
+
+    [Fact]
+    public async Task SendAccessGrant_NeverAuthenticateSend_ReturnsInvalidGrant()
     {
         // Arrange
         var sendId = Guid.NewGuid();
@@ -135,7 +160,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
 
         // Assert
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Invalid request", content);
+        Assert.Contains("invalid_grant", content);
     }
 
     [Fact]

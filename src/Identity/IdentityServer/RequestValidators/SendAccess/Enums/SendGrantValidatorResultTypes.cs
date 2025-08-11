@@ -5,6 +5,7 @@
 /// </summary>
 internal enum SendGrantValidatorResultTypes
 {
+    ValidSendGuid,
     MissingSendId,
-    InvalidRequest
+    InvalidSendId
 }

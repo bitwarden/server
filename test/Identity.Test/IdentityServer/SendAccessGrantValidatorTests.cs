@@ -69,7 +69,7 @@ public class SendAccessGrantValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_InvalidSendId_ReturnsInvalidRequest(
+    public async Task ValidateAsync_InvalidSendId_ReturnsInvalidGrant(
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         SutProvider<SendAccessGrantValidator> sutProvider)
     {
@@ -91,12 +91,12 @@ public class SendAccessGrantValidatorTests
         await sutProvider.Sut.ValidateAsync(context);
 
         // Assert
-        Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, context.Result.Error);
-        Assert.Equal("send_id is required.", context.Result.ErrorDescription);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
+        Assert.Equal("send_id is invalid.", context.Result.ErrorDescription);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_EmptyGuidSendId_ReturnsInvalidRequest(
+    public async Task ValidateAsync_EmptyGuidSendId_ReturnsInvalidGrant(
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         SutProvider<SendAccessGrantValidator> sutProvider)
     {
@@ -110,12 +110,12 @@ public class SendAccessGrantValidatorTests
         await sutProvider.Sut.ValidateAsync(context);
 
         // Assert
-        Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, context.Result.Error);
-        Assert.Equal("send_id is required.", context.Result.ErrorDescription);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
+        Assert.Equal("send_id is invalid.", context.Result.ErrorDescription);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_NeverAuthenticateMethod_ReturnsInvalidRequest(
+    public async Task ValidateAsync_NeverAuthenticateMethod_ReturnsInvalidGrant(
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         SutProvider<SendAccessGrantValidator> sutProvider,
         Guid sendId)
@@ -134,8 +134,8 @@ public class SendAccessGrantValidatorTests
         await sutProvider.Sut.ValidateAsync(context);
 
         // Assert
-        Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, context.Result.Error);
-        Assert.Equal("Invalid request.", context.Result.ErrorDescription);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
+        Assert.Equal("send_id is invalid.", context.Result.ErrorDescription);
     }
 
     [Theory, BitAutoData]
