@@ -456,7 +456,7 @@ public class AccountController : Controller
         }
         else
         {
-            existingUser = await GetUserFromManualLinkingToken(userIdentifier);
+            existingUser = await GetUserFromManualLinkingData(userIdentifier);
         }
 
         // Try to find the OrganizationUser if it exists.
@@ -592,7 +592,7 @@ public class AccountController : Controller
         return user;
     }
 
-    private async Task<User> GetUserFromManualLinkingToken(string userIdentifier)
+    private async Task<User> GetUserFromManualLinkingData(string userIdentifier)
     {
         User user = null;
         var split = userIdentifier.Split(",");
