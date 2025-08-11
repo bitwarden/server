@@ -68,9 +68,9 @@ BEGIN
         ST.CreationDate,
         ST.RevisionDate
     FROM
-      dbo.[SecurityTaskView] ST
-      INNER JOIN OrganizationAccess OA
-          ON ST.OrganizationId = OA.OrganizationId
+        dbo.[SecurityTaskView] ST
+        INNER JOIN OrganizationAccess OA
+            ON ST.OrganizationId = OA.OrganizationId
     WHERE
         (@Status IS NULL OR ST.Status = @Status)
         AND (
