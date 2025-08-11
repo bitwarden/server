@@ -22,6 +22,8 @@ BEGIN
             CC.CipherId
         FROM
             dbo.OrganizationUser OU
+            INNER JOIN dbo.OrganizationView O
+                ON O.Id = OU.OrganizationId
             JOIN dbo.CollectionUser CU
                 ON CU.OrganizationUserId = OU.Id
             JOIN dbo.CollectionCipher CC
