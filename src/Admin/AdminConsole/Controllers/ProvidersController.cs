@@ -1,11 +1,16 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
+using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -34,51 +39,50 @@ namespace Bit.Admin.AdminConsole.Controllers;
 public class ProvidersController : Controller
 {
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationService _organizationService;
+    private readonly IResellerClientOrganizationSignUpCommand _resellerClientOrganizationSignUpCommand;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly GlobalSettings _globalSettings;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderService _providerService;
-    private readonly IUserService _userService;
     private readonly ICreateProviderCommand _createProviderCommand;
     private readonly IFeatureService _featureService;
     private readonly IProviderPlanRepository _providerPlanRepository;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IPricingClient _pricingClient;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IAccessControlService _accessControlService;
     private readonly string _stripeUrl;
     private readonly string _braintreeMerchantUrl;
     private readonly string _braintreeMerchantId;
 
     public ProvidersController(
         IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService,
+        IResellerClientOrganizationSignUpCommand resellerClientOrganizationSignUpCommand,
         IProviderRepository providerRepository,
         IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderService providerService,
         GlobalSettings globalSettings,
         IApplicationCacheService applicationCacheService,
-        IUserService userService,
         ICreateProviderCommand createProviderCommand,
         IFeatureService featureService,
         IProviderPlanRepository providerPlanRepository,
         IProviderBillingService providerBillingService,
         IWebHostEnvironment webHostEnvironment,
         IPricingClient pricingClient,
-        IStripeAdapter stripeAdapter)
+        IStripeAdapter stripeAdapter,
+        IAccessControlService accessControlService)
     {
         _organizationRepository = organizationRepository;
-        _organizationService = organizationService;
+        _resellerClientOrganizationSignUpCommand = resellerClientOrganizationSignUpCommand;
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerService = providerService;
         _globalSettings = globalSettings;
         _applicationCacheService = applicationCacheService;
-        _userService = userService;
         _createProviderCommand = createProviderCommand;
         _featureService = featureService;
         _providerPlanRepository = providerPlanRepository;
@@ -88,6 +92,7 @@ public class ProvidersController : Controller
         _stripeUrl = webHostEnvironment.GetStripeUrl();
         _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
         _braintreeMerchantId = globalSettings.Braintree.MerchantId;
+        _accessControlService = accessControlService;
     }
 
     [RequirePermission(Permission.Provider_List_View)]
@@ -290,9 +295,14 @@ public class ProvidersController : Controller
             return View(oldModel);
         }
 
+        var originalProviderStatus = provider.Enabled;
+
         model.ToProvider(provider);
 
-        await _providerRepository.ReplaceAsync(provider);
+        provider.Enabled = _accessControlService.UserHasPermission(Permission.Provider_CheckEnabledBox)
+            ? model.Enabled : originalProviderStatus;
+
+        await _providerService.UpdateAsync(provider);
         await _applicationCacheService.UpsertProviderAbilityAsync(provider);
 
         if (!provider.IsBillable())
@@ -459,7 +469,7 @@ public class ProvidersController : Controller
         }
 
         var organization = model.CreateOrganization(provider);
-        await _organizationService.CreatePendingOrganization(organization, model.Owners, User, _userService, model.SalesAssistedTrialStarted);
+        await _resellerClientOrganizationSignUpCommand.SignUpResellerClientAsync(organization, model.Owners);
         await _providerService.AddOrganization(providerId, organization.Id, null);
 
         return RedirectToAction("Edit", "Providers", new { id = providerId });

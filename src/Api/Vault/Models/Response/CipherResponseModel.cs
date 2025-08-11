@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data.Organizations;
@@ -131,13 +134,13 @@ public class CipherDetailsResponseModel : CipherResponseModel
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherDetails")
         : base(cipher, user, organizationAbilities, globalSettings, obj)
     {
-        if (collectionCiphers?.ContainsKey(cipher.Id) ?? false)
+        if (collectionCiphers?.TryGetValue(cipher.Id, out var collectionCipher) ?? false)
         {
-            CollectionIds = collectionCiphers[cipher.Id].Select(c => c.CollectionId);
+            CollectionIds = collectionCipher.Select(c => c.CollectionId);
         }
         else
         {
-            CollectionIds = new Guid[] { };
+            CollectionIds = [];
         }
     }
 
@@ -149,7 +152,7 @@ public class CipherDetailsResponseModel : CipherResponseModel
         IEnumerable<CollectionCipher> collectionCiphers, string obj = "cipherDetails")
         : base(cipher, user, organizationAbilities, globalSettings, obj)
     {
-        CollectionIds = collectionCiphers?.Select(c => c.CollectionId) ?? new List<Guid>();
+        CollectionIds = collectionCiphers?.Select(c => c.CollectionId) ?? [];
     }
 
     public CipherDetailsResponseModel(
@@ -160,7 +163,7 @@ public class CipherDetailsResponseModel : CipherResponseModel
         string obj = "cipherDetails")
         : base(cipher, user, organizationAbilities, globalSettings, obj)
     {
-        CollectionIds = cipher.CollectionIds ?? new List<Guid>();
+        CollectionIds = cipher.CollectionIds ?? [];
     }
 
     public IEnumerable<Guid> CollectionIds { get; set; }
@@ -172,13 +175,13 @@ public class CipherMiniDetailsResponseModel : CipherMiniResponseModel
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, bool orgUseTotp, string obj = "cipherMiniDetails")
         : base(cipher, globalSettings, orgUseTotp, obj)
     {
-        if (collectionCiphers?.ContainsKey(cipher.Id) ?? false)
+        if (collectionCiphers?.TryGetValue(cipher.Id, out var collectionCipher) ?? false)
         {
-            CollectionIds = collectionCiphers[cipher.Id].Select(c => c.CollectionId);
+            CollectionIds = collectionCipher.Select(c => c.CollectionId);
         }
         else
         {
-            CollectionIds = new Guid[] { };
+            CollectionIds = [];
         }
     }
 
@@ -186,7 +189,7 @@ public class CipherMiniDetailsResponseModel : CipherMiniResponseModel
         GlobalSettings globalSettings, bool orgUseTotp, string obj = "cipherMiniDetails")
         : base(cipher, globalSettings, orgUseTotp, obj)
     {
-        CollectionIds = cipher.CollectionIds ?? new List<Guid>();
+        CollectionIds = cipher.CollectionIds ?? [];
     }
 
     public CipherMiniDetailsResponseModel(CipherOrganizationDetailsWithCollections cipher,

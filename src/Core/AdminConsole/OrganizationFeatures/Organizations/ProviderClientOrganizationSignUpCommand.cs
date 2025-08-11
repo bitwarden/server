@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -8,9 +11,6 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -37,7 +37,6 @@ public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizati
 
     private readonly ICurrentContext _currentContext;
     private readonly IPricingClient _pricingClient;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly IApplicationCacheService _applicationCacheService;
@@ -46,7 +45,6 @@ public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizati
     public ProviderClientOrganizationSignUpCommand(
         ICurrentContext currentContext,
         IPricingClient pricingClient,
-        IReferenceEventService referenceEventService,
         IOrganizationRepository organizationRepository,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IApplicationCacheService applicationCacheService,
@@ -54,7 +52,6 @@ public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizati
     {
         _currentContext = currentContext;
         _pricingClient = pricingClient;
-        _referenceEventService = referenceEventService;
         _organizationRepository = organizationRepository;
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _applicationCacheService = applicationCacheService;
@@ -107,16 +104,6 @@ public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizati
         };
 
         var returnValue = await SignUpAsync(organization, signup.CollectionName);
-
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.Signup, organization, _currentContext)
-            {
-                PlanName = plan.Name,
-                PlanType = plan.Type,
-                Seats = returnValue.Organization.Seats,
-                SignupInitiationPath = signup.InitiationPath,
-                Storage = returnValue.Organization.MaxStorageGb,
-            });
 
         return returnValue;
     }

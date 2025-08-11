@@ -1,6 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Data;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Dapper;
+using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
@@ -13,4 +16,17 @@ public class OrganizationIntegrationRepository : Repository<OrganizationIntegrat
     public OrganizationIntegrationRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
     { }
+
+    public async Task<List<OrganizationIntegration>> GetManyByOrganizationAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationIntegration>(
+                "[dbo].[OrganizationIntegration_ReadManyByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
 }

@@ -67,7 +67,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(0, kdf);
         var kdfIterations = AssertHelper.AssertJsonProperty(root, "KdfIterations", JsonValueKind.Number).GetInt32();
         Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, kdfIterations);
-        AssertUserDecryptionOptions(root);
+        AssertUserDecryptionOptions(root, user);
     }
 
     [Theory, RegisterFinishRequestModelCustomize]
@@ -238,7 +238,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
-    public async Task TokenEndpoint_GrantTypeClientCredentials_AsLegacyUser_NotOnWebClient_Fails(
+    public async Task TokenEndpoint_GrantTypeClientCredentials_AsLegacyUser_Fails(
         RegisterFinishRequestModel model,
         string deviceId)
     {
@@ -277,7 +277,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var errorBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "ErrorModel", JsonValueKind.Object);
         var message = AssertHelper.AssertJsonProperty(error, "Message", JsonValueKind.String).GetString();
-        Assert.StartsWith("Encryption key migration is required.", message);
+        Assert.StartsWith("Legacy encryption without a userkey is no longer supported.", message);
     }
 
 
@@ -601,14 +601,27 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         Assert.StartsWith("sso authentication", errorDescription.ToLowerInvariant());
     }
 
-    private static void AssertUserDecryptionOptions(JsonElement tokenResponse)
+    private static void AssertUserDecryptionOptions(JsonElement tokenResponse, User expectedUser)
     {
-        var userDecryptionOptions = AssertHelper.AssertJsonProperty(tokenResponse, "UserDecryptionOptions", JsonValueKind.Object)
-            .EnumerateObject();
+        var userDecryptionOptions =
+            AssertHelper.AssertJsonProperty(tokenResponse, "UserDecryptionOptions", JsonValueKind.Object);
 
-        Assert.Collection(userDecryptionOptions,
-            (prop) => { Assert.Equal("HasMasterPassword", prop.Name); Assert.Equal(JsonValueKind.True, prop.Value.ValueKind); },
-            (prop) => { Assert.Equal("Object", prop.Name); Assert.Equal("userDecryptionOptions", prop.Value.GetString()); });
+        AssertHelper.AssertJsonProperty(userDecryptionOptions, "HasMasterPassword", JsonValueKind.True);
+        var objectString = AssertHelper.AssertJsonProperty(userDecryptionOptions, "Object", JsonValueKind.String).ToString();
+        Assert.Equal("userDecryptionOptions", objectString);
+        var masterPasswordUnlock = AssertHelper.AssertJsonProperty(userDecryptionOptions, "MasterPasswordUnlock", JsonValueKind.Object);
+        // MasterPasswordUnlock.Kdf
+        var kdf = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "Kdf", JsonValueKind.Object);
+        var kdfType = AssertHelper.AssertJsonProperty(kdf, "KdfType", JsonValueKind.Number).GetInt32();
+        Assert.Equal((int)expectedUser.Kdf, kdfType);
+        var kdfIterations = AssertHelper.AssertJsonProperty(kdf, "Iterations", JsonValueKind.Number).GetInt32();
+        Assert.Equal(expectedUser.KdfIterations, kdfIterations);
+        // MasterPasswordUnlock.MasterKeyEncryptedUserKey
+        var masterKeyEncryptedUserKey = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "MasterKeyEncryptedUserKey", JsonValueKind.String).ToString();
+        Assert.Equal(expectedUser.Key, masterKeyEncryptedUserKey);
+        // MasterPasswordUnlock.Salt
+        var salt = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "Salt", JsonValueKind.String).ToString();
+        Assert.Equal(expectedUser.Email.ToLower(), salt);
     }
 
     private void ReinitializeDbForTests(IdentityApplicationFactory factory)

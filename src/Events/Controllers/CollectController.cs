@@ -1,4 +1,7 @@
-﻿using Bit.Core.Context;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -69,9 +72,9 @@ public class CollectController : Controller
                         continue;
                     }
                     Cipher cipher = null;
-                    if (ciphersCache.ContainsKey(eventModel.CipherId.Value))
+                    if (ciphersCache.TryGetValue(eventModel.CipherId.Value, out var cachedCipher))
                     {
-                        cipher = ciphersCache[eventModel.CipherId.Value];
+                        cipher = cachedCipher;
                     }
                     else
                     {
@@ -96,10 +99,7 @@ public class CollectController : Controller
                             continue;
                         }
                     }
-                    if (!ciphersCache.ContainsKey(eventModel.CipherId.Value))
-                    {
-                        ciphersCache.Add(eventModel.CipherId.Value, cipher);
-                    }
+                    ciphersCache.TryAdd(eventModel.CipherId.Value, cipher);
                     cipherEvents.Add(new Tuple<Cipher, EventType, DateTime?>(cipher, eventModel.Type, eventModel.Date));
                     break;
                 case EventType.Organization_ClientExportedVault:

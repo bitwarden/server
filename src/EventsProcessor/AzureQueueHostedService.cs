@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Azure.Storage.Queues;
 using Bit.Core;
 using Bit.Core.Models.Data;
@@ -83,11 +86,24 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                     await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 }
             }
+            catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogDebug("Task.Delay cancelled during Alpine container shutdown");
+                break;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred processing message block.");
 
-                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                }
+                catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogDebug("Task.Delay cancelled during Alpine container shutdown");
+                    break;
+                }
             }
         }
 

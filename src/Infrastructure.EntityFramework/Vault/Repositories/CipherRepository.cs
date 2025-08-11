@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoMapper;
 using Bit.Core.KeyManagement.UserKey;
@@ -458,7 +461,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            IQueryable<CipherDetails> cipherDetailsView = withOrganizations ?
+            var cipherDetailsView = withOrganizations ?
                 new UserCipherDetailsQuery(userId).Run(dbContext) :
                 new CipherDetailsQuery(userId).Run(dbContext);
             if (!withOrganizations)
@@ -487,8 +490,15 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                         ArchivedDate = c.ArchivedDate,
                                     };
             }
+
             var ciphers = await cipherDetailsView.ToListAsync();
-            return ciphers;
+
+            return ciphers.GroupBy(c => c.Id)
+                .Select(g => g.OrderByDescending(c => c.Manage)
+                    .ThenByDescending(c => c.Edit)
+                    .ThenByDescending(c => c.ViewPassword)
+                    .First())
+                .ToList();
         }
     }
 

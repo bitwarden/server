@@ -8,13 +8,12 @@ using Bit.Core.Test.AutoFixture.CurrentContextFixtures;
 using Bit.Core.Test.Tools.AutoFixture.SendFixtures;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
-using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Tools.SendFeatures.Commands;
 using Bit.Core.Tools.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
@@ -32,10 +31,11 @@ public class NonAnonymousSendCommandTests
     private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendValidationService _sendValidationService;
     private readonly IFeatureService _featureService;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
     private readonly ISendCoreHelperService _sendCoreHelperService;
     private readonly NonAnonymousSendCommand _nonAnonymousSendCommand;
+
+    private readonly ILogger<NonAnonymousSendCommand> _logger;
 
     public NonAnonymousSendCommandTests()
     {
@@ -45,9 +45,9 @@ public class NonAnonymousSendCommandTests
         _sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
         _featureService = Substitute.For<IFeatureService>();
         _sendValidationService = Substitute.For<ISendValidationService>();
-        _referenceEventService = Substitute.For<IReferenceEventService>();
         _currentContext = Substitute.For<ICurrentContext>();
         _sendCoreHelperService = Substitute.For<ISendCoreHelperService>();
+        _logger = Substitute.For<ILogger<NonAnonymousSendCommand>>();
 
         _nonAnonymousSendCommand = new NonAnonymousSendCommand(
             _sendRepository,
@@ -55,9 +55,8 @@ public class NonAnonymousSendCommandTests
             _pushNotificationService,
             _sendAuthorizationService,
             _sendValidationService,
-            _referenceEventService,
-            _currentContext,
-            _sendCoreHelperService
+            _sendCoreHelperService,
+            _logger
         );
     }
 
@@ -135,14 +134,6 @@ public class NonAnonymousSendCommandTests
             // For new Sends
             await _sendRepository.Received(1).CreateAsync(send);
             await _pushNotificationService.Received(1).PushSyncSendCreateAsync(send);
-            await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
-                e.Id == userId &&
-                e.Type == ReferenceEventType.SendCreated &&
-                e.Source == ReferenceEventSource.User &&
-                e.SendType == send.Type &&
-                e.SendHasNotes == true &&
-                e.ClientId == "test-client" &&
-                e.ClientVersion == Version.Parse("1.0.0")));
         }
         else
         {
@@ -150,7 +141,6 @@ public class NonAnonymousSendCommandTests
             await _sendRepository.Received(1).UpsertAsync(send);
             Assert.NotEqual(initialDate, send.RevisionDate);
             await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
-            await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         }
     }
 
@@ -234,14 +224,6 @@ public class NonAnonymousSendCommandTests
             // For new Sends
             await _sendRepository.Received(1).CreateAsync(send);
             await _pushNotificationService.Received(1).PushSyncSendCreateAsync(send);
-            await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
-                e.Id == userId &&
-                e.Type == ReferenceEventType.SendCreated &&
-                e.Source == ReferenceEventSource.User &&
-                e.SendType == send.Type &&
-                e.HasPassword == false &&
-                e.ClientId == "test-client" &&
-                e.ClientVersion == Version.Parse("1.0.0")));
         }
         else
         {
@@ -249,7 +231,6 @@ public class NonAnonymousSendCommandTests
             await _sendRepository.Received(1).UpsertAsync(send);
             Assert.NotEqual(initialDate, send.RevisionDate);
             await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
-            await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         }
     }
 
@@ -285,7 +266,6 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
         await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
         await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
-        await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
     }
 
     [Theory]
@@ -328,14 +308,6 @@ public class NonAnonymousSendCommandTests
             // For new Sends
             await _sendRepository.Received(1).CreateAsync(send);
             await _pushNotificationService.Received(1).PushSyncSendCreateAsync(send);
-            await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
-                e.Id == userId &&
-                e.Type == ReferenceEventType.SendCreated &&
-                e.Source == ReferenceEventSource.User &&
-                e.SendType == send.Type &&
-                e.SendHasNotes == true &&
-                e.ClientId == "test-client" &&
-                e.ClientVersion == Version.Parse("1.0.0")));
         }
         else
         {
@@ -343,7 +315,6 @@ public class NonAnonymousSendCommandTests
             await _sendRepository.Received(1).UpsertAsync(send);
             Assert.NotEqual(initialDate, send.RevisionDate);
             await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
-            await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         }
     }
 
@@ -386,9 +357,6 @@ public class NonAnonymousSendCommandTests
         // Verify push notification wasn't sent
         await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
         await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
-
-        // Verify reference event service wasn't called
-        await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
     }
 
     [Theory]
@@ -431,13 +399,6 @@ public class NonAnonymousSendCommandTests
             // For new Sends
             await _sendRepository.Received(1).CreateAsync(send);
             await _pushNotificationService.Received(1).PushSyncSendCreateAsync(send);
-            await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
-                e.Id == userId &&
-                e.Type == ReferenceEventType.SendCreated &&
-                e.Source == ReferenceEventSource.User &&
-                e.SendType == send.Type &&
-                e.ClientId == "test-client" &&
-                e.ClientVersion == Version.Parse("1.0.0")));
         }
         else
         {
@@ -445,7 +406,6 @@ public class NonAnonymousSendCommandTests
             await _sendRepository.Received(1).UpsertAsync(send);
             Assert.NotEqual(initialDate, send.RevisionDate);
             await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
-            await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         }
     }
 
@@ -481,9 +441,6 @@ public class NonAnonymousSendCommandTests
 
         // Verify push notification was sent for the update
         await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
-
-        // Verify no reference event was raised (only happens for new sends)
-        await _referenceEventService.DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
     }
 
     [Fact]
@@ -699,11 +656,11 @@ public class NonAnonymousSendCommandTests
             UserId = userId
         };
         var fileData = new SendFileData();
-        var fileLength = 15L * 1024L * 1024L * 1024L; // 15GB
+        var fileLength = 15L * 1024L * 1024L; // 15 MB
 
-        // Configure validation service to return large but insufficient storage (10GB for self-hosted non-premium)
+        // Configure validation service to return insufficient storage
         _sendValidationService.StorageRemainingForSendAsync(send)
-            .Returns(10L * 1024L * 1024L * 1024L); // 10GB remaining (self-hosted default)
+            .Returns(10L * 1024L * 1024L); // 10 MB remaining
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -734,11 +691,40 @@ public class NonAnonymousSendCommandTests
             UserId = userId
         };
         var fileData = new SendFileData();
-        var fileLength = 2L * 1024L * 1024L * 1024L; // 2GB
+        var fileLength = 2L * 1024L * 1024L * 1024L; // 2MB
 
-        // Configure validation service to return 1GB storage (cloud non-premium default)
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
+
+        Assert.Contains("Max file size is ", exception.Message);
+
+        // Verify no further methods were called
+        await _sendValidationService.DidNotReceive().StorageRemainingForSendAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+        await _pushNotificationService.DidNotReceive().PushSyncSendCreateAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushSyncSendUpdateAsync(Arg.Any<Send>());
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_UserCanAccessPremium_IsNotPremium_IsNotSelfHosted_NotEnoughSpace_ThrowsBadRequest()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = userId
+        };
+        var fileData = new SendFileData();
+        var fileLength = 2L * 1024L * 1024L; // 2MB
+
+        // Configure validation service to return 1 MB storage remaining
         _sendValidationService.StorageRemainingForSendAsync(send)
-            .Returns(1L * 1024L * 1024L * 1024L); // 1GB remaining (cloud default)
+            .Returns(1L * 1024L * 1024L);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -803,7 +789,7 @@ public class NonAnonymousSendCommandTests
             UserId = null
         };
         var fileData = new SendFileData();
-        var fileLength = 2L * 1024L * 1024L * 1024L; // 2GB
+        var fileLength = 2L * 1024L * 1024L; // 2 MB
 
         // Configure validation service to throw BadRequest when checking storage for org without storage
         _sendValidationService.StorageRemainingForSendAsync(send)
@@ -839,11 +825,10 @@ public class NonAnonymousSendCommandTests
             UserId = null
         };
         var fileData = new SendFileData();
-        var fileLength = 2L * 1024L * 1024L * 1024L; // 2GB
+        var fileLength = 2L * 1024L * 1024L; // 2 MB
 
-        // Configure validation service to return 1GB storage (org's max storage limit)
         _sendValidationService.StorageRemainingForSendAsync(send)
-            .Returns(1L * 1024L * 1024L * 1024L); // 1GB remaining
+            .Returns(1L * 1024L * 1024L); // 1 MB remaining
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -1027,7 +1012,7 @@ public class NonAnonymousSendCommandTests
         };
 
         // Setup validation to succeed
-        _sendFileStorageService.ValidateFileAsync(send, sendFileData.Id, sendFileData.Size, SendFileSettingHelper.FILE_SIZE_LEEWAY).Returns((true, sendFileData.Size));
+        _sendFileStorageService.ValidateFileAsync(send, sendFileData.Id, Arg.Any<long>(), Arg.Any<long>()).Returns((true, sendFileData.Size));
 
         // Act
         await _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send);
@@ -1061,7 +1046,7 @@ public class NonAnonymousSendCommandTests
             Data = JsonSerializer.Serialize(sendFileData)
         };
 
-        _sendFileStorageService.ValidateFileAsync(send, sendFileData.Id, sendFileData.Size, SendFileSettingHelper.FILE_SIZE_LEEWAY).Returns((true, sendFileData.Size));
+        _sendFileStorageService.ValidateFileAsync(send, sendFileData.Id, Arg.Any<long>(), Arg.Any<long>()).Returns((true, sendFileData.Size));
 
         // Act
         await _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send);

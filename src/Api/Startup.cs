@@ -27,12 +27,11 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Api.Auth.Models.Request.WebAuthn;
-using Bit.Api.Billing;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Tools.ImportFeatures;
-using Bit.Core.Tools.ReportFeatures;
 using Bit.Core.Auth.Models.Api.Request;
+using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Tools.SendFeatures;
 
 #if !OSS
@@ -184,7 +183,6 @@ public class Startup
         services.AddImportServices();
         services.AddPhishingDomainServices(globalSettings);
 
-        services.AddBillingQueries();
         services.AddSendServices();
 
         // Authorization Handlers

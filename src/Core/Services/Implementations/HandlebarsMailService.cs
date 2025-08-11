@@ -21,6 +21,7 @@ using Bit.Core.SecretsManager.Models.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
+using Core.Auth.Enums;
 using HandlebarsDotNet;
 
 namespace Bit.Core.Services;
@@ -166,14 +167,14 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true)
+    public async Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, TwoFactorEmailPurpose purpose)
     {
         var message = CreateDefaultMessage("Your Bitwarden Verification Code", email);
         var requestDateTime = DateTime.UtcNow;
         var model = new TwoFactorEmailTokenViewModel
         {
             Token = token,
-            EmailTotpAction = authentication ? "logging in" : "setting up two-step login",
+            EmailTotpAction = (purpose == TwoFactorEmailPurpose.Setup) ? "setting up two-step login" : "logging in",
             AccountEmail = accountEmail,
             TheDate = requestDateTime.ToLongDateString(),
             TheTime = requestDateTime.ToShortTimeString(),
@@ -182,6 +183,9 @@ public class HandlebarsMailService : IMailService
             DeviceType = deviceType,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
+            // We only want to remind users to set up 2FA if they're getting a new device verification email.
+            // For login with 2FA, and setup of 2FA, we do not want to show the reminder because users are already doing so.
+            DisplayTwoFactorReminder = purpose == TwoFactorEmailPurpose.NewDeviceVerification
         };
         await AddMessageContentAsync(message, "Auth.TwoFactorEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);

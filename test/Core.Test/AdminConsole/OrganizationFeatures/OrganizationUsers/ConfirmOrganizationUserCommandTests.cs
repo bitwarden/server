@@ -11,6 +11,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
@@ -117,6 +118,11 @@ public class ConfirmOrganizationUserCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var userRepository = sutProvider.GetDependency<IUserRepository>();
 
+        var device = new Device() { Id = Guid.NewGuid(), UserId = user.Id, PushToken = "pushToken", Identifier = "identifier" };
+        sutProvider.GetDependency<IDeviceRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns([device]);
+
         org.PlanType = planType;
         orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
         orgUser.UserId = user.Id;
@@ -132,6 +138,12 @@ public class ConfirmOrganizationUserCommandTests
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
         await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email);
         await organizationUserRepository.Received(1).ReplaceManyAsync(Arg.Is<List<OrganizationUser>>(users => users.Contains(orgUser) && users.Count == 1));
+        await sutProvider.GetDependency<IPushRegistrationService>()
+            .Received(1)
+            .DeleteUserRegistrationOrganizationAsync(
+                Arg.Is<IEnumerable<string>>(ids => ids.Contains(device.Id.ToString()) && ids.Count() == 1),
+                org.Id.ToString());
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncOrgKeysAsync(user.Id);
     }
 
 
@@ -441,5 +453,84 @@ public class ConfirmOrganizationUserCommandTests
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
         await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email, orgUser.AccessSecretsManager);
         await organizationUserRepository.Received(1).ReplaceManyAsync(Arg.Is<List<OrganizationUser>>(users => users.Contains(orgUser) && users.Count == 1));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmUserAsync_WithCreateDefaultLocationEnabled_WithOrganizationDataOwnershipPolicyApplicable_WithValidCollectionName_CreatesDefaultCollection(
+        Organization organization, OrganizationUser confirmingUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
+        string key, string collectionName, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        orgUser.OrganizationId = confirmingUser.OrganizationId = organization.Id;
+        orgUser.UserId = user.Id;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
+        sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
+            .Returns(new List<Guid> { orgUser.Id });
+
+        await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
+
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(1)
+            .CreateDefaultCollectionsAsync(
+                organization.Id,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.Id)),
+                collectionName);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmUserAsync_WithCreateDefaultLocationEnabled_WithOrganizationDataOwnershipPolicyApplicable_WithInvalidCollectionName_DoesNotCreateDefaultCollection(
+        Organization org, OrganizationUser confirmingUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
+        string key, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
+    {
+        org.PlanType = PlanType.EnterpriseAnnually;
+        orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
+        orgUser.UserId = user.Id;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+        sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
+
+        await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, "");
+
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceive()
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmUserAsync_WithCreateDefaultLocationEnabled_WithOrganizationDataOwnershipPolicyNotApplicable_DoesNotCreateDefaultCollection(
+        Organization org, OrganizationUser confirmingUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
+        string key, string collectionName, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
+    {
+        org.PlanType = PlanType.EnterpriseAnnually;
+        orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
+        orgUser.UserId = user.Id;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser });
+        sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.CreateDefaultLocation).Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(org.Id)
+            .Returns(new List<Guid> { orgUser.UserId!.Value });
+
+        await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
+
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceive()
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 }

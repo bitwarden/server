@@ -1,4 +1,7 @@
-﻿using Azure.Storage.Blobs;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using Bit.Core.Enums;
@@ -88,7 +91,7 @@ public class AzureSendFileStorageService : ISendFileStorageService
         return sasUri.ToString();
     }
 
-    public async Task<(bool, long?)> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
+    public async Task<(bool, long)> ValidateFileAsync(Send send, string fileId, long minimum, long maximum)
     {
         await InitAsync();
 
@@ -116,17 +119,14 @@ public class AzureSendFileStorageService : ISendFileStorageService
             await blobClient.SetHttpHeadersAsync(headers);
 
             var length = blobProperties.Value.ContentLength;
-            if (length < expectedFileSize - leeway || length > expectedFileSize + leeway)
-            {
-                return (false, length);
-            }
+            var valid = minimum <= length || length <= maximum;
 
-            return (true, length);
+            return (valid, length);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled error in ValidateFileAsync");
-            return (false, null);
+            _logger.LogError(ex, $"A storage operation failed in {nameof(ValidateFileAsync)}");
+            return (false, -1);
         }
     }
 
