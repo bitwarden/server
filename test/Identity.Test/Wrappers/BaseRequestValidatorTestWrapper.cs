@@ -63,7 +63,8 @@ IBaseRequestValidatorTestWrapper
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IPolicyRequirementQuery policyRequirementQuery,
-        IAuthRequestRepository authRequestRepository) :
+        IAuthRequestRepository authRequestRepository,
+        IMailService mailService) :
          base(
             userManager,
             userService,
@@ -80,7 +81,8 @@ IBaseRequestValidatorTestWrapper
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
             policyRequirementQuery,
-            authRequestRepository)
+            authRequestRepository,
+            mailService)
     {
     }
 

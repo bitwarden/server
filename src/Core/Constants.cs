@@ -127,6 +127,7 @@ public static class FeatureFlagKeys
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
+    public const string FailedTwoFactorEmail = "pm-24425-send-2fa-failed-email";
 
     /* Autofill Team */
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
