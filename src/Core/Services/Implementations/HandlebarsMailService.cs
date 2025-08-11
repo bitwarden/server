@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Mail;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Mail;
@@ -190,6 +191,25 @@ public class HandlebarsMailService : IMailService
         await AddMessageContentAsync(message, "Auth.TwoFactorEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         message.Category = "TwoFactorEmail";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendFailedTwoFactorAttemptEmailAsync(string email, TwoFactorProviderType failedType, DateTime utcNow, string ip)
+    {
+        var message = CreateDefaultMessage("Failed two-step login attempt detected", email);
+        var model = new FailedAuthAttemptModel()
+        {
+            TheDate = utcNow.ToLongDateString(),
+            TheTime = utcNow.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+            IpAddress = ip,
+            AffectedEmail = email,
+            TwoFactorType = failedType,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
+
+        };
+        await AddMessageContentAsync(message, "Auth.FailedTwoFactorAttempt", model);
+        message.Category = "FailedTwoFactorAttempt";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
