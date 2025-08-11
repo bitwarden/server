@@ -427,8 +427,8 @@ public class AccountController : Controller
     /// <param name="claims">The claims from the external IdP.</param>
     /// <param name="userIdentifier">The user identifier used for manual SSO linking.</param>
     /// <param name="config">The SSO configuration for the organization.</param>
-    /// <returns></returns>
-    /// <exception cref="Exception"></exception>
+    /// <returns>The User to sign in.</returns>
+    /// <exception cref="Exception">An exception if the user cannot be authenticated.</exception>
     private async Task<User> AutoProvisionUserAsync(string provider, string providerUserId,
         IEnumerable<Claim> claims, string userIdentifier, SsoConfigurationData config)
     {
