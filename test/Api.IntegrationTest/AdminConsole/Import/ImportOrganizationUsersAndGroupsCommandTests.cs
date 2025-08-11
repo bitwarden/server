@@ -8,75 +8,63 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Import;
 
-public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class ImportOrganizationUsersAndGroupsCommandTests(ApiApplicationFactory factory)
+    : IntegrationTestBase(factory)
 {
-    private readonly HttpClient _client;
-    private readonly ApiApplicationFactory _factory;
-    private readonly LoginHelper _loginHelper;
+    private LoginHelper _loginHelper;
     private Organization _organization = null!;
     private string _ownerEmail = null!;
 
-    public ImportOrganizationUsersAndGroupsCommandTests(ApiApplicationFactory factory)
+    public override async Task InitializeAsync()
     {
-        _factory = factory;
-        _factory.SubstituteService((IFeatureService featureService)
-            => featureService.IsEnabled(FeatureFlagKeys.ImportAsyncRefactor)
-                .Returns(true));
-        _client = _factory.CreateClient();
-        _loginHelper = new LoginHelper(_factory, _client);
-    }
+        InitializationWithFeaturesEnabled(FeatureFlagKeys.ImportAsyncRefactor);
 
-    public async Task InitializeAsync()
-    {
+        _loginHelper = new LoginHelper(Factory, Client);
+
         // Create the owner account
         _ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
-        await _factory.LoginWithNewAccount(_ownerEmail);
+        await Factory.LoginWithNewAccount(_ownerEmail);
 
         // Create the organization
-        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
+        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(Factory, plan: PlanType.EnterpriseAnnually2023,
             ownerEmail: _ownerEmail, passwordManagerSeats: 10, paymentMethod: PaymentMethodType.Card);
 
         // Authorize with the organization api key
         await _loginHelper.LoginWithOrganizationApiKeyAsync(_organization.Id);
     }
 
-    public Task DisposeAsync()
-    {
-        _client.Dispose();
-        return Task.CompletedTask;
-    }
-
     [Fact]
     public async Task Import_Existing_Organization_User_Succeeds()
     {
-        var (email, ou) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
+        var (email, ou) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory, _organization.Id,
             OrganizationUserType.User);
 
         var externalId = Guid.NewGuid().ToString();
-        var request = new OrganizationImportRequestModel();
-        request.LargeImport = false;
-        request.OverwriteExisting = false;
-        request.Groups = [];
-        request.Members = [
-            new OrganizationImportRequestModel.OrganizationImportMemberRequestModel
-            {
-                Email = email,
-                ExternalId = externalId,
-                Deleted = false
-            }
-        ];
+        var request = new OrganizationImportRequestModel
+        {
+            LargeImport = false,
+            OverwriteExisting = false,
+            Groups = [],
+            Members =
+            [
+                new OrganizationImportRequestModel.OrganizationImportMemberRequestModel
+                {
+                    Email = email,
+                    ExternalId = externalId,
+                    Deleted = false
+                }
+            ]
+        };
 
-        var response = await _client.PostAsync($"/public/organization/import", JsonContent.Create(request));
+        var response = await Client.PostAsync($"/public/organization/import", JsonContent.Create(request));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         // Assert against the database values
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        var organizationUserRepository = Factory.GetService<IOrganizationUserRepository>();
         var orgUser = await organizationUserRepository.GetByIdAsync(ou.Id);
 
         Assert.NotNull(orgUser);
@@ -93,7 +81,7 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
     public async Task Import_New_Organization_User_Succeeds()
     {
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
-        await _factory.LoginWithNewAccount(email);
+        await Factory.LoginWithNewAccount(email);
 
         var externalId = Guid.NewGuid().ToString();
         var request = new OrganizationImportRequestModel();
@@ -109,11 +97,11 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
             }
         ];
 
-        var response = await _client.PostAsync($"/public/organization/import", JsonContent.Create(request));
+        var response = await Client.PostAsync($"/public/organization/import", JsonContent.Create(request));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         // Assert against the database values
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        var organizationUserRepository = Factory.GetService<IOrganizationUserRepository>();
         var orgUser = await organizationUserRepository.GetByOrganizationEmailAsync(_organization.Id, email);
 
         Assert.NotNull(orgUser);
@@ -128,13 +116,13 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
     public async Task Import_New_And_Existing_Organization_Users_Succeeds()
     {
         // Existing organization user
-        var (existingEmail, ou) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
+        var (existingEmail, ou) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory, _organization.Id,
             OrganizationUserType.User);
         var existingExternalId = Guid.NewGuid().ToString();
 
         // New organization user
         var newEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
-        await _factory.LoginWithNewAccount(newEmail);
+        await Factory.LoginWithNewAccount(newEmail);
         var newExternalId = Guid.NewGuid().ToString();
 
         var request = new OrganizationImportRequestModel();
@@ -156,11 +144,11 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
             }
         ];
 
-        var response = await _client.PostAsync($"/public/organization/import", JsonContent.Create(request));
+        var response = await Client.PostAsync($"/public/organization/import", JsonContent.Create(request));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         // Assert against the database values
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        var organizationUserRepository = Factory.GetService<IOrganizationUserRepository>();
 
         // Existing user
         var existingOrgUser = await organizationUserRepository.GetByIdAsync(ou.Id);
@@ -184,8 +172,8 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
     [Fact]
     public async Task Import_Existing_Groups_Succeeds()
     {
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
-        var group = await OrganizationTestHelpers.CreateGroup(_factory, _organization.Id);
+        var organizationUserRepository = Factory.GetService<IOrganizationUserRepository>();
+        var group = await OrganizationTestHelpers.CreateGroup(Factory, _organization.Id);
         var request = new OrganizationImportRequestModel();
         var addedMember = new OrganizationImportRequestModel.OrganizationImportMemberRequestModel
         {
@@ -206,11 +194,11 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
         ];
         request.Members = [addedMember];
 
-        var response = await _client.PostAsync($"/public/organization/import", JsonContent.Create(request));
+        var response = await Client.PostAsync($"/public/organization/import", JsonContent.Create(request));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         // Assert against the database values
-        var groupRepository = _factory.GetService<IGroupRepository>();
+        var groupRepository = Factory.GetService<IGroupRepository>();
         var existingGroups = (await groupRepository.GetManyByOrganizationIdAsync(_organization.Id)).ToArray();
 
         // Assert that we are actually updating the existing group, not adding a new one.
@@ -247,11 +235,11 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
         ];
         request.Members = [];
 
-        var response = await _client.PostAsync($"/public/organization/import", JsonContent.Create(request));
+        var response = await Client.PostAsync($"/public/organization/import", JsonContent.Create(request));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         // Assert against the database values
-        var groupRepository = _factory.GetService<IGroupRepository>();
+        var groupRepository = Factory.GetService<IGroupRepository>();
         var existingGroups = await groupRepository.GetManyByOrganizationIdAsync(_organization.Id);
         var existingGroup = existingGroups.Where(g => g.ExternalId == group.ExternalId).FirstOrDefault();
 
@@ -263,7 +251,7 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
     [Fact]
     public async Task Import_New_And_Existing_Groups_Succeeds()
     {
-        var existingGroup = await OrganizationTestHelpers.CreateGroup(_factory, _organization.Id);
+        var existingGroup = await OrganizationTestHelpers.CreateGroup(Factory, _organization.Id);
 
         var newGroup = new Group
         {
@@ -291,11 +279,11 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
         ];
         request.Members = [];
 
-        var response = await _client.PostAsync($"/public/organization/import", JsonContent.Create(request));
+        var response = await Client.PostAsync($"/public/organization/import", JsonContent.Create(request));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         // Assert against the database values
-        var groupRepository = _factory.GetService<IGroupRepository>();
+        var groupRepository = Factory.GetService<IGroupRepository>();
         var groups = await groupRepository.GetManyByOrganizationIdAsync(_organization.Id);
 
         var newGroupInDb = groups.Where(g => g.ExternalId == newGroup.ExternalId).FirstOrDefault();
