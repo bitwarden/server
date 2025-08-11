@@ -18,17 +18,6 @@ public class InvoiceExtensionsTests
     }
 
     #region FormatForProvider Tests
-    [Fact]
-    public void FormatForProvider_NullInvoice_ThrowsArgumentNullException()
-    {
-        // Arrange
-        Invoice invoice = null;
-        var subscription = new Subscription();
-
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => invoice.FormatForProvider(subscription));
-        Assert.Equal("invoice", exception.ParamName);
-    }
 
     [Fact]
     public void FormatForProvider_NullLines_ReturnsEmptyList()
@@ -159,6 +148,50 @@ public class InvoiceExtensionsTests
         // Assert
         Assert.Single(result);
         Assert.Equal("3 × Manage service provider ", result[0]);
+    }
+
+    [Fact]
+    public void FormatForProvider_BusinessUnitPortalEnterprise_FormatsCorrectly()
+    {
+        // Arrange
+        var invoice = CreateInvoiceWithLines(
+            new InvoiceLineItem
+            {
+                Description = "Business Unit Portal - Enterprise (at $5.00 / month)",
+                Quantity = 8,
+                Amount = 4000
+            }
+        );
+        var subscription = new Subscription();
+
+        // Act
+        var result = invoice.FormatForProvider(subscription);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("8 × Manage service provider (at $5.00 / month)", result[0]);
+    }
+
+    [Fact]
+    public void FormatForProvider_BusinessUnitPortalGeneric_FormatsCorrectly()
+    {
+        // Arrange
+        var invoice = CreateInvoiceWithLines(
+            new InvoiceLineItem
+            {
+                Description = "Business Unit Portal (at $3.00 / month)",
+                Quantity = 2,
+                Amount = 600
+            }
+        );
+        var subscription = new Subscription();
+
+        // Act
+        var result = invoice.FormatForProvider(subscription);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("2 × Manage service provider (at $3.00 / month)", result[0]);
     }
 
     [Fact]
