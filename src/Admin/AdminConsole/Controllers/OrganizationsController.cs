@@ -55,6 +55,7 @@ public class OrganizationsController : Controller
     private readonly IProviderBillingService _providerBillingService;
     private readonly IOrganizationInitiateDeleteCommand _organizationInitiateDeleteCommand;
     private readonly IPricingClient _pricingClient;
+    private readonly IResendInviteCommand _resendInviteCommand;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -79,7 +80,8 @@ public class OrganizationsController : Controller
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
         IProviderBillingService providerBillingService,
         IOrganizationInitiateDeleteCommand organizationInitiateDeleteCommand,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IResendInviteCommand resendInviteCommand)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -104,6 +106,7 @@ public class OrganizationsController : Controller
         _providerBillingService = providerBillingService;
         _organizationInitiateDeleteCommand = organizationInitiateDeleteCommand;
         _pricingClient = pricingClient;
+        _resendInviteCommand = resendInviteCommand;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -395,7 +398,7 @@ public class OrganizationsController : Controller
         var organizationUsers = await _organizationUserRepository.GetManyByOrganizationAsync(id, OrganizationUserType.Owner);
         foreach (var organizationUser in organizationUsers)
         {
-            await _organizationService.ResendInviteAsync(id, null, organizationUser.Id, true);
+            await _resendInviteCommand.ResendInviteAsync(id, null, organizationUser.Id, true);
         }
 
         return Json(null);

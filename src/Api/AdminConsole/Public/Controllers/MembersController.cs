@@ -32,6 +32,7 @@ public class MembersController : Controller
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IResendInviteCommand _resendInviteCommand;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
@@ -45,7 +46,8 @@ public class MembersController : Controller
         IPaymentService paymentService,
         IOrganizationRepository organizationRepository,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IResendInviteCommand resendInviteCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
@@ -59,6 +61,7 @@ public class MembersController : Controller
         _organizationRepository = organizationRepository;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _resendInviteCommand = resendInviteCommand;
     }
 
     /// <summary>
@@ -260,7 +263,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        await _organizationService.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
+        await _resendInviteCommand.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
         return new OkResult();
     }
 }

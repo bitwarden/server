@@ -62,6 +62,7 @@ public class OrganizationUsersController : Controller
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
+    private readonly IResendInviteCommand _resendInviteCommand;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
@@ -92,7 +93,8 @@ public class OrganizationUsersController : Controller
         IConfirmOrganizationUserCommand confirmOrganizationUserCommand,
         IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
         IInitPendingOrganizationCommand initPendingOrganizationCommand,
-        IRevokeOrganizationUserCommand revokeOrganizationUserCommand)
+        IRevokeOrganizationUserCommand revokeOrganizationUserCommand,
+        IResendInviteCommand resendInviteCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -116,6 +118,7 @@ public class OrganizationUsersController : Controller
         _policyRequirementQuery = policyRequirementQuery;
         _featureService = featureService;
         _pricingClient = pricingClient;
+        _resendInviteCommand = resendInviteCommand;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
@@ -266,7 +269,7 @@ public class OrganizationUsersController : Controller
     public async Task Reinvite(Guid orgId, Guid id)
     {
         var userId = _userService.GetProperUserId(User);
-        await _organizationService.ResendInviteAsync(orgId, userId.Value, id);
+        await _resendInviteCommand.ResendInviteAsync(orgId, userId.Value, id);
     }
 
     [HttpPost("{organizationUserId}/accept-init")]
