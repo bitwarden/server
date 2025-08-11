@@ -6,6 +6,7 @@ using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
@@ -32,7 +33,7 @@ public class MembersController : Controller
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
-    private readonly IResendInviteCommand _resendInviteCommand;
+    private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
@@ -47,7 +48,7 @@ public class MembersController : Controller
         IOrganizationRepository organizationRepository,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        IResendInviteCommand resendInviteCommand)
+        IResendOrganizationInviteCommand resendOrganizationInviteCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
@@ -61,7 +62,7 @@ public class MembersController : Controller
         _organizationRepository = organizationRepository;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
-        _resendInviteCommand = resendInviteCommand;
+        _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
     }
 
     /// <summary>
@@ -263,7 +264,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        await _resendInviteCommand.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
+        await _resendOrganizationInviteCommand.ResendInviteAsync(_currentContext.OrganizationId.Value, null, id);
         return new OkResult();
     }
 }

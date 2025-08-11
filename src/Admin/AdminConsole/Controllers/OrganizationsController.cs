@@ -9,6 +9,7 @@ using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
@@ -32,7 +33,6 @@ namespace Bit.Admin.AdminConsole.Controllers;
 [Authorize]
 public class OrganizationsController : Controller
 {
-    private readonly IOrganizationService _organizationService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
@@ -55,10 +55,9 @@ public class OrganizationsController : Controller
     private readonly IProviderBillingService _providerBillingService;
     private readonly IOrganizationInitiateDeleteCommand _organizationInitiateDeleteCommand;
     private readonly IPricingClient _pricingClient;
-    private readonly IResendInviteCommand _resendInviteCommand;
+    private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
 
     public OrganizationsController(
-        IOrganizationService organizationService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,
@@ -81,9 +80,8 @@ public class OrganizationsController : Controller
         IProviderBillingService providerBillingService,
         IOrganizationInitiateDeleteCommand organizationInitiateDeleteCommand,
         IPricingClient pricingClient,
-        IResendInviteCommand resendInviteCommand)
+        IResendOrganizationInviteCommand resendOrganizationInviteCommand)
     {
-        _organizationService = organizationService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _organizationConnectionRepository = organizationConnectionRepository;
@@ -106,7 +104,7 @@ public class OrganizationsController : Controller
         _providerBillingService = providerBillingService;
         _organizationInitiateDeleteCommand = organizationInitiateDeleteCommand;
         _pricingClient = pricingClient;
-        _resendInviteCommand = resendInviteCommand;
+        _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -398,7 +396,7 @@ public class OrganizationsController : Controller
         var organizationUsers = await _organizationUserRepository.GetManyByOrganizationAsync(id, OrganizationUserType.Owner);
         foreach (var organizationUser in organizationUsers)
         {
-            await _resendInviteCommand.ResendInviteAsync(id, null, organizationUser.Id, true);
+            await _resendOrganizationInviteCommand.ResendInviteAsync(id, null, organizationUser.Id, true);
         }
 
         return Json(null);
