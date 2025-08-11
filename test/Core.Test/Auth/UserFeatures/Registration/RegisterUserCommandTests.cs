@@ -14,9 +14,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -57,10 +54,6 @@ public class RegisterUserCommandTests
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendWelcomeEmailAsync(user);
-
-        await sutProvider.GetDependency<IReferenceEventService>()
-            .Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
     }
 
     [Theory]
@@ -85,10 +78,6 @@ public class RegisterUserCommandTests
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
             .SendWelcomeEmailAsync(Arg.Any<User>());
-
-        await sutProvider.GetDependency<IReferenceEventService>()
-            .DidNotReceive()
-            .RaiseEventAsync(Arg.Any<ReferenceEvent>());
     }
 
     // -----------------------------------------------------------------------------------------------
@@ -117,10 +106,6 @@ public class RegisterUserCommandTests
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
             .CreateUserAsync(user, masterPasswordHash);
-
-        await sutProvider.GetDependency<IReferenceEventService>()
-            .Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
     }
 
     // Complex happy path test
@@ -215,18 +200,9 @@ public class RegisterUserCommandTests
                     .Received(1)
                     .SendWelcomeEmailAsync(user);
             }
-
-            await sutProvider.GetDependency<IReferenceEventService>()
-                .Received(1)
-                .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup && refEvent.SignupInitiationPath == initiationPath));
-
         }
         else
         {
-            await sutProvider.GetDependency<IReferenceEventService>()
-                .Received(1)
-                .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup && refEvent.SignupInitiationPath == default));
-
             // Even if user doesn't have reference data, we should send them welcome email
             await sutProvider.GetDependency<IMailService>()
                 .Received(1)
@@ -359,10 +335,6 @@ public class RegisterUserCommandTests
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendWelcomeEmailAsync(user);
-
-        await sutProvider.GetDependency<IReferenceEventService>()
-            .Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup && refEvent.ReceiveMarketingEmails == receiveMarketingMaterials));
     }
 
     [Theory]
@@ -429,10 +401,6 @@ public class RegisterUserCommandTests
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendWelcomeEmailAsync(user);
-
-        await sutProvider.GetDependency<IReferenceEventService>()
-            .Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
     }
 
     [Theory]
@@ -506,10 +474,6 @@ public class RegisterUserCommandTests
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendWelcomeEmailAsync(user);
-
-        await sutProvider.GetDependency<IReferenceEventService>()
-            .Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
     }
 
     [Theory]
@@ -604,10 +568,6 @@ public class RegisterUserCommandTests
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendWelcomeEmailAsync(user);
-
-        await sutProvider.GetDependency<IReferenceEventService>()
-            .Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
     }
 
     [Theory]

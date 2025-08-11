@@ -14,7 +14,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
-using OrganizationUserInvite = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 
@@ -36,13 +35,13 @@ public class InviteOrganizationUsersValidatorTests
         {
             Invites =
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test@email.com",
                     externalId: "test-external-id"),
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test2@email.com",
                     externalId: "test-external-id2"),
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test3@email.com",
                     externalId: "test-external-id3")
             ],
@@ -82,13 +81,13 @@ public class InviteOrganizationUsersValidatorTests
         {
             Invites =
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test@email.com",
                     externalId: "test-external-id"),
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test2@email.com",
                     externalId: "test-external-id2"),
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test3@email.com",
                     externalId: "test-external-id3")
             ],
@@ -126,13 +125,13 @@ public class InviteOrganizationUsersValidatorTests
         {
             Invites =
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test@email.com",
                     externalId: "test-external-id"),
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test2@email.com",
                     externalId: "test-external-id2"),
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test3@email.com",
                     externalId: "test-external-id3")
             ],

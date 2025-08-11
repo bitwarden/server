@@ -1,5 +1,10 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -24,6 +29,9 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private readonly IPushRegistrationService _pushRegistrationService;
     private readonly IPolicyService _policyService;
     private readonly IDeviceRepository _deviceRepository;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IFeatureService _featureService;
+    private readonly ICollectionRepository _collectionRepository;
 
     public ConfirmOrganizationUserCommand(
         IOrganizationRepository organizationRepository,
@@ -35,7 +43,10 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         IPushNotificationService pushNotificationService,
         IPushRegistrationService pushRegistrationService,
         IPolicyService policyService,
-        IDeviceRepository deviceRepository)
+        IDeviceRepository deviceRepository,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IFeatureService featureService,
+        ICollectionRepository collectionRepository)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -47,12 +58,15 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         _pushRegistrationService = pushRegistrationService;
         _policyService = policyService;
         _deviceRepository = deviceRepository;
+        _policyRequirementQuery = policyRequirementQuery;
+        _featureService = featureService;
+        _collectionRepository = collectionRepository;
     }
 
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
-        Guid confirmingUserId)
+        Guid confirmingUserId, string defaultUserCollectionName = null)
     {
-        var result = await ConfirmUsersAsync(
+        var result = await SaveChangesToDatabaseAsync(
             organizationId,
             new Dictionary<Guid, string>() { { organizationUserId, key } },
             confirmingUserId);
@@ -67,10 +81,31 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         {
             throw new BadRequestException(error);
         }
+
+        await HandleConfirmationSideEffectsAsync(organizationId, confirmedOrganizationUsers: [orgUser], defaultUserCollectionName);
+
         return orgUser;
     }
 
     public async Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
+        Guid confirmingUserId, string defaultUserCollectionName = null)
+    {
+        var result = await SaveChangesToDatabaseAsync(organizationId, keys, confirmingUserId);
+
+        var confirmedOrganizationUsers = result
+            .Where(r => string.IsNullOrEmpty(r.Item2))
+            .Select(r => r.Item1)
+            .ToList();
+
+        if (confirmedOrganizationUsers.Count > 0)
+        {
+            await HandleConfirmationSideEffectsAsync(organizationId, confirmedOrganizationUsers, defaultUserCollectionName);
+        }
+
+        return result;
+    }
+
+    private async Task<List<Tuple<OrganizationUser, string>>> SaveChangesToDatabaseAsync(Guid organizationId, Dictionary<Guid, string> keys,
         Guid confirmingUserId)
     {
         var selectedOrganizationUsers = await _organizationUserRepository.GetManyAsync(keys.Keys);
@@ -118,15 +153,14 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
                     }
                 }
 
-                var twoFactorEnabled = usersTwoFactorEnabled.FirstOrDefault(tuple => tuple.userId == user.Id).twoFactorIsEnabled;
-                await CheckPoliciesAsync(organizationId, user, orgUsers, twoFactorEnabled);
+                var userTwoFactorEnabled = usersTwoFactorEnabled.FirstOrDefault(tuple => tuple.userId == user.Id).twoFactorIsEnabled;
+                await CheckPoliciesAsync(organizationId, user, orgUsers, userTwoFactorEnabled);
                 orgUser.Status = OrganizationUserStatusType.Confirmed;
                 orgUser.Key = keys[orgUser.Id];
                 orgUser.Email = null;
 
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
                 await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email, orgUser.AccessSecretsManager);
-                await DeleteAndPushUserRegistrationAsync(organizationId, user.Id);
                 succeededUsers.Add(orgUser);
                 result.Add(Tuple.Create(orgUser, ""));
             }
@@ -137,20 +171,16 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         }
 
         await _organizationUserRepository.ReplaceManyAsync(succeededUsers);
+        await DeleteAndPushUserRegistrationAsync(organizationId, succeededUsers.Select(u => u.UserId!.Value));
 
         return result;
     }
 
     private async Task CheckPoliciesAsync(Guid organizationId, User user,
-        ICollection<OrganizationUser> userOrgs, bool twoFactorEnabled)
+        ICollection<OrganizationUser> userOrgs, bool userTwoFactorEnabled)
     {
         // Enforce Two Factor Authentication Policy for this organization
-        var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication))
-            .Any(p => p.OrganizationId == organizationId);
-        if (orgRequiresTwoFactor && !twoFactorEnabled)
-        {
-            throw new BadRequestException("User does not have two-step login enabled.");
-        }
+        await ValidateTwoFactorAuthenticationPolicyAsync(user, organizationId, userTwoFactorEnabled);
 
         var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
         var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
@@ -168,12 +198,42 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         }
     }
 
-    private async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId)
+    private async Task ValidateTwoFactorAuthenticationPolicyAsync(User user, Guid organizationId, bool userTwoFactorEnabled)
     {
-        var devices = await GetUserDeviceIdsAsync(userId);
-        await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(devices,
-            organizationId.ToString());
-        await _pushNotificationService.PushSyncOrgKeysAsync(userId);
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            if (userTwoFactorEnabled)
+            {
+                // If the user has two-step login enabled, we skip checking the 2FA policy
+                return;
+            }
+
+            var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
+            if (twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId))
+            {
+                throw new BadRequestException("User does not have two-step login enabled.");
+            }
+
+            return;
+        }
+
+        var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication))
+            .Any(p => p.OrganizationId == organizationId);
+        if (orgRequiresTwoFactor && !userTwoFactorEnabled)
+        {
+            throw new BadRequestException("User does not have two-step login enabled.");
+        }
+    }
+
+    private async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, IEnumerable<Guid> userIds)
+    {
+        foreach (var userId in userIds)
+        {
+            var devices = await GetUserDeviceIdsAsync(userId);
+            await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(devices,
+                organizationId.ToString());
+            await _pushNotificationService.PushSyncOrgKeysAsync(userId);
+        }
     }
 
     private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
@@ -182,5 +242,44 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         return devices
             .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
             .Select(d => d.Id.ToString());
+    }
+
+    private async Task<bool> OrganizationRequiresDefaultCollectionAsync(Guid organizationId, string defaultUserCollectionName)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
+        {
+            return false;
+        }
+
+        // Skip if no collection name provided (backwards compatibility)
+        if (string.IsNullOrWhiteSpace(defaultUserCollectionName))
+        {
+            return false;
+        }
+
+        var organizationPolicyRequirement = await _policyRequirementQuery.GetByOrganizationAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId);
+
+        // Check if the organization requires default collections
+        return organizationPolicyRequirement.RequiresDefaultCollection(organizationId);
+    }
+
+    /// <summary>
+    /// Handles the side effects of confirming an organization user.
+    /// Creates a default collection for the user if the organization
+    /// has the OrganizationDataOwnership policy enabled.
+    /// </summary>
+    /// <param name="organizationId">The organization ID.</param>
+    /// <param name="confirmedOrganizationUsers">The confirmed organization users.</param>
+    /// <param name="defaultUserCollectionName">The encrypted default user collection name.</param>
+    private async Task HandleConfirmationSideEffectsAsync(Guid organizationId, IEnumerable<OrganizationUser> confirmedOrganizationUsers, string defaultUserCollectionName)
+    {
+        var requiresDefaultCollections = await OrganizationRequiresDefaultCollectionAsync(organizationId, defaultUserCollectionName);
+        if (!requiresDefaultCollections)
+        {
+            return;
+        }
+
+        var organizationUserIds = confirmedOrganizationUsers.Select(u => u.Id).ToList();
+        await _collectionRepository.CreateDefaultCollectionsAsync(organizationId, organizationUserIds, defaultUserCollectionName);
     }
 }

@@ -1,5 +1,7 @@
 ﻿namespace Bit.Core.NotificationHub;
 
+#nullable enable
+
 public record struct WebPushRegistrationData
 {
     public string Endpoint { get; init; }
@@ -9,9 +11,9 @@ public record struct WebPushRegistrationData
 
 public record class PushRegistrationData
 {
-    public string Token { get; set; }
+    public string? Token { get; set; }
     public WebPushRegistrationData? WebPush { get; set; }
-    public PushRegistrationData(string token)
+    public PushRegistrationData(string? token)
     {
         Token = token;
     }

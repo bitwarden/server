@@ -3,10 +3,11 @@ using System.Diagnostics;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Api.Billing.Queries.Organizations;
-using Bit.Core;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
@@ -25,10 +26,9 @@ namespace Bit.Api.Billing.Controllers;
 public class OrganizationBillingController(
     IBusinessUnitConverter businessUnitConverter,
     ICurrentContext currentContext,
-    IFeatureService featureService,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
-    IOrganizationWarningsQuery organizationWarningsQuery,
+    IGetOrganizationWarningsQuery getOrganizationWarningsQuery,
     IPaymentService paymentService,
     IPricingClient pricingClient,
     ISubscriberService subscriberService,
@@ -282,17 +282,36 @@ public class OrganizationBillingController(
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
-
         if (organization == null)
         {
             return Error.NotFound();
         }
+        var existingPlan = organization.PlanType;
         var organizationSignup = model.ToOrganizationSignup(user);
         var sale = OrganizationSale.From(organization, organizationSignup);
         var plan = await pricingClient.GetPlanOrThrow(model.PlanType);
         sale.Organization.PlanType = plan.Type;
         sale.Organization.Plan = plan.Name;
         sale.SubscriptionSetup.SkipTrial = true;
+        if (existingPlan == PlanType.Free && organization.GatewaySubscriptionId is not null)
+        {
+            sale.Organization.UseTotp = plan.HasTotp;
+            sale.Organization.UseGroups = plan.HasGroups;
+            sale.Organization.UseDirectory = plan.HasDirectory;
+            sale.Organization.SelfHost = plan.HasSelfHost;
+            sale.Organization.UsersGetPremium = plan.UsersGetPremium;
+            sale.Organization.UseEvents = plan.HasEvents;
+            sale.Organization.Use2fa = plan.Has2fa;
+            sale.Organization.UseApi = plan.HasApi;
+            sale.Organization.UsePolicies = plan.HasPolicies;
+            sale.Organization.UseSso = plan.HasSso;
+            sale.Organization.UseResetPassword = plan.HasResetPassword;
+            sale.Organization.UseKeyConnector = plan.HasKeyConnector;
+            sale.Organization.UseScim = plan.HasScim;
+            sale.Organization.UseCustomPermissions = plan.HasCustomPermissions;
+            sale.Organization.UseOrganizationDomains = plan.HasOrganizationDomains;
+            sale.Organization.MaxCollections = plan.PasswordManager.MaxCollections;
+        }
 
         if (organizationSignup.PaymentMethodType == null || string.IsNullOrEmpty(organizationSignup.PaymentToken))
         {
@@ -302,8 +321,12 @@ public class OrganizationBillingController(
         Debug.Assert(org is not null, "This organization has already been found via this same ID, this should be fine.");
         var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
         var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
-        await organizationBillingService.UpdatePaymentMethod(org, paymentSource, taxInformation);
         await organizationBillingService.Finalize(sale);
+        var updatedOrg = await organizationRepository.GetByIdAsync(organizationId);
+        if (updatedOrg != null)
+        {
+            await organizationBillingService.UpdatePaymentMethod(updatedOrg, paymentSource, taxInformation);
+        }
 
         return TypedResults.Ok();
     }
@@ -314,14 +337,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] SetupBusinessUnitRequestBody requestBody)
     {
-        var enableOrganizationBusinessUnitConversion =
-            featureService.IsEnabled(FeatureFlagKeys.PM18770_EnableOrganizationBusinessUnitConversion);
-
-        if (!enableOrganizationBusinessUnitConversion)
-        {
-            return Error.NotFound();
-        }
-
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 
         if (organization == null)
@@ -348,7 +363,7 @@ public class OrganizationBillingController(
     public async Task<IResult> GetWarningsAsync([FromRoute] Guid organizationId)
     {
         /*
-         * We'll keep these available at the User level, because we're hiding any pertinent information and
+         * We'll keep these available at the User level because we're hiding any pertinent information, and
          * we want to throw as few errors as possible since these are not core features.
          */
         if (!await currentContext.OrganizationUser(organizationId))
@@ -363,8 +378,39 @@ public class OrganizationBillingController(
             return Error.NotFound();
         }
 
-        var response = await organizationWarningsQuery.Run(organization);
+        var warnings = await getOrganizationWarningsQuery.Run(organization);
 
-        return TypedResults.Ok(response);
+        return TypedResults.Ok(warnings);
+    }
+
+
+    [HttpPost("change-frequency")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> ChangePlanSubscriptionFrequencyAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] ChangePlanFrequencyRequest request)
+    {
+        if (!await currentContext.EditSubscription(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        if (organization.PlanType == request.NewPlanType)
+        {
+            return Error.BadRequest("Organization is already on the requested plan frequency.");
+        }
+
+        await organizationBillingService.UpdateSubscriptionPlanFrequency(
+            organization,
+            request.NewPlanType);
+
+        return TypedResults.Ok();
     }
 }

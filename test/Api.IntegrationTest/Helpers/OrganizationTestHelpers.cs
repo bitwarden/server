@@ -1,7 +1,9 @@
 ﻿using System.Diagnostics;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -78,6 +80,7 @@ public static class OrganizationTestHelpers
             Status = userStatusType,
             ExternalId = null,
             AccessSecretsManager = accessSecretsManager,
+            Email = userEmail
         };
 
         if (permissions != null)
@@ -129,5 +132,40 @@ public static class OrganizationTestHelpers
         verifiedDomain.SetVerifiedDate();
 
         await organizationDomainRepository.CreateAsync(verifiedDomain);
+    }
+
+    public static async Task<Group> CreateGroup(ApiApplicationFactory factory, Guid organizationId)
+    {
+
+        var groupRepository = factory.GetService<IGroupRepository>();
+        var group = new Group
+        {
+            OrganizationId = organizationId,
+            Id = new Guid(),
+            ExternalId = "bwtest-externalId",
+            Name = "bwtest"
+        };
+
+        await groupRepository.CreateAsync(group, new List<CollectionAccessSelection>());
+        return group;
+    }
+
+    /// <summary>
+    /// Enables the Organization Data Ownership policy for the specified organization.
+    /// </summary>
+    public static async Task EnableOrganizationDataOwnershipPolicyAsync<T>(
+        WebApplicationFactoryBase<T> factory,
+        Guid organizationId) where T : class
+    {
+        var policyRepository = factory.GetService<IPolicyRepository>();
+
+        var policy = new Policy
+        {
+            OrganizationId = organizationId,
+            Type = PolicyType.OrganizationDataOwnership,
+            Enabled = true
+        };
+
+        await policyRepository.CreateAsync(policy);
     }
 }

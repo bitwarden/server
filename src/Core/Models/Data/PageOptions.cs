@@ -1,4 +1,7 @@
-﻿namespace Bit.Core.Models.Data;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Core.Models.Data;
 
 public class PageOptions
 {

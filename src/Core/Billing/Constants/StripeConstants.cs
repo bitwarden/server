@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Billing.Constants;
+﻿using System.Reflection;
+
+namespace Bit.Core.Billing.Constants;
 
 public static class StripeConstants
 {
@@ -36,6 +38,13 @@ public static class StripeConstants
         public const string PaymentMethodMicroDepositVerificationDescriptorCodeMismatch = "payment_method_microdeposit_verification_descriptor_code_mismatch";
         public const string PaymentMethodMicroDepositVerificationTimeout = "payment_method_microdeposit_verification_timeout";
         public const string TaxIdInvalid = "tax_id_invalid";
+
+        public static string[] Get() =>
+            typeof(ErrorCodes)
+                .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+                .Where(fi => fi is { IsLiteral: true, IsInitOnly: false } && fi.FieldType == typeof(string))
+                .Select(fi => (string)fi.GetValue(null)!)
+                .ToArray();
     }
 
     public static class InvoiceStatus
@@ -51,6 +60,8 @@ public static class StripeConstants
         public const string InvoiceApproved = "invoice_approved";
         public const string OrganizationId = "organizationId";
         public const string ProviderId = "providerId";
+        public const string Region = "region";
+        public const string RetiredBraintreeCustomerId = "btCustomerId_old";
         public const string UserId = "userId";
     }
 
@@ -96,9 +107,22 @@ public static class StripeConstants
         public const string Reverse = "reverse";
     }
 
+    public static class TaxIdType
+    {
+        public const string EUVAT = "eu_vat";
+        public const string SpanishNIF = "es_cif";
+    }
+
     public static class ValidateTaxLocationTiming
     {
         public const string Deferred = "deferred";
         public const string Immediately = "immediately";
+    }
+
+    public static class MissingPaymentMethodBehaviorOptions
+    {
+        public const string CreateInvoice = "create_invoice";
+        public const string Cancel = "cancel";
+        public const string Pause = "pause";
     }
 }
