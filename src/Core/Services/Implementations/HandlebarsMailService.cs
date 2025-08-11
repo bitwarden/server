@@ -204,7 +204,8 @@ public class HandlebarsMailService : IMailService
             TimeZone = _utcTimeZoneDisplay,
             IpAddress = ip,
             AffectedEmail = email,
-            TwoFactorType = failedType
+            TwoFactorType = failedType,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
 
         };
         await AddMessageContentAsync(message, "Auth.FailedTwoFactorAttempt", model);
