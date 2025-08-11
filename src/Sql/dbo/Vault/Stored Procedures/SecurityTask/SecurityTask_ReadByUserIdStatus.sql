@@ -80,6 +80,6 @@ BEGIN
           )
         )
     ORDER BY
-        ST.CreationDate DESC;
+        ST.CreationDate DESC
     OPTION (RECOMPILE);
 END
