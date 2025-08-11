@@ -172,15 +172,22 @@ public class UpcomingInvoiceHandler(
 
         if (invoice.NextPaymentAttempt.HasValue && invoice.AmountDue > 0)
         {
-            var expandedSubscription = await stripeFacade.GetSubscription(subscription.Id, new SubscriptionGetOptions
+            var provider = await providerRepository.GetByIdAsync(providerId);
+            if (provider == null)
             {
-                Expand = ["customer.invoice_settings.default_payment_method", "customer.default_source"]
-            });
+                logger.LogWarning("Provider {ProviderId} not found for invoice upcoming email", providerId);
+                return;
+            }
 
-            var collectionMethod = expandedSubscription.CollectionMethod;
-            var customer = expandedSubscription.Customer;
-            var hasPaymentMethod = await getPaymentMethodQuery.HasPaymentMethod(customer, providerId);
-            var paymentMethodDescription = getPaymentMethodQuery.GetPaymentMethodDescription(customer);
+            var collectionMethod = subscription.CollectionMethod;
+            var paymentMethod = await getPaymentMethodQuery.Run(provider);
+
+            var hasPaymentMethod = paymentMethod != null;
+            var paymentMethodDescription = paymentMethod?.Match(
+                bankAccount => $"Bank account ending in {bankAccount.Last4}",
+                card => $"{card.Brand} ending in {card.Last4}",
+                payPal => $"PayPal account {payPal.Email}"
+            );
 
             await mailService.SendProviderInvoiceUpcoming(
                 validEmails,

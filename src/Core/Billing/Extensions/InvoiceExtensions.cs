@@ -12,14 +12,8 @@ public static class InvoiceExtensions
     /// <param name="invoice">The Stripe invoice containing line items</param>
     /// <param name="subscription">The associated subscription (for future extensibility)</param>
     /// <returns>A list of formatted invoice item descriptions</returns>
-    /// <exception cref="ArgumentNullException">Thrown when invoice is null</exception>
     public static List<string> FormatForProvider(this Invoice invoice, Subscription subscription)
     {
-        if (invoice == null)
-        {
-            throw new ArgumentNullException(nameof(invoice));
-        }
-
         var items = new List<string>();
 
         // Return empty list if no line items
