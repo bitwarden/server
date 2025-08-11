@@ -1,7 +1,6 @@
 CREATE OR ALTER PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
     @UserId UNIQUEIDENTIFIER,
     @Status TINYINT = NULL
-WITH RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -11,9 +10,12 @@ BEGIN
             OU.OrganizationId
         FROM
             dbo.OrganizationUser OU
+        INNER JOIN dbo.OrganizationView O
+            ON O.Id = OU.OrganizationId
         WHERE
             OU.UserId = @UserId
             AND OU.Status = 2
+            AND O.Enabled = 1
     ),
     UserCollectionAccess AS (
         SELECT
@@ -27,6 +29,7 @@ BEGIN
         WHERE
             OU.UserId = @UserId
             AND OU.Status = 2
+            AND O.Enabled = 1
             AND CU.ReadOnly = 0
     ),
     GroupCollectionAccess AS (
@@ -34,6 +37,8 @@ BEGIN
             CC.CipherId
         FROM
             dbo.OrganizationUser OU
+            INNER JOIN dbo.OrganizationView O
+                ON O.Id = OU.OrganizationId
             JOIN dbo.GroupUser GU
                 ON GU.OrganizationUserId = OU.Id
             JOIN dbo.CollectionGroup CG
@@ -46,27 +51,11 @@ BEGIN
             AND CG.ReadOnly = 0
     ),
     AccessibleCiphers AS (
-        SELECT CipherId
-        FROM UserCollectionAccess
-
-        UNION ALL
-
-        SELECT GC.CipherId
-        FROM GroupCollectionAccess AS GC
-        WHERE NOT EXISTS (
-            SELECT 1
-            FROM UserCollectionAccess AS UA
-            WHERE UA.CipherId = GC.CipherId
-        )
-    ),
-    SecurityTasks AS (
         SELECT
-            ST.*
-        FROM
-            dbo.[SecurityTaskView] ST
-        WHERE
-            @Status IS NULL
-            OR ST.Status = @Status
+            CipherId FROM UserCollectionAccess
+        UNION
+        SELECT
+            CipherId FROM GroupCollectionAccess
     )
     SELECT
         ST.Id,
@@ -77,16 +66,22 @@ BEGIN
         ST.CreationDate,
         ST.RevisionDate
     FROM
-        SecurityTasks ST
-        JOIN OrganizationAccess OA
-            ON ST.OrganizationId = OA.OrganizationId
-        LEFT JOIN AccessibleCiphers AC
-            ON ST.CipherId = AC.CipherId
+      dbo.[SecurityTaskView] ST
+      INNER JOIN OrganizationAccess OA
+          ON ST.OrganizationId = OA.OrganizationId
     WHERE
-        ST.CipherId IS NULL
-        OR AC.CipherId IS NOT NULL
+        (@Status IS NULL OR ST.Status = @Status)
+        AND (
+          ST.CipherId IS NULL
+          OR EXISTS (
+              SELECT 1
+              FROM AccessibleCiphers AC
+              WHERE AC.CipherId = ST.CipherId
+          )
+        )
     ORDER BY
         ST.CreationDate DESC;
+    OPTION (RECOMPILE);
 END
 GO
 
@@ -150,5 +145,6 @@ IF NOT EXISTS (
 BEGIN
 CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserId_Status_Filtered]
     ON [dbo].[OrganizationUser] (UserId)
+    INCLUDE (Id, OrganizationId)
     WHERE Status = 2;
 END
