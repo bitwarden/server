@@ -347,6 +347,13 @@ public class SyncControllerTests
 
         user.MasterPassword = null;
 
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
         var userService = sutProvider.GetDependency<IUserService>();
         userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
 
@@ -371,6 +378,13 @@ public class SyncControllerTests
         user.KdfIterations = kdfIterations;
         user.KdfMemory = kdfMemory;
         user.KdfParallelism = kdfParallelism;
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
 
         var userService = sutProvider.GetDependency<IUserService>();
         userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
