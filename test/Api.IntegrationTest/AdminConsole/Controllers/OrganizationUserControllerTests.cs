@@ -2,8 +2,10 @@
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Api.Models.Request;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -19,7 +21,6 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
 {
     private static readonly string _mockEncryptedString =
         "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
-
 
     public OrganizationUserControllerTests(ApiApplicationFactory apiFactory)
     {
@@ -113,7 +114,7 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
     {
         await OrganizationTestHelpers.EnableOrganizationDataOwnershipPolicyAsync(_factory, _organization.Id);
 
-        var acceptedOrgUser = (await CreateAcceptedUsersAsync(new[] { "test1@bitwarden.com" })).First();
+        var acceptedOrgUser = (await CreateAcceptedUsersAsync(new[] { ("test1@bitwarden.com", OrganizationUserType.User) })).First();
 
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -127,7 +128,29 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         Assert.Equal(HttpStatusCode.OK, confirmResponse.StatusCode);
 
         await VerifyUserConfirmedAsync(acceptedOrgUser, "test-key");
-        await VerifyDefaultCollectionCreatedAsync(acceptedOrgUser);
+        await VerifyDefaultCollectionCountAsync(acceptedOrgUser, 1);
+    }
+
+    [Fact]
+    public async Task Confirm_WithValidOwner_ReturnsSuccess()
+    {
+        await OrganizationTestHelpers.EnableOrganizationDataOwnershipPolicyAsync(_factory, _organization.Id);
+
+        var acceptedOrgUser = (await CreateAcceptedUsersAsync(new[] { ("owner1@bitwarden.com", OrganizationUserType.Owner) })).First();
+
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var confirmModel = new OrganizationUserConfirmRequestModel
+        {
+            Key = "test-key",
+            DefaultUserCollectionName = _mockEncryptedString
+        };
+        var confirmResponse = await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/{acceptedOrgUser.Id}/confirm", confirmModel);
+
+        Assert.Equal(HttpStatusCode.OK, confirmResponse.StatusCode);
+
+        await VerifyUserConfirmedAsync(acceptedOrgUser, "test-key");
+        await VerifyDefaultCollectionCountAsync(acceptedOrgUser, 0);
     }
 
     [Fact]
@@ -136,8 +159,11 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         const string testKeyFormat = "test-key-{0}";
         await OrganizationTestHelpers.EnableOrganizationDataOwnershipPolicyAsync(_factory, _organization.Id);
 
-        var emails = new[] { "test1@example.com", "test2@example.com", "test3@example.com" };
-        var acceptedUsers = await CreateAcceptedUsersAsync(emails);
+        var acceptedUsers = await CreateAcceptedUsersAsync([
+            ("test1@example.com", OrganizationUserType.User),
+            ("test2@example.com", OrganizationUserType.Owner),
+            ("test3@example.com", OrganizationUserType.User)
+        ]);
 
         await _loginHelper.LoginAsync(_ownerEmail);
 
@@ -157,7 +183,33 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
 
         await VerifyMultipleUsersConfirmedAsync(acceptedUsers.Select((organizationUser, index) =>
             (organizationUser, string.Format(testKeyFormat, index))).ToList());
-        await VerifyMultipleUsersHaveDefaultCollectionsAsync(acceptedUsers);
+        await VerifyDefaultCollectionCountAsync(acceptedUsers.ElementAt(0), 1);
+        await VerifyDefaultCollectionCountAsync(acceptedUsers.ElementAt(1), 0); // Owner does not get a default collection
+        await VerifyDefaultCollectionCountAsync(acceptedUsers.ElementAt(2), 1);
+    }
+
+    [Fact]
+    public async Task Put_WithExistingDefaultCollection_Success()
+    {
+        // Arrange
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var (userEmail, organizationUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.User);
+
+        var (group, sharedCollection, defaultCollection) = await CreateTestDataAsync();
+        await AssignDefaultCollectionToUserAsync(organizationUser, defaultCollection);
+
+        // Act
+        var updateRequest = CreateUpdateRequest(sharedCollection, group);
+        var httpResponse = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{organizationUser.Id}", updateRequest);
+
+        Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
+
+        // Assert
+        await VerifyUserWasUpdatedCorrectlyAsync(organizationUser, expectedType: OrganizationUserType.Custom, expectedManageGroups: true);
+        await VerifyGroupAccessWasAddedAsync(organizationUser, [group]);
+        await VerifyCollectionAccessWasUpdatedCorrectlyAsync(organizationUser, sharedCollection.Id, defaultCollection.Id);
     }
 
     public Task DisposeAsync()
@@ -166,16 +218,120 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         return Task.CompletedTask;
     }
 
-    private async Task<List<OrganizationUser>> CreateAcceptedUsersAsync(IEnumerable<string> emails)
+    private async Task<(Group group, Collection sharedCollection, Collection defaultCollection)> CreateTestDataAsync()
+    {
+        var groupRepository = _factory.GetService<IGroupRepository>();
+        var group = await groupRepository.CreateAsync(new Group
+        {
+            OrganizationId = _organization.Id,
+            Name = $"Test Group {Guid.NewGuid()}"
+        });
+
+        var collectionRepository = _factory.GetService<ICollectionRepository>();
+        var sharedCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = $"Test Collection {Guid.NewGuid()}",
+            Type = CollectionType.SharedCollection
+        });
+
+        var defaultCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = $"My Items {Guid.NewGuid()}",
+            Type = CollectionType.DefaultUserCollection
+        });
+
+        return (group, sharedCollection, defaultCollection);
+    }
+
+    private async Task AssignDefaultCollectionToUserAsync(OrganizationUser organizationUser, Collection defaultCollection)
+    {
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        await organizationUserRepository.ReplaceAsync(organizationUser,
+            new List<CollectionAccessSelection>
+            {
+                new CollectionAccessSelection
+                {
+                    Id = defaultCollection.Id,
+                    ReadOnly = false,
+                    HidePasswords = false,
+                    Manage = true
+                }
+            });
+    }
+
+    private static OrganizationUserUpdateRequestModel CreateUpdateRequest(Collection sharedCollection, Group group)
+    {
+        return new OrganizationUserUpdateRequestModel
+        {
+            Type = OrganizationUserType.Custom,
+            Permissions = new Permissions
+            {
+                ManageGroups = true
+            },
+            Collections = new List<SelectionReadOnlyRequestModel>
+            {
+                new SelectionReadOnlyRequestModel
+                {
+                    Id = sharedCollection.Id,
+                    ReadOnly = true,
+                    HidePasswords = false,
+                    Manage = false
+                }
+            },
+            Groups = new List<Guid> { group.Id }
+        };
+    }
+
+    private async Task VerifyUserWasUpdatedCorrectlyAsync(
+        OrganizationUser organizationUser,
+        OrganizationUserType expectedType,
+        bool expectedManageGroups)
+    {
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        var updatedOrgUser = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(expectedType, updatedOrgUser.Type);
+        Assert.Equal(expectedManageGroups, updatedOrgUser.GetPermissions().ManageGroups);
+    }
+
+    private async Task VerifyGroupAccessWasAddedAsync(
+        OrganizationUser organizationUser, IEnumerable<Group> groups)
+    {
+        var groupRepository = _factory.GetService<IGroupRepository>();
+        var userGroups = await groupRepository.GetManyIdsByUserIdAsync(organizationUser.Id);
+        Assert.All(groups, group => Assert.Contains(group.Id, userGroups));
+    }
+
+    private async Task VerifyCollectionAccessWasUpdatedCorrectlyAsync(
+        OrganizationUser organizationUser, Guid sharedCollectionId, Guid defaultCollectionId)
+    {
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        var (_, collectionAccess) = await organizationUserRepository.GetByIdWithCollectionsAsync(organizationUser.Id);
+        var collectionIds = collectionAccess.Select(c => c.Id).ToHashSet();
+
+        Assert.Contains(defaultCollectionId, collectionIds);
+        Assert.Contains(sharedCollectionId, collectionIds);
+
+        var newCollectionAccess = collectionAccess.First(c => c.Id == sharedCollectionId);
+        Assert.True(newCollectionAccess.ReadOnly);
+        Assert.False(newCollectionAccess.HidePasswords);
+        Assert.False(newCollectionAccess.Manage);
+    }
+
+    private async Task<List<OrganizationUser>> CreateAcceptedUsersAsync(
+        IEnumerable<(string email, OrganizationUserType userType)> newUsers)
     {
         var acceptedUsers = new List<OrganizationUser>();
 
-        foreach (var email in emails)
+        foreach (var (email, userType) in newUsers)
         {
             await _factory.LoginWithNewAccount(email);
 
-            var acceptedOrgUser = await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, email,
-                OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Accepted);
+            var acceptedOrgUser = await OrganizationTestHelpers.CreateUserAsync(
+                _factory, _organization.Id, email,
+                userType, userStatusType: OrganizationUserStatusType.Accepted);
 
             acceptedUsers.Add(acceptedOrgUser);
         }
@@ -183,12 +339,11 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         return acceptedUsers;
     }
 
-    private async Task VerifyDefaultCollectionCreatedAsync(OrganizationUser orgUser)
+    private async Task VerifyDefaultCollectionCountAsync(OrganizationUser orgUser, int expectedCount)
     {
         var collectionRepository = _factory.GetService<ICollectionRepository>();
         var collections = await collectionRepository.GetManyByUserIdAsync(orgUser.UserId!.Value);
-        Assert.Single(collections);
-        Assert.Equal(_mockEncryptedString, collections.First().Name);
+        Assert.Equal(expectedCount, collections.Count);
     }
 
     private async Task VerifyUserConfirmedAsync(OrganizationUser orgUser, string expectedKey)
@@ -204,17 +359,6 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             var confirmedUser = await orgUserRepository.GetByIdAsync(acceptedOrganizationUsers[i].orgUser.Id);
             Assert.Equal(OrganizationUserStatusType.Confirmed, confirmedUser.Status);
             Assert.Equal(acceptedOrganizationUsers[i].key, confirmedUser.Key);
-        }
-    }
-
-    private async Task VerifyMultipleUsersHaveDefaultCollectionsAsync(List<OrganizationUser> acceptedOrganizationUsers)
-    {
-        var collectionRepository = _factory.GetService<ICollectionRepository>();
-        foreach (var acceptedOrganizationUser in acceptedOrganizationUsers)
-        {
-            var collections = await collectionRepository.GetManyByUserIdAsync(acceptedOrganizationUser.UserId!.Value);
-            Assert.Single(collections);
-            Assert.Equal(_mockEncryptedString, collections.First().Name);
         }
     }
 }
