@@ -1,12 +1,14 @@
 ﻿using AutoFixture;
 using Bit.Api.Dirt.Controllers;
 using Bit.Api.Dirt.Models;
+using Bit.Api.Dirt.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Exceptions;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Xunit;
 
@@ -279,5 +281,186 @@ public class ReportsControllerTests
         // Assert
         _ = sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .Received(0);
+    }
+
+    [Theory, BitAutoData]
+    public void CreateOrganizationReportSummary_ReturnsNoContent_WhenAccessGranted(SutProvider<ReportsController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var model = new OrganizationReportSummaryModel
+        {
+            OrganizationId = orgId,
+            EncryptedData = "mock-data",
+            EncryptionKey = "mock-key",
+            Date = DateTime.UtcNow
+        };
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(true);
+
+        // Act
+        var result = sutProvider.Sut.CreateOrganizationReportSummary(model);
+
+        // Assert
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Theory, BitAutoData]
+    public void CreateOrganizationReportSummary_ThrowsNotFoundException_WhenAccessDenied(SutProvider<ReportsController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var model = new OrganizationReportSummaryModel
+        {
+            OrganizationId = orgId,
+            EncryptedData = "mock-data",
+            EncryptionKey = "mock-key",
+            Date = DateTime.UtcNow
+        };
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(false);
+
+        // Act & Assert
+        Assert.Throws<Bit.Core.Exceptions.NotFoundException>(
+            () => sutProvider.Sut.CreateOrganizationReportSummary(model));
+    }
+
+    [Theory, BitAutoData]
+    public void GetOrganizationReportSummary_ThrowsNotFoundException_WhenAccessDenied(
+        SutProvider<ReportsController> sutProvider
+    )
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(false);
+
+        // Act & Assert
+        Assert.Throws<Bit.Core.Exceptions.NotFoundException>(
+            () => sutProvider.Sut.GetOrganizationReportSummary(orgId, DateOnly.FromDateTime(DateTime.UtcNow), DateOnly.FromDateTime(DateTime.UtcNow)));
+    }
+
+    [Theory, BitAutoData]
+    public void GetOrganizationReportSummary_returnsExpectedResult(
+        SutProvider<ReportsController> sutProvider
+    )
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var dates = new[]
+        {
+            DateOnly.FromDateTime(DateTime.UtcNow),
+            DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(-1))
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(true);
+
+        // Act
+        var result = sutProvider.Sut.GetOrganizationReportSummary(orgId, dates[0], dates[1]);
+
+        // Assert
+        Assert.NotNull(result);
+    }
+
+    [Theory, BitAutoData]
+    public void CreateOrganizationReportSummary_ReturnsNoContent_WhenModelIsValidAndAccessGranted(
+            SutProvider<ReportsController> sutProvider
+        )
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var model = new OrganizationReportSummaryModel
+        {
+            OrganizationId = orgId,
+            EncryptedData = "mock-data",
+            EncryptionKey = "mock-key"
+        };
+        sutProvider.Sut.ModelState.Clear();
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(true);
+
+        // Act
+        var result = sutProvider.Sut.CreateOrganizationReportSummary(model);
+
+        // Assert
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Theory, BitAutoData]
+    public void CreateOrganizationReportSummary_ThrowsBadRequestException_WhenModelStateIsInvalid(
+        SutProvider<ReportsController> sutProvider
+    )
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var model = new OrganizationReportSummaryModel
+        {
+            OrganizationId = orgId,
+            EncryptedData = "mock-data",
+            EncryptionKey = "mock-key"
+        };
+        sutProvider.Sut.ModelState.AddModelError("key", "error");
+
+        // Act & Assert
+        Assert.Throws<BadRequestException>(() => sutProvider.Sut.CreateOrganizationReportSummary(model));
+    }
+
+    [Theory, BitAutoData]
+    public void UpdateOrganizationReportSummary_ReturnsNoContent_WhenModelIsValidAndAccessGranted(
+        SutProvider<ReportsController> sutProvider
+    )
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var model = new OrganizationReportSummaryModel
+        {
+            OrganizationId = orgId,
+            EncryptedData = "mock-data",
+            EncryptionKey = "mock-key"
+        };
+        sutProvider.Sut.ModelState.Clear();
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(true);
+
+        // Act
+        var result = sutProvider.Sut.UpdateOrganizationReportSummary(model);
+
+        // Assert
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Theory, BitAutoData]
+    public void UpdateOrganizationReportSummary_ThrowsBadRequestException_WhenModelStateIsInvalid(
+        SutProvider<ReportsController> sutProvider
+    )
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var model = new OrganizationReportSummaryModel
+        {
+            OrganizationId = orgId,
+            EncryptedData = "mock-data",
+            EncryptionKey = "mock-key"
+        };
+        sutProvider.Sut.ModelState.AddModelError("key", "error");
+
+        // Act & Assert
+        Assert.Throws<BadRequestException>(() => sutProvider.Sut.UpdateOrganizationReportSummary(model));
+    }
+
+    [Theory, BitAutoData]
+    public void UpdateOrganizationReportSummary_ThrowsNotFoundException_WhenAccessDenied(
+        SutProvider<ReportsController> sutProvider
+    )
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var model = new OrganizationReportSummaryModel
+        {
+            OrganizationId = orgId,
+            EncryptedData = "mock-data",
+            EncryptionKey = "mock-key"
+        };
+        sutProvider.Sut.ModelState.Clear();
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(false);
+
+        // Act & Assert
+        Assert.Throws<NotFoundException>(() => sutProvider.Sut.UpdateOrganizationReportSummary(model));
     }
 }

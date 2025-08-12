@@ -113,7 +113,10 @@ public static class FeatureFlagKeys
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
+    public const string ImportAsyncRefactor = "pm-22583-refactor-import-async";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
+    public const string MembersGetEndpointOptimization = "pm-23113-optimize-get-members-endpoint";
+    public const string DirectoryConnectorPreventUserRemoval = "pm-24592-directory-connector-prevent-user-removal";
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
@@ -125,6 +128,7 @@ public static class FeatureFlagKeys
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
+    public const string FailedTwoFactorEmail = "pm-24425-send-2fa-failed-email";
 
     /* Autofill Team */
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
@@ -157,10 +161,7 @@ public static class FeatureFlagKeys
     public const string PM21092_SetNonUSBusinessUseToReverseCharge = "pm-21092-set-non-us-business-use-to-reverse-charge";
     public const string PM21383_GetProviderPriceFromStripe = "pm-21383-get-provider-price-from-stripe";
     public const string PM21881_ManagePaymentDetailsOutsideCheckout = "pm-21881-manage-payment-details-outside-checkout";
-
-    /* Data Insights and Reporting Team */
-    public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
-    public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
+    public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";

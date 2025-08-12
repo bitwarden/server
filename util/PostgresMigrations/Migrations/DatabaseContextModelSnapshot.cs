@@ -207,6 +207,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<long?>("Storage")
                         .HasColumnType("bigint");
 
+                    b.Property<bool>("SyncSeats")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("TwoFactorProviders")
                         .HasColumnType("text");
 
@@ -316,7 +319,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("EventType")
+                    b.Property<int?>("EventType")
                         .HasColumnType("integer");
 
                     b.Property<string>("Filters")

@@ -12,4 +12,6 @@ public interface IOrganizationIntegrationConfigurationRepository : IRepository<O
         EventType eventType);
 
     Task<List<OrganizationIntegrationConfigurationDetails>> GetAllConfigurationDetailsAsync();
+
+    Task<List<OrganizationIntegrationConfiguration>> GetManyByIntegrationAsync(Guid organizationIntegrationId);
 }

@@ -36,6 +36,12 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// <param name="includeCollections">Whether to include collections</param>
     /// <returns>A list of OrganizationUserUserDetails</returns>
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
+    /// <inheritdoc cref="GetManyDetailsByOrganizationAsync"/>
+    /// <remarks>
+    /// This method is optimized for performance.
+    /// Reduces database round trips by fetching all data in fewer queries.
+    /// </remarks>
+    Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null);
     Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId, Guid organizationId,
@@ -70,7 +76,10 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// Returns a list of OrganizationUsers with email domains that match one of the Organization's claimed domains.
     /// </summary>
     Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId);
-
+    /// <summary>
+    /// Optimized version of <see cref="GetManyByOrganizationWithClaimedDomainsAsync"/> with better performance.
+    /// </summary>
+    Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync_vNext(Guid organizationId);
     Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds);
 
     /// <summary>

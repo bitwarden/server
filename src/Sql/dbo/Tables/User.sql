@@ -57,3 +57,7 @@ GO
 CREATE NONCLUSTERED INDEX [IX_User_Premium_PremiumExpirationDate_RenewalReminderDate]
     ON [dbo].[User]([Premium] ASC, [PremiumExpirationDate] ASC, [RenewalReminderDate] ASC);
 
+GO
+CREATE NONCLUSTERED INDEX [IX_User_Id_EmailDomain]
+    ON [dbo].[User]([Id] ASC, [Email] ASC);
+

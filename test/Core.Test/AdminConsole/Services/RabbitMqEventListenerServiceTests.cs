@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿#nullable enable
+
+using System.Text.Json;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -15,17 +18,30 @@ namespace Bit.Core.Test.Services;
 [SutProviderCustomize]
 public class RabbitMqEventListenerServiceTests
 {
-    private const string _queueName = "test_queue";
-    private readonly IRabbitMqService _rabbitMqService = Substitute.For<IRabbitMqService>();
-    private readonly ILogger<RabbitMqEventListenerService> _logger = Substitute.For<ILogger<RabbitMqEventListenerService>>();
+    private readonly TestListenerConfiguration _config = new();
+    private readonly ILogger _logger = Substitute.For<ILogger>();
 
-    private SutProvider<RabbitMqEventListenerService> GetSutProvider()
+    private SutProvider<RabbitMqEventListenerService<TestListenerConfiguration>> GetSutProvider()
     {
-        return new SutProvider<RabbitMqEventListenerService>()
-            .SetDependency(_rabbitMqService)
-            .SetDependency(_logger)
-            .SetDependency(_queueName, "queueName")
+        var loggerFactory = Substitute.For<ILoggerFactory>();
+        loggerFactory.CreateLogger<object>().ReturnsForAnyArgs(_logger);
+        return new SutProvider<RabbitMqEventListenerService<TestListenerConfiguration>>()
+            .SetDependency(_config)
+            .SetDependency(loggerFactory)
             .Create();
+    }
+
+    [Fact]
+    public void Constructor_CreatesLogWithCorrectCategory()
+    {
+        var sutProvider = GetSutProvider();
+
+        var fullName = typeof(RabbitMqEventListenerService<>).FullName ?? "";
+        var tickIndex = fullName.IndexOf('`');
+        var cleanedName = tickIndex >= 0 ? fullName.Substring(0, tickIndex) : fullName;
+        var categoryName = cleanedName + '.' + _config.EventQueueName;
+
+        sutProvider.GetDependency<ILoggerFactory>().Received(1).CreateLogger(categoryName);
     }
 
     [Fact]
@@ -35,8 +51,8 @@ public class RabbitMqEventListenerServiceTests
         var cancellationToken = CancellationToken.None;
         await sutProvider.Sut.StartAsync(cancellationToken);
 
-        await _rabbitMqService.Received(1).CreateEventQueueAsync(
-            Arg.Is(_queueName),
+        await sutProvider.GetDependency<IRabbitMqService>().Received(1).CreateEventQueueAsync(
+            Arg.Is(_config.EventQueueName),
             Arg.Is(cancellationToken)
         );
     }
@@ -52,7 +68,7 @@ public class RabbitMqEventListenerServiceTests
             exchange: string.Empty,
             routingKey: string.Empty,
             new BasicProperties(),
-            body: new byte[0]);
+            body: Array.Empty<byte>());
 
         await sutProvider.Sut.ProcessReceivedMessageAsync(eventArgs);
 
@@ -61,7 +77,7 @@ public class RabbitMqEventListenerServiceTests
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -75,16 +91,16 @@ public class RabbitMqEventListenerServiceTests
             exchange: string.Empty,
             routingKey: string.Empty,
             new BasicProperties(),
-            body: JsonSerializer.SerializeToUtf8Bytes("{ Inavlid JSON"));
+            body: JsonSerializer.SerializeToUtf8Bytes("{ Invalid JSON"));
 
         await sutProvider.Sut.ProcessReceivedMessageAsync(eventArgs);
 
         _logger.Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString().Contains("Invalid JSON")),
+            Arg.Is<object>(o => (o.ToString() ?? "").Contains("Invalid JSON")),
             Arg.Any<Exception>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -107,7 +123,7 @@ public class RabbitMqEventListenerServiceTests
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -130,7 +146,7 @@ public class RabbitMqEventListenerServiceTests
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Theory, BitAutoData]
