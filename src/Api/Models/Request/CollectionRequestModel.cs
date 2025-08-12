@@ -40,7 +40,7 @@ public class CollectionBulkDeleteRequestModel
     public IEnumerable<Guid> Ids { get; set; }
 }
 
-public class CollectionWithIdRequestModel : UpdateCollectionRequestModel
+public class CollectionWithIdRequestModel : CreateCollectionRequestModel
 {
     public Guid? Id { get; set; }
 
