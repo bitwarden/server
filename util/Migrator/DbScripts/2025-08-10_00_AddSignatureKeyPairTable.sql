@@ -84,6 +84,20 @@ BEGIN
 END
 GO
 
+IF COL_LENGTH('[dbo].[User]', 'SecurityVersion') IS NULL
+BEGIN
+    ALTER TABLE [dbo].[User]
+    ADD [SecurityVersion] INT NULL;
+END
+GO
+
+IF COL_LENGTH('[dbo].[User]', 'SecurityState') IS NULL
+BEGIN
+    ALTER TABLE [dbo].[User]
+    ADD [SecurityState] NVARCHAR(MAX) NULL;
+END
+GO
+
 EXECUTE sp_refreshview 'dbo.UserView'
 GO
 
@@ -132,6 +146,7 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
     @SignedPublicKey NVARCHAR(MAX) = NULL,
+    @SecurityState NVARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL
 AS
 BEGIN
@@ -183,6 +198,7 @@ BEGIN
         [LastEmailChangeDate],
         [VerifyDevices],
         [SignedPublicKey],
+        [SecurityState],
         [SecurityVersion]
     )
     VALUES
@@ -231,6 +247,7 @@ BEGIN
         @LastEmailChangeDate,
         @VerifyDevices,
         @SignedPublicKey,
+        @SecurityState,
         @SecurityVersion
     )
 END
@@ -281,6 +298,7 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
     @SignedPublicKey NVARCHAR(MAX) = NULL,
+    @SecurityState NVARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL
 AS
 BEGIN
@@ -332,6 +350,7 @@ BEGIN
         [LastEmailChangeDate] = @LastEmailChangeDate,
         [VerifyDevices] = @VerifyDevices,
         [SignedPublicKey] = @SignedPublicKey,
+        [SecurityState] = @SecurityState,
         [SecurityVersion] = @SecurityVersion
     WHERE
         [Id] = @Id
