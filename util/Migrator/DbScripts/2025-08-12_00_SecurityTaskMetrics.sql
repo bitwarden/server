@@ -9,10 +9,7 @@ BEGIN
         COUNT(*) AS TotalTasks
     FROM
         [dbo].[SecurityTaskView] st
-    INNER JOIN
-        [dbo].[Organization] O ON O.[Id] = st.[OrganizationId]
     WHERE
         st.[OrganizationId] = @OrganizationId
-        AND O.[Enabled] = 1
 END
 GO
