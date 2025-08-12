@@ -477,6 +477,93 @@ public class AdminRecoverAccountCommandTests
         Assert.Equal(AdminRecoverAccountCommand.InsufficientPermissionsForProvider, exception.Message);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task RecoverAccountAsync_TargetUserNotProvider_Success(
+        OrganizationUserType callingUserType,
+        string newMasterPassword,
+        string key,
+        Organization organization,
+        Policy resetPasswordPolicy,
+        OrganizationUser organizationUser,
+        User user,
+        SutProvider<AdminRecoverAccountCommand> sutProvider)
+    {
+        // Arrange
+        SetupValidOrganization(sutProvider, organization);
+        SetupValidPolicy(sutProvider, resetPasswordPolicy, organization.Id);
+        SetupValidOrganizationUser(sutProvider, organizationUser, organization.Id, callingUserType);
+        SetupValidUser(sutProvider, user, organizationUser.UserId.Value);
+        SetupSuccessfulPasswordUpdate(sutProvider, user, newMasterPassword);
+
+        // Setup provider relationship - the target user is NOT a provider for the organization
+        // Mock the provider user repository to return no provider users (empty list)
+        var providerUsers = new List<ProviderUser>();
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByOrganizationAsync(organizationUser.OrganizationId)
+            .Returns(providerUsers);
+
+        // Act
+        var result = await sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        await VerifyUserUpdated(sutProvider, user, key);
+        await VerifyEmailSent(sutProvider, user, organization);
+        await VerifyEventLogged(sutProvider, organizationUser);
+        await VerifyPushNotificationSent(sutProvider, user.Id);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RecoverAccountAsync_CallingUserIsProvider_Success(
+        OrganizationUserType callingUserType,
+        string newMasterPassword,
+        string key,
+        Organization organization,
+        Policy resetPasswordPolicy,
+        OrganizationUser organizationUser,
+        User user,
+        ProviderUser targetProviderUser,
+        ProviderUser callingProviderUser,
+        SutProvider<AdminRecoverAccountCommand> sutProvider)
+    {
+        // Arrange
+        SetupValidOrganization(sutProvider, organization);
+        SetupValidPolicy(sutProvider, resetPasswordPolicy, organization.Id);
+        SetupValidOrganizationUser(sutProvider, organizationUser, organization.Id, callingUserType);
+        SetupValidUser(sutProvider, user, organizationUser.UserId.Value);
+        SetupSuccessfulPasswordUpdate(sutProvider, user, newMasterPassword);
+
+        // Setup provider relationship - both the target user and calling user are providers for the organization
+        targetProviderUser.UserId = organizationUser.UserId.Value;
+        targetProviderUser.Status = ProviderUserStatusType.Confirmed;
+
+        var callingUserId = Guid.NewGuid();
+        callingProviderUser.UserId = callingUserId;
+        callingProviderUser.Status = ProviderUserStatusType.Confirmed;
+
+        var providerUsers = new List<ProviderUser> { targetProviderUser, callingProviderUser };
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByOrganizationAsync(organizationUser.OrganizationId)
+            .Returns(providerUsers);
+
+        // Mock the current context to return the calling user ID
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId
+            .Returns(callingUserId);
+
+        // Act
+        var result = await sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        await VerifyUserUpdated(sutProvider, user, key);
+        await VerifyEmailSent(sutProvider, user, organization);
+        await VerifyEventLogged(sutProvider, organizationUser);
+        await VerifyPushNotificationSent(sutProvider, user.Id);
+    }
+
     private void SetupValidOrganization(SutProvider<AdminRecoverAccountCommand> sutProvider, Organization organization)
     {
         organization.UseResetPassword = true;
