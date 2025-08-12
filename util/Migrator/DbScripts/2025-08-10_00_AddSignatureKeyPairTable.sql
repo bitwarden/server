@@ -4,7 +4,7 @@ BEGIN
     (
         [Id] UNIQUEIDENTIFIER NOT NULL,
         [UserId] UNIQUEIDENTIFIER NOT NULL,
-        [SignatureKeyPairAlgorithm] TINYINT NOT NULL,
+        [SignatureAlgorithm] TINYINT NOT NULL,
         [SigningKey] VARCHAR(MAX) NOT NULL,
         [VerifyingKey] VARCHAR(MAX) NOT NULL,
         [CreationDate] DATETIME2 (7) NOT NULL,
@@ -45,14 +45,14 @@ GO
 
 CREATE OR ALTER PROCEDURE [dbo].[UserSignatureKeyPair_UpdateForRotation]
     @UserId UNIQUEIDENTIFIER,
-    @SignatureKeyPairAlgorithm TINYINT,
+    @SignatureAlgorithm TINYINT,
     @SigningKey VARCHAR(MAX),
     @VerifyingKey VARCHAR(MAX),
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
     UPDATE [dbo].[UserSignatureKeyPair]
-    SET [SignatureKeyPairAlgorithm] = @SignatureKeyPairAlgorithm,
+    SET [SignatureAlgorithm] = @SignatureAlgorithm,
         [SigningKey] = @SigningKey,
         [VerifyingKey] = @VerifyingKey,
         [RevisionDate] = @RevisionDate
@@ -63,15 +63,15 @@ GO
 CREATE OR ALTER PROCEDURE [dbo].[UserSignatureKeyPair_SetForRotation]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
-    @SignatureKeyPairAlgorithm TINYINT,
+    @SignatureAlgorithm TINYINT,
     @SigningKey VARCHAR(MAX),
     @VerifyingKey VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
-    INSERT INTO [dbo].[UserSignatureKeyPair] ([Id], [UserId], [SignatureKeyPairAlgorithm], [SigningKey], [VerifyingKey], [CreationDate], [RevisionDate])
-    VALUES (@Id, @UserId, @SignatureKeyPairAlgorithm, @SigningKey, @VerifyingKey, @CreationDate, @RevisionDate)
+    INSERT INTO [dbo].[UserSignatureKeyPair] ([Id], [UserId], [SignatureAlgorithm], [SigningKey], [VerifyingKey], [CreationDate], [RevisionDate])
+    VALUES (@Id, @UserId, @SignatureAlgorithm, @SigningKey, @VerifyingKey, @CreationDate, @RevisionDate)
 END
 GO
 
@@ -131,7 +131,8 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
-    @SignedPublicKey NVARCHAR(MAX) = NULL
+    @SignedPublicKey NVARCHAR(MAX) = NULL,
+    @SecurityVersion INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -181,7 +182,8 @@ BEGIN
         [LastKeyRotationDate],
         [LastEmailChangeDate],
         [VerifyDevices],
-        [SignedPublicKey]
+        [SignedPublicKey],
+        [SecurityVersion]
     )
     VALUES
     (
@@ -228,7 +230,8 @@ BEGIN
         @LastKeyRotationDate,
         @LastEmailChangeDate,
         @VerifyDevices,
-        @SignedPublicKey
+        @SignedPublicKey,
+        @SecurityVersion
     )
 END
 GO
@@ -277,7 +280,8 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
-    @SignedPublicKey NVARCHAR(MAX) = NULL
+    @SignedPublicKey NVARCHAR(MAX) = NULL,
+    @SecurityVersion INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -327,7 +331,8 @@ BEGIN
         [LastKeyRotationDate] = @LastKeyRotationDate,
         [LastEmailChangeDate] = @LastEmailChangeDate,
         [VerifyDevices] = @VerifyDevices,
-        [SignedPublicKey] = @SignedPublicKey
+        [SignedPublicKey] = @SignedPublicKey,
+        [SecurityVersion] = @SecurityVersion
     WHERE
         [Id] = @Id
 END

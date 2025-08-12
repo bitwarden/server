@@ -1,13 +1,13 @@
 CREATE PROCEDURE [dbo].[UserSignatureKeyPair_SetForRotation]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
-    @SignatureKeyPairAlgorithm TINYINT,
+    @SignatureAlgorithm TINYINT,
     @SigningKey VARCHAR(MAX),
     @VerifyingKey VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
 BEGIN
-    INSERT INTO [dbo].[UserSignatureKeyPair] ([Id], [UserId], [SignatureKeyPairAlgorithm], [SigningKey], [VerifyingKey], [CreationDate], [RevisionDate])
-    VALUES (@Id, @UserId, @SignatureKeyPairAlgorithm, @SigningKey, @VerifyingKey, @CreationDate, @RevisionDate)
+    INSERT INTO [dbo].[UserSignatureKeyPair] ([Id], [UserId], [SignatureAlgorithm], [SigningKey], [VerifyingKey], [CreationDate], [RevisionDate])
+    VALUES (@Id, @UserId, @SignatureAlgorithm, @SigningKey, @VerifyingKey, @CreationDate, @RevisionDate)
 END

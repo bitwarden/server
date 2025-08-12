@@ -48,7 +48,7 @@ public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, G
                 {
                     Id = CoreHelpers.GenerateComb(),
                     UserId = userId,
-                    SignatureKeyPairAlgorithm = (byte)signingKeys.SignatureAlgorithm,
+                    SignatureAlgorithm = (byte)signingKeys.SignatureAlgorithm,
                     SigningKey = signingKeys.WrappedSigningKey,
                     VerifyingKey = signingKeys.VerifyingKey,
                     CreationDate = DateTime.UtcNow,

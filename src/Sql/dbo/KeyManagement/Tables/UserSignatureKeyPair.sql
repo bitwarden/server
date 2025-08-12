@@ -1,7 +1,7 @@
 ﻿CREATE TABLE [dbo].[UserSignatureKeyPair] (
     [Id]                        UNIQUEIDENTIFIER NOT NULL,
     [UserId]                    UNIQUEIDENTIFIER NOT NULL,
-    [SignatureKeyPairAlgorithm] TINYINT NOT NULL,
+    [SignatureAlgorithm]        TINYINT NOT NULL,
     [SigningKey]                VARCHAR(MAX) NOT NULL,
     [VerifyingKey]              VARCHAR(MAX) NOT NULL,
     [CreationDate]              DATETIME2 (7) NOT NULL,
