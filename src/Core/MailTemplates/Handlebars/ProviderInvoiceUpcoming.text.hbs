@@ -1,16 +1,18 @@
 {{#>BasicTextLayout}}
 {{#if (eq CollectionMethod "send_invoice")}}
-Your Bitwarden subscription is due for renewal soon. An invoice for {{usd AmountDue}} will be sent to you on {{date DueDate 'MMMM dd, yyyy'}}.
+Your subscription will renew soon
+
+On {{date DueDate 'MMMM dd, yyyy'}} we'll send you an invoice with a summary of the charges including tax.
 {{else}}
+Your subscription will renew on {{date DueDate 'MMMM dd, yyyy'}}
+
     {{#if HasPaymentMethod}}
-Your Bitwarden subscription is due for renewal soon. Your {{PaymentMethodDescription}} will be charged on {{date DueDate 'MMMM dd, yyyy'}} for:
-
-{{usd AmountDue}}
+To avoid any interruption in service, please ensure your {{PaymentMethodDescription}} can be charged for the following amount:
     {{else}}
-Your Bitwarden subscription is due for renewal on {{date DueDate 'MMMM dd, yyyy'}}. To avoid any interruption in service, please add a payment method that can be charged for the following amount:
+To avoid any interruption in service, please add a payment method that can be charged for the following amount:
+    {{/if}}
 
 {{usd AmountDue}}
-    {{/if}}
 {{/if}}
 {{#if Items}}
 {{#unless (eq CollectionMethod "send_invoice")}}
@@ -24,16 +26,16 @@ Summary Of Charges
 {{/if}}
 
 {{#if (eq CollectionMethod "send_invoice")}}
-You will receive an invoice that you can pay manually. You can view and manage your subscription by logging into the web app. For more information, please visit {{{UpdateBillingInfoUrl}}}.
-{{else}}
-    {{#if HasPaymentMethod}}
-To avoid any interruption in service, please ensure that your payment method on file is up to date and can be charged for the above amount.
-    {{/if}}
+To avoid any interruption in service for you or your clients, please pay the invoice by the due date, or contact Bitwarden Customer Support to sign up for auto-pay.
 
-You can manage your subscription, payment method, and invoices by logging into the web app. For more information, visit {{{UpdateBillingInfoUrl}}}.
+Contact Bitwarden Support: {{{ContactUrl}}}
+
+For assistance managing your subscription, please visit the **Help center** (https://bitwarden.com/help/update-billing-info) or **contact Bitwarden Customer Support** (https://bitwarden.com/contact/).
+{{else}}
+
 {{/if}}
 
 {{#unless (eq CollectionMethod "send_invoice")}}
-If you have any questions or problems, please contact Bitwarden Customer Support ({{{ContactUrl}}}).
+For assistance managing your subscription, please visit the **Help center** (https://bitwarden.com/help/update-billing-info) or **contact Bitwarden Customer Support** (https://bitwarden.com/contact/).
 {{/unless}}
 {{/BasicTextLayout}}

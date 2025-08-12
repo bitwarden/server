@@ -1,33 +1,35 @@
 {{#>ProviderFull}}
-<table width="100%" cellpadding="0" cellspacing="0" style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
-    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+<table width="100%" cellpadding="0" cellspacing="0" style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #1B2029; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #1B2029; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
         <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 20px; -webkit-text-size-adjust: none;" valign="top">
             {{#if (eq CollectionMethod "send_invoice")}}
-            Your Bitwarden subscription is due for renewal soon. On <strong>{{date DueDate 'MMMM dd, yyyy'}}</strong> we'll send you an invoice with a summary of the charges including tax.
+            <div style="font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 600; font-size: 24px; line-height: 32px; letter-spacing: 0px; color: #1B2029; margin: 0 0 8px 0;">Your subscription will renew soon</div>
+            <div style="font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 400; font-size: 16px; line-height: 24px; letter-spacing: 0px; color: #1B2029; margin: 0;">On <strong>{{date DueDate 'MMMM dd, yyyy'}}</strong> we'll send you an invoice with a summary of the charges including tax.</div>
             {{else}}
+            <div style="font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 600; font-size: 24px; line-height: 32px; letter-spacing: 0px; color: #1B2029; margin: 0 0 8px 0;">Your subscription will renew on {{date DueDate 'MMMM dd, yyyy'}}</div>
                 {{#if HasPaymentMethod}}
-            Your Bitwarden subscription is due for renewal soon. Your {{PaymentMethodDescription}} will be charged on {{date DueDate 'MMMM dd, yyyy'}} for:
+            <div style="font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 400; font-size: 16px; line-height: 24px; letter-spacing: 0px; color: #1B2029; margin: 0;">To avoid any interruption in service, please ensure your {{PaymentMethodDescription}} can be charged for the following amount:</div>
                 {{else}}
-            Your Bitwarden subscription is due for renewal on {{date DueDate 'MMMM dd, yyyy'}}. To avoid any interruption in service, please add a payment method that can be charged for the following amount:
+            <div style="font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 400; font-size: 16px; line-height: 24px; letter-spacing: 0px; color: #1B2029; margin: 0;">To avoid any interruption in service, please add a payment method that can be charged for the following amount:</div>
                 {{/if}}
             {{/if}}
         </td>
     </tr>
     {{#unless (eq CollectionMethod "send_invoice")}}
-    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
-        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 32px; font-weight: bold; color: #333; line-height: 1.2; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 20px; -webkit-text-size-adjust: none;" valign="top">
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #1B2029; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 32px; font-weight: bold; color: #1B2029; line-height: 1.2; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 20px; -webkit-text-size-adjust: none;" valign="top">
             {{usd AmountDue}}
         </td>
     </tr>
     {{/unless}}
     {{#if Items}}
     {{#unless (eq CollectionMethod "send_invoice")}}
-    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
-        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 20px; -webkit-text-size-adjust: none;" valign="top">
-            <strong style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">Summary Of Charges</strong><br />
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #1B2029; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block" style="font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; font-weight: 400; color: #1B2029; line-height: 24px; letter-spacing: 0px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 10px; -webkit-text-size-adjust: none;" valign="top">
+            <strong style="margin: 0; font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; font-weight: 700; color: ##1B2029; line-height: 24px; letter-spacing: 0px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">Summary Of Charges</strong><br />
             <div style="border-bottom: 1px solid #ddd; margin: 5px 0 10px 0; padding-bottom: 5px;"></div>
             {{#each Items}}
-            {{this}}<br style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;" />
+            <div style="font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 400; font-size: 16px; line-height: 24px; letter-spacing: 0px; color: #1B2029; margin: 0;">{{this}}</div>
             {{/each}}
         </td>
     </tr>
@@ -36,22 +38,16 @@
     <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
         <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 20px; -webkit-text-size-adjust: none;" valign="top">
             {{#if (eq CollectionMethod "send_invoice")}}
-            To avoid any interruption in service for you or your clients, please pay the invoice by the due date, or contact Bitwarden Customer Support to sign up for auto-pay.
+            <div style="font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 400; font-size: 16px; line-height: 24px; letter-spacing: 0px; color: #1B2029; margin: 0;">To avoid any interruption in service for you or your clients, please pay the invoice by the due date, or contact Bitwarden Customer Support to sign up for auto-pay.</div>
             {{else}}
-                {{#if HasPaymentMethod}}
-            To avoid any interruption in service, please ensure that your payment method on file is up to date and can be charged for the above amount.
-                {{/if}}
+
             {{/if}}
         </td>
     </tr>
     {{#unless (eq CollectionMethod "send_invoice")}}
+
     <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
-        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 20px; -webkit-text-size-adjust: none;" valign="top">
-            You can manage your subscription, payment method, and invoices by logging into the web app. For more information, visit <a href="{{{UpdateBillingInfoUrl}}}" style="color: #175DDC; text-decoration: underline;">bitwarden.com/help/update-billing-info</a>.
-        </td>
-    </tr>
-    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
-        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 20px; -webkit-text-size-adjust: none;" valign="top">
+        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 10px; -webkit-text-size-adjust: none;" valign="top">
             <table cellpadding="0" cellspacing="0" style="margin: 0;">
                 <tr>
                     <td style="background-color: #175DDC; border-radius: 25px; padding: 12px 24px;">
@@ -63,7 +59,7 @@
     </tr>
     {{/unless}}
     <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
-        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 20px; -webkit-text-size-adjust: none;" valign="top">
+        <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 16px; -webkit-text-size-adjust: none;" valign="top">
             {{#if (eq CollectionMethod "send_invoice")}}
             <table cellpadding="0" cellspacing="0" style="margin: 0;">
                 <tr>
@@ -75,10 +71,17 @@
             {{/if}}
         </td>
     </tr>
+    {{#if (eq CollectionMethod "send_invoice")}}
+    <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+        <td class="content-block last" style="font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 14px; font-weight: 400; color: #1B2029; line-height: 20px; letter-spacing: 0px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0; -webkit-text-size-adjust: none;" valign="top">
+            For assistance managing your subscription, please visit the <a href="https://bitwarden.com/help/update-billing-info" style="color: #175DDC !important; text-decoration: none; font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 20px; letter-spacing: 0px;"><strong style="color: #175DDC !important;">Help center</strong></a> or <a href="https://bitwarden.com/contact/" style="color: #175DDC !important; text-decoration: none; font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 20px; letter-spacing: 0px;"><strong style="color: #175DDC !important;">contact Bitwarden Customer Support</strong></a>.
+        </td>
+    </tr>
+    {{/if}}
     {{#unless (eq CollectionMethod "send_invoice")}}
     <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
-        <td class="content-block last" style="font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 14px; font-weight: 400; color: #333; line-height: 20px; letter-spacing: 0px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0; -webkit-text-size-adjust: none;" valign="top">
-            If you have any questions or problems, please <a href="{{{ContactUrl}}}" style="color: #175DDC; text-decoration: underline; font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 400; line-height: 20px; letter-spacing: 0px;">contact Bitwarden Customer Support</a>.
+        <td class="content-block last" style="font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 14px; font-weight: 400; color: #1B2029; line-height: 20px; letter-spacing: 0px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0; -webkit-text-size-adjust: none;" valign="top">
+            For assistance managing your subscription, please visit the <a href="https://bitwarden.com/help/update-billing-info" style="color: #175DDC !important; text-decoration: none; font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 20px; letter-spacing: 0px;"><strong style="color: #175DDC !important;">Help center</strong></a> or <a href="https://bitwarden.com/contact/" style="color: #175DDC !important; text-decoration: none; font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 20px; letter-spacing: 0px;"><strong style="color: #175DDC !important;">contact Bitwarden Customer Support</strong></a>.
         </td>
     </tr>
     {{/unless}}
