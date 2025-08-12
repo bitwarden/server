@@ -12,8 +12,8 @@ public static class ScimConcurrencyRateLimiter
             RateLimitPartition.GetConcurrencyLimiter(context.GetOrganizationId(),
                 factory: _ => new ConcurrencyLimiterOptions
                 {
-                    PermitLimit = int.MaxValue, // How much do we want in memory
-                    QueueLimit = 1,
+                    PermitLimit = 1,
+                    QueueLimit = int.MaxValue,
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst
                 })
         ));
