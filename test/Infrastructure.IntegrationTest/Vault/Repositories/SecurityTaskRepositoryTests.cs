@@ -323,8 +323,8 @@ public class SecurityTaskRepositoryTests
 
         var metrics = await securityTaskRepository.GetTaskMetricsAsync(organization.Id);
 
-        Assert.Equal(2, metrics.CompletedTasksCount);
-        Assert.Equal(4, metrics.TotalTasksCount);
+        Assert.Equal(2, metrics.CompletedTasks);
+        Assert.Equal(4, metrics.TotalTasks);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -342,7 +342,7 @@ public class SecurityTaskRepositoryTests
 
         var metrics = await securityTaskRepository.GetTaskMetricsAsync(organization.Id);
 
-        Assert.Equal(0, metrics.CompletedTasksCount);
-        Assert.Equal(0, metrics.TotalTasksCount);
+        Assert.Equal(0, metrics.CompletedTasks);
+        Assert.Equal(0, metrics.TotalTasks);
     }
 }

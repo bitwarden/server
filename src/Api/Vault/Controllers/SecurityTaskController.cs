@@ -92,7 +92,7 @@ public class SecurityTaskController : Controller
     {
         var metrics = await _getTaskMetricsForOrganizationQuery.GetTaskMetrics(orgId);
 
-        return new SecurityTaskMetricsResponseModel(metrics.CompletedTasksCount, metrics.TotalTasksCount);
+        return new SecurityTaskMetricsResponseModel(metrics.CompletedTasks, metrics.TotalTasks);
     }
 
     /// <summary>

@@ -2,12 +2,12 @@
 
 public class SecurityTaskMetrics
 {
-    public SecurityTaskMetrics(int completedTasksCount, int totalTasksCount)
+    public SecurityTaskMetrics(int completedTasks, int totalTasks)
     {
-        CompletedTasksCount = completedTasksCount;
-        TotalTasksCount = totalTasksCount;
+        CompletedTasks = completedTasks;
+        TotalTasks = totalTasks;
     }
 
-    public int CompletedTasksCount { get; set; }
-    public int TotalTasksCount { get; set; }
+    public int CompletedTasks { get; set; }
+    public int TotalTasks { get; set; }
 }

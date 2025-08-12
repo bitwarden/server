@@ -54,7 +54,7 @@ public class SecurityTaskRepository : Repository<SecurityTask, Guid>, ISecurityT
         await using var connection = new SqlConnection(ConnectionString);
 
         var result = await connection.QueryAsync<SecurityTaskMetrics>(
-            $"[{Schema}].[SecurityTask_ReadByOrganizationIdMetrics]",
+            $"[{Schema}].[SecurityTask_ReadMetricsByOrganizationId]",
             new { OrganizationId = organizationId },
             commandType: CommandType.StoredProcedure);
 
