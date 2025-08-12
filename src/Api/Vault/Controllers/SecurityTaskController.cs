@@ -88,7 +88,7 @@ public class SecurityTaskController : Controller
     /// </summary>
     /// <param name="orgId">The organization Id</param>
     [HttpGet("{orgId:guid}/metrics")]
-    public async Task<SecurityTaskMetricsResponseModel> GetTaskMetricsForOrg([FromRoute] Guid orgId)
+    public async Task<SecurityTaskMetricsResponseModel> GetTaskMetricsForOrganization([FromRoute] Guid orgId)
     {
         var metrics = await _getTaskMetricsForOrganizationQuery.GetTaskMetrics(orgId);
 
