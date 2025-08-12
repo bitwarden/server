@@ -7,8 +7,9 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request;
 
-public class CollectionRequestModel
+public class CreateCollectionRequestModel
 {
+    [Required]
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Name { get; set; }
@@ -27,10 +28,7 @@ public class CollectionRequestModel
 
     public virtual Collection ToCollection(Collection existingCollection)
     {
-        if (string.IsNullOrEmpty(existingCollection.DefaultUserCollectionEmail) && !string.IsNullOrEmpty(Name))
-        {
-            existingCollection.Name = Name;
-        }
+        existingCollection.Name = Name;
         existingCollection.ExternalId = ExternalId;
         return existingCollection;
     }
@@ -42,7 +40,7 @@ public class CollectionBulkDeleteRequestModel
     public IEnumerable<Guid> Ids { get; set; }
 }
 
-public class CollectionWithIdRequestModel : CollectionRequestModel
+public class CollectionWithIdRequestModel : UpdateCollectionRequestModel
 {
     public Guid? Id { get; set; }
 
@@ -51,4 +49,20 @@ public class CollectionWithIdRequestModel : CollectionRequestModel
         existingCollection.Id = Id ?? Guid.Empty;
         return base.ToCollection(existingCollection);
     }
+}
+
+public class UpdateCollectionRequestModel : CreateCollectionRequestModel
+{
+    new public string Name { get; set; }
+
+    new public virtual Collection ToCollection(Collection existingCollection)
+    {
+        if (string.IsNullOrEmpty(existingCollection.DefaultUserCollectionEmail) && !string.IsNullOrEmpty(Name))
+        {
+            existingCollection.Name = Name;
+        }
+        existingCollection.ExternalId = ExternalId;
+        return existingCollection;
+    }
+
 }

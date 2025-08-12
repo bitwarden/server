@@ -28,8 +28,8 @@ public class OrganizationUserRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Org",
-            BillingEmail = user.Email, // TODO: EF does not enfore this being NOT NULL
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+            BillingEmail = user.Email, // TODO: EF does not enforce this being NOT NULL
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULL
         });
 
         var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
@@ -73,8 +73,8 @@ public class OrganizationUserRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Org",
-            BillingEmail = user1.Email, // TODO: EF does not enfore this being NOT NULL
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULL
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULL
         });
 
         var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
@@ -167,8 +167,8 @@ public class OrganizationUserRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Org",
-            BillingEmail = user.Email, // TODO: EF does not enfore this being NOT NULL
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+            BillingEmail = user.Email, // TODO: EF does not enforce this being NOT NULL
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULL
         });
 
         var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
@@ -236,8 +236,8 @@ public class OrganizationUserRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Org",
-            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULl
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULL
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULL
         });
 
         var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
@@ -303,8 +303,8 @@ public class OrganizationUserRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Org",
-            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULl
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULL
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULL
             PrivateKey = "privatekey",
         });
 
@@ -459,8 +459,8 @@ public class OrganizationUserRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Org",
-            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULl
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULL
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULL
             PrivateKey = "privatekey",
         });
 
@@ -571,8 +571,8 @@ public class OrganizationUserRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = $"Test Org {id}",
-            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULl
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULL
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULL
             PrivateKey = "privatekey",
             UsePolicies = false,
             UseSso = false,
@@ -665,7 +665,7 @@ public class OrganizationUserRepositoryTests
         {
             Name = $"test-{Guid.NewGuid()}",
             BillingEmail = "billing@example.com", // TODO: EF does not enforce this being NOT NULL
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULL
         });
 
         var orgUsers = users.Select(u => new OrganizationUser
@@ -699,7 +699,7 @@ public class OrganizationUserRepositoryTests
         {
             Name = $"test-{Guid.NewGuid()}",
             BillingEmail = "billing@example.com", // TODO: EF does not enforce this being NOT NULL
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULL
         });
 
         var orgUsers = users.Select(u => new OrganizationUser
@@ -731,8 +731,8 @@ public class OrganizationUserRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Org",
-            BillingEmail = "billing@test.com", // TODO: EF does not enfore this being NOT NULL
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULl,
+            BillingEmail = "billing@test.com", // TODO: EF does not enforce this being NOT NULL
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULL,
             CreationDate = requestTime
         });
 

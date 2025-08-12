@@ -1,5 +1,6 @@
 CREATE PROCEDURE [dbo].[OrganizationUser_MigrateDefaultCollection]
-    @Ids [dbo].[GuidIdArray] READONLY
+    @Ids [dbo].[GuidIdArray] READONLY,
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -7,6 +8,7 @@ BEGIN
     UPDATE c
     SET
         [DefaultUserCollectionEmail] = CASE WHEN c.[DefaultUserCollectionEmail] IS NULL THEN u.[Email] ELSE c.[DefaultUserCollectionEmail] END,
+        [RevisionDate] = @RevisionDate,
         [Type] = 0
     FROM
         [dbo].[Collection] c
