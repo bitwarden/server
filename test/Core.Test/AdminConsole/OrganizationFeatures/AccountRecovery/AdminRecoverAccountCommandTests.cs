@@ -474,7 +474,7 @@ public class AdminRecoverAccountCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RecoverAccountAsync(callingUserType, organization.Id, organizationUser.Id, newMasterPassword, key));
-        Assert.Equal("Calling user does not have permission to reset this user's master password", exception.Message);
+        Assert.Equal(AdminRecoverAccountCommand.InsufficientPermissionsForProvider, exception.Message);
     }
 
     private void SetupValidOrganization(SutProvider<AdminRecoverAccountCommand> sutProvider, Organization organization)

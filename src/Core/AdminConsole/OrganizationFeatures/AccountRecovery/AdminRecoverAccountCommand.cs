@@ -23,6 +23,8 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
     IProviderUserRepository providerUserRepository,
     ICurrentContext currentContext) : IAdminRecoverAccountCommand
 {
+    public const string InsufficientPermissionsForProvider = "You are not permitted to recover a Provider's account.";
+
     public async Task<IdentityResult> RecoverAccountAsync(OrganizationUserType callingUserType, Guid orgId,
         Guid organizationUserId, string newMasterPassword, string key)
     {
@@ -124,7 +126,7 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
 
             if (!callingUserIsProvider)
             {
-                throw new BadRequestException("Calling user does not have permission to reset this user's master password");
+                throw new BadRequestException(InsufficientPermissionsForProvider);
             }
         }
     }
