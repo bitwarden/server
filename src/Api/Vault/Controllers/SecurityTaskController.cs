@@ -86,11 +86,11 @@ public class SecurityTaskController : Controller
     /// <summary>
     /// Retrieves security task metrics for an organization.
     /// </summary>
-    /// <param name="orgId">The organization Id</param>
-    [HttpGet("{orgId:guid}/metrics")]
-    public async Task<SecurityTaskMetricsResponseModel> GetTaskMetricsForOrganization([FromRoute] Guid orgId)
+    /// <param name="organizationId">The organization Id</param>
+    [HttpGet("{organizationId:guid}/metrics")]
+    public async Task<SecurityTaskMetricsResponseModel> GetTaskMetricsForOrganization([FromRoute] Guid organizationId)
     {
-        var metrics = await _getTaskMetricsForOrganizationQuery.GetTaskMetrics(orgId);
+        var metrics = await _getTaskMetricsForOrganizationQuery.GetTaskMetrics(organizationId);
 
         return new SecurityTaskMetricsResponseModel(metrics.CompletedTasks, metrics.TotalTasks);
     }
