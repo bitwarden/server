@@ -15,12 +15,11 @@ using Stripe.Tax;
 
 namespace Bit.Core.Billing.Organizations.Queries;
 
+using static StripeConstants;
 using FreeTrialWarning = OrganizationWarnings.FreeTrialWarning;
 using InactiveSubscriptionWarning = OrganizationWarnings.InactiveSubscriptionWarning;
 using ResellerRenewalWarning = OrganizationWarnings.ResellerRenewalWarning;
 using TaxIdWarning = OrganizationWarnings.TaxIdWarning;
-
-using static StripeConstants;
 
 public interface IGetOrganizationWarningsQuery
 {
