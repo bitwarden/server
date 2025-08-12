@@ -14,9 +14,6 @@ public class OnyxAnswerWithCitationRequestModel
     [JsonPropertyName("persona_id")]
     public int PersonaId { get; set; } = 1;
 
-    [JsonPropertyName("prompt_id")]
-    public int PromptId { get; set; } = 1;
-
     [JsonPropertyName("retrieval_options")]
     public RetrievalOptions RetrievalOptions { get; set; }
 
