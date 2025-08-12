@@ -564,7 +564,7 @@ public class AdminRecoverAccountCommandTests
         await VerifyPushNotificationSent(sutProvider, user.Id);
     }
 
-    private void SetupValidOrganization(SutProvider<AdminRecoverAccountCommand> sutProvider, Organization organization)
+    private static void SetupValidOrganization(SutProvider<AdminRecoverAccountCommand> sutProvider, Organization organization)
     {
         organization.UseResetPassword = true;
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -572,7 +572,7 @@ public class AdminRecoverAccountCommandTests
             .Returns(organization);
     }
 
-    private void SetupValidPolicy(SutProvider<AdminRecoverAccountCommand> sutProvider, Policy resetPasswordPolicy, Guid orgId)
+    private static void SetupValidPolicy(SutProvider<AdminRecoverAccountCommand> sutProvider, Policy resetPasswordPolicy, Guid orgId)
     {
         resetPasswordPolicy.Enabled = true;
         sutProvider.GetDependency<IPolicyRepository>()
@@ -580,7 +580,7 @@ public class AdminRecoverAccountCommandTests
             .Returns(resetPasswordPolicy);
     }
 
-    private void SetupValidOrganizationUser(SutProvider<AdminRecoverAccountCommand> sutProvider, OrganizationUser organizationUser, Guid orgId, OrganizationUserType callingUserType)
+    private static void SetupValidOrganizationUser(SutProvider<AdminRecoverAccountCommand> sutProvider, OrganizationUser organizationUser, Guid orgId, OrganizationUserType callingUserType)
     {
         organizationUser.Status = OrganizationUserStatusType.Confirmed;
         organizationUser.OrganizationId = orgId;
@@ -593,7 +593,7 @@ public class AdminRecoverAccountCommandTests
             .Returns(organizationUser);
     }
 
-    private void SetupValidUser(SutProvider<AdminRecoverAccountCommand> sutProvider, User user, Guid userId)
+    private static void SetupValidUser(SutProvider<AdminRecoverAccountCommand> sutProvider, User user, Guid userId)
     {
         user.UsesKeyConnector = false;
         sutProvider.GetDependency<IUserService>()
@@ -601,14 +601,14 @@ public class AdminRecoverAccountCommandTests
             .Returns(user);
     }
 
-    private void SetupSuccessfulPasswordUpdate(SutProvider<AdminRecoverAccountCommand> sutProvider, User user, string newMasterPassword)
+    private static void SetupSuccessfulPasswordUpdate(SutProvider<AdminRecoverAccountCommand> sutProvider, User user, string newMasterPassword)
     {
         sutProvider.GetDependency<IUserService>()
             .UpdatePasswordHash(user, newMasterPassword)
             .Returns(IdentityResult.Success);
     }
 
-    private async Task VerifyUserUpdated(SutProvider<AdminRecoverAccountCommand> sutProvider, User user, string key)
+    private static async Task VerifyUserUpdated(SutProvider<AdminRecoverAccountCommand> sutProvider, User user, string key)
     {
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
             Arg.Is<User>(u =>
@@ -619,7 +619,7 @@ public class AdminRecoverAccountCommandTests
                 u.LastPasswordChangeDate == u.RevisionDate));
     }
 
-    private async Task VerifyEmailSent(SutProvider<AdminRecoverAccountCommand> sutProvider, User user, Organization organization)
+    private static async Task VerifyEmailSent(SutProvider<AdminRecoverAccountCommand> sutProvider, User user, Organization organization)
     {
         await sutProvider.GetDependency<IMailService>().Received(1).SendAdminResetPasswordEmailAsync(
             Arg.Is(user.Email),
@@ -627,14 +627,14 @@ public class AdminRecoverAccountCommandTests
             Arg.Is(organization.DisplayName()));
     }
 
-    private async Task VerifyEventLogged(SutProvider<AdminRecoverAccountCommand> sutProvider, OrganizationUser organizationUser)
+    private static async Task VerifyEventLogged(SutProvider<AdminRecoverAccountCommand> sutProvider, OrganizationUser organizationUser)
     {
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(
             Arg.Is(organizationUser),
             Arg.Is(EventType.OrganizationUser_AdminResetPassword));
     }
 
-    private async Task VerifyPushNotificationSent(SutProvider<AdminRecoverAccountCommand> sutProvider, Guid userId)
+    private static async Task VerifyPushNotificationSent(SutProvider<AdminRecoverAccountCommand> sutProvider, Guid userId)
     {
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushLogOutAsync(
             Arg.Is(userId));
