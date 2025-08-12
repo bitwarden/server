@@ -22,7 +22,7 @@ namespace Bit.Api.Test.Controllers;
 public class CollectionsControllerTests
 {
     [Theory, BitAutoData]
-    public async Task Post_Success(Organization organization, CollectionRequestModel collectionRequest,
+    public async Task Post_Success(Organization organization, CreateCollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
         Collection ExpectedCollection() => Arg.Is<Collection>(c =>
@@ -46,7 +46,7 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Put_Success(Collection collection, CollectionRequestModel collectionRequest,
+    public async Task Put_Success(Collection collection, UpdateCollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
         collection.DefaultUserCollectionEmail = null;
@@ -73,7 +73,7 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Put_WithNoCollectionPermission_ThrowsNotFound(Collection collection, CollectionRequestModel collectionRequest,
+    public async Task Put_WithNoCollectionPermission_ThrowsNotFound(Collection collection, UpdateCollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
         sutProvider.GetDependency<IAuthorizationService>()
@@ -487,7 +487,7 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Put_With_NonNullName_DoesNotPreserveExistingName(Collection existingCollection, CollectionRequestModel collectionRequest,
+    public async Task Put_With_NonNullName_DoesNotPreserveExistingName(Collection existingCollection, UpdateCollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
         // Arrange
@@ -522,7 +522,7 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Put_WithNullName_DoesPreserveExistingName(Collection existingCollection, CollectionRequestModel collectionRequest,
+    public async Task Put_WithNullName_DoesPreserveExistingName(Collection existingCollection, UpdateCollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
         // Arrange
@@ -556,7 +556,7 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Put_WithDefaultUserCollectionEmail_DoesPreserveExistingName(Collection existingCollection, CollectionRequestModel collectionRequest,
+    public async Task Put_WithDefaultUserCollectionEmail_DoesPreserveExistingName(Collection existingCollection, UpdateCollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
         // Arrange
