@@ -445,7 +445,6 @@ public class AdminRecoverAccountCommandTests
         OrganizationUser organizationUser,
         User user,
         ProviderUser providerUser,
-        ProviderOrganization providerOrganization,
         SutProvider<AdminRecoverAccountCommand> sutProvider)
     {
         // Arrange
@@ -457,27 +456,20 @@ public class AdminRecoverAccountCommandTests
 
         // Setup provider relationship - the target user is a provider for the organization
         providerUser.UserId = organizationUser.UserId.Value;
-        providerUser.ProviderId = providerOrganization.ProviderId;
         providerUser.Status = ProviderUserStatusType.Confirmed;
-        providerOrganization.OrganizationId = organization.Id;
-
-        // Mock the provider organization repository to return the provider organization
-        sutProvider.GetDependency<IProviderOrganizationRepository>()
-            .GetByOrganizationId(organization.Id)
-            .Returns(providerOrganization);
-
-        // Mock the current context to return a calling user ID
-        var callingUserId = Guid.NewGuid();
-        sutProvider.GetDependency<ICurrentContext>()
-            .UserId
-            .Returns(callingUserId);
 
         // Mock the provider user repository to return the provider user for the target user
         // and no provider user for the calling user
         var providerUsers = new List<ProviderUser> { providerUser };
         sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyByProviderAsync(providerOrganization.ProviderId)
+            .GetManyByOrganizationAsync(organizationUser.OrganizationId)
             .Returns(providerUsers);
+
+        // Mock the current context to return the calling user ID
+        var callingUserId = Guid.NewGuid();
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId
+            .Returns(callingUserId);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>

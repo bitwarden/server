@@ -21,7 +21,6 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
     IPushNotificationService pushNotificationService,
     IUserService userService,
     IProviderUserRepository providerUserRepository,
-    IProviderOrganizationRepository providerOrganizationRepository,
     ICurrentContext currentContext) : IAdminRecoverAccountCommand
 {
     public async Task<IdentityResult> RecoverAccountAsync(OrganizationUserType callingUserType, Guid orgId,
@@ -52,6 +51,7 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
         }
 
         // Calling User must be of higher/equal user type to reset user's password
+        // TODO: move this out of the command and into an authorization handler
         var canAdjustPassword = false;
         switch (callingUserType)
         {
@@ -69,6 +69,7 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
 
         // Check if the target user is a providerUser for this organization - if so, the Calling User must also be
         // part of the provider
+        // TODO: move this out of the command and into an authorization handler
         await CheckProviderPermissionsAsync(orgId, orgUser);
 
         if (!canAdjustPassword)
@@ -108,26 +109,17 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
 
     private async Task CheckProviderPermissionsAsync(Guid orgId, OrganizationUser targetOrganizationUser)
     {
-        var providerOrg = await providerOrganizationRepository.GetByOrganizationId(orgId);
-        if (providerOrg == null)
-        {
-            return;
-        }
+        // Get all ProviderUsers for this organization. If the organization doesn't have a provider, then
+        // there will be no ProviderUsers so this logic will work either way.
+        var providerUsers = await providerUserRepository.GetManyByOrganizationAsync(orgId);
 
-        var providerUsers = await providerUserRepository.GetManyByProviderAsync(providerOrg.ProviderId);
-
-        // Check if the target user is a providerUser (in any status to be safe)
+        // Check if the target user is a providerUser (in any status, just to be safe)
         var targetUserIsProvider = providerUsers.Any(pu => pu.UserId == targetOrganizationUser.UserId!.Value);
 
         // If the target user is a provider, the calling user must also be a provider for this organization
         if (targetUserIsProvider)
         {
-            if (!currentContext.UserId.HasValue)
-            {
-                throw new BadRequestException("Calling user does not have permission to reset this user's master password");
-            }
-
-            var callingUserIsProvider = providerUsers.Any(pu =>
+            var callingUserIsProvider = currentContext.UserId.HasValue && providerUsers.Any(pu =>
                 pu.UserId == currentContext.UserId.Value && pu.Status == ProviderUserStatusType.Confirmed);
 
             if (!callingUserIsProvider)
