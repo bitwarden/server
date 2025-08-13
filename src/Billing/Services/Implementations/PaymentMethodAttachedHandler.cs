@@ -2,7 +2,6 @@
 #nullable disable
 
 using Bit.Billing.Constants;
-using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
@@ -12,21 +11,34 @@ using Event = Stripe.Event;
 
 namespace Bit.Billing.Services.Implementations;
 
-public class PaymentMethodAttachedHandler(
-    ILogger<PaymentMethodAttachedHandler> logger,
-    IStripeEventService stripeEventService,
-    IStripeFacade stripeFacade,
-    IStripeEventUtilityService stripeEventUtilityService,
-    IProviderRepository providerRepository)
-    : IPaymentMethodAttachedHandler
+public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
 {
+    private readonly ILogger<PaymentMethodAttachedHandler> _logger;
+    private readonly IStripeEventService _stripeEventService;
+    private readonly IStripeFacade _stripeFacade;
+    private readonly IStripeEventUtilityService _stripeEventUtilityService;
+    private readonly IProviderRepository _providerRepository;
+
+    public PaymentMethodAttachedHandler(ILogger<PaymentMethodAttachedHandler> logger,
+        IStripeEventService stripeEventService,
+        IStripeFacade stripeFacade,
+        IStripeEventUtilityService stripeEventUtilityService,
+        IProviderRepository providerRepository)
+    {
+        _logger = logger;
+        _stripeEventService = stripeEventService;
+        _stripeFacade = stripeFacade;
+        _stripeEventUtilityService = stripeEventUtilityService;
+        _providerRepository = providerRepository;
+    }
+
     public async Task HandleAsync(Event parsedEvent)
     {
-        var paymentMethod = await stripeEventService.GetPaymentMethod(parsedEvent, true, ["customer.subscriptions.data.latest_invoice"]);
+        var paymentMethod = await _stripeEventService.GetPaymentMethod(parsedEvent, true, ["customer.subscriptions.data.latest_invoice"]);
 
         if (paymentMethod == null)
         {
-            logger.LogWarning("Attempted to handle the event payment_method.attached but paymentMethod was null");
+            _logger.LogWarning("Attempted to handle the event payment_method.attached but paymentMethod was null");
         }
         else
         {
@@ -47,7 +59,7 @@ public class PaymentMethodAttachedHandler(
                 !customer.ApprovedToPayByInvoice() &&
                 Guid.TryParse(invoicedProviderSubscription.Metadata[StripeConstants.MetadataKeys.ProviderId], out var providerId))
             {
-                var provider = await providerRepository.GetByIdAsync(providerId);
+                var provider = await _providerRepository.GetByIdAsync(providerId);
 
                 if (provider is { Type: ProviderType.Msp })
                 {
@@ -55,7 +67,7 @@ public class PaymentMethodAttachedHandler(
                     {
                         try
                         {
-                            await stripeFacade.UpdateCustomer(customer.Id,
+                            await _stripeFacade.UpdateCustomer(customer.Id,
                                 new CustomerUpdateOptions
                                 {
                                     InvoiceSettings = new CustomerInvoiceSettingsOptions
@@ -66,7 +78,7 @@ public class PaymentMethodAttachedHandler(
                         }
                         catch (Exception exception)
                         {
-                            logger.LogWarning(exception,
+                            _logger.LogWarning(exception,
                                 "Failed to set customer's ({CustomerID}) default payment method during 'payment_method.attached' webhook",
                                 customer.Id);
                         }
@@ -74,7 +86,7 @@ public class PaymentMethodAttachedHandler(
 
                     try
                     {
-                        await stripeFacade.UpdateSubscription(invoicedProviderSubscription.Id,
+                        await _stripeFacade.UpdateSubscription(invoicedProviderSubscription.Id,
                             new SubscriptionUpdateOptions
                             {
                                 CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically
@@ -82,7 +94,7 @@ public class PaymentMethodAttachedHandler(
                     }
                     catch (Exception exception)
                     {
-                        logger.LogWarning(exception,
+                        _logger.LogWarning(exception,
                             "Failed to set subscription's ({SubscriptionID}) collection method to 'charge_automatically' during 'payment_method.attached' webhook",
                             customer.Id);
                     }
@@ -111,7 +123,7 @@ public class PaymentMethodAttachedHandler(
 
         if (unpaidSubscription.LatestInvoice is null)
         {
-            logger.LogWarning(
+            _logger.LogWarning(
                 "Attempted to pay unpaid subscription {SubscriptionId} but latest invoice didn't exist",
                 unpaidSubscription.Id);
 
@@ -120,7 +132,7 @@ public class PaymentMethodAttachedHandler(
 
         if (latestInvoice.Status != StripeInvoiceStatus.Open)
         {
-            logger.LogWarning(
+            _logger.LogWarning(
                 "Attempted to pay unpaid subscription {SubscriptionId} but latest invoice wasn't \"open\"",
                 unpaidSubscription.Id);
 
@@ -129,11 +141,11 @@ public class PaymentMethodAttachedHandler(
 
         try
         {
-            await stripeEventUtilityService.AttemptToPayInvoiceAsync(latestInvoice, true);
+            await _stripeEventUtilityService.AttemptToPayInvoiceAsync(latestInvoice, true);
         }
         catch (Exception e)
         {
-            logger.LogError(e,
+            _logger.LogError(e,
                 "Attempted to pay open invoice {InvoiceId} on unpaid subscription {SubscriptionId} but encountered an error",
                 latestInvoice.Id, unpaidSubscription.Id);
             throw;
