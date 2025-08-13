@@ -117,6 +117,7 @@ public static class FeatureFlagKeys
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string MembersGetEndpointOptimization = "pm-23113-optimize-get-members-endpoint";
     public const string DirectoryConnectorPreventUserRemoval = "pm-24592-directory-connector-prevent-user-removal";
+    public const string CipherRepositoryBulkResourceCreation = "pm-24233-cipher-repository-bulk-resource-creation";
 
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
