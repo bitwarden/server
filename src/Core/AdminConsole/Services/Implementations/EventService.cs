@@ -606,7 +606,7 @@ public class EventService : IEventService
         {
             if (!CanUseEvents(orgAbilities, serviceAccount.OrganizationId))
             {
-                throw new NotFoundException();
+                return;
             }
 
             var (actingUserId, serviceAccountId) = MapIdentityClientType(userId, identityClientType);
