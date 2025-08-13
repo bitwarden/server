@@ -97,5 +97,4 @@ public class GetPaymentMethodQuery(
 
         return MaskedPaymentMethod.From(setupIntent);
     }
-
 }

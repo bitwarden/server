@@ -163,7 +163,6 @@ public class UpcomingInvoiceHandler(
         }
     }
 
-
     private async Task SendProviderUpcomingInvoiceEmailsAsync(IEnumerable<string> emails, Invoice invoice, Subscription subscription, Guid providerId)
     {
         var validEmails = emails.Where(e => !string.IsNullOrEmpty(e));
@@ -199,8 +198,6 @@ public class UpcomingInvoiceHandler(
                 paymentMethodDescription);
         }
     }
-
-
 
     private async Task AlignOrganizationTaxConcernsAsync(
         Organization organization,
