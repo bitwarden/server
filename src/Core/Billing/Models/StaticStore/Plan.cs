@@ -1,4 +1,7 @@
-﻿using Bit.Core.Billing.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Billing.Enums;
 
 namespace Bit.Core.Models.StaticStore;
 
@@ -24,6 +27,7 @@ public abstract record Plan
     public bool Has2fa { get; protected init; }
     public bool HasApi { get; protected init; }
     public bool HasSso { get; protected init; }
+    public bool HasOrganizationDomains { get; protected init; }
     public bool HasKeyConnector { get; protected init; }
     public bool HasScim { get; protected init; }
     public bool HasResetPassword { get; protected init; }

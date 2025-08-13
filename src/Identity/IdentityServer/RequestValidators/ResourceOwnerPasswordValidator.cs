@@ -1,15 +1,16 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
@@ -21,7 +22,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
 {
     private UserManager<User> _userManager;
     private readonly ICurrentContext _currentContext;
-    private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IDeviceValidator _deviceValidator;
     public ResourceOwnerPasswordValidator(
@@ -31,18 +31,17 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        ICaptchaValidationService captchaValidationService,
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        IMailService mailService)
         : base(
             userManager,
             userService,
@@ -50,7 +49,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             deviceValidator,
             twoFactorAuthenticationValidator,
             organizationUserRepository,
-            mailService,
             logger,
             currentContext,
             globalSettings,
@@ -59,23 +57,18 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
-            policyRequirementQuery)
+            policyRequirementQuery,
+            authRequestRepository,
+            mailService)
     {
         _userManager = userManager;
         _currentContext = currentContext;
-        _captchaValidationService = captchaValidationService;
         _authRequestRepository = authRequestRepository;
         _deviceValidator = deviceValidator;
     }
 
     public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
     {
-        if (!AuthEmailHeaderIsValid(context))
-        {
-            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
-                "Auth-Email header invalid.");
-            return;
-        }
 
         var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
         // We want to keep this device around incase the device is new for the user
@@ -88,37 +81,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             Device = knownDevice ?? requestDevice,
         };
 
-        string bypassToken = null;
-        if (!validatorContext.KnownDevice &&
-            _captchaValidationService.RequireCaptchaValidation(_currentContext, user))
-        {
-            var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
-
-            if (string.IsNullOrWhiteSpace(captchaResponse))
-            {
-                context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Captcha required.",
-                    new Dictionary<string, object>
-                    {
-                        { _captchaValidationService.SiteKeyResponseKeyName, _captchaValidationService.SiteKey },
-                    });
-                return;
-            }
-
-            validatorContext.CaptchaResponse = await _captchaValidationService.ValidateCaptchaResponseAsync(
-                captchaResponse, _currentContext.IpAddress, user);
-            if (!validatorContext.CaptchaResponse.Success)
-            {
-                await BuildErrorResultAsync("Captcha is invalid. Please refresh and try again", false, context, null);
-                return;
-            }
-            bypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
-        }
-
         await ValidateAsync(context, context.Request, validatorContext);
-        if (context.Result.CustomResponse != null && bypassToken != null)
-        {
-            context.Result.CustomResponse["CaptchaBypassToken"] = bypassToken;
-        }
     }
 
     protected async override Task<bool> ValidateContextAsync(ResourceOwnerPasswordValidationContext context,
@@ -129,21 +92,33 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             return false;
         }
 
-        var authRequestId = context.Request.Raw["AuthRequest"]?.ToString()?.ToLowerInvariant();
-        if (!string.IsNullOrWhiteSpace(authRequestId) && Guid.TryParse(authRequestId, out var authRequestGuid))
+        var authRequestId = context.Request.Raw["AuthRequest"]?.ToLowerInvariant();
+        if (!string.IsNullOrEmpty(authRequestId))
         {
-            var authRequest = await _authRequestRepository.GetByIdAsync(authRequestGuid);
-            if (authRequest != null)
+            // only allow valid guids
+            if (!Guid.TryParse(authRequestId, out var authRequestGuid))
             {
-                var requestAge = DateTime.UtcNow - authRequest.CreationDate;
-                if (requestAge < TimeSpan.FromHours(1) &&
-                    CoreHelpers.FixedTimeEquals(authRequest.AccessCode, context.Password))
-                {
-                    authRequest.AuthenticationDate = DateTime.UtcNow;
-                    await _authRequestRepository.ReplaceAsync(authRequest);
-                    return true;
-                }
+                return false;
             }
+
+            var authRequest = await _authRequestRepository.GetByIdAsync(authRequestGuid);
+
+            if (authRequest == null)
+            {
+                return false;
+            }
+
+            // Auth request is non-null so validate it
+            if (authRequest.IsValidForAuthentication(validatorContext.User.Id, context.Password))
+            {
+                // We save the validated auth request so that we can set it's authentication date
+                // later on only upon successful authentication.
+                // For example, 2FA requires a resubmission so we can't mark the auth request
+                // as authenticated here.
+                validatorContext.ValidatedAuthRequest = authRequest;
+                return true;
+            }
+
             return false;
         }
 
@@ -204,29 +179,4 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         return context.Result.Subject;
     }
 
-    private bool AuthEmailHeaderIsValid(ResourceOwnerPasswordValidationContext context)
-    {
-        if (_currentContext.HttpContext.Request.Headers.TryGetValue("Auth-Email", out var authEmailHeader))
-        {
-            try
-            {
-                var authEmailDecoded = CoreHelpers.Base64UrlDecodeString(authEmailHeader);
-                if (authEmailDecoded != context.UserName)
-                {
-                    return false;
-                }
-            }
-            catch (Exception e) when (e is InvalidOperationException || e is FormatException)
-            {
-                // Invalid B64 encoding
-                return false;
-            }
-        }
-        else
-        {
-            return false;
-        }
-
-        return true;
-    }
 }

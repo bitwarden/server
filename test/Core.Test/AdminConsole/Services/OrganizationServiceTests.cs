@@ -9,23 +9,18 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
-using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Core.Tokens;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -64,7 +59,12 @@ public class OrganizationServiceTests
         existingUsers.First().Type = OrganizationUserType.Owner;
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
-
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(org.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
 
@@ -101,10 +101,6 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>(events =>
             events.Count() == expectedNewUsersCount));
-        await sutProvider.GetDependency<IReferenceEventService>().Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
-            referenceEvent.Type == ReferenceEventType.InvitedUsers && referenceEvent.Id == org.Id &&
-            referenceEvent.Users == expectedNewUsersCount));
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
@@ -125,7 +121,12 @@ public class OrganizationServiceTests
             ExternalId = reInvitedUser.Email,
         });
         var expectedNewUsersCount = newUsers.Count - 1;
-
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(org.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyDetailsByOrganizationAsync(org.Id)
             .Returns(existingUsers);
@@ -171,51 +172,6 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>(events =>
             events.Count(e => e.Item2 == EventType.OrganizationUser_Invited) == expectedNewUsersCount));
-        await sutProvider.GetDependency<IReferenceEventService>().Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
-            referenceEvent.Type == ReferenceEventType.InvitedUsers && referenceEvent.Id == org.Id &&
-            referenceEvent.Users == expectedNewUsersCount));
-    }
-
-    [Theory, BitAutoData]
-    public async Task SignupClientAsync_Succeeds(
-        OrganizationSignup signup,
-        SutProvider<OrganizationService> sutProvider)
-    {
-        signup.Plan = PlanType.TeamsMonthly;
-
-        var plan = StaticStore.GetPlan(signup.Plan);
-
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(plan);
-
-        var (organization, _, _) = await sutProvider.Sut.SignupClientAsync(signup);
-
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(Arg.Is<Organization>(org =>
-            org.Id == organization.Id &&
-            org.Name == signup.Name &&
-            org.Plan == plan.Name &&
-            org.PlanType == plan.Type &&
-            org.UsePolicies == plan.HasPolicies &&
-            org.PublicKey == signup.PublicKey &&
-            org.PrivateKey == signup.PrivateKey &&
-            org.UseSecretsManager == false));
-
-        await sutProvider.GetDependency<IOrganizationApiKeyRepository>().Received(1)
-            .CreateAsync(Arg.Is<OrganizationApiKey>(orgApiKey =>
-                orgApiKey.OrganizationId == organization.Id));
-
-        await sutProvider.GetDependency<IApplicationCacheService>().Received(1)
-            .UpsertOrganizationAbilityAsync(organization);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
-
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1)
-            .CreateAsync(Arg.Is<Collection>(c => c.Name == signup.CollectionName && c.OrganizationId == organization.Id), null, null);
-
-        await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(
-            re =>
-                re.Type == ReferenceEventType.Signup &&
-                re.PlanType == plan.Type));
     }
 
     [Theory]
@@ -243,7 +199,12 @@ public class OrganizationServiceTests
         sutProvider.Create();
 
         invite.Emails = invite.Emails.Append(invite.Emails.First());
-
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
@@ -274,6 +235,12 @@ public class OrganizationServiceTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, new (OrganizationUserInvite, string)[] { (invite, null) }));
         Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
@@ -367,6 +334,12 @@ public class OrganizationServiceTests
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
 
         SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
 
@@ -392,6 +365,13 @@ public class OrganizationServiceTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
 
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
@@ -450,7 +430,12 @@ public class OrganizationServiceTests
 
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
-
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
         currentContext.OrganizationCustom(organization.Id).Returns(true);
         currentContext.ManageUsers(organization.Id).Returns(true);
@@ -478,7 +463,12 @@ public class OrganizationServiceTests
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
-
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
 
         currentContext.OrganizationOwner(organization.Id).Returns(true);
@@ -526,7 +516,12 @@ public class OrganizationServiceTests
 
         SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
         SetupOrgUserRepositoryCreateAsyncMock(organizationUserRepository);
-
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId);
 
         await sutProvider.GetDependency<ISendOrganizationInvitesCommand>().Received(1)
@@ -591,7 +586,12 @@ public class OrganizationServiceTests
 
         SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
         SetupOrgUserRepositoryCreateAsyncMock(organizationUserRepository);
-
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut
             .InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId));
         Assert.Contains("This user has already been invited", exception.Message);
@@ -648,7 +648,12 @@ public class OrganizationServiceTests
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
@@ -684,7 +689,12 @@ public class OrganizationServiceTests
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             });
-
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
@@ -716,6 +726,13 @@ public class OrganizationServiceTests
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
         InviteUserHelper_ArrangeValidPermissions(organization, savingUser, sutProvider);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
 
         // Set up some invites to grant access to SM
         invites.First().invite.AccessSecretsManager = true;
@@ -761,6 +778,13 @@ public class OrganizationServiceTests
             invite.AccessSecretsManager = false;
         }
 
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
+
         // Assume we need to add seats for all invited SM users
         sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
             .CountNewSmSeatsRequiredAsync(organization.Id, invitedSmUsers).Returns(invitedSmUsers);
@@ -770,9 +794,8 @@ public class OrganizationServiceTests
             .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>())
             .ReturnsForAnyArgs(Task.FromResult(0)).AndDoes(x => organization.SmSeats += invitedSmUsers);
 
-        // Throw error at the end of the try block
-        sutProvider.GetDependency<IReferenceEventService>().RaiseEventAsync(default)
-            .ThrowsForAnyArgs<BadRequestException>();
+        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .SendInvitesAsync(Arg.Any<SendInvitesRequest>()).ThrowsAsync<Exception>();
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
             .Returns(StaticStore.GetPlan(organization.PlanType));
@@ -867,7 +890,12 @@ public class OrganizationServiceTests
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
             .Returns(StaticStore.GetPlan(organization.PlanType));
-
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         var actual = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscription(organization.Id, seatAdjustment, null));
@@ -932,62 +960,6 @@ public class OrganizationServiceTests
         Assert.Contains("Seat limit has been reached. Contact your provider to purchase additional seats.", failureMessage);
     }
 
-    private void RestoreRevokeUser_Setup(
-        Organization organization,
-        OrganizationUser? requestingOrganizationUser,
-        OrganizationUser targetOrganizationUser,
-        SutProvider<OrganizationService> sutProvider)
-    {
-        if (requestingOrganizationUser != null)
-        {
-            requestingOrganizationUser.OrganizationId = organization.Id;
-        }
-        targetOrganizationUser.OrganizationId = organization.Id;
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(requestingOrganizationUser != null && requestingOrganizationUser.Type is OrganizationUserType.Owner);
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(requestingOrganizationUser != null && (requestingOrganizationUser.Type is OrganizationUserType.Owner or OrganizationUserType.Admin));
-        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
-            .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>())
-            .Returns(true);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RevokeUser_Success(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
-        [OrganizationUser] OrganizationUser organizationUser, SutProvider<OrganizationService> sutProvider)
-    {
-        RestoreRevokeUser_Setup(organization, owner, organizationUser, sutProvider);
-
-        await sutProvider.Sut.RevokeUserAsync(organizationUser, owner.Id);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .Received(1)
-            .RevokeAsync(organizationUser.Id);
-        await sutProvider.GetDependency<IEventService>()
-            .Received(1)
-            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .Received(1)
-            .PushSyncOrgKeysAsync(organizationUser.UserId!.Value);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RevokeUser_WithEventSystemUser_Success(Organization organization, [OrganizationUser] OrganizationUser organizationUser, EventSystemUser eventSystemUser, SutProvider<OrganizationService> sutProvider)
-    {
-        RestoreRevokeUser_Setup(organization, null, organizationUser, sutProvider);
-
-        await sutProvider.Sut.RevokeUserAsync(organizationUser, eventSystemUser);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .Received(1)
-            .RevokeAsync(organizationUser.Id);
-        await sutProvider.GetDependency<IEventService>()
-            .Received(1)
-            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, eventSystemUser);
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .Received(1)
-            .PushSyncOrgKeysAsync(organizationUser.UserId!.Value);
-    }
 
     [Theory]
     [BitAutoData(PlanType.TeamsAnnually)]

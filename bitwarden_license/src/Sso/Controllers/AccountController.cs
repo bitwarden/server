@@ -1,4 +1,7 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
@@ -252,9 +255,12 @@ public class AccountController : Controller
         _logger.LogDebug("External claims: {@claims}", externalClaims);
 
         // Lookup our user and external provider info
+        // Note: the user will only exist if the user has already been provisioned and exists in the User table and the SSO user table.
         var (user, provider, providerUserId, claims, ssoConfigData) = await FindUserFromExternalProviderAsync(result);
         if (user == null)
         {
+            // User does not exist in SSO User table. They could have an existing BW account in the User table.
+
             // This might be where you might initiate a custom workflow for user registration
             // in this sample we don't show how that would be done, as our sample implementation
             // simply auto-provisions new external user
@@ -265,6 +271,8 @@ public class AccountController : Controller
 
         if (user != null)
         {
+            // User was JIT provisioned (this could be an existing user or a new user)
+
             // This allows us to collect any additional claims or properties
             // for the specific protocols used and store them in the local auth cookie.
             // this is typically used to store data needed for signout from those protocols.
@@ -370,8 +378,8 @@ public class AccountController : Controller
         //  for the user identifier.
         static bool nameIdIsNotTransient(Claim c) => c.Type == ClaimTypes.NameIdentifier
             && (c.Properties == null
-            || !c.Properties.ContainsKey(SamlPropertyKeys.ClaimFormat)
-            || c.Properties[SamlPropertyKeys.ClaimFormat] != SamlNameIdFormats.Transient);
+            || !c.Properties.TryGetValue(SamlPropertyKeys.ClaimFormat, out var claimFormat)
+            || claimFormat != SamlNameIdFormats.Transient);
 
         // Try to determine the unique id of the external user (issued by the provider)
         // the most common claim type for that are the sub claim and the NameIdentifier
@@ -484,12 +492,8 @@ public class AccountController : Controller
                 throw new Exception(_i18nService.T("UserAlreadyExistsInviteProcess"));
             }
 
-            if (orgUser.Status == OrganizationUserStatusType.Invited)
-            {
-                // Org User is invited - they must manually accept the invite via email and authenticate with MP
-                // This allows us to enroll them in MP reset if required
-                throw new Exception(_i18nService.T("AcceptInviteBeforeUsingSSO", organization.DisplayName()));
-            }
+            EnsureOrgUserStatusAllowed(orgUser.Status, organization.DisplayName(),
+                allowedStatuses: [OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]);
 
             // Accepted or Confirmed - create SSO link and return;
             await CreateSsoUserRecord(providerUserId, existingUser.Id, orgId, orgUser);
@@ -499,9 +503,9 @@ public class AccountController : Controller
         // Before any user creation - if Org User doesn't exist at this point - make sure there are enough seats to add one
         if (orgUser == null && organization.Seats.HasValue)
         {
-            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            var occupiedSeats = await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
             var initialSeatCount = organization.Seats.Value;
-            var availableSeats = initialSeatCount - occupiedSeats;
+            var availableSeats = initialSeatCount - occupiedSeats.Total;
             if (availableSeats < 1)
             {
                 try
@@ -583,6 +587,36 @@ public class AccountController : Controller
 
         return user;
     }
+
+    private void EnsureOrgUserStatusAllowed(
+        OrganizationUserStatusType status,
+        string organizationDisplayName,
+        params OrganizationUserStatusType[] allowedStatuses)
+    {
+        // if this status is one of the allowed ones, just return
+        if (allowedStatuses.Contains(status))
+        {
+            return;
+        }
+
+        // otherwise throw the appropriate exception
+        switch (status)
+        {
+            case OrganizationUserStatusType.Invited:
+                // Org User is invited – must accept via email first
+                throw new Exception(
+                    _i18nService.T("AcceptInviteBeforeUsingSSO", organizationDisplayName));
+            case OrganizationUserStatusType.Revoked:
+                // Revoked users may not be (auto)‑provisioned
+                throw new Exception(
+                    _i18nService.T("OrganizationUserAccessRevoked", organizationDisplayName));
+            default:
+                // anything else is “unknown”
+                throw new Exception(
+                    _i18nService.T("OrganizationUserUnknownStatus", organizationDisplayName));
+        }
+    }
+
 
     private IActionResult InvalidJson(string errorMessageKey, Exception ex = null)
     {

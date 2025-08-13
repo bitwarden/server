@@ -3,16 +3,14 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
-using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,7 +20,8 @@ namespace Bit.Api.Billing.Controllers;
 [Route("accounts")]
 [Authorize("Application")]
 public class AccountsController(
-    IUserService userService) : Controller
+    IUserService userService,
+    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery) : Controller
 {
     [HttpPost("premium")]
     public async Task<PaymentResponseModel> PostPremiumAsync(
@@ -56,7 +55,7 @@ public class AccountsController(
             model.PaymentMethodType!.Value, model.AdditionalStorageGb.GetValueOrDefault(0), license,
             new TaxInfo { BillingAddressCountry = model.Country, BillingAddressPostalCode = model.PostalCode });
 
-        var userTwoFactorEnabled = await userService.TwoFactorIsEnabledAsync(user);
+        var userTwoFactorEnabled = await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
@@ -159,8 +158,6 @@ public class AccountsController(
     [HttpPost("cancel")]
     public async Task PostCancelAsync(
         [FromBody] SubscriptionCancellationRequestModel request,
-        [FromServices] ICurrentContext currentContext,
-        [FromServices] IReferenceEventService referenceEventService,
         [FromServices] ISubscriberService subscriberService)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
@@ -173,12 +170,6 @@ public class AccountsController(
         await subscriberService.CancelSubscription(user,
             new OffboardingSurveyResponse { UserId = user.Id, Reason = request.Reason, Feedback = request.Feedback },
             user.IsExpired());
-
-        await referenceEventService.RaiseEventAsync(new ReferenceEvent(
-            ReferenceEventType.CancelSubscription,
-            user,
-            currentContext)
-        { EndOfPeriod = user.IsExpired() });
     }
 
     [HttpPost("reinstate-premium")]

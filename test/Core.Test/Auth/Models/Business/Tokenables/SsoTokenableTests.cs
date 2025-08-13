@@ -67,7 +67,7 @@ public class SsoTokenableTests
             ExpirationDate = expectedDateTime
         };
 
-        var result = Tokenable.FromToken<HCaptchaTokenable>(token.ToToken());
+        var result = Tokenable.FromToken<SsoTokenable>(token.ToToken());
 
         Assert.Equal(expectedDateTime, result.ExpirationDate, TimeSpan.FromMilliseconds(10));
     }

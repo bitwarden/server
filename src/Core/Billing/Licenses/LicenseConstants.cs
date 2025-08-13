@@ -34,7 +34,6 @@ public static class OrganizationLicenseConstants
     public const string UseSecretsManager = nameof(UseSecretsManager);
     public const string SmSeats = nameof(SmSeats);
     public const string SmServiceAccounts = nameof(SmServiceAccounts);
-    public const string SmMaxProjects = nameof(SmMaxProjects);
     public const string LimitCollectionCreationDeletion = nameof(LimitCollectionCreationDeletion);
     public const string AllowAdminAccessToAllCollectionItems = nameof(AllowAdminAccessToAllCollectionItems);
     public const string UseRiskInsights = nameof(UseRiskInsights);
@@ -43,6 +42,7 @@ public static class OrganizationLicenseConstants
     public const string ExpirationWithoutGracePeriod = nameof(ExpirationWithoutGracePeriod);
     public const string Trial = nameof(Trial);
     public const string UseAdminSponsoredFamilies = nameof(UseAdminSponsoredFamilies);
+    public const string UseOrganizationDomains = nameof(UseOrganizationDomains);
 }
 
 public static class UserLicenseConstants

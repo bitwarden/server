@@ -6,11 +6,13 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -185,6 +187,262 @@ public class ProviderServiceTests
     public async Task UpdateAsync_Success(Provider provider, SutProvider<ProviderService> sutProvider)
     {
         await sutProvider.Sut.UpdateAsync(provider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_ExistingProviderIsNull_DoesNotCallUpdateClientOrganizationsEnabledStatus(
+        Provider provider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+
+        providerRepository.GetByIdAsync(provider.Id).Returns((Provider)null);
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(provider);
+
+        // Assert
+        await providerRepository.Received(1).ReplaceAsync(provider);
+        await providerOrganizationRepository.DidNotReceive().GetManyDetailsByProviderAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_EnabledStatusNotChanged_DoesNotCallUpdateClientOrganizationsEnabledStatus(
+        Provider provider, Provider existingProvider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+
+        existingProvider.Id = provider.Id;
+        existingProvider.Enabled = provider.Enabled; // Same enabled status
+        provider.Type = ProviderType.Msp; // Set to a type that would trigger update if status changed
+
+        providerRepository.GetByIdAsync(provider.Id).Returns(existingProvider);
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(provider);
+
+        // Assert
+        await providerRepository.Received(1).ReplaceAsync(provider);
+        await providerOrganizationRepository.DidNotReceive().GetManyDetailsByProviderAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_EnabledStatusChangedButProviderTypeIsReseller_DoesNotCallUpdateClientOrganizationsEnabledStatus(
+        Provider provider, Provider existingProvider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+
+        existingProvider.Id = provider.Id;
+        existingProvider.Enabled = !provider.Enabled; // Different enabled status
+        provider.Type = ProviderType.Reseller; // Type that should not trigger update
+
+        providerRepository.GetByIdAsync(provider.Id).Returns(existingProvider);
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(provider);
+
+        // Assert
+        await providerRepository.Received(1).ReplaceAsync(provider);
+        await providerOrganizationRepository.DidNotReceive().GetManyDetailsByProviderAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_EnabledStatusChangedAndProviderTypeIsMsp_CallsUpdateClientOrganizationsEnabledStatus(
+        Provider provider, Provider existingProvider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+
+        existingProvider.Id = provider.Id;
+        existingProvider.Enabled = !provider.Enabled; // Different enabled status
+        provider.Type = ProviderType.Msp; // Type that should trigger update
+
+        // Create test provider organization details
+        var providerOrganizationDetails = new List<ProviderOrganizationOrganizationDetails>
+        {
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() },
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() }
+        };
+
+        // Create test organizations with different enabled status than what we're setting
+        var organizations = providerOrganizationDetails.Select(po =>
+        {
+            var org = new Organization { Id = po.OrganizationId, Enabled = !provider.Enabled };
+            return org;
+        }).ToList();
+
+        providerRepository.GetByIdAsync(provider.Id).Returns(existingProvider);
+        providerOrganizationRepository.GetManyDetailsByProviderAsync(provider.Id).Returns(providerOrganizationDetails);
+
+        foreach (var org in organizations)
+        {
+            organizationRepository.GetByIdAsync(org.Id).Returns(org);
+        }
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(provider);
+
+        // Assert
+        await providerRepository.Received(1).ReplaceAsync(provider);
+        await providerOrganizationRepository.Received(1).GetManyDetailsByProviderAsync(provider.Id);
+
+        foreach (var org in organizations)
+        {
+            await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+                o.Id == org.Id && o.Enabled == provider.Enabled));
+            await applicationCacheService.Received(1).UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o =>
+                o.Id == org.Id && o.Enabled == provider.Enabled));
+        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_EnabledStatusChangedAndProviderTypeIsBusinessUnit_CallsUpdateClientOrganizationsEnabledStatus(
+        Provider provider, Provider existingProvider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+
+        existingProvider.Id = provider.Id;
+        existingProvider.Enabled = !provider.Enabled; // Different enabled status
+        provider.Type = ProviderType.BusinessUnit; // Type that should trigger update
+
+        // Create test provider organization details
+        var providerOrganizationDetails = new List<ProviderOrganizationOrganizationDetails>
+        {
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() },
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() }
+        };
+
+        // Create test organizations with different enabled status than what we're setting
+        var organizations = providerOrganizationDetails.Select(po =>
+        {
+            var org = new Organization { Id = po.OrganizationId, Enabled = !provider.Enabled };
+            return org;
+        }).ToList();
+
+        providerRepository.GetByIdAsync(provider.Id).Returns(existingProvider);
+        providerOrganizationRepository.GetManyDetailsByProviderAsync(provider.Id).Returns(providerOrganizationDetails);
+
+        foreach (var org in organizations)
+        {
+            organizationRepository.GetByIdAsync(org.Id).Returns(org);
+        }
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(provider);
+
+        // Assert
+        await providerRepository.Received(1).ReplaceAsync(provider);
+        await providerOrganizationRepository.Received(1).GetManyDetailsByProviderAsync(provider.Id);
+
+        foreach (var org in organizations)
+        {
+            await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+                o.Id == org.Id && o.Enabled == provider.Enabled));
+            await applicationCacheService.Received(1).UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o =>
+                o.Id == org.Id && o.Enabled == provider.Enabled));
+        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_OrganizationEnabledStatusAlreadyMatches_DoesNotUpdateOrganization(
+        Provider provider, Provider existingProvider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+
+        existingProvider.Id = provider.Id;
+        existingProvider.Enabled = !provider.Enabled; // Different enabled status
+        provider.Type = ProviderType.Msp; // Type that should trigger update
+
+        // Create test provider organization details
+        var providerOrganizationDetails = new List<ProviderOrganizationOrganizationDetails>
+        {
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() },
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() }
+        };
+
+        // Create test organizations with SAME enabled status as what we're setting
+        var organizations = providerOrganizationDetails.Select(po =>
+        {
+            var org = new Organization { Id = po.OrganizationId, Enabled = provider.Enabled };
+            return org;
+        }).ToList();
+
+        providerRepository.GetByIdAsync(provider.Id).Returns(existingProvider);
+        providerOrganizationRepository.GetManyDetailsByProviderAsync(provider.Id).Returns(providerOrganizationDetails);
+
+        foreach (var org in organizations)
+        {
+            organizationRepository.GetByIdAsync(org.Id).Returns(org);
+        }
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(provider);
+
+        // Assert
+        await providerRepository.Received(1).ReplaceAsync(provider);
+        await providerOrganizationRepository.Received(1).GetManyDetailsByProviderAsync(provider.Id);
+
+        // Organizations should not be updated since their enabled status already matches
+        foreach (var org in organizations)
+        {
+            await organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+            await applicationCacheService.DidNotReceive().UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
+        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_OrganizationIsNull_SkipsNullOrganization(
+        Provider provider, Provider existingProvider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+
+        existingProvider.Id = provider.Id;
+        existingProvider.Enabled = !provider.Enabled; // Different enabled status
+        provider.Type = ProviderType.Msp; // Type that should trigger update
+
+        // Create test provider organization details
+        var providerOrganizationDetails = new List<ProviderOrganizationOrganizationDetails>
+        {
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() },
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() }
+        };
+
+        providerRepository.GetByIdAsync(provider.Id).Returns(existingProvider);
+        providerOrganizationRepository.GetManyDetailsByProviderAsync(provider.Id).Returns(providerOrganizationDetails);
+
+        // Return null for all organizations
+        organizationRepository.GetByIdAsync(Arg.Any<Guid>()).Returns((Organization)null);
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(provider);
+
+        // Assert
+        await providerRepository.Received(1).ReplaceAsync(provider);
+        await providerOrganizationRepository.Received(1).GetManyDetailsByProviderAsync(provider.Id);
+
+        // No organizations should be updated since they're all null
+        await organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+        await applicationCacheService.DidNotReceive().UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
     }
 
     [Theory, BitAutoData]
@@ -717,8 +975,8 @@ public class ProviderServiceTests
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        sutProvider.GetDependency<IOrganizationService>().SignupClientAsync(organizationSignup)
-            .Returns((organization, null as OrganizationUser, new Collection()));
+        sutProvider.GetDependency<IProviderClientOrganizationSignUpCommand>().SignUpClientOrganizationAsync(organizationSignup)
+            .Returns(new ProviderClientOrganizationSignUpResponse(organization, new Collection()));
 
         var providerOrganization =
             await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);
@@ -755,8 +1013,8 @@ public class ProviderServiceTests
 
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
 
-        sutProvider.GetDependency<IOrganizationService>().SignupClientAsync(organizationSignup)
-            .Returns((organization, null as OrganizationUser, new Collection()));
+        sutProvider.GetDependency<IProviderClientOrganizationSignUpCommand>().SignUpClientOrganizationAsync(organizationSignup)
+            .Returns(new ProviderClientOrganizationSignUpResponse(organization, new Collection()));
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user));
@@ -782,8 +1040,8 @@ public class ProviderServiceTests
 
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
 
-        sutProvider.GetDependency<IOrganizationService>().SignupClientAsync(organizationSignup)
-            .Returns((organization, null as OrganizationUser, new Collection()));
+        sutProvider.GetDependency<IProviderClientOrganizationSignUpCommand>().SignUpClientOrganizationAsync(organizationSignup)
+            .Returns(new ProviderClientOrganizationSignUpResponse(organization, new Collection()));
 
         var providerOrganization = await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);
 
@@ -821,8 +1079,8 @@ public class ProviderServiceTests
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        sutProvider.GetDependency<IOrganizationService>().SignupClientAsync(organizationSignup)
-            .Returns((organization, null as OrganizationUser, defaultCollection));
+        sutProvider.GetDependency<IProviderClientOrganizationSignUpCommand>().SignUpClientOrganizationAsync(organizationSignup)
+            .Returns(new ProviderClientOrganizationSignUpResponse(organization, defaultCollection));
 
         var providerOrganization =
             await sutProvider.Sut.CreateOrganizationAsync(provider.Id, organizationSignup, clientOwnerEmail, user);

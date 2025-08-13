@@ -1,17 +1,21 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
-using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
+using Bit.Core.Tools.SendFeatures;
+using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -25,30 +29,34 @@ public class SendsController : Controller
 {
     private readonly ISendRepository _sendRepository;
     private readonly IUserService _userService;
-    private readonly ISendService _sendService;
+    private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendFileStorageService _sendFileStorageService;
+    private readonly IAnonymousSendCommand _anonymousSendCommand;
+    private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
     private readonly ILogger<SendsController> _logger;
     private readonly GlobalSettings _globalSettings;
-    private readonly ICurrentContext _currentContext;
 
     public SendsController(
         ISendRepository sendRepository,
         IUserService userService,
-        ISendService sendService,
+        ISendAuthorizationService sendAuthorizationService,
+        IAnonymousSendCommand anonymousSendCommand,
+        INonAnonymousSendCommand nonAnonymousSendCommand,
         ISendFileStorageService sendFileStorageService,
         ILogger<SendsController> logger,
-        GlobalSettings globalSettings,
-        ICurrentContext currentContext)
+        GlobalSettings globalSettings)
     {
         _sendRepository = sendRepository;
         _userService = userService;
-        _sendService = sendService;
+        _sendAuthorizationService = sendAuthorizationService;
+        _anonymousSendCommand = anonymousSendCommand;
+        _nonAnonymousSendCommand = nonAnonymousSendCommand;
         _sendFileStorageService = sendFileStorageService;
         _logger = logger;
         _globalSettings = globalSettings;
-        _currentContext = currentContext;
     }
 
+    #region Anonymous endpoints
     [AllowAnonymous]
     [HttpPost("access/{id}")]
     public async Task<IActionResult> Access(string id, [FromBody] SendAccessRequestModel model)
@@ -61,18 +69,19 @@ public class SendsController : Controller
         //}
 
         var guid = new Guid(CoreHelpers.Base64UrlDecode(id));
-        var (send, passwordRequired, passwordInvalid) =
-            await _sendService.AccessAsync(guid, model.Password);
-        if (passwordRequired)
+        var send = await _sendRepository.GetByIdAsync(guid);
+        SendAccessResult sendAuthResult =
+            await _sendAuthorizationService.AccessAsync(send, model.Password);
+        if (sendAuthResult.Equals(SendAccessResult.PasswordRequired))
         {
             return new UnauthorizedResult();
         }
-        if (passwordInvalid)
+        if (sendAuthResult.Equals(SendAccessResult.PasswordInvalid))
         {
             await Task.Delay(2000);
             throw new BadRequestException("Invalid password.");
         }
-        if (send == null)
+        if (sendAuthResult.Equals(SendAccessResult.Denied))
         {
             throw new NotFoundException();
         }
@@ -106,19 +115,19 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
-        var (url, passwordRequired, passwordInvalid) = await _sendService.GetSendFileDownloadUrlAsync(send, fileId,
+        var (url, result) = await _anonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId,
             model.Password);
 
-        if (passwordRequired)
+        if (result.Equals(SendAccessResult.PasswordRequired))
         {
             return new UnauthorizedResult();
         }
-        if (passwordInvalid)
+        if (result.Equals(SendAccessResult.PasswordInvalid))
         {
             await Task.Delay(2000);
             throw new BadRequestException("Invalid password.");
         }
-        if (send == null)
+        if (result.Equals(SendAccessResult.Denied))
         {
             throw new NotFoundException();
         }
@@ -129,6 +138,45 @@ public class SendsController : Controller
             Url = url,
         });
     }
+
+    [AllowAnonymous]
+    [HttpPost("file/validate/azure")]
+    public async Task<ObjectResult> AzureValidateFile()
+    {
+        return await ApiHelpers.HandleAzureEvents(Request, new Dictionary<string, Func<EventGridEvent, Task>>
+        {
+            {
+                "Microsoft.Storage.BlobCreated", async (eventGridEvent) =>
+                {
+                    try
+                    {
+                        var blobName = eventGridEvent.Subject.Split($"{AzureSendFileStorageService.FilesContainerName}/blobs/")[1];
+                        var sendId = AzureSendFileStorageService.SendIdFromBlobName(blobName);
+                        var send = await _sendRepository.GetByIdAsync(new Guid(sendId));
+                        if (send == null)
+                        {
+                            if (_sendFileStorageService is AzureSendFileStorageService azureSendFileStorageService)
+                            {
+                                await azureSendFileStorageService.DeleteBlobAsync(blobName);
+                            }
+                            return;
+                        }
+
+                        await _nonAnonymousSendCommand.ConfirmFileSize(send);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonSerializer.Serialize(eventGridEvent)}");
+                        return;
+                    }
+                }
+            }
+        });
+    }
+
+    #endregion
+
+    #region Non-anonymous endpoints
 
     [HttpGet("{id}")]
     public async Task<SendResponseModel> Get(string id)
@@ -157,8 +205,8 @@ public class SendsController : Controller
     {
         model.ValidateCreation();
         var userId = _userService.GetProperUserId(User).Value;
-        var send = model.ToSend(userId, _sendService);
-        await _sendService.SaveSendAsync(send);
+        var send = model.ToSend(userId, _sendAuthorizationService);
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
         return new SendResponseModel(send, _globalSettings);
     }
 
@@ -175,15 +223,15 @@ public class SendsController : Controller
             throw new BadRequestException("Invalid content. File size hint is required.");
         }
 
-        if (model.FileLength.Value > SendService.MAX_FILE_SIZE)
+        if (model.FileLength.Value > Constants.FileSize501mb)
         {
-            throw new BadRequestException($"Max file size is {SendService.MAX_FILE_SIZE_READABLE}.");
+            throw new BadRequestException($"Max file size is {SendFileSettingHelper.MAX_FILE_SIZE_READABLE}.");
         }
 
         model.ValidateCreation();
         var userId = _userService.GetProperUserId(User).Value;
-        var (send, data) = model.ToSend(userId, model.File.FileName, _sendService);
-        var uploadUrl = await _sendService.SaveFileSendAsync(send, data, model.FileLength.Value);
+        var (send, data) = model.ToSend(userId, model.File.FileName, _sendAuthorizationService);
+        var uploadUrl = await _nonAnonymousSendCommand.SaveFileSendAsync(send, data, model.FileLength.Value);
         return new SendFileUploadDataResponseModel
         {
             Url = uploadUrl,
@@ -230,41 +278,7 @@ public class SendsController : Controller
         var send = await _sendRepository.GetByIdAsync(new Guid(id));
         await Request.GetFileAsync(async (stream) =>
         {
-            await _sendService.UploadFileToExistingSendAsync(stream, send);
-        });
-    }
-
-    [AllowAnonymous]
-    [HttpPost("file/validate/azure")]
-    public async Task<ObjectResult> AzureValidateFile()
-    {
-        return await ApiHelpers.HandleAzureEvents(Request, new Dictionary<string, Func<EventGridEvent, Task>>
-        {
-            {
-                "Microsoft.Storage.BlobCreated", async (eventGridEvent) =>
-                {
-                    try
-                    {
-                        var blobName = eventGridEvent.Subject.Split($"{AzureSendFileStorageService.FilesContainerName}/blobs/")[1];
-                        var sendId = AzureSendFileStorageService.SendIdFromBlobName(blobName);
-                        var send = await _sendRepository.GetByIdAsync(new Guid(sendId));
-                        if (send == null)
-                        {
-                            if (_sendFileStorageService is AzureSendFileStorageService azureSendFileStorageService)
-                            {
-                                await azureSendFileStorageService.DeleteBlobAsync(blobName);
-                            }
-                            return;
-                        }
-                        await _sendService.ValidateSendFile(send);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonSerializer.Serialize(eventGridEvent)}");
-                        return;
-                    }
-                }
-            }
+            await _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send);
         });
     }
 
@@ -279,7 +293,7 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        await _sendService.SaveSendAsync(model.ToSend(send, _sendService));
+        await _nonAnonymousSendCommand.SaveSendAsync(model.ToSend(send, _sendAuthorizationService));
         return new SendResponseModel(send, _globalSettings);
     }
 
@@ -294,7 +308,7 @@ public class SendsController : Controller
         }
 
         send.Password = null;
-        await _sendService.SaveSendAsync(send);
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
         return new SendResponseModel(send, _globalSettings);
     }
 
@@ -308,6 +322,8 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        await _sendService.DeleteSendAsync(send);
+        await _nonAnonymousSendCommand.DeleteSendAsync(send);
     }
+
+    #endregion
 }

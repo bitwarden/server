@@ -31,6 +31,56 @@
               },
               {
                 "Name": "events-webhook-subscription"
+              },
+              {
+                "Name": "events-hec-subscription"
+              }
+            ]
+          },
+          {
+            "Name": "event-integrations",
+            "Subscriptions": [
+              {
+                "Name": "integration-slack-subscription",
+                "Rules": [
+                  {
+                    "Name": "slack-integration-filter",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "slack"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "integration-webhook-subscription",
+                "Rules": [
+                  {
+                    "Name": "webhook-integration-filter",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "webhook"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "integration-hec-subscription",
+                "Rules": [
+                  {
+                    "Name": "hec-integration-filter",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "hec"
+                      }
+                    }
+                  }
+                ]
               }
             ]
           }

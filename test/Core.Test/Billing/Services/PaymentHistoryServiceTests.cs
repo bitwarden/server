@@ -4,7 +4,6 @@ using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -22,8 +21,7 @@ public class PaymentHistoryServiceTests
         var stripeAdapter = Substitute.For<IStripeAdapter>();
         stripeAdapter.InvoiceListAsync(Arg.Any<StripeInvoiceListOptions>()).Returns(invoices);
         var transactionRepository = Substitute.For<ITransactionRepository>();
-        var logger = Substitute.For<ILogger<PaymentHistoryService>>();
-        var paymentHistoryService = new PaymentHistoryService(stripeAdapter, transactionRepository, logger);
+        var paymentHistoryService = new PaymentHistoryService(stripeAdapter, transactionRepository);
 
         // Act
         var result = await paymentHistoryService.GetInvoiceHistoryAsync(subscriber);
@@ -40,8 +38,7 @@ public class PaymentHistoryServiceTests
         // Arrange
         var paymentHistoryService = new PaymentHistoryService(
             Substitute.For<IStripeAdapter>(),
-            Substitute.For<ITransactionRepository>(),
-            Substitute.For<ILogger<PaymentHistoryService>>());
+            Substitute.For<ITransactionRepository>());
 
         // Act
         var result = await paymentHistoryService.GetInvoiceHistoryAsync(null);
@@ -59,8 +56,7 @@ public class PaymentHistoryServiceTests
         var transactionRepository = Substitute.For<ITransactionRepository>();
         transactionRepository.GetManyByOrganizationIdAsync(subscriber.Id, Arg.Any<int>(), Arg.Any<DateTime?>()).Returns(transactions);
         var stripeAdapter = Substitute.For<IStripeAdapter>();
-        var logger = Substitute.For<ILogger<PaymentHistoryService>>();
-        var paymentHistoryService = new PaymentHistoryService(stripeAdapter, transactionRepository, logger);
+        var paymentHistoryService = new PaymentHistoryService(stripeAdapter, transactionRepository);
 
         // Act
         var result = await paymentHistoryService.GetTransactionHistoryAsync(subscriber);
@@ -77,8 +73,7 @@ public class PaymentHistoryServiceTests
         // Arrange
         var paymentHistoryService = new PaymentHistoryService(
             Substitute.For<IStripeAdapter>(),
-            Substitute.For<ITransactionRepository>(),
-            Substitute.For<ILogger<PaymentHistoryService>>());
+            Substitute.For<ITransactionRepository>());
 
         // Act
         var result = await paymentHistoryService.GetTransactionHistoryAsync(null);

@@ -9,10 +9,6 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
-using Microsoft.Extensions.Logging;
 
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
@@ -28,7 +24,7 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly IReferenceEventService _referenceEventService;
+    private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPushNotificationService _pushService;
     public DeleteClaimedOrganizationUserAccountCommand(
         IUserService userService,
@@ -37,7 +33,7 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         IOrganizationUserRepository organizationUserRepository,
         IUserRepository userRepository,
         ICurrentContext currentContext,
-        IReferenceEventService referenceEventService,
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPushNotificationService pushService,
         ILogger<DeleteClaimedOrganizationUserAccountCommand> logger,
         IDeleteClaimedOrganizationUserAccountValidator deleteClaimedOrganizationUserAccountValidator)
@@ -48,7 +44,7 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         _organizationUserRepository = organizationUserRepository;
         _userRepository = userRepository;
         _currentContext = currentContext;
-        _referenceEventService = referenceEventService;
+        _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pushService = pushService;
         _logger = logger;
         _deleteClaimedOrganizationUserAccountValidator = deleteClaimedOrganizationUserAccountValidator;
@@ -146,8 +142,6 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
 
         foreach (var user in users)
         {
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.DeleteAccount, user, _currentContext));
             await _pushService.PushLogOutAsync(user.Id);
         }
     }

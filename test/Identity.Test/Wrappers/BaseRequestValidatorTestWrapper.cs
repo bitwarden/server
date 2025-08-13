@@ -54,7 +54,6 @@ IBaseRequestValidatorTestWrapper
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
         ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
@@ -63,7 +62,9 @@ IBaseRequestValidatorTestWrapper
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
-        IPolicyRequirementQuery policyRequirementQuery) :
+        IPolicyRequirementQuery policyRequirementQuery,
+        IAuthRequestRepository authRequestRepository,
+        IMailService mailService) :
          base(
             userManager,
             userService,
@@ -71,7 +72,6 @@ IBaseRequestValidatorTestWrapper
             deviceValidator,
             twoFactorAuthenticationValidator,
             organizationUserRepository,
-            mailService,
             logger,
             currentContext,
             globalSettings,
@@ -80,7 +80,9 @@ IBaseRequestValidatorTestWrapper
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
-            policyRequirementQuery)
+            policyRequirementQuery,
+            authRequestRepository,
+            mailService)
     {
     }
 

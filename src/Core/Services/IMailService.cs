@@ -3,11 +3,13 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
 using Bit.Core.Vault.Models.Data;
+using Core.Auth.Enums;
 
 namespace Bit.Core.Services;
 
@@ -27,7 +29,8 @@ public interface IMailService
     Task SendCannotDeleteClaimedAccountEmailAsync(string email);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
-    Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true);
+    Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, TwoFactorEmailPurpose purpose);
+    Task SendFailedTwoFactorAttemptEmailAsync(string email, TwoFactorProviderType type, DateTime utcNow, string ip);
     Task SendNoMasterPasswordHintEmailAsync(string email);
     Task SendMasterPasswordHintEmailAsync(string email, string hint);
 
@@ -40,7 +43,6 @@ public interface IMailService
     Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails);
     Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false);
     Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false);
-    Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email);
     Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email);
     Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email);
     Task SendPasswordlessSignInAsync(string returnUrl, string token, string email);
@@ -61,7 +63,6 @@ public interface IMailService
     Task SendLicenseExpiredAsync(IEnumerable<string> emails, string? organizationName = null);
     Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip);
     Task SendRecoverTwoFactorEmail(string email, DateTime timestamp, string ip);
-    Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email);
     Task SendEmergencyAccessInviteEmailAsync(EmergencyAccess emergencyAccess, string name, string token);
     Task SendEmergencyAccessAcceptedEmailAsync(string granteeEmail, string email);
     Task SendEmergencyAccessConfirmedEmailAsync(string grantorName, string email);
@@ -88,9 +89,6 @@ public interface IMailService
     Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail);
     Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, DateTime expirationDate);
     Task SendOTPEmailAsync(string email, string token);
-    Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip);
-    Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip);
-    Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName);
     Task SendUnclaimedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName);
     Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);

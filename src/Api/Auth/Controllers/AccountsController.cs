@@ -1,33 +1,25 @@
-﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using Bit.Api.AdminConsole.Models.Response;
-using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
-using Bit.Api.Auth.Models.Request.WebAuthn;
-using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
-using Bit.Api.Tools.Models.Request;
-using Bit.Api.Vault.Models.Request;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
-using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
-using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -44,19 +36,9 @@ public class AccountsController : Controller
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
-    private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
-
-    private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
-    private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
-    private readonly IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> _sendValidator;
-    private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
-        _emergencyAccessValidator;
-    private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
-            IReadOnlyList<OrganizationUser>>
-        _organizationUserValidator;
-    private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
-        _webauthnKeyValidator;
+    private readonly ITwoFactorEmailService _twoFactorEmailService;
 
 
     public AccountsController(
@@ -67,16 +49,9 @@ public class AccountsController : Controller
         IPolicyService policyService,
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
-        IRotateUserKeyCommand rotateUserKeyCommand,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IFeatureService featureService,
-        IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
-        IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> folderValidator,
-        IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> sendValidator,
-        IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
-            emergencyAccessValidator,
-        IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
-            organizationUserValidator,
-        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator
+        ITwoFactorEmailService twoFactorEmailService
         )
     {
         _organizationService = organizationService;
@@ -86,14 +61,10 @@ public class AccountsController : Controller
         _policyService = policyService;
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
         _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
-        _rotateUserKeyCommand = rotateUserKeyCommand;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _featureService = featureService;
-        _cipherValidator = cipherValidator;
-        _folderValidator = folderValidator;
-        _sendValidator = sendValidator;
-        _emergencyAccessValidator = emergencyAccessValidator;
-        _organizationUserValidator = organizationUserValidator;
-        _webauthnKeyValidator = webAuthnKeyValidator;
+        _twoFactorEmailService = twoFactorEmailService;
+
     }
 
 
@@ -309,45 +280,6 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    [Obsolete("Replaced by the safer rotate-user-account-keys endpoint.")]
-    [HttpPost("key")]
-    public async Task PostKey([FromBody] UpdateKeyRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var dataModel = new RotateUserKeyData
-        {
-            MasterPasswordHash = model.MasterPasswordHash,
-            Key = model.Key,
-            PrivateKey = model.PrivateKey,
-            Ciphers = await _cipherValidator.ValidateAsync(user, model.Ciphers),
-            Folders = await _folderValidator.ValidateAsync(user, model.Folders),
-            Sends = await _sendValidator.ValidateAsync(user, model.Sends),
-            EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
-            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.ResetPasswordKeys),
-            WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.WebAuthnKeys)
-        };
-
-        var result = await _rotateUserKeyCommand.RotateUserKeyAsync(user, dataModel);
-
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        await Task.Delay(2000);
-        throw new BadRequestException(ModelState);
-    }
-
     [HttpPost("security-stamp")]
     public async Task PostSecurityStamp([FromBody] SecretVerificationRequestModel model)
     {
@@ -389,7 +321,7 @@ public class AccountsController : Controller
             await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(user.Id,
                 ProviderUserStatusType.Confirmed);
 
-        var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
+        var twoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
@@ -423,7 +355,7 @@ public class AccountsController : Controller
 
         await _userService.SaveUserAsync(model.ToUser(user));
 
-        var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
+        var twoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
@@ -442,7 +374,7 @@ public class AccountsController : Controller
         }
         await _userService.SaveUserAsync(model.ToUser(user), true);
 
-        var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
+        var userTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
         var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
 
@@ -514,9 +446,8 @@ public class AccountsController : Controller
         }
         else
         {
-            // If Account Deprovisioning is enabled, we need to check if the user is claimed by any organization.
-            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-                && await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
+            // Check if the user is claimed by any organization.
+            if (await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
             {
                 throw new BadRequestException("Cannot delete accounts owned by an organization. Contact your organization administrator for additional details.");
             }
@@ -693,12 +624,18 @@ public class AccountsController : Controller
         }
     }
 
-    [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
     [AllowAnonymous]
     [HttpPost("resend-new-device-otp")]
     public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificationRequestModel request)
     {
-        await _userService.ResendNewDeviceVerificationEmail(request.Email, request.Secret);
+        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+        if (!await _userService.VerifySecretAsync(user, request.Secret))
+        {
+            await Task.Delay(2000);
+            throw new BadRequestException(string.Empty, "User verification failed.");
+        }
+
+        await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user);
     }
 
     [HttpPost("verify-devices")]

@@ -1,4 +1,7 @@
-﻿using Bit.Api.Models.Request.Organizations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Enums;
@@ -223,6 +226,20 @@ public class OrganizationSponsorshipsController : Controller
     }
 
     [Authorize("Application")]
+    [HttpDelete("{sponsoringOrgId}/{sponsoredFriendlyName}/revoke")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task AdminInitiatedRevokeSponsorshipAsync(Guid sponsoringOrgId, string sponsoredFriendlyName)
+    {
+        var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
+        var existingOrgSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
+        if (existingOrgSponsorship == null)
+        {
+            throw new BadRequestException("The specified sponsored organization could not be found under the given sponsoring organization.");
+        }
+        await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
+    }
+
+    [Authorize("Application")]
     [HttpDelete("sponsored/{sponsoredOrgId}")]
     [HttpPost("sponsored/{sponsoredOrgId}/remove")]
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -271,8 +288,11 @@ public class OrganizationSponsorshipsController : Controller
         }
 
         var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
-        return new ListResponseModel<OrganizationSponsorshipInvitesResponseModel>(sponsorships.Select(s =>
-            new OrganizationSponsorshipInvitesResponseModel(new OrganizationSponsorshipData(s))));
+        return new ListResponseModel<OrganizationSponsorshipInvitesResponseModel>(
+            sponsorships
+                .Where(s => s.IsAdminInitiated)
+                .Select(s => new OrganizationSponsorshipInvitesResponseModel(new OrganizationSponsorshipData(s)))
+        );
 
     }
 

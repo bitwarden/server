@@ -14,7 +14,7 @@
 .github/workflows/publish.yml @bitwarden/dept-bre
 
 ## These are shared workflows ##
-.github/workflows/_move_finalization_db_scripts.yml
+.github/workflows/_move_edd_db_scripts.yml
 .github/workflows/release.yml
 
 # Database Operations for database changes
@@ -33,6 +33,9 @@ util/SqliteMigrations/** @bitwarden/dept-dbops
 # Shared util projects
 util/Setup/** @bitwarden/dept-bre @bitwarden/team-platform-dev
 
+# UIF
+src/Core/MailTemplates/Mjml @bitwarden/team-ui-foundation # Teams are expected to own sub-directories of this project
+
 # Auth team
 **/Auth @bitwarden/team-auth-dev
 bitwarden_license/src/Sso @bitwarden/team-auth-dev
@@ -47,11 +50,7 @@ src/Core/IdentityServer @bitwarden/team-auth-dev
 **/Tools @bitwarden/team-tools-dev
 
 # Dirt (Data Insights & Reporting) team
-src/Api/Controllers/Dirt @bitwarden/team-data-insights-and-reporting-dev
-src/Core/Dirt @bitwarden/team-data-insights-and-reporting-dev
-src/Infrastructure.Dapper/Dirt @bitwarden/team-data-insights-and-reporting-dev
-test/Api.Test/Dirt @bitwarden/team-data-insights-and-reporting-dev
-test/Core.Test/Dirt @bitwarden/team-data-insights-and-reporting-dev
+**/Dirt @bitwarden/team-data-insights-and-reporting-dev
 
 # Vault team
 **/Vault @bitwarden/team-vault-dev
@@ -90,6 +89,9 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 .github/workflows/test-database.yml @bitwarden/team-platform-dev
 .github/workflows/test.yml @bitwarden/team-platform-dev
 **/*Platform* @bitwarden/team-platform-dev
+**/.dockerignore @bitwarden/team-platform-dev
+**/Dockerfile @bitwarden/team-platform-dev
+**/entrypoint.sh @bitwarden/team-platform-dev
 
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json

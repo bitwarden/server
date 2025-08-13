@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Models.Api;
@@ -32,6 +35,7 @@ public class PlanResponseModel : ResponseModel
         HasTotp = plan.HasTotp;
         Has2fa = plan.Has2fa;
         HasSso = plan.HasSso;
+        HasOrganizationDomains = plan.HasOrganizationDomains;
         HasResetPassword = plan.HasResetPassword;
         UsersGetPremium = plan.UsersGetPremium;
         UpgradeSortOrder = plan.UpgradeSortOrder;
@@ -71,6 +75,7 @@ public class PlanResponseModel : ResponseModel
     public bool Has2fa { get; set; }
     public bool HasApi { get; set; }
     public bool HasSso { get; set; }
+    public bool HasOrganizationDomains { get; set; }
     public bool HasResetPassword { get; set; }
     public bool UsersGetPremium { get; set; }
 

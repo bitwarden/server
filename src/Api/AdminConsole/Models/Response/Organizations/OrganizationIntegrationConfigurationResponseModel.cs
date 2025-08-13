@@ -17,12 +17,14 @@ public class OrganizationIntegrationConfigurationResponseModel : ResponseModel
         Configuration = organizationIntegrationConfiguration.Configuration;
         CreationDate = organizationIntegrationConfiguration.CreationDate;
         EventType = organizationIntegrationConfiguration.EventType;
+        Filters = organizationIntegrationConfiguration.Filters;
         Template = organizationIntegrationConfiguration.Template;
     }
 
     public Guid Id { get; set; }
     public string? Configuration { get; set; }
+    public string? Filters { get; set; }
     public DateTime CreationDate { get; set; }
-    public EventType EventType { get; set; }
+    public EventType? EventType { get; set; }
     public string? Template { get; set; }
 }

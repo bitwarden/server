@@ -239,19 +239,12 @@ public class OrganizationUsersControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Invite(organizationAbility.Id, model));
     }
 
-    [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
+    [Theory, BitAutoData]
     public async Task Get_ReturnsUser(
-        bool accountDeprovisioningEnabled,
         OrganizationUserUserDetails organizationUser, ICollection<CollectionAccessSelection> collections,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         organizationUser.Permissions = null;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            .Returns(accountDeprovisioningEnabled);
 
         sutProvider.GetDependency<ICurrentContext>()
             .ManageUsers(organizationUser.OrganizationId)
@@ -265,11 +258,11 @@ public class OrganizationUsersControllerTests
             .GetUsersOrganizationClaimedStatusAsync(organizationUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)))
             .Returns(new Dictionary<Guid, bool> { { organizationUser.Id, true } });
 
-        var response = await sutProvider.Sut.Get(organizationUser.Id, false);
+        var response = await sutProvider.Sut.Get(organizationUser.OrganizationId, organizationUser.Id, false);
 
         Assert.Equal(organizationUser.Id, response.Id);
-        Assert.Equal(accountDeprovisioningEnabled, response.ManagedByOrganization);
-        Assert.Equal(accountDeprovisioningEnabled, response.ClaimedByOrganization);
+        Assert.True(response.ManagedByOrganization);
+        Assert.True(response.ClaimedByOrganization);
     }
 
     [Theory]
@@ -313,18 +306,6 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetAccountRecoveryDetails_WithoutManageResetPasswordPermission_Throws(
-        Guid organizationId,
-        OrganizationUserBulkRequestModel bulkRequestModel,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(false);
-
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel));
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task DeleteAccount_WhenUserCanManageUsers_Success(
         Guid orgId, Guid id, User currentUser, SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -336,17 +317,6 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountCommand>()
             .Received(1)
             .DeleteUserAsync(orgId, id, currentUser.Id);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task DeleteAccount_WhenUserCannotManageUsers_ThrowsNotFoundException(
-        Guid orgId, Guid id, SutProvider<OrganizationUsersController> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(false);
-
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.DeleteAccount(orgId, id));
     }
 
     [Theory]
@@ -386,17 +356,6 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountCommand>()
             .Received(1)
             .DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task BulkDeleteAccount_WhenUserCannotManageUsers_ThrowsNotFoundException(
-        Guid orgId, OrganizationUserBulkRequestModel model, SutProvider<OrganizationUsersController> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(false);
-
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.BulkDeleteAccount(orgId, model));
     }
 
     [Theory]

@@ -1,4 +1,7 @@
-﻿using System.Text.RegularExpressions;
+﻿#nullable enable
+
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Bit.Core.AdminConsole.Utilities;
 
@@ -9,7 +12,7 @@ public static partial class IntegrationTemplateProcessor
 
     public static string ReplaceTokens(string template, object values)
     {
-        if (string.IsNullOrEmpty(template) || values == null)
+        if (string.IsNullOrEmpty(template))
         {
             return template;
         }
@@ -17,8 +20,15 @@ public static partial class IntegrationTemplateProcessor
         return TokenRegex().Replace(template, match =>
         {
             var propertyName = match.Groups[1].Value;
-            var property = type.GetProperty(propertyName);
-            return property?.GetValue(values)?.ToString() ?? match.Value;
+            if (propertyName == "EventMessage")
+            {
+                return JsonSerializer.Serialize(values);
+            }
+            else
+            {
+                var property = type.GetProperty(propertyName);
+                return property?.GetValue(values)?.ToString() ?? match.Value;
+            }
         });
     }
 

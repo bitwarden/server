@@ -7,5 +7,4 @@ public class LicenseContext
 {
     public Guid? InstallationId { get; init; }
     public required SubscriptionInfo SubscriptionInfo { get; init; }
-    public int? SmMaxProjects { get; set; }
 }

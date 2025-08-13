@@ -9,11 +9,16 @@ jobs:
   delete-rc:
     name: Delete RC Branch
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      id-token: write
     steps:
-      - name: Login to Azure - CI Subscription
-        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
         with:
-          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
 
       - name: Retrieve bot secrets
         id: retrieve-bot-secrets
@@ -21,6 +26,9 @@ jobs:
         with:
           keyvault: bitwarden-ci
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Checkout main
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2

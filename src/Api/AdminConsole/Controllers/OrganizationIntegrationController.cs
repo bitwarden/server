@@ -19,6 +19,20 @@ public class OrganizationIntegrationController(
     ICurrentContext currentContext,
     IOrganizationIntegrationRepository integrationRepository) : Controller
 {
+    [HttpGet("")]
+    public async Task<List<OrganizationIntegrationResponseModel>> GetAsync(Guid organizationId)
+    {
+        if (!await HasPermission(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var integrations = await integrationRepository.GetManyByOrganizationAsync(organizationId);
+        return integrations
+            .Select(integration => new OrganizationIntegrationResponseModel(integration))
+            .ToList();
+    }
+
     [HttpPost("")]
     public async Task<OrganizationIntegrationResponseModel> CreateAsync(Guid organizationId, [FromBody] OrganizationIntegrationRequestModel model)
     {

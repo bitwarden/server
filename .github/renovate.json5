@@ -10,19 +10,6 @@
   ],
   packageRules: [
     {
-      // Group all release-related workflows for GitHub Actions together for BRE.
-      groupName: "github-action",
-      matchManagers: ["github-actions"],
-      matchFileNames: [
-        ".github/workflows/publish.yml",
-        ".github/workflows/release.yml",
-        ".github/workflows/repository-management.yml"
-      ],
-      commitMessagePrefix: "[deps] BRE:",
-      reviewers: ["team:dept-bre"],
-      addLabels: ["hold"],
-    },
-    {
       groupName: "dockerfile minor",
       matchManagers: ["dockerfile"],
       matchUpdateTypes: ["minor"],
@@ -36,6 +23,7 @@
       groupName: "github-action minor",
       matchManagers: ["github-actions"],
       matchUpdateTypes: ["minor"],
+      addLabels: ["hold"],
     },
     {
       // For any Microsoft.Extensions.* and Microsoft.AspNetCore.* packages, we want to create PRs for patch updates.
@@ -96,7 +84,6 @@
         "Serilog.AspNetCore",
         "Serilog.Extensions.Logging",
         "Serilog.Extensions.Logging.File",
-        "Serilog.Sinks.AzureCosmosDB",
         "Serilog.Sinks.SyslogMessages",
         "Stripe.net",
         "Swashbuckle.AspNetCore",
@@ -134,8 +121,8 @@
       reviewers: ["team:dept-dbops"],
     },
     {
-      matchPackageNames: ["CommandDotNet", "YamlDotNet"],
-      description: "DevOps owned dependencies",
+      matchPackageNames: ["YamlDotNet"],
+      description: "BRE owned dependencies",
       commitMessagePrefix: "[deps] BRE:",
       reviewers: ["team:dept-bre"],
     },

@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
-using Bit.Core.Billing.Entities;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Providers.Entities;
+using Bit.Core.Billing.Providers.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

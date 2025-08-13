@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Utilities;
+﻿#nullable enable
+
+using System.Text.Json;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Models.Data;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
@@ -32,6 +35,16 @@ public class IntegrationTemplateProcessorTests
     {
         var template = "Event #Type#, User (id: #UserId#), Details: #UnknownKey#.";
         var expected = $"Event {eventMessage.Type}, User (id: {eventMessage.UserId}), Details: #UnknownKey#.";
+        var result = IntegrationTemplateProcessor.ReplaceTokens(template, eventMessage);
+
+        Assert.Equal(expected, result);
+    }
+
+    [Theory, BitAutoData]
+    public void ReplaceTokens_WithEventMessageToken_ReplacesWithSerializedJson(EventMessage eventMessage)
+    {
+        var template = "#EventMessage#";
+        var expected = $"{JsonSerializer.Serialize(eventMessage)}";
         var result = IntegrationTemplateProcessor.ReplaceTokens(template, eventMessage);
 
         Assert.Equal(expected, result);
@@ -76,18 +89,6 @@ public class IntegrationTemplateProcessorTests
         var expectedEmpty = "";
 
         Assert.Equal(expectedEmpty, IntegrationTemplateProcessor.ReplaceTokens(emptyTemplate, eventMessage));
-        Assert.Null(IntegrationTemplateProcessor.ReplaceTokens(null, eventMessage));
-    }
-
-    [Fact]
-    public void ReplaceTokens_DataObjectIsNull_ReturnsOriginalString()
-    {
-        var template = "Event #Type#, User (id: #UserId#).";
-        var expected = "Event #Type#, User (id: #UserId#).";
-
-        var result = IntegrationTemplateProcessor.ReplaceTokens(template, null);
-
-        Assert.Equal(expected, result);
     }
 
     [Theory]

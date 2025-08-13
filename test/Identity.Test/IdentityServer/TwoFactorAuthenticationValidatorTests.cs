@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
@@ -27,11 +28,11 @@ public class TwoFactorAuthenticationValidatorTests
     private readonly IUserService _userService;
     private readonly UserManagerTestWrapper<User> _userManager;
     private readonly IOrganizationDuoUniversalTokenProvider _organizationDuoUniversalTokenProvider;
-    private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmail2faSessionTokenable;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorenabledQuery;
     private readonly ICurrentContext _currentContext;
     private readonly TwoFactorAuthenticationValidator _sut;
 
@@ -40,22 +41,22 @@ public class TwoFactorAuthenticationValidatorTests
         _userService = Substitute.For<IUserService>();
         _userManager = SubstituteUserManager();
         _organizationDuoUniversalTokenProvider = Substitute.For<IOrganizationDuoUniversalTokenProvider>();
-        _featureService = Substitute.For<IFeatureService>();
         _applicationCacheService = Substitute.For<IApplicationCacheService>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _ssoEmail2faSessionTokenable = Substitute.For<IDataProtectorTokenFactory<SsoEmail2faSessionTokenable>>();
+        _twoFactorenabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
         _currentContext = Substitute.For<ICurrentContext>();
 
         _sut = new TwoFactorAuthenticationValidator(
                     _userService,
                     _userManager,
                     _organizationDuoUniversalTokenProvider,
-                    _featureService,
                     _applicationCacheService,
                     _organizationUserRepository,
                     _organizationRepository,
                     _ssoEmail2faSessionTokenable,
+                    _twoFactorenabledQuery,
                     _currentContext);
     }
 
@@ -251,9 +252,9 @@ public class TwoFactorAuthenticationValidatorTests
 
     [Theory]
     [BitAutoData(TwoFactorProviderType.Email)]
-    public async void BuildTwoFactorResultAsync_IndividualEmailProvider_SendsEmail_SetsSsoToken_ReturnsNotNull(
-        TwoFactorProviderType providerType,
-        User user)
+    public async void BuildTwoFactorResultAsync_SetsSsoToken_ReturnsNotNull(
+    TwoFactorProviderType providerType,
+    User user)
     {
         // Arrange
         var providerTypeInt = (int)providerType;
@@ -262,9 +263,6 @@ public class TwoFactorAuthenticationValidatorTests
         _userManager.TWO_FACTOR_ENABLED = true;
         _userManager.SUPPORTS_TWO_FACTOR = true;
         _userManager.TWO_FACTOR_PROVIDERS = [providerType.ToString()];
-
-        _userService.TwoFactorProviderIsEnabledAsync(Arg.Any<TwoFactorProviderType>(), user)
-            .Returns(true);
 
         // Act
         var result = await _sut.BuildTwoFactorResultAsync(user, null);
@@ -278,8 +276,6 @@ public class TwoFactorAuthenticationValidatorTests
         Assert.True(providers.ContainsKey(providerTypeInt.ToString()));
         Assert.True(result.ContainsKey("SsoEmail2faSessionToken"));
         Assert.True(result.ContainsKey("Email"));
-
-        await _userService.Received(1).SendTwoFactorEmailAsync(Arg.Any<User>());
     }
 
     [Theory]
@@ -322,9 +318,6 @@ public class TwoFactorAuthenticationValidatorTests
         string token)
     {
         // Arrange
-        _userService.TwoFactorProviderIsEnabledAsync(
-            TwoFactorProviderType.Email, user).Returns(true);
-
         _userManager.TWO_FACTOR_PROVIDERS = ["email"];
 
         // Act
@@ -342,10 +335,8 @@ public class TwoFactorAuthenticationValidatorTests
         string token)
     {
         // Arrange
-        _userService.TwoFactorProviderIsEnabledAsync(
-            TwoFactorProviderType.Email, user).Returns(false);
-
         _userManager.TWO_FACTOR_PROVIDERS = ["email"];
+        user.TwoFactorProviders = "";
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
@@ -362,9 +353,6 @@ public class TwoFactorAuthenticationValidatorTests
         string token)
     {
         // Arrange
-        _userService.TwoFactorProviderIsEnabledAsync(
-            TwoFactorProviderType.OrganizationDuo, user).Returns(false);
-
         _userManager.TWO_FACTOR_PROVIDERS = ["OrganizationDuo"];
 
         // Act
@@ -387,11 +375,9 @@ public class TwoFactorAuthenticationValidatorTests
         string token)
     {
         // Arrange
-        _userService.TwoFactorProviderIsEnabledAsync(
-            providerType, user).Returns(true);
-
         _userManager.TWO_FACTOR_ENABLED = true;
         _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
+        user.TwoFactorProviders = GetTwoFactorIndividualProviderJson(providerType);
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token);
@@ -412,11 +398,9 @@ public class TwoFactorAuthenticationValidatorTests
         string token)
     {
         // Arrange
-        _userService.TwoFactorProviderIsEnabledAsync(
-            providerType, user).Returns(true);
-
         _userManager.TWO_FACTOR_ENABLED = true;
         _userManager.TWO_FACTOR_TOKEN_VERIFIED = false;
+        user.TwoFactorProviders = GetTwoFactorIndividualProviderJson(providerType);
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token);
