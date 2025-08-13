@@ -361,7 +361,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task BulkDelete_ReturnsAccessDeniedForProjectsWithoutAccess_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    public async Task BulkDelete_ReturnsAccessDeniedForProjectsWithoutAccess_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data, Guid userId)
     {
         var ids = data.Select(sa => sa.Id).ToList();
         var organizationId = data.First().OrganizationId;
@@ -377,6 +377,7 @@ public class ServiceAccountsControllerTests
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Failed());
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
         var results = await sutProvider.Sut.BulkDeleteAsync(ids);
 
@@ -390,7 +391,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task BulkDelete_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    public async Task BulkDelete_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data, Guid userId)
     {
         var ids = data.Select(sa => sa.Id).ToList();
         var organizationId = data.First().OrganizationId;
@@ -404,6 +405,7 @@ public class ServiceAccountsControllerTests
 
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
         var results = await sutProvider.Sut.BulkDeleteAsync(ids);
 
