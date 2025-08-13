@@ -3,7 +3,7 @@ IF NOT EXISTS (
    WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport_GetLatestByOrganizationId]')
 )
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_GetLatestByOrganizationId]
-    @OrganizationId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -49,7 +49,7 @@ END
 
 IF NOT EXISTS (
    SELECT * FROM sys.objects
-   WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport_GetSummaryDataById]');
+   WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport_GetSummaryDataById]')
 )
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_GetSummaryDataById]
     @OrganizationId UNIQUEIDENTIFIER,
@@ -60,8 +60,8 @@ BEGIN
 
 SELECT
     [Id],
-    [OrganizationId], [
-    SummaryData]
+    [OrganizationId],
+    [SummaryData]
 FROM [dbo].[OrganizationReport]
 WHERE [OrganizationId] = @OrganizationId AND [Id] = @Id
 END
