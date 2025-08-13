@@ -1,4 +1,5 @@
-﻿using Stripe;
+﻿using Bit.Core.Billing.Constants;
+using Stripe;
 using Event = Stripe.Event;
 
 namespace Bit.Billing.Services.Implementations;
@@ -26,17 +27,23 @@ public class PaymentFailedHandler : IPaymentFailedHandler
     public async Task HandleAsync(Event parsedEvent)
     {
         var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-        if (invoice.Paid || invoice.AttemptCount <= 1 || !ShouldAttemptToPayInvoice(invoice))
+        if (invoice.Status == StripeConstants.InvoiceStatus.Paid || invoice.AttemptCount <= 1 || !ShouldAttemptToPayInvoice(invoice))
         {
             return;
         }
 
-        var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
-        // attempt count 4 = 11 days after initial failure
-        if (invoice.AttemptCount <= 3 ||
-            !subscription.Items.Any(i => i.Price.Id is IStripeEventUtilityService.PremiumPlanId or IStripeEventUtilityService.PremiumPlanIdAppStore))
+        if (invoice.Parent is
+            {
+                Type: "subscription_details"
+            })
         {
-            await _stripeEventUtilityService.AttemptToPayInvoiceAsync(invoice);
+            var subscription = await _stripeFacade.GetSubscription(invoice.Parent.SubscriptionDetails.SubscriptionId);
+            // attempt count 4 = 11 days after initial failure
+            if (invoice.AttemptCount <= 3 ||
+                !subscription.Items.Any(i => i.Price.Id is IStripeEventUtilityService.PremiumPlanId or IStripeEventUtilityService.PremiumPlanIdAppStore))
+            {
+                await _stripeEventUtilityService.AttemptToPayInvoiceAsync(invoice);
+            }
         }
     }
 
@@ -44,9 +51,9 @@ public class PaymentFailedHandler : IPaymentFailedHandler
         invoice is
         {
             AmountDue: > 0,
-            Paid: false,
+            Status: not StripeConstants.InvoiceStatus.Paid,
             CollectionMethod: "charge_automatically",
             BillingReason: "subscription_cycle" or "automatic_pending_invoice_item_invoice",
-            SubscriptionId: not null
+            Parent.Type: "subscription_details"
         };
 }
