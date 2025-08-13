@@ -8,33 +8,33 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
-public class UpdateOrganizationReportCommand : IUpdateOrganizationReportCommand
+public class UpdateOrganizationReportDataCommand : IUpdateOrganizationReportDataCommand
 {
     private readonly IOrganizationRepository _organizationRepo;
     private readonly IOrganizationReportRepository _organizationReportRepo;
-    private readonly ILogger<UpdateOrganizationReportCommand> _logger;
+    private readonly ILogger<UpdateOrganizationReportDataCommand> _logger;
 
-    public UpdateOrganizationReportCommand(
+    public UpdateOrganizationReportDataCommand(
         IOrganizationRepository organizationRepository,
         IOrganizationReportRepository organizationReportRepository,
-        ILogger<UpdateOrganizationReportCommand> logger)
+        ILogger<UpdateOrganizationReportDataCommand> logger)
     {
         _organizationRepo = organizationRepository;
         _organizationReportRepo = organizationReportRepository;
         _logger = logger;
     }
 
-    public async Task<OrganizationReport> UpdateOrganizationReportAsync(UpdateOrganizationReportRequest request)
+    public async Task<OrganizationReport> UpdateOrganizationReportDataAsync(UpdateOrganizationReportDataRequest request)
     {
         try
         {
-            _logger.LogInformation("Updating organization report {reportId} for organization {organizationId}",
+            _logger.LogInformation("Updating organization report data {reportId} for organization {organizationId}",
                 request.ReportId, request.OrganizationId);
 
             var (isValid, errorMessage) = await ValidateRequestAsync(request);
             if (!isValid)
             {
-                _logger.LogWarning("Failed to update organization report {reportId} for organization {organizationId}: {errorMessage}",
+                _logger.LogWarning("Failed to update organization report data {reportId} for organization {organizationId}: {errorMessage}",
                     request.ReportId, request.OrganizationId, errorMessage);
                 throw new BadRequestException(errorMessage);
             }
@@ -53,25 +53,22 @@ public class UpdateOrganizationReportCommand : IUpdateOrganizationReportCommand
                 throw new BadRequestException("Organization report does not belong to the specified organization");
             }
 
-            existingReport.ReportData = request.ReportData;
-            existingReport.RevisionDate = DateTime.UtcNow;
+            var updatedReport = await _organizationReportRepo.UpdateReportDataAsync(request.OrganizationId, request.ReportId, request.ReportData);
 
-            await _organizationReportRepo.ReplaceAsync(existingReport);
-
-            _logger.LogInformation("Successfully updated organization report {reportId} for organization {organizationId}",
+            _logger.LogInformation("Successfully updated organization report data {reportId} for organization {organizationId}",
                 request.ReportId, request.OrganizationId);
 
-            return await _organizationReportRepo.GetLatestByOrganizationIdAsync(request.ReportId);
+            return updatedReport;
         }
         catch (Exception ex) when (!(ex is BadRequestException || ex is NotFoundException))
         {
-            _logger.LogError(ex, "Error updating organization report {reportId} for organization {organizationId}",
+            _logger.LogError(ex, "Error updating organization report data {reportId} for organization {organizationId}",
                 request.ReportId, request.OrganizationId);
             throw;
         }
     }
 
-    private async Task<(bool IsValid, string errorMessage)> ValidateRequestAsync(UpdateOrganizationReportRequest request)
+    private async Task<(bool IsValid, string errorMessage)> ValidateRequestAsync(UpdateOrganizationReportDataRequest request)
     {
         if (request.OrganizationId == Guid.Empty)
         {

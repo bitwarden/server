@@ -19,15 +19,17 @@ public class GetOrganizationReportQuery : IGetOrganizationReportQuery
         _logger = logger;
     }
 
-    public async Task<IEnumerable<OrganizationReport>> GetOrganizationReportAsync(Guid organizationId)
+    public async Task<OrganizationReport> GetOrganizationReportAsync(Guid reportId)
     {
-        if (organizationId == Guid.Empty)
+        if (reportId == Guid.Empty)
         {
-            throw new BadRequestException("OrganizationId is required.");
+            throw new BadRequestException("Id of report is required.");
         }
 
-        _logger.LogInformation("Fetching organization reports for organization {organizationId}", organizationId);
-        return await _organizationReportRepo.GetByOrganizationIdAsync(organizationId);
+        _logger.LogInformation("Fetching organization reports for organization by Id: {reportId}", reportId);
+
+        return await _organizationReportRepo.GetByIdAsync(reportId)
+            ?? throw new NotFoundException("Organization report not found.");
     }
 
     public async Task<OrganizationReport> GetLatestOrganizationReportAsync(Guid organizationId)
