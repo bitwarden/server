@@ -1,8 +1,8 @@
-IF NOT EXISTS (
-   SELECT * FROM sys.objects
-   WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport_GetLatestByOrganizationId]')
-)
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_GetLatestByOrganizationId]
+IF OBJECT_ID('[dbo].[OrganizationReport_GetLatestByOrganizationId]') IS NOT NULL
+    DROP PROCEDURE [dbo].[OrganizationReport_GetLatestByOrganizationId]
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationReport_GetLatestByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -21,12 +21,13 @@ BEGIN
     WHERE [OrganizationId] = @OrganizationId
     ORDER BY [RevisionDate] DESC
 END
+GO
 
-IF NOT EXISTS (
-   SELECT * FROM sys.objects
-   WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport_GetSummariesByDateRange]')
-)
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_GetSummariesByDateRange]
+IF OBJECT_ID('[dbo].[OrganizationReport_GetSummariesByDateRange]') IS NOT NULL
+    DROP PROCEDURE [dbo].[OrganizationReport_GetSummariesByDateRange]
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationReport_GetSummariesByDateRange]
     @OrganizationId UNIQUEIDENTIFIER,
     @Id UNIQUEIDENTIFIER,
     @StartDate DATETIME2(7),
@@ -46,12 +47,13 @@ WHERE [OrganizationId] = @OrganizationId
   AND [RevisionDate] <= @EndDate
 ORDER BY [RevisionDate] DESC
 END
+GO
 
-IF NOT EXISTS (
-   SELECT * FROM sys.objects
-   WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport_GetSummaryDataById]')
-)
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_GetSummaryDataById]
+IF OBJECT_ID('[dbo].[OrganizationReport_GetSummaryDataById]') IS NOT NULL
+    DROP PROCEDURE [dbo].[OrganizationReport_GetSummaryDataById]
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationReport_GetSummaryDataById]
     @OrganizationId UNIQUEIDENTIFIER,
     @Id UNIQUEIDENTIFIER
 AS
@@ -65,12 +67,13 @@ SELECT
 FROM [dbo].[OrganizationReport]
 WHERE [OrganizationId] = @OrganizationId AND [Id] = @Id
 END
+GO
 
-IF NOT EXISTS (
-   SELECT * FROM sys.objects
-   WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport_UpdateSummaryData]')
-)
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_UpdateSummaryData]
+IF OBJECT_ID('[dbo].[OrganizationReport_UpdateSummaryData]') IS NOT NULL
+    DROP PROCEDURE [dbo].[OrganizationReport_UpdateSummaryData]
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationReport_UpdateSummaryData]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @SummaryData NVARCHAR(MAX)
@@ -85,12 +88,13 @@ SET
 WHERE [Id] = @Id
   AND [OrganizationId] = @OrganizationId;
 END
+GO
 
-IF NOT EXISTS (
-   SELECT * FROM sys.objects
-   WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport_GetReportDataById]')
-)
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_GetReportDataById]
+IF OBJECT_ID('[dbo].[OrganizationReport_GetReportDataById]') IS NOT NULL
+    DROP PROCEDURE [dbo].[OrganizationReport_GetReportDataById]
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationReport_GetReportDataById]
     @OrganizationId UNIQUEIDENTIFIER,
     @Id UNIQUEIDENTIFIER
 AS
@@ -105,12 +109,13 @@ BEGIN
     WHERE [OrganizationId] = @OrganizationId
       AND [Id] = @Id
 END
+GO
 
-IF NOT EXISTS (
-   SELECT * FROM sys.objects
-   WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport_UpdateReportData]')
-)
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_UpdateReportData]
+IF OBJECT_ID('[dbo].[OrganizationReport_UpdateReportData]') IS NOT NULL
+    DROP PROCEDURE [dbo].[OrganizationReport_UpdateReportData]
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationReport_UpdateReportData]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @ReportData NVARCHAR(MAX)
@@ -125,12 +130,13 @@ SET
 WHERE [Id] = @Id
   AND [OrganizationId] = @OrganizationId;
 END
+GO
 
-IF NOT EXISTS (
-   SELECT * FROM sys.objects
-   WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport_GetApplicationDataById]')
-)
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_GetApplicationDataById]
+IF OBJECT_ID('[dbo].[OrganizationReport_GetApplicationDataById]') IS NOT NULL
+    DROP PROCEDURE [dbo].[OrganizationReport_GetApplicationDataById]
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationReport_GetApplicationDataById]
     @OrganizationId UNIQUEIDENTIFIER,
     @Id UNIQUEIDENTIFIER
 AS
@@ -145,12 +151,13 @@ BEGIN
     WHERE [OrganizationId] = @OrganizationId
       AND [Id] = @Id
 END
+GO
 
-IF NOT EXISTS (
-   SELECT * FROM sys.objects
-   WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport_UpdateApplicationData]')
-)
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_UpdateApplicationData]
+IF OBJECT_ID('[dbo].[OrganizationReport_UpdateApplicationData]') IS NOT NULL
+    DROP PROCEDURE [dbo].[OrganizationReport_UpdateApplicationData]
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationReport_UpdateApplicationData]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @ApplicationData NVARCHAR(MAX)
@@ -165,6 +172,4 @@ BEGIN
     WHERE [Id] = @Id
       AND [OrganizationId] = @OrganizationId;
 END
-
-
-
+GO
