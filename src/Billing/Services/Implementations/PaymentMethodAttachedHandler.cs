@@ -39,81 +39,79 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
         if (paymentMethod == null)
         {
             _logger.LogWarning("Attempted to handle the event payment_method.attached but paymentMethod was null");
+            return;
         }
-        else
-        {
-            var customer = paymentMethod.Customer;
-            var subscriptions = customer?.Subscriptions;
 
-            // This represents a provider subscription set to "send_invoice" that was paid using a Stripe hosted invoice payment page.
-            var invoicedProviderSubscription = subscriptions?.Data.FirstOrDefault(subscription =>
-                subscription.Metadata.ContainsKey(StripeConstants.MetadataKeys.ProviderId) &&
-                subscription.Status != StripeConstants.SubscriptionStatus.Canceled &&
-                subscription.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice);
+        var customer = paymentMethod.Customer;
+        var subscriptions = customer?.Subscriptions;
 
-            /*
+        // This represents a provider subscription set to "send_invoice" that was paid using a Stripe hosted invoice payment page.
+        var invoicedProviderSubscription = subscriptions?.Data.FirstOrDefault(subscription =>
+            subscription.Metadata.ContainsKey(StripeConstants.MetadataKeys.ProviderId) &&
+            subscription.Status != StripeConstants.SubscriptionStatus.Canceled &&
+            subscription.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice);
+
+        /*
          * If we have an invoiced provider subscription where the customer hasn't been marked as invoice-approved,
          * we need to try and set the default payment method and update the collection method to be "charge_automatically".
          */
-            if (invoicedProviderSubscription != null &&
-                !customer.ApprovedToPayByInvoice() &&
-                Guid.TryParse(invoicedProviderSubscription.Metadata[StripeConstants.MetadataKeys.ProviderId], out var providerId))
+        if (invoicedProviderSubscription != null &&
+            !customer.ApprovedToPayByInvoice() &&
+            Guid.TryParse(invoicedProviderSubscription.Metadata[StripeConstants.MetadataKeys.ProviderId], out var providerId))
+        {
+            var provider = await _providerRepository.GetByIdAsync(providerId);
+
+            if (provider is { Type: ProviderType.Msp })
             {
-                var provider = await _providerRepository.GetByIdAsync(providerId);
-
-                if (provider is { Type: ProviderType.Msp })
+                if (customer.InvoiceSettings.DefaultPaymentMethodId != paymentMethod.Id)
                 {
-                    if (customer.InvoiceSettings.DefaultPaymentMethodId != paymentMethod.Id)
-                    {
-                        try
-                        {
-                            await _stripeFacade.UpdateCustomer(customer.Id,
-                                new CustomerUpdateOptions
-                                {
-                                    InvoiceSettings = new CustomerInvoiceSettingsOptions
-                                    {
-                                        DefaultPaymentMethod = paymentMethod.Id
-                                    }
-                                });
-                        }
-                        catch (Exception exception)
-                        {
-                            _logger.LogWarning(exception,
-                                "Failed to set customer's ({CustomerID}) default payment method during 'payment_method.attached' webhook",
-                                customer.Id);
-                        }
-                    }
-
                     try
                     {
-                        await _stripeFacade.UpdateSubscription(invoicedProviderSubscription.Id,
-                            new SubscriptionUpdateOptions
+                        await _stripeFacade.UpdateCustomer(customer.Id,
+                            new CustomerUpdateOptions
                             {
-                                CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically
+                                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                                {
+                                    DefaultPaymentMethod = paymentMethod.Id
+                                }
                             });
                     }
                     catch (Exception exception)
                     {
                         _logger.LogWarning(exception,
-                            "Failed to set subscription's ({SubscriptionID}) collection method to 'charge_automatically' during 'payment_method.attached' webhook",
+                            "Failed to set customer's ({CustomerID}) default payment method during 'payment_method.attached' webhook",
                             customer.Id);
                     }
                 }
-            }
 
-            var unpaidSubscriptions = subscriptions?.Data.Where(subscription =>
-                subscription.Status == StripeConstants.SubscriptionStatus.Unpaid).ToList();
-
-            if (unpaidSubscriptions == null || unpaidSubscriptions.Count == 0)
-            {
-            }
-            else
-            {
-                foreach (var unpaidSubscription in unpaidSubscriptions)
+                try
                 {
-                    await AttemptToPayOpenSubscriptionAsync(unpaidSubscription);
+                    await _stripeFacade.UpdateSubscription(invoicedProviderSubscription.Id,
+                        new SubscriptionUpdateOptions
+                        {
+                            CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically
+                        });
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogWarning(exception,
+                        "Failed to set subscription's ({SubscriptionID}) collection method to 'charge_automatically' during 'payment_method.attached' webhook",
+                        customer.Id);
                 }
             }
+        }
+
+        var unpaidSubscriptions = subscriptions?.Data.Where(subscription =>
+            subscription.Status == StripeConstants.SubscriptionStatus.Unpaid).ToList();
+
+        if (unpaidSubscriptions == null || unpaidSubscriptions.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var unpaidSubscription in unpaidSubscriptions)
+        {
+            await AttemptToPayOpenSubscriptionAsync(unpaidSubscription);
         }
     }
 
