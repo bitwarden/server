@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Enums;
 using Bit.SharedWeb.Utilities;
@@ -87,15 +88,13 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         existingProvider.BillingEmail = BillingEmail?.ToLowerInvariant().Trim();
         existingProvider.BillingPhone = BillingPhone?.ToLowerInvariant().Trim();
         existingProvider.Enabled = Enabled;
-        switch (Type)
+        if (Type.IsStripeSupported())
         {
-            case ProviderType.Msp:
-            case ProviderType.BusinessUnit:
-                existingProvider.Gateway = Gateway;
-                existingProvider.GatewayCustomerId = GatewayCustomerId;
-                existingProvider.GatewaySubscriptionId = GatewaySubscriptionId;
-                break;
+            existingProvider.Gateway = Gateway;
+            existingProvider.GatewayCustomerId = GatewayCustomerId;
+            existingProvider.GatewaySubscriptionId = GatewaySubscriptionId;
         }
+
         return existingProvider;
     }
 
