@@ -30,6 +30,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// This value is HTML encoded. For display purposes use the method DisplayBusinessName() instead.
     /// </summary>
     [MaxLength(50)]
+    [Obsolete("This property has been deprecated. Use the 'Name' property instead.")]
     public string? BusinessName { get; set; }
     [MaxLength(50)]
     public string? BusinessAddress1 { get; set; }
@@ -147,6 +148,8 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// <summary>
     /// Returns the business name of the organization, HTML decoded ready for display.
     /// </summary>
+    ///
+    [Obsolete("This method has been deprecated. Use the 'DisplayName()' method instead.")]
     public string? DisplayBusinessName()
     {
         return WebUtility.HtmlDecode(BusinessName);
