@@ -7,7 +7,6 @@ using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -36,64 +35,27 @@ namespace Bit.Admin.AdminConsole.Controllers;
 
 [Authorize]
 [SelfHosted(NotSelfHostedOnly = true)]
-public class ProvidersController : Controller
+public class ProvidersController(
+    IOrganizationRepository organizationRepository,
+    IResellerClientOrganizationSignUpCommand resellerClientOrganizationSignUpCommand,
+    IProviderRepository providerRepository,
+    IProviderUserRepository providerUserRepository,
+    IProviderOrganizationRepository providerOrganizationRepository,
+    IProviderService providerService,
+    GlobalSettings globalSettings,
+    IApplicationCacheService applicationCacheService,
+    ICreateProviderCommand createProviderCommand,
+    IProviderPlanRepository providerPlanRepository,
+    IProviderBillingService providerBillingService,
+    IWebHostEnvironment webHostEnvironment,
+    IPricingClient pricingClient,
+    IStripeAdapter stripeAdapter,
+    IAccessControlService accessControlService)
+    : Controller
 {
-    private readonly IOrganizationRepository _organizationRepository;
-    private readonly IResellerClientOrganizationSignUpCommand _resellerClientOrganizationSignUpCommand;
-    private readonly IProviderRepository _providerRepository;
-    private readonly IProviderUserRepository _providerUserRepository;
-    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
-    private readonly GlobalSettings _globalSettings;
-    private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IProviderService _providerService;
-    private readonly ICreateProviderCommand _createProviderCommand;
-    private readonly IFeatureService _featureService;
-    private readonly IProviderPlanRepository _providerPlanRepository;
-    private readonly IProviderBillingService _providerBillingService;
-    private readonly IPricingClient _pricingClient;
-    private readonly IStripeAdapter _stripeAdapter;
-    private readonly IAccessControlService _accessControlService;
-    private readonly string _stripeUrl;
-    private readonly string _braintreeMerchantUrl;
-    private readonly string _braintreeMerchantId;
-
-    public ProvidersController(
-        IOrganizationRepository organizationRepository,
-        IResellerClientOrganizationSignUpCommand resellerClientOrganizationSignUpCommand,
-        IProviderRepository providerRepository,
-        IProviderUserRepository providerUserRepository,
-        IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderService providerService,
-        GlobalSettings globalSettings,
-        IApplicationCacheService applicationCacheService,
-        ICreateProviderCommand createProviderCommand,
-        IFeatureService featureService,
-        IProviderPlanRepository providerPlanRepository,
-        IProviderBillingService providerBillingService,
-        IWebHostEnvironment webHostEnvironment,
-        IPricingClient pricingClient,
-        IStripeAdapter stripeAdapter,
-        IAccessControlService accessControlService)
-    {
-        _organizationRepository = organizationRepository;
-        _resellerClientOrganizationSignUpCommand = resellerClientOrganizationSignUpCommand;
-        _providerRepository = providerRepository;
-        _providerUserRepository = providerUserRepository;
-        _providerOrganizationRepository = providerOrganizationRepository;
-        _providerService = providerService;
-        _globalSettings = globalSettings;
-        _applicationCacheService = applicationCacheService;
-        _createProviderCommand = createProviderCommand;
-        _featureService = featureService;
-        _providerPlanRepository = providerPlanRepository;
-        _providerBillingService = providerBillingService;
-        _pricingClient = pricingClient;
-        _stripeAdapter = stripeAdapter;
-        _stripeUrl = webHostEnvironment.GetStripeUrl();
-        _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
-        _braintreeMerchantId = globalSettings.Braintree.MerchantId;
-        _accessControlService = accessControlService;
-    }
+    private readonly string _stripeUrl = webHostEnvironment.GetStripeUrl();
+    private readonly string _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
+    private readonly string _braintreeMerchantId = globalSettings.Braintree.MerchantId;
 
     [RequirePermission(Permission.Provider_List_View)]
     public async Task<IActionResult> Index(string name = null, string userEmail = null, int page = 1, int count = 25)
@@ -109,7 +71,7 @@ public class ProvidersController : Controller
         }
 
         var skip = (page - 1) * count;
-        var providers = await _providerRepository.SearchAsync(name, userEmail, skip, count);
+        var providers = await providerRepository.SearchAsync(name, userEmail, skip, count);
         return View(new ProvidersModel
         {
             Items = providers as List<Provider>,
@@ -117,8 +79,8 @@ public class ProvidersController : Controller
             UserEmail = string.IsNullOrWhiteSpace(userEmail) ? null : userEmail,
             Page = page,
             Count = count,
-            Action = _globalSettings.SelfHosted ? "View" : "Edit",
-            SelfHosted = _globalSettings.SelfHosted
+            Action = globalSettings.SelfHosted ? "View" : "Edit",
+            SelfHosted = globalSettings.SelfHosted
         });
     }
 
@@ -185,7 +147,7 @@ public class ProvidersController : Controller
 
         var provider = model.ToProvider();
 
-        await _createProviderCommand.CreateMspAsync(
+        await createProviderCommand.CreateMspAsync(
             provider,
             model.OwnerEmail,
             model.TeamsMonthlySeatMinimum,
@@ -204,7 +166,7 @@ public class ProvidersController : Controller
             return View(model);
         }
         var provider = model.ToProvider();
-        await _createProviderCommand.CreateResellerAsync(provider);
+        await createProviderCommand.CreateResellerAsync(provider);
 
         return RedirectToAction("Edit", new { id = provider.Id });
     }
@@ -220,7 +182,7 @@ public class ProvidersController : Controller
         }
         var provider = model.ToProvider();
 
-        await _createProviderCommand.CreateBusinessUnitAsync(
+        await createProviderCommand.CreateBusinessUnitAsync(
             provider,
             model.OwnerEmail,
             model.Plan.Value,
@@ -232,15 +194,15 @@ public class ProvidersController : Controller
     [RequirePermission(Permission.Provider_View)]
     public async Task<IActionResult> View(Guid id)
     {
-        var provider = await _providerRepository.GetByIdAsync(id);
+        var provider = await providerRepository.GetByIdAsync(id);
         if (provider == null)
         {
             return RedirectToAction("Index");
         }
 
-        var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
-        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
-        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
+        var users = await providerUserRepository.GetManyDetailsByProviderAsync(id);
+        var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
+        var providerPlans = await providerPlanRepository.GetByProviderId(id);
         return View(new ProviderViewModel(provider, users, providerOrganizations, providerPlans.ToList()));
     }
 
@@ -274,7 +236,7 @@ public class ProvidersController : Controller
     [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> Edit(Guid id, ProviderEditModel model)
     {
-        var provider = await _providerRepository.GetByIdAsync(id);
+        var provider = await providerRepository.GetByIdAsync(id);
 
         if (provider == null)
         {
@@ -299,18 +261,18 @@ public class ProvidersController : Controller
 
         model.ToProvider(provider);
 
-        provider.Enabled = _accessControlService.UserHasPermission(Permission.Provider_CheckEnabledBox)
+        provider.Enabled = accessControlService.UserHasPermission(Permission.Provider_CheckEnabledBox)
             ? model.Enabled : originalProviderStatus;
 
-        await _providerService.UpdateAsync(provider);
-        await _applicationCacheService.UpsertProviderAbilityAsync(provider);
+        await providerService.UpdateAsync(provider);
+        await applicationCacheService.UpsertProviderAbilityAsync(provider);
 
         if (!provider.IsBillable())
         {
             return RedirectToAction("Edit", new { id });
         }
 
-        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
+        var providerPlans = await providerPlanRepository.GetByProviderId(id);
 
         switch (provider.Type)
         {
@@ -321,23 +283,19 @@ public class ProvidersController : Controller
                         (Plan: PlanType.TeamsMonthly, SeatsMinimum: model.TeamsMonthlySeatMinimum),
                         (Plan: PlanType.EnterpriseMonthly, SeatsMinimum: model.EnterpriseMonthlySeatMinimum)
                     ]);
-                await _providerBillingService.UpdateSeatMinimums(updateMspSeatMinimumsCommand);
+                await providerBillingService.UpdateSeatMinimums(updateMspSeatMinimumsCommand);
 
-                if (_featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically))
+                var customer = await stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId);
+                if (model.PayByInvoice != customer.ApprovedToPayByInvoice())
                 {
-                    var customer = await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId);
-
-                    if (model.PayByInvoice != customer.ApprovedToPayByInvoice())
+                    var approvedToPayByInvoice = model.PayByInvoice ? "1" : "0";
+                    await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
                     {
-                        var approvedToPayByInvoice = model.PayByInvoice ? "1" : "0";
-                        await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+                        Metadata = new Dictionary<string, string>
                         {
-                            Metadata = new Dictionary<string, string>
-                            {
-                                [StripeConstants.MetadataKeys.InvoiceApproved] = approvedToPayByInvoice
-                            }
-                        });
-                    }
+                            [StripeConstants.MetadataKeys.InvoiceApproved] = approvedToPayByInvoice
+                        }
+                    });
                 }
                 break;
             case ProviderType.BusinessUnit:
@@ -349,7 +307,7 @@ public class ProvidersController : Controller
                         provider,
                         existingMoePlan.Id,
                         model.Plan!.Value);
-                    await _providerBillingService.ChangePlan(changeMoePlanCommand);
+                    await providerBillingService.ChangePlan(changeMoePlanCommand);
 
                     // 2. Update the seat minimums.
                     var updateMoeSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
@@ -357,7 +315,7 @@ public class ProvidersController : Controller
                         [
                             (Plan: model.Plan!.Value, SeatsMinimum: model.EnterpriseMinimumSeats!.Value)
                         ]);
-                    await _providerBillingService.UpdateSeatMinimums(updateMoeSeatMinimumsCommand);
+                    await providerBillingService.UpdateSeatMinimums(updateMoeSeatMinimumsCommand);
                     break;
                 }
         }
@@ -367,25 +325,23 @@ public class ProvidersController : Controller
 
     private async Task<ProviderEditModel> GetEditModel(Guid id)
     {
-        var provider = await _providerRepository.GetByIdAsync(id);
+        var provider = await providerRepository.GetByIdAsync(id);
         if (provider == null)
         {
             return null;
         }
 
-        var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
-        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
+        var users = await providerUserRepository.GetManyDetailsByProviderAsync(id);
+        var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
 
         if (!provider.IsBillable())
         {
             return new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>(), false);
         }
 
-        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
+        var providerPlans = await providerPlanRepository.GetByProviderId(id);
 
-        var payByInvoice =
-            _featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) &&
-            (await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)).ApprovedToPayByInvoice();
+        var payByInvoice = (await stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)).ApprovedToPayByInvoice();
 
         return new ProviderEditModel(
             provider, users, providerOrganizations,
@@ -395,7 +351,7 @@ public class ProvidersController : Controller
     [RequirePermission(Permission.Provider_ResendEmailInvite)]
     public async Task<IActionResult> ResendInvite(Guid ownerId, Guid providerId)
     {
-        await _providerService.ResendProviderSetupInviteEmailAsync(providerId, ownerId);
+        await providerService.ResendProviderSetupInviteEmailAsync(providerId, ownerId);
         TempData["InviteResentTo"] = ownerId;
         return RedirectToAction("Edit", new { id = providerId });
     }
@@ -415,7 +371,7 @@ public class ProvidersController : Controller
 
         var encodedName = WebUtility.HtmlEncode(name);
         var skip = (page - 1) * count;
-        var unassignedOrganizations = await _organizationRepository.SearchUnassignedToProviderAsync(encodedName, ownerEmail, skip, count);
+        var unassignedOrganizations = await organizationRepository.SearchUnassignedToProviderAsync(encodedName, ownerEmail, skip, count);
         var viewModel = new OrganizationUnassignedToProviderSearchViewModel
         {
             OrganizationName = string.IsNullOrWhiteSpace(name) ? null : name,
@@ -439,7 +395,7 @@ public class ProvidersController : Controller
         var organizationIds = model.Items.Where(o => o.Selected).Select(o => o.Id).ToArray();
         if (organizationIds.Any())
         {
-            await _providerService.AddOrganizationsToReseller(id, organizationIds);
+            await providerService.AddOrganizationsToReseller(id, organizationIds);
         }
 
         return RedirectToAction("Edit", "Providers", new { id = id });
@@ -448,13 +404,13 @@ public class ProvidersController : Controller
     [HttpGet]
     public async Task<IActionResult> CreateOrganization(Guid providerId)
     {
-        var provider = await _providerRepository.GetByIdAsync(providerId);
+        var provider = await providerRepository.GetByIdAsync(providerId);
         if (provider is not { Type: ProviderType.Reseller })
         {
             return RedirectToAction("Index");
         }
 
-        var plans = await _pricingClient.ListPlans();
+        var plans = await pricingClient.ListPlans();
 
         return View(new OrganizationEditModel(provider, plans));
     }
@@ -462,15 +418,15 @@ public class ProvidersController : Controller
     [HttpPost]
     public async Task<IActionResult> CreateOrganization(Guid providerId, OrganizationEditModel model)
     {
-        var provider = await _providerRepository.GetByIdAsync(providerId);
+        var provider = await providerRepository.GetByIdAsync(providerId);
         if (provider is not { Type: ProviderType.Reseller })
         {
             return RedirectToAction("Index");
         }
 
         var organization = model.CreateOrganization(provider);
-        await _resellerClientOrganizationSignUpCommand.SignUpResellerClientAsync(organization, model.Owners);
-        await _providerService.AddOrganization(providerId, organization.Id, null);
+        await resellerClientOrganizationSignUpCommand.SignUpResellerClientAsync(organization, model.Owners);
+        await providerService.AddOrganization(providerId, organization.Id, null);
 
         return RedirectToAction("Edit", "Providers", new { id = providerId });
     }
@@ -480,7 +436,7 @@ public class ProvidersController : Controller
     [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> Delete(Guid id, string providerName)
     {
-        var provider = await _providerRepository.GetByIdAsync(id);
+        var provider = await providerRepository.GetByIdAsync(id);
 
         if (provider is null)
         {
@@ -489,7 +445,7 @@ public class ProvidersController : Controller
 
         if (provider.Status == ProviderStatusType.Pending)
         {
-            await _providerService.DeleteAsync(provider);
+            await providerService.DeleteAsync(provider);
             return NoContent();
         }
 
@@ -498,7 +454,7 @@ public class ProvidersController : Controller
             return BadRequest("Invalid provider name");
         }
 
-        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
+        var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
 
         if (providerOrganizations.Count > 0)
         {
@@ -510,7 +466,7 @@ public class ProvidersController : Controller
             return BadRequest("Invalid provider name");
         }
 
-        await _providerService.DeleteAsync(provider);
+        await providerService.DeleteAsync(provider);
         return NoContent();
     }
 
@@ -525,12 +481,12 @@ public class ProvidersController : Controller
             return BadRequest("Invalid provider admin email");
         }
 
-        var provider = await _providerRepository.GetByIdAsync(id);
+        var provider = await providerRepository.GetByIdAsync(id);
         if (provider != null)
         {
             try
             {
-                await _providerService.InitiateDeleteAsync(provider, providerEmail);
+                await providerService.InitiateDeleteAsync(provider, providerEmail);
             }
             catch (BadRequestException ex)
             {
