@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
@@ -13,16 +10,17 @@ namespace Bit.Core.Services;
 
 public class InMemoryApplicationCacheService(
     IOrganizationRepository organizationRepository,
-    IProviderRepository providerRepository)
+    IProviderRepository providerRepository,
+    TimeProvider timeProvider)
     : IApplicationCacheService
 {
-    private ConcurrentDictionary<Guid, OrganizationAbility> _orgAbilities;
+    private ConcurrentDictionary<Guid, OrganizationAbility> _orgAbilities = new();
     private readonly SemaphoreSlim _orgInitLock = new(1, 1);
-    private DateTime _lastOrgAbilityRefresh = DateTime.MinValue;
+    private DateTimeOffset _lastOrgAbilityRefresh = DateTimeOffset.MinValue;
 
-    private ConcurrentDictionary<Guid, ProviderAbility> _providerAbilities;
+    private ConcurrentDictionary<Guid, ProviderAbility> _providerAbilities = new();
     private readonly SemaphoreSlim _providerInitLock = new(1, 1);
-    private DateTime _lastProviderAbilityRefresh = DateTime.MinValue;
+    private DateTimeOffset _lastProviderAbilityRefresh = DateTimeOffset.MinValue;
 
     private readonly TimeSpan _refreshInterval = TimeSpan.FromMinutes(10);
 
@@ -104,14 +102,14 @@ public class InMemoryApplicationCacheService(
     private async Task InitAbilitiesAsync<TAbility>(
         Func<ConcurrentDictionary<Guid, TAbility>> getCache,
         Action<ConcurrentDictionary<Guid, TAbility>> setCache,
-        Func<DateTime> getLastRefresh,
-        Action<DateTime> setLastRefresh,
+        Func<DateTimeOffset> getLastRefresh,
+        Action<DateTimeOffset> setLastRefresh,
         SemaphoreSlim @lock,
         Func<Task<IEnumerable<TAbility>>> fetchFunc,
         TimeSpan refreshInterval,
         Func<TAbility, Guid> getId)
     {
-        if (getCache() != null && (DateTime.UtcNow - getLastRefresh()) <= refreshInterval)
+        if (getCache() != null && (timeProvider.GetUtcNow() - getLastRefresh()) <= refreshInterval)
         {
             return;
         }
@@ -119,7 +117,7 @@ public class InMemoryApplicationCacheService(
         await @lock.WaitAsync();
         try
         {
-            var now = DateTime.UtcNow;
+            var now = timeProvider.GetUtcNow();
             if (getCache() == null || (now - getLastRefresh()) > refreshInterval)
             {
                 var sources = await fetchFunc();
