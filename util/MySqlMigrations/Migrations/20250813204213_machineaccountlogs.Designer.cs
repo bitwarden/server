@@ -13,7 +13,7 @@ namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
     [Migration("20250813204213_machineaccountlogs")]
-    partial class machineaccountlogs
+    partial class MachineAccountLogs
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

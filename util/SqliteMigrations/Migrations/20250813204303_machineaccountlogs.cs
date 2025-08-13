@@ -5,7 +5,7 @@
 namespace Bit.SqliteMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class machineaccountlogs : Migration
+public partial class MachineAccountLogs : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
