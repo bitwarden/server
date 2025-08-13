@@ -1,11 +1,14 @@
-﻿using Bit.Core;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -25,8 +28,7 @@ public class UpcomingInvoiceHandler(
     IStripeEventService stripeEventService,
     IStripeEventUtilityService stripeEventUtilityService,
     IUserRepository userRepository,
-    IValidateSponsorshipCommand validateSponsorshipCommand,
-    IAutomaticTaxFactory automaticTaxFactory)
+    IValidateSponsorshipCommand validateSponsorshipCommand)
     : IUpcomingInvoiceHandler
 {
     public async Task HandleAsync(Event parsedEvent)
@@ -46,6 +48,8 @@ public class UpcomingInvoiceHandler(
 
         var (organizationId, userId, providerId) = stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
 
+        var setNonUSBusinessUseToReverseCharge = featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+
         if (organizationId.HasValue)
         {
             var organization = await organizationRepository.GetByIdAsync(organizationId.Value);
@@ -55,7 +59,7 @@ public class UpcomingInvoiceHandler(
                 return;
             }
 
-            await TryEnableAutomaticTaxAsync(subscription);
+            await AlignOrganizationTaxConcernsAsync(organization, subscription, parsedEvent.Id, setNonUSBusinessUseToReverseCharge);
 
             var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
@@ -100,7 +104,25 @@ public class UpcomingInvoiceHandler(
                 return;
             }
 
-            await TryEnableAutomaticTaxAsync(subscription);
+            if (!subscription.AutomaticTax.Enabled && subscription.Customer.HasRecognizedTaxLocation())
+            {
+                try
+                {
+                    await stripeFacade.UpdateSubscription(subscription.Id,
+                        new SubscriptionUpdateOptions
+                        {
+                            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+                        });
+                }
+                catch (Exception exception)
+                {
+                    logger.LogError(
+                        exception,
+                        "Failed to set user's ({UserID}) subscription to automatic tax while processing event with ID {EventID}",
+                        user.Id,
+                        parsedEvent.Id);
+                }
+            }
 
             if (user.Premium)
             {
@@ -116,7 +138,7 @@ public class UpcomingInvoiceHandler(
                 return;
             }
 
-            await TryEnableAutomaticTaxAsync(subscription);
+            await AlignProviderTaxConcernsAsync(provider, subscription, parsedEvent.Id, setNonUSBusinessUseToReverseCharge);
 
             await SendUpcomingInvoiceEmailsAsync(new List<string> { provider.BillingEmail }, invoice);
         }
@@ -139,50 +161,123 @@ public class UpcomingInvoiceHandler(
         }
     }
 
-    private async Task TryEnableAutomaticTaxAsync(Subscription subscription)
+    private async Task AlignOrganizationTaxConcernsAsync(
+        Organization organization,
+        Subscription subscription,
+        string eventId,
+        bool setNonUSBusinessUseToReverseCharge)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
-        {
-            var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscription.Items.Select(x => x.Price.Id));
-            var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
-            var updateOptions = automaticTaxStrategy.GetUpdateOptions(subscription);
+        var nonUSBusinessUse =
+            organization.PlanType.GetProductTier() != ProductTierType.Families &&
+            subscription.Customer.Address.Country != "US";
 
-            if (updateOptions == null)
+        bool setAutomaticTaxToEnabled;
+
+        if (setNonUSBusinessUseToReverseCharge)
+        {
+            if (nonUSBusinessUse && subscription.Customer.TaxExempt != StripeConstants.TaxExempt.Reverse)
             {
-                return;
+                try
+                {
+                    await stripeFacade.UpdateCustomer(subscription.CustomerId,
+                        new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
+                }
+                catch (Exception exception)
+                {
+                    logger.LogError(
+                        exception,
+                        "Failed to set organization's ({OrganizationID}) to reverse tax exemption while processing event with ID {EventID}",
+                        organization.Id,
+                        eventId);
+                }
             }
 
-            await stripeFacade.UpdateSubscription(subscription.Id, updateOptions);
-            return;
+            setAutomaticTaxToEnabled = true;
         }
-
-        if (subscription.AutomaticTax.Enabled ||
-            !subscription.Customer.HasBillingLocation() ||
-            await IsNonTaxableNonUSBusinessUseSubscription(subscription))
+        else
         {
-            return;
+            setAutomaticTaxToEnabled =
+                subscription.Customer.HasRecognizedTaxLocation() &&
+                (subscription.Customer.Address.Country == "US" ||
+                 (nonUSBusinessUse && subscription.Customer.TaxIds.Any()));
         }
 
-        await stripeFacade.UpdateSubscription(subscription.Id,
-            new SubscriptionUpdateOptions
+        if (!subscription.AutomaticTax.Enabled && setAutomaticTaxToEnabled)
+        {
+            try
             {
-                DefaultTaxRates = [],
-                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
-            });
+                await stripeFacade.UpdateSubscription(subscription.Id,
+                    new SubscriptionUpdateOptions
+                    {
+                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+                    });
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "Failed to set organization's ({OrganizationID}) subscription to automatic tax while processing event with ID {EventID}",
+                    organization.Id,
+                    eventId);
+            }
+        }
+    }
 
-        return;
+    private async Task AlignProviderTaxConcernsAsync(
+        Provider provider,
+        Subscription subscription,
+        string eventId,
+        bool setNonUSBusinessUseToReverseCharge)
+    {
+        bool setAutomaticTaxToEnabled;
 
-        async Task<bool> IsNonTaxableNonUSBusinessUseSubscription(Subscription localSubscription)
+        if (setNonUSBusinessUseToReverseCharge)
         {
-            var familyPriceIds = (await Task.WhenAll(
-                    pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019),
-                    pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)))
-                .Select(plan => plan.PasswordManager.StripePlanId);
+            if (subscription.Customer.Address.Country != "US" && subscription.Customer.TaxExempt != StripeConstants.TaxExempt.Reverse)
+            {
+                try
+                {
+                    await stripeFacade.UpdateCustomer(subscription.CustomerId,
+                        new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
+                }
+                catch (Exception exception)
+                {
+                    logger.LogError(
+                        exception,
+                        "Failed to set provider's ({ProviderID}) to reverse tax exemption while processing event with ID {EventID}",
+                        provider.Id,
+                        eventId);
+                }
+            }
 
-            return localSubscription.Customer.Address.Country != "US" &&
-                   localSubscription.Metadata.ContainsKey(StripeConstants.MetadataKeys.OrganizationId) &&
-                   !localSubscription.Items.Select(item => item.Price.Id).Intersect(familyPriceIds).Any() &&
-                   !localSubscription.Customer.TaxIds.Any();
+            setAutomaticTaxToEnabled = true;
+        }
+        else
+        {
+            setAutomaticTaxToEnabled =
+                subscription.Customer.HasRecognizedTaxLocation() &&
+                (subscription.Customer.Address.Country == "US" ||
+                 subscription.Customer.TaxIds.Any());
+        }
+
+        if (!subscription.AutomaticTax.Enabled && setAutomaticTaxToEnabled)
+        {
+            try
+            {
+                await stripeFacade.UpdateSubscription(subscription.Id,
+                    new SubscriptionUpdateOptions
+                    {
+                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+                    });
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "Failed to set provider's ({ProviderID}) subscription to automatic tax while processing event with ID {EventID}",
+                    provider.Id,
+                    eventId);
+            }
         }
     }
 }

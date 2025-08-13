@@ -14,11 +14,18 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 public class CreateSponsorshipCommand(
     ICurrentContext currentContext,
     IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-    IUserService userService) : ICreateSponsorshipCommand
+    IUserService userService,
+    IOrganizationService organizationService,
+    IOrganizationRepository organizationRepository) : ICreateSponsorshipCommand
 {
-    public async Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrganization,
-        OrganizationUser sponsoringMember, PlanSponsorshipType sponsorshipType, string sponsoredEmail,
-        string friendlyName, string notes)
+    public async Task<OrganizationSponsorship> CreateSponsorshipAsync(
+        Organization sponsoringOrganization,
+        OrganizationUser sponsoringMember,
+        PlanSponsorshipType sponsorshipType,
+        string sponsoredEmail,
+        string friendlyName,
+        bool isAdminInitiated,
+        string notes)
     {
         var sponsoringUser = await userService.GetUserByIdAsync(sponsoringMember.UserId!.Value);
 
@@ -41,55 +48,74 @@ public class CreateSponsorshipCommand(
             throw new BadRequestException("Only confirmed users can sponsor other organizations.");
         }
 
-        var existingOrgSponsorship = await organizationSponsorshipRepository
-            .GetBySponsoringOrganizationUserIdAsync(sponsoringMember.Id);
-        if (existingOrgSponsorship?.SponsoredOrganizationId != null)
+        var sponsorships =
+            await organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrganization.Id);
+        var existingSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName == friendlyName);
+        if (existingSponsorship != null)
         {
-            throw new BadRequestException("Can only sponsor one organization per Organization User.");
+            return existingSponsorship;
         }
 
-        var sponsorship = new OrganizationSponsorship();
-        sponsorship.SponsoringOrganizationId = sponsoringOrganization.Id;
-        sponsorship.SponsoringOrganizationUserId = sponsoringMember.Id;
-        sponsorship.FriendlyName = friendlyName;
-        sponsorship.OfferedToEmail = sponsoredEmail;
-        sponsorship.PlanSponsorshipType = sponsorshipType;
-
-        if (existingOrgSponsorship != null)
+        if (isAdminInitiated)
         {
-            // Replace existing invalid offer with our new sponsorship offer
-            sponsorship.Id = existingOrgSponsorship.Id;
+            ValidateAdminInitiatedSponsorship(sponsoringOrganization);
         }
 
-        var isAdminInitiated = false;
-        if (currentContext.UserId != sponsoringMember.UserId)
+        var sponsorship = new OrganizationSponsorship
         {
-            var organization = currentContext.Organizations.First(x => x.Id == sponsoringOrganization.Id);
-            OrganizationUserType[] allowedUserTypes =
-            [
-                OrganizationUserType.Admin,
-                OrganizationUserType.Owner
-            ];
+            SponsoringOrganizationId = sponsoringOrganization.Id,
+            SponsoringOrganizationUserId = sponsoringMember.Id,
+            FriendlyName = friendlyName,
+            OfferedToEmail = sponsoredEmail,
+            PlanSponsorshipType = sponsorshipType,
+            IsAdminInitiated = isAdminInitiated,
+            Notes = notes
+        };
 
-            if (!organization.Permissions.ManageUsers && allowedUserTypes.All(x => x != organization.Type))
+        if (!isAdminInitiated)
+        {
+            var existingOrgSponsorship = await organizationSponsorshipRepository
+                .GetBySponsoringOrganizationUserIdAsync(sponsoringMember.Id);
+            if (existingOrgSponsorship?.SponsoredOrganizationId != null)
             {
-                throw new UnauthorizedAccessException("You do not have permissions to send sponsorships on behalf of the organization.");
+                throw new BadRequestException("Can only sponsor one organization per Organization User.");
             }
 
-            if (!sponsoringOrganization.UseAdminSponsoredFamilies)
+            if (existingOrgSponsorship != null)
             {
-                throw new BadRequestException("Sponsoring organization cannot sponsor other Family organizations.");
+                sponsorship.Id = existingOrgSponsorship.Id;
             }
-
-            isAdminInitiated = true;
         }
 
-        sponsorship.IsAdminInitiated = isAdminInitiated;
-        sponsorship.Notes = notes;
+        if (isAdminInitiated && sponsoringOrganization.Seats.HasValue)
+        {
+            var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrganization.Id);
+            var availableSeats = sponsoringOrganization.Seats.Value - seatCounts.Total;
+
+            if (availableSeats <= 0)
+            {
+                var newSeatsRequired = 1;
+                var (canScale, failureReason) = await organizationService.CanScaleAsync(sponsoringOrganization, newSeatsRequired);
+                if (!canScale)
+                {
+                    throw new BadRequestException(failureReason);
+                }
+
+                await organizationService.AutoAddSeatsAsync(sponsoringOrganization, newSeatsRequired);
+            }
+        }
 
         try
         {
-            await organizationSponsorshipRepository.UpsertAsync(sponsorship);
+            if (isAdminInitiated)
+            {
+                await organizationSponsorshipRepository.CreateAsync(sponsorship);
+            }
+            else
+            {
+                await organizationSponsorshipRepository.UpsertAsync(sponsorship);
+            }
+
             return sponsorship;
         }
         catch
@@ -99,6 +125,26 @@ public class CreateSponsorshipCommand(
                 await organizationSponsorshipRepository.DeleteAsync(sponsorship);
             }
             throw;
+        }
+    }
+
+    private void ValidateAdminInitiatedSponsorship(Organization sponsoringOrganization)
+    {
+        var organization = currentContext.Organizations.First(x => x.Id == sponsoringOrganization.Id);
+        OrganizationUserType[] allowedUserTypes =
+        [
+            OrganizationUserType.Admin,
+            OrganizationUserType.Owner
+        ];
+
+        if (!organization.Permissions.ManageUsers && allowedUserTypes.All(x => x != organization.Type))
+        {
+            throw new UnauthorizedAccessException("You do not have permissions to send sponsorships on behalf of the organization");
+        }
+
+        if (!sponsoringOrganization.UseAdminSponsoredFamilies)
+        {
+            throw new BadRequestException("Sponsoring organization cannot send admin-initiated sponsorship invitations");
         }
     }
 }

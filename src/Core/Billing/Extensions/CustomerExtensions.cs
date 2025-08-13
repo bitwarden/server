@@ -15,12 +15,7 @@ public static class CustomerExtensions
             }
         };
 
-    /// <summary>
-    /// Determines if a Stripe customer supports automatic tax
-    /// </summary>
-    /// <param name="customer"></param>
-    /// <returns></returns>
-    public static bool HasTaxLocationVerified(this Customer customer) =>
+    public static bool HasRecognizedTaxLocation(this Customer customer) =>
         customer?.Tax?.AutomaticTax != StripeConstants.AutomaticTaxStatus.UnrecognizedLocation;
 
     public static decimal GetBillingBalance(this Customer customer)

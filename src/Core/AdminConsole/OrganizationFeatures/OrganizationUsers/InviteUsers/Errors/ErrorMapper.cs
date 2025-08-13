@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Errors;
+﻿using Bit.Core.AdminConsole.Utilities.Errors;
 using Bit.Core.Exceptions;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors;

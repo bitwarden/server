@@ -8,7 +8,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
@@ -23,7 +22,6 @@ public class DevicesControllerTest
     private readonly IUntrustDevicesCommand _untrustDevicesCommand;
     private readonly IUserRepository _userRepositoryMock;
     private readonly ICurrentContext _currentContextMock;
-    private readonly IGlobalSettings _globalSettingsMock;
     private readonly ILogger<DevicesController> _loggerMock;
     private readonly DevicesController _sut;
 

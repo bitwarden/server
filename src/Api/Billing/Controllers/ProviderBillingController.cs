@@ -1,11 +1,17 @@
-﻿using Bit.Api.Billing.Models.Requests;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
+using Bit.Commercial.Core.Billing.Providers.Services;
 using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Providers.Models;
+using Bit.Core.Billing.Providers.Repositories;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
@@ -78,13 +84,6 @@ public class ProviderBillingController(
         [FromRoute] Guid providerId,
         [FromBody] UpdatePaymentMethodRequestBody requestBody)
     {
-        var allowProviderPaymentMethod = featureService.IsEnabled(FeatureFlagKeys.PM18794_ProviderPaymentMethod);
-
-        if (!allowProviderPaymentMethod)
-        {
-            return TypedResults.NotFound();
-        }
-
         var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
         if (provider == null)
@@ -108,13 +107,6 @@ public class ProviderBillingController(
         [FromRoute] Guid providerId,
         [FromBody] VerifyBankAccountRequestBody requestBody)
     {
-        var allowProviderPaymentMethod = featureService.IsEnabled(FeatureFlagKeys.PM18794_ProviderPaymentMethod);
-
-        if (!allowProviderPaymentMethod)
-        {
-            return TypedResults.NotFound();
-        }
-
         var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
         if (provider == null)
@@ -147,13 +139,33 @@ public class ProviderBillingController(
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
+        var getProviderPriceFromStripe = featureService.IsEnabled(FeatureFlagKeys.PM21383_GetProviderPriceFromStripe);
+
         var configuredProviderPlans = await Task.WhenAll(providerPlans.Select(async providerPlan =>
         {
             var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
+
+            decimal unitAmount;
+
+            if (getProviderPriceFromStripe)
+            {
+                var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, plan.Type);
+                var price = await stripeAdapter.PriceGetAsync(priceId);
+
+                unitAmount = price.UnitAmountDecimal.HasValue
+                    ? price.UnitAmountDecimal.Value / 100M
+                    : plan.PasswordManager.ProviderPortalSeatPrice;
+            }
+            else
+            {
+                unitAmount = plan.PasswordManager.ProviderPortalSeatPrice;
+            }
+
             return new ConfiguredProviderPlan(
                 providerPlan.Id,
                 providerPlan.ProviderId,
                 plan,
+                unitAmount,
                 providerPlan.SeatMinimum ?? 0,
                 providerPlan.PurchasedSeats ?? 0,
                 providerPlan.AllocatedSeats ?? 0);

@@ -2,12 +2,11 @@
 using Bit.Admin.Billing.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
@@ -18,7 +17,6 @@ namespace Bit.Admin.Billing.Controllers;
 
 [Authorize]
 [Route("organizations/billing/{organizationId:guid}/business-unit")]
-[RequireFeature(FeatureFlagKeys.PM18770_EnableOrganizationBusinessUnitConversion)]
 public class BusinessUnitConversionController(
     IBusinessUnitConverter businessUnitConverter,
     IOrganizationRepository organizationRepository,

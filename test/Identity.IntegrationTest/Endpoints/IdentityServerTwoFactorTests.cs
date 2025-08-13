@@ -143,7 +143,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "grant_type", "password" },
             { "username", _testEmail },
             { "password", _testPassword },
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
+        }));
 
         // Assert
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -263,7 +263,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
+        }));
 
         // Assert
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -307,7 +307,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
+        }));
 
         Assert.Equal(StatusCodes.Status400BadRequest, failedTokenContext.Response.StatusCode);
         Assert.NotNull(emailToken);
@@ -326,7 +326,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
+        }));
 
 
         // Assert
@@ -363,7 +363,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "code", "test_code" },
             { "code_verifier", challenge },
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
+        }));
 
         // Assert
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);

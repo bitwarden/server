@@ -1,10 +1,16 @@
 ﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Caches.Implementations;
 using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Organizations.Services;
+using Bit.Core.Billing.Payment;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
-using Bit.Core.Billing.Services.Implementations.AutomaticTax;
+using Bit.Core.Billing.Tax.Commands;
+using Bit.Core.Billing.Tax.Services;
+using Bit.Core.Billing.Tax.Services.Implementations;
 
 namespace Bit.Core.Billing.Extensions;
 
@@ -24,5 +30,16 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IAutomaticTaxFactory, AutomaticTaxFactory>();
         services.AddLicenseServices();
         services.AddPricingClient();
+        services.AddTransient<IPreviewTaxAmountCommand, PreviewTaxAmountCommand>();
+        services.AddPaymentOperations();
+        services.AddOrganizationLicenseCommandsQueries();
+        services.AddTransient<IGetOrganizationWarningsQuery, GetOrganizationWarningsQuery>();
+    }
+
+    private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)
+    {
+        services.AddScoped<IGetCloudOrganizationLicenseQuery, GetCloudOrganizationLicenseQuery>();
+        services.AddScoped<IGetSelfHostedOrganizationLicenseQuery, GetSelfHostedOrganizationLicenseQuery>();
+        services.AddScoped<IUpdateOrganizationLicenseCommand, UpdateOrganizationLicenseCommand>();
     }
 }

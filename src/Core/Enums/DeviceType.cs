@@ -55,5 +55,7 @@ public enum DeviceType : byte
     [Display(Name = "MacOs CLI")]
     MacOsCLI = 24,
     [Display(Name = "Linux CLI")]
-    LinuxCLI = 25
+    LinuxCLI = 25,
+    [Display(Name = "DuckDuckGo")]
+    DuckDuckGoBrowser = 26,
 }

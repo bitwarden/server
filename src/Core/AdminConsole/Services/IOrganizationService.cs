@@ -1,4 +1,6 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Auth.Enums;
@@ -11,8 +13,6 @@ namespace Bit.Core.Services;
 
 public interface IOrganizationService
 {
-    Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken, PaymentMethodType paymentMethodType,
-        TaxInfo taxInfo);
     Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null);
     Task ReinstateSubscriptionAsync(Guid organizationId);
     Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb);
@@ -20,14 +20,6 @@ public interface IOrganizationService
     Task AutoAddSeatsAsync(Organization organization, int seatsToAdd);
     Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
     Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
-#nullable enable
-    Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup);
-#nullable disable
-    /// <summary>
-    /// Create a new organization on a self-hosted instance
-    /// </summary>
-    Task<(Organization organization, OrganizationUser organizationUser)> SignUpAsync(OrganizationLicense license, User owner,
-        string ownerKey, string collectionName, string publicKey, string privateKey);
     Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate);
     Task UpdateAsync(Organization organization, bool updateBilling = false, EventType eventType = EventType.Organization_Updated);
     Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
@@ -43,19 +35,8 @@ public interface IOrganizationService
         IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
         bool overwriteExisting, EventSystemUser eventSystemUser);
     Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
-    Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId);
-    Task RevokeUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser);
-    Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
-        IEnumerable<Guid> organizationUserIds, Guid? revokingUserId);
-    Task CreatePendingOrganization(Organization organization, string ownerEmail, ClaimsPrincipal user, IUserService userService, bool salesAssistedTrialStarted);
-    /// <summary>
-    /// Update an Organization entry by setting the public/private keys, set it as 'Enabled' and move the Status from 'Pending' to 'Created'.
-    /// </summary>
-    /// <remarks>
-    /// This method must target a disabled Organization that has null keys and status as 'Pending'.
-    /// </remarks>
-    Task InitPendingOrganization(User user, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName, string emailToken);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
+    Task<(bool canScale, string failureReason)> CanScaleAsync(Organization organization, int seatsToAdd);
 
     void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
     void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);

@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -159,7 +162,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             throw new BadRequestException(RemoveAdminByCustomUserErrorMessage);
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && deletingUserId.HasValue && eventSystemUser == null)
+        if (deletingUserId.HasValue && eventSystemUser == null)
         {
             var claimedStatus = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(orgUser.OrganizationId, new[] { orgUser.Id });
             if (claimedStatus.TryGetValue(orgUser.Id, out var isClaimed) && isClaimed)
@@ -214,7 +217,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
         }
 
-        var claimedStatus = _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && deletingUserId.HasValue && eventSystemUser == null
+        var claimedStatus = deletingUserId.HasValue && eventSystemUser == null
             ? await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, filteredUsers.Select(u => u.Id))
             : filteredUsers.ToDictionary(u => u.Id, u => false);
         var result = new List<(OrganizationUser OrganizationUser, string ErrorMessage)>();

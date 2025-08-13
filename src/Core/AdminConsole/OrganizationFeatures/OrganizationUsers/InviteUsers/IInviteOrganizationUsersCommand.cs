@@ -1,5 +1,5 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
-using Bit.Core.Models.Commands;
+using Bit.Core.AdminConsole.Utilities.Commands;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 
@@ -19,4 +19,14 @@ public interface IInviteOrganizationUsersCommand
     /// </param>
     /// <returns>Response from InviteScimOrganiation<see cref="ScimInviteOrganizationUsersResponse"/></returns>
     Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(InviteOrganizationUsersRequest request);
+    /// <summary>
+    /// Sends invitations to add imported organization users via the public API.
+    /// This can be a Success or a Failure. Failure will contain the Error along with a representation of the errored value.
+    /// Success will be the successful return object.
+    /// </summary>
+    /// <param name="request">
+    /// Contains the details for inviting the imported organization users.
+    /// </param>
+    /// <returns>Response from InviteOrganiationUsersAsync<see cref="InviteOrganizationUsersResponse"/></returns>
+    Task<CommandResult<InviteOrganizationUsersResponse>> InviteImportedOrganizationUsersAsync(InviteOrganizationUsersRequest request);
 }

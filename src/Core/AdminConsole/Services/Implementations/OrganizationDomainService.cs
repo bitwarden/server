@@ -93,16 +93,8 @@ public class OrganizationDomainService : IOrganizationDomainService
                 //Send email to administrators
                 if (adminEmails.Count > 0)
                 {
-                    if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
-                    {
-                        await _mailService.SendUnclaimedOrganizationDomainEmailAsync(adminEmails,
-                            domain.OrganizationId.ToString(), domain.DomainName);
-                    }
-                    else
-                    {
-                        await _mailService.SendUnverifiedOrganizationDomainEmailAsync(adminEmails,
-                            domain.OrganizationId.ToString(), domain.DomainName);
-                    }
+                    await _mailService.SendUnclaimedOrganizationDomainEmailAsync(adminEmails,
+                        domain.OrganizationId.ToString(), domain.DomainName);
                 }
 
                 _logger.LogInformation(Constants.BypassFiltersEventId, "Expired domain: {domainName}", domain.DomainName);

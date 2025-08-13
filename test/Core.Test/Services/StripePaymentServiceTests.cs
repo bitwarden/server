@@ -1,13 +1,12 @@
 ﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models.Api.Requests;
-using Bit.Core.Billing.Models.Api.Requests.Organizations;
 using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Services.Contracts;
+using Bit.Core.Billing.Tax.Models;
+using Bit.Core.Billing.Tax.Requests;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Enums;
 using Bit.Core.Services;
-using Bit.Core.Test.Billing.Stubs;
+using Bit.Core.Test.Billing.Tax.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

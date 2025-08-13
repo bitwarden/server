@@ -45,7 +45,7 @@ public class GetCipherPermissionsForUserQuery : IGetCipherPermissionsForUserQuer
                 cipher.Value.ViewPassword = true;
             }
         }
-        else if (await CanAccessUnassignedCiphersAsync(org))
+        else if (CanAccessUnassignedCiphers(org))
         {
             var unassignedCiphers = await _cipherRepository.GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(organizationId);
             foreach (var unassignedCipher in unassignedCiphers)
@@ -83,7 +83,7 @@ public class GetCipherPermissionsForUserQuery : IGetCipherPermissionsForUserQuer
         return false;
     }
 
-    private async Task<bool> CanAccessUnassignedCiphersAsync(CurrentContextOrganization org)
+    private bool CanAccessUnassignedCiphers(CurrentContextOrganization org)
     {
         if (org is
         { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or

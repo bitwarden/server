@@ -11,6 +11,7 @@
 @{
     ViewData["Title"] = "Provider: " + Model.Provider.DisplayName();
     var canEdit = AccessControlService.UserHasPermission(Permission.Provider_Edit);
+    var canCheckEnabled = AccessControlService.UserHasPermission(Permission.Provider_CheckEnabledBox);
 }
 
 <h1>Provider <small>@Model.Provider.DisplayName()</small></h1>
@@ -30,6 +31,13 @@
         <dt class="col-sm-4 col-lg-3">Name</dt>
         <dd class="col-sm-8 col-lg-9">@Model.Provider.DisplayName()</dd>
     </dl>
+    @if (canCheckEnabled && (Model.Provider.Type == ProviderType.Msp || Model.Provider.Type == ProviderType.BusinessUnit))
+    {
+        <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" asp-for="Enabled" disabled='@(canCheckEnabled ? null : "disabled")'>
+            <label class="form-check-label" asp-for="Enabled"></label>
+        </div>
+    }
     <h2>Business Information</h2>
     <dl class="row">
         <dt class="col-sm-4 col-lg-3">Business Name</dt>
@@ -183,17 +191,29 @@
                 <div class="p-3">
                     <h4 class="fw-bolder" id="exampleModalLabel">Delete provider</h4>
                 </div>
-                <div class="modal-body">
-                    <span class="fw-light">
-                        This action is permanent and irreversible. Enter the provider name to complete deletion of the provider and associated data.
-                    </span>
-                    <form>
-                        <div class="mb-3">
-                            <label for="provider-name" class="col-form-label">Provider name</label>
-                            <input type="text" class="form-control" id="provider-name">
-                        </div>
-                    </form>
-                </div>
+
+                @if (Model.Provider.Status == ProviderStatusType.Pending)
+                {
+                    <div class="modal-body">
+                        <span class="fw-light">
+                            This action is permanent and irreversible.
+                        </span>
+                    </div>
+                }
+                else
+                {
+                    <div class="modal-body">
+                        <span class="fw-light">
+                            This action is permanent and irreversible. Enter the provider name to complete deletion of the provider and associated data.
+                        </span>
+                        <form>
+                            <div class="mb-3">
+                                <label for="provider-name" class="col-form-label">Provider name</label>
+                                <input type="text" class="form-control" id="provider-name">
+                            </div>
+                        </form>
+                    </div>
+                }
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-primary btn-pill" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-danger btn-pill" onclick="deleteProvider('@Model.Provider.Id');">Delete provider</button>
