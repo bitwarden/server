@@ -92,6 +92,7 @@ public class ProfileService : IProfileService
 
     public async Task IsActiveAsync(IsActiveContext context)
     {
+        // Send Tokens are not refreshed so when the token has expired the user must request a new one via the authentication method assigned to the send.
         if (context.Client.ClientId == BitwardenClient.Send)
         {
             context.IsActive = true;
