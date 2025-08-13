@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationReport_GetSummaryData]
+CREATE PROCEDURE [dbo].[OrganizationReport_GetSummaryDataById]
     @OrganizationId UNIQUEIDENTIFIER,
     @Id UNIQUEIDENTIFIER
 AS
