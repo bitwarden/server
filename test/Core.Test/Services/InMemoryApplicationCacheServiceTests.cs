@@ -223,6 +223,15 @@ public class InMemoryApplicationCacheServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task DeleteOrganizationAbilityAsync_NullSource_DoesNotThrow(
+        Guid organizationId,
+        SutProvider<InMemoryApplicationCacheService> sutProvider)
+    {
+        // Act & Assert
+        await sutProvider.Sut.DeleteOrganizationAbilityAsync(organizationId);
+    }
+
+    [Theory, BitAutoData]
     public async Task DeleteProviderAbilityAsync_ExistingId_RemovesFromCache(
         List<ProviderAbility> providerAbilities,
         SutProvider<InMemoryApplicationCacheService> sutProvider)
@@ -240,6 +249,15 @@ public class InMemoryApplicationCacheServiceTests
         // Assert
         var result = await sutProvider.Sut.GetProviderAbilitiesAsync();
         Assert.False(result.ContainsKey(targetAbility.Id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteProviderAbilityAsync_NullSource_DoesNotThrow(
+        Guid providerId,
+        SutProvider<InMemoryApplicationCacheService> sutProvider)
+    {
+        // Act & Assert
+        await sutProvider.Sut.DeleteProviderAbilityAsync(providerId);
     }
 
     [Theory, BitAutoData]

@@ -16,16 +16,15 @@ public class InMemoryApplicationCacheService(
     IProviderRepository providerRepository)
     : IApplicationCacheService
 {
-    private readonly IOrganizationRepository _organizationRepository = organizationRepository;
-    private readonly IProviderRepository _providerRepository = providerRepository;
-    private DateTime _lastOrgAbilityRefresh = DateTime.MinValue;
-    private DateTime _lastProviderAbilityRefresh = DateTime.MinValue;
     private ConcurrentDictionary<Guid, OrganizationAbility> _orgAbilities;
-    private readonly TimeSpan _refreshInterval = TimeSpan.FromMinutes(10);
     private readonly SemaphoreSlim _orgInitLock = new(1, 1);
-    private readonly SemaphoreSlim _providerInitLock = new(1, 1);
+    private DateTime _lastOrgAbilityRefresh = DateTime.MinValue;
 
     private ConcurrentDictionary<Guid, ProviderAbility> _providerAbilities;
+    private readonly SemaphoreSlim _providerInitLock = new(1, 1);
+    private DateTime _lastProviderAbilityRefresh = DateTime.MinValue;
+
+    private readonly TimeSpan _refreshInterval = TimeSpan.FromMinutes(10);
 
     public virtual async Task<ConcurrentDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
     {
@@ -69,13 +68,13 @@ public class InMemoryApplicationCacheService(
 
     public virtual Task DeleteOrganizationAbilityAsync(Guid organizationId)
     {
-        _orgAbilities.TryRemove(organizationId, out _);
+        _orgAbilities?.TryRemove(organizationId, out _);
         return Task.CompletedTask;
     }
 
     public virtual Task DeleteProviderAbilityAsync(Guid providerId)
     {
-        _providerAbilities.TryRemove(providerId, out _);
+        _providerAbilities?.TryRemove(providerId, out _);
         return Task.CompletedTask;
     }
 
@@ -86,7 +85,7 @@ public class InMemoryApplicationCacheService(
             () => _lastOrgAbilityRefresh,
             dt => _lastOrgAbilityRefresh = dt,
             _orgInitLock,
-            async () => await _organizationRepository.GetManyAbilitiesAsync(),
+            async () => await organizationRepository.GetManyAbilitiesAsync(),
             _refreshInterval,
             ability => ability.Id);
 
@@ -97,7 +96,7 @@ public class InMemoryApplicationCacheService(
             () => _lastProviderAbilityRefresh,
             dateTime => _lastProviderAbilityRefresh = dateTime,
             _providerInitLock,
-            async () => await _providerRepository.GetManyAbilitiesAsync(),
+            async () => await providerRepository.GetManyAbilitiesAsync(),
             _refreshInterval,
             ability => ability.Id);
 
