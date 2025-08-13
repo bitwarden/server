@@ -8,6 +8,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -272,9 +273,12 @@ public class InMemoryApplicationCacheServiceTests
 
         var results = new ConcurrentBag<ConcurrentDictionary<Guid, OrganizationAbility>>();
 
+        const int iterationCount = 100;
+
+
         // Act
         await Parallel.ForEachAsync(
-            Enumerable.Range(0, 100),
+            Enumerable.Range(0, iterationCount),
             async (_, _) =>
             {
                 var result = await sutProvider.Sut.GetOrganizationAbilitiesAsync();
@@ -283,8 +287,129 @@ public class InMemoryApplicationCacheServiceTests
 
         // Assert
         var firstResult = results.First();
+        Assert.Equal(iterationCount, results.Count);
         Assert.All(results, result => Assert.Same(firstResult, result));
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).GetManyAbilitiesAsync();
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationAbilitiesAsync_AfterRefreshInterval_RefreshesFromRepository(
+        List<OrganizationAbility> organizationAbilities,
+        List<OrganizationAbility> updatedAbilities)
+    {
+        // Arrange
+        var fakeTimeProvider = new FakeTimeProvider();
+        var orgRepo = Substitute.For<IOrganizationRepository>();
+        var providerRepo = Substitute.For<IProviderRepository>();
+
+        orgRepo.GetManyAbilitiesAsync().Returns(organizationAbilities, updatedAbilities);
+
+        var sut = new InMemoryApplicationCacheService(orgRepo, providerRepo, fakeTimeProvider);
+
+        var firstResult = await sut.GetOrganizationAbilitiesAsync();
+
+        const int pastIntervalInMinutes = 11;
+        fakeTimeProvider.Advance(TimeSpan.FromMinutes(pastIntervalInMinutes));
+
+        // Act
+        var secondResult = await sut.GetOrganizationAbilitiesAsync();
+
+        // Assert
+        Assert.NotSame(firstResult, secondResult);
+        Assert.Equal(updatedAbilities.Count, secondResult.Count);
+        await orgRepo.Received(2).GetManyAbilitiesAsync();
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetProviderAbilitiesAsync_AfterRefreshInterval_RefreshesFromRepository(
+        List<ProviderAbility> providerAbilities,
+        List<ProviderAbility> updatedAbilities)
+    {
+        // Arrange
+        var fakeTimeProvider = new FakeTimeProvider();
+        var orgRepo = Substitute.For<IOrganizationRepository>();
+        var providerRepo = Substitute.For<IProviderRepository>();
+
+        providerRepo.GetManyAbilitiesAsync().Returns(providerAbilities, updatedAbilities);
+
+        var sut = new InMemoryApplicationCacheService(orgRepo, providerRepo, fakeTimeProvider);
+
+        var firstResult = await sut.GetProviderAbilitiesAsync();
+
+        const int pastIntervalMinutes = 11;
+        fakeTimeProvider.Advance(TimeSpan.FromMinutes(pastIntervalMinutes));
+
+        // Act
+        var secondResult = await sut.GetProviderAbilitiesAsync();
+
+        // Assert
+        Assert.NotSame(firstResult, secondResult);
+        Assert.Equal(updatedAbilities.Count, secondResult.Count);
+        await providerRepo.Received(2).GetManyAbilitiesAsync();
+    }
+
+    public static IEnumerable<object[]> WhenCacheIsWithinIntervalTestCases =>
+    [
+        [5, 1],
+        [10, 1],
+    ];
+
+    [Theory]
+    [BitMemberAutoData(nameof(WhenCacheIsWithinIntervalTestCases))]
+    public async Task GetOrganizationAbilitiesAsync_WhenCacheIsWithinInterval(
+        int pastIntervalInMinutes,
+        int expectCacheHit,
+        List<OrganizationAbility> organizationAbilities)
+    {
+        // Arrange
+        var fakeTimeProvider = new FakeTimeProvider();
+        var orgRepo = Substitute.For<IOrganizationRepository>();
+        var providerRepo = Substitute.For<IProviderRepository>();
+
+        orgRepo.GetManyAbilitiesAsync().Returns(organizationAbilities);
+
+        var sut = new InMemoryApplicationCacheService(orgRepo, providerRepo, fakeTimeProvider);
+
+        var firstResult = await sut.GetOrganizationAbilitiesAsync();
+
+        fakeTimeProvider.Advance(TimeSpan.FromMinutes(pastIntervalInMinutes));
+
+        // Act
+        var secondResult = await sut.GetOrganizationAbilitiesAsync();
+
+        // Assert
+        Assert.Same(firstResult, secondResult);
+        Assert.Equal(organizationAbilities.Count, secondResult.Count);
+        await orgRepo.Received(expectCacheHit).GetManyAbilitiesAsync();
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(WhenCacheIsWithinIntervalTestCases))]
+    public async Task GetProviderAbilitiesAsync_WhenCacheIsWithinInterval(
+        int pastIntervalInMinutes,
+        int expectCacheHit,
+        List<ProviderAbility> providerAbilities)
+    {
+        // Arrange
+        var fakeTimeProvider = new FakeTimeProvider();
+        var orgRepo = Substitute.For<IOrganizationRepository>();
+        var providerRepo = Substitute.For<IProviderRepository>();
+
+        providerRepo.GetManyAbilitiesAsync().Returns(providerAbilities);
+
+        var sut = new InMemoryApplicationCacheService(orgRepo, providerRepo, fakeTimeProvider);
+
+        var firstResult = await sut.GetProviderAbilitiesAsync();
+
+        fakeTimeProvider.Advance(TimeSpan.FromMinutes(pastIntervalInMinutes));
+
+        // Act
+        var secondResult = await sut.GetProviderAbilitiesAsync();
+
+        // Assert
+        Assert.Same(firstResult, secondResult);
+        Assert.Equal(providerAbilities.Count, secondResult.Count);
+        await providerRepo.Received(expectCacheHit).GetManyAbilitiesAsync();
     }
 
 }

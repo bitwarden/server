@@ -30,14 +30,12 @@ public class InMemoryApplicationCacheService(
         return _orgAbilities;
     }
 
-#nullable enable
     public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid organizationId)
     {
         (await GetOrganizationAbilitiesAsync())
             .TryGetValue(organizationId, out var organizationAbility);
         return organizationAbility;
     }
-#nullable disable
 
     public virtual async Task<ConcurrentDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
     {
@@ -109,7 +107,7 @@ public class InMemoryApplicationCacheService(
         TimeSpan refreshInterval,
         Func<TAbility, Guid> getId)
     {
-        if (getCache() != null && (timeProvider.GetUtcNow() - getLastRefresh()) <= refreshInterval)
+        if (SkipRefresh())
         {
             return;
         }
@@ -117,19 +115,25 @@ public class InMemoryApplicationCacheService(
         await @lock.WaitAsync();
         try
         {
-            var now = timeProvider.GetUtcNow();
-            if (getCache() == null || (now - getLastRefresh()) > refreshInterval)
+            if (SkipRefresh())
             {
-                var sources = await fetchFunc();
-                var abilities = new ConcurrentDictionary<Guid, TAbility>(
-                    sources.ToDictionary(getId));
-                setCache(abilities);
-                setLastRefresh(now);
+                return;
             }
+
+            var sources = await fetchFunc();
+            var abilities = new ConcurrentDictionary<Guid, TAbility>(
+                sources.ToDictionary(getId));
+            setCache(abilities);
+            setLastRefresh(timeProvider.GetUtcNow());
         }
         finally
         {
             @lock.Release();
+        }
+
+        bool SkipRefresh()
+        {
+            return getCache() != null && (timeProvider.GetUtcNow() - getLastRefresh()) <= refreshInterval;
         }
     }
 
