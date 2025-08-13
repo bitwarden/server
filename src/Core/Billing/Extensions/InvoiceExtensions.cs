@@ -33,9 +33,7 @@ public static class InvoiceExtensions
             var description = line.Description;
 
             // Handle Provider Portal and Business Unit Portal service lines
-            if (description.Contains("Provider Portal - Teams") || description.Contains("Provider Portal - Enterprise") ||
-                description.Contains("Business Unit Portal - Teams") || description.Contains("Business Unit Portal - Enterprise") ||
-                description.Contains("Business Unit Portal"))
+            if (description.Contains("Provider Portal") || description.Contains("Business Unit"))
             {
                 var priceMatch = Regex.Match(description, @"\(at \$[\d,]+\.?\d* / month\)");
                 var priceInfo = priceMatch.Success ? priceMatch.Value : "";
