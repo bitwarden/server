@@ -417,12 +417,26 @@ public class OrganizationService : IOrganizationService
 
         if (updateBilling && !string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
         {
+            var newDisplayName = organization.DisplayName();
+
             var customerService = new CustomerService();
             await customerService.UpdateAsync(organization.GatewayCustomerId,
                 new CustomerUpdateOptions
                 {
                     Email = organization.BillingEmail,
-                    Description = organization.DisplayBusinessName()
+                    Description = organization.DisplayBusinessName(),
+                    InvoiceSettings = new CustomerInvoiceSettingsOptions
+                    {
+                        // This overwrites the existing custom fields for this organization
+                        CustomFields = [
+                            new CustomerInvoiceSettingsCustomFieldOptions
+                            {
+                                Name = organization.SubscriberType(),
+                                Value = newDisplayName.Length <= 30
+                                    ? newDisplayName
+                                    : newDisplayName[..30]
+                            }]
+                    },
                 });
         }
 
