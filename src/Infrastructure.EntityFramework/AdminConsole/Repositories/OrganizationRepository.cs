@@ -4,12 +4,18 @@
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
+using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.EntityFramework.Models;
 using LinqToDB.Tools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -439,5 +445,70 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .SetProperty(o => o.Seats, o => o.Seats + increaseAmount)
                 .SetProperty(o => o.SyncSeats, true)
                 .SetProperty(o => o.RevisionDate, requestDate));
+    }
+
+    public async Task AddUsersToPasswordManagerAsync(
+        Guid organizationId,
+        DateTime requestDate,
+        Plan plan,
+        IEnumerable<CreateOrganizationUser> organizationUserCollection)
+    {
+        var organizationUsersList = organizationUserCollection.ToList();
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        await using var dbContext = GetDatabaseContext(scope);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var organization = await GetByIdAsync(organizationId);
+
+        if (organization is null)
+        {
+            throw new Exception($"Organization with id {organizationId} not found.");
+        }
+
+        var occupiedSeatCount = await GetOccupiedSeatCountByOrganizationIdAsync(organizationId);
+
+        var validatorRequest = new PasswordManagerSubscriptionUpdate(
+            new InviteOrganization(organization, plan),
+            occupiedSeatCount.Total,
+            organizationUsersList.Count);
+
+        var result = InviteUsersPasswordManagerValidator.ValidatePasswordManager(validatorRequest);
+
+        switch (result)
+        {
+            case Valid<PasswordManagerSubscriptionUpdate> valid:
+                await dbContext.Organizations
+                    .Where(o => o.Id == organizationId)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(o => o.Seats, o => o.Seats + valid.Value.SeatsRequiredToAdd)
+                        .SetProperty(o => o.SyncSeats, true)
+                        .SetProperty(o => o.RevisionDate, requestDate));
+
+                dbContext.OrganizationUsers.AddRange(Mapper.Map<List<OrganizationUser>>(organizationUsersList.Select(x => x.OrganizationUser)));
+                dbContext.CollectionUsers.AddRange(organizationUsersList.SelectMany(x => x.Collections, (user, collection) => new CollectionUser
+                {
+                    CollectionId = collection.Id,
+                    HidePasswords = collection.HidePasswords,
+                    OrganizationUserId = user.OrganizationUser.Id,
+                    Manage = collection.Manage,
+                    ReadOnly = collection.ReadOnly
+                }));
+                dbContext.GroupUsers.AddRange(organizationUsersList.SelectMany(x => x.Groups, (user, group) => new GroupUser
+                {
+                    GroupId = group,
+                    OrganizationUserId = user.OrganizationUser.Id
+                }));
+
+                await transaction.CommitAsync();
+                break;
+            case Invalid<PasswordManagerSubscriptionUpdate> invalid:
+                await transaction.RollbackAsync();
+                throw new Exception(invalid.Error.Message);
+            default:
+                await transaction.RollbackAsync();
+                throw new Exception();
+        }
+
     }
 }

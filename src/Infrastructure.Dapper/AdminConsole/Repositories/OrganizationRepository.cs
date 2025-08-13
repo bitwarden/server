@@ -1,10 +1,16 @@
 ﻿using System.Data;
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
+using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
@@ -72,7 +78,14 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         {
             var results = await connection.QueryAsync<Organization>(
                 "[dbo].[Organization_Search]",
-                new { Name = name, UserEmail = userEmail, Paid = paid, Skip = skip, Take = take },
+                new
+                {
+                    Name = name,
+                    UserEmail = userEmail,
+                    Paid = paid,
+                    Skip = skip,
+                    Take = take
+                },
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 120);
 
@@ -144,7 +157,8 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         }
     }
 
-    public async Task<ICollection<Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
+    public async Task<ICollection<Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail,
+        int skip, int take)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
@@ -202,9 +216,9 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
     {
         await using var connection = new SqlConnection(ConnectionString);
         return (await connection.QueryAsync<Organization>(
-            $"[{Schema}].[{Table}_ReadManyByIds]",
-            new { OrganizationIds = ids.ToGuidIdArrayTVP() },
-            commandType: CommandType.StoredProcedure))
+                $"[{Schema}].[{Table}_ReadManyByIds]",
+                new { OrganizationIds = ids.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure))
             .ToList();
     }
 
@@ -230,16 +244,13 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task UpdateSuccessfulOrganizationSyncStatusAsync(IEnumerable<Guid> successfulOrganizations, DateTime syncDate)
+    public async Task UpdateSuccessfulOrganizationSyncStatusAsync(IEnumerable<Guid> successfulOrganizations,
+        DateTime syncDate)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
         await connection.ExecuteAsync("[dbo].[Organization_UpdateSubscriptionStatus]",
-            new
-            {
-                SuccessfulOrganizations = successfulOrganizations.ToGuidIdArrayTVP(),
-                SyncDate = syncDate
-            },
+            new { SuccessfulOrganizations = successfulOrganizations.ToGuidIdArrayTVP(), SyncDate = syncDate },
             commandType: CommandType.StoredProcedure);
     }
 
@@ -250,5 +261,80 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
             new { OrganizationId = organizationId, SeatsToAdd = increaseAmount, RequestDate = requestDate },
             commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task AddUsersToPasswordManagerAsync(
+        Guid organizationId,
+        DateTime requestDate,
+        Plan plan,
+        IEnumerable<CreateOrganizationUser> organizationUserCollection)
+    {
+        var organizationUsersList = organizationUserCollection.ToList();
+
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        var organization = await GetByIdAsync(organizationId);
+
+        var occupiedSeatCount = await GetOccupiedSeatCountByOrganizationIdAsync(organizationId);
+
+        var validatorRequest = new PasswordManagerSubscriptionUpdate(
+            new InviteOrganization(organization, plan),
+            occupiedSeatCount.Total,
+            organizationUsersList.Count);
+
+        var result = InviteUsersPasswordManagerValidator.ValidatePasswordManager(validatorRequest);
+
+        switch (result)
+        {
+            case Valid<PasswordManagerSubscriptionUpdate> valid:
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[OrganizationUser_CreateManyWithCollectionsAndGroups]",
+                    new
+                    {
+                        OrganizationUserData =
+                            JsonSerializer.Serialize(organizationUsersList.Select(x => x.OrganizationUser)),
+                        CollectionData = JsonSerializer.Serialize(organizationUsersList
+                            .SelectMany(x => x.Collections,
+                                (user, collection) => new CollectionUser
+                                {
+                                    CollectionId = collection.Id,
+                                    OrganizationUserId = user.OrganizationUser.Id,
+                                    ReadOnly = collection.ReadOnly,
+                                    HidePasswords = collection.HidePasswords,
+                                    Manage = collection.Manage
+                                })),
+                        GroupData = JsonSerializer.Serialize(organizationUsersList
+                            .SelectMany(x => x.Groups,
+                                (user, group) => new GroupUser
+                                {
+                                    GroupId = group,
+                                    OrganizationUserId = user.OrganizationUser.Id
+                                }))
+                    },
+                    commandType: CommandType.StoredProcedure);
+
+                if (valid.Value.SeatsRequiredToAdd > 0)
+                {
+                    await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
+                        new
+                        {
+                            OrganizationId = organizationId,
+                            SeatsToAdd = valid.Value.SeatsRequiredToAdd,
+                            RequestDate = requestDate
+                        },
+                        commandType: CommandType.StoredProcedure);
+                }
+
+                await transaction.CommitAsync();
+                break;
+            case Invalid<PasswordManagerSubscriptionUpdate> invalid:
+                await transaction.RollbackAsync();
+                throw new Exception(invalid.Error.Message);
+            default:
+                await transaction.RollbackAsync();
+                throw new Exception();
+        }
     }
 }

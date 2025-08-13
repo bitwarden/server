@@ -142,9 +142,15 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
         try
         {
-            await organizationUserRepository.CreateManyAsync(organizationUserToInviteEntities);
+            await organizationRepository.AddUsersToPasswordManagerAsync(organization!.Id,
+                validatedRequest.Value.PerformedAt.UtcDateTime,
+                request.InviteOrganization.Plan,
+                organizationUserToInviteEntities);
 
-            await AdjustPasswordManagerSeatsAsync(validatedRequest, organization);
+            organization.Seats = validatedRequest.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal;
+            organization.SyncSeats = true;
+
+            await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
             await AdjustSecretsManagerSeatsAsync(validatedRequest);
 
