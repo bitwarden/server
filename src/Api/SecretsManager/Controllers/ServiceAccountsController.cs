@@ -42,6 +42,8 @@ public class ServiceAccountsController : Controller
     private readonly IDeleteServiceAccountsCommand _deleteServiceAccountsCommand;
     private readonly IRevokeAccessTokensCommand _revokeAccessTokensCommand;
     private readonly IPricingClient _pricingClient;
+    private readonly IEventService _eventService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public ServiceAccountsController(
         ICurrentContext currentContext,
@@ -58,7 +60,9 @@ public class ServiceAccountsController : Controller
         IUpdateServiceAccountCommand updateServiceAccountCommand,
         IDeleteServiceAccountsCommand deleteServiceAccountsCommand,
         IRevokeAccessTokensCommand revokeAccessTokensCommand,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IEventService eventService,
+        IOrganizationUserRepository organizationUserRepository)
     {
         _currentContext = currentContext;
         _userService = userService;
@@ -75,6 +79,8 @@ public class ServiceAccountsController : Controller
         _pricingClient = pricingClient;
         _createAccessTokenCommand = createAccessTokenCommand;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _eventService = eventService;
+        _organizationUserRepository = organizationUserRepository;
     }
 
     [HttpGet("/organizations/{organizationId}/service-accounts")]
@@ -139,8 +145,16 @@ public class ServiceAccountsController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
+        var serviceAcct = createRequest.ToServiceAccount(organizationId);
+
         var result =
-            await _createServiceAccountCommand.CreateAsync(createRequest.ToServiceAccount(organizationId), userId);
+            await _createServiceAccountCommand.CreateAsync(serviceAcct, userId);
+
+        if (result != null)
+        {
+            await _eventService.LogServiceAccountEventAsync(userId, [serviceAcct], EventType.ServiceAccount_Created, _currentContext.IdentityClientType);
+        }
+
         return new ServiceAccountResponseModel(result);
     }
 
@@ -197,6 +211,9 @@ public class ServiceAccountsController : Controller
         }
 
         await _deleteServiceAccountsCommand.DeleteServiceAccounts(serviceAccountsToDelete);
+        var userId = _userService.GetProperUserId(User)!.Value;
+        await _eventService.LogServiceAccountEventAsync(userId, serviceAccountsToDelete, EventType.ServiceAccount_Deleted, _currentContext.IdentityClientType);
+
         var responses = results.Select(r => new BulkDeleteResponseModel(r.ServiceAccount.Id, r.Error));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }

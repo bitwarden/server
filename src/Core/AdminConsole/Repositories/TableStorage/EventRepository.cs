@@ -35,6 +35,7 @@ public class EventRepository : IEventRepository
         return await GetManyAsync($"OrganizationId={organizationId}", "Date={0}", startDate, endDate, pageOptions);
     }
 
+
     public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Secret secret,
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
@@ -77,12 +78,37 @@ public class EventRepository : IEventRepository
         return await GetManyAsync(partitionKey, $"CipherId={cipher.Id}__Date={{0}}", startDate, endDate, pageOptions);
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId,
-        Guid serviceAccountId, DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(
+        Guid organizationId,
+        Guid serviceAccountId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions)
     {
+        var byServiceAccount = await GetManyAsync(
+            $"OrganizationId={organizationId}",
+            $"ServiceAccountId={serviceAccountId}__Date={{0}}",
+            startDate, endDate, pageOptions);
 
-        return await GetManyAsync($"OrganizationId={organizationId}",
-            $"ServiceAccountId={serviceAccountId}__Date={{0}}", startDate, endDate, pageOptions);
+        var byGrantedAccount = await GetManyAsync(
+            $"OrganizationId={organizationId}",
+            $"GrantedServiceAccountId={serviceAccountId}__Date={{0}}",
+            startDate, endDate, pageOptions);
+
+        var combinedEvents = byServiceAccount.Data
+            .Concat(byGrantedAccount.Data)
+            .OrderByDescending(e => e.Date)
+            .ToList();
+
+        var pagedItems = combinedEvents
+            .Take(pageOptions.PageSize)
+            .ToList();
+
+        return new PagedResult<IEvent>
+        {
+            Data = pagedItems,
+            ContinuationToken = pageOptions.ContinuationToken
+        };
     }
 
     public async Task CreateAsync(IEvent e)

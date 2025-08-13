@@ -100,4 +100,11 @@ public enum EventType : int
     Project_Created = 2201,
     Project_Edited = 2202,
     Project_Deleted = 2203,
+
+    ServiceAccount_UserAdded = 2300,
+    ServiceAccount_UserRemoved = 2301,
+    ServiceAccount_GroupAdded = 2302,
+    ServiceAccount_GroupRemoved = 2303,
+    ServiceAccount_Created = 2304,
+    ServiceAccount_Deleted = 2305,
 }
