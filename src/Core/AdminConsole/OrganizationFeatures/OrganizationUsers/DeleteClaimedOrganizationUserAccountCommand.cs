@@ -9,10 +9,10 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Microsoft.Extensions.Logging;
 
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
-#nullable enable
 
 public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganizationUserAccountCommand
 {
