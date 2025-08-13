@@ -14,6 +14,11 @@
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\..\util\SqliteMigrations\SqliteMigrations.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="Billing\Views\MigrateProviders\Details.cshtml" />
+    <_ContentIncludedByDefault Remove="Billing\Views\MigrateProviders\Index.cshtml" />
+    <_ContentIncludedByDefault Remove="Billing\Views\MigrateProviders\Results.cshtml" />
+  </ItemGroup>
 
   <Choose>
     <When Condition="!$(DefineConstants.Contains('OSS'))">

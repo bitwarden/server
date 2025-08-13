@@ -65,8 +65,6 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IProviderInvoiceItemRepository, ProviderInvoiceItemRepository>();
         services.AddSingleton<INotificationRepository, NotificationRepository>();
         services.AddSingleton<INotificationStatusRepository, NotificationStatusRepository>();
-        services
-            .AddSingleton<IClientOrganizationMigrationRecordRepository, ClientOrganizationMigrationRecordRepository>();
         services.AddSingleton<IPasswordHealthReportApplicationRepository, PasswordHealthReportApplicationRepository>();
         services.AddSingleton<ISecurityTaskRepository, SecurityTaskRepository>();
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
