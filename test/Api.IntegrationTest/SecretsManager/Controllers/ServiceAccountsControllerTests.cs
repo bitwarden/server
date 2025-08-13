@@ -4,17 +4,13 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.SecretsManager.Enums;
 using Bit.Api.IntegrationTest.SecretsManager.Helpers;
 using Bit.Api.Models.Response;
-using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Services;
-using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.Helpers;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
@@ -265,8 +261,6 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
 
         var orgUserId = adminOrgUser.Id;
         var currentUserId = adminOrgUser.UserId!.Value;
-        var sutProvider = new SutProvider<ServiceAccountsController>();
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(currentUserId);
 
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
@@ -440,9 +434,6 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task Delete_Success(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
-
-        var sutProvider = new SutProvider<ServiceAccountsController>();
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(new Guid());
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {

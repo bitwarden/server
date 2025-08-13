@@ -145,14 +145,13 @@ public class ServiceAccountsController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var serviceAcct = createRequest.ToServiceAccount(organizationId);
 
         var result =
-            await _createServiceAccountCommand.CreateAsync(serviceAcct, userId);
+            await _createServiceAccountCommand.CreateAsync(serviceAccount, userId);
 
         if (result != null)
         {
-            await _eventService.LogServiceAccountEventAsync(userId, [serviceAcct], EventType.ServiceAccount_Created, _currentContext.IdentityClientType);
+            await _eventService.LogServiceAccountEventAsync(userId, [serviceAccount], EventType.ServiceAccount_Created, _currentContext.IdentityClientType);
         }
 
         return new ServiceAccountResponseModel(result);
