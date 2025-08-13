@@ -11,6 +11,15 @@ public static class SubscriptionExtensions
      *
      * Because we can't guarantee a subscription will have items, this has to be nullable.
      */
+    public static (DateTime? Start, DateTime? End)? GetCurrentPeriod(this Subscription subscription)
+    {
+        var item = subscription.Items.FirstOrDefault();
+        return item is null ? null : (item.CurrentPeriodStart, item.CurrentPeriodEnd);
+    }
+
+    public static DateTime? GetCurrentPeriodStart(this Subscription subscription) =>
+        subscription.Items.FirstOrDefault()?.CurrentPeriodStart;
+
     public static DateTime? GetCurrentPeriodEnd(this Subscription subscription) =>
         subscription.Items.FirstOrDefault()?.CurrentPeriodEnd;
 }
