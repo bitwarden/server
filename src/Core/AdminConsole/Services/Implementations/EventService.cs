@@ -9,7 +9,6 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Identity;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
@@ -526,7 +525,7 @@ public class EventService : IEventService
 
         if (!CanUseEvents(orgAbilities, orgUser.OrganizationId))
         {
-            throw new NotFoundException();
+            return;
         }
 
         var (actingUserId, serviceAccountId) = MapIdentityClientType(userId, identityClientType);
@@ -552,10 +551,6 @@ public class EventService : IEventService
 
             await _eventWriteService.CreateManyAsync(eventMessages);
         }
-        else
-        {
-            throw new NotFoundException();
-        }
     }
 
     public async Task LogServiceAccountGroupEventAsync(Guid userId, GroupServiceAccountAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null)
@@ -565,7 +560,7 @@ public class EventService : IEventService
 
         if (!CanUseEvents(orgAbilities, policy.Group.OrganizationId))
         {
-            throw new NotFoundException();
+            return;
         }
 
         var (actingUserId, serviceAccountId) = MapIdentityClientType(userId, identityClientType);
@@ -590,10 +585,6 @@ public class EventService : IEventService
             eventMessages.Add(e);
 
             await _eventWriteService.CreateManyAsync(eventMessages);
-        }
-        else
-        {
-            throw new NotFoundException();
         }
     }
 
@@ -625,15 +616,11 @@ public class EventService : IEventService
                     GrantedServiceAccountId = serviceAccount.Id,
                     ServiceAccountId = serviceAccountId,
                     ActingUserId = actingUserId,
-                    Date = date.GetValueOrDefault(DateTime.UtcNow) //TODO do we need userID here?
+                    Date = date.GetValueOrDefault(DateTime.UtcNow)
                 };
                 eventMessages.Add(e);
 
                 await _eventWriteService.CreateManyAsync(eventMessages);
-            }
-            else
-            {
-                throw new NotFoundException();
             }
         }
     }
