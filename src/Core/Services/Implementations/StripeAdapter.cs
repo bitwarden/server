@@ -228,22 +228,6 @@ public class StripeAdapter : IStripeAdapter
         return _bankAccountService.DeleteAsync(customerId, bankAccount, options);
     }
 
-    public async Task<List<Subscription>> SubscriptionListAsync(StripeSubscriptionListOptions options)
-    {
-        if (!options.SelectAll)
-        {
-            return (await _subscriptionService.ListAsync(options.ToStripeApiOptions())).Data;
-        }
-
-        options.Limit = 100;
-        var items = new List<Subscription>();
-        await foreach (var i in _subscriptionService.ListAutoPagingAsync(options.ToStripeApiOptions()))
-        {
-            items.Add(i);
-        }
-        return items;
-    }
-
     public async Task<StripeList<Price>> PriceListAsync(PriceListOptions options = null)
     {
         return await _priceService.ListAsync(options);
