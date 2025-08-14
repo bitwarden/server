@@ -78,7 +78,13 @@ public class ProviderEventServiceTests
 
         var invoice = new Invoice
         {
-            SubscriptionId = subscriptionId
+            Parent = new InvoiceParent
+            {
+                SubscriptionDetails = new InvoiceParentSubscriptionDetails
+                {
+                    SubscriptionId = subscriptionId
+                }
+            }
         };
 
         _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
@@ -110,14 +116,22 @@ public class ProviderEventServiceTests
         {
             Id = "invoice_1",
             Number = "A",
-            SubscriptionId = subscriptionId,
-            Discount = new Discount
+            Parent = new InvoiceParent
             {
-                Coupon = new Coupon
+                SubscriptionDetails = new InvoiceParentSubscriptionDetails
                 {
-                    PercentOff = 35
+                    SubscriptionId = subscriptionId
                 }
-            }
+            },
+            Discounts = [
+                new Discount
+                {
+                    Coupon = new Coupon
+                    {
+                        PercentOff = 35
+                    }
+                }
+            ]
         };
 
         _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
@@ -258,7 +272,13 @@ public class ProviderEventServiceTests
         {
             Id = "invoice_1",
             Number = "A",
-            SubscriptionId = subscriptionId
+            Parent = new InvoiceParent
+            {
+                SubscriptionDetails = new InvoiceParentSubscriptionDetails
+                {
+                    SubscriptionId = subscriptionId
+                }
+            },
         };
 
         _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
