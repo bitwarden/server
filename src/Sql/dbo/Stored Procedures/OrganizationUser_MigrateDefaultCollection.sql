@@ -1,5 +1,5 @@
 CREATE PROCEDURE [dbo].[OrganizationUser_MigrateDefaultCollection]
-    @Ids [dbo].[GuidIdArray] READONLY,
+    @Ids [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
