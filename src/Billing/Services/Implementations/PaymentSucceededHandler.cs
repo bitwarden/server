@@ -61,7 +61,7 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
             return;
         }
 
-        if (invoice.Parent is not { Type: "subscription_details" })
+        if (invoice.Parent?.SubscriptionDetails == null)
         {
             return;
         }

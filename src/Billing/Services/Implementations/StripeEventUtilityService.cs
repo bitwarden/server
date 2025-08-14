@@ -241,7 +241,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             Status: not StripeConstants.InvoiceStatus.Paid,
             CollectionMethod: "charge_automatically",
             BillingReason: "subscription_cycle" or "automatic_pending_invoice_item_invoice",
-            Parent.SubscriptionDetails.SubscriptionId: not null
+            Parent.SubscriptionDetails: not null
         };
 
     private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice, Customer customer)
@@ -254,7 +254,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             return false;
         }
 
-        if (invoice.Parent.SubscriptionDetails == null)
+        if (invoice.Parent?.SubscriptionDetails == null)
         {
             _logger.LogWarning("Invoice parent was not a subscription.");
             return false;

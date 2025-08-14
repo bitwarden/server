@@ -32,10 +32,7 @@ public class PaymentFailedHandler : IPaymentFailedHandler
             return;
         }
 
-        if (invoice.Parent is
-            {
-                Type: "subscription_details"
-            })
+        if (invoice.Parent?.SubscriptionDetails != null)
         {
             var subscription = await _stripeFacade.GetSubscription(invoice.Parent.SubscriptionDetails.SubscriptionId);
             // attempt count 4 = 11 days after initial failure
@@ -54,6 +51,6 @@ public class PaymentFailedHandler : IPaymentFailedHandler
             Status: not StripeConstants.InvoiceStatus.Paid,
             CollectionMethod: "charge_automatically",
             BillingReason: "subscription_cycle" or "automatic_pending_invoice_item_invoice",
-            Parent.Type: "subscription_details"
+            Parent.SubscriptionDetails: not null
         };
 }
