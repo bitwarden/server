@@ -191,9 +191,9 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                     {
                         if (string.IsNullOrEmpty(collection.DefaultUserCollectionEmail))
                         {
-                            var emailToUse = !string.IsNullOrEmpty(orgUser.User.Email)
-                                ? orgUser.User.Email
-                                : orgUser.Email;
+                            var emailToUse = !string.IsNullOrEmpty(orgUser.Email)
+                                ? orgUser.Email
+                                : orgUser.User.Email;
 
                             if (!string.IsNullOrEmpty(emailToUse))
                             {
