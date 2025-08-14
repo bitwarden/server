@@ -88,7 +88,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task OnSaveSideEffectsAsync_WhenNoUsersExist_ShouldLogWarning(
+    public async Task OnSaveSideEffectsAsync_WhenNoUsersExist_ShouldLogError(
         [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy currentPolicy,
         OrganizationDataOwnershipPolicyRequirementFactory factory)
@@ -117,7 +117,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         const string expectedErrorMessage = "No UserOrganizationIds found for";
 
         logger.Received(1).Log(
-            LogLevel.Warning,
+            LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Is<object>(o => (o.ToString() ?? "").Contains(expectedErrorMessage)),
             Arg.Any<Exception>(),

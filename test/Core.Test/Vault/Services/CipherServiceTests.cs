@@ -196,8 +196,6 @@ public class CipherServiceTests
             .IsEnabled(FeatureFlagKeys.PolicyRequirements)
             .Returns(true);
 
-
-
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(

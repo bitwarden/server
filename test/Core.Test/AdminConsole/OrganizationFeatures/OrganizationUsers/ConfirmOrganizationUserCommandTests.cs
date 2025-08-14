@@ -476,8 +476,8 @@ public class ConfirmOrganizationUserCommandTests
             .GetByOrganizationAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
-                [organization.Id]
-                , []));
+                [organization.Id],
+                []));
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
 
         await sutProvider.GetDependency<ICollectionRepository>()
@@ -508,8 +508,8 @@ public class ConfirmOrganizationUserCommandTests
             .GetByOrganizationAsync<OrganizationDataOwnershipPolicyRequirement>(org.Id)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
-                [org.Id]
-                , []));
+                [org.Id],
+                []));
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, "");
 

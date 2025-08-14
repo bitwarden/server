@@ -19,7 +19,6 @@ public class OrganizationDataOwnershipPolicyValidator(
     ILogger<OrganizationDataOwnershipPolicyValidator> logger)
     : OrganizationPolicyValidator(policyRepository, factories)
 {
-    private readonly ILogger<OrganizationDataOwnershipPolicyValidator> _logger = logger;
     public override PolicyType Type => PolicyType.OrganizationDataOwnership;
 
     public override IEnumerable<PolicyType> RequiredPolicies => [];
@@ -48,7 +47,7 @@ public class OrganizationDataOwnershipPolicyValidator(
 
         if (!userOrgIds.Any())
         {
-            _logger.LogWarning($"No UserOrganizationIds found for {policyUpdate.OrganizationId}");
+            logger.LogError($"No UserOrganizationIds found for {policyUpdate.OrganizationId}");
             return;
         }
 
@@ -78,7 +77,7 @@ public class OrganizationDataOwnershipPolicyValidator(
             }
             else
             {
-                _logger.LogWarning("UserOrganizationId is null for organization {OrganizationId}", policyUpdate.OrganizationId);
+                logger.LogError("UserOrganizationId is null for organization {OrganizationId}", policyUpdate.OrganizationId);
             }
         }
         return userOrgIds;
