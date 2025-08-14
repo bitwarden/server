@@ -1,5 +1,5 @@
 CREATE PROCEDURE [dbo].[OrganizationReport_GetLatestByOrganizationId]
-    @OrganizationId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -17,4 +17,3 @@ BEGIN
     WHERE [OrganizationId] = @OrganizationId
     ORDER BY [RevisionDate] DESC
 END
-
