@@ -35,18 +35,14 @@ public class PreviewTaxAmountCommandTests
         {
             PlanType = PlanType.EnterpriseAnnually,
             ProductType = ProductType.PasswordManager,
-            TaxInformation = new TaxInformationDTO
-            {
-                Country = "US",
-                PostalCode = "12345"
-            }
+            TaxInformation = new TaxInformationDTO { Country = "US", PostalCode = "12345" }
         };
 
         var plan = StaticStore.GetPlan(parameters.PlanType);
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [ new InvoiceTotalTax { Amount = 1000 } ] }; // $10.00 in cents
 
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.Currency == "usd" &&
@@ -65,7 +61,7 @@ public class PreviewTaxAmountCommandTests
         // Assert
         Assert.True(result.IsT0);
         var taxAmount = result.AsT0;
-        Assert.Equal(expectedInvoice.Tax, (long)taxAmount * 100);
+        Assert.Equal(1000, (long)taxAmount * 100);
     }
 
     [Fact]
@@ -76,18 +72,14 @@ public class PreviewTaxAmountCommandTests
         {
             PlanType = PlanType.FamiliesAnnually,
             ProductType = ProductType.PasswordManager,
-            TaxInformation = new TaxInformationDTO
-            {
-                Country = "US",
-                PostalCode = "12345"
-            }
+            TaxInformation = new TaxInformationDTO { Country = "US", PostalCode = "12345" }
         };
 
         var plan = StaticStore.GetPlan(parameters.PlanType);
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [ new InvoiceTotalTax { Amount = 1000 } ] }; // $10.00 in cents
 
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.Currency == "usd" &&
@@ -106,7 +98,7 @@ public class PreviewTaxAmountCommandTests
         // Assert
         Assert.True(result.IsT0);
         var taxAmount = result.AsT0;
-        Assert.Equal(expectedInvoice.Tax, (long)taxAmount * 100);
+        Assert.Equal(1000, (long)taxAmount * 100);
     }
 
     [Fact]
@@ -117,18 +109,14 @@ public class PreviewTaxAmountCommandTests
         {
             PlanType = PlanType.EnterpriseAnnually,
             ProductType = ProductType.SecretsManager,
-            TaxInformation = new TaxInformationDTO
-            {
-                Country = "US",
-                PostalCode = "12345"
-            }
+            TaxInformation = new TaxInformationDTO { Country = "US", PostalCode = "12345" }
         };
 
         var plan = StaticStore.GetPlan(parameters.PlanType);
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [ new InvoiceTotalTax { Amount = 1000 } ] }; // $10.00 in cents
 
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.Currency == "usd" &&
@@ -139,7 +127,7 @@ public class PreviewTaxAmountCommandTests
                 options.SubscriptionDetails.Items[0].Quantity == 1 &&
                 options.SubscriptionDetails.Items[1].Price == plan.SecretsManager.StripeSeatPlanId &&
                 options.SubscriptionDetails.Items[1].Quantity == 1 &&
-                options.Coupon == StripeConstants.CouponIDs.SecretsManagerStandalone &&
+                options.Discounts.FirstOrDefault().Coupon == StripeConstants.CouponIDs.SecretsManagerStandalone &&
                 options.AutomaticTax.Enabled == true
             ))
             .Returns(expectedInvoice);
@@ -150,7 +138,7 @@ public class PreviewTaxAmountCommandTests
         // Assert
         Assert.True(result.IsT0);
         var taxAmount = result.AsT0;
-        Assert.Equal(expectedInvoice.Tax, (long)taxAmount * 100);
+        Assert.Equal(1000, (long)taxAmount * 100);
     }
 
     [Fact]
@@ -161,18 +149,14 @@ public class PreviewTaxAmountCommandTests
         {
             PlanType = PlanType.EnterpriseAnnually,
             ProductType = ProductType.PasswordManager,
-            TaxInformation = new TaxInformationDTO
-            {
-                Country = "CA",
-                PostalCode = "12345"
-            }
+            TaxInformation = new TaxInformationDTO { Country = "CA", PostalCode = "12345" }
         };
 
         var plan = StaticStore.GetPlan(parameters.PlanType);
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [ new InvoiceTotalTax { Amount = 1000 } ] }; // $10.00 in cents
 
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.Currency == "usd" &&
@@ -191,7 +175,7 @@ public class PreviewTaxAmountCommandTests
         // Assert
         Assert.True(result.IsT0);
         var taxAmount = result.AsT0;
-        Assert.Equal(expectedInvoice.Tax, (long)taxAmount * 100);
+        Assert.Equal(1000, (long)taxAmount * 100);
     }
 
     [Fact]
@@ -202,12 +186,7 @@ public class PreviewTaxAmountCommandTests
         {
             PlanType = PlanType.EnterpriseAnnually,
             ProductType = ProductType.PasswordManager,
-            TaxInformation = new TaxInformationDTO
-            {
-                Country = "CA",
-                PostalCode = "12345",
-                TaxId = "123456789"
-            }
+            TaxInformation = new TaxInformationDTO { Country = "CA", PostalCode = "12345", TaxId = "123456789" }
         };
 
         var plan = StaticStore.GetPlan(parameters.PlanType);
@@ -217,7 +196,7 @@ public class PreviewTaxAmountCommandTests
         _taxService.GetStripeTaxCode(parameters.TaxInformation.Country, parameters.TaxInformation.TaxId)
             .Returns("ca_st");
 
-        var expectedInvoice = new Invoice { Tax = 1000 }; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [ new InvoiceTotalTax { Amount = 1000 } ] }; // $10.00 in cents
 
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.Currency == "usd" &&
@@ -239,7 +218,7 @@ public class PreviewTaxAmountCommandTests
         // Assert
         Assert.True(result.IsT0);
         var taxAmount = result.AsT0;
-        Assert.Equal(expectedInvoice.Tax, (long)taxAmount * 100);
+        Assert.Equal(1000, (long)taxAmount * 100);
     }
 
     [Fact]
@@ -250,12 +229,7 @@ public class PreviewTaxAmountCommandTests
         {
             PlanType = PlanType.EnterpriseAnnually,
             ProductType = ProductType.PasswordManager,
-            TaxInformation = new TaxInformationDTO
-            {
-                Country = "CA",
-                PostalCode = "12345",
-                TaxId = "123456789"
-            }
+            TaxInformation = new TaxInformationDTO { Country = "CA", PostalCode = "12345", TaxId = "123456789" }
         };
 
         var plan = StaticStore.GetPlan(parameters.PlanType);
@@ -271,6 +245,8 @@ public class PreviewTaxAmountCommandTests
         // Assert
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
-        Assert.Equal("We couldn't find a corresponding tax ID type for the tax ID you provided. Please try again or contact support for assistance.", badRequest.Response);
+        Assert.Equal(
+            "We couldn't find a corresponding tax ID type for the tax ID you provided. Please try again or contact support for assistance.",
+            badRequest.Response);
     }
 }
