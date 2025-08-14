@@ -50,9 +50,9 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
-        IQueryable<Secret> query = dbContext.Secret
-            .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
-            .Include(c => c.Projects);
+        var query = dbContext.Secret
+            .Include(c => c.Projects)
+            .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null);
 
         query = accessType switch
         {
@@ -131,8 +131,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var query = dbContext.Secret.Where(s => s.Projects.Any(p => p.Id == projectId) && s.DeletedDate == null)
-            .Include(s => s.Projects)
-            ;
+            .Include(s => s.Projects);
 
         var secrets = SecretToPermissionDetails(query, userId, accessType);
 
