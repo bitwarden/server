@@ -53,11 +53,13 @@ public class CollectionWithIdRequestModel : CreateCollectionRequestModel
 
 public class UpdateCollectionRequestModel : CreateCollectionRequestModel
 {
-    new public string Name { get; set; }
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public new string Name { get; set; }
 
-    new public virtual Collection ToCollection(Collection existingCollection)
+    public override Collection ToCollection(Collection existingCollection)
     {
-        if (string.IsNullOrEmpty(existingCollection.DefaultUserCollectionEmail) && !string.IsNullOrEmpty(Name))
+        if (string.IsNullOrEmpty(existingCollection.DefaultUserCollectionEmail) && !string.IsNullOrWhiteSpace(Name))
         {
             existingCollection.Name = Name;
         }
