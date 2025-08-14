@@ -190,6 +190,7 @@ public static class FeatureFlagKeys
     public const string UserManagedPrivilegedApps = "pm-18970-user-managed-privileged-apps";
     public const string EnablePMPreloginSettings = "enable-pm-prelogin-settings";
     public const string AppIntents = "app-intents";
+    public const string SendAccess = "pm-19394-send-access-control";
 
     /* Platform Team */
     public const string PersistPopupView = "persist-popup-view";
