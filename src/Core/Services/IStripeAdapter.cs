@@ -28,7 +28,6 @@ public interface IStripeAdapter
     /// <exception cref="InvalidOperationException">Thrown when the subscription doesn't belong to the provider.</exception>
     Task<Subscription> ProviderSubscriptionGetAsync(string id, Guid providerId, SubscriptionGetOptions options = null);
 
-    Task<List<Subscription>> SubscriptionListAsync(StripeSubscriptionListOptions subscriptionSearchOptions);
     Task<Subscription> SubscriptionUpdateAsync(string id, SubscriptionUpdateOptions options = null);
     Task<Subscription> SubscriptionCancelAsync(string Id, SubscriptionCancelOptions options = null);
     Task<Invoice> InvoiceGetAsync(string id, InvoiceGetOptions options);

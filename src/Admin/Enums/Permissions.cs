@@ -52,7 +52,6 @@ public enum Permission
     Tools_PromoteProviderServiceUser,
     Tools_GenerateLicenseFile,
     Tools_ManageTaxRates,
-    Tools_ManageStripeSubscriptions,
     Tools_CreateEditTransaction,
     Tools_ProcessStripeEvents,
     Tools_MigrateProviders
