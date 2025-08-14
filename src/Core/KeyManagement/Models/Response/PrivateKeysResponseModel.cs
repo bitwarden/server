@@ -1,9 +1,9 @@
 ﻿using System.Text.Json.Serialization;
-using Bit.Api.KeyManagement.Models.Requests;
+using Bit.Core.KeyManagement.Models.Requests;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.KeyManagement.Models.Response;
+namespace Bit.Core.KeyManagement.Models.Response;
 
 #nullable enable
 

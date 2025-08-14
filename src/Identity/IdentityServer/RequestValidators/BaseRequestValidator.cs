@@ -14,6 +14,8 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
+using Bit.Core.KeyManagement.Models.Response;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
@@ -45,6 +47,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected IUserService _userService { get; }
     protected IUserDecryptionOptionsBuilder UserDecryptionOptionsBuilder { get; }
     protected IPolicyRequirementQuery PolicyRequirementQuery { get; }
+    protected IUserAccountKeysQuery _accountKeysQuery { get; }
 
     public BaseRequestValidator(
         UserManager<User> userManager,
@@ -63,7 +66,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
-        IMailService mailService
+        IMailService mailService,
+        IUserAccountKeysQuery userAccountKeysQuery
         )
     {
         _userManager = userManager;
@@ -83,6 +87,7 @@ public abstract class BaseRequestValidator<T> where T : class
         PolicyRequirementQuery = policyRequirementQuery;
         _authRequestRepository = authRequestRepository;
         _mailService = mailService;
+        _accountKeysQuery = userAccountKeysQuery;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -446,6 +451,7 @@ public abstract class BaseRequestValidator<T> where T : class
             customResponse.Add("Key", user.Key);
         }
 
+
         customResponse.Add("MasterPasswordPolicy", await GetMasterPasswordPolicyAsync(user));
         customResponse.Add("ForcePasswordReset", user.ForcePasswordReset);
         customResponse.Add("ResetMasterPassword", string.IsNullOrWhiteSpace(user.MasterPassword));
@@ -453,6 +459,8 @@ public abstract class BaseRequestValidator<T> where T : class
         customResponse.Add("KdfIterations", user.KdfIterations);
         customResponse.Add("KdfMemory", user.KdfMemory);
         customResponse.Add("KdfParallelism", user.KdfParallelism);
+        var accountKeys = await _accountKeysQuery.Run(user);
+        customResponse.Add("AccountKeys", new PrivateKeysResponseModel(accountKeys));
         customResponse.Add("UserDecryptionOptions", await CreateUserDecryptionOptionsAsync(user, device, GetSubject(context)));
 
         if (sendRememberToken)

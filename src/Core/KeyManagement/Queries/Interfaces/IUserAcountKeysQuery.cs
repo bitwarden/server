@@ -3,7 +3,7 @@
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
 
-namespace Bit.Api.KeyManagement.Queries.Interfaces;
+namespace Bit.Core.KeyManagement.Queries.Interfaces;
 
 public interface IUserAccountKeysQuery
 {

@@ -3,7 +3,6 @@
 
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Auth.Models.Request.Accounts;
-using Bit.Api.KeyManagement.Queries.Interfaces;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Core;
@@ -17,6 +16,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

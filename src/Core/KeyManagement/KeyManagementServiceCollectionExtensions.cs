@@ -1,7 +1,7 @@
-﻿using Bit.Api.KeyManagement.Queries.Interfaces;
-using Bit.Core.KeyManagement.Commands;
+﻿using Bit.Core.KeyManagement.Commands;
 using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Queries;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.KeyManagement;

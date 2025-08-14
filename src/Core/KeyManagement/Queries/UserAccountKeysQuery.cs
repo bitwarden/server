@@ -1,8 +1,8 @@
 ﻿#nullable enable
 
-using Bit.Api.KeyManagement.Queries.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.KeyManagement.Repositories;
 
 namespace Bit.Core.KeyManagement.Queries;
