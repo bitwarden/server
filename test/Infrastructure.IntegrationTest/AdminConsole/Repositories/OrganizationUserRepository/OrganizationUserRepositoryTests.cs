@@ -1547,66 +1547,68 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(CollectionType.SharedCollection, updatedCollection2.Type);
         Assert.Equal("override@example.com", updatedCollection2.DefaultUserCollectionEmail); // Uses orgUser override email
 
-        [DatabaseData]
-        public async Task ReplaceAsync_PreservesDefaultCollections_WhenUpdatingCollectionAccess(
-            IUserRepository userRepository,
-            IOrganizationRepository organizationRepository,
-            IOrganizationUserRepository organizationUserRepository,
-            ICollectionRepository collectionRepository)
-        {
-            // Arrange
-            var organization = await organizationRepository.CreateTestOrganizationAsync();
-            var user = await userRepository.CreateTestUserAsync();
-            var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
-
-            // Create a regular collection and a default collection
-            var regularCollection = await collectionRepository.CreateTestCollectionAsync(organization);
-
-            // Manually create default collection since CreateTestCollectionAsync doesn't support type parameter
-            var defaultCollection = new Collection
-            {
-                OrganizationId = organization.Id,
-                Name = $"Default Collection {Guid.NewGuid()}",
-                Type = CollectionType.DefaultUserCollection
-            };
-            await collectionRepository.CreateAsync(defaultCollection);
-
-            var newCollection = await collectionRepository.CreateTestCollectionAsync(organization);
-
-            // Set up initial collection access: user has access to both regular and default collections
-            await organizationUserRepository.ReplaceAsync(orgUser, [
-                new CollectionAccessSelection { Id = regularCollection.Id, ReadOnly = false, HidePasswords = false, Manage = false },
-                new CollectionAccessSelection { Id = defaultCollection.Id, ReadOnly = false, HidePasswords = false, Manage = true }
-            ]);
-
-            // Verify initial state
-            var (_, initialCollections) = await organizationUserRepository.GetByIdWithCollectionsAsync(orgUser.Id);
-            Assert.Equal(2, initialCollections.Count);
-            Assert.Contains(initialCollections, c => c.Id == regularCollection.Id);
-            Assert.Contains(initialCollections, c => c.Id == defaultCollection.Id);
-
-            // Act: Update collection access with only the new collection
-            // This should preserve the default collection but remove the regular collection
-            await organizationUserRepository.ReplaceAsync(orgUser, [
-                new CollectionAccessSelection { Id = newCollection.Id, ReadOnly = false, HidePasswords = false, Manage = true }
-            ]);
-
-            // Assert
-            var (actualOrgUser, actualCollections) = await organizationUserRepository.GetByIdWithCollectionsAsync(orgUser.Id);
-            Assert.NotNull(actualOrgUser);
-            Assert.Equal(2, actualCollections.Count); // Should have default collection + new collection
-
-            // Default collection should be preserved
-            var preservedDefaultCollection = actualCollections.FirstOrDefault(c => c.Id == defaultCollection.Id);
-            Assert.NotNull(preservedDefaultCollection);
-            Assert.True(preservedDefaultCollection.Manage); // Original permissions preserved
-
-            // New collection should be added
-            var addedNewCollection = actualCollections.FirstOrDefault(c => c.Id == newCollection.Id);
-            Assert.NotNull(addedNewCollection);
-            Assert.True(addedNewCollection.Manage);
-
-            // Regular collection should be removed
-            Assert.DoesNotContain(actualCollections, c => c.Id == regularCollection.Id);
-        }
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_PreservesDefaultCollections_WhenUpdatingCollectionAccess(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var user = await userRepository.CreateTestUserAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        // Create a regular collection and a default collection
+        var regularCollection = await collectionRepository.CreateTestCollectionAsync(organization);
+
+        // Manually create default collection since CreateTestCollectionAsync doesn't support type parameter
+        var defaultCollection = new Collection
+        {
+            OrganizationId = organization.Id,
+            Name = $"Default Collection {Guid.NewGuid()}",
+            Type = CollectionType.DefaultUserCollection
+        };
+        await collectionRepository.CreateAsync(defaultCollection);
+
+        var newCollection = await collectionRepository.CreateTestCollectionAsync(organization);
+
+        // Set up initial collection access: user has access to both regular and default collections
+        await organizationUserRepository.ReplaceAsync(orgUser, [
+            new CollectionAccessSelection { Id = regularCollection.Id, ReadOnly = false, HidePasswords = false, Manage = false },
+            new CollectionAccessSelection { Id = defaultCollection.Id, ReadOnly = false, HidePasswords = false, Manage = true }
+        ]);
+
+        // Verify initial state
+        var (_, initialCollections) = await organizationUserRepository.GetByIdWithCollectionsAsync(orgUser.Id);
+        Assert.Equal(2, initialCollections.Count);
+        Assert.Contains(initialCollections, c => c.Id == regularCollection.Id);
+        Assert.Contains(initialCollections, c => c.Id == defaultCollection.Id);
+
+        // Act: Update collection access with only the new collection
+        // This should preserve the default collection but remove the regular collection
+        await organizationUserRepository.ReplaceAsync(orgUser, [
+            new CollectionAccessSelection { Id = newCollection.Id, ReadOnly = false, HidePasswords = false, Manage = true }
+        ]);
+
+        // Assert
+        var (actualOrgUser, actualCollections) = await organizationUserRepository.GetByIdWithCollectionsAsync(orgUser.Id);
+        Assert.NotNull(actualOrgUser);
+        Assert.Equal(2, actualCollections.Count); // Should have default collection + new collection
+
+        // Default collection should be preserved
+        var preservedDefaultCollection = actualCollections.FirstOrDefault(c => c.Id == defaultCollection.Id);
+        Assert.NotNull(preservedDefaultCollection);
+        Assert.True(preservedDefaultCollection.Manage); // Original permissions preserved
+
+        // New collection should be added
+        var addedNewCollection = actualCollections.FirstOrDefault(c => c.Id == newCollection.Id);
+        Assert.NotNull(addedNewCollection);
+        Assert.True(addedNewCollection.Manage);
+
+        // Regular collection should be removed
+        Assert.DoesNotContain(actualCollections, c => c.Id == regularCollection.Id);
+    }
+}
