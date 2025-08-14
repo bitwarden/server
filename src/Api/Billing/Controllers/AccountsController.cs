@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using Bit.Api.KeyManagement.Queries.Interfaces;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
@@ -10,6 +9,7 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Bit.Core.Settings;
