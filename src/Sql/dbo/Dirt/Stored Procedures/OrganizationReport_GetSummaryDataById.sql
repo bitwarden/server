@@ -7,8 +7,8 @@ BEGIN
 
     SELECT
         [Id],
-        [OrganizationId], [
-        SummaryData]
+        [OrganizationId],
+        [SummaryData]
     FROM [dbo].[OrganizationReport]
     WHERE [OrganizationId] = @OrganizationId AND [Id] = @Id
 END
