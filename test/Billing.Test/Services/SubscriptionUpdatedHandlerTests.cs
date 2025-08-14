@@ -170,7 +170,8 @@ public class SubscriptionUpdatedHandlerTests
             Type = HandledStripeWebhook.SubscriptionUpdated,
             Data = new EventData
             {
-                Object = currentSubscription, PreviousAttributes = JObject.FromObject(previousSubscription)
+                Object = currentSubscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
             }
         };
 
@@ -236,7 +237,8 @@ public class SubscriptionUpdatedHandlerTests
             Type = HandledStripeWebhook.SubscriptionUpdated,
             Data = new EventData
             {
-                Object = currentSubscription, PreviousAttributes = JObject.FromObject(previousSubscription)
+                Object = currentSubscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
             }
         };
 
@@ -700,7 +702,8 @@ public class SubscriptionUpdatedHandlerTests
             },
             Customer = new Customer
             {
-                Balance = 0, Discount = new Discount { Coupon = new Coupon { Id = "sm-standalone" } }
+                Balance = 0,
+                Discount = new Discount { Coupon = new Coupon { Id = "sm-standalone" } }
             },
             Discounts = [new Discount { Coupon = new Coupon { Id = "sm-standalone" } }],
             Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } }

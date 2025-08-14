@@ -138,7 +138,8 @@ public class SubscriptionDeletedHandlerTests
                 [
                     new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(30) }
                 ]
-            },            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
             CancellationDetails = new SubscriptionCancellationDetails
             {
                 Comment = "Cancelled as part of provider migration to Consolidated Billing"

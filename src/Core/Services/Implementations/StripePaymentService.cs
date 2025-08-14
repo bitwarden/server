@@ -26,7 +26,6 @@ using Bit.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stripe;
-using Stripe.Tax;
 using PaymentMethod = Stripe.PaymentMethod;
 using StaticStore = Bit.Core.Models.StaticStore;
 
@@ -163,45 +162,45 @@ public class StripePaymentService : IPaymentService
                 switch (subscriber)
                 {
                     case User:
-                    {
-                        subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
-                        break;
-                    }
-                    case Organization:
-                    {
-                        if (sub.Customer.Address.Country == "US")
                         {
                             subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+                            break;
                         }
-                        else
+                    case Organization:
                         {
-                            var familyPriceIds = (await Task.WhenAll(
-                                    _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019),
-                                    _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)))
-                                .Select(plan => plan.PasswordManager.StripePlanId);
+                            if (sub.Customer.Address.Country == "US")
+                            {
+                                subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+                            }
+                            else
+                            {
+                                var familyPriceIds = (await Task.WhenAll(
+                                        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019),
+                                        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)))
+                                    .Select(plan => plan.PasswordManager.StripePlanId);
 
-                            var updateIsForPersonalUse = updatedItemOptions
-                                .Select(option => option.Price)
-                                .Intersect(familyPriceIds)
-                                .Any();
+                                var updateIsForPersonalUse = updatedItemOptions
+                                    .Select(option => option.Price)
+                                    .Intersect(familyPriceIds)
+                                    .Any();
 
+                                subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
+                                {
+                                    Enabled = updateIsForPersonalUse || sub.Customer.TaxIds.Any()
+                                };
+                            }
+
+                            break;
+                        }
+                    case Provider:
+                        {
                             subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
                             {
-                                Enabled = updateIsForPersonalUse || sub.Customer.TaxIds.Any()
+                                Enabled = sub.Customer.Address.Country == "US" ||
+                                          sub.Customer.TaxIds.Any()
                             };
+                            break;
                         }
-
-                        break;
-                    }
-                    case Provider:
-                    {
-                        subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
-                        {
-                            Enabled = sub.Customer.Address.Country == "US" ||
-                                      sub.Customer.TaxIds.Any()
-                        };
-                        break;
-                    }
                 }
             }
         }
@@ -273,7 +272,8 @@ public class StripePaymentService : IPaymentService
                 await _stripeAdapter.SubscriptionUpdateAsync(sub.Id,
                     new SubscriptionUpdateOptions
                     {
-                        CollectionMethod = collectionMethod, DaysUntilDue = daysUntilDue,
+                        CollectionMethod = collectionMethod,
+                        DaysUntilDue = daysUntilDue,
                     });
             }
 
@@ -657,7 +657,8 @@ public class StripePaymentService : IPaymentService
         {
             customer = await _stripeAdapter.CustomerCreateAsync(new CustomerCreateOptions
             {
-                Email = subscriber.BillingEmailAddress(), Description = subscriber.BillingName(),
+                Email = subscriber.BillingEmailAddress(),
+                Description = subscriber.BillingName(),
             });
             subscriber.Gateway = GatewayType.Stripe;
             subscriber.GatewayCustomerId = customer.Id;
@@ -673,7 +674,8 @@ public class StripePaymentService : IPaymentService
         var customer = await GetCustomerAsync(subscriber.GatewayCustomerId, GetCustomerPaymentOptions());
         var billingInfo = new BillingInfo
         {
-            Balance = customer.GetBillingBalance(), PaymentSource = await GetBillingPaymentSourceAsync(customer)
+            Balance = customer.GetBillingBalance(),
+            PaymentSource = await GetBillingPaymentSourceAsync(customer)
         };
 
         return billingInfo;
@@ -857,7 +859,8 @@ public class StripePaymentService : IPaymentService
                 await _stripeAdapter.TaxIdCreateAsync(customer.Id,
                     new TaxIdCreateOptions
                     {
-                        Type = StripeConstants.TaxIdType.EUVAT, Value = $"ES{taxInfo.TaxIdNumber}"
+                        Type = StripeConstants.TaxIdType.EUVAT,
+                        Value = $"ES{taxInfo.TaxIdNumber}"
                     });
             }
         }
@@ -939,21 +942,21 @@ public class StripePaymentService : IPaymentService
         switch (subscription.CollectionMethod)
         {
             case "charge_automatically":
-            {
-                var firstOverdueInvoice = openInvoices
-                    .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
-                    .MinBy(invoice => invoice.Created);
+                {
+                    var firstOverdueInvoice = openInvoices
+                        .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
+                        .MinBy(invoice => invoice.Created);
 
-                return (firstOverdueInvoice?.Created.AddDays(14), firstOverdueInvoice?.PeriodEnd);
-            }
+                    return (firstOverdueInvoice?.Created.AddDays(14), firstOverdueInvoice?.PeriodEnd);
+                }
             case "send_invoice":
-            {
-                var firstOverdueInvoice = openInvoices
-                    .Where(invoice => invoice.DueDate < currentDate)
-                    .MinBy(invoice => invoice.Created);
+                {
+                    var firstOverdueInvoice = openInvoices
+                        .Where(invoice => invoice.DueDate < currentDate)
+                        .MinBy(invoice => invoice.Created);
 
-                return (firstOverdueInvoice?.DueDate?.AddDays(30), firstOverdueInvoice?.PeriodEnd);
-            }
+                    return (firstOverdueInvoice?.DueDate?.AddDays(30), firstOverdueInvoice?.PeriodEnd);
+                }
             default: return (null, null);
         }
     }
@@ -1009,7 +1012,8 @@ public class StripePaymentService : IPaymentService
             {
                 options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
                 {
-                    Type = StripeConstants.TaxIdType.EUVAT, Value = $"ES{parameters.TaxInformation.TaxId}"
+                    Type = StripeConstants.TaxIdType.EUVAT,
+                    Value = $"ES{parameters.TaxInformation.TaxId}"
                 });
             }
         }
@@ -1176,7 +1180,8 @@ public class StripePaymentService : IPaymentService
             {
                 options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
                 {
-                    Type = StripeConstants.TaxIdType.EUVAT, Value = $"ES{parameters.TaxInformation.TaxId}"
+                    Type = StripeConstants.TaxIdType.EUVAT,
+                    Value = $"ES{parameters.TaxInformation.TaxId}"
                 });
             }
         }
@@ -1352,15 +1357,24 @@ public class StripePaymentService : IPaymentService
         {
             var paidInvoicesTask = _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
             {
-                Customer = customer.Id, SelectAll = !limit.HasValue, Limit = limit, Status = "paid"
+                Customer = customer.Id,
+                SelectAll = !limit.HasValue,
+                Limit = limit,
+                Status = "paid"
             });
             var openInvoicesTask = _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
             {
-                Customer = customer.Id, SelectAll = !limit.HasValue, Limit = limit, Status = "open"
+                Customer = customer.Id,
+                SelectAll = !limit.HasValue,
+                Limit = limit,
+                Status = "open"
             });
             var uncollectibleInvoicesTask = _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
             {
-                Customer = customer.Id, SelectAll = !limit.HasValue, Limit = limit, Status = "uncollectible"
+                Customer = customer.Id,
+                SelectAll = !limit.HasValue,
+                Limit = limit,
+                Status = "uncollectible"
             });
 
             var paidInvoices = await paidInvoicesTask;

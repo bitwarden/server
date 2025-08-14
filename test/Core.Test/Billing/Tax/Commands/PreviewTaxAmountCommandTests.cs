@@ -42,7 +42,7 @@ public class PreviewTaxAmountCommandTests
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { TotalTaxes = [ new InvoiceTotalTax { Amount = 1000 } ] }; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }] }; // $10.00 in cents
 
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.Currency == "usd" &&
@@ -79,7 +79,7 @@ public class PreviewTaxAmountCommandTests
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { TotalTaxes = [ new InvoiceTotalTax { Amount = 1000 } ] }; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }] }; // $10.00 in cents
 
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.Currency == "usd" &&
@@ -116,7 +116,7 @@ public class PreviewTaxAmountCommandTests
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { TotalTaxes = [ new InvoiceTotalTax { Amount = 1000 } ] }; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }] }; // $10.00 in cents
 
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.Currency == "usd" &&
@@ -156,7 +156,7 @@ public class PreviewTaxAmountCommandTests
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { TotalTaxes = [ new InvoiceTotalTax { Amount = 1000 } ] }; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }] }; // $10.00 in cents
 
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.Currency == "usd" &&
@@ -196,7 +196,7 @@ public class PreviewTaxAmountCommandTests
         _taxService.GetStripeTaxCode(parameters.TaxInformation.Country, parameters.TaxInformation.TaxId)
             .Returns("ca_st");
 
-        var expectedInvoice = new Invoice { TotalTaxes = [ new InvoiceTotalTax { Amount = 1000 } ] }; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }] }; // $10.00 in cents
 
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.Currency == "usd" &&

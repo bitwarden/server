@@ -38,7 +38,8 @@ public class StripePaymentServiceTests
             PasswordManager =
                 new OrganizationPasswordManagerRequestModel
                 {
-                    Plan = PlanType.FamiliesAnnually, AdditionalStorage = 0
+                    Plan = PlanType.FamiliesAnnually,
+                    AdditionalStorage = 0
                 },
             TaxInformation = new TaxInformationRequestModel { Country = "FR", PostalCode = "12345" }
         };
@@ -54,7 +55,9 @@ public class StripePaymentServiceTests
                     x.Quantity == 0)))
             .Returns(new Invoice
             {
-                TotalExcludingTax = 4000, TotalTaxes = [new InvoiceTotalTax { Amount = 800 }], Total = 4800
+                TotalExcludingTax = 4000,
+                TotalTaxes = [new InvoiceTotalTax { Amount = 800 }],
+                Total = 4800
             });
 
         var actual = await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
@@ -83,7 +86,8 @@ public class StripePaymentServiceTests
             PasswordManager =
                 new OrganizationPasswordManagerRequestModel
                 {
-                    Plan = PlanType.FamiliesAnnually, AdditionalStorage = 1
+                    Plan = PlanType.FamiliesAnnually,
+                    AdditionalStorage = 1
                 },
             TaxInformation = new TaxInformationRequestModel { Country = "FR", PostalCode = "12345" }
         };
