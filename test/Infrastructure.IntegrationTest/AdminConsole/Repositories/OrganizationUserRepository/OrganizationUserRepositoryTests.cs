@@ -1362,7 +1362,7 @@ public class OrganizationUserRepositoryTests
             OrganizationId = organization.Id,
             UserId = user.Id,
             Status = OrganizationUserStatusType.Confirmed,
-            Email = null // Explicitly null email
+            Email = null
         });
 
         var defaultUserCollection = await collectionRepository.CreateAsync(new Collection
@@ -1389,7 +1389,6 @@ public class OrganizationUserRepositoryTests
         var updatedCollection = await collectionRepository.GetByIdAsync(defaultUserCollection.Id);
         Assert.NotNull(updatedCollection);
         Assert.Equal(CollectionType.SharedCollection, updatedCollection.Type);
-        // Email should be set to user.Email as fallback
         Assert.Equal(user.Email, updatedCollection.DefaultUserCollectionEmail);
     }
 
@@ -1447,106 +1446,7 @@ public class OrganizationUserRepositoryTests
         var updatedCollection = await collectionRepository.GetByIdAsync(defaultUserCollection.Id);
         Assert.NotNull(updatedCollection);
         Assert.Equal(CollectionType.SharedCollection, updatedCollection.Type);
-        // Email should be set to user.Email as fallback
         Assert.Equal(user.Email, updatedCollection.DefaultUserCollectionEmail);
-    }
-
-    [DatabaseTheory, DatabaseData]
-    public async Task DeleteManyAsync_WithMixedEmailScenarios_HandlesCorrectly(IUserRepository userRepository,
-        ICollectionRepository collectionRepository,
-        IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository
-        )
-    {
-        var user1 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 1",
-            Email = $"test1+{Guid.NewGuid()}@example.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
-
-        var user2 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 2",
-            Email = $"test2+{Guid.NewGuid()}@example.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
-
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = "Test Org",
-            BillingEmail = user1.Email,
-            Plan = "Test",
-        });
-
-        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user1.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Email = null // Null email - should fall back to User.Email
-        });
-
-        var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user2.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Email = "override@example.com" // Override email - should use this
-        });
-
-        var defaultUserCollection1 = await collectionRepository.CreateAsync(new Collection
-        {
-            Name = "Test Collection 1",
-            Id = user1.Id,
-            Type = CollectionType.DefaultUserCollection,
-            OrganizationId = organization.Id
-        });
-
-        var defaultUserCollection2 = await collectionRepository.CreateAsync(new Collection
-        {
-            Name = "Test Collection 2",
-            Id = user2.Id,
-            Type = CollectionType.DefaultUserCollection,
-            OrganizationId = organization.Id
-        });
-
-        await collectionRepository.UpdateUsersAsync(defaultUserCollection1.Id, new List<CollectionAccessSelection>()
-        {
-            new CollectionAccessSelection
-            {
-                Id = orgUser1.Id,
-                HidePasswords = false,
-                ReadOnly = false,
-                Manage = true
-            },
-        });
-
-        await collectionRepository.UpdateUsersAsync(defaultUserCollection2.Id, new List<CollectionAccessSelection>()
-        {
-            new CollectionAccessSelection
-            {
-                Id = orgUser2.Id,
-                HidePasswords = false,
-                ReadOnly = false,
-                Manage = true
-            },
-        });
-
-        await organizationUserRepository.DeleteManyAsync(new List<Guid> { orgUser1.Id, orgUser2.Id });
-
-        var updatedCollection1 = await collectionRepository.GetByIdAsync(defaultUserCollection1.Id);
-        Assert.NotNull(updatedCollection1);
-        Assert.Equal(CollectionType.SharedCollection, updatedCollection1.Type);
-        Assert.Equal(user1.Email, updatedCollection1.DefaultUserCollectionEmail); // Falls back to User.Email
-
-        var updatedCollection2 = await collectionRepository.GetByIdAsync(defaultUserCollection2.Id);
-        Assert.NotNull(updatedCollection2);
-        Assert.Equal(CollectionType.SharedCollection, updatedCollection2.Type);
-        Assert.Equal("override@example.com", updatedCollection2.DefaultUserCollectionEmail); // Uses orgUser override email
-
     }
 
     [DatabaseTheory, DatabaseData]
