@@ -9,6 +9,7 @@ namespace Bit.Core.Services;
 public interface IStripeAdapter
 {
     Task<Customer> CustomerCreateAsync(CustomerCreateOptions customerCreateOptions);
+    Task CustomerDeleteDiscountAsync(string customerId, CustomerDeleteDiscountOptions options = null);
     Task<Customer> CustomerGetAsync(string id, CustomerGetOptions options = null);
     Task<Customer> CustomerUpdateAsync(string id, CustomerUpdateOptions options = null);
     Task<Customer> CustomerDeleteAsync(string id);
