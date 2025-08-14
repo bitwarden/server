@@ -421,7 +421,7 @@ public class OrganizationReportControllerTests
             .UpdateOrganizationReportDataAsync(request).Returns(report);
 
         // Act
-        var result = await sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request);
+        var result = await sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, request);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -441,23 +441,7 @@ public class OrganizationReportControllerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request));
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateOrganizationReportDataAsync_WithAccess_MismatchedReportId_ThrowsBadRequestException(SutProvider<OrganizationReportsController> sutProvider)
-    {
-        // Arrange
-        var orgId = Guid.NewGuid();
-        var reportId = Guid.NewGuid();
-        var differentReportId = Guid.NewGuid();
-        var request = new UpdateOrganizationReportDataRequest { OrganizationId = orgId, ReportId = differentReportId };
-
-        sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(true);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request));
+            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, request));
     }
 
     [Theory, BitAutoData]
@@ -471,7 +455,7 @@ public class OrganizationReportControllerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request));
+            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, request));
     }
 
     #endregion
