@@ -25,8 +25,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         {
             var dbContext = GetDatabaseContext(scope);
             var secret = await dbContext.Secret
-                                    .Include("Projects")
                                     .Where(c => c.Id == id && c.DeletedDate == null)
+                                    .Include("Projects")
                                     .FirstOrDefaultAsync();
             return Mapper.Map<Core.SecretsManager.Entities.Secret>(secret);
         }
@@ -50,10 +50,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.Secret
-            .Include(c => c.Projects)
-            .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null);
-
+        var query = dbContext.Secret.Where(c => c.OrganizationId == organizationId && c.DeletedDate == null);
+        query.Include(c => c.Projects);
         query = accessType switch
         {
             AccessClientType.NoAccessCheck => query,
@@ -71,8 +69,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var query = dbContext.Secret
-            .Include(c => c.Projects)
             .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
+            .Include(c => c.Projects)
             .OrderBy(s => s.RevisionDate);
 
         var secrets = SecretToPermissionDetails(query, userId, accessType);
@@ -130,8 +128,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.Secret.Include(s => s.Projects)
-            .Where(s => s.Projects.Any(p => p.Id == projectId) && s.DeletedDate == null);
+        var query = dbContext.Secret.Where(s => s.Projects.Any(p => p.Id == projectId) && s.DeletedDate == null)
+            .Include(s => s.Projects);
 
         var secrets = SecretToPermissionDetails(query, userId, accessType);
 
