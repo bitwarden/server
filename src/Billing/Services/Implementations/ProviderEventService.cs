@@ -30,7 +30,7 @@ public class ProviderEventService(
 
         var invoice = await stripeEventService.GetInvoice(parsedEvent);
 
-        if (invoice.Parent is not { Type: "subscription_details" })
+        if (invoice.Parent?.SubscriptionDetails == null)
         {
             return;
         }

@@ -59,7 +59,7 @@ public class ProviderEventServiceTests
     public async Task TryRecordInvoiceLineItems_EventTypeNotInvoiceCreatedOrInvoiceFinalized_NoOp()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.PaymentMethodAttached);
+        var stripeEvent = new Event { Type = "payment_method.attached" };
 
         // Act
         await _providerEventService.TryRecordInvoiceLineItems(stripeEvent);
@@ -72,7 +72,10 @@ public class ProviderEventServiceTests
     public async Task TryRecordInvoiceLineItems_EventNotProviderRelated_NoOp()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.InvoiceCreated);
+        var stripeEvent = new Event
+        {
+            Type = "invoice.created"
+        };
 
         const string subscriptionId = "sub_1";
 
@@ -107,7 +110,10 @@ public class ProviderEventServiceTests
     public async Task TryRecordInvoiceLineItems_InvoiceCreated_Succeeds()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.InvoiceCreated);
+        var stripeEvent = new Event
+        {
+            Type = "invoice.created"
+        };
 
         const string subscriptionId = "sub_1";
         var providerId = Guid.NewGuid();
@@ -263,7 +269,10 @@ public class ProviderEventServiceTests
     public async Task TryRecordInvoiceLineItems_InvoiceFinalized_Succeeds()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.InvoiceFinalized);
+        var stripeEvent = new Event
+        {
+            Type = "invoice.finalized"
+        };
 
         const string subscriptionId = "sub_1";
         var providerId = Guid.NewGuid();

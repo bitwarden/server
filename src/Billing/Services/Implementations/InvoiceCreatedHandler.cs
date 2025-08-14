@@ -42,7 +42,7 @@ public class InvoiceCreatedHandler(
                     "subscription_create" or
                     "subscription_cycle" or
                     "automatic_pending_invoice_item_invoice",
-                    Parent.Type: "subscription_details"
+                    Parent.SubscriptionDetails: not null
                 })
             {
                 await stripeEventUtilityService.AttemptToPayInvoiceAsync(invoice);
