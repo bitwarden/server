@@ -1,4 +1,4 @@
-// FIXME: Update this file to be null safe and then delete the line below
+﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
 using Duende.IdentityModel;
