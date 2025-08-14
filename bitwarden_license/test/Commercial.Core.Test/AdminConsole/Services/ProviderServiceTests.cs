@@ -120,8 +120,6 @@ public class ProviderServiceTests
 
         var token = protector.Protect($"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
 
         tokenizedPaymentSource = tokenizedPaymentSource with { Type = PaymentMethodType.BitPay };
 

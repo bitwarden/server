@@ -120,10 +120,7 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Both address and postal code are required to set up your provider.");
         }
 
-        var requireProviderPaymentMethodDuringSetup =
-            _featureService.IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup);
-
-        if (requireProviderPaymentMethodDuringSetup && tokenizedPaymentSource is not
+        if (tokenizedPaymentSource is not
             {
                 Type: PaymentMethodType.BankAccount or PaymentMethodType.Card or PaymentMethodType.PayPal,
                 Token: not null and not ""
