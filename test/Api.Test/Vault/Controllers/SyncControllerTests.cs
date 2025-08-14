@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using AutoFixture;
-using Bit.Api.KeyManagement.Queries.Interfaces;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.AdminConsole.Entities;
@@ -14,6 +13,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;

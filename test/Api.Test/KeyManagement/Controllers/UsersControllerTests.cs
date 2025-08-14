@@ -1,10 +1,10 @@
 ﻿#nullable enable
 using Bit.Api.KeyManagement.Controllers;
-using Bit.Api.KeyManagement.Queries.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
