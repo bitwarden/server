@@ -33,7 +33,7 @@ public class OrganizationDataOwnershipPolicyValidator(
             return;
         }
 
-        if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
+        if (currentPolicy?.Enabled != true && policyUpdate.Enabled)
         {
             await UpsertDefaultCollectionsForUsersAsync(policyUpdate);
         }
