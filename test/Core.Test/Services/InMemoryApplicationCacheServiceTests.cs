@@ -271,7 +271,7 @@ public class InMemoryApplicationCacheServiceTests
             .GetManyAbilitiesAsync()
             .Returns(organizationAbilities);
 
-        var results = new ConcurrentBag<ConcurrentDictionary<Guid, OrganizationAbility>>();
+        var results = new ConcurrentBag<IDictionary<Guid, OrganizationAbility>>();
 
         const int iterationCount = 100;
 

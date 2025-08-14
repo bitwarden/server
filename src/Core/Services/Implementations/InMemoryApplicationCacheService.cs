@@ -24,7 +24,7 @@ public class InMemoryApplicationCacheService(
 
     private readonly TimeSpan _refreshInterval = TimeSpan.FromMinutes(10);
 
-    public virtual async Task<ConcurrentDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
+    public virtual async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
     {
         await InitOrganizationAbilitiesAsync();
         return _orgAbilities;
@@ -37,7 +37,7 @@ public class InMemoryApplicationCacheService(
         return organizationAbility;
     }
 
-    public virtual async Task<ConcurrentDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
+    public virtual async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
     {
         await InitProviderAbilitiesAsync();
         return _providerAbilities;

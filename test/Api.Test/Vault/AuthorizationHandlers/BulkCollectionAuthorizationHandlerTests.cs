@@ -8,7 +8,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Test.Helpers;
 using Bit.Core.Test.Vault.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -1266,7 +1265,17 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
         var orgId = collections.First().OrganizationId;
 
-        var organizationAbilities = OrganizationAbilityBuilder.BuildConcurrentDictionary(collections);
+        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
+        {
+            { collections.First().OrganizationId,
+                new OrganizationAbility
+                {
+                    LimitCollectionCreation = true,
+                    LimitCollectionDeletion = true,
+                    AllowAdminAccessToAllCollectionItems = true
+                }
+            }
+        };
 
         var operationsToTest = new[]
         {
