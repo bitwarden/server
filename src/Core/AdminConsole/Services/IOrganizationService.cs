@@ -29,16 +29,11 @@ public interface IOrganizationService
     Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites);
     Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
-    Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId, bool initOrganization = false);
     Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId);
     Task ImportAsync(Guid organizationId, IEnumerable<ImportedGroup> groups,
         IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
         bool overwriteExisting, EventSystemUser eventSystemUser);
     Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
-    Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId);
-    Task RevokeUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser);
-    Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
-        IEnumerable<Guid> organizationUserIds, Guid? revokingUserId);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
     Task<(bool canScale, string failureReason)> CanScaleAsync(Organization organization, int seatsToAdd);
 

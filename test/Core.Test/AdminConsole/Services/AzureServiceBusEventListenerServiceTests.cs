@@ -1,5 +1,8 @@
-﻿using System.Text.Json;
+﻿#nullable enable
+
+using System.Text.Json;
 using Azure.Messaging.ServiceBus;
+using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -14,18 +17,43 @@ namespace Bit.Core.Test.Services;
 [SutProviderCustomize]
 public class AzureServiceBusEventListenerServiceTests
 {
-    private readonly IEventMessageHandler _handler = Substitute.For<IEventMessageHandler>();
-    private readonly ILogger<AzureServiceBusEventListenerService> _logger =
-        Substitute.For<ILogger<AzureServiceBusEventListenerService>>();
     private const string _messageId = "messageId";
+    private readonly TestListenerConfiguration _config = new();
+    private readonly ILogger _logger = Substitute.For<ILogger>();
 
-    private SutProvider<AzureServiceBusEventListenerService> GetSutProvider()
+    private SutProvider<AzureServiceBusEventListenerService<TestListenerConfiguration>> GetSutProvider()
     {
-        return new SutProvider<AzureServiceBusEventListenerService>()
-            .SetDependency(_handler)
-            .SetDependency(_logger)
-            .SetDependency("test-subscription", "subscriptionName")
+        var loggerFactory = Substitute.For<ILoggerFactory>();
+        loggerFactory.CreateLogger<object>().ReturnsForAnyArgs(_logger);
+        return new SutProvider<AzureServiceBusEventListenerService<TestListenerConfiguration>>()
+            .SetDependency(_config)
+            .SetDependency(loggerFactory)
             .Create();
+    }
+
+    [Fact]
+    public void Constructor_CreatesLogWithCorrectCategory()
+    {
+        var sutProvider = GetSutProvider();
+
+        var fullName = typeof(AzureServiceBusEventListenerService<>).FullName ?? "";
+        var tickIndex = fullName.IndexOf('`');
+        var cleanedName = tickIndex >= 0 ? fullName.Substring(0, tickIndex) : fullName;
+        var categoryName = cleanedName + '.' + _config.EventSubscriptionName;
+
+        sutProvider.GetDependency<ILoggerFactory>().Received(1).CreateLogger(categoryName);
+    }
+
+    [Fact]
+    public void Constructor_CreatesProcessor()
+    {
+        var sutProvider = GetSutProvider();
+
+        sutProvider.GetDependency<IAzureServiceBusService>().Received(1).CreateProcessor(
+            Arg.Is(_config.EventTopicName),
+            Arg.Is(_config.EventSubscriptionName),
+            Arg.Any<ServiceBusProcessorOptions>()
+        );
     }
 
     [Theory, BitAutoData]
@@ -40,7 +68,7 @@ public class AzureServiceBusEventListenerServiceTests
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<Exception>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -54,21 +82,21 @@ public class AzureServiceBusEventListenerServiceTests
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
     public async Task ProcessReceivedMessageAsync_InvalidJson_LogsError()
     {
         var sutProvider = GetSutProvider();
-        await sutProvider.Sut.ProcessReceivedMessageAsync("{ Inavlid JSON }", _messageId);
+        await sutProvider.Sut.ProcessReceivedMessageAsync("{ Invalid JSON }", _messageId);
 
         _logger.Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString().Contains("Invalid JSON")),
+            Arg.Is<object>(o => (o.ToString() ?? "").Contains("Invalid JSON")),
             Arg.Any<Exception>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -85,7 +113,7 @@ public class AzureServiceBusEventListenerServiceTests
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -102,7 +130,7 @@ public class AzureServiceBusEventListenerServiceTests
             Arg.Any<EventId>(),
             Arg.Any<object>(),
             Arg.Any<JsonException>(),
-            Arg.Any<Func<object, Exception, string>>());
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Theory, BitAutoData]
