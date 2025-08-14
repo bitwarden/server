@@ -141,7 +141,7 @@ public class StripePaymentServiceTests
                 p.SubscriptionDetails.Items.Any(x =>
                     x.Plan == familiesPlan.PasswordManager.StripeStoragePlanId &&
                     x.Quantity == 0)))
-            .Returns(new Invoice { TotalExcludingTax = 0, TotalTaxes = [new InvoiceTotalTax { Amount = 800 }], Total = 0 });
+            .Returns(new Invoice { TotalExcludingTax = 0, TotalTaxes = [new InvoiceTotalTax { Amount = 0 }], Total = 0 });
 
         var actual = await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
 
@@ -185,7 +185,7 @@ public class StripePaymentServiceTests
                 p.SubscriptionDetails.Items.Any(x =>
                     x.Plan == familiesPlan.PasswordManager.StripeStoragePlanId &&
                     x.Quantity == 1)))
-            .Returns(new Invoice { TotalExcludingTax = 400, TotalTaxes = [new InvoiceTotalTax { Amount = 800 }], Total = 408 });
+            .Returns(new Invoice { TotalExcludingTax = 400, TotalTaxes = [new InvoiceTotalTax { Amount = 8 }], Total = 408 });
 
         var actual = await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
 
