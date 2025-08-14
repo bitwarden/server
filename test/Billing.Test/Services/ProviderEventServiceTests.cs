@@ -1,6 +1,5 @@
 ﻿using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
-using Bit.Billing.Test.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;

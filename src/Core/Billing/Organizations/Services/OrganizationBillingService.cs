@@ -465,7 +465,7 @@ public class OrganizationBillingService(
         {
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
-            Discounts = !string.IsNullOrEmpty(coupon) ? [ new SubscriptionDiscountOptions { Coupon = coupon } ] : null,
+            Discounts = !string.IsNullOrEmpty(coupon) ? [new SubscriptionDiscountOptions { Coupon = coupon }] : null,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
