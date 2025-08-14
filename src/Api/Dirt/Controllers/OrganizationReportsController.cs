@@ -178,19 +178,14 @@ public class OrganizationReportsController : Controller
         return Ok(reportData);
     }
 
-    [HttpPatch("{orgId}/data/report/{reportId}")]
-    public async Task<IActionResult> UpdateOrganizationReportDataAsync(Guid orgId, Guid reportId, [FromBody] UpdateOrganizationReportDataRequest request)
+    [HttpPatch("{orgId}/data/report")]
+    public async Task<IActionResult> UpdateOrganizationReportDataAsync(Guid orgId, [FromBody] UpdateOrganizationReportDataRequest request)
     {
         GuardOrganizationAccess(orgId);
 
         if (request.OrganizationId != orgId)
         {
             throw new BadRequestException("Organization ID in the request body must match the route parameter");
-        }
-
-        if (request.ReportId != reportId)
-        {
-            throw new BadRequestException("Report ID in the request body must match the route parameter");
         }
 
         var updatedReport = await _updateOrganizationReportDataCommand.UpdateOrganizationReportDataAsync(request);
