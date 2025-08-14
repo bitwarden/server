@@ -1,6 +1,5 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Services;
 using Bit.Commercial.Core.Test.AdminConsole.AutoFixture;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -1192,7 +1191,7 @@ public class ProviderServiceTests
     private static SubscriptionUpdateOptions SubscriptionUpdateRequest(string expectedPlanId, Subscription subscriptionItem) =>
         new()
         {
-            Items = new List<Stripe.SubscriptionItemOptions>
+            Items = new List<SubscriptionItemOptions>
             {
                 new() { Id = subscriptionItem.Id, Price = expectedPlanId },
             }
