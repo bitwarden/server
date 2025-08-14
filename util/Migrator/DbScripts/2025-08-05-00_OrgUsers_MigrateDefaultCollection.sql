@@ -1,14 +1,14 @@
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_MigrateDefaultCollection]
     @Ids [dbo].[GuidIdArray] READONLY,
-    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
+    DECLARE @UtcNow DATETIME2(7) = GETUTCDATE();
 
     UPDATE c
     SET
         [DefaultUserCollectionEmail] = CASE WHEN c.[DefaultUserCollectionEmail] IS NULL THEN u.[Email] ELSE c.[DefaultUserCollectionEmail] END,
-        [RevisionDate] = @RevisionDate,
+        [RevisionDate] = @UtcNow,
         [Type] = 0
     FROM
         [dbo].[Collection] c

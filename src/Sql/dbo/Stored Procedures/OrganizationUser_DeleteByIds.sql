@@ -6,9 +6,8 @@ BEGIN
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @Ids
 
-    DECLARE @UtcNow DATETIME2(7) = GETUTCDATE();
     -- Migrate DefaultCollection to SharedCollection
-    EXEC [dbo].[OrganizationUser_MigrateDefaultCollection] @Ids, @UtcNow
+    EXEC [dbo].[OrganizationUser_MigrateDefaultCollection] @Ids
 
     DECLARE @UserAndOrganizationIds [dbo].[TwoGuidIdArray]
 

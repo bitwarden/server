@@ -18,10 +18,9 @@ BEGIN
         [Id] = @Id
 
     -- Migrate DefaultUserCollection to SharedCollection
-    DECLARE @UtcNow DATETIME2(7) = GETUTCDATE();
     DECLARE @Ids [dbo].[GuidIdArray]
     INSERT INTO @Ids (Id) VALUES (@Id)
-    EXEC [dbo].[OrganizationUser_MigrateDefaultCollection] @Ids, @UtcNow
+    EXEC [dbo].[OrganizationUser_MigrateDefaultCollection] @Ids
 
     IF @OrganizationId IS NOT NULL AND @UserId IS NOT NULL
     BEGIN
