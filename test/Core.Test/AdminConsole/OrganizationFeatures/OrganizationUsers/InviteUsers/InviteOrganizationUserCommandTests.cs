@@ -407,7 +407,8 @@ public class InviteOrganizationUserCommandTests
         organization.MaxAutoscaleSeats = 2;
         ownerDetails.Type = OrganizationUserType.Owner;
 
-        var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+        var plan = new FreePlan();
+        var inviteOrganization = new InviteOrganization(organization, plan);
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
@@ -459,7 +460,10 @@ public class InviteOrganizationUserCommandTests
         // Assert
         Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
 
-        await orgRepository.Received(1).IncrementSeatCountAsync(organization.Id, passwordManagerUpdate.SeatsRequiredToAdd, request.PerformedAt.UtcDateTime);
+        await orgRepository.Received(1).AddUsersToPasswordManagerAsync(organization.Id,
+            request.PerformedAt.UtcDateTime,
+            plan,
+            Arg.Any<IEnumerable<CreateOrganizationUser>>());
 
         await sutProvider.GetDependency<IApplicationCacheService>()
             .Received(1)

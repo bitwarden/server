@@ -275,9 +275,24 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
 
         await using var transaction = await connection.BeginTransactionAsync();
 
-        var organization = await GetByIdAsync(organizationId);
+        var organizationResult = await connection.QueryAsync<Organization>(
+            "[dbo].[Organization_ReadById]",
+            new { Id = organizationId },
+            commandType: CommandType.StoredProcedure);
 
-        var occupiedSeatCount = await GetOccupiedSeatCountByOrganizationIdAsync(organizationId);
+        var organization = organizationResult.SingleOrDefault();
+
+        if (organization == null)
+        {
+            throw new Exception("Organization not found");
+        }
+
+        var occupiedSeatCountResult = await connection.QueryAsync<OrganizationSeatCounts>(
+            "[dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]",
+            new { OrganizationId = organizationId },
+            commandType: CommandType.StoredProcedure);
+
+        var occupiedSeatCount = occupiedSeatCountResult.SingleOrDefault() ?? new OrganizationSeatCounts();
 
         var validatorRequest = new PasswordManagerSubscriptionUpdate(
             new InviteOrganization(organization, plan),
@@ -289,45 +304,54 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         switch (result)
         {
             case Valid<PasswordManagerSubscriptionUpdate> valid:
-                await connection.ExecuteAsync(
-                    $"[{Schema}].[OrganizationUser_CreateManyWithCollectionsAndGroups]",
-                    new
-                    {
-                        OrganizationUserData =
-                            JsonSerializer.Serialize(organizationUsersList.Select(x => x.OrganizationUser)),
-                        CollectionData = JsonSerializer.Serialize(organizationUsersList
-                            .SelectMany(x => x.Collections,
-                                (user, collection) => new CollectionUser
-                                {
-                                    CollectionId = collection.Id,
-                                    OrganizationUserId = user.OrganizationUser.Id,
-                                    ReadOnly = collection.ReadOnly,
-                                    HidePasswords = collection.HidePasswords,
-                                    Manage = collection.Manage
-                                })),
-                        GroupData = JsonSerializer.Serialize(organizationUsersList
-                            .SelectMany(x => x.Groups,
-                                (user, group) => new GroupUser
-                                {
-                                    GroupId = group,
-                                    OrganizationUserId = user.OrganizationUser.Id
-                                }))
-                    },
-                    commandType: CommandType.StoredProcedure);
-
-                if (valid.Value.SeatsRequiredToAdd > 0)
+                try
                 {
-                    await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
+                    await connection.ExecuteAsync(
+                        $"[{Schema}].[OrganizationUser_CreateManyWithCollectionsAndGroups]",
                         new
                         {
-                            OrganizationId = organizationId,
-                            SeatsToAdd = valid.Value.SeatsRequiredToAdd,
-                            RequestDate = requestDate
+                            OrganizationUserData =
+                                JsonSerializer.Serialize(organizationUsersList.Select(x => x.OrganizationUser)),
+                            CollectionData = JsonSerializer.Serialize(organizationUsersList
+                                .SelectMany(x => x.Collections,
+                                    (user, collection) => new CollectionUser
+                                    {
+                                        CollectionId = collection.Id,
+                                        OrganizationUserId = user.OrganizationUser.Id,
+                                        ReadOnly = collection.ReadOnly,
+                                        HidePasswords = collection.HidePasswords,
+                                        Manage = collection.Manage
+                                    })),
+                            GroupData = JsonSerializer.Serialize(organizationUsersList
+                                .SelectMany(x => x.Groups,
+                                    (user, group) => new GroupUser
+                                    {
+                                        GroupId = group,
+                                        OrganizationUserId = user.OrganizationUser.Id
+                                    }))
                         },
                         commandType: CommandType.StoredProcedure);
+
+                    if (valid.Value.SeatsRequiredToAdd > 0)
+                    {
+                        await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
+                            new
+                            {
+                                OrganizationId = organizationId,
+                                SeatsToAdd = valid.Value.SeatsRequiredToAdd,
+                                RequestDate = requestDate
+                            },
+                            commandType: CommandType.StoredProcedure);
+                    }
+
+                    await transaction.CommitAsync();
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
                 }
 
-                await transaction.CommitAsync();
                 break;
             case Invalid<PasswordManagerSubscriptionUpdate> invalid:
                 await transaction.RollbackAsync();

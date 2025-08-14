@@ -459,14 +459,29 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         await using var dbContext = GetDatabaseContext(scope);
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        var organization = await GetByIdAsync(organizationId);
+        var organization = await dbContext.Organizations.SingleOrDefaultAsync(x => x.Id == organizationId);
 
         if (organization is null)
         {
             throw new Exception($"Organization with id {organizationId} not found.");
         }
 
-        var occupiedSeatCount = await GetOccupiedSeatCountByOrganizationIdAsync(organizationId);
+        var users = await dbContext.OrganizationUsers
+            .Where(ou => ou.OrganizationId == organizationId && ou.Status >= 0)
+            .CountAsync();
+
+        var sponsored = await dbContext.OrganizationSponsorships
+            .Where(os => os.SponsoringOrganizationId == organizationId &&
+                         os.IsAdminInitiated &&
+                         (os.ToDelete == false || (os.ToDelete == true && os.ValidUntil != null && os.ValidUntil > DateTime.UtcNow)) &&
+                         (os.SponsoredOrganizationId == null || (os.SponsoredOrganizationId != null && (os.ValidUntil == null || os.ValidUntil > DateTime.UtcNow))))
+            .CountAsync(); ;
+
+        var occupiedSeatCount = new OrganizationSeatCounts
+        {
+            Users = users,
+            Sponsored = sponsored
+        };
 
         var validatorRequest = new PasswordManagerSubscriptionUpdate(
             new InviteOrganization(organization, plan),
