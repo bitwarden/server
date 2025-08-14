@@ -1,5 +1,4 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Providers;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -331,9 +330,6 @@ public class RemoveOrganizationFromProviderCommandTests
         {
             Id = "subscription_id"
         });
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge).Returns(true);
 
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 

@@ -352,9 +352,6 @@ public class ProviderBillingServiceTests
                 CloudRegion = "US"
             });
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge).Returns(true);
-
         sutProvider.GetDependency<IStripeAdapter>().CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(
                 options =>
                     options.Address.Country == providerCustomer.Address.Country &&
@@ -1296,9 +1293,6 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge).Returns(true);
-
         stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
                 o.Address.Country == taxInfo.BillingAddressCountry &&
                 o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
@@ -1879,9 +1873,6 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge).Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(
             sub =>
