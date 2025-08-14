@@ -162,22 +162,30 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         }
         else if (organization.IsStripeEnabled())
         {
-            var subscription = await _stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId);
+            var subscription = await _stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId, new SubscriptionGetOptions
+            {
+                Expand = ["customer"]
+            });
+
             if (subscription.Status is StripeConstants.SubscriptionStatus.Canceled or StripeConstants.SubscriptionStatus.IncompleteExpired)
             {
                 return;
             }
 
-            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            await _stripeAdapter.CustomerUpdateAsync(subscription.CustomerId, new CustomerUpdateOptions
             {
-                Coupon = string.Empty,
                 Email = organization.BillingEmail
             });
+
+            if (subscription.Customer.Discount?.Coupon != null)
+            {
+                await _stripeAdapter.CustomerDeleteDiscountAsync(subscription.Customer.Id);
+            }
 
             await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, new SubscriptionUpdateOptions
             {
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
-                DaysUntilDue = 30
+                DaysUntilDue = 30,
             });
 
             await _subscriberService.RemovePaymentSource(organization);

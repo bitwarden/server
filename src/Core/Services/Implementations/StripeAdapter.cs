@@ -46,6 +46,9 @@ public class StripeAdapter : IStripeAdapter
         return _customerService.CreateAsync(options);
     }
 
+    public Task CustomerDeleteDiscountAsync(string customerId, CustomerDeleteDiscountOptions options = null) =>
+        _customerService.DeleteDiscountAsync(customerId, options);
+
     public Task<Customer> CustomerGetAsync(string id, CustomerGetOptions options = null)
     {
         return _customerService.GetAsync(id, options);
