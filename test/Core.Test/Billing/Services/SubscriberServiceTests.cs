@@ -1695,9 +1695,6 @@ public class SubscriberServiceTests
         sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(Arg.Any<string>())
             .Returns(subscription);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge).Returns(true);
-
         await sutProvider.Sut.UpdateTaxInformation(provider, taxInformation);
 
         await stripeAdapter.Received(1).CustomerUpdateAsync(provider.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
