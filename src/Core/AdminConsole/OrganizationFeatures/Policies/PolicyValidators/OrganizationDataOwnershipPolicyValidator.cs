@@ -45,9 +45,9 @@ public class OrganizationDataOwnershipPolicyValidator(
 
         var userOrgIds = GetUserOrgIds(policyUpdate, requirements);
 
-        if (!userOrgIds.Any())
+        if (userOrgIds.Count == 0)
         {
-            logger.LogError($"No UserOrganizationIds found for {policyUpdate.OrganizationId}");
+            logger.LogError("No UserOrganizationIds found for {OrganizationId}", policyUpdate.OrganizationId);
             return;
         }
 
