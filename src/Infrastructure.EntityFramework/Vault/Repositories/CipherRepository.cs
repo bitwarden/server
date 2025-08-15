@@ -974,13 +974,13 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
 
         var defaultTypeInt = (int)CollectionType.DefaultUserCollection;
 
-        // 1) filter out any cipher that belongs *only* to default collections
+        //  filter out any cipher that belongs *only* to default collections
         //    i.e. keep ciphers with no collections, or with ≥1 non-default collection
         var query = from c in dbContext.Ciphers.AsNoTracking()
                     where c.UserId == null
                        && c.OrganizationId == organizationId
                        && (
-                            !c.CollectionCiphers.Any()
+                            c.CollectionCiphers.Count() == 0
                             || c.CollectionCiphers.Any(cc => (int)cc.Collection.Type != defaultTypeInt)
                           )
                     select new CipherOrganizationDetailsWithCollections(
@@ -991,6 +991,8 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                             OrganizationId = c.OrganizationId,
                             Type = c.Type,
                             Data = c.Data,
+                            Favorites = c.Favorites,
+                            Folders = c.Folders,
                             Attachments = c.Attachments,
                             CreationDate = c.CreationDate,
                             RevisionDate = c.RevisionDate,
@@ -1002,7 +1004,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                         new Dictionary<Guid, IGrouping<Guid, Bit.Core.Entities.CollectionCipher>>()
                     )
                     {
-                        // populate your CollectionIds array in one shot
                         CollectionIds = c.CollectionCiphers
                             .Where(cc => (int)cc.Collection.Type != defaultTypeInt)
                             .Select(cc => cc.CollectionId)
