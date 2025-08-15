@@ -210,7 +210,7 @@ public class Startup
             config.Conventions.Add(new PublicApiControllersModelConvention());
         });
 
-        services.AddSwagger(globalSettings);
+        services.AddSwagger(globalSettings, Environment);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
 
