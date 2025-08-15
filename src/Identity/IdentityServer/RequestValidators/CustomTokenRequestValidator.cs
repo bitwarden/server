@@ -46,7 +46,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IUpdateInstallationCommand updateInstallationCommand,
         IPolicyRequirementQuery policyRequirementQuery,
-        IAuthRequestRepository authRequestRepository)
+        IAuthRequestRepository authRequestRepository,
+        IMailService mailService)
         : base(
             userManager,
             userService,
@@ -63,7 +64,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
             policyRequirementQuery,
-            authRequestRepository)
+            authRequestRepository,
+            mailService)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
