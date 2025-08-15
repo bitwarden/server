@@ -1,4 +1,4 @@
-
+﻿
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
 

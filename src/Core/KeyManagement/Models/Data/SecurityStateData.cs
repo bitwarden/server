@@ -1,4 +1,4 @@
-
+﻿
 namespace Bit.Core.KeyManagement.Models.Data;
 
 public class SecurityStateData

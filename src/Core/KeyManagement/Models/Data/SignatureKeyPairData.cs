@@ -1,4 +1,4 @@
-
+﻿
 using System.Text.Json.Serialization;
 using Bit.Core.KeyManagement.Enums;
 
