@@ -27,7 +27,9 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Fakes;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using NSubstitute.ReceivedExtensions;
 using NSubstitute.ReturnsExtensions;
+using Stripe;
 using Xunit;
 using Organization = Bit.Core.AdminConsole.Entities.Organization;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
@@ -1233,6 +1235,130 @@ public class OrganizationServiceTests
             .Returns(organization);
 
         await sutProvider.Sut.ValidateOrganizationCustomPermissionsEnabledAsync(organization.Id, OrganizationUserType.Custom);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WhenValidOrganization_AndUpdateBillingIsTrue_UpdateStripeCustomerAndOrganization(Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        // Arrange
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+
+        var requestOptionsReturned = new CustomerUpdateOptions
+        {
+            Email = organization.BillingEmail,
+            Description = organization.DisplayBusinessName(),
+            InvoiceSettings = new CustomerInvoiceSettingsOptions
+            {
+                // This overwrites the existing custom fields for this organization
+                CustomFields =
+                [
+                    new CustomerInvoiceSettingsCustomFieldOptions
+                    {
+                        Name = organization.SubscriberType(),
+                        Value = organization.DisplayName()[..30]
+                    }
+                ]
+            },
+        };
+        organizationRepository
+            .GetByIdentifierAsync(organization.Identifier!)
+            .Returns(organization);
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(organization, updateBilling: true);
+
+        // Assert
+        await organizationRepository
+            .Received(1)
+            .GetByIdentifierAsync(Arg.Is<string>(id => id == organization.Identifier));
+        await stripeAdapter
+            .Received(1)
+            .CustomerUpdateAsync(
+                Arg.Is<string>(id => id == organization.GatewayCustomerId),
+                Arg.Is<CustomerUpdateOptions>(options => options.Email == requestOptionsReturned.Email
+                                                         && options.Description == requestOptionsReturned.Description
+                                                         && options.InvoiceSettings.CustomFields.First().Name == requestOptionsReturned.InvoiceSettings.CustomFields.First().Name
+                                                         && options.InvoiceSettings.CustomFields.First().Value == requestOptionsReturned.InvoiceSettings.CustomFields.First().Value)); ;
+        await organizationRepository
+            .Received(1)
+            .ReplaceAsync(Arg.Is<Organization>(org => org == organization));
+        await applicationCacheService
+            .Received(1)
+            .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(org => org == organization));
+        await eventService
+            .Received(1)
+            .LogOrganizationEventAsync(Arg.Is<Organization>(org => org == organization),
+                Arg.Is<EventType>(e => e == EventType.Organization_Updated));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WhenValidOrganization_AndUpdateBillingIsFalse_UpdateOrganization(Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        // Arrange
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var eventService = sutProvider.GetDependency<IEventService>();
+
+        organizationRepository
+            .GetByIdentifierAsync(organization.Identifier!)
+            .Returns(organization);
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(organization, updateBilling: false);
+
+        // Assert
+        await organizationRepository
+            .Received(1)
+            .GetByIdentifierAsync(Arg.Is<string>(id => id == organization.Identifier));
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+        await organizationRepository
+            .Received(1)
+            .ReplaceAsync(Arg.Is<Organization>(org => org == organization));
+        await applicationCacheService
+            .Received(1)
+            .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(org => org == organization));
+        await eventService
+            .Received(1)
+            .LogOrganizationEventAsync(Arg.Is<Organization>(org => org == organization),
+                Arg.Is<EventType>(e => e == EventType.Organization_Updated));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WhenOrganizationHasNoId_ThrowsApplicationException(Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        // Arrange
+        organization.Id = Guid.Empty;
+
+        // Act/Assert
+        var exception = await Assert.ThrowsAnyAsync<ApplicationException>(() => sutProvider.Sut.UpdateAsync(organization));
+        Assert.Equal("Cannot create org this way. Call SignUpAsync.", exception.Message);
+
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WhenIdentifierAlreadyExistsForADifferentOrganization_ThrowsBadRequestException(Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        // Arrange
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var differentOrganization = new Organization { Id = Guid.NewGuid() };
+
+        organizationRepository
+            .GetByIdentifierAsync(organization.Identifier!)
+            .Returns(differentOrganization);
+
+        // Act/Assert
+        var exception = await Assert.ThrowsAnyAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(organization));
+        Assert.Equal("Identifier already in use by another organization.", exception.Message);
+
+        await organizationRepository
+            .Received(1)
+            .GetByIdentifierAsync(Arg.Is<string>(id => id == organization.Identifier));
     }
 
     // Must set real guids in order for dictionary of guids to not throw aggregate exceptions

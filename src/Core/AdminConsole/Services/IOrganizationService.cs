@@ -13,7 +13,6 @@ namespace Bit.Core.Services;
 
 public interface IOrganizationService
 {
-    Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null);
     Task ReinstateSubscriptionAsync(Guid organizationId);
     Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb);
     Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats);
