@@ -1,7 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Repositories;
@@ -99,8 +101,13 @@ public class UpdateSecretsManagerSubscriptionCommandTests
                 org.MaxAutoscaleSmServiceAccounts == updateMaxAutoscaleSmServiceAccounts),
                 sutProvider);
 
-        await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs().SendSecretsManagerMaxSeatLimitReachedEmailAsync(default, default, default);
-        await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs().SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(default, default, default);
+        await sutProvider
+            .GetDependency<IMailService>()
+            .DidNotReceiveWithAnyArgs()
+            .SendSecretsManagerMaxSeatLimitReachedEmailAsync(default, default, default);
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceiveWithAnyArgs()
+            .SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(default, default, default);
     }
 
     [Theory]
@@ -266,11 +273,13 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateSubscriptionAsync_UpdateSeatsToAutoscaleLimit_EmailsOwners(
+    public async Task UpdateSubscriptionAsync_UpdateSeatCount_AndExistingSeatsDoNotReachAutoscaleLimit_NoEmailSent(
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
+        // Arrange
         const int seatCount = 10;
+        var existingSeatCount = 9;
 
         // Make sure Password Manager seats is greater or equal to Secrets Manager seats
         organization.Seats = seatCount;
@@ -281,11 +290,66 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             SmSeats = seatCount,
             MaxAutoscaleSmSeats = seatCount
         };
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(existingSeatCount);
 
+        // Act
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        await sutProvider.GetDependency<IMailService>().Received(1).SendSecretsManagerMaxSeatLimitReachedEmailAsync(
-            organization, organization.MaxAutoscaleSmSeats.Value, Arg.Any<IEnumerable<string>>());
+        // Assert
+
+        // Currently being called once each for different validation methods
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(2)
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceiveWithAnyArgs()
+            .SendSecretsManagerMaxSeatLimitReachedEmailAsync(Arg.Any<Organization>(), Arg.Any<int>(), Arg.Any<IEnumerable<string>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_ExistingSeatsReachAutoscaleLimit_EmailOwners(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        // Arrange
+        const int seatCount = 10;
+        const int existingSeatCount = 10;
+        var ownerDetailsList = new List<OrganizationUserUserDetails> { new() { Email = "owner@example.com" } };
+
+        // The amount of seats for users in an organization
+        var plan = StaticStore.GetPlan(organization.PlanType);
+        var update = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            SmSeats = seatCount,
+            MaxAutoscaleSmSeats = seatCount
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(existingSeatCount);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(ownerDetailsList);
+
+        // Act
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
+
+        // Assert
+
+        // Currently being called once each for different validation methods
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(2)
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendSecretsManagerMaxSeatLimitReachedEmailAsync(Arg.Is(organization),
+                Arg.Is(seatCount),
+                Arg.Is<IEnumerable<string>>(emails => emails.Contains(ownerDetailsList[0].Email)));
     }
 
     [Theory]
@@ -413,21 +477,78 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateSubscriptionAsync_UpdateServiceAccountsToAutoscaleLimit_EmailsOwners(
+    public async Task UpdateSubscriptionAsync_UpdateServiceAccounts_AndExistingServiceAccountsCountDoesNotReachAutoscaleLimit_NoEmailSent(
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
+        // Arrange
+        var smServiceAccounts = 300;
+        var existingServiceAccountCount = 299;
+
         var plan = StaticStore.GetPlan(organization.PlanType);
         var update = new SecretsManagerSubscriptionUpdate(organization, plan, false)
         {
-            SmServiceAccounts = 300,
-            MaxAutoscaleSmServiceAccounts = 300
+            SmServiceAccounts = smServiceAccounts,
+            MaxAutoscaleSmServiceAccounts = smServiceAccounts
         };
+        sutProvider.GetDependency<IServiceAccountRepository>()
+            .GetServiceAccountCountByOrganizationIdAsync(organization.Id)
+            .Returns(existingServiceAccountCount);
 
+        // Act
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        await sutProvider.GetDependency<IMailService>().Received(1).SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(
-            organization, organization.MaxAutoscaleSmServiceAccounts.Value, Arg.Any<IEnumerable<string>>());
+        // Assert
+        await sutProvider.GetDependency<IServiceAccountRepository>()
+            .Received(1)
+            .GetServiceAccountCountByOrganizationIdAsync(organization.Id);
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceiveWithAnyArgs()
+            .SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(
+                Arg.Any<Organization>(),
+                Arg.Any<int>(),
+                Arg.Any<IEnumerable<string>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_ExistingServiceAccountsReachAutoscaleLimit_EmailOwners(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var smServiceAccounts = 300;
+        var plan = StaticStore.GetPlan(organization.PlanType);
+        var update = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            SmServiceAccounts = smServiceAccounts,
+            MaxAutoscaleSmServiceAccounts = smServiceAccounts
+        };
+        var ownerDetailsList = new List<OrganizationUserUserDetails> { new() { Email = "owner@example.com" } };
+
+
+        sutProvider.GetDependency<IServiceAccountRepository>()
+            .GetServiceAccountCountByOrganizationIdAsync(organization.Id)
+            .Returns(smServiceAccounts);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(ownerDetailsList);
+
+
+        // Act
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
+
+        // Assert
+
+        await sutProvider.GetDependency<IServiceAccountRepository>()
+            .Received(1)
+            .GetServiceAccountCountByOrganizationIdAsync(organization.Id);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Arg.Is(organization),
+                Arg.Is(smServiceAccounts),
+                Arg.Is<IEnumerable<string>>(emails => emails.Contains(ownerDetailsList[0].Email)));
     }
 
     [Theory]

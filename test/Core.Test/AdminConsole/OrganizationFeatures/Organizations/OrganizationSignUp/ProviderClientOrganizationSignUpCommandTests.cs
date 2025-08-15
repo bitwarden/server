@@ -10,9 +10,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -64,17 +61,6 @@ public class ProviderClientOrganizationSignUpCommandTests
                     o.Status == OrganizationStatusType.Created
                 )
             );
-
-        await sutProvider.GetDependency<IReferenceEventService>()
-            .Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
-                referenceEvent.Type == ReferenceEventType.Signup &&
-                referenceEvent.PlanName == plan.Name &&
-                referenceEvent.PlanType == plan.Type &&
-                referenceEvent.Seats == result.Organization.Seats &&
-                referenceEvent.Storage == result.Organization.MaxStorageGb &&
-                referenceEvent.SignupInitiationPath == signup.InitiationPath
-            ));
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)

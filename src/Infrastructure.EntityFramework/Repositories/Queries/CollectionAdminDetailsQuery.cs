@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Data;
+﻿using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
@@ -59,7 +60,9 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
 
         if (_organizationId.HasValue)
         {
-            baseCollectionQuery = baseCollectionQuery.Where(x => x.c.OrganizationId == _organizationId);
+            baseCollectionQuery = baseCollectionQuery.Where(x =>
+                x.c.OrganizationId == _organizationId &&
+                x.c.Type != CollectionType.DefaultUserCollection);
         }
         else if (_collectionId.HasValue)
         {

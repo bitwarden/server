@@ -3,7 +3,9 @@ using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer;
+using Bit.Identity.IdentityServer.ClientProviders;
 using Bit.Identity.IdentityServer.RequestValidators;
+using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.SharedWeb.Utilities;
 using Duende.IdentityServer.ResponseHandling;
 using Duende.IdentityServer.Services;
@@ -24,6 +26,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IDeviceValidator, DeviceValidator>();
         services.AddTransient<ITwoFactorAuthenticationValidator, TwoFactorAuthenticationValidator>();
         services.AddTransient<ILoginApprovingClientTypes, LoginApprovingClientTypes>();
+        services.AddTransient<ISendPasswordRequestValidator, SendPasswordRequestValidator>();
 
         var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
         var identityServerBuilder = services
@@ -48,13 +51,29 @@ public static class ServiceCollectionExtensions
             .AddInMemoryCaching()
             .AddInMemoryApiResources(ApiResources.GetApiResources())
             .AddInMemoryApiScopes(ApiScopes.GetApiScopes())
-            .AddClientStoreCache<ClientStore>()
+            .AddClientStoreCache<DynamicClientStore>()
             .AddCustomTokenRequestValidator<CustomTokenRequestValidator>()
             .AddProfileService<ProfileService>()
             .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
-            .AddClientStore<ClientStore>()
+            .AddClientStore<DynamicClientStore>()
             .AddIdentityServerCertificate(env, globalSettings)
-            .AddExtensionGrantValidator<WebAuthnGrantValidator>();
+            .AddExtensionGrantValidator<WebAuthnGrantValidator>()
+            .AddExtensionGrantValidator<SendAccessGrantValidator>();
+
+        if (!globalSettings.SelfHosted)
+        {
+            // Only cloud instances should be able to handle installations
+            services.AddClientProvider<InstallationClientProvider>("installation");
+        }
+
+        if (globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey))
+        {
+            services.AddClientProvider<InternalClientProvider>("internal");
+        }
+
+        services.AddClientProvider<UserClientProvider>("user");
+        services.AddClientProvider<OrganizationClientProvider>("organization");
+        services.AddClientProvider<SecretsManagerApiKeyProvider>(SecretsManagerApiKeyProvider.ApiKeyPrefix);
 
         if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CosmosConnectionString))
         {

@@ -1,4 +1,7 @@
-﻿using Bit.Core;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -153,6 +156,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
             organization.GatewaySubscriptionId = subscription.Id;
             organization.Status = OrganizationStatusType.Created;
+            organization.Enabled = true;
 
             await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats ?? 0);
         }

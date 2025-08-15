@@ -14,7 +14,7 @@ public class OrganizationUsersControllerPerformanceTest(ITestOutputHelper testOu
     [InlineData(60000)]
     public async Task GetAsync(int seats)
     {
-        await using var factory = new ApiApplicationFactory();
+        await using var factory = new SqlServerApiApplicationFactory();
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();

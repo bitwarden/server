@@ -40,4 +40,32 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
             return results.ToList();
         }
     }
+
+    public async Task<List<OrganizationIntegrationConfigurationDetails>> GetAllConfigurationDetailsAsync()
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationIntegrationConfigurationDetails>(
+                "[dbo].[OrganizationIntegrationConfigurationDetails_ReadMany]",
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<List<OrganizationIntegrationConfiguration>> GetManyByIntegrationAsync(Guid organizationIntegrationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationIntegrationConfiguration>(
+                "[dbo].[OrganizationIntegrationConfiguration_ReadManyByOrganizationIntegrationId]",
+                new
+                {
+                    OrganizationIntegrationId = organizationIntegrationId
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
 }
