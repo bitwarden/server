@@ -26,7 +26,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             var dbContext = GetDatabaseContext(scope);
             var secret = await dbContext.Secret
                                     .Where(c => c.Id == id && c.DeletedDate == null)
-                                    .Include("Projects")
+                                    .Include(s => s.Projects)
                                     .FirstOrDefaultAsync();
             return Mapper.Map<Core.SecretsManager.Entities.Secret>(secret);
         }
@@ -71,8 +71,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var query = dbContext.Secret
-            .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
             .Include(c => c.Projects)
+            .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
             .OrderBy(s => s.RevisionDate);
 
         var secrets = SecretToPermissionDetails(query, userId, accessType);
@@ -130,8 +130,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.Secret.Where(s => s.Projects.Any(p => p.Id == projectId) && s.DeletedDate == null)
-            .Include(s => s.Projects);
+        var query = dbContext.Secret.Include(s => s.Projects)
+            .Where(s => s.Projects.Any(p => p.Id == projectId) && s.DeletedDate == null);
 
         var secrets = SecretToPermissionDetails(query, userId, accessType);
 
