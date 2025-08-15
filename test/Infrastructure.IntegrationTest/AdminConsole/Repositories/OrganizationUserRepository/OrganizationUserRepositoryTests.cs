@@ -1159,7 +1159,7 @@ public class OrganizationUserRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyByOrganizationWithClaimedDomainsAsync_vNext_WithVerifiedDomain_WithOneMatchingEmailDomain_ReturnsSingle(
+    public async Task GetManyByOrganizationWithClaimedDomainsAsync_WithVerifiedDomain_WithOneMatchingEmailDomain_ReturnsSingle(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -1262,7 +1262,7 @@ public class OrganizationUserRepositoryTests
             RevisionDate = requestTime
         });
 
-        var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync_vNext(organization.Id);
+        var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organization.Id);
 
         Assert.NotNull(responseModel);
         Assert.Single(responseModel);
@@ -1272,7 +1272,7 @@ public class OrganizationUserRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyByOrganizationWithClaimedDomainsAsync_vNext_WithNoVerifiedDomain_ReturnsEmpty(
+    public async Task GetManyByOrganizationWithClaimedDomainsAsync_WithNoVerifiedDomain_ReturnsEmpty(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -1329,7 +1329,7 @@ public class OrganizationUserRepositoryTests
             RevisionDate = requestTime
         });
 
-        var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync_vNext(organization.Id);
+        var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organization.Id);
 
         Assert.NotNull(responseModel);
         Assert.Empty(responseModel);
