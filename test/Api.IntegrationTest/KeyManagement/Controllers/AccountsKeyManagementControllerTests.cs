@@ -14,6 +14,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Entities;
 using Bit.Core.KeyManagement.Enums;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Enums;

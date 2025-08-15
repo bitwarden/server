@@ -5,7 +5,7 @@ using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.KeyManagement.Models.Response;
+using Bit.Core.KeyManagement.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
