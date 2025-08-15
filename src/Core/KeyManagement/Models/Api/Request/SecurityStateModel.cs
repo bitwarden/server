@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.KeyManagement.Models.Data;
 
-namespace Bit.Core.KeyManagement.Models.Requests;
+namespace Bit.Core.KeyManagement.Models.Api.Request;
 
 public class SecurityStateModel
 {

@@ -2,7 +2,7 @@
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Api;
 
-namespace Bit.Core.KeyManagement.Models.Response;
+namespace Bit.Core.KeyManagement.Models.Api.Response;
 
 
 public class PublicKeyEncryptionKeyPairModel : ResponseModel

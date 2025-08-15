@@ -14,7 +14,6 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
-using Bit.Core.KeyManagement.Models.Response;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Api.Response;
@@ -444,6 +443,8 @@ public abstract class BaseRequestValidator<T> where T : class
         if (!string.IsNullOrWhiteSpace(user.PrivateKey))
         {
             customResponse.Add("PrivateKey", user.PrivateKey);
+            var accountKeys = await _accountKeysQuery.Run(user);
+            customResponse.Add("AccountKeys", new PrivateKeysResponseModel(accountKeys));
         }
 
         if (!string.IsNullOrWhiteSpace(user.Key))
@@ -459,8 +460,6 @@ public abstract class BaseRequestValidator<T> where T : class
         customResponse.Add("KdfIterations", user.KdfIterations);
         customResponse.Add("KdfMemory", user.KdfMemory);
         customResponse.Add("KdfParallelism", user.KdfParallelism);
-        var accountKeys = await _accountKeysQuery.Run(user);
-        customResponse.Add("AccountKeys", new PrivateKeysResponseModel(accountKeys));
         customResponse.Add("UserDecryptionOptions", await CreateUserDecryptionOptionsAsync(user, device, GetSubject(context)));
 
         if (sendRememberToken)
