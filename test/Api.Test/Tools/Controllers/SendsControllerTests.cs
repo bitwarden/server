@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using AutoFixture.Xunit2;
+using Bit.Api.Models.Response;
 using Bit.Api.Tools.Controllers;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;
@@ -12,6 +13,7 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
+using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
@@ -29,6 +31,7 @@ public class SendsControllerTests : IDisposable
     private readonly ISendRepository _sendRepository;
     private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
     private readonly IAnonymousSendCommand _anonymousSendCommand;
+    private readonly ISendOwnerQuery _sendOwnerQuery;
     private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly ILogger<SendsController> _logger;
@@ -39,6 +42,7 @@ public class SendsControllerTests : IDisposable
         _sendRepository = Substitute.For<ISendRepository>();
         _nonAnonymousSendCommand = Substitute.For<INonAnonymousSendCommand>();
         _anonymousSendCommand = Substitute.For<IAnonymousSendCommand>();
+        _sendOwnerQuery = Substitute.For<ISendOwnerQuery>();
         _sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
         _sendFileStorageService = Substitute.For<ISendFileStorageService>();
         _globalSettings = new GlobalSettings();
@@ -50,6 +54,7 @@ public class SendsControllerTests : IDisposable
             _sendAuthorizationService,
             _anonymousSendCommand,
             _nonAnonymousSendCommand,
+            _sendOwnerQuery,
             _sendFileStorageService,
             _logger
         );
@@ -107,5 +112,63 @@ public class SendsControllerTests : IDisposable
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostFile(request));
         Assert.Equal(expected, exception.Message);
+    }
+
+    [Theory, AutoData]
+    public async Task Get_WithValidId_ReturnsSendResponseModel(Guid sendId, Send send)
+    {
+        send.Type = SendType.Text;
+        var textData = new SendTextData("Test Send", "Notes", "Sample text", false);
+        send.Data = JsonSerializer.Serialize(textData);
+        _sendOwnerQuery.Get(sendId).Returns(send);
+
+        var result = await _sut.Get(sendId.ToString());
+
+        Assert.NotNull(result);
+        Assert.IsType<SendResponseModel>(result);
+        Assert.Equal(send.Id, result.Id);
+        await _sendOwnerQuery.Received(1).Get(sendId);
+    }
+
+    [Theory, AutoData]
+    public async Task Get_WithInvalidGuid_ThrowsException(string invalidId)
+    {
+        await Assert.ThrowsAsync<FormatException>(() => _sut.Get(invalidId));
+    }
+
+    [Fact]
+    public async Task GetAllOwned_ReturnsListResponseModelWithSendResponseModels()
+    {
+        var textSendData = new SendTextData("Test Send 1", "Notes 1", "Sample text", false);
+        var fileSendData = new SendFileData("Test Send 2", "Notes 2", "test.txt") { Id = "file-123", Size = 1024 };
+        var sends = new List<Send>
+        {
+            new Send { Id = Guid.NewGuid(), Type = SendType.Text, Data = JsonSerializer.Serialize(textSendData) },
+            new Send { Id = Guid.NewGuid(), Type = SendType.File, Data = JsonSerializer.Serialize(fileSendData) }
+        };
+        _sendOwnerQuery.GetOwned().Returns(sends);
+
+        var result = await _sut.Get();
+
+        Assert.NotNull(result);
+        Assert.IsType<ListResponseModel<SendResponseModel>>(result);
+        Assert.Equal(2, result.Data.Count());
+        var sendResponseModels = result.Data.ToList();
+        Assert.Equal(sends[0].Id, sendResponseModels[0].Id);
+        Assert.Equal(sends[1].Id, sendResponseModels[1].Id);
+        await _sendOwnerQuery.Received(1).GetOwned();
+    }
+
+    [Fact]
+    public async Task GetAllOwned_WhenNoSends_ReturnsEmptyListResponseModel()
+    {
+        _sendOwnerQuery.GetOwned().Returns(new List<Send>());
+
+        var result = await _sut.Get();
+
+        Assert.NotNull(result);
+        Assert.IsType<ListResponseModel<SendResponseModel>>(result);
+        Assert.Empty(result.Data);
+        await _sendOwnerQuery.Received(1).GetOwned();
     }
 }
