@@ -3,7 +3,6 @@ using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 
-#nullable enable
 
 namespace Bit.Core.KeyManagement.Entities;
 
