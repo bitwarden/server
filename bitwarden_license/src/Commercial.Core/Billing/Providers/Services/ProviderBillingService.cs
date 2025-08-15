@@ -540,6 +540,11 @@ public class ProviderBillingService(
                 taxInfo.BillingAddressCountry,
                 taxInfo.TaxIdNumber);
 
+            if (string.IsNullOrEmpty(taxIdType))
+            {
+                throw new BadRequestException("billingTaxIdTypeInferenceError");
+            }
+
             options.TaxIdData =
             [
                 new CustomerTaxIdDataOptions { Type = taxIdType, Value = taxInfo.TaxIdNumber }
@@ -701,10 +706,9 @@ public class ProviderBillingService(
 
         var usePaymentMethod =
             requireProviderPaymentMethodDuringSetup &&
-            setupIntent != null &&
             (!string.IsNullOrEmpty(customer.InvoiceSettings.DefaultPaymentMethodId) ||
              customer.Metadata.ContainsKey(BraintreeCustomerIdKey) ||
-             setupIntent.IsUnverifiedBankAccount());
+             (setupIntent != null && setupIntent.IsUnverifiedBankAccount()));
 
         int? trialPeriodDays = provider.Type switch
         {

@@ -179,7 +179,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
             if (subscription.Customer.Discount?.Coupon != null)
             {
-                await _stripeAdapter.CustomerDeleteDiscountAsync(subscription.Customer.Id);
+                await _stripeAdapter.CustomerDeleteDiscountAsync(subscription.CustomerId);
             }
 
             await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, new SubscriptionUpdateOptions

@@ -19,6 +19,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Stripe;
+using Stripe.Tax;
 using Xunit;
 
 namespace Bit.Commercial.Core.Test.AdminConsole.ProviderFeatures;
@@ -157,7 +158,8 @@ public class RemoveOrganizationFromProviderCommandTests
             "b@example.com"
         ]);
 
-        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
+                options => options.Expand.Contains("customer")))
             .Returns(GetSubscription(organization.GatewaySubscriptionId, organization.GatewayCustomerId));
 
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
@@ -378,6 +380,16 @@ public class RemoveOrganizationFromProviderCommandTests
         {
             Id = subscriptionId,
             CustomerId = customerId,
+            Customer = new Customer
+            {
+                Discount = new Discount
+                {
+                    Coupon = new Coupon
+                    {
+                        Id = "coupon-id"
+                    }
+                }
+            },
             Status = StripeConstants.SubscriptionStatus.Active,
             Items = new StripeList<SubscriptionItem>
             {
