@@ -453,7 +453,6 @@ public abstract class BaseRequestValidator<T> where T : class
             customResponse.Add("Key", user.Key);
         }
 
-
         customResponse.Add("MasterPasswordPolicy", await GetMasterPasswordPolicyAsync(user));
         customResponse.Add("ForcePasswordReset", user.ForcePasswordReset);
         customResponse.Add("ResetMasterPassword", string.IsNullOrWhiteSpace(user.MasterPassword));
