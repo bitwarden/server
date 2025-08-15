@@ -1,4 +1,3 @@
-﻿#nullable enable
 using System.Data;
 using Bit.Core.KeyManagement.Entities;
 using Bit.Core.KeyManagement.Models.Data;
