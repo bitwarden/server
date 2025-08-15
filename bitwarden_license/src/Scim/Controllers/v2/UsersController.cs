@@ -11,6 +11,7 @@ using Bit.Scim.Users.Interfaces;
 using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Bit.Scim.Controllers.v2;
 
@@ -73,6 +74,7 @@ public class UsersController : Controller
     }
 
     [HttpPost("")]
+    [EnableRateLimiting(ScimConcurrencyRateLimiter.PolicyName)]
     public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimUserRequestModel model)
     {
         var orgUser = await _postUserCommand.PostUserAsync(organizationId, model);
