@@ -169,6 +169,40 @@ public class GetPolicyDetailsByOrganizationIdAsyncTests
         AssertPolicyDetailUserConnections(results, userOrgConnectedDirectly, userOrgConnectedByEmail, userOrgConnectedByUserId);
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task ShouldReturnUserIds(
+        IUserRepository userRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        IPolicyRepository policyRepository)
+    {
+        // Arrange
+        var user1 = await userRepository.CreateTestUserAsync();
+        var user2 = await userRepository.CreateTestUserAsync();
+        const PolicyType policyType = PolicyType.SingleOrg;
+
+        var organization = await CreateEnterpriseOrg(organizationRepository);
+        await policyRepository.CreateAsync(new Policy { OrganizationId = organization.Id, Enabled = true, Type = policyType });
+
+        var orgUser1 = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user1);
+        var orgUser2 = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user2);
+
+        // Act
+        var results = (await policyRepository.GetPolicyDetailsByOrganizationIdAsync(organization.Id, policyType)).ToList();
+
+        // Assert
+        Assert.Equal(2, results.Count);
+
+        Assert.Contains(results, result => result.OrganizationUserId == orgUser1.Id
+                                           && result.UserId == orgUser1.UserId
+                                           && result.OrganizationId == orgUser1.OrganizationId);
+
+        Assert.Contains(results, result => result.OrganizationUserId == orgUser2.Id
+                                           && result.UserId == orgUser2.UserId
+                                           && result.OrganizationId == orgUser2.OrganizationId);
+    }
+
+
     private async Task<OrganizationUser> ArrangeOtherOrgConnectedByUserIdAsync(IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository, IPolicyRepository policyRepository, User user,
         PolicyType policyType)
