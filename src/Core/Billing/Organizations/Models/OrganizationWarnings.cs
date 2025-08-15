@@ -5,6 +5,7 @@ public record OrganizationWarnings
     public FreeTrialWarning? FreeTrial { get; set; }
     public InactiveSubscriptionWarning? InactiveSubscription { get; set; }
     public ResellerRenewalWarning? ResellerRenewal { get; set; }
+    public TaxIdWarning? TaxId { get; set; }
 
     public record FreeTrialWarning
     {
@@ -38,5 +39,10 @@ public record OrganizationWarnings
         {
             public required DateTime SuspensionDate { get; set; }
         }
+    }
+
+    public record TaxIdWarning
+    {
+        public required string Type { get; set; }
     }
 }
