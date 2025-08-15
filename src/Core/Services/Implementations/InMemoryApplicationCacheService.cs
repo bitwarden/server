@@ -64,19 +64,18 @@ public class InMemoryApplicationCacheService(
 
     public virtual Task DeleteOrganizationAbilityAsync(Guid organizationId)
     {
-        _orgAbilities?.TryRemove(organizationId, out _);
+        _orgAbilities.TryRemove(organizationId, out _);
         return Task.CompletedTask;
     }
 
     public virtual Task DeleteProviderAbilityAsync(Guid providerId)
     {
-        _providerAbilities?.TryRemove(providerId, out _);
+        _providerAbilities.TryRemove(providerId, out _);
         return Task.CompletedTask;
     }
 
     private async Task InitOrganizationAbilitiesAsync() =>
-        await InitAbilitiesAsync(
-            () => _orgAbilities,
+        await InitAbilitiesAsync<OrganizationAbility>(
             dict => _orgAbilities = dict,
             () => _lastOrgAbilityRefresh,
             dt => _lastOrgAbilityRefresh = dt,
@@ -86,8 +85,7 @@ public class InMemoryApplicationCacheService(
             ability => ability.Id);
 
     private async Task InitProviderAbilitiesAsync() =>
-       await InitAbilitiesAsync(
-            () => _providerAbilities,
+       await InitAbilitiesAsync<ProviderAbility>(
             concurrentDictionary => _providerAbilities = concurrentDictionary,
             () => _lastProviderAbilityRefresh,
             dateTime => _lastProviderAbilityRefresh = dateTime,
@@ -98,7 +96,6 @@ public class InMemoryApplicationCacheService(
 
 
     private async Task InitAbilitiesAsync<TAbility>(
-        Func<ConcurrentDictionary<Guid, TAbility>> getCache,
         Action<ConcurrentDictionary<Guid, TAbility>> setCache,
         Func<DateTimeOffset> getLastRefresh,
         Action<DateTimeOffset> setLastRefresh,
@@ -133,7 +130,7 @@ public class InMemoryApplicationCacheService(
 
         bool SkipRefresh()
         {
-            return getCache() != null && (timeProvider.GetUtcNow() - getLastRefresh()) <= refreshInterval;
+            return timeProvider.GetUtcNow() - getLastRefresh() <= refreshInterval;
         }
     }
 
