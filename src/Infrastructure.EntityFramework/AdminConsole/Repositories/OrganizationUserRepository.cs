@@ -127,6 +127,22 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                     .Where(su => su.UserId == userId && su.OrganizationId == organizationId)
                     .ExecuteDeleteAsync();
 
+                await dbContext.UserProjectAccessPolicy
+                    .Where(ap => ap.OrganizationUserId == organizationUser.Id)
+                    .ExecuteDeleteAsync();
+
+                await dbContext.UserServiceAccountAccessPolicy
+                    .Where(ap => ap.OrganizationUserId == organizationUser.Id)
+                    .ExecuteDeleteAsync();
+
+                await dbContext.UserSecretAccessPolicy
+                    .Where(ap => ap.OrganizationUserId == organizationUser.Id)
+                    .ExecuteDeleteAsync();
+
+                await dbContext.OrganizationSponsorships
+                    .Where(os => os.SponsoringOrganizationUserId == organizationUser.Id)
+                    .ExecuteDeleteAsync();
+
                 await dbContext.Users
                     .Where(u => u.Id == orgUser.UserId)
                     .ExecuteUpdateAsync(setters => setters
@@ -221,6 +237,9 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 .ExecuteDeleteAsync();
             await dbContext.UserSecretAccessPolicy
                 .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
+                .ExecuteDeleteAsync();
+            await dbContext.OrganizationSponsorships
+                .Where(os => targetOrganizationUserIds.Contains(os.SponsoringOrganizationUserId))
                 .ExecuteDeleteAsync();
 
             await dbContext.OrganizationUsers
