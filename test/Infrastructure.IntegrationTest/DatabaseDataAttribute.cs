@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using Bit.Core.Enums;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
@@ -19,6 +20,7 @@ public class DatabaseDataAttribute : DataAttribute
     public bool SelfHosted { get; set; }
     public bool UseFakeTimeProvider { get; set; }
     public string? MigrationName { get; set; }
+    public string[] EnabledFeatureFlags { get; set; } = [];
 
     public override IEnumerable<object[]> GetData(MethodInfo testMethod)
     {
@@ -85,6 +87,8 @@ public class DatabaseDataAttribute : DataAttribute
                     o.TableName = "Cache";
                 });
 
+                dapperSqlServerCollection.AddSingleton<IFeatureService>(new InlineFeatureService(EnabledFeatureFlags));
+
                 if (!string.IsNullOrEmpty(MigrationName))
                 {
                     AddSqlMigrationTester(dapperSqlServerCollection, database.ConnectionString, MigrationName);
@@ -112,6 +116,8 @@ public class DatabaseDataAttribute : DataAttribute
                 efCollection.AddSingleton(database);
                 efCollection.AddSingleton<IDistributedCache, EntityFrameworkCache>();
 
+                efCollection.AddSingleton<IFeatureService>(new InlineFeatureService(EnabledFeatureFlags));
+
                 if (!string.IsNullOrEmpty(MigrationName))
                 {
                     AddEfMigrationTester(efCollection, database.Type, MigrationName);
@@ -120,6 +126,29 @@ public class DatabaseDataAttribute : DataAttribute
                 yield return efCollection.BuildServiceProvider();
             }
         }
+    }
+
+    // This is a simple offline feature service that honors the EnabledFeatureFlags.
+    internal sealed class InlineFeatureService : IFeatureService
+    {
+        private readonly HashSet<string> _enabled;
+        public InlineFeatureService(IEnumerable<string> enabled)
+        {
+            _enabled = new HashSet<string>(enabled ?? Array.Empty<string>());
+        }
+
+        public bool IsOnline() => true;
+        public bool IsEnabled(string key, bool defaultValue = false)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return defaultValue;
+            }
+            return _enabled.Contains(key);
+        }
+        public int GetIntVariation(string key, int defaultValue = 0) => defaultValue;
+        public string GetStringVariation(string key, string defaultValue = null) => defaultValue;
+        public Dictionary<string, object> GetAll() => new();
     }
 
     private void AddCommonServices(IServiceCollection services, Action<ILoggingBuilder> configureLogging)
