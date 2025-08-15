@@ -1,12 +1,11 @@
-﻿@using Bit.Admin.Enums;
-@using Bit.Core
+﻿@inject IAccessControlService AccessControlService
+
+@using Bit.Admin.Enums
+@using Bit.Admin.Services
 @using Bit.Core.AdminConsole.Enums.Provider
 @using Bit.Core.Billing.Enums
 @using Bit.Core.Billing.Extensions
-@using Microsoft.AspNetCore.Mvc.TagHelpers
-@inject Bit.Admin.Services.IAccessControlService AccessControlService
-@inject Bit.Core.Services.IFeatureService FeatureService
-
+@using Bit.Core.Enums
 @model ProviderEditModel
 @{
     ViewData["Title"] = "Provider: " + Model.Provider.DisplayName();
@@ -114,7 +113,7 @@
             <div class="col-sm">
                 <div class="mb-3">
                     <label asp-for="Gateway" class="form-label"></label>
-                    <select class="form-control" asp-for="Gateway" asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
+                    <select class="form-control" asp-for="Gateway" asp-items="Html.GetEnumSelectList<GatewayType>()">
                         <option value="">--</option>
                     </select>
                 </div>
@@ -144,7 +143,7 @@
                 </div>
             </div>
         </div>
-        @if (FeatureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) && Model.Provider.Type == ProviderType.Msp && Model.Provider.IsBillable())
+        @if (Model.Provider.Type == ProviderType.Msp && Model.Provider.IsBillable())
         {
             <div class="row">
                 <div class="col-sm">
