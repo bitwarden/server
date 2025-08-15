@@ -177,15 +177,15 @@ public static class BulkResourceCreationService
         ciphersTable.Columns.Add(userIdColumn);
         var organizationId = new DataColumn(nameof(c.OrganizationId), typeof(Guid));
         ciphersTable.Columns.Add(organizationId);
-        var typeColumn = new DataColumn(nameof(c.Type), c.Type.GetType());
+        var typeColumn = new DataColumn(nameof(c.Type), typeof(short));
         ciphersTable.Columns.Add(typeColumn);
-        var dataColumn = new DataColumn(nameof(c.Data), c.Data.GetType());
+        var dataColumn = new DataColumn(nameof(c.Data), typeof(string));
         ciphersTable.Columns.Add(dataColumn);
-        var favoritesColumn = new DataColumn(nameof(c.Favorites), c.Favorites.GetType());
+        var favoritesColumn = new DataColumn(nameof(c.Favorites), typeof(string));
         ciphersTable.Columns.Add(favoritesColumn);
-        var foldersColumn = new DataColumn(nameof(c.Folders), c.Folders.GetType());
+        var foldersColumn = new DataColumn(nameof(c.Folders), typeof(string));
         ciphersTable.Columns.Add(foldersColumn);
-        var attachmentsColumn = new DataColumn(nameof(c.Attachments), c.Attachments.GetType());
+        var attachmentsColumn = new DataColumn(nameof(c.Attachments), typeof(string));
         ciphersTable.Columns.Add(attachmentsColumn);
         var creationDateColumn = new DataColumn(nameof(c.CreationDate), c.CreationDate.GetType());
         ciphersTable.Columns.Add(creationDateColumn);
@@ -195,7 +195,7 @@ public static class BulkResourceCreationService
         ciphersTable.Columns.Add(deletedDateColumn);
         var repromptColumn = new DataColumn(nameof(c.Reprompt), typeof(short));
         ciphersTable.Columns.Add(repromptColumn);
-        var keyColummn = new DataColumn(nameof(c.Key), c.Key.GetType());
+        var keyColummn = new DataColumn(nameof(c.Key), typeof(string));
         ciphersTable.Columns.Add(keyColummn);
 
         foreach (DataColumn col in ciphersTable.Columns)
@@ -212,8 +212,8 @@ public static class BulkResourceCreationService
             var row = ciphersTable.NewRow();
 
             row[idColumn] = cipher.Id;
-            row[userIdColumn] = cipher.UserId;
-            row[organizationId] = cipher.OrganizationId;
+            row[userIdColumn] = cipher.UserId.HasValue ? (object)cipher.UserId.Value : DBNull.Value;
+            row[organizationId] = cipher.OrganizationId.HasValue ? (object)cipher.OrganizationId.Value : DBNull.Value;
             row[typeColumn] = (short)cipher.Type;
             row[dataColumn] = cipher.Data;
             row[favoritesColumn] = cipher.Favorites;
@@ -221,8 +221,8 @@ public static class BulkResourceCreationService
             row[attachmentsColumn] = cipher.Attachments;
             row[creationDateColumn] = cipher.CreationDate;
             row[revisionDateColumn] = cipher.RevisionDate;
-            row[deletedDateColumn] = cipher.DeletedDate;
-            row[repromptColumn] = cipher.Reprompt;
+            row[deletedDateColumn] = cipher.DeletedDate.HasValue ? (object)cipher.DeletedDate : DBNull.Value;
+            row[repromptColumn] = cipher.Reprompt.HasValue ? cipher.Reprompt.Value : DBNull.Value;
             row[keyColummn] = cipher.Key;
 
             ciphersTable.Rows.Add(row);
