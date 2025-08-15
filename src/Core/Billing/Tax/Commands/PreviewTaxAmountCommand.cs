@@ -10,6 +10,8 @@ using Stripe;
 
 namespace Bit.Core.Billing.Tax.Commands;
 
+using static StripeConstants;
+
 public interface IPreviewTaxAmountCommand
 {
     Task<BillingCommandResult<decimal>> Run(OrganizationTrialParameters parameters);
@@ -65,7 +67,10 @@ public class PreviewTaxAmountCommand(
                     Quantity = 1
                 });
 
-                options.Coupon = StripeConstants.CouponIDs.SecretsManagerStandalone;
+                options.Discounts =
+                [
+                    new InvoiceDiscountOptions { Coupon = CouponIDs.SecretsManagerStandalone }
+                ];
             }
 
             if (!string.IsNullOrEmpty(taxInformation.TaxId))
@@ -85,11 +90,11 @@ public class PreviewTaxAmountCommand(
                     new InvoiceCustomerDetailsTaxIdOptions { Type = taxIdType, Value = taxInformation.TaxId }
                 ];
 
-                if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
+                if (taxIdType == TaxIdType.SpanishNIF)
                 {
                     options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
                     {
-                        Type = StripeConstants.TaxIdType.EUVAT,
+                        Type = TaxIdType.EUVAT,
                         Value = $"ES{parameters.TaxInformation.TaxId}"
                     });
                 }
@@ -109,7 +114,7 @@ public class PreviewTaxAmountCommand(
             }
 
             var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
-            return Convert.ToDecimal(invoice.Tax) / 100;
+            return Convert.ToDecimal(invoice.TotalTaxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount)) / 100;
         });
 }
 

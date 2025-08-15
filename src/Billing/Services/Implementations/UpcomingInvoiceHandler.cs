@@ -35,16 +35,15 @@ public class UpcomingInvoiceHandler(
     {
         var invoice = await stripeEventService.GetInvoice(parsedEvent);
 
-        if (string.IsNullOrEmpty(invoice.SubscriptionId))
+        var customer =
+            await stripeFacade.GetCustomer(invoice.CustomerId, new CustomerGetOptions { Expand = ["subscriptions", "tax", "tax_ids"] });
+
+        var subscription = customer.Subscriptions.FirstOrDefault();
+
+        if (subscription == null)
         {
-            logger.LogInformation("Received 'invoice.upcoming' Event with ID '{eventId}' that did not include a Subscription ID", parsedEvent.Id);
             return;
         }
-
-        var subscription = await stripeFacade.GetSubscription(invoice.SubscriptionId, new SubscriptionGetOptions
-        {
-            Expand = ["customer.tax", "customer.tax_ids"]
-        });
 
         var (organizationId, userId, providerId) = stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
 
@@ -59,7 +58,12 @@ public class UpcomingInvoiceHandler(
                 return;
             }
 
-            await AlignOrganizationTaxConcernsAsync(organization, subscription, parsedEvent.Id, setNonUSBusinessUseToReverseCharge);
+            await AlignOrganizationTaxConcernsAsync(
+                organization,
+                customer,
+                subscription,
+                parsedEvent.Id,
+                setNonUSBusinessUseToReverseCharge);
 
             var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
@@ -138,7 +142,12 @@ public class UpcomingInvoiceHandler(
                 return;
             }
 
-            await AlignProviderTaxConcernsAsync(provider, subscription, parsedEvent.Id, setNonUSBusinessUseToReverseCharge);
+            await AlignProviderTaxConcernsAsync(
+                provider,
+                customer,
+                subscription,
+                parsedEvent.Id,
+                setNonUSBusinessUseToReverseCharge);
 
             await SendUpcomingInvoiceEmailsAsync(new List<string> { provider.BillingEmail }, invoice);
         }
@@ -163,23 +172,24 @@ public class UpcomingInvoiceHandler(
 
     private async Task AlignOrganizationTaxConcernsAsync(
         Organization organization,
+        Customer customer,
         Subscription subscription,
         string eventId,
         bool setNonUSBusinessUseToReverseCharge)
     {
         var nonUSBusinessUse =
             organization.PlanType.GetProductTier() != ProductTierType.Families &&
-            subscription.Customer.Address.Country != "US";
+            customer.Address.Country != "US";
 
         bool setAutomaticTaxToEnabled;
 
         if (setNonUSBusinessUseToReverseCharge)
         {
-            if (nonUSBusinessUse && subscription.Customer.TaxExempt != StripeConstants.TaxExempt.Reverse)
+            if (nonUSBusinessUse && customer.TaxExempt != StripeConstants.TaxExempt.Reverse)
             {
                 try
                 {
-                    await stripeFacade.UpdateCustomer(subscription.CustomerId,
+                    await stripeFacade.UpdateCustomer(customer.Id,
                         new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
                 }
                 catch (Exception exception)
@@ -197,9 +207,9 @@ public class UpcomingInvoiceHandler(
         else
         {
             setAutomaticTaxToEnabled =
-                subscription.Customer.HasRecognizedTaxLocation() &&
-                (subscription.Customer.Address.Country == "US" ||
-                 (nonUSBusinessUse && subscription.Customer.TaxIds.Any()));
+                customer.HasRecognizedTaxLocation() &&
+                (customer.Address.Country == "US" ||
+                 (nonUSBusinessUse && customer.TaxIds.Any()));
         }
 
         if (!subscription.AutomaticTax.Enabled && setAutomaticTaxToEnabled)
@@ -225,6 +235,7 @@ public class UpcomingInvoiceHandler(
 
     private async Task AlignProviderTaxConcernsAsync(
         Provider provider,
+        Customer customer,
         Subscription subscription,
         string eventId,
         bool setNonUSBusinessUseToReverseCharge)
@@ -233,11 +244,11 @@ public class UpcomingInvoiceHandler(
 
         if (setNonUSBusinessUseToReverseCharge)
         {
-            if (subscription.Customer.Address.Country != "US" && subscription.Customer.TaxExempt != StripeConstants.TaxExempt.Reverse)
+            if (customer.Address.Country != "US" && customer.TaxExempt != StripeConstants.TaxExempt.Reverse)
             {
                 try
                 {
-                    await stripeFacade.UpdateCustomer(subscription.CustomerId,
+                    await stripeFacade.UpdateCustomer(customer.Id,
                         new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
                 }
                 catch (Exception exception)
@@ -255,9 +266,9 @@ public class UpcomingInvoiceHandler(
         else
         {
             setAutomaticTaxToEnabled =
-                subscription.Customer.HasRecognizedTaxLocation() &&
-                (subscription.Customer.Address.Country == "US" ||
-                 subscription.Customer.TaxIds.Any());
+                customer.HasRecognizedTaxLocation() &&
+                (customer.Address.Country == "US" ||
+                 customer.TaxIds.Any());
         }
 
         if (!subscription.AutomaticTax.Enabled && setAutomaticTaxToEnabled)
