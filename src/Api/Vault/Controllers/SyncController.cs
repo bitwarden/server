@@ -11,6 +11,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -119,7 +120,13 @@ public class SyncController : Controller
         var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
 
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-        var userAccountKeys = await _userAccountKeysQuery.Run(user);
+
+        UserAccountKeysData userAccountKeys = null;
+        // JIT TDE users and some broken/old users may not have a private key.
+        if (user.PrivateKey != null)
+        {
+            userAccountKeys = await _userAccountKeysQuery.Run(user);
+        }
 
         var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,

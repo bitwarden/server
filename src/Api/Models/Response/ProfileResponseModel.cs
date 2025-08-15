@@ -38,7 +38,7 @@ public class ProfileResponseModel : ResponseModel
         TwoFactorEnabled = twoFactorEnabled;
         Key = user.Key;
         PrivateKey = user.PrivateKey;
-        AccountKeys = new PrivateKeysResponseModel(userAccountKeysData);
+        AccountKeys = userAccountKeysData != null ? new PrivateKeysResponseModel(userAccountKeysData) : null;
         SecurityStamp = user.SecurityStamp;
         ForcePasswordReset = user.ForcePasswordReset;
         UsesKeyConnector = user.UsesKeyConnector;
