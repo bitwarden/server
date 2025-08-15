@@ -1281,6 +1281,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("DomainName")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("GrantedServiceAccountId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("uuid");
 
@@ -1298,6 +1301,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("PolicyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProjectId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("ProviderId")

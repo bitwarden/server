@@ -93,4 +93,18 @@ public enum EventType : int
     Secret_Created = 2101,
     Secret_Edited = 2102,
     Secret_Deleted = 2103,
+    Secret_Permanently_Deleted = 2104,
+    Secret_Restored = 2105,
+
+    Project_Retrieved = 2200,
+    Project_Created = 2201,
+    Project_Edited = 2202,
+    Project_Deleted = 2203,
+
+    ServiceAccount_UserAdded = 2300,
+    ServiceAccount_UserRemoved = 2301,
+    ServiceAccount_GroupAdded = 2302,
+    ServiceAccount_GroupRemoved = 2303,
+    ServiceAccount_Created = 2304,
+    ServiceAccount_Deleted = 2305,
 }

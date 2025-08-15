@@ -33,7 +33,9 @@ public class EventResponseModel : ResponseModel
         SystemUser = ev.SystemUser;
         DomainName = ev.DomainName;
         SecretId = ev.SecretId;
+        ProjectId = ev.ProjectId;
         ServiceAccountId = ev.ServiceAccountId;
+        GrantedServiceAccountId = ev.GrantedServiceAccountId;
     }
 
     public EventType Type { get; set; }
@@ -55,5 +57,7 @@ public class EventResponseModel : ResponseModel
     public EventSystemUser? SystemUser { get; set; }
     public string DomainName { get; set; }
     public Guid? SecretId { get; set; }
+    public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
+    public Guid? GrantedServiceAccountId { get; set; }
 }

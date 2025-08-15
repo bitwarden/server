@@ -30,7 +30,7 @@ public class EventReadPageByOrganizationIdServiceAccountIdQuery : IQuery<Event>
                       (_beforeDate != null || e.Date <= _endDate) &&
                       (_beforeDate == null || e.Date < _beforeDate.Value) &&
                       e.OrganizationId == _organizationId &&
-                      e.ServiceAccountId == _serviceAccountId
+                      (e.ServiceAccountId == _serviceAccountId || e.GrantedServiceAccountId == _serviceAccountId)
                 orderby e.Date descending
                 select e;
         return q.Skip(0).Take(_pageOptions.PageSize);
