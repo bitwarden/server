@@ -14,7 +14,6 @@
     var canPromoteProviderServiceUser = AccessControlService.UserHasPermission(Permission.Tools_PromoteProviderServiceUser);
     var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
     var canProcessStripeEvents = AccessControlService.UserHasPermission(Permission.Tools_ProcessStripeEvents);
-    var canMigrateProviders = AccessControlService.UserHasPermission(Permission.Tools_MigrateProviders);
 
     var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin || canPromoteProviderServiceUser ||
                         canGenerateLicense;
@@ -106,12 +105,6 @@
                                         {
                                             <a class="dropdown-item" asp-controller="ProcessStripeEvents" asp-action="Index">
                                                 Process Stripe Events
-                                            </a>
-                                        }
-                                        @if (canMigrateProviders)
-                                        {
-                                            <a class="dropdown-item" asp-controller="MigrateProviders" asp-action="index">
-                                                Migrate Providers
                                             </a>
                                         }
                                     </ul>

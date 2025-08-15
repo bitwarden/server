@@ -179,8 +179,7 @@ public static class RolePermissionMapping
                 Permission.Tools_GenerateLicenseFile,
                 Permission.Tools_ManageTaxRates,
                 Permission.Tools_CreateEditTransaction,
-                Permission.Tools_ProcessStripeEvents,
-                Permission.Tools_MigrateProviders
+                Permission.Tools_ProcessStripeEvents
             }
         },
         { "sales", new List<Permission>

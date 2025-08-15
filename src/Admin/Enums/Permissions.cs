@@ -53,6 +53,5 @@ public enum Permission
     Tools_GenerateLicenseFile,
     Tools_ManageTaxRates,
     Tools_CreateEditTransaction,
-    Tools_ProcessStripeEvents,
-    Tools_MigrateProviders
+    Tools_ProcessStripeEvents
 }
