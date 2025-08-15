@@ -2,7 +2,6 @@
 
 namespace Bit.Core.KeyManagement.Models.Data;
 
-#nullable enable
 
 public class PublicKeyEncryptionKeyPairData
 {
