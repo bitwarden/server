@@ -12,6 +12,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -62,6 +63,7 @@ public class OrganizationUsersController : Controller
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
+    private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
@@ -92,7 +94,8 @@ public class OrganizationUsersController : Controller
         IConfirmOrganizationUserCommand confirmOrganizationUserCommand,
         IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
         IInitPendingOrganizationCommand initPendingOrganizationCommand,
-        IRevokeOrganizationUserCommand revokeOrganizationUserCommand)
+        IRevokeOrganizationUserCommand revokeOrganizationUserCommand,
+        IResendOrganizationInviteCommand resendOrganizationInviteCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -116,6 +119,7 @@ public class OrganizationUsersController : Controller
         _policyRequirementQuery = policyRequirementQuery;
         _featureService = featureService;
         _pricingClient = pricingClient;
+        _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
@@ -266,7 +270,7 @@ public class OrganizationUsersController : Controller
     public async Task Reinvite(Guid orgId, Guid id)
     {
         var userId = _userService.GetProperUserId(User);
-        await _organizationService.ResendInviteAsync(orgId, userId.Value, id);
+        await _resendOrganizationInviteCommand.ResendInviteAsync(orgId, userId.Value, id);
     }
 
     [HttpPost("{organizationUserId}/accept-init")]

@@ -1,4 +1,3 @@
-﻿#nullable enable
 
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;

@@ -115,7 +115,6 @@ public static class FeatureFlagKeys
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string ImportAsyncRefactor = "pm-22583-refactor-import-async";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
-    public const string MembersGetEndpointOptimization = "pm-23113-optimize-get-members-endpoint";
     public const string DirectoryConnectorPreventUserRemoval = "pm-24592-directory-connector-prevent-user-removal";
 
     /* Auth Team */
@@ -204,6 +203,7 @@ public static class FeatureFlagKeys
     /* Tools Team */
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
+    public const string UseChromiumImporter = "pm-23982-chromium-importer";
 
     /* Vault Team */
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";

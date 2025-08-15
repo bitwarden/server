@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UserKeyResponseModel = Bit.Api.Models.Response.UserKeyResponseModel;
 
-#nullable enable
 
 namespace Bit.Api.KeyManagement.Controllers;
 

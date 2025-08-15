@@ -3,7 +3,6 @@ using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 
-#nullable enable
 
 namespace Bit.Core.KeyManagement.Entities;
 
@@ -13,8 +12,8 @@ public class UserSignatureKeyPair : ITableObject<Guid>, IRevisable
     public Guid UserId { get; set; }
     public SignatureAlgorithm SignatureAlgorithm { get; set; }
 
-    required public string VerifyingKey { get; set; }
-    required public string SigningKey { get; set; }
+    public required string VerifyingKey { get; set; }
+    public required string SigningKey { get; set; }
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
