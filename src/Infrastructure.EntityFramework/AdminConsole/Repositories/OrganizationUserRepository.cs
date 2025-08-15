@@ -81,26 +81,16 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var dbContext = GetDatabaseContext(scope);
             var orgUser = await dbContext.OrganizationUsers
                 .Where(ou => ou.Id == organizationUser.Id)
-                .Select(ou => new
-                {
-                    ou.Id,
-                    ou.UserId,
-                    OrgEmail = ou.Email,
-                    UserEmail = ou.User.Email
-                })
-              .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync();
 
             if (orgUser == null)
             {
                 throw new NotFoundException("User not found.");
             }
 
-            var email = !string.IsNullOrEmpty(orgUser.OrgEmail)
-                ? orgUser.OrgEmail
-                : orgUser.UserEmail;
-            var organizationId = organizationUser?.OrganizationId;
-            var userId = orgUser?.UserId;
-            var utcNow = DateTime.UtcNow;
+            var email = string.IsNullOrEmpty(orgUser.Email)
+                ? orgUser.User.Email
+                : orgUser.Email;
 
             using var transaction = await dbContext.Database.BeginTransactionAsync();
 
@@ -111,7 +101,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                              && c.CollectionUsers.Any(cu => cu.OrganizationUserId == organizationUser.Id))
                     .ExecuteUpdateAsync(setters => setters
                         .SetProperty(c => c.Type, CollectionType.SharedCollection)
-                        .SetProperty(c => c.RevisionDate, utcNow)
+                        .SetProperty(c => c.RevisionDate, DateTime.UtcNow)
                         .SetProperty(c => c.DefaultUserCollectionEmail,
                             c => c.DefaultUserCollectionEmail == null ? email : c.DefaultUserCollectionEmail));
 
@@ -124,7 +114,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                     .ExecuteDeleteAsync();
 
                 await dbContext.SsoUsers
-                    .Where(su => su.UserId == userId && su.OrganizationId == organizationId)
+                    .Where(su => su.UserId == orgUser.UserId && su.OrganizationId == orgUser.OrganizationId)
                     .ExecuteDeleteAsync();
 
                 await dbContext.UserProjectAccessPolicy
@@ -146,7 +136,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 await dbContext.Users
                     .Where(u => u.Id == orgUser.UserId)
                     .ExecuteUpdateAsync(setters => setters
-                        .SetProperty(u => u.AccountRevisionDate, utcNow));
+                        .SetProperty(u => u.AccountRevisionDate, DateTime.UtcNow));
 
                 await dbContext.OrganizationUsers
                     .Where(ou => ou.Id == organizationUser.Id)
@@ -174,7 +164,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         {
             await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(targetOrganizationUserIds);
 
-            // Update collection types for default user collections
             var organizationUsersToDelete = await dbContext.OrganizationUsers
                 .Where(ou => targetOrganizationUserIds.Contains(ou.Id))
                 .Include(ou => ou.User)
@@ -207,16 +196,16 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                     {
                         if (string.IsNullOrEmpty(collection.DefaultUserCollectionEmail))
                         {
-                            var emailToUse = !string.IsNullOrEmpty(orgUser.Email)
-                                ? orgUser.Email
-                                : orgUser.User.Email;
+                            var emailToUse = string.IsNullOrEmpty(orgUser.Email)
+                                ? orgUser.User.Email
+                                : orgUser.Email;
 
                             if (!string.IsNullOrEmpty(emailToUse))
                             {
                                 collection.DefaultUserCollectionEmail = emailToUse;
                             }
                         }
-                        collection.Type = Core.Enums.CollectionType.SharedCollection;
+                        collection.Type = CollectionType.SharedCollection;
                     }
                 }
             }
@@ -232,12 +221,15 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             await dbContext.UserProjectAccessPolicy
                 .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
                 .ExecuteDeleteAsync();
+
             await dbContext.UserServiceAccountAccessPolicy
                 .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
                 .ExecuteDeleteAsync();
+
             await dbContext.UserSecretAccessPolicy
                 .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
                 .ExecuteDeleteAsync();
+
             await dbContext.OrganizationSponsorships
                 .Where(os => targetOrganizationUserIds.Contains(os.SponsoringOrganizationUserId))
                 .ExecuteDeleteAsync();
