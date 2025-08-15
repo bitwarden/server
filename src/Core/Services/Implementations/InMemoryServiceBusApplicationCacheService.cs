@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Services.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
@@ -18,8 +19,9 @@ public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCach
         IOrganizationRepository organizationRepository,
         IProviderRepository providerRepository,
         GlobalSettings globalSettings,
-        IVNextInMemoryApplicationCacheService vNextInMemoryApplicationCacheService)
-        : base(organizationRepository, providerRepository, vNextInMemoryApplicationCacheService)
+        IVNextInMemoryApplicationCacheService vNextInMemoryApplicationCacheService,
+        IFeatureService featureService)
+        : base(organizationRepository, providerRepository, vNextInMemoryApplicationCacheService, featureService)
     {
         _subName = CoreHelpers.GetApplicationCacheServiceBusSubscriptionName(globalSettings);
         _serviceBusClient = new ServiceBusClient(globalSettings.ServiceBus.ConnectionString);

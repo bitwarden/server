@@ -217,6 +217,9 @@ public static class FeatureFlagKeys
     public const string PM19315EndUserActivationMvp = "pm-19315-end-user-activation-mvp";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
 
+    // Jimmy
+    public const string PM23845_VNextApplicationCache = "pm-23845-vnext-application-cache";
+
     public static List<string> GetAllKeys()
     {
         return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)

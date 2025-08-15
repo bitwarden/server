@@ -14,20 +14,23 @@ public class InMemoryServiceBusApplicationCacheServiceTests
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderRepository _providerRepository;
     private readonly GlobalSettings _globalSettings;
-    private IVNextInMemoryApplicationCacheService _ivNextInMemoryApplicationCacheService;
+    private readonly IVNextInMemoryApplicationCacheService _ivNextInMemoryApplicationCacheService;
+    private readonly IFeatureService _featureService;
 
     public InMemoryServiceBusApplicationCacheServiceTests()
     {
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _providerRepository = Substitute.For<IProviderRepository>();
         _ivNextInMemoryApplicationCacheService = Substitute.For<IVNextInMemoryApplicationCacheService>();
+        _featureService = Substitute.For<IFeatureService>();
         _globalSettings = new GlobalSettings();
 
         _sut = new InMemoryServiceBusApplicationCacheService(
             _organizationRepository,
             _providerRepository,
             _globalSettings,
-            _ivNextInMemoryApplicationCacheService);
+            _ivNextInMemoryApplicationCacheService,
+            _featureService);
     }
 
     // Remove this test when we add actual tests. It only proves that

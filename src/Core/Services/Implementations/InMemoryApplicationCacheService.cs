@@ -8,14 +8,14 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Services.Implementations;
 
 public class InMemoryApplicationCacheService : IApplicationCacheService
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderRepository _providerRepository;
     private readonly IVNextInMemoryApplicationCacheService _vNextInMemoryApplicationCacheService;
-    private readonly bool _useVNext;
+    private readonly IFeatureService _featureService;
     private DateTime _lastOrgAbilityRefresh = DateTime.MinValue;
     private IDictionary<Guid, OrganizationAbility> _orgAbilities;
     private TimeSpan _orgAbilitiesRefreshInterval = TimeSpan.FromMinutes(10);
@@ -25,17 +25,19 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
     public InMemoryApplicationCacheService(IOrganizationRepository organizationRepository,
         IProviderRepository providerRepository,
         IVNextInMemoryApplicationCacheService vNextInMemoryApplicationCacheService,
-        bool useVNext = false)
+        IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _providerRepository = providerRepository;
         _vNextInMemoryApplicationCacheService = vNextInMemoryApplicationCacheService;
-        _useVNext = useVNext;
+        _featureService = featureService;
     }
+
+    private bool UseVNext => _featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache);
 
     public virtual async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
     {
-        if (_useVNext)
+        if (UseVNext)
         {
             return await _vNextInMemoryApplicationCacheService.GetOrganizationAbilitiesAsync();
         }
@@ -47,7 +49,7 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
 #nullable enable
     public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid organizationId)
     {
-        if (_useVNext)
+        if (UseVNext)
         {
             return await _vNextInMemoryApplicationCacheService.GetOrganizationAbilityAsync(organizationId);
         }
@@ -60,7 +62,7 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
 
     public virtual async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
     {
-        if (_useVNext)
+        if (UseVNext)
         {
             return await _vNextInMemoryApplicationCacheService.GetProviderAbilitiesAsync();
         }
@@ -71,7 +73,7 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
 
     public virtual async Task UpsertProviderAbilityAsync(Provider provider)
     {
-        if (_useVNext)
+        if (UseVNext)
         {
             await _vNextInMemoryApplicationCacheService.UpsertProviderAbilityAsync(provider);
             return;
@@ -85,7 +87,7 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
 
     public virtual async Task UpsertOrganizationAbilityAsync(Organization organization)
     {
-        if (_useVNext)
+        if (UseVNext)
         {
             await _vNextInMemoryApplicationCacheService.UpsertOrganizationAbilityAsync(organization);
             return;
@@ -99,7 +101,7 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
 
     public virtual Task DeleteOrganizationAbilityAsync(Guid organizationId)
     {
-        if (_useVNext)
+        if (UseVNext)
         {
             return _vNextInMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
         }
@@ -111,7 +113,7 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
 
     public virtual Task DeleteProviderAbilityAsync(Guid providerId)
     {
-        if (_useVNext)
+        if (UseVNext)
         {
             return _vNextInMemoryApplicationCacheService.DeleteProviderAbilityAsync(providerId);
         }
