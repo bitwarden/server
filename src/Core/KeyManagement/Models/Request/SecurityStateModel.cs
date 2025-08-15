@@ -1,4 +1,3 @@
-﻿#nullable enable
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.KeyManagement.Models.Data;
 
