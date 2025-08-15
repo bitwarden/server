@@ -7,7 +7,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request;
 
-public class CollectionRequestModel
+public class CreateCollectionRequestModel
 {
     [Required]
     [EncryptedString]
@@ -40,7 +40,7 @@ public class CollectionBulkDeleteRequestModel
     public IEnumerable<Guid> Ids { get; set; }
 }
 
-public class CollectionWithIdRequestModel : CollectionRequestModel
+public class CollectionWithIdRequestModel : CreateCollectionRequestModel
 {
     public Guid? Id { get; set; }
 
@@ -49,4 +49,22 @@ public class CollectionWithIdRequestModel : CollectionRequestModel
         existingCollection.Id = Id ?? Guid.Empty;
         return base.ToCollection(existingCollection);
     }
+}
+
+public class UpdateCollectionRequestModel : CreateCollectionRequestModel
+{
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public new string Name { get; set; }
+
+    public override Collection ToCollection(Collection existingCollection)
+    {
+        if (string.IsNullOrEmpty(existingCollection.DefaultUserCollectionEmail) && !string.IsNullOrWhiteSpace(Name))
+        {
+            existingCollection.Name = Name;
+        }
+        existingCollection.ExternalId = ExternalId;
+        return existingCollection;
+    }
+
 }

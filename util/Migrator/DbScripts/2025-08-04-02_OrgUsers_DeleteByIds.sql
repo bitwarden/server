@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_DeleteByIds]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_DeleteByIds]
     @Ids [dbo].[GuidIdArray] READONLY
 AS
 BEGIN

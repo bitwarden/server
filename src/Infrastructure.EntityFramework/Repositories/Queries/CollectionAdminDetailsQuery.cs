@@ -81,6 +81,7 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
             ExternalId = x.c.ExternalId,
             CreationDate = x.c.CreationDate,
             RevisionDate = x.c.RevisionDate,
+            DefaultUserCollectionEmail = x.c.DefaultUserCollectionEmail,
             ReadOnly = (bool?)x.cu.ReadOnly ?? (bool?)x.cg.ReadOnly ?? false,
             HidePasswords = (bool?)x.cu.HidePasswords ?? (bool?)x.cg.HidePasswords ?? false,
             Manage = (bool?)x.cu.Manage ?? (bool?)x.cg.Manage ?? false,
