@@ -585,9 +585,8 @@ public class OrganizationsController : Controller
 
     private bool ShouldUpdateBilling(OrganizationUpdateRequestModel model, Organization organization)
     {
-        var businessNameChanged = model.BusinessName != organization.DisplayBusinessName();
         var organizationNameChanged = model.Name != organization.Name;
         var billingEmailChanged = model.BillingEmail != organization.BillingEmail;
-        return !_globalSettings.SelfHosted && (businessNameChanged || organizationNameChanged || billingEmailChanged);
+        return !_globalSettings.SelfHosted && (organizationNameChanged || billingEmailChanged);
     }
 }
