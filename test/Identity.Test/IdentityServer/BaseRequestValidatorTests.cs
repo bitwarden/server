@@ -521,6 +521,13 @@ public class BaseRequestValidatorTests
         _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
             .Returns(Task.FromResult(true));
         context.ValidatedTokenRequest.ClientId = "web";
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                "test-private-key",
+                "test-public-key"
+            )
+        });
 
         // Act
         await _sut.ValidateAsync(context);
