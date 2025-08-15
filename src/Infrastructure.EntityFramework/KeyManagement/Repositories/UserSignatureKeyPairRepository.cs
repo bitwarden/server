@@ -1,4 +1,3 @@
-﻿#nullable enable
 
 using AutoMapper;
 using Bit.Core.KeyManagement.Models.Data;
