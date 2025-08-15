@@ -12,8 +12,8 @@ public class UserSignatureKeyPair : ITableObject<Guid>, IRevisable
     public Guid UserId { get; set; }
     public SignatureAlgorithm SignatureAlgorithm { get; set; }
 
-    required public string VerifyingKey { get; set; }
-    required public string SigningKey { get; set; }
+    public required string VerifyingKey { get; set; }
+    public required string SigningKey { get; set; }
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
