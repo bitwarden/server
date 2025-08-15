@@ -36,6 +36,10 @@ public static class BillingExtensions
             Status: ProviderStatusType.Billable
         };
 
+    // Reseller types do not have Stripe entities
+    public static bool IsStripeSupported(this ProviderType providerType) =>
+        providerType is ProviderType.Msp or ProviderType.BusinessUnit;
+
     public static bool SupportsConsolidatedBilling(this ProviderType providerType)
         => providerType is ProviderType.Msp or ProviderType.BusinessUnit;
 
