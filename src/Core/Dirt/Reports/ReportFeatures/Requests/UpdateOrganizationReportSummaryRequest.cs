@@ -3,8 +3,9 @@
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 
-public class AddOrganizationReportRequest
+public class UpdateOrganizationReportSummaryRequest
 {
     public Guid OrganizationId { get; set; }
-    public string ReportData { get; set; }
+    public Guid ReportId { get; set; }
+    public string SummaryData { get; set; }
 }
