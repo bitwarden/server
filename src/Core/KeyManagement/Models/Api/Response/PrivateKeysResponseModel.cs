@@ -16,13 +16,13 @@ public class PrivateKeysResponseModel : ResponseModel
 {
     // Not all accounts have signature keys, but all accounts have public encryption keys.
     public SignatureKeyPairResponseModel? SignatureKeyPair { get; set; }
-    public required PublicKeyEncryptionKeyPairModel PublicKeyEncryptionKeyPair { get; set; }
+    public required PublicKeyEncryptionKeyPairResponseModel PublicKeyEncryptionKeyPair { get; set; }
     public SecurityStateModel? SecurityState { get; set; }
 
     [System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute]
     public PrivateKeysResponseModel(UserAccountKeysData accountKeys) : base("privateKeys")
     {
-        PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairModel(accountKeys.PublicKeyEncryptionKeyPairData);
+        PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairResponseModel(accountKeys.PublicKeyEncryptionKeyPairData);
         ArgumentNullException.ThrowIfNull(accountKeys);
 
         if (accountKeys.SignatureKeyPairData != null && accountKeys.SecurityStateData != null)
@@ -33,7 +33,7 @@ public class PrivateKeysResponseModel : ResponseModel
     }
 
     [JsonConstructor]
-    public PrivateKeysResponseModel(SignatureKeyPairResponseModel? signatureKeyPair, PublicKeyEncryptionKeyPairModel publicKeyEncryptionKeyPair, SecurityStateModel? securityState)
+    public PrivateKeysResponseModel(SignatureKeyPairResponseModel? signatureKeyPair, PublicKeyEncryptionKeyPairResponseModel publicKeyEncryptionKeyPair, SecurityStateModel? securityState)
         : base("privateKeys")
     {
         SignatureKeyPair = signatureKeyPair;
