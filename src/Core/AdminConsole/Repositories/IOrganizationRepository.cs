@@ -1,7 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.StaticStore;
 
 #nullable enable
 
@@ -62,4 +64,21 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     /// <param name="requestDate">When the action was performed</param>
     /// <returns></returns>
     Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate);
+
+    /// <summary>
+    /// Adds a collection of users to the password manager for a specific organization.  This re-validates that the
+    /// organization can add the desired number of users to Password Manager.
+    ///
+    /// This will throw exceptions if the org cannot add seats.
+    /// </summary>
+    /// <param name="organizationId">Organization to add users to</param>
+    /// <param name="requestDate">DateTime the request was initiated</param>
+    /// <param name="plan">The subscription plan for the organization.</param>
+    /// <param name="organizationUserCollection">The collection of users to be added to the password manager.</param>
+    /// <returns></returns>
+    Task AddUsersToPasswordManagerAsync(
+        Guid organizationId,
+        DateTime requestDate,
+        Plan plan,
+        IEnumerable<CreateOrganizationUser> organizationUserCollection);
 }
