@@ -278,6 +278,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        await _collectionRepository.CreateDefaultCollectionsAsync(organizationId, eligibleOrganizationUserIds, defaultUserCollectionName);
+        await _collectionRepository.UpsertDefaultCollectionsAsync(organizationId, eligibleOrganizationUserIds, defaultUserCollectionName);
     }
 }

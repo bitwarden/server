@@ -64,6 +64,7 @@ public class ImportCiphersAsyncCommandTests
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(importingUserId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Disabled,
+                [],
                 []));
 
         sutProvider.GetDependency<IFolderRepository>()
@@ -120,7 +121,8 @@ public class ImportCiphersAsyncCommandTests
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
-                [Guid.NewGuid()]));
+                [Guid.NewGuid()]
+                , []));
 
         var folderRelationships = new List<KeyValuePair<int, int>>();
 
