@@ -122,24 +122,6 @@ public class OrganizationService : IOrganizationService
         _stripeAdapter = stripeAdapter;
     }
 
-    public async Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null)
-    {
-        var organization = await GetOrgById(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        var eop = endOfPeriod.GetValueOrDefault(true);
-        if (!endOfPeriod.HasValue && organization.ExpirationDate.HasValue &&
-            organization.ExpirationDate.Value < DateTime.UtcNow)
-        {
-            eop = false;
-        }
-
-        await _paymentService.CancelSubscriptionAsync(organization, eop);
-    }
-
     public async Task ReinstateSubscriptionAsync(Guid organizationId)
     {
         var organization = await GetOrgById(organizationId);
