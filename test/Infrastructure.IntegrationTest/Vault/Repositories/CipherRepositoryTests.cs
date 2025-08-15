@@ -977,31 +977,43 @@ public class CipherRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData(EnabledFeatureFlags = new[] { FeatureFlagKeys.CipherRepositoryBulkResourceCreation })]
-    public async Task CreateAsync_UserAndFolders_BulkFlag_Works(IUserRepository userRepository, ICipherRepository cipherRepository)
+    public async Task CreateAsync_WithFolders_WhenBulkResourceCreationFlagEnabled_Works(
+        IUserRepository userRepository, ICipherRepository cipherRepository, IFolderRepository folderRepository)
     {
+        // Arrange
         var user = await userRepository.CreateAsync(new User
         {
-            Name = "Bulk User",
-            Email = $"bulk+{Guid.NewGuid()}@email.com",
+            Name = "Test User",
+            Email = $"{Guid.NewGuid()}@example.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
 
-        var folder1 = new Folder { Id = Guid.NewGuid(), UserId = user.Id, Name = "f1" };
-        var folder2 = new Folder { Id = Guid.NewGuid(), UserId = user.Id, Name = "f2" };
+        var folder1 = new Folder { Id = Guid.NewGuid(), UserId = user.Id, Name = "Test Folder 1" };
+        var folder2 = new Folder { Id = Guid.NewGuid(), UserId = user.Id, Name = "Test Folder 2" };
         var cipher1 = new Cipher { Id = Guid.NewGuid(), Type = CipherType.Login, UserId = user.Id, Data = "" };
         var cipher2 = new Cipher { Id = Guid.NewGuid(), Type = CipherType.SecureNote, UserId = user.Id, Data = "" };
 
-        await cipherRepository.CreateAsync(user.Id, new[] { cipher1, cipher2 }, new[] { folder1, folder2 });
+        // Act
+        await cipherRepository.CreateAsync(
+            userId: user.Id,
+            ciphers: [cipher1, cipher2],
+            folders: [folder1, folder2]);
 
+        // Assert
         var readCipher1 = await cipherRepository.GetByIdAsync(cipher1.Id);
         var readCipher2 = await cipherRepository.GetByIdAsync(cipher2.Id);
         Assert.NotNull(readCipher1);
         Assert.NotNull(readCipher2);
+
+        var readFolder1 = await folderRepository.GetByIdAsync(folder1.Id);
+        var readFolder2 = await folderRepository.GetByIdAsync(folder2.Id);
+        Assert.NotNull(readFolder1);
+        Assert.NotNull(readFolder2);
     }
 
     [DatabaseTheory, DatabaseData(EnabledFeatureFlags = new[] { FeatureFlagKeys.CipherRepositoryBulkResourceCreation })]
-    public async Task CreateAsync_OrgCollectionsAndUsers_BulkFlag_Works(
+    public async Task CreateAsync_WithCollectionsAndUsers_WhenBulkResourceCreationFlagEnabled_Works(
         IOrganizationRepository orgRepository,
         IOrganizationUserRepository orgUserRepository,
         ICollectionRepository collectionRepository,
@@ -1009,17 +1021,18 @@ public class CipherRepositoryTests
         ICipherRepository cipherRepository,
         IUserRepository userRepository)
     {
+        // Arrange
         var user = await userRepository.CreateAsync(new User
         {
-            Name = "Bulk Org User",
-            Email = $"bulk-org+{Guid.NewGuid()}@email.com",
+            Name = "Test User",
+            Email = $"{Guid.NewGuid()}@example.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
 
         var org = await orgRepository.CreateAsync(new Organization
         {
-            Name = "Bulk Org",
+            Name = "Test Organization",
             BillingEmail = user.Email,
             Plan = "Test"
         });
@@ -1032,7 +1045,7 @@ public class CipherRepositoryTests
             Type = OrganizationUserType.Owner,
         });
 
-        var collection = new Collection { Id = Guid.NewGuid(), Name = "Bulk Coll", OrganizationId = org.Id };
+        var collection = new Collection { Id = Guid.NewGuid(), Name = "Test Collection", OrganizationId = org.Id };
         var cipher = new Cipher { Id = Guid.NewGuid(), Type = CipherType.Login, OrganizationId = org.Id, Data = "" };
         var collectionCipher = new CollectionCipher { CollectionId = collection.Id, CipherId = cipher.Id };
         var collectionUser = new CollectionUser
@@ -1044,8 +1057,14 @@ public class CipherRepositoryTests
             Manage = true
         };
 
-        await cipherRepository.CreateAsync(new[] { cipher }, new[] { collection }, new[] { collectionCipher }, new[] { collectionUser });
+        // Act
+        await cipherRepository.CreateAsync(
+            ciphers: [cipher],
+            collections: [collection],
+            collectionCiphers: [collectionCipher],
+            collectionUsers: [collectionUser]);
 
+        // Assert
         var orgCiphers = await cipherRepository.GetManyByOrganizationIdAsync(org.Id);
         Assert.Contains(orgCiphers, c => c.Id == cipher.Id);
 
@@ -1054,31 +1073,64 @@ public class CipherRepositoryTests
 
         var collectionsInOrg = await collectionRepository.GetManyByOrganizationIdAsync(org.Id);
         Assert.Contains(collectionsInOrg, c => c.Id == collection.Id);
+
+        var collectionUsers = await collectionRepository.GetManyUsersByIdAsync(collection.Id);
+        var foundCollectionUser = collectionUsers.FirstOrDefault(cu => cu.Id == orgUser.Id);
+        Assert.NotNull(foundCollectionUser);
+        Assert.True(foundCollectionUser.Manage);
+        Assert.False(foundCollectionUser.ReadOnly);
+        Assert.False(foundCollectionUser.HidePasswords);
     }
 
     [DatabaseTheory, DatabaseData(EnabledFeatureFlags = new[] { FeatureFlagKeys.CipherRepositoryBulkResourceCreation })]
-    public async Task UpdateCiphersAsync_BulkFlag_Works(IUserRepository userRepository, ICipherRepository cipherRepository)
+    public async Task UpdateCiphersAsync_WhenBulkResourceCreationFlagEnabled_Works(
+        IUserRepository userRepository, ICipherRepository cipherRepository)
     {
+        // Arrange
+        var expectedNewType = CipherType.SecureNote;
+        var expectedNewAttachments = "bulk_new_attachments";
+
         var user = await userRepository.CreateAsync(new User
         {
-            Name = "Bulk Update User",
-            Email = $"bulk-update+{Guid.NewGuid()}@email.com",
+            Name = "Test User",
+            Email = $"{Guid.NewGuid()}@example.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
 
         var c1 = new Cipher { Id = Guid.NewGuid(), Type = CipherType.Login, UserId = user.Id, Data = "" };
         var c2 = new Cipher { Id = Guid.NewGuid(), Type = CipherType.Login, UserId = user.Id, Data = "" };
-        await cipherRepository.CreateAsync(user.Id, new[] { c1, c2 }, Array.Empty<Folder>());
+        await cipherRepository.CreateAsync(
+            userId: user.Id,
+            ciphers: [c1, c2],
+            folders: []);
 
-        c1.Type = CipherType.SecureNote;
-        c2.Attachments = "bulk_new_attachments";
-        await cipherRepository.UpdateCiphersAsync(user.Id, new[] { c1, c2 });
+        c1.Type = expectedNewType;
+        c2.Attachments = expectedNewAttachments;
 
+        // Act
+        await cipherRepository.UpdateCiphersAsync(
+            userId: user.Id,
+            ciphers: [c1, c2]);
+
+        // Assert
         var updated1 = await cipherRepository.GetByIdAsync(c1.Id);
+        Assert.NotNull(updated1);
+        Assert.Equal(c1.Id, updated1.Id);
+        Assert.Equal(expectedNewType, updated1.Type);
+        Assert.Equal(c1.UserId, updated1.UserId);
+        Assert.Equal(c1.Data, updated1.Data);
+        Assert.Equal(c1.OrganizationId, updated1.OrganizationId);
+        Assert.Equal(c1.Attachments, updated1.Attachments);
+
         var updated2 = await cipherRepository.GetByIdAsync(c2.Id);
-        Assert.Equal(CipherType.SecureNote, updated1.Type);
-        Assert.Equal("bulk_new_attachments", updated2.Attachments);
+        Assert.NotNull(updated2);
+        Assert.Equal(c2.Id, updated2.Id);
+        Assert.Equal(c2.Type, updated2.Type);
+        Assert.Equal(c2.UserId, updated2.UserId);
+        Assert.Equal(c2.Data, updated2.Data);
+        Assert.Equal(c2.OrganizationId, updated2.OrganizationId);
+        Assert.Equal(expectedNewAttachments, updated2.Attachments);
     }
 
     [DatabaseTheory, DatabaseData]
