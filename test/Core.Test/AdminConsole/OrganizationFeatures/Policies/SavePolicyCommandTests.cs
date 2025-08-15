@@ -228,7 +228,7 @@ public class SavePolicyCommandTests
         var sutProvider = SutProviderFactory([
             new FakeRequireSsoPolicyValidator(),
             new FakeSingleOrgPolicyValidator(),
-            new FakeVaultTimeoutPolicyValidator()
+            new FakeVaultTimeoutPolicyValidator(null)
         ]);
 
         ArrangeOrganization(sutProvider, policyUpdate);
