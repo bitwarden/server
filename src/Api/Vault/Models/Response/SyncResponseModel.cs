@@ -54,7 +54,7 @@ public class SyncResponseModel() : ResponseModel("sync")
             c => new CollectionDetailsResponseModel(c)) ?? new List<CollectionDetailsResponseModel>();
         Domains = excludeDomains ? null : new DomainsResponseModel(user, false);
         Policies = policies?.Select(p => new PolicyResponseModel(p)) ?? new List<PolicyResponseModel>();
-        Sends = sends.Select(s => new SendResponseModel(s, globalSettings));
+        Sends = sends.Select(s => new SendResponseModel(s));
         UserDecryption = new UserDecryptionResponseModel
         {
             MasterPasswordUnlock = user.HasMasterPassword()

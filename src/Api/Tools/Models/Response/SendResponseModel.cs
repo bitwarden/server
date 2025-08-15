@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using Bit.Core.Models.Api;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
@@ -21,17 +20,13 @@ public class SendResponseModel : ResponseModel
     /// Instantiates a send response model
     /// </summary>
     /// <param name="send">Content to transmit to the client.</param>
-    /// <param name="globalSettings">
-    /// Settings that control response generation.
-    /// </param>
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="send"/> is <see langword="null" />
     /// </exception>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="send" /> has an invalid <see cref="Send.Type"/>.
     /// </exception>
-    // FIXME: remove `globalSettings` variable
-    public SendResponseModel(Send send, GlobalSettings globalSettings)
+    public SendResponseModel(Send send)
         : base("send")
     {
         if (send == null)
