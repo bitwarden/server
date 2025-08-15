@@ -17,9 +17,9 @@ public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCach
     public InMemoryServiceBusApplicationCacheService(
         IOrganizationRepository organizationRepository,
         IProviderRepository providerRepository,
-        TimeProvider timeProvider,
-        GlobalSettings globalSettings)
-        : base(organizationRepository, providerRepository, timeProvider)
+        GlobalSettings globalSettings,
+        IVNextInMemoryApplicationCacheService vNextInMemoryApplicationCacheService)
+        : base(organizationRepository, providerRepository, vNextInMemoryApplicationCacheService)
     {
         _subName = CoreHelpers.GetApplicationCacheServiceBusSubscriptionName(globalSettings);
         _serviceBusClient = new ServiceBusClient(globalSettings.ServiceBus.ConnectionString);
