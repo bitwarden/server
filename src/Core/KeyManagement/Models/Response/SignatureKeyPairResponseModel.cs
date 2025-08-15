@@ -4,7 +4,6 @@ using Bit.Core.Models.Api;
 
 namespace Bit.Core.KeyManagement.Models.Response;
 
-#nullable enable
 
 public class SignatureKeyPairResponseModel : ResponseModel
 {
