@@ -3,7 +3,6 @@ using Bit.Core.Models.Api;
 
 namespace Bit.Core.KeyManagement.Models.Response;
 
-#nullable enable
 
 /// <summary>
 /// This response model is used to return the public keys of a user, to any other registered user or entity on the server.
