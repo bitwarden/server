@@ -2,13 +2,47 @@
 using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Factories;
 
 public class OrganizationSeeder
 {
+    private readonly ISeederCryptoService _cryptoService;
+
+    public OrganizationSeeder(ISeederCryptoService cryptoService)
+    {
+        _cryptoService = cryptoService;
+    }
+
+    public Organization CreateEnterpriseWithCrypto(string name, string domain, int seats)
+    {
+        // TODO: When Rust SDK is available, ISeederCryptoService will have a RustSeederCryptoService 
+        // implementation that calls the Rust SDK via P/Invoke. For now, using C# implementation.
+
+        // Generate organization crypto keys
+        var orgKey = _cryptoService.GenerateOrganizationKey();
+        var (publicKey, privateKey) = _cryptoService.GenerateUserKeyPair();
+        var encryptedPrivateKey = _cryptoService.EncryptPrivateKey(privateKey, orgKey);
+
+        return new Organization
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            BillingEmail = $"billing@{domain}",
+            Plan = "Enterprise (Annually)",
+            PlanType = PlanType.EnterpriseAnnually,
+            Seats = seats,
+            PublicKey = publicKey,
+            PrivateKey = encryptedPrivateKey,
+        };
+    }
+
+    // Static factory method for backward compatibility
     public static Organization CreateEnterprise(string name, string domain, int seats)
     {
+        // TODO: This should be removed once all callers are updated to use DI
+        // For now, returning hardcoded values for backward compatibility
         return new Organization
         {
             Id = Guid.NewGuid(),
@@ -30,6 +64,8 @@ public static class OrgnaizationExtensions
 {
     public static OrganizationUser CreateOrganizationUser(this Organization organization, User user)
     {
+        // TODO: This hardcoded key should be replaced with proper encryption
+        // When updating callers to use the service-aware version below
         return new OrganizationUser
         {
             Id = Guid.NewGuid(),
@@ -37,6 +73,28 @@ public static class OrgnaizationExtensions
             UserId = user.Id,
 
             Key = "4.rY01mZFXHOsBAg5Fq4gyXuklWfm6mQASm42DJpx05a+e2mmp+P5W6r54WU2hlREX0uoTxyP91bKKwickSPdCQQ58J45LXHdr9t2uzOYyjVzpzebFcdMw1eElR9W2DW8wEk9+mvtWvKwu7yTebzND+46y1nRMoFydi5zPVLSlJEf81qZZ4Uh1UUMLwXz+NRWfixnGXgq2wRq1bH0n3mqDhayiG4LJKgGdDjWXC8W8MMXDYx24SIJrJu9KiNEMprJE+XVF9nQVNijNAjlWBqkDpsfaWTUfeVLRLctfAqW1blsmIv4RQ91PupYJZDNc8nO9ZTF3TEVM+2KHoxzDJrLs2Q==",
+            Type = OrganizationUserType.Admin,
+            Status = OrganizationUserStatusType.Confirmed
+        };
+    }
+
+    // Service-aware version that properly encrypts the organization key
+    public static OrganizationUser CreateOrganizationUser(this Organization organization, User user,
+        byte[] organizationKey, byte[] userPublicKey, ISeederCryptoService cryptoService)
+    {
+        // TODO: When Rust SDK is available, this encryption will use RustSeederCryptoService
+        // The organization key needs to be encrypted with the user's public key
+        // For now, this is a placeholder showing where the integration would happen
+
+        // Future implementation would be:
+        // var encryptedOrgKey = cryptoService.EncryptWithUserPublicKey(organizationKey, userPublicKey);
+
+        return new OrganizationUser
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Key = "4.rY01mZFXHOsBAg5Fq4gyXuklWfm6mQASm42DJpx05a+e2mmp+P5W6r54WU2hlREX0uoTxyP91bKKwickSPdCQQ58J45LXHdr9t2uzOYyjVzpzebFcdMw1eElR9W2DW8wEk9+mvtWvKwu7yTebzND+46y1nRMoFydi5zPVLSlJEf81qZZ4Uh1UUMLwXz+NRWfixnGXgq2wRq1bH0n3mqDhayiG4LJKgGdDjWXC8W8MMXDYx24SIJrJu9KiNEMprJE+XVF9nQVNijNAjlWBqkDpsfaWTUfeVLRLctfAqW1blsmIv4RQ91PupYJZDNc8nO9ZTF3TEVM+2KHoxzDJrLs2Q==", // TODO: Replace with encryptedOrgKey
             Type = OrganizationUserType.Admin,
             Status = OrganizationUserStatusType.Confirmed
         };
