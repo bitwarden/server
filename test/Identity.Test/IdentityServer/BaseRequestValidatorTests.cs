@@ -806,11 +806,11 @@ public class BaseRequestValidatorTests
         Assert.Equal("test-security-state", accountKeysResponse.SecurityState.SecurityState);
         Assert.Equal(2, accountKeysResponse.SecurityState.SecurityVersion);
     }
- [Theory, BitAutoData]
+    [Theory, BitAutoData]
     public async Task ValidateAsync_CustomResponse_AccountKeysQuery_SkippedWhenPrivateKeyIsNull(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
+           [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+           CustomValidatorRequestContext requestContext,
+           GrantValidationResult grantResult)
     {
         // Arrange
         requestContext.User.PrivateKey = null;
