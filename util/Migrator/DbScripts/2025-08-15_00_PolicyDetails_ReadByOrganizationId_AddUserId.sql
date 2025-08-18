@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[PolicyDetails_ReadByOrganizationId]
+CREATE OR ALTER PROCEDURE [dbo].[PolicyDetails_ReadByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER,
     @PolicyType  TINYINT
 AS

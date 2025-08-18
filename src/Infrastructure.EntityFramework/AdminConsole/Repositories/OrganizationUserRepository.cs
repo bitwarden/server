@@ -786,12 +786,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync_vNext(Guid organizationId)
-    {
-        // No EF optimization is required for this query
-        return await GetManyByOrganizationWithClaimedDomainsAsync(organizationId);
-    }
-
     public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
     {
         using var scope = ServiceScopeFactory.CreateScope();
