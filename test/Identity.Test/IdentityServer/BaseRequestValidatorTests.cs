@@ -806,7 +806,31 @@ public class BaseRequestValidatorTests
         Assert.Equal("test-security-state", accountKeysResponse.SecurityState.SecurityState);
         Assert.Equal(2, accountKeysResponse.SecurityState.SecurityVersion);
     }
+ [Theory, BitAutoData]
+    public async Task ValidateAsync_CustomResponse_AccountKeysQuery_SkippedWhenPrivateKeyIsNull(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        requestContext.User.PrivateKey = null;
 
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+        _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError);
+
+        // Verify that the account keys query wasn't called.
+        await _userAccountKeysQuery.Received(0).Run(Arg.Any<User>());
+    }
     [Theory, BitAutoData]
     public async Task ValidateAsync_CustomResponse_AccountKeysQuery_CalledWithCorrectUser(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
