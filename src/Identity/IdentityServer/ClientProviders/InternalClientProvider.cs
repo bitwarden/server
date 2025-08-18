@@ -3,8 +3,8 @@
 using System.Diagnostics;
 using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
-using Duende.IdentityServer.Models;
 using Duende.IdentityModel;
+using Duende.IdentityServer.Models;
 
 namespace Bit.Identity.IdentityServer.ClientProviders;
 
