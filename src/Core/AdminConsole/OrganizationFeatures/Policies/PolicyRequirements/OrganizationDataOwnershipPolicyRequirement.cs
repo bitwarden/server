@@ -60,16 +60,24 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
     }
 
     /// <summary>
-    /// Return the OrganizationUserId for the given OrganizationId.
+    /// Get the user's default collection request for the specified organization.
     /// </summary>
-    public Guid? GetOrganizationUserId(Guid organizationId)
+    /// <param name="organizationId">The organization ID to create the request for.</param>
+    /// <returns>A DefaultCollectionRequest containing the organization user ID and creation flag.</returns>
+    public DefaultCollectionRequest GetDefaultCollectionRequest(Guid organizationId)
     {
         if (_organizationUserIdsByOrgId.TryGetValue(organizationId, out var orgUserId))
         {
-            return orgUserId;
+            return new DefaultCollectionRequest(orgUserId, true);
         }
-        return null;
+        return new DefaultCollectionRequest(Guid.Empty, true);
     }
+}
+
+public class DefaultCollectionRequest(Guid organizationUserId, bool shouldCreateDefaultCollection)
+{
+    public readonly bool ShouldCreateDefaultCollection = shouldCreateDefaultCollection;
+    public readonly Guid OrganizationUserId = organizationUserId;
 }
 
 public class OrganizationDataOwnershipPolicyRequirementFactory : BasePolicyRequirementFactory<OrganizationDataOwnershipPolicyRequirement>

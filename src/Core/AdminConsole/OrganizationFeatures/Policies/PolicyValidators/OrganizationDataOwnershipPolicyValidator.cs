@@ -36,16 +36,18 @@ public class OrganizationDataOwnershipPolicyValidator(
         {
             await UpsertDefaultCollectionsForUsersAsync(policyUpdate);
         }
-
     }
 
     private async Task UpsertDefaultCollectionsForUsersAsync(PolicyUpdate policyUpdate)
     {
         var requirements = await GetUserPolicyRequirementsByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(policyUpdate.OrganizationId, policyUpdate.Type);
 
-        var userOrgIds = GetUserOrgIds(policyUpdate, requirements);
+        var userOrgIds = requirements
+            .Select(requirement => requirement.GetDefaultCollectionRequest(policyUpdate.OrganizationId))
+            .Where(request => request.ShouldCreateDefaultCollection)
+            .Select(request => request.OrganizationUserId);
 
-        if (userOrgIds.Count == 0)
+        if (!userOrgIds.Any())
         {
             logger.LogError("No UserOrganizationIds found for {OrganizationId}", policyUpdate.OrganizationId);
             return;
@@ -62,24 +64,5 @@ public class OrganizationDataOwnershipPolicyValidator(
         // TODO: https://bitwarden.atlassian.net/browse/PM-24279
         const string temporaryPlaceHolderValue = "Default";
         return temporaryPlaceHolderValue;
-    }
-
-    private List<Guid> GetUserOrgIds(PolicyUpdate policyUpdate, IEnumerable<OrganizationDataOwnershipPolicyRequirement> requirements)
-    {
-        var userOrgIds = new List<Guid>();
-        foreach (var requirement in requirements)
-        {
-            var userOrgId = requirement.GetOrganizationUserId(policyUpdate.OrganizationId);
-
-            if (userOrgId.HasValue)
-            {
-                userOrgIds.Add(userOrgId.Value);
-            }
-            else
-            {
-                logger.LogError("UserOrganizationId is null for organization {OrganizationId}", policyUpdate.OrganizationId);
-            }
-        }
-        return userOrgIds;
     }
 }
