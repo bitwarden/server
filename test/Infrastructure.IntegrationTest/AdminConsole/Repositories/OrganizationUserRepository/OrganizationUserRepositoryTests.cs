@@ -355,134 +355,6 @@ public class OrganizationUserRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyByOrganizationWithClaimedDomainsAsync_WithVerifiedDomain_WithOneMatchingEmailDomain_ReturnsSingle(
-        IUserRepository userRepository,
-        IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationDomainRepository organizationDomainRepository)
-    {
-        var id = Guid.NewGuid();
-        var domainName = $"{id}.example.com";
-
-        var user1 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 1",
-            Email = $"test+{id}@{domainName}",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
-
-        var user2 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 2",
-            Email = $"test+{id}@x-{domainName}", // Different domain
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
-
-        var user3 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 2",
-            Email = $"test+{id}@{domainName}.example.com", // Different domain
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
-
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org {id}",
-            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULl
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
-            PrivateKey = "privatekey",
-            UsePolicies = false,
-            UseSso = false,
-            UseKeyConnector = false,
-            UseScim = false,
-            UseGroups = false,
-            UseDirectory = false,
-            UseEvents = false,
-            UseTotp = false,
-            Use2fa = false,
-            UseApi = false,
-            UseResetPassword = false,
-            UseSecretsManager = false,
-            SelfHost = false,
-            UsersGetPremium = false,
-            UseCustomPermissions = false,
-            Enabled = true,
-            UsePasswordManager = false,
-            LimitCollectionCreation = false,
-            LimitCollectionDeletion = false,
-            LimitItemDeletion = false,
-            AllowAdminAccessToAllCollectionItems = false,
-            UseRiskInsights = false,
-            UseAdminSponsoredFamilies = false
-        });
-
-        var organizationDomain = new OrganizationDomain
-        {
-            OrganizationId = organization.Id,
-            DomainName = domainName,
-            Txt = "btw+12345",
-        };
-        organizationDomain.SetVerifiedDate();
-        organizationDomain.SetNextRunDate(12);
-        organizationDomain.SetJobRunCount();
-        await organizationDomainRepository.CreateAsync(organizationDomain);
-
-        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            Id = CoreHelpers.GenerateComb(),
-            OrganizationId = organization.Id,
-            UserId = user1.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.Owner,
-            ResetPasswordKey = "resetpasswordkey1",
-            AccessSecretsManager = false
-        });
-
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            Id = CoreHelpers.GenerateComb(),
-            OrganizationId = organization.Id,
-            UserId = user2.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.User,
-            ResetPasswordKey = "resetpasswordkey1",
-            AccessSecretsManager = false
-        });
-
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            Id = CoreHelpers.GenerateComb(),
-            OrganizationId = organization.Id,
-            UserId = user3.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.User,
-            ResetPasswordKey = "resetpasswordkey1",
-            AccessSecretsManager = false
-        });
-
-        var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organization.Id);
-
-        Assert.NotNull(responseModel);
-        Assert.Single(responseModel);
-        Assert.Equal(orgUser1.Id, responseModel.Single().Id);
-    }
-
-    [DatabaseTheory, DatabaseData]
     public async Task CreateManyAsync_NoId_Works(IOrganizationRepository organizationRepository,
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository)
@@ -911,6 +783,17 @@ public class OrganizationUserRepositoryTests
             RevisionDate = requestTime
         });
 
+        var defaultUserCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            Name = "My Items",
+            Type = CollectionType.DefaultUserCollection,
+            DefaultUserCollectionEmail = user1.Email,
+            CreationDate = requestTime,
+            RevisionDate = requestTime
+        });
+
         // Create organization user with both groups and collections using CreateManyAsync
         var createOrgUserWithCollections = new List<CreateOrganizationUser>
         {
@@ -939,6 +822,13 @@ public class OrganizationUserRepositoryTests
                         Id = collection2.Id,
                         ReadOnly = false,
                         HidePasswords = true,
+                        Manage = true
+                    },
+                    new CollectionAccessSelection
+                    {
+                        Id = defaultUserCollection.Id,
+                        ReadOnly = false,
+                        HidePasswords = false,
                         Manage = true
                     }
                 ],
@@ -969,10 +859,11 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(2, user1Result.Collections.Count());
         Assert.Contains(user1Result.Collections, c => c.Id == collection1.Id);
         Assert.Contains(user1Result.Collections, c => c.Id == collection2.Id);
+        Assert.DoesNotContain(user1Result.Collections, c => c.Id == defaultUserCollection.Id);
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyByOrganizationWithClaimedDomainsAsync_vNext_WithVerifiedDomain_WithOneMatchingEmailDomain_ReturnsSingle(
+    public async Task GetManyByOrganizationWithClaimedDomainsAsync_WithVerifiedDomain_WithOneMatchingEmailDomain_ReturnsSingle(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -1075,7 +966,7 @@ public class OrganizationUserRepositoryTests
             RevisionDate = requestTime
         });
 
-        var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync_vNext(organization.Id);
+        var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organization.Id);
 
         Assert.NotNull(responseModel);
         Assert.Single(responseModel);
@@ -1085,7 +976,7 @@ public class OrganizationUserRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyByOrganizationWithClaimedDomainsAsync_vNext_WithNoVerifiedDomain_ReturnsEmpty(
+    public async Task GetManyByOrganizationWithClaimedDomainsAsync_WithNoVerifiedDomain_ReturnsEmpty(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -1142,9 +1033,72 @@ public class OrganizationUserRepositoryTests
             RevisionDate = requestTime
         });
 
-        var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync_vNext(organization.Id);
+        var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organization.Id);
 
         Assert.NotNull(responseModel);
         Assert.Empty(responseModel);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_PreservesDefaultCollections_WhenUpdatingCollectionAccess(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var user = await userRepository.CreateTestUserAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        // Create a regular collection and a default collection
+        var regularCollection = await collectionRepository.CreateTestCollectionAsync(organization);
+
+        // Manually create default collection since CreateTestCollectionAsync doesn't support type parameter
+        var defaultCollection = new Collection
+        {
+            OrganizationId = organization.Id,
+            Name = $"Default Collection {Guid.NewGuid()}",
+            Type = CollectionType.DefaultUserCollection
+        };
+        await collectionRepository.CreateAsync(defaultCollection);
+
+        var newCollection = await collectionRepository.CreateTestCollectionAsync(organization);
+
+        // Set up initial collection access: user has access to both regular and default collections
+        await organizationUserRepository.ReplaceAsync(orgUser, [
+            new CollectionAccessSelection { Id = regularCollection.Id, ReadOnly = false, HidePasswords = false, Manage = false },
+            new CollectionAccessSelection { Id = defaultCollection.Id, ReadOnly = false, HidePasswords = false, Manage = true }
+        ]);
+
+        // Verify initial state
+        var (_, initialCollections) = await organizationUserRepository.GetByIdWithCollectionsAsync(orgUser.Id);
+        Assert.Equal(2, initialCollections.Count);
+        Assert.Contains(initialCollections, c => c.Id == regularCollection.Id);
+        Assert.Contains(initialCollections, c => c.Id == defaultCollection.Id);
+
+        // Act: Update collection access with only the new collection
+        // This should preserve the default collection but remove the regular collection
+        await organizationUserRepository.ReplaceAsync(orgUser, [
+            new CollectionAccessSelection { Id = newCollection.Id, ReadOnly = false, HidePasswords = false, Manage = true }
+        ]);
+
+        // Assert
+        var (actualOrgUser, actualCollections) = await organizationUserRepository.GetByIdWithCollectionsAsync(orgUser.Id);
+        Assert.NotNull(actualOrgUser);
+        Assert.Equal(2, actualCollections.Count); // Should have default collection + new collection
+
+        // Default collection should be preserved
+        var preservedDefaultCollection = actualCollections.FirstOrDefault(c => c.Id == defaultCollection.Id);
+        Assert.NotNull(preservedDefaultCollection);
+        Assert.True(preservedDefaultCollection.Manage); // Original permissions preserved
+
+        // New collection should be added
+        var addedNewCollection = actualCollections.FirstOrDefault(c => c.Id == newCollection.Id);
+        Assert.NotNull(addedNewCollection);
+        Assert.True(addedNewCollection.Manage);
+
+        // Regular collection should be removed
+        Assert.DoesNotContain(actualCollections, c => c.Id == regularCollection.Id);
     }
 }

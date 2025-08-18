@@ -21,7 +21,6 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -44,13 +43,9 @@ public class OrganizationService : IOrganizationService
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IMailService _mailService;
     private readonly IPushNotificationService _pushNotificationService;
-    private readonly IPushRegistrationService _pushRegistrationService;
-    private readonly IDeviceRepository _deviceRepository;
-    private readonly ILicensingService _licensingService;
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IPaymentService _paymentService;
@@ -58,7 +53,6 @@ public class OrganizationService : IOrganizationService
     private readonly IPolicyService _policyService;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IGlobalSettings _globalSettings;
-    private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<OrganizationService> _logger;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
@@ -75,13 +69,9 @@ public class OrganizationService : IOrganizationService
     public OrganizationService(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
         IMailService mailService,
         IPushNotificationService pushNotificationService,
-        IPushRegistrationService pushRegistrationService,
-        IDeviceRepository deviceRepository,
-        ILicensingService licensingService,
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
         IPaymentService paymentService,
@@ -89,7 +79,6 @@ public class OrganizationService : IOrganizationService
         IPolicyService policyService,
         ISsoUserRepository ssoUserRepository,
         IGlobalSettings globalSettings,
-        IOrganizationApiKeyRepository organizationApiKeyRepository,
         ICurrentContext currentContext,
         ILogger<OrganizationService> logger,
         IProviderOrganizationRepository providerOrganizationRepository,
@@ -106,13 +95,9 @@ public class OrganizationService : IOrganizationService
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
-        _collectionRepository = collectionRepository;
         _groupRepository = groupRepository;
         _mailService = mailService;
         _pushNotificationService = pushNotificationService;
-        _pushRegistrationService = pushRegistrationService;
-        _deviceRepository = deviceRepository;
-        _licensingService = licensingService;
         _eventService = eventService;
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
@@ -120,7 +105,6 @@ public class OrganizationService : IOrganizationService
         _policyService = policyService;
         _ssoUserRepository = ssoUserRepository;
         _globalSettings = globalSettings;
-        _organizationApiKeyRepository = organizationApiKeyRepository;
         _currentContext = currentContext;
         _logger = logger;
         _providerOrganizationRepository = providerOrganizationRepository;
@@ -782,21 +766,6 @@ public class OrganizationService : IOrganizationService
         return result;
     }
 
-    public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId,
-        bool initOrganization = false)
-    {
-        var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-        if (orgUser == null || orgUser.OrganizationId != organizationId ||
-            orgUser.Status != OrganizationUserStatusType.Invited)
-        {
-            throw new BadRequestException("User invalid.");
-        }
-
-        _logger.LogUserInviteStateDiagnostics(orgUser);
-
-        var org = await GetOrgById(orgUser.OrganizationId);
-        await SendInviteAsync(orgUser, org, initOrganization);
-    }
 
     private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization) =>
         await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(orgUsers, organization));
@@ -1451,122 +1420,6 @@ public class OrganizationService : IOrganizationService
         }
 
         return true;
-    }
-
-    public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId)
-    {
-        if (revokingUserId.HasValue && organizationUser.UserId == revokingUserId.Value)
-        {
-            throw new BadRequestException("You cannot revoke yourself.");
-        }
-
-        if (organizationUser.Type == OrganizationUserType.Owner && revokingUserId.HasValue &&
-            !await _currentContext.OrganizationOwner(organizationUser.OrganizationId))
-        {
-            throw new BadRequestException("Only owners can revoke other owners.");
-        }
-
-        await RepositoryRevokeUserAsync(organizationUser);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
-
-        if (organizationUser.UserId.HasValue)
-        {
-            await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
-        }
-    }
-
-    public async Task RevokeUserAsync(OrganizationUser organizationUser,
-        EventSystemUser systemUser)
-    {
-        await RepositoryRevokeUserAsync(organizationUser);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked,
-            systemUser);
-
-        if (organizationUser.UserId.HasValue)
-        {
-            await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
-        }
-    }
-
-    private async Task RepositoryRevokeUserAsync(OrganizationUser organizationUser)
-    {
-        if (organizationUser.Status == OrganizationUserStatusType.Revoked)
-        {
-            throw new BadRequestException("Already revoked.");
-        }
-
-        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId,
-                new[] { organizationUser.Id }, includeProvider: true))
-        {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
-        }
-
-        await _organizationUserRepository.RevokeAsync(organizationUser.Id);
-        organizationUser.Status = OrganizationUserStatusType.Revoked;
-    }
-
-    public async Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
-        IEnumerable<Guid> organizationUserIds, Guid? revokingUserId)
-    {
-        var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUserIds);
-        var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
-            .ToList();
-
-        if (!filteredUsers.Any())
-        {
-            throw new BadRequestException("Users invalid.");
-        }
-
-        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, organizationUserIds))
-        {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
-        }
-
-        var deletingUserIsOwner = false;
-        if (revokingUserId.HasValue)
-        {
-            deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
-        }
-
-        var result = new List<Tuple<OrganizationUser, string>>();
-
-        foreach (var organizationUser in filteredUsers)
-        {
-            try
-            {
-                if (organizationUser.Status == OrganizationUserStatusType.Revoked)
-                {
-                    throw new BadRequestException("Already revoked.");
-                }
-
-                if (revokingUserId.HasValue && organizationUser.UserId == revokingUserId)
-                {
-                    throw new BadRequestException("You cannot revoke yourself.");
-                }
-
-                if (organizationUser.Type == OrganizationUserType.Owner && revokingUserId.HasValue &&
-                    !deletingUserIsOwner)
-                {
-                    throw new BadRequestException("Only owners can revoke other owners.");
-                }
-
-                await _organizationUserRepository.RevokeAsync(organizationUser.Id);
-                organizationUser.Status = OrganizationUserStatusType.Revoked;
-                await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
-                if (organizationUser.UserId.HasValue)
-                {
-                    await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
-                }
-
-                result.Add(Tuple.Create(organizationUser, ""));
-            }
-            catch (BadRequestException e)
-            {
-                result.Add(Tuple.Create(organizationUser, e.Message));
-            }
-        }
-
-        return result;
     }
 
     public static OrganizationUserStatusType GetPriorActiveOrganizationUserStatusType(OrganizationUser organizationUser)

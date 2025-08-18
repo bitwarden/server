@@ -612,19 +612,6 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUser>(
-                $"[{Schema}].[OrganizationUser_ReadByOrganizationIdWithClaimedDomains]",
-                new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
-
-            return results.ToList();
-        }
-    }
-
-    public async Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync_vNext(Guid organizationId)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<OrganizationUser>(
                 $"[{Schema}].[OrganizationUser_ReadByOrganizationIdWithClaimedDomains_V2]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
@@ -660,12 +647,14 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     {
         await using var connection = new SqlConnection(_marsConnectionString);
 
+        var organizationUsersList = organizationUserCollection.ToList();
+
         await connection.ExecuteAsync(
             $"[{Schema}].[OrganizationUser_CreateManyWithCollectionsAndGroups]",
             new
             {
-                OrganizationUserData = JsonSerializer.Serialize(organizationUserCollection.Select(x => x.OrganizationUser)),
-                CollectionData = JsonSerializer.Serialize(organizationUserCollection
+                OrganizationUserData = JsonSerializer.Serialize(organizationUsersList.Select(x => x.OrganizationUser)),
+                CollectionData = JsonSerializer.Serialize(organizationUsersList
                     .SelectMany(x => x.Collections, (user, collection) => new CollectionUser
                     {
                         CollectionId = collection.Id,
@@ -674,7 +663,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                         HidePasswords = collection.HidePasswords,
                         Manage = collection.Manage
                     })),
-                GroupData = JsonSerializer.Serialize(organizationUserCollection
+                GroupData = JsonSerializer.Serialize(organizationUsersList
                     .SelectMany(x => x.Groups, (user, group) => new GroupUser
                     {
                         GroupId = group,

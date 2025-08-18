@@ -33,7 +33,12 @@ public static class ServiceCollectionExtensions
                     Url = new Uri("https://bitwarden.com"),
                     Email = "support@bitwarden.com"
                 },
-                Description = "The Bitwarden public APIs.",
+                Description = """
+                              This schema documents the endpoints available to the Public API, which provides
+                              organizations tools for managing members, collections, groups, event logs, and policies.
+                              If you are looking for the Vault Management API, refer instead to
+                              [this document](https://bitwarden.com/help/vault-management-api/).
+                              """,
                 License = new OpenApiLicense
                 {
                     Name = "GNU Affero General Public License v3.0",
