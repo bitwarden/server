@@ -158,7 +158,6 @@ public static class FeatureFlagKeys
     public const string UseOrganizationWarningsService = "use-organization-warnings-service";
     public const string PM20322_AllowTrialLength0 = "pm-20322-allow-trial-length-0";
     public const string PM21092_SetNonUSBusinessUseToReverseCharge = "pm-21092-set-non-us-business-use-to-reverse-charge";
-    public const string PM21383_GetProviderPriceFromStripe = "pm-21383-get-provider-price-from-stripe";
     public const string PM21881_ManagePaymentDetailsOutsideCheckout = "pm-21881-manage-payment-details-outside-checkout";
     public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
     public const string PM22415_TaxIDWarnings = "pm-22415-tax-id-warnings";
