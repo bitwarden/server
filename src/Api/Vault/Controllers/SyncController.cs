@@ -123,7 +123,7 @@ public class SyncController : Controller
 
         UserAccountKeysData userAccountKeys = null;
         // JIT TDE users and some broken/old users may not have a private key.
-        if (user.PrivateKey != null)
+        if (!string.IsNullOrWhiteSpace(user.PrivateKey))
         {
             userAccountKeys = await _userAccountKeysQuery.Run(user);
         }
