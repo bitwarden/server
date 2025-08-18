@@ -3,6 +3,7 @@
 
 using Bit.Core.Models.BitStripe;
 using Stripe;
+using Stripe.Tax;
 
 namespace Bit.Core.Services;
 
@@ -18,17 +19,6 @@ public interface IStripeAdapter
         CustomerBalanceTransactionCreateOptions options);
     Task<Subscription> SubscriptionCreateAsync(SubscriptionCreateOptions subscriptionCreateOptions);
     Task<Subscription> SubscriptionGetAsync(string id, SubscriptionGetOptions options = null);
-
-    /// <summary>
-    /// Retrieves a subscription object for a provider.
-    /// </summary>
-    /// <param name="id">The subscription ID.</param>
-    /// <param name="providerId">The provider ID.</param>
-    /// <param name="options">Additional options.</param>
-    /// <returns>The subscription object.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the subscription doesn't belong to the provider.</exception>
-    Task<Subscription> ProviderSubscriptionGetAsync(string id, Guid providerId, SubscriptionGetOptions options = null);
-
     Task<Subscription> SubscriptionUpdateAsync(string id, SubscriptionUpdateOptions options = null);
     Task<Subscription> SubscriptionCancelAsync(string Id, SubscriptionCancelOptions options = null);
     Task<Invoice> InvoiceGetAsync(string id, InvoiceGetOptions options);
@@ -47,6 +37,7 @@ public interface IStripeAdapter
     Task<PaymentMethod> PaymentMethodDetachAsync(string id, PaymentMethodDetachOptions options = null);
     Task<TaxId> TaxIdCreateAsync(string id, TaxIdCreateOptions options);
     Task<TaxId> TaxIdDeleteAsync(string customerId, string taxIdId, TaxIdDeleteOptions options = null);
+    Task<StripeList<Registration>> TaxRegistrationsListAsync(RegistrationListOptions options = null);
     Task<StripeList<Charge>> ChargeListAsync(ChargeListOptions options);
     Task<Refund> RefundCreateAsync(RefundCreateOptions options);
     Task<Card> CardDeleteAsync(string customerId, string cardId, CardDeleteOptions options = null);
