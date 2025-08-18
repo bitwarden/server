@@ -52,7 +52,7 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void GetOrganizationUserId_WithValidOrganizationId_ReturnsOrganizationUserId(
+    public void GetDefaultCollectionRequest_WithValidOrganizationId_ReturnsRequestWithOrganizationUserId(
         [PolicyDetails(PolicyType.OrganizationDataOwnership)] PolicyDetails[] policies,
         SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
     {
@@ -62,14 +62,15 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
         var organizationId = policies[0].OrganizationId;
 
         // Act
-        var result = requirement.GetOrganizationUserId(organizationId);
+        var result = requirement.GetDefaultCollectionRequest(organizationId);
 
         // Assert
-        Assert.Equal(expectedOrganizationUserId, result);
+        Assert.Equal(expectedOrganizationUserId, result.OrganizationUserId);
+        Assert.True(result.ShouldCreateDefaultCollection);
     }
 
     [Theory, BitAutoData]
-    public void GetOrganizationUserId_WithInvalidOrganizationId_ReturnsNull(
+    public void GetDefaultCollectionRequest_WithInvalidOrganizationId_ReturnsRequestWithEmptyGuid(
         [PolicyDetails(PolicyType.OrganizationDataOwnership)] PolicyDetails[] policies,
         Guid invalidOrganizationId,
         SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
@@ -78,10 +79,11 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
         var requirement = sutProvider.Sut.Create(policies);
 
         // Act
-        var result = requirement.GetOrganizationUserId(invalidOrganizationId);
+        var result = requirement.GetDefaultCollectionRequest(invalidOrganizationId);
 
         // Assert
-        Assert.Null(result);
+        Assert.Equal(Guid.Empty, result.OrganizationUserId);
+        Assert.True(result.ShouldCreateDefaultCollection);
     }
 
 }
