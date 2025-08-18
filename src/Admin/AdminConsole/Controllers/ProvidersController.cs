@@ -295,6 +295,22 @@ public class ProvidersController : Controller
             return View(oldModel);
         }
 
+        if (provider.IsBillable() && !string.IsNullOrEmpty(model.GatewayCustomerId))
+        {
+            // validate the stripe ids to prevent saving a bad one
+            try
+            {
+                await _stripeAdapter.CustomerGetAsync(model.GatewayCustomerId);
+                await _stripeAdapter.SubscriptionGetAsync(model.GatewaySubscriptionId);
+            }
+            catch (StripeException e)
+            {
+                var oldModel = await GetEditModel(id);
+                ModelState.AddModelError(nameof(model.GatewayCustomerId), $"Stripe Error: {e.Message}");
+                return View(oldModel);
+            }
+        }
+
         var originalProviderStatus = provider.Enabled;
 
         model.ToProvider(provider);
@@ -382,10 +398,18 @@ public class ProvidersController : Controller
         }
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
-
-        var payByInvoice =
-            _featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) &&
-            (await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)).ApprovedToPayByInvoice();
+        var payByInvoice = false;
+        // prevent the page from crashing if stripe errors
+        try
+        {
+            payByInvoice =
+                _featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) &&
+                (await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)).ApprovedToPayByInvoice();
+        }
+        catch (StripeException e)
+        {
+            TempData["Error"] = $"Stripe Error: {e.Message}";
+        }
 
         return new ProviderEditModel(
             provider, users, providerOrganizations,
