@@ -19,7 +19,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Stripe;
-using Stripe.Tax;
 using Xunit;
 
 namespace Bit.Commercial.Core.Test.AdminConsole.ProviderFeatures;
