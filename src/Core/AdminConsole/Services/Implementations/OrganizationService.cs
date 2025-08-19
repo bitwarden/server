@@ -766,21 +766,6 @@ public class OrganizationService : IOrganizationService
         return result;
     }
 
-    public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId,
-        bool initOrganization = false)
-    {
-        var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-        if (orgUser == null || orgUser.OrganizationId != organizationId ||
-            orgUser.Status != OrganizationUserStatusType.Invited)
-        {
-            throw new BadRequestException("User invalid.");
-        }
-
-        _logger.LogUserInviteStateDiagnostics(orgUser);
-
-        var org = await GetOrgById(orgUser.OrganizationId);
-        await SendInviteAsync(orgUser, org, initOrganization);
-    }
 
     private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization) =>
         await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(orgUsers, organization));
