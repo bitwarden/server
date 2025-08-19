@@ -169,6 +169,7 @@ public class StripeController : Controller
 
         var json = await sr.ReadToEndAsync();
         var webhookSecret = PickStripeWebhookSecret(json);
+
         if (string.IsNullOrEmpty(webhookSecret))
         {
             return null;
