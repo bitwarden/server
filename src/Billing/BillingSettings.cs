@@ -7,9 +7,6 @@ public class BillingSettings
 {
     public virtual string JobsKey { get; set; }
     public virtual string StripeWebhookKey { get; set; }
-    public virtual string StripeWebhookSecret { get; set; }
-    public virtual string StripeWebhookSecret20231016 { get; set; }
-    public virtual string StripeWebhookSecret20240620 { get; set; }
     public virtual string StripeWebhookSecret20250430Basil { get; set; }
     public virtual string BitPayWebhookKey { get; set; }
     public virtual string AppleWebhookKey { get; set; }
