@@ -15,8 +15,13 @@ namespace Bit.Core.KeyManagement.Models.Api.Response;
 public class PrivateKeysResponseModel : ResponseModel
 {
     // Not all accounts have signature keys, but all accounts have public encryption keys.
+    [JsonPropertyName("signatureKeyPair")]
     public SignatureKeyPairResponseModel? SignatureKeyPair { get; set; }
+
+    [JsonPropertyName("publicKeyEncryptionKeyPair")]
     public required PublicKeyEncryptionKeyPairResponseModel PublicKeyEncryptionKeyPair { get; set; }
+
+    [JsonPropertyName("securityState")]
     public SecurityStateModel? SecurityState { get; set; }
 
     [System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute]

@@ -7,7 +7,9 @@ namespace Bit.Core.KeyManagement.Models.Api.Response;
 
 public class SignatureKeyPairResponseModel : ResponseModel
 {
+    [JsonPropertyName("wrappedSigningKey")]
     public required string WrappedSigningKey { get; set; }
+    [JsonPropertyName("verifyingKey")]
     public required string VerifyingKey { get; set; }
 
     [System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute]

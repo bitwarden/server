@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Core.KeyManagement.Models.Api.Request;
@@ -6,7 +7,9 @@ namespace Bit.Core.KeyManagement.Models.Api.Request;
 public class SecurityStateModel
 {
     [StringLength(1000)]
+    [JsonPropertyName("securityState")]
     public required string SecurityState { get; set; }
+    [JsonPropertyName("securityVersion")]
     public required int SecurityVersion { get; set; }
 
     public SecurityStateData ToSecurityState()

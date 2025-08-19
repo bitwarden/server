@@ -7,8 +7,11 @@ namespace Bit.Core.KeyManagement.Models.Api.Response;
 
 public class PublicKeyEncryptionKeyPairResponseModel : ResponseModel
 {
+    [JsonPropertyName("wrappedPrivateKey")]
     public required string WrappedPrivateKey { get; set; }
+    [JsonPropertyName("publicKey")]
     public required string PublicKey { get; set; }
+    [JsonPropertyName("signedPublicKey")]
     public string? SignedPublicKey { get; set; }
 
     [System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute]
