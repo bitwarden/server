@@ -940,18 +940,6 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,
-        Dictionary<string, Guid> existingUsersIdDict, HashSet<Guid> existingUsers = null)
-    {
-        var availableUsers = groupUsers.Intersect(existingUsersIdDict.Keys);
-        var users = new HashSet<Guid>(availableUsers.Select(u => existingUsersIdDict[u]));
-        if (existingUsers != null && existingUsers.Count == users.Count && users.SetEquals(existingUsers))
-        {
-            return;
-        }
-
-        await _groupRepository.UpdateUsersAsync(group.Id, users);
-    }
 
     public async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)
     {
