@@ -30,28 +30,6 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void RequiresDefaultCollection_WithNoPolicies_ReturnsFalse(
-        Guid organizationId,
-        SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
-    {
-        var actual = sutProvider.Sut.Create([]);
-
-        Assert.False(actual.RequiresDefaultCollection(organizationId));
-    }
-
-    [Theory, BitAutoData]
-    public void RequiresDefaultCollection_WithOrganizationDataOwnershipPolicies_ReturnsCorrectResult(
-        [PolicyDetails(PolicyType.OrganizationDataOwnership)] PolicyDetails[] policies,
-        Guid nonPolicyOrganizationId,
-        SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
-    {
-        var actual = sutProvider.Sut.Create(policies);
-
-        Assert.True(actual.RequiresDefaultCollection(policies[0].OrganizationId));
-        Assert.False(actual.RequiresDefaultCollection(nonPolicyOrganizationId));
-    }
-
-    [Theory, BitAutoData]
     public void GetDefaultCollectionRequest_WithValidOrganizationId_ReturnsRequestWithOrganizationUserId(
         [PolicyDetails(PolicyType.OrganizationDataOwnership)] PolicyDetails[] policies,
         SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
@@ -83,7 +61,7 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
 
         // Assert
         Assert.Equal(Guid.Empty, result.OrganizationUserId);
-        Assert.True(result.ShouldCreateDefaultCollection);
+        Assert.False(result.ShouldCreateDefaultCollection);
     }
 
 }

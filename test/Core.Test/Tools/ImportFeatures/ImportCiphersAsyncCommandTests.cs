@@ -64,7 +64,6 @@ public class ImportCiphersAsyncCommandTests
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(importingUserId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Disabled,
-                [],
                 []));
 
         sutProvider.GetDependency<IFolderRepository>()
