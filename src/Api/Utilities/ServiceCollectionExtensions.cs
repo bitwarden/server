@@ -19,7 +19,7 @@ namespace Bit.Api.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddSwagger(this IServiceCollection services, GlobalSettings globalSettings)
+    public static void AddSwagger(this IServiceCollection services, GlobalSettings globalSettings, IWebHostEnvironment environment)
     {
         services.AddSwaggerGen(config =>
         {
@@ -83,6 +83,14 @@ public static class ServiceCollectionExtensions
             // config.UseReferencedDefinitionsForEnums();
 
             config.SchemaFilter<EnumSchemaFilter>();
+            config.SchemaFilter<EncryptedStringSchemaFilter>();
+
+            // These two filters require debug symbols/git, so only add them in development mode
+            if (environment.IsDevelopment())
+            {
+                config.DocumentFilter<GitCommitDocumentFilter>();
+                config.OperationFilter<SourceFileLineOperationFilter>();
+            }
 
             var apiFilePath = Path.Combine(AppContext.BaseDirectory, "Api.xml");
             config.IncludeXmlComments(apiFilePath, true);
