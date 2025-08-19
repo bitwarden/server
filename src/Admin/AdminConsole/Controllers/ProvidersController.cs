@@ -295,18 +295,21 @@ public class ProvidersController : Controller
             return View(oldModel);
         }
 
-        if (provider.IsBillable() && !string.IsNullOrEmpty(model.GatewayCustomerId))
+        // validate the stripe ids to prevent saving a bad one
+        if (provider.IsBillable())
         {
-            // validate the stripe ids to prevent saving a bad one
-            try
-            {
-                await _stripeAdapter.CustomerGetAsync(model.GatewayCustomerId);
-                await _stripeAdapter.SubscriptionGetAsync(model.GatewaySubscriptionId);
-            }
-            catch (StripeException e)
+            if (!string.IsNullOrEmpty(model.GatewayCustomerId) &&
+                !await _providerBillingService.IsValidGatewayCustomerIdAsync(model.GatewayCustomerId))
             {
                 var oldModel = await GetEditModel(id);
-                ModelState.AddModelError(nameof(model.GatewayCustomerId), $"Stripe Error: {e.Message}");
+                ModelState.AddModelError(nameof(model.GatewayCustomerId), $"Invalid Gateway Customer Id: {model.GatewayCustomerId}");
+                return View(oldModel);
+            }
+            if (!string.IsNullOrEmpty(model.GatewayCustomerId) &&
+                !await _providerBillingService.IsValidGatewaySubscriptionIdAsync(model.GatewaySubscriptionId))
+            {
+                var oldModel = await GetEditModel(id);
+                ModelState.AddModelError(nameof(model.GatewaySubscriptionId), $"Invalid Gateway Subscription Id: {model.GatewaySubscriptionId}");
                 return View(oldModel);
             }
         }

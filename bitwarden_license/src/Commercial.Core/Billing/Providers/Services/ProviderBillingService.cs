@@ -881,6 +881,32 @@ public class ProviderBillingService(
         }
     }
 
+    public async Task<bool> IsValidGatewayCustomerIdAsync(string customerId)
+    {
+        try
+        {
+            await stripeAdapter.CustomerGetAsync(customerId);
+        }
+        catch (StripeException)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    public async Task<bool> IsValidGatewaySubscriptionIdAsync(string subscriptionId)
+    {
+        try
+        {
+            await stripeAdapter.SubscriptionGetAsync(subscriptionId);
+        }
+        catch (StripeException)
+        {
+            return false;
+        }
+        return true;
+    }
+
     private Func<int, Task> CurrySeatScalingUpdate(
         Provider provider,
         ProviderPlan providerPlan,
