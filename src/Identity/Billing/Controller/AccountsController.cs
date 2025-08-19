@@ -1,5 +1,4 @@
-﻿using Bit.Core;
-using Bit.Core.Billing.Models.Api.Requests.Accounts;
+﻿using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.TrialInitiation.Registration;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
