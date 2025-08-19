@@ -13,7 +13,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
-using IdentityModel;
+using Duende.IdentityModel;
 using NSubstitute;
 using Xunit;
 
