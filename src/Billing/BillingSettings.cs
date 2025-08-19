@@ -10,8 +10,7 @@ public class BillingSettings
     public virtual string StripeWebhookSecret { get; set; }
     public virtual string StripeWebhookSecret20231016 { get; set; }
     public virtual string StripeWebhookSecret20240620 { get; set; }
-    public virtual string StripeWebhookSecret20250430Basil1 { get; set; }
-    public virtual string StripeWebhookSecret20250430Basil2 { get; set; }
+    public virtual string StripeWebhookSecret20250430Basil { get; set; }
     public virtual string BitPayWebhookKey { get; set; }
     public virtual string AppleWebhookKey { get; set; }
     public virtual FreshDeskSettings FreshDesk { get; set; } = new FreshDeskSettings();

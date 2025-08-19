@@ -120,6 +120,7 @@ public class StripeController : Controller
 
         return deliveryContainer.ApiVersion switch
         {
+            "2025-04-30.basil" => HandleVersionWith(_billingSettings.StripeWebhookSecret20250430Basil),
             "2024-06-20" => HandleVersionWith(_billingSettings.StripeWebhookSecret20240620),
             "2023-10-16" => HandleVersionWith(_billingSettings.StripeWebhookSecret20231016),
             "2022-08-01" => HandleVersionWith(_billingSettings.StripeWebhookSecret),
@@ -167,17 +168,6 @@ public class StripeController : Controller
         using var sr = new StreamReader(HttpContext.Request.Body);
 
         var json = await sr.ReadToEndAsync();
-        var stripeSignature = Request.Headers["Stripe-Signature"];
-
-        // For API version 2025-04-30.basil, we need to try multiple webhook secrets
-        var deliveryContainer = JsonSerializer.Deserialize<StripeWebhookDeliveryContainer>(json);
-
-        if (deliveryContainer.ApiVersion == "2025-04-30.basil")
-        {
-            return TryParseWithMultipleSecrets(json, stripeSignature, deliveryContainer);
-        }
-
-        // For other versions, use the existing single secret approach
         var webhookSecret = PickStripeWebhookSecret(json);
         if (string.IsNullOrEmpty(webhookSecret))
         {
@@ -186,64 +176,8 @@ public class StripeController : Controller
 
         return EventUtility.ConstructEvent(
             json,
-            stripeSignature,
+            Request.Headers["Stripe-Signature"],
             webhookSecret,
             throwOnApiVersionMismatch: false);
-    }
-
-    /// <summary>
-    /// Tries to parse the webhook event using multiple secrets for API version 2025-04-30.basil
-    /// </summary>
-    private Event TryParseWithMultipleSecrets(string json, string stripeSignature, StripeWebhookDeliveryContainer deliveryContainer)
-    {
-        var secrets = new[]
-        {
-            _billingSettings.StripeWebhookSecret20250430Basil1,
-            _billingSettings.StripeWebhookSecret20250430Basil2
-        };
-
-        foreach (var secret in secrets)
-        {
-            if (string.IsNullOrEmpty(secret) || !secret.StartsWith("whsec_"))
-            {
-                continue;
-            }
-
-            try
-            {
-                var parsedEvent = EventUtility.ConstructEvent(
-                    json,
-                    stripeSignature,
-                    secret,
-                    throwOnApiVersionMismatch: false);
-
-                var truncatedSecret = secret[..10];
-                _logger.LogInformation(
-                    "Successfully parsed webhook event {EventID}: {EventType} using secret {TruncatedSecret}... for API version {APIVersion}",
-                    deliveryContainer.Id,
-                    deliveryContainer.Type,
-                    truncatedSecret,
-                    deliveryContainer.ApiVersion);
-
-                return parsedEvent;
-            }
-            catch (StripeException ex)
-            {
-                var truncatedSecret = secret[..10];
-                _logger.LogDebug(
-                    "Failed to parse webhook event using secret {TruncatedSecret}... for API version {APIVersion}: {Error}",
-                    truncatedSecret,
-                    deliveryContainer.ApiVersion,
-                    ex.Message);
-            }
-        }
-
-        _logger.LogError(
-            "Could not parse webhook event {EventID}: {EventType} with any configured secret for API version {APIVersion}",
-            deliveryContainer.Id,
-            deliveryContainer.Type,
-            deliveryContainer.ApiVersion);
-
-        return null;
     }
 }
