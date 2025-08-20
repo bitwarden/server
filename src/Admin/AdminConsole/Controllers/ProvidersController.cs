@@ -403,18 +403,8 @@ public class ProvidersController : Controller
         }
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
-        var payByInvoice = false;
-        // prevent the page from crashing if stripe errors
-        try
-        {
-            payByInvoice =
-                _featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) &&
-                (await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)).ApprovedToPayByInvoice();
-        }
-        catch (StripeException e)
-        {
-            TempData["Error"] = $"Stripe Error: {e.Message}";
-        }
+        var payByInvoice = _featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) &&
+                           ((await _subscriberService.GetCustomer(provider))?.ApprovedToPayByInvoice() ?? false);
 
         return new ProviderEditModel(
             provider, users, providerOrganizations,
