@@ -88,7 +88,7 @@ public interface IProviderBillingService
     Task<Customer> SetupCustomer(
         Provider provider,
         TaxInfo taxInfo,
-        TokenizedPaymentSource tokenizedPaymentSource = null);
+        TokenizedPaymentSource tokenizedPaymentSource);
 
     /// <summary>
     /// For use during the provider setup process, this method starts a Stripe <see cref="Stripe.Subscription"/> for the given <paramref name="provider"/>.
