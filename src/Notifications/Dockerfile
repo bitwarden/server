@@ -1,7 +1,7 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine3.21 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0-alpine3.21 AS build
 
 # Docker buildx supplies the value for this arg
 ARG TARGETPLATFORM
@@ -37,7 +37,7 @@ RUN . /tmp/rid.txt && dotnet publish \
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.21
+FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine3.21
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
