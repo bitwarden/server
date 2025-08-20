@@ -124,16 +124,63 @@ public class OrganizationDataOwnershipPolicyValidatorTests
             Arg.Any<Func<object, Exception?, string>>());
     }
 
+    public static IEnumerable<object?[]> ShouldUpsertDefaultCollectionsTestCases()
+    {
+        yield return WithExistingPolicy();
+
+        yield return WithNoExistingPolicy();
+        yield break;
+
+        object?[] WithExistingPolicy()
+        {
+            var organizationId = Guid.NewGuid();
+            var policyUpdate = new PolicyUpdate
+            {
+                OrganizationId = organizationId,
+                Type = PolicyType.OrganizationDataOwnership,
+                Enabled = true
+            };
+            var currentPolicy = new Policy
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = organizationId,
+                Type = PolicyType.OrganizationDataOwnership,
+                Enabled = false
+            };
+
+            return new object?[]
+            {
+                policyUpdate,
+                currentPolicy
+            };
+        }
+
+        object?[] WithNoExistingPolicy()
+        {
+            var policyUpdate = new PolicyUpdate
+            {
+                OrganizationId = new Guid(),
+                Type = PolicyType.OrganizationDataOwnership,
+                Enabled = true
+            };
+
+            const Policy currentPolicy = null;
+
+            return new object?[]
+            {
+                policyUpdate,
+                currentPolicy
+            };
+        }
+    }
     [Theory, BitAutoData]
+    [BitMemberAutoData(nameof(ShouldUpsertDefaultCollectionsTestCases))]
     public async Task OnSaveSideEffectsAsync_WithRequirements_ShouldUpsertDefaultCollections(
         [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.OrganizationDataOwnership, false)] Policy currentPolicy,
+        [Policy(PolicyType.OrganizationDataOwnership, false)] Policy? currentPolicy,
         OrganizationDataOwnershipPolicyRequirementFactory factory)
     {
         // Arrange
-        currentPolicy.OrganizationId = policyUpdate.OrganizationId;
-        policyUpdate.Enabled = true;
-
         var policyRepository = ArrangePolicyRepositoryWithUsers(policyUpdate);
         var collectionRepository = Substitute.For<ICollectionRepository>();
         var logger = Substitute.For<ILogger<OrganizationDataOwnershipPolicyValidator>>();
@@ -144,7 +191,6 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         await sut.OnSaveSideEffectsAsync(policyUpdate, currentPolicy);
 
         // Assert
-
         await collectionRepository
             .Received(1)
             .UpsertDefaultCollectionsAsync(
