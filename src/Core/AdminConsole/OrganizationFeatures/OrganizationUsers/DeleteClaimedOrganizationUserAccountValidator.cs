@@ -1,19 +1,66 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedUserAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using OneOf;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+
+// public abstract record ValidationResult<T>(T Request)
+// {
+//     public static implicit operator ValidationResult<T>(T request) => new Valid<T>(request);
+//     public static implicit operator ValidationResult<T>(ValueTuple<T, Error> requestWithError) => new Invalid<T>(requestWithError.Item1, requestWithError.Item2);
+//
+//     public bool Valid => this is Valid<T>;
+//     public bool Invalid => this is Invalid<T>;
+//
+//     public TResult Match<TResult>(Func<Valid<T>, TResult> validFunc, Func<Invalid<T>, TResult> invalidFunc)
+//         => this switch
+//             {
+//                 Invalid<T> => invalidFunc((Invalid<T>)this),
+//                 Valid<T> => validFunc((Valid<T>)this),
+//                 _ => throw new Exception()
+//             };
+// }
+// public record Valid<T>(T Request) : ValidationResult<T>(Request);
+// public record Invalid<T>(T Request, Error Error) : ValidationResult<T>(Request);
+
+// public static class ValidationResultExtensions
+// {
+//     public static List<Valid<T>> ValidResults<T>(this IEnumerable<ValidationResult<T>> results) =>
+//         results.OfType<Valid<T>>().ToList();
+// }
+
+public record Valid<T>(T Request);
+public record Invalid<T>(T Request, Error Error);
+public class ValidationResult<T> : OneOfBase<Valid<T>, Invalid<T>>
+{
+    private ValidationResult(OneOf<Valid<T>, Invalid<T>> _) : base(_) {}
+    public static implicit operator ValidationResult<T>(T request) => new (new Valid<T>(request));
+    public static implicit operator ValidationResult<T>(ValueTuple<T, Error> requestWithError) => new (new Invalid<T>(requestWithError.Item1, requestWithError.Item2));
+
+    public bool Valid => IsT0;
+    public bool Invalid => IsT1;
+}
+public static class ValidationResultExtensions
+{
+    public static List<Valid<T>> ValidResults<T>(this IEnumerable<ValidationResult<T>> results) =>
+        results
+            .Where(r => r.IsT0)
+            .Select(r => r.AsT0)
+            .ToList();
+}
+
+public record Error(string Message);
 
 public class DeleteClaimedOrganizationUserAccountValidator(
     ICurrentContext currentContext,
     IOrganizationUserRepository organizationUserRepository,
     IProviderUserRepository providerUserRepository) : IDeleteClaimedOrganizationUserAccountValidator
 {
-    public async Task<IEnumerable<ValidationResult<DeleteUserValidationRequest>>> ValidateAsync(List<DeleteUserValidationRequest> requests)
+    public async Task<IEnumerable<ValidationResult<DeleteUserValidationRequest>>> ValidateAsync(IEnumerable<DeleteUserValidationRequest> requests)
     {
         // The order of the validators matters.
         // Earlier validators assert nullable properties so that later validators don’t have to.
@@ -51,8 +98,7 @@ public class DeleteClaimedOrganizationUserAccountValidator(
         foreach (var validator in validators)
         {
             var result = validator(request);
-
-            if (result is Invalid<DeleteUserValidationRequest>)
+            if (result.Invalid)
             {
                 return result;
             }
@@ -61,53 +107,52 @@ public class DeleteClaimedOrganizationUserAccountValidator(
         foreach (var asyncValidator in asyncValidators)
         {
             var result = await asyncValidator(request);
-
-            if (result is Invalid<DeleteUserValidationRequest>)
+            if (result.Invalid)
             {
                 return result;
             }
         }
 
-        return new Valid<DeleteUserValidationRequest>(request);
+        return request;
     }
 
     private static ValidationResult<DeleteUserValidationRequest> EnsureUserBelongsToOrganization(DeleteUserValidationRequest request)
     {
         if (request.User == null || request.OrganizationUser == null)
         {
-            return new Invalid<DeleteUserValidationRequest>(request, new UserNotFoundError());
+            return (request, new UserNotFoundError());
         }
 
-        return new Valid<DeleteUserValidationRequest>(request);
+        return request;
     }
 
     private static ValidationResult<DeleteUserValidationRequest> EnsureUserIsClaimedByOrganization(DeleteUserValidationRequest request)
     {
         if (request.IsClaimed)
         {
-            return new Valid<DeleteUserValidationRequest>(request);
+            return request;
         }
-        return new Invalid<DeleteUserValidationRequest>(request, new UserNotClaimedError());
+        return (request, new UserNotClaimedError());
     }
 
     private static ValidationResult<DeleteUserValidationRequest> EnsureUserStatusIsNotInvited(DeleteUserValidationRequest request)
     {
         if (request.OrganizationUser!.Status == OrganizationUserStatusType.Invited)
         {
-            return new Invalid<DeleteUserValidationRequest>(request, new InvalidUserStatusError());
+            return (request, new InvalidUserStatusError());
         }
 
-        return new Valid<DeleteUserValidationRequest>(request);
+        return request;
     }
 
     private static ValidationResult<DeleteUserValidationRequest> PreventSelfDeletion(DeleteUserValidationRequest request)
     {
         if (request.OrganizationUser!.UserId == request.DeletingUserId)
         {
-            return new Invalid<DeleteUserValidationRequest>(request, new CannotDeleteYourselfError());
+            return (request, new CannotDeleteYourselfError());
         }
 
-        return new Valid<DeleteUserValidationRequest>(request);
+        return request;
     }
 
     private async Task<ValidationResult<DeleteUserValidationRequest>> EnsureOnlyOwnersCanDeleteOwnersAsync(DeleteUserValidationRequest request)
@@ -115,10 +160,10 @@ public class DeleteClaimedOrganizationUserAccountValidator(
         if (request.OrganizationUser!.Type == OrganizationUserType.Owner! &&
             await currentContext.OrganizationOwner(request.OrganizationId))
         {
-            return new Invalid<DeleteUserValidationRequest>(request, new CannotDeleteOwnersError());
+            return (request, new CannotDeleteOwnersError());
         }
 
-        return new Valid<DeleteUserValidationRequest>(request);
+        return request;
     }
 
     private async Task<ValidationResult<DeleteUserValidationRequest>> EnsureUserIsNotSoleOrganizationOwnerAsync(DeleteUserValidationRequest request)
@@ -126,9 +171,9 @@ public class DeleteClaimedOrganizationUserAccountValidator(
         var onlyOwnerCount = await organizationUserRepository.GetCountByOnlyOwnerAsync(request.User!.Id);
         if (onlyOwnerCount > 0)
         {
-            return new Invalid<DeleteUserValidationRequest>(request, new SoleOwnerError());
+            return (request, new SoleOwnerError());
         }
-        return new Valid<DeleteUserValidationRequest>(request);
+        return request;
     }
 
     private async Task<ValidationResult<DeleteUserValidationRequest>> EnsureUserIsNotSoleProviderOwnerAsync(DeleteUserValidationRequest request)
@@ -136,20 +181,20 @@ public class DeleteClaimedOrganizationUserAccountValidator(
         var onlyOwnerProviderCount = await providerUserRepository.GetCountByOnlyOwnerAsync(request.User!.Id);
         if (onlyOwnerProviderCount > 0)
         {
-            return new Invalid<DeleteUserValidationRequest>(request, new SoleProviderError());
+            return (request, new SoleProviderError());
         }
 
-        return new Valid<DeleteUserValidationRequest>(request);
+        return request;
     }
 
     private async Task<ValidationResult<DeleteUserValidationRequest>> EnsureCustomUsersCannotDeleteAdminsAsync(DeleteUserValidationRequest request)
     {
         if (request.OrganizationUser!.Type == OrganizationUserType.Admin && await currentContext.OrganizationCustom(request.OrganizationId))
         {
-            return new Invalid<DeleteUserValidationRequest>(request, new CannotDeleteAdminsError());
+            return (request, new CannotDeleteAdminsError());
         }
 
-        return new Valid<DeleteUserValidationRequest>(request);
+        return request;
     }
 
 }

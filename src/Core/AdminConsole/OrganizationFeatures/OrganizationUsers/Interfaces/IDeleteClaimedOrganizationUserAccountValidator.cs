@@ -1,8 +1,6 @@
-﻿using Bit.Core.AdminConsole.Utilities.Validation;
-
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 public interface IDeleteClaimedOrganizationUserAccountValidator
 {
-    Task<IEnumerable<ValidationResult<DeleteUserValidationRequest>>> ValidateAsync(List<DeleteUserValidationRequest> requests);
+    Task<IEnumerable<ValidationResult<DeleteUserValidationRequest>>> ValidateAsync(IEnumerable<DeleteUserValidationRequest> requests);
 }
