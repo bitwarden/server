@@ -65,6 +65,7 @@ public class OrganizationService : IOrganizationService
     private readonly IPricingClient _pricingClient;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
+    private readonly IStripeAdapter _stripeAdapter;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -90,7 +91,8 @@ public class OrganizationService : IOrganizationService
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         IPolicyRequirementQuery policyRequirementQuery,
-        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand
+        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
+        IStripeAdapter stripeAdapter
     )
     {
         _organizationRepository = organizationRepository;
@@ -117,24 +119,7 @@ public class OrganizationService : IOrganizationService
         _pricingClient = pricingClient;
         _policyRequirementQuery = policyRequirementQuery;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
-    }
-
-    public async Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null)
-    {
-        var organization = await GetOrgById(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        var eop = endOfPeriod.GetValueOrDefault(true);
-        if (!endOfPeriod.HasValue && organization.ExpirationDate.HasValue &&
-            organization.ExpirationDate.Value < DateTime.UtcNow)
-        {
-            eop = false;
-        }
-
-        await _paymentService.CancelSubscriptionAsync(organization, eop);
+        _stripeAdapter = stripeAdapter;
     }
 
     public async Task ReinstateSubscriptionAsync(Guid organizationId)
@@ -355,8 +340,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var bankService = new BankAccountService();
-        var customerService = new CustomerService();
-        var customer = await customerService.GetAsync(organization.GatewayCustomerId,
+        var customer = await _stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId,
             new CustomerGetOptions { Expand = new List<string> { "sources" } });
         if (customer == null)
         {
@@ -417,12 +401,25 @@ public class OrganizationService : IOrganizationService
 
         if (updateBilling && !string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
         {
-            var customerService = new CustomerService();
-            await customerService.UpdateAsync(organization.GatewayCustomerId,
+            var newDisplayName = organization.DisplayName();
+
+            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId,
                 new CustomerUpdateOptions
                 {
                     Email = organization.BillingEmail,
-                    Description = organization.DisplayBusinessName()
+                    Description = organization.DisplayBusinessName(),
+                    InvoiceSettings = new CustomerInvoiceSettingsOptions
+                    {
+                        // This overwrites the existing custom fields for this organization
+                        CustomFields = [
+                            new CustomerInvoiceSettingsCustomFieldOptions
+                            {
+                                Name = organization.SubscriberType(),
+                                Value = newDisplayName.Length <= 30
+                                    ? newDisplayName
+                                    : newDisplayName[..30]
+                            }]
+                    },
                 });
         }
 
