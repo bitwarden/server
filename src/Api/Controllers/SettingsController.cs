@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Services;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -33,6 +34,7 @@ public class SettingsController : Controller
 
     [HttpPut("domains")]
     [HttpPost("domains")]
+    [SwaggerExclude("POST")]
     public async Task<DomainsResponseModel> PutDomains([FromBody] UpdateDomainsRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);

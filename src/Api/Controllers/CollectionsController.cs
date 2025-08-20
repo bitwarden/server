@@ -12,6 +12,7 @@ using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -102,7 +103,7 @@ public class CollectionsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<CollectionResponseModel>> Get(Guid orgId)
+    public async Task<ListResponseModel<CollectionResponseModel>> GetAll(Guid orgId)
     {
         IEnumerable<Collection> orgCollections;
 
@@ -174,6 +175,7 @@ public class CollectionsController : Controller
 
     [HttpPut("{id}")]
     [HttpPost("{id}")]
+    [SwaggerExclude("POST")]
     public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
@@ -223,6 +225,7 @@ public class CollectionsController : Controller
 
     [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
+    [SwaggerExclude("POST")]
     public async Task Delete(Guid orgId, Guid id)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
@@ -237,6 +240,7 @@ public class CollectionsController : Controller
 
     [HttpDelete("")]
     [HttpPost("delete")]
+    [SwaggerExclude("POST")]
     public async Task DeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
     {
         var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Ids);

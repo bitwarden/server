@@ -10,6 +10,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -49,7 +50,7 @@ public class ProviderUsersController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<ProviderUserUserDetailsResponseModel>> Get(Guid providerId)
+    public async Task<ListResponseModel<ProviderUserUserDetailsResponseModel>> GetAll(Guid providerId)
     {
         if (!_currentContext.ProviderManageUsers(providerId))
         {
@@ -156,6 +157,7 @@ public class ProviderUsersController : Controller
 
     [HttpPut("{id:guid}")]
     [HttpPost("{id:guid}")]
+    [SwaggerExclude("POST")]
     public async Task Put(Guid providerId, Guid id, [FromBody] ProviderUserUpdateRequestModel model)
     {
         if (!_currentContext.ProviderManageUsers(providerId))
@@ -175,6 +177,7 @@ public class ProviderUsersController : Controller
 
     [HttpDelete("{id:guid}")]
     [HttpPost("{id:guid}/delete")]
+    [SwaggerExclude("POST")]
     public async Task Delete(Guid providerId, Guid id)
     {
         if (!_currentContext.ProviderManageUsers(providerId))
@@ -188,6 +191,7 @@ public class ProviderUsersController : Controller
 
     [HttpDelete("")]
     [HttpPost("delete")]
+    [SwaggerExclude("POST")]
     public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkDelete(Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
     {
         if (!_currentContext.ProviderManageUsers(providerId))

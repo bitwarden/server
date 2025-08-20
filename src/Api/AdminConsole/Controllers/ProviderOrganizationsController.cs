@@ -12,6 +12,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -94,6 +95,7 @@ public class ProviderOrganizationsController : Controller
 
     [HttpDelete("{id:guid}")]
     [HttpPost("{id:guid}/delete")]
+    [SwaggerExclude("POST")]
     public async Task Delete(Guid providerId, Guid id)
     {
         if (!_currentContext.ManageProviderOrganizations(providerId))

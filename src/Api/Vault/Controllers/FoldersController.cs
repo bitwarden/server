@@ -8,6 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -45,7 +46,7 @@ public class FoldersController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<FolderResponseModel>> Get()
+    public async Task<ListResponseModel<FolderResponseModel>> GetAll()
     {
         var userId = _userService.GetProperUserId(User).Value;
         var folders = await _folderRepository.GetManyByUserIdAsync(userId);
@@ -64,6 +65,7 @@ public class FoldersController : Controller
 
     [HttpPut("{id}")]
     [HttpPost("{id}")]
+    [SwaggerExclude("POST")]
     public async Task<FolderResponseModel> Put(string id, [FromBody] FolderRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -79,6 +81,7 @@ public class FoldersController : Controller
 
     [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
+    [SwaggerExclude("POST")]
     public async Task Delete(string id)
     {
         var userId = _userService.GetProperUserId(User).Value;

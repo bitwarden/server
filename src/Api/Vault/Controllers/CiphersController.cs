@@ -25,6 +25,7 @@ using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -108,8 +109,9 @@ public class CiphersController : Controller
         return new CipherMiniDetailsResponseModel(cipher, _globalSettings, collectionCiphersGroupDict, cipher.OrganizationUseTotp);
     }
 
-    [HttpGet("{id}/full-details")]
     [HttpGet("{id}/details")]
+    [HttpGet("{id}/full-details")]
+    [SwaggerExclude("GET", "full-details")]
     public async Task<CipherDetailsResponseModel> GetDetails(Guid id)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -125,7 +127,7 @@ public class CiphersController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<CipherDetailsResponseModel>> Get()
+    public async Task<ListResponseModel<CipherDetailsResponseModel>> GetAll()
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var hasOrgs = _currentContext.Organizations.Count != 0;
@@ -233,6 +235,7 @@ public class CiphersController : Controller
 
     [HttpPut("{id}")]
     [HttpPost("{id}")]
+    [SwaggerExclude("POST")]
     public async Task<CipherResponseModel> Put(Guid id, [FromBody] CipherRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -275,6 +278,7 @@ public class CiphersController : Controller
 
     [HttpPut("{id}/admin")]
     [HttpPost("{id}/admin")]
+    [SwaggerExclude("POST")]
     public async Task<CipherMiniResponseModel> PutAdmin(Guid id, [FromBody] CipherRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -679,6 +683,7 @@ public class CiphersController : Controller
 
     [HttpPut("{id}/partial")]
     [HttpPost("{id}/partial")]
+    [SwaggerExclude("POST")]
     public async Task<CipherResponseModel> PutPartial(Guid id, [FromBody] CipherPartialRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -696,6 +701,7 @@ public class CiphersController : Controller
 
     [HttpPut("{id}/share")]
     [HttpPost("{id}/share")]
+    [SwaggerExclude("POST")]
     public async Task<CipherResponseModel> PutShare(Guid id, [FromBody] CipherShareRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -733,6 +739,7 @@ public class CiphersController : Controller
 
     [HttpPut("{id}/collections")]
     [HttpPost("{id}/collections")]
+    [SwaggerExclude("POST")]
     public async Task<CipherDetailsResponseModel> PutCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -759,6 +766,7 @@ public class CiphersController : Controller
 
     [HttpPut("{id}/collections_v2")]
     [HttpPost("{id}/collections_v2")]
+    [SwaggerExclude("POST")]
     public async Task<OptionalCipherDetailsResponseModel> PutCollections_vNext(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -793,6 +801,7 @@ public class CiphersController : Controller
 
     [HttpPut("{id}/collections-admin")]
     [HttpPost("{id}/collections-admin")]
+    [SwaggerExclude("POST")]
     public async Task<CipherMiniDetailsResponseModel> PutCollectionsAdmin(string id, [FromBody] CipherCollectionsRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -842,6 +851,7 @@ public class CiphersController : Controller
 
     [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
+    [SwaggerExclude("POST")]
     public async Task Delete(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -856,6 +866,7 @@ public class CiphersController : Controller
 
     [HttpDelete("{id}/admin")]
     [HttpPost("{id}/delete-admin")]
+    [SwaggerExclude("POST")]
     public async Task DeleteAdmin(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -871,6 +882,7 @@ public class CiphersController : Controller
 
     [HttpDelete("")]
     [HttpPost("delete")]
+    [SwaggerExclude("POST")]
     public async Task DeleteMany([FromBody] CipherBulkDeleteRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
@@ -885,6 +897,7 @@ public class CiphersController : Controller
 
     [HttpDelete("admin")]
     [HttpPost("delete-admin")]
+    [SwaggerExclude("POST")]
     public async Task DeleteManyAdmin([FromBody] CipherBulkDeleteRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
@@ -1051,6 +1064,7 @@ public class CiphersController : Controller
 
     [HttpPut("move")]
     [HttpPost("move")]
+    [SwaggerExclude("POST")]
     public async Task MoveMany([FromBody] CipherBulkMoveRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
@@ -1065,6 +1079,7 @@ public class CiphersController : Controller
 
     [HttpPut("share")]
     [HttpPost("share")]
+    [SwaggerExclude("POST")]
     public async Task<ListResponseModel<CipherMiniResponseModel>> PutShareMany([FromBody] CipherBulkShareRequestModel model)
     {
         var organizationId = new Guid(model.Ciphers.First().OrganizationId);
@@ -1230,7 +1245,7 @@ public class CiphersController : Controller
     [Obsolete("Deprecated Attachments API", false)]
     [RequestSizeLimit(Constants.FileSize101mb)]
     [DisableFormValueModelBinding]
-    public async Task<CipherResponseModel> PostAttachment(Guid id)
+    public async Task<CipherResponseModel> PostAttachmentV1(Guid id)
     {
         ValidateAttachment();
 
@@ -1325,6 +1340,7 @@ public class CiphersController : Controller
 
     [HttpDelete("{id}/attachment/{attachmentId}")]
     [HttpPost("{id}/attachment/{attachmentId}/delete")]
+    [SwaggerExclude("POST")]
     public async Task<DeleteAttachmentResponseData> DeleteAttachment(Guid id, string attachmentId)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -1339,6 +1355,7 @@ public class CiphersController : Controller
 
     [HttpDelete("{id}/attachment/{attachmentId}/admin")]
     [HttpPost("{id}/attachment/{attachmentId}/delete-admin")]
+    [SwaggerExclude("POST")]
     public async Task<DeleteAttachmentResponseData> DeleteAttachmentAdmin(Guid id, string attachmentId)
     {
         var userId = _userService.GetProperUserId(User).Value;

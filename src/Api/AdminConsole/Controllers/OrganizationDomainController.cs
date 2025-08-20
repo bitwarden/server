@@ -7,6 +7,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -46,7 +47,7 @@ public class OrganizationDomainController : Controller
     }
 
     [HttpGet("{orgId}/domain")]
-    public async Task<ListResponseModel<OrganizationDomainResponseModel>> Get(Guid orgId)
+    public async Task<ListResponseModel<OrganizationDomainResponseModel>> GetAll(Guid orgId)
     {
         await ValidateOrganizationAccessAsync(orgId);
 
@@ -106,6 +107,7 @@ public class OrganizationDomainController : Controller
 
     [HttpDelete("{orgId}/domain/{id}")]
     [HttpPost("{orgId}/domain/{id}/remove")]
+    [SwaggerExclude("POST")]
     public async Task RemoveDomain(Guid orgId, Guid id)
     {
         await ValidateOrganizationAccessAsync(orgId);

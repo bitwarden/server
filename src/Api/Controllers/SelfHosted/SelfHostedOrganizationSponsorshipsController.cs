@@ -12,6 +12,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -80,6 +81,7 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
 
     [HttpDelete("{sponsoringOrgId}")]
     [HttpPost("{sponsoringOrgId}/delete")]
+    [SwaggerExclude("POST")]
     public async Task RevokeSponsorship(Guid sponsoringOrgId)
     {
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);

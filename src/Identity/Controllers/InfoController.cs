@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Utilities;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Identity.Controllers;
@@ -7,10 +8,12 @@ public class InfoController : Controller
 {
     [HttpGet("~/alive")]
     [HttpGet("~/now")]
+    [SwaggerExclude("GET", "now")]
     public DateTime GetAlive()
     {
         return DateTime.UtcNow;
     }
+
 
     [HttpGet("~/version")]
     public JsonResult GetVersion()
