@@ -20,8 +20,9 @@ public class StripePaymentServiceTests
 {
     [Theory]
     [BitAutoData]
-    public async Task PreviewInvoiceAsync_ForOrganization_CalculatesSalesTaxCorrectlyForFamiliesWithoutAdditionalStorage(
-        SutProvider<StripePaymentService> sutProvider)
+    public async Task
+        PreviewInvoiceAsync_ForOrganization_CalculatesSalesTaxCorrectlyForFamiliesWithoutAdditionalStorage(
+            SutProvider<StripePaymentService> sutProvider)
     {
         sutProvider.GetDependency<IAutomaticTaxFactory>()
             .CreateAsync(Arg.Is<AutomaticTaxFactoryParameters>(p => p.PlanType == PlanType.FamiliesAnnually))
@@ -34,16 +35,13 @@ public class StripePaymentServiceTests
 
         var parameters = new PreviewOrganizationInvoiceRequestBody
         {
-            PasswordManager = new OrganizationPasswordManagerRequestModel
-            {
-                Plan = PlanType.FamiliesAnnually,
-                AdditionalStorage = 0
-            },
-            TaxInformation = new TaxInformationRequestModel
-            {
-                Country = "FR",
-                PostalCode = "12345"
-            }
+            PasswordManager =
+                new OrganizationPasswordManagerRequestModel
+                {
+                    Plan = PlanType.FamiliesAnnually,
+                    AdditionalStorage = 0
+                },
+            TaxInformation = new TaxInformationRequestModel { Country = "FR", PostalCode = "12345" }
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
@@ -58,7 +56,7 @@ public class StripePaymentServiceTests
             .Returns(new Invoice
             {
                 TotalExcludingTax = 4000,
-                Tax = 800,
+                TotalTaxes = [new InvoiceTotalTax { Amount = 800 }],
                 Total = 4800
             });
 
@@ -85,16 +83,13 @@ public class StripePaymentServiceTests
 
         var parameters = new PreviewOrganizationInvoiceRequestBody
         {
-            PasswordManager = new OrganizationPasswordManagerRequestModel
-            {
-                Plan = PlanType.FamiliesAnnually,
-                AdditionalStorage = 1
-            },
-            TaxInformation = new TaxInformationRequestModel
-            {
-                Country = "FR",
-                PostalCode = "12345"
-            }
+            PasswordManager =
+                new OrganizationPasswordManagerRequestModel
+                {
+                    Plan = PlanType.FamiliesAnnually,
+                    AdditionalStorage = 1
+                },
+            TaxInformation = new TaxInformationRequestModel { Country = "FR", PostalCode = "12345" }
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
@@ -106,12 +101,7 @@ public class StripePaymentServiceTests
                 p.SubscriptionDetails.Items.Any(x =>
                     x.Plan == familiesPlan.PasswordManager.StripeStoragePlanId &&
                     x.Quantity == 1)))
-            .Returns(new Invoice
-            {
-                TotalExcludingTax = 4000,
-                Tax = 800,
-                Total = 4800
-            });
+            .Returns(new Invoice { TotalExcludingTax = 4000, TotalTaxes = [new InvoiceTotalTax { Amount = 800 }], Total = 4800 });
 
         var actual = await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
 
@@ -122,8 +112,9 @@ public class StripePaymentServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task PreviewInvoiceAsync_ForOrganization_CalculatesSalesTaxCorrectlyForFamiliesForEnterpriseWithoutAdditionalStorage(
-        SutProvider<StripePaymentService> sutProvider)
+    public async Task
+        PreviewInvoiceAsync_ForOrganization_CalculatesSalesTaxCorrectlyForFamiliesForEnterpriseWithoutAdditionalStorage(
+            SutProvider<StripePaymentService> sutProvider)
     {
         sutProvider.GetDependency<IAutomaticTaxFactory>()
             .CreateAsync(Arg.Is<AutomaticTaxFactoryParameters>(p => p.PlanType == PlanType.FamiliesAnnually))
@@ -142,11 +133,7 @@ public class StripePaymentServiceTests
                 SponsoredPlan = PlanSponsorshipType.FamiliesForEnterprise,
                 AdditionalStorage = 0
             },
-            TaxInformation = new TaxInformationRequestModel
-            {
-                Country = "FR",
-                PostalCode = "12345"
-            }
+            TaxInformation = new TaxInformationRequestModel { Country = "FR", PostalCode = "12345" }
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
@@ -158,12 +145,7 @@ public class StripePaymentServiceTests
                 p.SubscriptionDetails.Items.Any(x =>
                     x.Plan == familiesPlan.PasswordManager.StripeStoragePlanId &&
                     x.Quantity == 0)))
-            .Returns(new Invoice
-            {
-                TotalExcludingTax = 0,
-                Tax = 0,
-                Total = 0
-            });
+            .Returns(new Invoice { TotalExcludingTax = 0, TotalTaxes = [new InvoiceTotalTax { Amount = 0 }], Total = 0 });
 
         var actual = await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
 
@@ -174,8 +156,9 @@ public class StripePaymentServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task PreviewInvoiceAsync_ForOrganization_CalculatesSalesTaxCorrectlyForFamiliesForEnterpriseWithAdditionalStorage(
-        SutProvider<StripePaymentService> sutProvider)
+    public async Task
+        PreviewInvoiceAsync_ForOrganization_CalculatesSalesTaxCorrectlyForFamiliesForEnterpriseWithAdditionalStorage(
+            SutProvider<StripePaymentService> sutProvider)
     {
         sutProvider.GetDependency<IAutomaticTaxFactory>()
             .CreateAsync(Arg.Is<AutomaticTaxFactoryParameters>(p => p.PlanType == PlanType.FamiliesAnnually))
@@ -194,11 +177,7 @@ public class StripePaymentServiceTests
                 SponsoredPlan = PlanSponsorshipType.FamiliesForEnterprise,
                 AdditionalStorage = 1
             },
-            TaxInformation = new TaxInformationRequestModel
-            {
-                Country = "FR",
-                PostalCode = "12345"
-            }
+            TaxInformation = new TaxInformationRequestModel { Country = "FR", PostalCode = "12345" }
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
@@ -210,12 +189,7 @@ public class StripePaymentServiceTests
                 p.SubscriptionDetails.Items.Any(x =>
                     x.Plan == familiesPlan.PasswordManager.StripeStoragePlanId &&
                     x.Quantity == 1)))
-            .Returns(new Invoice
-            {
-                TotalExcludingTax = 400,
-                Tax = 8,
-                Total = 408
-            });
+            .Returns(new Invoice { TotalExcludingTax = 400, TotalTaxes = [new InvoiceTotalTax { Amount = 8 }], Total = 408 });
 
         var actual = await sutProvider.Sut.PreviewInvoiceAsync(parameters, null, null);
 

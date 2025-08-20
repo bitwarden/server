@@ -169,17 +169,23 @@ public class GetOrganizationWarningsQuery(
         if (subscription is
             {
                 Status: SubscriptionStatus.Trialing or SubscriptionStatus.Active,
-                LatestInvoice: null or { Status: InvoiceStatus.Paid }
-            } && (subscription.CurrentPeriodEnd - now).TotalDays <= 14)
+                LatestInvoice: null or { Status: InvoiceStatus.Paid },
+                Items.Data.Count: > 0
+            })
         {
-            return new ResellerRenewalWarning
+            var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
+
+            if (currentPeriodEnd != null && (currentPeriodEnd.Value - now).TotalDays <= 14)
             {
-                Type = "upcoming",
-                Upcoming = new ResellerRenewalWarning.UpcomingRenewal
+                return new ResellerRenewalWarning
                 {
-                    RenewalDate = subscription.CurrentPeriodEnd
-                }
-            };
+                    Type = "upcoming",
+                    Upcoming = new ResellerRenewalWarning.UpcomingRenewal
+                    {
+                        RenewalDate = currentPeriodEnd.Value
+                    }
+                };
+            }
         }
 
         if (subscription is
