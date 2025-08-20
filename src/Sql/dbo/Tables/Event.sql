@@ -20,6 +20,7 @@
     [DomainName]             VARCHAR(256)     NULL,
     [SecretId]               UNIQUEIDENTIFIER NULL,
     [ServiceAccountId]       UNIQUEIDENTIFIER NULL,
+    [ProjectId]              UNIQUEIDENTIFIER NULL,
     CONSTRAINT [PK_Event] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
