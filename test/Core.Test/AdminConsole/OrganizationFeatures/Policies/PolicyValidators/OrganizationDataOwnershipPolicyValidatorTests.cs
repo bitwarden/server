@@ -144,11 +144,12 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         await sut.OnSaveSideEffectsAsync(policyUpdate, currentPolicy);
 
         // Assert
+
         await collectionRepository
             .Received(1)
             .UpsertDefaultCollectionsAsync(
                 policyUpdate.OrganizationId,
-                Arg.Is<List<Guid>>(ids => ids.Count == 3),
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 3),
                 _defaultUserCollectionName);
     }
 
