@@ -113,18 +113,4 @@ public interface IProviderBillingService
         TaxInformation taxInformation);
 
     Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command);
-
-    /// <summary>
-    /// Checks whether the <paramref name="customerId"/> exists in the gateway.
-    /// </summary>
-    /// <param name="customerId">The gateway customer ID to check.</param>
-    /// <returns>True if the ID exists in the gateway, false if not.</returns>
-    Task<bool> IsValidGatewayCustomerIdAsync(string customerId);
-
-    /// <summary>
-    /// Checks whether the <paramref name="subscriptionId"/> exists in the gateway.
-    /// </summary>
-    /// <param name="subscriptionId">The gateway subscription ID to check.</param>
-    /// <returns>True if the ID exists in the gateway, false if not.</returns>
-    Task<bool> IsValidGatewaySubscriptionIdAsync(string subscriptionId);
 }

@@ -1765,4 +1765,142 @@ public class SubscriberServiceTests
     }
 
     #endregion
+
+    #region IsValidGatewayCustomerIdAsync
+
+    [Theory, BitAutoData]
+    public async Task IsValidGatewayCustomerIdAsync_NullSubscriber_ThrowsArgumentNullException(
+        SutProvider<SubscriberService> sutProvider)
+    {
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            sutProvider.Sut.IsValidGatewayCustomerIdAsync(null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsValidGatewayCustomerIdAsync_NullGatewayCustomerId_ReturnsTrue(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        organization.GatewayCustomerId = null;
+
+        var result = await sutProvider.Sut.IsValidGatewayCustomerIdAsync(organization);
+
+        Assert.True(result);
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .CustomerGetAsync(Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsValidGatewayCustomerIdAsync_EmptyGatewayCustomerId_ReturnsTrue(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        organization.GatewayCustomerId = "";
+
+        var result = await sutProvider.Sut.IsValidGatewayCustomerIdAsync(organization);
+
+        Assert.True(result);
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .CustomerGetAsync(Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsValidGatewayCustomerIdAsync_ValidCustomerId_ReturnsTrue(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId).Returns(new Customer());
+
+        var result = await sutProvider.Sut.IsValidGatewayCustomerIdAsync(organization);
+
+        Assert.True(result);
+        await stripeAdapter.Received(1).CustomerGetAsync(organization.GatewayCustomerId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsValidGatewayCustomerIdAsync_InvalidCustomerId_ReturnsFalse(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var stripeException = new StripeException { StripeError = new StripeError { Code = "resource_missing" } };
+        stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId).Throws(stripeException);
+
+        var result = await sutProvider.Sut.IsValidGatewayCustomerIdAsync(organization);
+
+        Assert.False(result);
+        await stripeAdapter.Received(1).CustomerGetAsync(organization.GatewayCustomerId);
+    }
+
+    #endregion
+
+    #region IsValidGatewaySubscriptionIdAsync
+
+    [Theory, BitAutoData]
+    public async Task IsValidGatewaySubscriptionIdAsync_NullSubscriber_ThrowsArgumentNullException(
+        SutProvider<SubscriberService> sutProvider)
+    {
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            sutProvider.Sut.IsValidGatewaySubscriptionIdAsync(null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsValidGatewaySubscriptionIdAsync_NullGatewaySubscriptionId_ReturnsTrue(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        organization.GatewaySubscriptionId = null;
+
+        var result = await sutProvider.Sut.IsValidGatewaySubscriptionIdAsync(organization);
+
+        Assert.True(result);
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .SubscriptionGetAsync(Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsValidGatewaySubscriptionIdAsync_EmptyGatewaySubscriptionId_ReturnsTrue(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        organization.GatewaySubscriptionId = "";
+
+        var result = await sutProvider.Sut.IsValidGatewaySubscriptionIdAsync(organization);
+
+        Assert.True(result);
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .SubscriptionGetAsync(Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsValidGatewaySubscriptionIdAsync_ValidSubscriptionId_ReturnsTrue(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId).Returns(new Subscription());
+
+        var result = await sutProvider.Sut.IsValidGatewaySubscriptionIdAsync(organization);
+
+        Assert.True(result);
+        await stripeAdapter.Received(1).SubscriptionGetAsync(organization.GatewaySubscriptionId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsValidGatewaySubscriptionIdAsync_InvalidSubscriptionId_ReturnsFalse(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var stripeException = new StripeException { StripeError = new StripeError { Code = "resource_missing" } };
+        stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId).Throws(stripeException);
+
+        var result = await sutProvider.Sut.IsValidGatewaySubscriptionIdAsync(organization);
+
+        Assert.False(result);
+        await stripeAdapter.Received(1).SubscriptionGetAsync(organization.GatewaySubscriptionId);
+    }
+
+    #endregion
 }
