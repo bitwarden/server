@@ -157,16 +157,18 @@ public class RemoveOrganizationFromProviderCommandTests
             "b@example.com"
         ]);
 
-        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
-            .Returns(GetSubscription(organization.GatewaySubscriptionId));
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
+                options => options.Expand.Contains("customer")))
+            .Returns(GetSubscription(organization.GatewaySubscriptionId, organization.GatewayCustomerId));
 
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         await stripeAdapter.Received(1).CustomerUpdateAsync(organization.GatewayCustomerId,
-            Arg.Is<CustomerUpdateOptions>(options =>
-                options.Coupon == string.Empty && options.Email == "a@example.com"));
+            Arg.Is<CustomerUpdateOptions>(options => options.Email == "a@example.com"));
+
+        await stripeAdapter.Received(1).CustomerDeleteDiscountAsync(organization.GatewayCustomerId);
 
         await stripeAdapter.Received(1).SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -372,10 +374,21 @@ public class RemoveOrganizationFromProviderCommandTests
                 Arg.Is<IEnumerable<string>>(emails => emails.FirstOrDefault() == "a@example.com"));
     }
 
-    private static Subscription GetSubscription(string subscriptionId) =>
+    private static Subscription GetSubscription(string subscriptionId, string customerId) =>
         new()
         {
             Id = subscriptionId,
+            CustomerId = customerId,
+            Customer = new Customer
+            {
+                Discount = new Discount
+                {
+                    Coupon = new Coupon
+                    {
+                        Id = "coupon-id"
+                    }
+                }
+            },
             Status = StripeConstants.SubscriptionStatus.Active,
             Items = new StripeList<SubscriptionItem>
             {

@@ -540,12 +540,8 @@ public class ProviderBillingService(
                 taxInfo.BillingAddressCountry,
                 taxInfo.TaxIdNumber);
 
-            if (taxIdType == null)
+            if (string.IsNullOrEmpty(taxIdType))
             {
-                logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
-                    taxInfo.BillingAddressCountry,
-                    taxInfo.TaxIdNumber);
-
                 throw new BadRequestException("billingTaxIdTypeInferenceError");
             }
 
@@ -562,11 +558,6 @@ public class ProviderBillingService(
                     Value = $"ES{taxInfo.TaxIdNumber}"
                 });
             }
-        }
-
-        if (!string.IsNullOrEmpty(provider.DiscountId))
-        {
-            options.Coupon = provider.DiscountId;
         }
 
         var requireProviderPaymentMethodDuringSetup =
@@ -673,7 +664,7 @@ public class ProviderBillingService(
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
-        if (providerPlans == null || providerPlans.Count == 0)
+        if (providerPlans.Count == 0)
         {
             logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured plans", provider.Id);
 
@@ -717,7 +708,7 @@ public class ProviderBillingService(
             requireProviderPaymentMethodDuringSetup &&
             (!string.IsNullOrEmpty(customer.InvoiceSettings.DefaultPaymentMethodId) ||
              customer.Metadata.ContainsKey(BraintreeCustomerIdKey) ||
-             setupIntent.IsUnverifiedBankAccount());
+             (setupIntent != null && setupIntent.IsUnverifiedBankAccount()));
 
         int? trialPeriodDays = provider.Type switch
         {
@@ -732,6 +723,7 @@ public class ProviderBillingService(
                 StripeConstants.CollectionMethod.ChargeAutomatically : StripeConstants.CollectionMethod.SendInvoice,
             Customer = customer.Id,
             DaysUntilDue = usePaymentMethod ? null : 30,
+            Discounts = !string.IsNullOrEmpty(provider.DiscountId) ? [new SubscriptionDiscountOptions { Coupon = provider.DiscountId }] : null,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
