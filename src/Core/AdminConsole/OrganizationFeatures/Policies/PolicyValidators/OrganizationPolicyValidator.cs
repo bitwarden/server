@@ -27,7 +27,9 @@ public abstract class OrganizationPolicyValidator(IPolicyRepository policyReposi
         foreach (var policyDetailGroup in policyDetailGroups)
         {
             var filteredPolicies = policyDetailGroup
-                .Where(factory.Enforce);
+                .Where(factory.Enforce)
+                // Prevent deferred execution from causing inconsistent tests.
+                .ToList();
 
             requirements.Add(factory.Create(filteredPolicies));
         }
