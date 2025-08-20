@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Dirt.Models;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Tools.Models.Response;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Reports.Models.Data;
@@ -89,13 +90,13 @@ public class ReportsController : Controller
     {
         if (!await _currentContext.AccessReports(orgId))
         {
-            _logger.LogInformation(
+            _logger.LogInformation(Constants.BypassFiltersEventId,
                 "AccessReports Check - UserId: {userId} OrgId: {orgId} DeviceType: {deviceType}",
                 _currentContext.UserId, orgId, _currentContext.DeviceType);
             throw new NotFoundException();
         }
 
-        _logger.LogInformation(
+        _logger.LogInformation(Constants.BypassFiltersEventId,
             "MemberAccessReportQuery starts - UserId: {userId} OrgId: {orgId} DeviceType: {deviceType}",
             _currentContext.UserId, orgId, _currentContext.DeviceType);
 

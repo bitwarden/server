@@ -20,26 +20,26 @@ public class MemberAccessReportQuery(
     public async Task<IEnumerable<MemberAccessReportDetail>> GetMemberAccessReportsAsync(
         MemberAccessReportRequest request)
     {
-        logger.LogInformation("Starting MemberAccessReport generation for OrganizationId: {OrganizationId}", request.OrganizationId);
+        logger.LogInformation(Constants.BypassFiltersEventId, "Starting MemberAccessReport generation for OrganizationId: {OrganizationId}", request.OrganizationId);
 
         var baseDetails =
             await organizationMemberBaseDetailRepository.GetOrganizationMemberBaseDetailsByOrganizationId(
                 request.OrganizationId);
 
-        logger.LogDebug("Retrieved {BaseDetailsCount} base details for OrganizationId: {OrganizationId}",
+        logger.LogInformation(Constants.BypassFiltersEventId, "Retrieved {BaseDetailsCount} base details for OrganizationId: {OrganizationId}",
             baseDetails.Count(), request.OrganizationId);
 
         var orgUsers = baseDetails.Select(x => x.UserGuid.GetValueOrDefault()).Distinct();
         var orgUsersCount = orgUsers.Count();
-        logger.LogDebug("Found {UniqueUsersCount} unique users for OrganizationId: {OrganizationId}",
+        logger.LogInformation(Constants.BypassFiltersEventId, "Found {UniqueUsersCount} unique users for OrganizationId: {OrganizationId}",
             orgUsersCount, request.OrganizationId);
 
         var orgUsersTwoFactorEnabled = await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUsers);
-        logger.LogDebug("Retrieved two-factor status for {UsersCount} users for OrganizationId: {OrganizationId}",
+        logger.LogInformation(Constants.BypassFiltersEventId, "Retrieved two-factor status for {UsersCount} users for OrganizationId: {OrganizationId}",
             orgUsersTwoFactorEnabled.Count(), request.OrganizationId);
 
         var orgAbility = await applicationCacheService.GetOrganizationAbilityAsync(request.OrganizationId);
-        logger.LogDebug("Retrieved organization ability (UseResetPassword: {UseResetPassword}) for OrganizationId: {OrganizationId}",
+        logger.LogInformation(Constants.BypassFiltersEventId, "Retrieved organization ability (UseResetPassword: {UseResetPassword}) for OrganizationId: {OrganizationId}",
             orgAbility?.UseResetPassword, request.OrganizationId);
 
         var accessDetails = baseDetails
@@ -78,7 +78,7 @@ public class MemberAccessReportQuery(
             });
 
         var accessDetailsCount = accessDetails.Count();
-        logger.LogInformation("Completed MemberAccessReport generation for OrganizationId: {OrganizationId}. Generated {AccessDetailsCount} access detail records",
+        logger.LogInformation(Constants.BypassFiltersEventId, "Completed MemberAccessReport generation for OrganizationId: {OrganizationId}. Generated {AccessDetailsCount} access detail records",
             request.OrganizationId, accessDetailsCount);
 
         return accessDetails;
