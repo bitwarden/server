@@ -8,18 +8,18 @@ using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
 
-public class DeleteClaimedOrganizationUserAccountCommand(
+public class DeleteClaimedOrganizationUserAccountCommandvNext(
     IUserService userService,
     IEventService eventService,
     IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
     IOrganizationUserRepository organizationUserRepository,
     IUserRepository userRepository,
     IPushNotificationService pushService,
-    ILogger<DeleteClaimedOrganizationUserAccountCommand> logger,
+    ILogger<DeleteClaimedOrganizationUserAccountCommandvNext> logger,
     IDeleteClaimedOrganizationUserAccountValidator deleteClaimedOrganizationUserAccountValidator)
-    : IDeleteClaimedOrganizationUserAccountCommand
+    : IDeleteClaimedOrganizationUserAccountCommandvNext
 {
     public async Task<CommandResult> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
     {

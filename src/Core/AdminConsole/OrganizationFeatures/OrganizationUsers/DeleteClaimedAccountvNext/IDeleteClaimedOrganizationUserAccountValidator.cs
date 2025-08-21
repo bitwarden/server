@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
+﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
 
 public interface IDeleteClaimedOrganizationUserAccountValidator
 {

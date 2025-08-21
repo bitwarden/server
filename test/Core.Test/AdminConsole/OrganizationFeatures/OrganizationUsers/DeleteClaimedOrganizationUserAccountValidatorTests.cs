@@ -9,8 +9,8 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-using DeleteClaimedOrganizationUserAccountValidator = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount.DeleteClaimedOrganizationUserAccountValidator;
-using DeleteUserValidationRequest = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount.DeleteUserValidationRequest;
+using DeleteClaimedOrganizationUserAccountValidator = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext.DeleteClaimedOrganizationUserAccountValidator;
+using DeleteUserValidationRequest = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext.DeleteUserValidationRequest;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 

@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
+﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
 
 /// <summary>
 /// A strongly typed error containing a reason that an action failed.
