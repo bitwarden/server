@@ -26,7 +26,6 @@ WORKDIR /source/util/Setup
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Build project
-WORKDIR /source/util/Setup
 RUN . /tmp/rid.txt && dotnet publish \
     -c release \
     --no-restore \
@@ -38,7 +37,7 @@ RUN . /tmp/rid.txt && dotnet publish \
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.21
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.21
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden" com.bitwarden.project="setup"

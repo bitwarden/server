@@ -850,7 +850,7 @@ public static class ServiceCollectionExtensions
                     configuration: listenerConfiguration,
                     handler: provider.GetRequiredKeyedService<IEventMessageHandler>(serviceKey: listenerConfiguration.RoutingKey),
                     serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
-                    logger: provider.GetRequiredService<ILogger<AzureServiceBusEventListenerService<TListenerConfig>>>()
+                    loggerFactory: provider.GetRequiredService<ILoggerFactory>()
                 )
             )
         );
@@ -860,7 +860,7 @@ public static class ServiceCollectionExtensions
                     configuration: listenerConfiguration,
                     handler: provider.GetRequiredService<IIntegrationHandler<TConfig>>(),
                     serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
-                    logger: provider.GetRequiredService<ILogger<AzureServiceBusIntegrationListenerService<TListenerConfig>>>()
+                    loggerFactory: provider.GetRequiredService<ILoggerFactory>()
                 )
             )
         );
@@ -901,7 +901,7 @@ public static class ServiceCollectionExtensions
                         handler: provider.GetRequiredService<EventRepositoryHandler>(),
                         configuration: repositoryConfiguration,
                         rabbitMqService: provider.GetRequiredService<IRabbitMqService>(),
-                        logger: provider.GetRequiredService<ILogger<RabbitMqEventListenerService<RepositoryListenerConfiguration>>>()
+                        loggerFactory: provider.GetRequiredService<ILoggerFactory>()
                     )
                 )
             );
@@ -918,7 +918,7 @@ public static class ServiceCollectionExtensions
                         configuration: repositoryConfiguration,
                         handler: provider.GetRequiredService<AzureTableStorageEventHandler>(),
                         serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
-                        logger: provider.GetRequiredService<ILogger<AzureServiceBusEventListenerService<RepositoryListenerConfiguration>>>()
+                        loggerFactory: provider.GetRequiredService<ILoggerFactory>()
                     )
                 )
             );
@@ -952,7 +952,7 @@ public static class ServiceCollectionExtensions
                     handler: provider.GetRequiredKeyedService<IEventMessageHandler>(serviceKey: listenerConfiguration.RoutingKey),
                     configuration: listenerConfiguration,
                     rabbitMqService: provider.GetRequiredService<IRabbitMqService>(),
-                    logger: provider.GetRequiredService<ILogger<RabbitMqEventListenerService<TListenerConfig>>>()
+                    loggerFactory: provider.GetRequiredService<ILoggerFactory>()
                 )
             )
         );
@@ -962,7 +962,7 @@ public static class ServiceCollectionExtensions
                     handler: provider.GetRequiredService<IIntegrationHandler<TConfig>>(),
                     configuration: listenerConfiguration,
                     rabbitMqService: provider.GetRequiredService<IRabbitMqService>(),
-                    logger: provider.GetRequiredService<ILogger<RabbitMqIntegrationListenerService<TListenerConfig>>>(),
+                    loggerFactory: provider.GetRequiredService<ILoggerFactory>(),
                     timeProvider: provider.GetRequiredService<TimeProvider>()
                 )
             )

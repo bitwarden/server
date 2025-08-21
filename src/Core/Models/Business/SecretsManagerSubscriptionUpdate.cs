@@ -50,11 +50,7 @@ public class SecretsManagerSubscriptionUpdate
     public bool MaxAutoscaleSmSeatsChanged => MaxAutoscaleSmSeats != Organization.MaxAutoscaleSmSeats;
     public bool MaxAutoscaleSmServiceAccountsChanged =>
         MaxAutoscaleSmServiceAccounts != Organization.MaxAutoscaleSmServiceAccounts;
-    public bool SmSeatAutoscaleLimitReached => SmSeats.HasValue && MaxAutoscaleSmSeats.HasValue && SmSeats == MaxAutoscaleSmSeats;
 
-    public bool SmServiceAccountAutoscaleLimitReached => SmServiceAccounts.HasValue &&
-                                                         MaxAutoscaleSmServiceAccounts.HasValue &&
-                                                         SmServiceAccounts == MaxAutoscaleSmServiceAccounts;
 
     public SecretsManagerSubscriptionUpdate(Organization organization, Plan plan, bool autoscaling)
     {

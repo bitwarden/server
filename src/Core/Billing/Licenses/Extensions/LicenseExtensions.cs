@@ -3,7 +3,6 @@
 
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.Billing.Licenses.Extensions;
@@ -14,7 +13,7 @@ public static class LicenseExtensions
     {
         if (subscriptionInfo?.Subscription == null)
         {
-            if (org.PlanType == PlanType.Custom && org.ExpirationDate.HasValue)
+            if (org.ExpirationDate.HasValue)
             {
                 return org.ExpirationDate.Value;
             }

@@ -23,17 +23,17 @@ if [ "$(id -u)" = "0" ]
 then
     # Create user and group
 
-    addgroup -g "$LGID" -S "$GROUPNAME" 2>/dev/null || true
-    adduser -u "$LUID" -G "$GROUPNAME" -S -D -H "$USERNAME" 2>/dev/null || true
-    mkdir -p /home/$USERNAME
-    chown $USERNAME:$GROUPNAME /home/$USERNAME
-
+    groupadd -o -g $LGID $GROUPNAME >/dev/null 2>&1 ||
+    groupmod -o -g $LGID $GROUPNAME >/dev/null 2>&1
+    useradd -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1 ||
+    usermod -o -u $LUID -g $GROUPNAME -s /bin/false $USERNAME >/dev/null 2>&1
+    mkhomedir_helper $USERNAME
 
     # The rest...
-
     chown -R $USERNAME:$GROUPNAME /bitwarden_server
     mkdir -p /etc/bitwarden/core/attachments
     chown -R $USERNAME:$GROUPNAME /etc/bitwarden
+    
     gosu_cmd="gosu $USERNAME:$GROUPNAME"
 else
     gosu_cmd=""
