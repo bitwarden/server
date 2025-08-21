@@ -122,6 +122,18 @@ services:
       - "${IDENTITY_PROXY_PORT}:${IDENTITY_PROXY_PORT}"
     profiles:
       - proxy
+  
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    profiles:
+      - jaeger
 
   service-bus:
     container_name: service-bus
