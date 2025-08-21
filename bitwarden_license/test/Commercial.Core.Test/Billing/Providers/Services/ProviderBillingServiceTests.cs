@@ -901,11 +901,12 @@ public class ProviderBillingServiceTests
     public async Task SetupCustomer_MissingCountry_ContactSupport(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider,
-        TaxInfo taxInfo)
+        TaxInfo taxInfo,
+        TokenizedPaymentSource tokenizedPaymentSource)
     {
         taxInfo.BillingAddressCountry = null;
 
-        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupCustomer(provider, taxInfo));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource));
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
@@ -916,60 +917,27 @@ public class ProviderBillingServiceTests
     public async Task SetupCustomer_MissingPostalCode_ContactSupport(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider,
-        TaxInfo taxInfo)
+        TaxInfo taxInfo,
+        TokenizedPaymentSource tokenizedPaymentSource)
     {
         taxInfo.BillingAddressCountry = null;
 
-        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupCustomer(provider, taxInfo));
+        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource));
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .DidNotReceiveWithAnyArgs()
             .CustomerGetAsync(Arg.Any<string>(), Arg.Any<CustomerGetOptions>());
     }
 
+
     [Theory, BitAutoData]
-    public async Task SetupCustomer_NoPaymentMethod_Success(
+    public async Task SetupCustomer_NullPaymentSource_ThrowsArgumentNullException(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider,
         TaxInfo taxInfo)
     {
-        provider.Name = "MSP";
-
-        sutProvider.GetDependency<ITaxService>()
-            .GetStripeTaxCode(Arg.Is<string>(
-                p => p == taxInfo.BillingAddressCountry),
-                Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
-            .Returns(taxInfo.TaxIdType);
-
-        taxInfo.BillingAddressCountry = "AD";
-
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
-        var expected = new Customer
-        {
-            Id = "customer_id",
-            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
-        };
-
-        stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
-                o.Address.Country == taxInfo.BillingAddressCountry &&
-                o.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
-                o.Address.Line1 == taxInfo.BillingAddressLine1 &&
-                o.Address.Line2 == taxInfo.BillingAddressLine2 &&
-                o.Address.City == taxInfo.BillingAddressCity &&
-                o.Address.State == taxInfo.BillingAddressState &&
-                o.Description == WebUtility.HtmlDecode(provider.BusinessName) &&
-                o.Email == provider.BillingEmail &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Name == "Provider" &&
-                o.InvoiceSettings.CustomFields.FirstOrDefault().Value == "MSP" &&
-                o.Metadata["region"] == "" &&
-                o.TaxIdData.FirstOrDefault().Type == taxInfo.TaxIdType &&
-                o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber))
-            .Returns(expected);
-
-        var actual = await sutProvider.Sut.SetupCustomer(provider, taxInfo);
-
-        Assert.Equivalent(expected, actual);
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            sutProvider.Sut.SetupCustomer(provider, taxInfo, null));
     }
 
     [Theory, BitAutoData]
@@ -989,8 +957,6 @@ public class ProviderBillingServiceTests
 
         taxInfo.BillingAddressCountry = "AD";
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
 
         tokenizedPaymentSource = tokenizedPaymentSource with { Type = PaymentMethodType.BitPay };
 
@@ -1018,8 +984,6 @@ public class ProviderBillingServiceTests
 
         var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.BankAccount, "token");
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
 
         stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options =>
             options.PaymentMethod == tokenizedPaymentSource.Token)).Returns([
@@ -1075,8 +1039,6 @@ public class ProviderBillingServiceTests
 
         var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.PayPal, "token");
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
 
         sutProvider.GetDependency<ISubscriberService>().CreateBraintreeCustomer(provider, tokenizedPaymentSource.Token)
             .Returns("braintree_customer_id");
@@ -1130,8 +1092,6 @@ public class ProviderBillingServiceTests
 
         var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.BankAccount, "token");
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
 
         stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options =>
             options.PaymentMethod == tokenizedPaymentSource.Token)).Returns([
@@ -1187,8 +1147,6 @@ public class ProviderBillingServiceTests
 
         var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.PayPal, "token");
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
 
         sutProvider.GetDependency<ISubscriberService>().CreateBraintreeCustomer(provider, tokenizedPaymentSource.Token)
             .Returns("braintree_customer_id");
@@ -1241,8 +1199,6 @@ public class ProviderBillingServiceTests
 
         var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.Card, "token");
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
 
         stripeAdapter.CustomerCreateAsync(Arg.Is<CustomerCreateOptions>(o =>
                 o.Address.Country == taxInfo.BillingAddressCountry &&
@@ -1293,8 +1249,6 @@ public class ProviderBillingServiceTests
 
         var tokenizedPaymentSource = new TokenizedPaymentSource(PaymentMethodType.Card, "token");
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
 
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge).Returns(true);
@@ -1327,7 +1281,8 @@ public class ProviderBillingServiceTests
     public async Task SetupCustomer_Throws_BadRequestException_WhenTaxIdIsInvalid(
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider,
-        TaxInfo taxInfo)
+        TaxInfo taxInfo,
+        TokenizedPaymentSource tokenizedPaymentSource)
     {
         provider.Name = "MSP";
 
@@ -1340,7 +1295,7 @@ public class ProviderBillingServiceTests
             .Returns((string)null);
 
         var actual = await Assert.ThrowsAsync<BadRequestException>(async () =>
-            await sutProvider.Sut.SetupCustomer(provider, taxInfo));
+            await sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource));
 
         Assert.IsType<BadRequestException>(actual);
         Assert.Equal("billingTaxIdTypeInferenceError", actual.Message);
@@ -1616,8 +1571,6 @@ public class ProviderBillingServiceTests
 
         var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(
             sub =>
@@ -1694,8 +1647,6 @@ public class ProviderBillingServiceTests
 
         var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
 
         const string setupIntentId = "seti_123";
 
@@ -1797,8 +1748,6 @@ public class ProviderBillingServiceTests
 
         var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
 
         sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(
             sub =>
@@ -1877,8 +1826,6 @@ public class ProviderBillingServiceTests
 
         var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
 
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge).Returns(true);
