@@ -134,7 +134,7 @@ jobs:
           # Unified MariaDB
           BW_TEST_DATABASES__4__TYPE: "MySql"
           BW_TEST_DATABASES__4__CONNECTIONSTRING: "server=localhost;port=4306;uid=root;pwd=mariadb-password;database=vault_dev;Allow User Variables=true"
-        run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage" -- xUnit.DiagnosticMessages=true
+        run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx" --logger "console;verbosity=normal" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage" -- xUnit.DiagnosticMessages=true
         shell: pwsh
 
       - name: Print MySQL Logs
