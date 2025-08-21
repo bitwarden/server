@@ -1,4 +1,4 @@
-﻿using Bit.Core.NotificationHub;
+﻿using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
@@ -6,7 +6,7 @@ using NSubstitute;
 using Xunit;
 using static Bit.Core.Settings.GlobalSettings;
 
-namespace Bit.Core.Test.NotificationHub;
+namespace Bit.Core.Test.Platform.Push.NotificationHub;
 
 public class NotificationHubPoolTests
 {

@@ -1,28 +1,23 @@
-﻿#nullable enable
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.RegularExpressions;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
-using Bit.Core.Platform.Push;
-using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.NotificationHub;
-
-#nullable enable
+namespace Bit.Core.Platform.Push.Internal;
 
 /// <summary>
 /// Sends mobile push notifications to the Azure Notification Hub.
 /// Used by Cloud-Hosted environments.
 /// Received by Firebase for Android or APNS for iOS.
 /// </summary>
-public class NotificationHubPushNotificationService : IPushEngine, IPushRelayer
+public class NotificationHubPushEngine : IPushEngine, IPushRelayer
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -30,11 +25,11 @@ public class NotificationHubPushNotificationService : IPushEngine, IPushRelayer
     private readonly INotificationHubPool _notificationHubPool;
     private readonly ILogger _logger;
 
-    public NotificationHubPushNotificationService(
+    public NotificationHubPushEngine(
         IInstallationDeviceRepository installationDeviceRepository,
         INotificationHubPool notificationHubPool,
         IHttpContextAccessor httpContextAccessor,
-        ILogger<NotificationHubPushNotificationService> logger,
+        ILogger<NotificationHubPushEngine> logger,
         IGlobalSettings globalSettings)
     {
         _installationDeviceRepository = installationDeviceRepository;

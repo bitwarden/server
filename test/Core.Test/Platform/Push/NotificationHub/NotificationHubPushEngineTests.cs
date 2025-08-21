@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Context;
@@ -7,10 +6,11 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Enums;
-using Bit.Core.NotificationHub;
 using Bit.Core.Platform.Push;
+using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Repositories;
 using Bit.Core.Test.NotificationCenter.AutoFixture;
+using Bit.Core.Test.Platform.Push.Engines;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Test.Common.AutoFixture;
@@ -22,7 +22,7 @@ using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.NotificationHub;
+namespace Bit.Core.Test.Platform.Push.NotificationHub;
 
 [SutProviderCustomize]
 [NotificationStatusCustomize]
@@ -621,11 +621,11 @@ public class NotificationHubPushNotificationServiceTests
 
         fakeTimeProvider.SetUtcNow(_now);
 
-        var sut = new NotificationHubPushNotificationService(
+        var sut = new NotificationHubPushEngine(
             installationDeviceRepository,
             notificationHubPool,
             httpContextAccessor,
-            NullLogger<NotificationHubPushNotificationService>.Instance,
+            NullLogger<NotificationHubPushEngine>.Instance,
             globalSettings
         );
 
@@ -676,7 +676,7 @@ public class NotificationHubPushNotificationServiceTests
         };
 
     private static async Task AssertSendTemplateNotificationAsync(
-        SutProvider<NotificationHubPushNotificationService> sutProvider, PushType type, object payload, string tag)
+        SutProvider<NotificationHubPushEngine> sutProvider, PushType type, object payload, string tag)
     {
         await sutProvider.GetDependency<INotificationHubPool>()
             .Received(1)

@@ -1,9 +1,9 @@
-﻿using Bit.Core.NotificationHub;
+﻿using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Xunit;
 
-namespace Bit.Core.Test.NotificationHub;
+namespace Bit.Core.Test.Platform.Push.NotificationHub;
 
 public class NotificationHubConnectionTests
 {

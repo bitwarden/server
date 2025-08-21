@@ -1,8 +1,6 @@
 ﻿using Microsoft.Azure.NotificationHubs;
 
-namespace Bit.Core.NotificationHub;
-
-#nullable enable
+namespace Bit.Core.Platform.Push.Internal;
 
 public interface INotificationHubPool
 {

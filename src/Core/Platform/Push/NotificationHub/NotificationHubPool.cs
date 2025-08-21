@@ -3,9 +3,7 @@ using Bit.Core.Utilities;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.NotificationHub;
-
-#nullable enable
+namespace Bit.Core.Platform.Push.Internal;
 
 public class NotificationHubPool : INotificationHubPool
 {
