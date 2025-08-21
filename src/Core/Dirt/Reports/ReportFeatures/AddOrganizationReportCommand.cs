@@ -40,6 +40,10 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
             OrganizationId = request.OrganizationId,
             ReportData = request.ReportData,
             CreationDate = DateTime.UtcNow,
+            ContentEncryptionKey = request.ContentEncryptionKey,
+            SummaryData = request.SummaryData,
+            ApplicationData = request.ApplicationData,
+            RevisionDate = DateTime.UtcNow
         };
 
         organizationReport.SetNewId();
@@ -64,6 +68,11 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
 
         // ensure that we have report data
         if (string.IsNullOrWhiteSpace(request.ReportData))
+        {
+            return (false, "Report Data is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.SummaryData))
         {
             return (false, "Report Data is required");
         }

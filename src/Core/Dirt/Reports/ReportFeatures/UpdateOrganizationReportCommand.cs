@@ -53,10 +53,18 @@ public class UpdateOrganizationReportCommand : IUpdateOrganizationReportCommand
                 throw new BadRequestException("Organization report does not belong to the specified organization");
             }
 
-            existingReport.ReportData = request.ReportData;
-            existingReport.RevisionDate = DateTime.UtcNow;
+            var updatedRecord = new OrganizationReport()
+            {
+                Id = existingReport.Id,
+                OrganizationId = request.OrganizationId,
+                CreationDate = existingReport.CreationDate,
+                ContentEncryptionKey = request.ContentEncryptionKey,
+                SummaryData = request.SummaryData,
+                ApplicationData = request.ApplicationData,
+                RevisionDate = DateTime.UtcNow
+            };
 
-            await _organizationReportRepo.ReplaceAsync(existingReport);
+            await _organizationReportRepo.ReplaceAsync(updatedRecord);
 
             _logger.LogInformation("Successfully updated organization report {reportId} for organization {organizationId}",
                 request.ReportId, request.OrganizationId);
@@ -89,9 +97,24 @@ public class UpdateOrganizationReportCommand : IUpdateOrganizationReportCommand
             return (false, "Invalid Organization");
         }
 
+        if (string.IsNullOrWhiteSpace(request.ContentEncryptionKey))
+        {
+            return (false, "ContentEncryptionKey is required");
+        }
+
         if (string.IsNullOrWhiteSpace(request.ReportData))
         {
             return (false, "Report Data is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.SummaryData))
+        {
+            return (false, "Summary Data is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ApplicationData))
+        {
+            return (false, "Application Data is required");
         }
 
         return (true, string.Empty);

@@ -219,9 +219,14 @@ public class OrganizationReportControllerTests
     {
         // Arrange
         var orgId = Guid.NewGuid();
-        var reportId = Guid.NewGuid();
         var startDate = DateTime.UtcNow.AddDays(-30);
         var endDate = DateTime.UtcNow;
+        var request = new GetOrganizationReportSummaryDataByDateRangeRequest
+        {
+            OrganizationId = orgId,
+            StartDate = startDate,
+            EndDate = endDate
+        };
         var summaryDataList = new List<OrganizationReportSummaryDataResponse>
         {
             new OrganizationReportSummaryDataResponse { Id = Guid.NewGuid(), OrganizationId = orgId }
@@ -229,11 +234,11 @@ public class OrganizationReportControllerTests
 
         sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(true);
         sutProvider.GetDependency<IGetOrganizationReportSummaryDataByDateRangeQuery>()
-            .GetOrganizationReportSummaryDataByDateRangeAsync(orgId, reportId, startDate, endDate)
+            .GetOrganizationReportSummaryDataByDateRangeAsync(orgId, startDate, endDate)
             .Returns(summaryDataList);
 
         // Act
-        var result = await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(orgId, reportId, startDate, endDate);
+        var result = await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(orgId, request);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -241,18 +246,40 @@ public class OrganizationReportControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetOrganizationReportSummaryDataByDateRangeAsync_WithAccess_MismatchedOrgId_ThrowsBadRequestException(SutProvider<OrganizationReportsController> sutProvider)
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var differentOrgId = Guid.NewGuid();
+        var request = new GetOrganizationReportSummaryDataByDateRangeRequest
+        {
+            OrganizationId = differentOrgId,
+            StartDate = DateTime.UtcNow.AddDays(-30),
+            EndDate = DateTime.UtcNow
+        };
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(true);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(orgId, request));
+    }
+
+    [Theory, BitAutoData]
     public async Task GetOrganizationReportSummaryDataByDateRangeAsync_WithoutAccess_ThrowsNotFoundException(SutProvider<OrganizationReportsController> sutProvider)
     {
         // Arrange
         var orgId = Guid.NewGuid();
-        var reportId = Guid.NewGuid();
-        var startDate = DateTime.UtcNow.AddDays(-30);
-        var endDate = DateTime.UtcNow;
+        var request = new GetOrganizationReportSummaryDataByDateRangeRequest
+        {
+            OrganizationId = orgId,
+            StartDate = DateTime.UtcNow.AddDays(-30),
+            EndDate = DateTime.UtcNow
+        };
         sutProvider.GetDependency<ICurrentContext>().AccessReports(orgId).Returns(false);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(orgId, reportId, startDate, endDate));
+            sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(orgId, request));
     }
 
     [Theory, BitAutoData]

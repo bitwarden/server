@@ -87,14 +87,16 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
         }
     }
 
-    public async Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetSummaryDataByDateRangeAsync(Guid organizationId, Guid reportId, DateTime startDate, DateTime endDate)
+    public async Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetSummaryDataByDateRangeAsync(
+        Guid organizationId,
+        DateTime startDate, DateTime
+            endDate)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
             var parameters = new
             {
                 OrganizationId = organizationId,
-                Id = reportId,
                 StartDate = startDate,
                 EndDate = endDate
             };

@@ -11,7 +11,7 @@ public interface IOrganizationReportRepository : IRepository<OrganizationReport,
     Task<OrganizationReport> GetByOrganizationIdAsync(Guid organizationName);
 
     // SummaryData methods
-    Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetSummaryDataByDateRangeAsync(Guid organizationId, Guid reportId, DateTime startDate, DateTime endDate);
+    Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetSummaryDataByDateRangeAsync(Guid organizationId, DateTime startDate, DateTime endDate);
     Task<OrganizationReportSummaryDataResponse> GetSummaryDataAsync(Guid organizationId, Guid reportId);
     Task<OrganizationReport> UpdateSummaryDataAsync(Guid reportId, string summaryData);
 

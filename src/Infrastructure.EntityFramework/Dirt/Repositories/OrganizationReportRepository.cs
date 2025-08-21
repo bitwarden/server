@@ -98,14 +98,16 @@ public class OrganizationReportRepository :
     }
 
     public async Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetSummaryDataByDateRangeAsync(
-        Guid organizationId, Guid reportId, DateTime startDate, DateTime endDate)
+        Guid organizationId,
+        DateTime startDate,
+        DateTime endDate)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
 
             var results = await dbContext.OrganizationReports
-                .Where(p => p.OrganizationId == organizationId && p.Id == reportId &&
+                .Where(p => p.OrganizationId == organizationId &&
                             p.CreationDate >= startDate && p.CreationDate <= endDate)
                 .Select(p => new OrganizationReportSummaryDataResponse
                 {

@@ -30,18 +30,18 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
             .CreateMany(3);
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
-            .GetSummaryDataByDateRangeAsync(organizationId, reportId, startDate, endDate)
+            .GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate)
             .Returns(summaryDataList);
 
         // Act
-        var result = await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, reportId, startDate, endDate);
+        var result = await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal(3, result.Count());
         Assert.All(result, item => Assert.Equal(organizationId, item.OrganizationId));
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .Received(1).GetSummaryDataByDateRangeAsync(organizationId, reportId, startDate, endDate);
+            .Received(1).GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
     }
 
     [Theory]
@@ -56,35 +56,15 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
-            await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(Guid.Empty, reportId, startDate, endDate));
+            await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(Guid.Empty, startDate, endDate));
 
         Assert.Equal("OrganizationId is required", exception.Message);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .DidNotReceive()
             .GetSummaryDataByDateRangeAsync(
                 Arg.Any<Guid>(),
-                Arg.Any<Guid>(),
                 Arg.Any<DateTime>(),
                 Arg.Any<DateTime>());
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task GetOrganizationReportSummaryDataByDateRangeAsync_WithEmptyReportId_ShouldThrowBadRequestException(
-        SutProvider<GetOrganizationReportSummaryDataByDateRangeQuery> sutProvider)
-    {
-        // Arrange
-        var organizationId = Guid.NewGuid();
-        var startDate = DateTime.UtcNow.AddDays(-30);
-        var endDate = DateTime.UtcNow;
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
-            await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, Guid.Empty, startDate, endDate));
-
-        Assert.Equal("ReportId is required", exception.Message);
-        await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .DidNotReceive().GetSummaryDataByDateRangeAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>());
     }
 
     [Theory]
@@ -100,11 +80,11 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
-            await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, reportId, startDate, endDate));
+            await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, startDate, endDate));
 
         Assert.Equal("StartDate must be earlier than or equal to EndDate", exception.Message);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .DidNotReceive().GetSummaryDataByDateRangeAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>());
+            .DidNotReceive().GetSummaryDataByDateRangeAsync(Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>());
     }
 
     [Theory]
@@ -119,11 +99,11 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
         var endDate = DateTime.UtcNow;
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
-            .GetSummaryDataByDateRangeAsync(organizationId, reportId, startDate, endDate)
+            .GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate)
             .Returns(new List<OrganizationReportSummaryDataResponse>());
 
         // Act
-        var result = await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, reportId, startDate, endDate);
+        var result = await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
 
         // Assert
         Assert.NotNull(result);
@@ -143,12 +123,12 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
         var expectedMessage = "Database connection failed";
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
-            .GetSummaryDataByDateRangeAsync(organizationId, reportId, startDate, endDate)
+            .GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate)
             .Throws(new InvalidOperationException(expectedMessage));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, reportId, startDate, endDate));
+            await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, startDate, endDate));
 
         Assert.Equal(expectedMessage, exception.Message);
     }

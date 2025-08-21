@@ -114,17 +114,20 @@ public class OrganizationReportsController : Controller
 
     # region SummaryData Field Endpoints
 
-    [HttpGet("{orgId}/data/summary/{reportId}/date-range")]
+    [HttpPost("{orgId}/data/summary/date-range")]
     public async Task<IActionResult> GetOrganizationReportSummaryDataByDateRangeAsync(
         Guid orgId,
-        Guid reportId,
-        [FromQuery] DateTime startDate,
-        [FromQuery] DateTime endDate)
+        [FromBody] GetOrganizationReportSummaryDataByDateRangeRequest request)
     {
         GuardOrganizationAccess(orgId);
 
+        if (request.OrganizationId != orgId)
+        {
+            throw new BadRequestException("Organization ID in the request body must match the route parameter");
+        }
+
         var summaryDataList = await _getOrganizationReportSummaryDataByDateRangeQuery
-            .GetOrganizationReportSummaryDataByDateRangeAsync(orgId, reportId, startDate, endDate);
+            .GetOrganizationReportSummaryDataByDateRangeAsync(request.OrganizationId, request.StartDate, request.EndDate);
 
         return Ok(summaryDataList);
     }
@@ -193,8 +196,6 @@ public class OrganizationReportsController : Controller
     }
 
     #endregion
-
-
 
     #region ApplicationData Field Endpoints
 

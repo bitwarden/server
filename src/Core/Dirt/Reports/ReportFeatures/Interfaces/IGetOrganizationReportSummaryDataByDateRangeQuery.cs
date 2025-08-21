@@ -4,5 +4,6 @@ namespace Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 
 public interface IGetOrganizationReportSummaryDataByDateRangeQuery
 {
-    Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetOrganizationReportSummaryDataByDateRangeAsync(Guid organizationId, Guid reportId, DateTime startDate, DateTime endDate);
+    Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetOrganizationReportSummaryDataByDateRangeAsync(
+        Guid organizationId, DateTime startDate, DateTime endDate);
 }

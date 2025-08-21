@@ -19,53 +19,49 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
         _logger = logger;
     }
 
-    public async Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetOrganizationReportSummaryDataByDateRangeAsync(Guid organizationId, Guid reportId, DateTime startDate, DateTime endDate)
+    public async Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetOrganizationReportSummaryDataByDateRangeAsync(Guid organizationId, DateTime startDate, DateTime endDate)
     {
         try
         {
-            _logger.LogInformation("Fetching organization report summary data by date range for organization {organizationId}, report {reportId}, from {startDate} to {endDate}",
-                organizationId, reportId, startDate, endDate);
+            _logger.LogInformation("Fetching organization report summary data by date range for organization {organizationId}, from {startDate} to {endDate}",
+                organizationId, startDate, endDate);
 
-            var (isValid, errorMessage) = ValidateRequest(organizationId, reportId, startDate, endDate);
+            var (isValid, errorMessage) = ValidateRequest(organizationId, startDate, endDate);
             if (!isValid)
             {
                 _logger.LogWarning("GetOrganizationReportSummaryDataByDateRangeAsync validation failed: {errorMessage}", errorMessage);
                 throw new BadRequestException(errorMessage);
             }
 
-            var summaryDataList = await _organizationReportRepo.GetSummaryDataByDateRangeAsync(organizationId, reportId, startDate, endDate);
+            IEnumerable<OrganizationReportSummaryDataResponse> summaryDataList = await _organizationReportRepo
+                .GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
 
             if (summaryDataList == null)
             {
-                _logger.LogInformation("No summary data found for organization {organizationId}, report {reportId} in date range {startDate} to {endDate}",
-                    organizationId, reportId, startDate, endDate);
+                _logger.LogInformation("No summary data found for organization {organizationId} in date range {startDate} to {endDate}",
+                    organizationId, startDate, endDate);
                 return Enumerable.Empty<OrganizationReportSummaryDataResponse>();
             }
 
             var resultList = summaryDataList.ToList();
-            _logger.LogInformation("Successfully retrieved {count} organization report summary data records for organization {organizationId}, report {reportId} in date range {startDate} to {endDate}",
-                resultList.Count, organizationId, reportId, startDate, endDate);
+            _logger.LogInformation("Successfully retrieved {count} organization report summary data records for organization {organizationId} in date range {startDate} to {endDate}",
+                resultList.Count, organizationId, startDate, endDate);
 
             return resultList;
         }
         catch (Exception ex) when (!(ex is BadRequestException))
         {
-            _logger.LogError(ex, "Error fetching organization report summary data by date range for organization {organizationId}, report {reportId}, from {startDate} to {endDate}",
-                organizationId, reportId, startDate, endDate);
+            _logger.LogError(ex, "Error fetching organization report summary data by date range for organization {organizationId}, from {startDate} to {endDate}",
+                organizationId, startDate, endDate);
             throw;
         }
     }
 
-    private static (bool IsValid, string errorMessage) ValidateRequest(Guid organizationId, Guid reportId, DateTime startDate, DateTime endDate)
+    private static (bool IsValid, string errorMessage) ValidateRequest(Guid organizationId, DateTime startDate, DateTime endDate)
     {
         if (organizationId == Guid.Empty)
         {
             return (false, "OrganizationId is required");
-        }
-
-        if (reportId == Guid.Empty)
-        {
-            return (false, "ReportId is required");
         }
 
         if (startDate == default)
@@ -81,12 +77,6 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
         if (startDate > endDate)
         {
             return (false, "StartDate must be earlier than or equal to EndDate");
-        }
-
-        var maxDateRange = TimeSpan.FromDays(365); // Prevent overly broad queries
-        if (endDate - startDate > maxDateRange)
-        {
-            return (false, "Date range cannot exceed 365 days");
         }
 
         return (true, string.Empty);
