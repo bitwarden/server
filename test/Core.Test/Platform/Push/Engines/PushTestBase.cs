@@ -10,6 +10,7 @@ using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Enums;
 using Bit.Core.Platform.Push;
+using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -21,6 +22,8 @@ using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using RichardSzalay.MockHttp;
 using Xunit;
+
+namespace Bit.Core.Test.Platform.Push.Engines;
 
 public class EngineWrapper(IPushEngine pushEngine, FakeTimeProvider fakeTimeProvider, Guid installationId) : IPushNotificationService
 {
