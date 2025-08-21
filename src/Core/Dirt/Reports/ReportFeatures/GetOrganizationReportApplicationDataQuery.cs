@@ -23,18 +23,18 @@ public class GetOrganizationReportApplicationDataQuery : IGetOrganizationReportA
     {
         try
         {
-            _logger.LogInformation("Fetching organization report application data for organization {organizationId} and report {reportId}",
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching organization report application data for organization {organizationId} and report {reportId}",
                 organizationId, reportId);
 
             if (organizationId == Guid.Empty)
             {
-                _logger.LogWarning("GetOrganizationReportApplicationDataAsync called with empty OrganizationId");
+                _logger.LogWarning(Constants.BypassFiltersEventId, "GetOrganizationReportApplicationDataAsync called with empty OrganizationId");
                 throw new BadRequestException("OrganizationId is required.");
             }
 
             if (reportId == Guid.Empty)
             {
-                _logger.LogWarning("GetOrganizationReportApplicationDataAsync called with empty ReportId");
+                _logger.LogWarning(Constants.BypassFiltersEventId, "GetOrganizationReportApplicationDataAsync called with empty ReportId");
                 throw new BadRequestException("ReportId is required.");
             }
 
@@ -42,12 +42,12 @@ public class GetOrganizationReportApplicationDataQuery : IGetOrganizationReportA
 
             if (applicationDataResponse == null)
             {
-                _logger.LogWarning("No application data found for organization {organizationId} and report {reportId}",
+                _logger.LogWarning(Constants.BypassFiltersEventId, "No application data found for organization {organizationId} and report {reportId}",
                     organizationId, reportId);
                 throw new NotFoundException("Organization report application data not found.");
             }
 
-            _logger.LogInformation("Successfully retrieved organization report application data for organization {organizationId} and report {reportId}",
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully retrieved organization report application data for organization {organizationId} and report {reportId}",
                 organizationId, reportId);
 
             return applicationDataResponse;

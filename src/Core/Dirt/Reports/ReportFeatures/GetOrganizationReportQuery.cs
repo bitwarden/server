@@ -26,7 +26,7 @@ public class GetOrganizationReportQuery : IGetOrganizationReportQuery
             throw new BadRequestException("Id of report is required.");
         }
 
-        _logger.LogInformation("Fetching organization reports for organization by Id: {reportId}", reportId);
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching organization reports for organization by Id: {reportId}", reportId);
 
         return await _organizationReportRepo.GetByIdAsync(reportId)
             ?? throw new NotFoundException("Organization report not found.");
@@ -39,7 +39,7 @@ public class GetOrganizationReportQuery : IGetOrganizationReportQuery
             throw new BadRequestException("OrganizationId is required.");
         }
 
-        _logger.LogInformation("Fetching latest organization report for organization {organizationId}", organizationId);
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching latest organization report for organization {organizationId}", organizationId);
         return await _organizationReportRepo.GetLatestByOrganizationIdAsync(organizationId);
     }
 }

@@ -23,18 +23,18 @@ public class GetOrganizationReportSummaryDataQuery : IGetOrganizationReportSumma
     {
         try
         {
-            _logger.LogInformation("Fetching organization report summary data for organization {organizationId} and report {reportId}",
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching organization report summary data for organization {organizationId} and report {reportId}",
                 organizationId, reportId);
 
             if (organizationId == Guid.Empty)
             {
-                _logger.LogWarning("GetOrganizationReportSummaryDataAsync called with empty OrganizationId");
+                _logger.LogWarning(Constants.BypassFiltersEventId, "GetOrganizationReportSummaryDataAsync called with empty OrganizationId");
                 throw new BadRequestException("OrganizationId is required.");
             }
 
             if (reportId == Guid.Empty)
             {
-                _logger.LogWarning("GetOrganizationReportSummaryDataAsync called with empty ReportId");
+                _logger.LogWarning(Constants.BypassFiltersEventId, "GetOrganizationReportSummaryDataAsync called with empty ReportId");
                 throw new BadRequestException("ReportId is required.");
             }
 
@@ -42,12 +42,12 @@ public class GetOrganizationReportSummaryDataQuery : IGetOrganizationReportSumma
 
             if (summaryDataResponse == null)
             {
-                _logger.LogWarning("No summary data found for organization {organizationId} and report {reportId}",
+                _logger.LogWarning(Constants.BypassFiltersEventId, "No summary data found for organization {organizationId} and report {reportId}",
                     organizationId, reportId);
                 throw new NotFoundException("Organization report summary data not found.");
             }
 
-            _logger.LogInformation("Successfully retrieved organization report summary data for organization {organizationId} and report {reportId}",
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully retrieved organization report summary data for organization {organizationId} and report {reportId}",
                 organizationId, reportId);
 
             return summaryDataResponse;

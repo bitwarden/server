@@ -26,12 +26,12 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
 
     public async Task<OrganizationReport> AddOrganizationReportAsync(AddOrganizationReportRequest request)
     {
-        _logger.LogInformation("Adding organization report for organization {organizationId}", request.OrganizationId);
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Adding organization report for organization {organizationId}", request.OrganizationId);
 
         var (isValid, errorMessage) = await ValidateRequestAsync(request);
         if (!isValid)
         {
-            _logger.LogInformation("Failed to add organization {organizationId} report: {errorMessage}", request.OrganizationId, errorMessage);
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Failed to add organization {organizationId} report: {errorMessage}", request.OrganizationId, errorMessage);
             throw new BadRequestException(errorMessage);
         }
 
@@ -50,7 +50,7 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
 
         var data = await _organizationReportRepo.CreateAsync(organizationReport);
 
-        _logger.LogInformation("Successfully added organization report for organization {organizationId}, {organizationReportId}",
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully added organization report for organization {organizationId}, {organizationReportId}",
                 request.OrganizationId, data.Id);
 
         return data;

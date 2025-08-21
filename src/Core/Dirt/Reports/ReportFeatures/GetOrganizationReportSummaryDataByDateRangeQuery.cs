@@ -23,13 +23,13 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
     {
         try
         {
-            _logger.LogInformation("Fetching organization report summary data by date range for organization {organizationId}, from {startDate} to {endDate}",
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching organization report summary data by date range for organization {organizationId}, from {startDate} to {endDate}",
                 organizationId, startDate, endDate);
 
             var (isValid, errorMessage) = ValidateRequest(organizationId, startDate, endDate);
             if (!isValid)
             {
-                _logger.LogWarning("GetOrganizationReportSummaryDataByDateRangeAsync validation failed: {errorMessage}", errorMessage);
+                _logger.LogWarning(Constants.BypassFiltersEventId, "GetOrganizationReportSummaryDataByDateRangeAsync validation failed: {errorMessage}", errorMessage);
                 throw new BadRequestException(errorMessage);
             }
 
@@ -38,13 +38,13 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
 
             if (summaryDataList == null)
             {
-                _logger.LogInformation("No summary data found for organization {organizationId} in date range {startDate} to {endDate}",
+                _logger.LogInformation(Constants.BypassFiltersEventId, "No summary data found for organization {organizationId} in date range {startDate} to {endDate}",
                     organizationId, startDate, endDate);
                 return Enumerable.Empty<OrganizationReportSummaryDataResponse>();
             }
 
             var resultList = summaryDataList.ToList();
-            _logger.LogInformation("Successfully retrieved {count} organization report summary data records for organization {organizationId} in date range {startDate} to {endDate}",
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully retrieved {count} organization report summary data records for organization {organizationId} in date range {startDate} to {endDate}",
                 resultList.Count, organizationId, startDate, endDate);
 
             return resultList;

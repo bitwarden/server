@@ -23,18 +23,18 @@ public class GetOrganizationReportDataQuery : IGetOrganizationReportDataQuery
     {
         try
         {
-            _logger.LogInformation("Fetching organization report data for organization {organizationId} and report {reportId}",
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching organization report data for organization {organizationId} and report {reportId}",
                 organizationId, reportId);
 
             if (organizationId == Guid.Empty)
             {
-                _logger.LogWarning("GetOrganizationReportDataAsync called with empty OrganizationId");
+                _logger.LogWarning(Constants.BypassFiltersEventId, "GetOrganizationReportDataAsync called with empty OrganizationId");
                 throw new BadRequestException("OrganizationId is required.");
             }
 
             if (reportId == Guid.Empty)
             {
-                _logger.LogWarning("GetOrganizationReportDataAsync called with empty ReportId");
+                _logger.LogWarning(Constants.BypassFiltersEventId, "GetOrganizationReportDataAsync called with empty ReportId");
                 throw new BadRequestException("ReportId is required.");
             }
 
@@ -42,12 +42,12 @@ public class GetOrganizationReportDataQuery : IGetOrganizationReportDataQuery
 
             if (reportDataResponse == null)
             {
-                _logger.LogWarning("No report data found for organization {organizationId} and report {reportId}",
+                _logger.LogWarning(Constants.BypassFiltersEventId, "No report data found for organization {organizationId} and report {reportId}",
                     organizationId, reportId);
                 throw new NotFoundException("Organization report data not found.");
             }
 
-            _logger.LogInformation("Successfully retrieved organization report data for organization {organizationId} and report {reportId}",
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully retrieved organization report data for organization {organizationId} and report {reportId}",
                 organizationId, reportId);
 
             return reportDataResponse;

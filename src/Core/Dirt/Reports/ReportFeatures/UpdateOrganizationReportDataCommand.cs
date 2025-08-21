@@ -28,13 +28,13 @@ public class UpdateOrganizationReportDataCommand : IUpdateOrganizationReportData
     {
         try
         {
-            _logger.LogInformation("Updating organization report data {reportId} for organization {organizationId}",
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Updating organization report data {reportId} for organization {organizationId}",
                 request.ReportId, request.OrganizationId);
 
             var (isValid, errorMessage) = await ValidateRequestAsync(request);
             if (!isValid)
             {
-                _logger.LogWarning("Failed to update organization report data {reportId} for organization {organizationId}: {errorMessage}",
+                _logger.LogWarning(Constants.BypassFiltersEventId, "Failed to update organization report data {reportId} for organization {organizationId}: {errorMessage}",
                     request.ReportId, request.OrganizationId, errorMessage);
                 throw new BadRequestException(errorMessage);
             }
@@ -42,20 +42,20 @@ public class UpdateOrganizationReportDataCommand : IUpdateOrganizationReportData
             var existingReport = await _organizationReportRepo.GetByIdAsync(request.ReportId);
             if (existingReport == null)
             {
-                _logger.LogWarning("Organization report {reportId} not found", request.ReportId);
+                _logger.LogWarning(Constants.BypassFiltersEventId, "Organization report {reportId} not found", request.ReportId);
                 throw new NotFoundException("Organization report not found");
             }
 
             if (existingReport.OrganizationId != request.OrganizationId)
             {
-                _logger.LogWarning("Organization report {reportId} does not belong to organization {organizationId}",
+                _logger.LogWarning(Constants.BypassFiltersEventId, "Organization report {reportId} does not belong to organization {organizationId}",
                     request.ReportId, request.OrganizationId);
                 throw new BadRequestException("Organization report does not belong to the specified organization");
             }
 
             var updatedReport = await _organizationReportRepo.UpdateReportDataAsync(request.OrganizationId, request.ReportId, request.ReportData);
 
-            _logger.LogInformation("Successfully updated organization report data {reportId} for organization {organizationId}",
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully updated organization report data {reportId} for organization {organizationId}",
                 request.ReportId, request.OrganizationId);
 
             return updatedReport;
