@@ -65,7 +65,7 @@ public class SendAccessGrantValidatorTests
 
         // Assert
         Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, context.Result.Error);
-        Assert.Equal($"{SendTokenAccessConstants.SendId} is required.", context.Result.ErrorDescription);
+        Assert.Equal($"{SendAccessConstants.TokenRequest.SendId} is required.", context.Result.ErrorDescription);
     }
 
     [Theory, BitAutoData]
@@ -84,7 +84,7 @@ public class SendAccessGrantValidatorTests
         tokenRequest.Raw = CreateTokenRequestBody(Guid.Empty);
 
         // To preserve the CreateTokenRequestBody method for more general usage we over write the sendId
-        tokenRequest.Raw.Set(SendTokenAccessConstants.SendId, "invalid-guid-format");
+        tokenRequest.Raw.Set(SendAccessConstants.TokenRequest.SendId, "invalid-guid-format");
         context.Request = tokenRequest;
 
         // Act
@@ -92,7 +92,7 @@ public class SendAccessGrantValidatorTests
 
         // Assert
         Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
-        Assert.Equal($"{SendTokenAccessConstants.SendId} is invalid.", context.Result.ErrorDescription);
+        Assert.Equal($"{SendAccessConstants.TokenRequest.SendId} is invalid.", context.Result.ErrorDescription);
     }
 
     [Theory, BitAutoData]
@@ -111,7 +111,7 @@ public class SendAccessGrantValidatorTests
 
         // Assert
         Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
-        Assert.Equal($"{SendTokenAccessConstants.SendId} is invalid.", context.Result.ErrorDescription);
+        Assert.Equal($"{SendAccessConstants.TokenRequest.SendId} is invalid.", context.Result.ErrorDescription);
     }
 
     [Theory, BitAutoData]
@@ -135,7 +135,7 @@ public class SendAccessGrantValidatorTests
 
         // Assert
         Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
-        Assert.Equal($"{SendTokenAccessConstants.SendId} is invalid.", context.Result.ErrorDescription);
+        Assert.Equal($"{SendAccessConstants.TokenRequest.SendId} is invalid.", context.Result.ErrorDescription);
     }
 
     [Theory, BitAutoData]
@@ -301,22 +301,22 @@ public class SendAccessGrantValidatorTests
             { OidcConstants.TokenRequest.ClientId, BitwardenClient.Send },
             { OidcConstants.TokenRequest.Scope, ApiScopes.ApiSendAccess },
             { "deviceType", ((int)DeviceType.FirefoxBrowser).ToString() },
-            { SendTokenAccessConstants.SendId, sendIdBase64 }
+            { SendAccessConstants.TokenRequest.SendId, sendIdBase64 }
         };
 
         if (passwordHash != null)
         {
-            rawRequestParameters.Add(SendTokenAccessConstants.ClientBase64HashedPassword, passwordHash);
+            rawRequestParameters.Add(SendAccessConstants.TokenRequest.ClientB64HashedPassword, passwordHash);
         }
 
         if (sendEmail != null)
         {
-            rawRequestParameters.Add(SendTokenAccessConstants.SendAccessEmail, sendEmail);
+            rawRequestParameters.Add(SendAccessConstants.TokenRequest.Email, sendEmail);
         }
 
         if (otpCode != null && sendEmail != null)
         {
-            rawRequestParameters.Add(SendTokenAccessConstants.SendAccessEmailOtp, otpCode);
+            rawRequestParameters.Add(SendAccessConstants.TokenRequest.Otp, otpCode);
         }
 
         return rawRequestParameters;

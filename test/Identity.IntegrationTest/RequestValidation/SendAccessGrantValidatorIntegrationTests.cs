@@ -8,8 +8,8 @@ using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.IntegrationTestCommon.Factories;
+using Duende.IdentityModel;
 using Duende.IdentityServer.Validation;
-using IdentityModel;
 using NSubstitute;
 using Xunit;
 
@@ -107,7 +107,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
         // Assert
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
-        Assert.Contains($"{SendTokenAccessConstants.SendId} is required", content);
+        Assert.Contains($"{SendAccessConstants.TokenRequest.SendId} is required", content);
     }
 
     [Fact]
@@ -250,12 +250,12 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
             new(OidcConstants.TokenRequest.ClientId, BitwardenClient.Send ),
             new(OidcConstants.TokenRequest.Scope, ApiScopes.ApiSendAccess),
             new("deviceType", ((int)DeviceType.FirefoxBrowser).ToString()),
-            new(SendTokenAccessConstants.SendId, sendIdBase64)
+            new(SendAccessConstants.TokenRequest.SendId, sendIdBase64)
         };
 
         if (!string.IsNullOrEmpty(password))
         {
-            parameters.Add(new(SendTokenAccessConstants.ClientBase64HashedPassword, password));
+            parameters.Add(new(SendAccessConstants.TokenRequest.ClientB64HashedPassword, password));
         }
 
         if (!string.IsNullOrEmpty(emailOtp) && !string.IsNullOrEmpty(sendEmail))

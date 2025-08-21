@@ -3,7 +3,6 @@ using Bit.Core.Identity;
 using Bit.Core.KeyManagement.Sends;
 using Bit.Core.Tools.Models.Data;
 using Bit.Identity.IdentityServer.Enums;
-using Bit.Identity.IdentityServer.RequestValidators.SendAccess.Enums;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 
@@ -18,14 +17,14 @@ public class SendPasswordRequestValidator(ISendPasswordHasher sendPasswordHasher
     /// </summary>
     private static readonly Dictionary<string, string> _sendPasswordValidatorErrors = new()
     {
-        { SendPasswordValidatorResult.RequestPasswordDoesNotMatch, $"{SendTokenAccessConstants.ClientBase64HashedPassword} is invalid." },
-        { SendPasswordValidatorResult.RequestPasswordIsRequired, $"{SendTokenAccessConstants.ClientBase64HashedPassword} is required." }
+        { SendAccessConstants.PasswordValidatorResults.RequestPasswordDoesNotMatch, $"{SendAccessConstants.TokenRequest.ClientB64HashedPassword} is invalid." },
+        { SendAccessConstants.PasswordValidatorResults.RequestPasswordIsRequired, $"{SendAccessConstants.TokenRequest.ClientB64HashedPassword} is required." }
     };
 
     public GrantValidationResult ValidateSendPassword(ExtensionGrantValidationContext context, ResourcePassword resourcePassword, Guid sendId)
     {
         var request = context.Request.Raw;
-        var clientHashedPassword = request.Get(SendTokenAccessConstants.ClientBase64HashedPassword);
+        var clientHashedPassword = request.Get(SendAccessConstants.TokenRequest.ClientB64HashedPassword);
 
         // It is an invalid request _only_ if the passwordHashB64 is missing which indicated bad shape.
         if (clientHashedPassword == null)
@@ -33,10 +32,10 @@ public class SendPasswordRequestValidator(ISendPasswordHasher sendPasswordHasher
             // Request is the wrong shape and doesn't contain a passwordHashB64 field.
             return new GrantValidationResult(
                 TokenRequestErrors.InvalidRequest,
-                errorDescription: _sendPasswordValidatorErrors[SendPasswordValidatorResult.RequestPasswordIsRequired],
+                errorDescription: _sendPasswordValidatorErrors[SendAccessConstants.PasswordValidatorResults.RequestPasswordIsRequired],
                 new Dictionary<string, object>
                 {
-                    { SendTokenAccessConstants.SendAccessError, SendPasswordValidatorResult.RequestPasswordIsRequired }
+                    { SendAccessConstants.SendAccessError, SendAccessConstants.PasswordValidatorResults.RequestPasswordIsRequired }
                 });
         }
 
@@ -49,10 +48,10 @@ public class SendPasswordRequestValidator(ISendPasswordHasher sendPasswordHasher
             // Request is the correct shape but the passwordHashB64 doesn't match, hash could be empty.
             return new GrantValidationResult(
                 TokenRequestErrors.InvalidGrant,
-                errorDescription: _sendPasswordValidatorErrors[SendPasswordValidatorResult.RequestPasswordDoesNotMatch],
+                errorDescription: _sendPasswordValidatorErrors[SendAccessConstants.PasswordValidatorResults.RequestPasswordDoesNotMatch],
                 new Dictionary<string, object>
                 {
-                    { SendTokenAccessConstants.SendAccessError, SendPasswordValidatorResult.RequestPasswordDoesNotMatch }
+                    { SendAccessConstants.SendAccessError, SendAccessConstants.PasswordValidatorResults.RequestPasswordDoesNotMatch }
                 });
         }
 

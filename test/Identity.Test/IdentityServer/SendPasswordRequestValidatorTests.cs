@@ -10,8 +10,8 @@ using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Duende.IdentityModel;
 using Duende.IdentityServer.Validation;
-using IdentityModel;
 using NSubstitute;
 using Xunit;
 
@@ -281,14 +281,14 @@ public class SendPasswordRequestValidatorTests
             { OidcConstants.TokenRequest.ClientId, BitwardenClient.Send },
             { OidcConstants.TokenRequest.Scope, ApiScopes.ApiSendAccess },
             { "device_type", ((int)DeviceType.FirefoxBrowser).ToString() },
-            { SendTokenAccessConstants.SendId, sendIdBase64 }
+            { SendAccessConstants.TokenRequest.SendId, sendIdBase64 }
         };
 
         if (passwordHash != null && passwordHash.Length > 0)
         {
             foreach (var hash in passwordHash)
             {
-                rawRequestParameters.Add(SendTokenAccessConstants.ClientBase64HashedPassword, hash);
+                rawRequestParameters.Add(SendAccessConstants.TokenRequest.ClientB64HashedPassword, hash);
             }
         }
 

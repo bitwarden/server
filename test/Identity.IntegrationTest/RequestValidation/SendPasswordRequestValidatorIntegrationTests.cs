@@ -8,7 +8,7 @@ using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.IntegrationTestCommon.Factories;
-using IdentityModel;
+using Duende.IdentityModel;
 using NSubstitute;
 using Xunit;
 
@@ -103,7 +103,7 @@ public class SendPasswordRequestValidatorIntegrationTests : IClassFixture<Identi
         // Assert
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains(OidcConstants.TokenErrors.InvalidGrant, content);
-        Assert.Contains("passwordHashB64 is invalid", content);
+        Assert.Contains($"{SendAccessConstants.TokenRequest.ClientB64HashedPassword} is invalid", content);
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class SendPasswordRequestValidatorIntegrationTests : IClassFixture<Identi
         // Assert
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
-        Assert.Contains("passwordHashB64 is required", content);
+        Assert.Contains($"{SendAccessConstants.TokenRequest.ClientB64HashedPassword} is required", content);
     }
 
     /// <summary>
@@ -184,7 +184,7 @@ public class SendPasswordRequestValidatorIntegrationTests : IClassFixture<Identi
         // Assert
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
-        Assert.Contains("passwordHashB64 is required", content);
+        Assert.Contains($"{SendAccessConstants.TokenRequest.ClientB64HashedPassword} is required", content);
     }
 
     private static FormUrlEncodedContent CreateTokenRequestBody(Guid sendId, string passwordHash = null)
@@ -194,14 +194,14 @@ public class SendPasswordRequestValidatorIntegrationTests : IClassFixture<Identi
         {
             new(OidcConstants.TokenRequest.GrantType, CustomGrantTypes.SendAccess),
             new(OidcConstants.TokenRequest.ClientId, BitwardenClient.Send),
-            new(SendTokenAccessConstants.SendId, sendIdBase64),
+            new(SendAccessConstants.TokenRequest.SendId, sendIdBase64),
             new(OidcConstants.TokenRequest.Scope, ApiScopes.ApiSendAccess),
             new("deviceType", "10")
         };
 
         if (passwordHash != null)
         {
-            parameters.Add(new KeyValuePair<string, string>(SendTokenAccessConstants.ClientBase64HashedPassword, passwordHash));
+            parameters.Add(new KeyValuePair<string, string>(SendAccessConstants.TokenRequest.ClientB64HashedPassword, passwordHash));
         }
 
         return new FormUrlEncodedContent(parameters);
