@@ -12,5 +12,5 @@ public class MaximumVaultTimeoutPolicyValidator : IPolicyValidator
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
     public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
     public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
-    public Task OnSaveSideEffectsAsync(SavePolicyModel policyUpdate, Policy? currentPolicy) => throw new NotImplementedException();
+    public Task OnSaveSideEffectsAsync(SavePolicyModel policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
 }

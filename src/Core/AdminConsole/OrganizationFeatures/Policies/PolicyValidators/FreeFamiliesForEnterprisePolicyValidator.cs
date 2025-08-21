@@ -25,7 +25,7 @@ public class FreeFamiliesForEnterprisePolicyValidator(
         }
     }
 
-    public Task OnSaveSideEffectsAsync(SavePolicyModel policyUpdate, Policy? currentPolicy) => throw new NotImplementedException();
+    public Task OnSaveSideEffectsAsync(SavePolicyModel policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
 
     private async Task NotifiesUserWithApplicablePoliciesAsync(PolicyUpdate policy)
     {
