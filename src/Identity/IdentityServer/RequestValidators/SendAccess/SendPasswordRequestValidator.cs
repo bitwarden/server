@@ -18,8 +18,8 @@ public class SendPasswordRequestValidator(ISendPasswordHasher sendPasswordHasher
     /// </summary>
     private static readonly Dictionary<string, string> _sendPasswordValidatorErrors = new()
     {
-        { SendPasswordValidatorResult.RequestPasswordDoesNotMatch, "passwordHashB64 is invalid." },
-        { SendPasswordValidatorResult.RequestPasswordIsRequired, "passwordHashB64 is required." }
+        { SendPasswordValidatorResult.RequestPasswordDoesNotMatch, $"{SendTokenAccessConstants.ClientBase64HashedPassword} is invalid." },
+        { SendPasswordValidatorResult.RequestPasswordIsRequired, $"{SendTokenAccessConstants.ClientBase64HashedPassword} is required." }
     };
 
     public GrantValidationResult ValidateSendPassword(ExtensionGrantValidationContext context, ResourcePassword resourcePassword, Guid sendId)

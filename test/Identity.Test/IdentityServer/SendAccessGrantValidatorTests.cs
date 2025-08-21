@@ -65,7 +65,7 @@ public class SendAccessGrantValidatorTests
 
         // Assert
         Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, context.Result.Error);
-        Assert.Equal("send_id is required.", context.Result.ErrorDescription);
+        Assert.Equal($"{SendTokenAccessConstants.SendId} is required.", context.Result.ErrorDescription);
     }
 
     [Theory, BitAutoData]
@@ -84,7 +84,7 @@ public class SendAccessGrantValidatorTests
         tokenRequest.Raw = CreateTokenRequestBody(Guid.Empty);
 
         // To preserve the CreateTokenRequestBody method for more general usage we over write the sendId
-        tokenRequest.Raw.Set("send_id", "invalid-guid-format");
+        tokenRequest.Raw.Set(SendTokenAccessConstants.SendId, "invalid-guid-format");
         context.Request = tokenRequest;
 
         // Act
@@ -92,7 +92,7 @@ public class SendAccessGrantValidatorTests
 
         // Assert
         Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
-        Assert.Equal("send_id is invalid.", context.Result.ErrorDescription);
+        Assert.Equal($"{SendTokenAccessConstants.SendId} is invalid.", context.Result.ErrorDescription);
     }
 
     [Theory, BitAutoData]
@@ -111,7 +111,7 @@ public class SendAccessGrantValidatorTests
 
         // Assert
         Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
-        Assert.Equal("send_id is invalid.", context.Result.ErrorDescription);
+        Assert.Equal($"{SendTokenAccessConstants.SendId} is invalid.", context.Result.ErrorDescription);
     }
 
     [Theory, BitAutoData]
@@ -135,7 +135,7 @@ public class SendAccessGrantValidatorTests
 
         // Assert
         Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
-        Assert.Equal("send_id is invalid.", context.Result.ErrorDescription);
+        Assert.Equal($"{SendTokenAccessConstants.SendId} is invalid.", context.Result.ErrorDescription);
     }
 
     [Theory, BitAutoData]

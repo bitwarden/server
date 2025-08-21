@@ -12,8 +12,8 @@ public static class SendTokenAccessConstants
     /// Custom input on the request that is a client base 64 hashed password <see cref="SendPasswordRequestValidator"/>
     /// </summary>
     public const string ClientBase64HashedPassword = "passwordHashB64";
-    public const string SendAccessEmail = "sendEmail";
-    public const string SendAccessEmailOtp = "sendEmailOtp";
+    public const string SendAccessEmail = "email";
+    public const string SendAccessEmailOtp = "otp";
     /// <summary>
     /// A catch all error type for send access related errors. Used mainly in the <see cref="GrantValidationResult.CustomResponse"/>
     /// </summary>

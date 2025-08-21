@@ -97,8 +97,8 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
         }).CreateClient();
 
         var requestBody = new FormUrlEncodedContent([
-            new KeyValuePair<string, string>("grant_type", CustomGrantTypes.SendAccess),
-            new KeyValuePair<string, string>("client_id", BitwardenClient.Send)
+            new KeyValuePair<string, string>(OidcConstants.TokenRequest.GrantType, CustomGrantTypes.SendAccess),
+            new KeyValuePair<string, string>(OidcConstants.TokenRequest.ClientId, BitwardenClient.Send)
         ]);
 
         // Act
@@ -106,8 +106,8 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
 
         // Assert
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("invalid_request", content);
-        Assert.Contains("send_id is required", content);
+        Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
+        Assert.Contains($"{SendTokenAccessConstants.SendId} is required", content);
     }
 
     [Fact]

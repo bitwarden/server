@@ -23,8 +23,8 @@ public class SendAccessGrantValidator(
     private static readonly Dictionary<SendGrantValidatorResultTypes, string>
     _sendGrantValidatorErrors = new()
     {
-        { SendGrantValidatorResultTypes.MissingSendId, "send_id is required." },
-        { SendGrantValidatorResultTypes.InvalidSendId, "send_id is invalid." }
+        { SendGrantValidatorResultTypes.MissingSendId, $"{SendTokenAccessConstants.SendId} is required." },
+        { SendGrantValidatorResultTypes.InvalidSendId, $"{SendTokenAccessConstants.SendId} is invalid." }
     };
 
 
