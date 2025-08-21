@@ -1,9 +1,7 @@
-﻿#nullable enable
+﻿using Bit.Core.Enums;
+using Bit.Core.Platform.Push;
 
-using Bit.Core.Enums;
-using Bit.Core.NotificationHub;
-
-namespace Bit.Core.Platform.Push.Internal;
+namespace Bit.Core.Platform.PushRegistration.Internal;
 
 public class NoopPushRegistrationService : IPushRegistrationService
 {

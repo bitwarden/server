@@ -1,4 +1,4 @@
-﻿using Bit.Core.Platform.Push.Internal;
+﻿using Bit.Core.Platform.PushRegistration.Internal;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using NSubstitute;

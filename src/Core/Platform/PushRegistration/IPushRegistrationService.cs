@@ -1,9 +1,9 @@
-﻿#nullable enable
+﻿using Bit.Core.Enums;
+using Bit.Core.Platform.PushRegistration;
 
-using Bit.Core.Enums;
-using Bit.Core.NotificationHub;
-
+// TODO: Change this namespace to `Bit.Core.Platform.PushRegistration
 namespace Bit.Core.Platform.Push;
+
 
 public interface IPushRegistrationService
 {
