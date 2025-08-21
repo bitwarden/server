@@ -65,8 +65,10 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
     {
         if (credential.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
         {
-            _options.WebAuthnPrfOption = new WebAuthnPrfDecryptionOption(credential.EncryptedPrivateKey, credential.EncryptedUserKey);
+            _options.WebAuthnPrfOption =
+                new WebAuthnPrfDecryptionOption(credential.EncryptedPrivateKey, credential.EncryptedUserKey);
         }
+
         return this;
     }
 
@@ -74,7 +76,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
     {
         BuildMasterPasswordUnlock();
         BuildKeyConnectorOptions();
-        await BuildTrustedDeviceOptions();
+        await BuildTrustedDeviceOptionsAsync();
 
         return _options;
     }
@@ -87,13 +89,14 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
         }
 
         var ssoConfigurationData = _ssoConfig.GetData();
-        if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
+        if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } &&
+            !string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
         {
             _options.KeyConnectorOption = new KeyConnectorUserDecryptionOption(ssoConfigurationData.KeyConnectorUrl);
         }
     }
 
-    private async Task BuildTrustedDeviceOptions()
+    private async Task BuildTrustedDeviceOptionsAsync()
     {
         // TrustedDeviceEncryption only exists for SSO, if that changes then these guards should change
         if (_ssoConfig == null)
@@ -101,7 +104,8 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             return;
         }
 
-        var isTdeActive = _ssoConfig.GetData() is { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption };
+        var isTdeActive = _ssoConfig.GetData() is
+        { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption };
         var isTdeOffboarding = !_user.HasMasterPassword() && _device != null && _device.IsTrusted() && !isTdeActive;
         if (!isTdeActive && !isTdeOffboarding)
         {
@@ -120,26 +124,26 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
         if (_device != null)
         {
             var allDevices = await _deviceRepository.GetManyByUserIdAsync(_user.Id);
-            // Checks if the current user has any devices that are capable of approving login with device requests except for
-            // their current device.
-            // NOTE: this doesn't check for if the users have configured the devices to be capable of approving requests as that is a client side setting.
-            hasLoginApprovingDevice = allDevices.Any(d => d.Identifier != _device.Identifier && _loginApprovingClientTypes.TypesThatCanApprove.Contains(DeviceTypes.ToClientType(d.Type)));
+            // Checks if the current user has any devices that are capable of approving login with device requests
+            // except for their current device.
+            // NOTE: this doesn't check for if the users have configured the devices to be capable
+            // of approving requests, as that is a client-side setting.
+            hasLoginApprovingDevice = allDevices.Any(d =>
+                d.Identifier != _device.Identifier &&
+                _loginApprovingClientTypes.TypesThatCanApprove.Contains(DeviceTypes.ToClientType(d.Type)));
         }
 
-        // Determine if user has manage reset password permission as post sso logic requires it for forcing users with this permission to set a MP
-        var hasManageResetPasswordPermission = false;
-        // when a user is being created via JIT provisioning, they will not have any orgs so we can't assume we will have orgs here
-        if (_currentContext.Organizations != null && _currentContext.Organizations.Any(o => o.Id == _ssoConfig.OrganizationId))
-        {
-            // TDE requires single org so grabbing first org & id is fine.
-            hasManageResetPasswordPermission = await _currentContext.ManageResetPassword(_ssoConfig!.OrganizationId);
-        }
+        var organizationUser =
+            await _organizationUserRepository.GetByOrganizationAsync(_ssoConfig.OrganizationId, _user.Id);
 
-        // If sso configuration data is not null then I know for sure that ssoConfiguration isn't null
-        var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(_ssoConfig.OrganizationId, _user.Id);
+        // SSO users, Organizations, and Providers with Manage Account Recovery (reset password) permission,
+        // as well as all Owners and Admins, must set a master password.
+        var hasManageResetPasswordPermission =
+            organizationUser?.GetPermissions() is { ManageResetPassword: true } ||
+            organizationUser?.Type is OrganizationUserType.Admin or OrganizationUserType.Owner ||
+            await _currentContext.ManageResetPassword(_ssoConfig!.OrganizationId);
 
-        hasManageResetPasswordPermission |= organizationUser != null && (organizationUser.Type == OrganizationUserType.Owner || organizationUser.Type == OrganizationUserType.Admin);
-        // They are only able to be approved by an admin if they have enrolled is reset password
+        // They can only be approved by an admin if they have enrolled in reset password
         var hasAdminApproval = organizationUser != null && !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
 
         _options.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(
