@@ -39,10 +39,8 @@ public class ValidationResult<T> : OneOfBase<Valid<T>, Invalid<T>>
     private ValidationResult(OneOf<Valid<T>, Invalid<T>> _) : base(_) {}
     public static implicit operator ValidationResult<T>(T request) => new (new Valid<T>(request));
     public static implicit operator ValidationResult<T>(ValueTuple<T, Error> requestWithError) => new (new Invalid<T>(requestWithError.Item1, requestWithError.Item2));
-
-    public bool Valid => IsT0;
-    public bool Invalid => IsT1;
 }
+
 public static class ValidationResultExtensions
 {
     public static List<Valid<T>> ValidResults<T>(this IEnumerable<ValidationResult<T>> results) =>
@@ -61,139 +59,64 @@ public class DeleteClaimedOrganizationUserAccountValidator(
 {
     public async Task<IEnumerable<ValidationResult<DeleteUserValidationRequest>>> ValidateAsync(IEnumerable<DeleteUserValidationRequest> requests)
     {
-        // The order of the validators matters.
-        // Earlier validators assert nullable properties so that later validators don’t have to.
-        var validators = new[]
-        {
-            EnsureUserBelongsToOrganization,
-            EnsureUserStatusIsNotInvited,
-            PreventSelfDeletion,
-            EnsureUserIsClaimedByOrganization
-        };
-
-        var asyncValidators = new[]
-        {
-            EnsureOnlyOwnersCanDeleteOwnersAsync,
-            EnsureUserIsNotSoleOrganizationOwnerAsync,
-            EnsureUserIsNotSoleProviderOwnerAsync,
-            EnsureCustomUsersCannotDeleteAdminsAsync
-        };
-
-        var validationResults = new List<ValidationResult<DeleteUserValidationRequest>>();
-        foreach (var request in requests)
-        {
-            var result = await ExecuteValidatorsAsync(validators, asyncValidators, request);
-            validationResults.Add(result);
-        }
-
-        return validationResults;
+        var tasks = requests.Select(ValidateAsync);
+        var results = await Task.WhenAll(tasks);
+        return results;
     }
 
-    private static async Task<ValidationResult<DeleteUserValidationRequest>> ExecuteValidatorsAsync(
-        Func<DeleteUserValidationRequest, ValidationResult<DeleteUserValidationRequest>>[] validators,
-        Func<DeleteUserValidationRequest, Task<ValidationResult<DeleteUserValidationRequest>>>[] asyncValidators,
-        DeleteUserValidationRequest request)
+    private async Task<ValidationResult<DeleteUserValidationRequest>> ValidateAsync(DeleteUserValidationRequest request)
     {
-        foreach (var validator in validators)
-        {
-            var result = validator(request);
-            if (result.Invalid)
-            {
-                return result;
-            }
-        }
-
-        foreach (var asyncValidator in asyncValidators)
-        {
-            var result = await asyncValidator(request);
-            if (result.Invalid)
-            {
-                return result;
-            }
-        }
-
-        return request;
-    }
-
-    private static ValidationResult<DeleteUserValidationRequest> EnsureUserBelongsToOrganization(DeleteUserValidationRequest request)
-    {
+        // Ensure user exists
         if (request.User == null || request.OrganizationUser == null)
         {
             return (request, new UserNotFoundError());
         }
 
-        return request;
-    }
-
-    private static ValidationResult<DeleteUserValidationRequest> EnsureUserIsClaimedByOrganization(DeleteUserValidationRequest request)
-    {
-        if (request.IsClaimed)
-        {
-            return request;
-        }
-        return (request, new UserNotClaimedError());
-    }
-
-    private static ValidationResult<DeleteUserValidationRequest> EnsureUserStatusIsNotInvited(DeleteUserValidationRequest request)
-    {
-        if (request.OrganizationUser!.Status == OrganizationUserStatusType.Invited)
+        // Cannot delete invited users
+        if (request.OrganizationUser.Status == OrganizationUserStatusType.Invited)
         {
             return (request, new InvalidUserStatusError());
         }
 
-        return request;
-    }
-
-    private static ValidationResult<DeleteUserValidationRequest> PreventSelfDeletion(DeleteUserValidationRequest request)
-    {
-        if (request.OrganizationUser!.UserId == request.DeletingUserId)
+        // Cannot delete yourself
+        if (request.OrganizationUser.UserId == request.DeletingUserId)
         {
             return (request, new CannotDeleteYourselfError());
         }
 
-        return request;
-    }
+        // Can only delete a claimed user
+        if (!request.IsClaimed)
+        {
+            return (request, new UserNotClaimedError());
+        }
 
-    private async Task<ValidationResult<DeleteUserValidationRequest>> EnsureOnlyOwnersCanDeleteOwnersAsync(DeleteUserValidationRequest request)
-    {
-        if (request.OrganizationUser!.Type == OrganizationUserType.Owner! &&
+        // Cannot delete an owner unless you are an owner or provider
+        if (request.OrganizationUser.Type == OrganizationUserType.Owner &&
             await currentContext.OrganizationOwner(request.OrganizationId))
         {
             return (request, new CannotDeleteOwnersError());
         }
 
-        return request;
-    }
-
-    private async Task<ValidationResult<DeleteUserValidationRequest>> EnsureUserIsNotSoleOrganizationOwnerAsync(DeleteUserValidationRequest request)
-    {
-        var onlyOwnerCount = await organizationUserRepository.GetCountByOnlyOwnerAsync(request.User!.Id);
+        // Cannot delete a user who is the sole owner of an organization
+        var onlyOwnerCount = await organizationUserRepository.GetCountByOnlyOwnerAsync(request.User.Id);
         if (onlyOwnerCount > 0)
         {
             return (request, new SoleOwnerError());
         }
-        return request;
-    }
 
-    private async Task<ValidationResult<DeleteUserValidationRequest>> EnsureUserIsNotSoleProviderOwnerAsync(DeleteUserValidationRequest request)
-    {
-        var onlyOwnerProviderCount = await providerUserRepository.GetCountByOnlyOwnerAsync(request.User!.Id);
+        // Cannot delete a user who is the sole member of a provider
+        var onlyOwnerProviderCount = await providerUserRepository.GetCountByOnlyOwnerAsync(request.User.Id);
         if (onlyOwnerProviderCount > 0)
         {
             return (request, new SoleProviderError());
         }
 
-        return request;
-    }
-
-    private async Task<ValidationResult<DeleteUserValidationRequest>> EnsureCustomUsersCannotDeleteAdminsAsync(DeleteUserValidationRequest request)
-    {
-        if (request.OrganizationUser!.Type == OrganizationUserType.Admin && await currentContext.OrganizationCustom(request.OrganizationId))
+        // Custom users cannot delete admins
+        if (request.OrganizationUser.Type == OrganizationUserType.Admin && await currentContext.OrganizationCustom(request.OrganizationId))
         {
             return (request, new CannotDeleteAdminsError());
         }
 
         return request;
     }
-
 }
