@@ -18,7 +18,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNext(
     IUserRepository userRepository,
     IPushNotificationService pushService,
     ILogger<DeleteClaimedOrganizationUserAccountCommandvNext> logger,
-    IDeleteClaimedOrganizationUserAccountValidator deleteClaimedOrganizationUserAccountValidator)
+    IDeleteClaimedOrganizationUserAccountValidatorvNext deleteClaimedOrganizationUserAccountValidatorvNext)
     : IDeleteClaimedOrganizationUserAccountCommandvNext
 {
     public async Task<CommandResult> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
@@ -35,14 +35,14 @@ public class DeleteClaimedOrganizationUserAccountCommandvNext(
         var claimedStatuses = await getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, orgUserIds);
 
         var internalRequests = CreateInternalRequests(organizationId, deletingUserId, orgUserIds, orgUsers, users, claimedStatuses);
-        var validationResults = (await deleteClaimedOrganizationUserAccountValidator.ValidateAsync(internalRequests)).ToList();
+        var validationResults = (await deleteClaimedOrganizationUserAccountValidatorvNext.ValidateAsync(internalRequests)).ToList();
 
         var validRequests = validationResults.ValidRequests();
         await CancelPremiumsAsync(validRequests);
         await HandleUserDeletionsAsync(validRequests);
         await LogDeletedOrganizationUsersAsync(validRequests);
 
-        return validationResults.Select(v => v.Error.Match<CommandResult>(
+        return validationResults.Select(v => v.Error.Match(
             error => new CommandResult(v.Request.OrganizationUserId, error),
             _ => new CommandResult(v.Request.OrganizationUserId, new None())
         ));

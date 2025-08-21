@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Context;
@@ -9,19 +9,18 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-using DeleteClaimedOrganizationUserAccountValidator = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext.DeleteClaimedOrganizationUserAccountValidator;
 using DeleteUserValidationRequest = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext.DeleteUserValidationRequest;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
 [SutProviderCustomize]
-public class DeleteClaimedOrganizationUserAccountValidatorTests
+public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
 {
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_ShouldExecuteSyncValidatorsFirst(
         Guid organizationId,
-        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider)
+        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider)
     {
         // Arrange
         var request = new DeleteUserValidationRequest
@@ -61,7 +60,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
     [BitAutoData]
     public async Task ValidateAsync_ShouldEnsureUserBelongsToOrganization(
         Guid organizationId,
-        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider)
+        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider)
     {
         // Arrange
         var request = new DeleteUserValidationRequest
@@ -90,7 +89,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
     public async Task ValidateAsync_ShouldEnsureUserStatusIsNotInvited(
         OrganizationUser orgUser,
         User user,
-        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider)
+        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider)
     {
         orgUser.Status = OrganizationUserStatusType.Invited;
         orgUser.UserId = user.Id;
@@ -117,7 +116,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
     public async Task ValidateAsync_ShouldPreventSelfDeletion(
         OrganizationUser orgUser,
         User user,
-        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider)
+        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider)
     {
         orgUser.Status = OrganizationUserStatusType.Confirmed;
         orgUser.UserId = user.Id;
@@ -145,7 +144,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
     public async Task ValidateAsync_ShouldEnsureUserIsClaimedByOrganization(
         OrganizationUser orgUser,
         User user,
-        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider)
+        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider)
     {
         orgUser.Status = OrganizationUserStatusType.Confirmed;
         orgUser.UserId = user.Id;
@@ -173,7 +172,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
     public async Task ValidateAsync_EnsureOnlyOwnersCanDeleteOwnersAsync(
         OrganizationUser orgUser,
         User user,
-        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider)
+        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider)
     {
         orgUser.Status = OrganizationUserStatusType.Confirmed;
         orgUser.Type = OrganizationUserType.Owner;
@@ -208,7 +207,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
     public async Task ValidateAsync_EnsureUserIsNotSoleOrganizationOwnerAsync(
         OrganizationUser orgUser,
         User user,
-        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider)
+        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider)
     {
         orgUser.Status = OrganizationUserStatusType.Confirmed;
         orgUser.Type = OrganizationUserType.Owner;
@@ -246,7 +245,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
     public async Task ValidateAsync_EnsureUserIsNotSoleProviderOwnerAsync(
         OrganizationUser orgUser,
         User user,
-        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider)
+        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider)
     {
         orgUser.Status = OrganizationUserStatusType.Confirmed;
         orgUser.Type = OrganizationUserType.Owner;
@@ -287,7 +286,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
     public async Task ValidateAsync_EnsureCustomUsersCannotDeleteAdminsAsync(
         OrganizationUser orgUser,
         User user,
-        SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider)
+        SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider)
     {
         orgUser.Status = OrganizationUserStatusType.Confirmed;
         orgUser.Type = OrganizationUserType.Admin;
@@ -330,7 +329,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorTests
      User validUser,
      OrganizationUser invalidOrgUser,
      User invalidUser,
-     SutProvider<DeleteClaimedOrganizationUserAccountValidator> sutProvider)
+     SutProvider<DeleteClaimedOrganizationUserAccountValidatorvNext> sutProvider)
     {
         // Arrange - valid user
         validOrgUser.Status = OrganizationUserStatusType.Confirmed;

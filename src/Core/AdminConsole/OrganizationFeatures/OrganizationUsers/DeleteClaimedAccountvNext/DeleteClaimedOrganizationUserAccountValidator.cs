@@ -6,10 +6,10 @@ using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Delete
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
 
-public class DeleteClaimedOrganizationUserAccountValidator(
+public class DeleteClaimedOrganizationUserAccountValidatorvNext(
     ICurrentContext currentContext,
     IOrganizationUserRepository organizationUserRepository,
-    IProviderUserRepository providerUserRepository) : IDeleteClaimedOrganizationUserAccountValidator
+    IProviderUserRepository providerUserRepository) : IDeleteClaimedOrganizationUserAccountValidatorvNext
 {
     public async Task<IEnumerable<ValidationResult<DeleteUserValidationRequest>>> ValidateAsync(IEnumerable<DeleteUserValidationRequest> requests)
     {
