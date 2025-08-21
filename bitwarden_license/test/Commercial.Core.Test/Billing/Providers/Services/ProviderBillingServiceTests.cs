@@ -2,7 +2,6 @@
 using System.Net;
 using Bit.Commercial.Core.Billing.Providers.Models;
 using Bit.Commercial.Core.Billing.Providers.Services;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;

@@ -3,7 +3,6 @@
 
 using System.Globalization;
 using Bit.Commercial.Core.Billing.Providers.Models;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -41,7 +40,6 @@ namespace Bit.Commercial.Core.Billing.Providers.Services;
 public class ProviderBillingService(
     IBraintreeGateway braintreeGateway,
     IEventService eventService,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
