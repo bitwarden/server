@@ -25,19 +25,19 @@ public enum OrganizationDataOwnershipState
 /// </summary>
 public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
 {
-    private readonly Dictionary<Guid, PolicyDetails> _policyDetailsByOrganizationId;
+    private readonly IEnumerable<PolicyDetails> _policyDetails;
 
     /// <param name="organizationDataOwnershipState">
     /// The organization data ownership state for the user.
     /// </param>
-    /// <param name="policyDetailsByOrganizationId">
-    /// A dictionary with the OrganizationId as the key and the PolicyDetails as the value.
+    /// <param name="policyDetails">
+    /// An enumerable collection of PolicyDetails for the organizations.
     /// </param>
     public OrganizationDataOwnershipPolicyRequirement(
         OrganizationDataOwnershipState organizationDataOwnershipState,
-        Dictionary<Guid, PolicyDetails> policyDetailsByOrganizationId)
+        IEnumerable<PolicyDetails> policyDetails)
     {
-        _policyDetailsByOrganizationId = policyDetailsByOrganizationId;
+        _policyDetails = policyDetails;
         State = organizationDataOwnershipState;
     }
 
@@ -56,20 +56,16 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
     /// <returns>A DefaultCollectionRequest containing the OrganizationUserId and a flag indicating whether to create a default collection.</returns>
     public DefaultCollectionRequest GetDefaultCollectionRequest(Guid organizationId)
     {
+        var policyDetail = _policyDetails
+            .FirstOrDefault(p => p.OrganizationId == organizationId);
+
+        if (policyDetail != null && policyDetail.HasStatus([OrganizationUserStatusType.Confirmed]))
+        {
+            return new DefaultCollectionRequest(policyDetail.OrganizationUserId, true);
+        }
+
         var noCollectionNeeded = new DefaultCollectionRequest(Guid.Empty, false);
-
-        if (!_policyDetailsByOrganizationId.TryGetValue(organizationId, out var policyDetails))
-        {
-            return noCollectionNeeded;
-        }
-
-        if (policyDetails.HasStatus([OrganizationUserStatusType.Confirmed]))
-        {
-            return new DefaultCollectionRequest(policyDetails.OrganizationUserId, true);
-        }
-
         return noCollectionNeeded;
-
     }
 }
 
@@ -89,12 +85,8 @@ public class OrganizationDataOwnershipPolicyRequirementFactory : BasePolicyRequi
             ? OrganizationDataOwnershipState.Enabled
             : OrganizationDataOwnershipState.Disabled;
 
-        var policyDetailsByOrganizationId = policyDetails
-            .GroupBy(p => p.OrganizationId)
-            .ToDictionary(g => g.Key, g => g.First());
-
         return new OrganizationDataOwnershipPolicyRequirement(
             organizationDataOwnershipState,
-            policyDetailsByOrganizationId);
+            policyDetails);
     }
 }

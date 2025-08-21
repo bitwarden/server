@@ -174,7 +174,7 @@ public class CipherServiceTests
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
-                new Dictionary<Guid, PolicyDetails> { { Guid.NewGuid(), new PolicyDetails() } }));
+                [new PolicyDetails()]));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null));

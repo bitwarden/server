@@ -18,7 +18,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-using Guid = System.Guid;
 
 namespace Bit.Core.Test.Tools.ImportFeatures;
 
@@ -122,7 +121,7 @@ public class ImportCiphersAsyncCommandTests
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
-                new Dictionary<Guid, PolicyDetails> { { Guid.NewGuid(), new PolicyDetails() } }));
+                [new PolicyDetails()]));
 
         var folderRelationships = new List<KeyValuePair<int, int>>();
 
