@@ -34,7 +34,7 @@ public class OrganizationDataOwnershipPolicyValidator(
 
         var metadata = MapToOrganizationModelOwnershipPolicyModel(policyModel.Metadata);
 
-        if (metadata == null || !ShouldCreateDefaultCollections(metadata))
+        if (metadata == null || string.IsNullOrWhiteSpace(metadata.DefaultUserCollectionName))
         {
             return;
         }
@@ -49,10 +49,7 @@ public class OrganizationDataOwnershipPolicyValidator(
         await UpsertDefaultCollectionsForUsersAsync(policyUpdate, metadata.DefaultUserCollectionName);
     }
 
-
-    private static bool ShouldCreateDefaultCollections(OrganizationModelOwnershipPolicyModel metadata) => string.IsNullOrWhiteSpace(metadata.DefaultUserCollectionName);
-
-    public static OrganizationModelOwnershipPolicyModel? MapToOrganizationModelOwnershipPolicyModel(IPolicyMetadataModel model)
+    private static OrganizationModelOwnershipPolicyModel? MapToOrganizationModelOwnershipPolicyModel(IPolicyMetadataModel model)
     {
         if (model is OrganizationModelOwnershipPolicyModel ownershipModel)
         {
@@ -61,7 +58,7 @@ public class OrganizationDataOwnershipPolicyValidator(
             );
         }
 
-        throw new InvalidOperationException($"Failure to map");
+        return null;
     }
 
     public override Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
