@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
@@ -64,8 +65,7 @@ public class ImportCiphersAsyncCommandTests
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(importingUserId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Disabled,
-                []
-                , []));
+                []));
 
         sutProvider.GetDependency<IFolderRepository>()
             .GetManyByUserIdAsync(importingUserId)
@@ -121,8 +121,7 @@ public class ImportCiphersAsyncCommandTests
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(
                 OrganizationDataOwnershipState.Enabled,
-                [Guid.NewGuid()]
-                , []));
+                [new PolicyDetails()]));
 
         var folderRelationships = new List<KeyValuePair<int, int>>();
 

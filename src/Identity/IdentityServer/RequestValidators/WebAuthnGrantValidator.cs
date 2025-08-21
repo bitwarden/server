@@ -49,7 +49,8 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand,
         IPolicyRequirementQuery policyRequirementQuery,
-        IAuthRequestRepository authRequestRepository)
+        IAuthRequestRepository authRequestRepository,
+        IMailService mailService)
         : base(
             userManager,
             userService,
@@ -66,7 +67,8 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
             policyRequirementQuery,
-            authRequestRepository)
+            authRequestRepository,
+            mailService)
     {
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;

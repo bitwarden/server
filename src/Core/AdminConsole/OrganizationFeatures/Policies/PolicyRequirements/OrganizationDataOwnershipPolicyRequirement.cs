@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
@@ -24,25 +25,19 @@ public enum OrganizationDataOwnershipState
 /// </summary>
 public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
 {
-    private readonly IEnumerable<Guid> _organizationIdsWithPolicyEnabled;
-    private readonly Dictionary<Guid, Guid> _organizationUserIdsByOrgId;
+    private readonly IEnumerable<PolicyDetails> _policyDetails;
 
     /// <param name="organizationDataOwnershipState">
     /// The organization data ownership state for the user.
     /// </param>
-    /// <param name="organizationIdsWithPolicyEnabled">
-    /// The collection of Organization IDs that have the Organization Data Ownership policy enabled.
-    /// </param>
-    /// <param name="organizationUserIdsByOrgId">
-    /// A dictionary with the OrganizationId as the key and the OrganizationUserId as the value.
+    /// <param name="policyDetails">
+    /// An enumerable collection of PolicyDetails for the organizations.
     /// </param>
     public OrganizationDataOwnershipPolicyRequirement(
         OrganizationDataOwnershipState organizationDataOwnershipState,
-        IEnumerable<Guid> organizationIdsWithPolicyEnabled,
-        Dictionary<Guid, Guid> organizationUserIdsByOrgId)
+        IEnumerable<PolicyDetails> policyDetails)
     {
-        _organizationIdsWithPolicyEnabled = organizationIdsWithPolicyEnabled;
-        _organizationUserIdsByOrgId = organizationUserIdsByOrgId;
+        _policyDetails = policyDetails;
         State = organizationDataOwnershipState;
     }
 
@@ -52,24 +47,32 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
     public OrganizationDataOwnershipState State { get; }
 
     /// <summary>
-    /// Returns true if the Organization Data Ownership policy is enforced in that organization.
+    /// Gets a default collection request for enforcing the Organization Data Ownership policy.
+    /// Only accepted users are applicable.
+    /// This indicates whether the user should have a default collection created for them when the policy is enabled,
+    /// and if so, the relevant OrganizationUserId to create the collection for. Only accepted users are applicable.
     /// </summary>
-    public bool RequiresDefaultCollection(Guid organizationId)
+    /// <param name="organizationId">The organization ID to create the request for.</param>
+    /// <returns>A DefaultCollectionRequest containing the OrganizationUserId and a flag indicating whether to create a default collection.</returns>
+    public DefaultCollectionRequest GetDefaultCollectionRequest(Guid organizationId)
     {
-        return _organizationIdsWithPolicyEnabled.Contains(organizationId);
-    }
+        var policyDetail = _policyDetails
+            .FirstOrDefault(p => p.OrganizationId == organizationId);
 
-    /// <summary>
-    /// Return the OrganizationUserId for the given OrganizationId.
-    /// </summary>
-    public Guid? GetOrganizationUserId(Guid organizationId)
-    {
-        if (_organizationUserIdsByOrgId.TryGetValue(organizationId, out var orgUserId))
+        if (policyDetail != null && policyDetail.HasStatus([OrganizationUserStatusType.Confirmed]))
         {
-            return orgUserId;
+            return new DefaultCollectionRequest(policyDetail.OrganizationUserId, true);
         }
-        return null;
+
+        var noCollectionNeeded = new DefaultCollectionRequest(Guid.Empty, false);
+        return noCollectionNeeded;
     }
+}
+
+public record DefaultCollectionRequest(Guid OrganizationUserId, bool ShouldCreateDefaultCollection)
+{
+    public readonly bool ShouldCreateDefaultCollection = ShouldCreateDefaultCollection;
+    public readonly Guid OrganizationUserId = OrganizationUserId;
 }
 
 public class OrganizationDataOwnershipPolicyRequirementFactory : BasePolicyRequirementFactory<OrganizationDataOwnershipPolicyRequirement>
@@ -82,17 +85,8 @@ public class OrganizationDataOwnershipPolicyRequirementFactory : BasePolicyRequi
             ? OrganizationDataOwnershipState.Enabled
             : OrganizationDataOwnershipState.Disabled;
 
-        var organizationIdsWithPolicyEnabled = policyDetails
-            .Select(p => p.OrganizationId)
-            .ToHashSet();
-
-        var organizationUserIdsByOrgId = policyDetails
-            .GroupBy(p => p.OrganizationId)
-            .ToDictionary(g => g.Key, g => g.First().OrganizationUserId);
-
         return new OrganizationDataOwnershipPolicyRequirement(
             organizationDataOwnershipState,
-            organizationIdsWithPolicyEnabled,
-            organizationUserIdsByOrgId);
+            policyDetails);
     }
 }

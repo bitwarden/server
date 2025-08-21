@@ -21,7 +21,7 @@ namespace Bit.Core.Test.Billing.Organizations.Queries;
 [SutProviderCustomize]
 public class GetOrganizationWarningsQueryTests
 {
-    private static readonly string[] _requiredExpansions = ["customer", "latest_invoice", "test_clock"];
+    private static readonly string[] _requiredExpansions = ["customer.tax_ids", "latest_invoice", "test_clock"];
 
     [Theory, BitAutoData]
     public async Task Run_NoSubscription_NoWarnings(
@@ -130,7 +130,7 @@ public class GetOrganizationWarningsQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_Has_InactiveSubscriptionWarning_AddPaymentMethodOptionalTrial(
+    public async Task Run_OrganizationEnabled_NoInactiveSubscriptionWarning(
         Organization organization,
         SutProvider<GetOrganizationWarningsQuery> sutProvider)
     {
@@ -142,7 +142,7 @@ public class GetOrganizationWarningsQueryTests
             ))
             .Returns(new Subscription
             {
-                Status = StripeConstants.SubscriptionStatus.Trialing,
+                Status = StripeConstants.SubscriptionStatus.Unpaid,
                 Customer = new Customer
                 {
                     InvoiceSettings = new CustomerInvoiceSettings(),
@@ -151,14 +151,10 @@ public class GetOrganizationWarningsQueryTests
             });
 
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
-        sutProvider.GetDependency<ISetupIntentCache>().Get(organization.Id).Returns((string?)null);
 
         var response = await sutProvider.Sut.Run(organization);
 
-        Assert.True(response is
-        {
-            InactiveSubscription.Resolution: "add_payment_method_optional_trial"
-        });
+        Assert.Null(response.InactiveSubscription);
     }
 
     [Theory, BitAutoData]

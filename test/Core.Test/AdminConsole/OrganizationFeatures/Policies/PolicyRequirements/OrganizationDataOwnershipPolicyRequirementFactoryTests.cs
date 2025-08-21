@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.Enums;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -30,31 +31,15 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void RequiresDefaultCollection_WithNoPolicies_ReturnsFalse(
-        Guid organizationId,
-        SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
+    public void PolicyType_ReturnsOrganizationDataOwnership(SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
     {
-        var actual = sutProvider.Sut.Create([]);
-
-        Assert.False(actual.RequiresDefaultCollection(organizationId));
+        Assert.Equal(PolicyType.OrganizationDataOwnership, sutProvider.Sut.PolicyType);
     }
 
     [Theory, BitAutoData]
-    public void RequiresDefaultCollection_WithOrganizationDataOwnershipPolicies_ReturnsCorrectResult(
-        [PolicyDetails(PolicyType.OrganizationDataOwnership)] PolicyDetails[] policies,
-        Guid nonPolicyOrganizationId,
-        SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
-    {
-        var actual = sutProvider.Sut.Create(policies);
-
-        Assert.True(actual.RequiresDefaultCollection(policies[0].OrganizationId));
-        Assert.False(actual.RequiresDefaultCollection(nonPolicyOrganizationId));
-    }
-
-    [Theory, BitAutoData]
-    public void GetOrganizationUserId_WithValidOrganizationId_ReturnsOrganizationUserId(
-        [PolicyDetails(PolicyType.OrganizationDataOwnership)] PolicyDetails[] policies,
-        SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
+    public void GetDefaultCollectionRequest_WithConfirmedUser(
+    [PolicyDetails(PolicyType.OrganizationDataOwnership, userStatus: OrganizationUserStatusType.Confirmed)] PolicyDetails[] policies,
+    SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
     {
         // Arrange
         var requirement = sutProvider.Sut.Create(policies);
@@ -62,26 +47,69 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
         var organizationId = policies[0].OrganizationId;
 
         // Act
-        var result = requirement.GetOrganizationUserId(organizationId);
+        var result = requirement.GetDefaultCollectionRequest(organizationId);
 
         // Assert
-        Assert.Equal(expectedOrganizationUserId, result);
+        Assert.Equal(expectedOrganizationUserId, result.OrganizationUserId);
+        Assert.True(result.ShouldCreateDefaultCollection);
     }
 
     [Theory, BitAutoData]
-    public void GetOrganizationUserId_WithInvalidOrganizationId_ReturnsNull(
+    public void GetDefaultCollectionRequest_WithAcceptedUser(
+        [PolicyDetails(PolicyType.OrganizationDataOwnership, userStatus: OrganizationUserStatusType.Accepted)] PolicyDetails[] policies,
+        SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
+    {
+        // Arrange
+        var requirement = sutProvider.Sut.Create(policies);
+        var organizationId = policies[0].OrganizationId;
+
+        // Act
+        var result = requirement.GetDefaultCollectionRequest(organizationId);
+
+        // Assert
+        Assert.Equal(Guid.Empty, result.OrganizationUserId);
+        Assert.False(result.ShouldCreateDefaultCollection);
+    }
+
+    [Theory, BitAutoData]
+    public void GetDefaultCollectionRequest_WithNoPolicies(
+        SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
+    {
+        // Arrange
+        var requirement = sutProvider.Sut.Create([]);
+        var organizationId = Guid.NewGuid();
+
+        // Act
+        var result = requirement.GetDefaultCollectionRequest(organizationId);
+
+        // Assert
+        Assert.Equal(Guid.Empty, result.OrganizationUserId);
+        Assert.False(result.ShouldCreateDefaultCollection);
+    }
+
+    [Theory, BitAutoData]
+    public void GetDefaultCollectionRequest_WithMixedStatuses(
         [PolicyDetails(PolicyType.OrganizationDataOwnership)] PolicyDetails[] policies,
-        Guid invalidOrganizationId,
         SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
     {
         // Arrange
         var requirement = sutProvider.Sut.Create(policies);
 
+        var confirmedPolicy = policies[0];
+        var acceptedPolicy = policies[1];
+
+        confirmedPolicy.OrganizationUserStatus = OrganizationUserStatusType.Confirmed;
+        acceptedPolicy.OrganizationUserStatus = OrganizationUserStatusType.Accepted;
+
         // Act
-        var result = requirement.GetOrganizationUserId(invalidOrganizationId);
+        var confirmedResult = requirement.GetDefaultCollectionRequest(confirmedPolicy.OrganizationId);
+        var acceptedResult = requirement.GetDefaultCollectionRequest(acceptedPolicy.OrganizationId);
 
         // Assert
-        Assert.Null(result);
-    }
+        Assert.Equal(Guid.Empty, acceptedResult.OrganizationUserId);
+        Assert.False(acceptedResult.ShouldCreateDefaultCollection);
 
+        Assert.Equal(confirmedPolicy.OrganizationUserId, confirmedResult.OrganizationUserId);
+        Assert.True(confirmedResult.ShouldCreateDefaultCollection);
+    }
 }

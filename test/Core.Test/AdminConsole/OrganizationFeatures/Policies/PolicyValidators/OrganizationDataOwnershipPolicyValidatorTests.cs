@@ -88,7 +88,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task OnSaveSideEffectsAsync_WhenNoUsersExist_ShouldLogWarning(
+    public async Task OnSaveSideEffectsAsync_WhenNoUsersExist_ShouldLogError(
         [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy currentPolicy,
         OrganizationDataOwnershipPolicyRequirementFactory factory)
@@ -117,23 +117,70 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         const string expectedErrorMessage = "No UserOrganizationIds found for";
 
         logger.Received(1).Log(
-            LogLevel.Warning,
+            LogLevel.Error,
             Arg.Any<EventId>(),
             Arg.Is<object>(o => (o.ToString() ?? "").Contains(expectedErrorMessage)),
             Arg.Any<Exception>(),
             Arg.Any<Func<object, Exception?, string>>());
     }
 
+    public static IEnumerable<object?[]> ShouldUpsertDefaultCollectionsTestCases()
+    {
+        yield return WithExistingPolicy();
+
+        yield return WithNoExistingPolicy();
+        yield break;
+
+        object?[] WithExistingPolicy()
+        {
+            var organizationId = Guid.NewGuid();
+            var policyUpdate = new PolicyUpdate
+            {
+                OrganizationId = organizationId,
+                Type = PolicyType.OrganizationDataOwnership,
+                Enabled = true
+            };
+            var currentPolicy = new Policy
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = organizationId,
+                Type = PolicyType.OrganizationDataOwnership,
+                Enabled = false
+            };
+
+            return new object?[]
+            {
+                policyUpdate,
+                currentPolicy
+            };
+        }
+
+        object?[] WithNoExistingPolicy()
+        {
+            var policyUpdate = new PolicyUpdate
+            {
+                OrganizationId = new Guid(),
+                Type = PolicyType.OrganizationDataOwnership,
+                Enabled = true
+            };
+
+            const Policy currentPolicy = null;
+
+            return new object?[]
+            {
+                policyUpdate,
+                currentPolicy
+            };
+        }
+    }
     [Theory, BitAutoData]
+    [BitMemberAutoData(nameof(ShouldUpsertDefaultCollectionsTestCases))]
     public async Task OnSaveSideEffectsAsync_WithRequirements_ShouldUpsertDefaultCollections(
         [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.OrganizationDataOwnership, false)] Policy currentPolicy,
+        [Policy(PolicyType.OrganizationDataOwnership, false)] Policy? currentPolicy,
         OrganizationDataOwnershipPolicyRequirementFactory factory)
     {
         // Arrange
-        currentPolicy.OrganizationId = policyUpdate.OrganizationId;
-        policyUpdate.Enabled = true;
-
         var policyRepository = ArrangePolicyRepositoryWithUsers(policyUpdate);
         var collectionRepository = Substitute.For<ICollectionRepository>();
         var logger = Substitute.For<ILogger<OrganizationDataOwnershipPolicyValidator>>();
@@ -148,7 +195,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
             .Received(1)
             .UpsertDefaultCollectionsAsync(
                 policyUpdate.OrganizationId,
-                Arg.Is<List<Guid>>(ids => ids.Count == 3),
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 3),
                 _defaultUserCollectionName);
     }
 

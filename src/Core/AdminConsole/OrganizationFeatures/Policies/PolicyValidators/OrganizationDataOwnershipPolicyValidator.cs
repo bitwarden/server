@@ -19,7 +19,6 @@ public class OrganizationDataOwnershipPolicyValidator(
     ILogger<OrganizationDataOwnershipPolicyValidator> logger)
     : OrganizationPolicyValidator(policyRepository, factories)
 {
-    private readonly ILogger<OrganizationDataOwnershipPolicyValidator> _logger = logger;
     public override PolicyType Type => PolicyType.OrganizationDataOwnership;
 
     public override IEnumerable<PolicyType> RequiredPolicies => [];
@@ -60,22 +59,24 @@ public class OrganizationDataOwnershipPolicyValidator(
             return;
         }
 
-        if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
+        if (currentPolicy?.Enabled != true && policyUpdate.Enabled)
         {
             await UpsertDefaultCollectionsForUsersAsync(policyUpdate);
         }
-
     }
 
     private async Task UpsertDefaultCollectionsForUsersAsync(PolicyUpdate policyUpdate)
     {
         var requirements = await GetUserPolicyRequirementsByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(policyUpdate.OrganizationId, policyUpdate.Type);
 
-        var userOrgIds = GetUserOrgIds(policyUpdate, requirements);
+        var userOrgIds = requirements
+            .Select(requirement => requirement.GetDefaultCollectionRequest(policyUpdate.OrganizationId))
+            .Where(request => request.ShouldCreateDefaultCollection)
+            .Select(request => request.OrganizationUserId);
 
         if (!userOrgIds.Any())
         {
-            _logger.LogWarning($"No UserOrganizationIds found for {policyUpdate.OrganizationId}");
+            logger.LogError("No UserOrganizationIds found for {OrganizationId}", policyUpdate.OrganizationId);
             return;
         }
 
@@ -90,24 +91,5 @@ public class OrganizationDataOwnershipPolicyValidator(
         // TODO: https://bitwarden.atlassian.net/browse/PM-24279
         const string temporaryPlaceHolderValue = "Default";
         return temporaryPlaceHolderValue;
-    }
-
-    private List<Guid> GetUserOrgIds(PolicyUpdate policyUpdate, IEnumerable<OrganizationDataOwnershipPolicyRequirement> requirements)
-    {
-        var userOrgIds = new List<Guid>();
-        foreach (var requirement in requirements)
-        {
-            var userOrgId = requirement.GetOrganizationUserId(policyUpdate.OrganizationId);
-
-            if (userOrgId.HasValue)
-            {
-                userOrgIds.Add(userOrgId.Value);
-            }
-            else
-            {
-                _logger.LogWarning("UserOrganizationId is null for organization {OrganizationId}", policyUpdate.OrganizationId);
-            }
-        }
-        return userOrgIds;
     }
 }

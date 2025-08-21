@@ -244,25 +244,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             .Select(d => d.Id.ToString());
     }
 
-    private async Task<bool> OrganizationRequiresDefaultCollectionAsync(Guid organizationId, string defaultUserCollectionName)
-    {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
-        {
-            return false;
-        }
-
-        // Skip if no collection name provided (backwards compatibility)
-        if (string.IsNullOrWhiteSpace(defaultUserCollectionName))
-        {
-            return false;
-        }
-
-        var organizationPolicyRequirement = await _policyRequirementQuery.GetByOrganizationAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId);
-
-        // Check if the organization requires default collections
-        return organizationPolicyRequirement.RequiresDefaultCollection(organizationId);
-    }
-
     /// <summary>
     /// Handles the side effects of confirming an organization user.
     /// Creates a default collection for the user if the organization
@@ -271,15 +252,32 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     /// <param name="organizationId">The organization ID.</param>
     /// <param name="confirmedOrganizationUsers">The confirmed organization users.</param>
     /// <param name="defaultUserCollectionName">The encrypted default user collection name.</param>
-    private async Task HandleConfirmationSideEffectsAsync(Guid organizationId, IEnumerable<OrganizationUser> confirmedOrganizationUsers, string defaultUserCollectionName)
+    private async Task HandleConfirmationSideEffectsAsync(Guid organizationId,
+        IEnumerable<OrganizationUser> confirmedOrganizationUsers, string defaultUserCollectionName)
     {
-        var requiresDefaultCollections = await OrganizationRequiresDefaultCollectionAsync(organizationId, defaultUserCollectionName);
-        if (!requiresDefaultCollections)
+        if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
         {
             return;
         }
 
-        var organizationUserIds = confirmedOrganizationUsers.Select(u => u.Id).ToList();
-        await _collectionRepository.UpsertDefaultCollectionsAsync(organizationId, organizationUserIds, defaultUserCollectionName);
+        // Skip if no collection name provided (backwards compatibility)
+        if (string.IsNullOrWhiteSpace(defaultUserCollectionName))
+        {
+            return;
+        }
+
+        var policyEligibleOrganizationUserIds = await _policyRequirementQuery.GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId);
+
+        var eligibleOrganizationUserIds = confirmedOrganizationUsers
+            .Where(ou => policyEligibleOrganizationUserIds.Contains(ou.Id))
+            .Select(ou => ou.Id)
+            .ToList();
+
+        if (eligibleOrganizationUserIds.Count == 0)
+        {
+            return;
+        }
+
+        await _collectionRepository.UpsertDefaultCollectionsAsync(organizationId, eligibleOrganizationUserIds, defaultUserCollectionName);
     }
 }
