@@ -1,7 +1,17 @@
 ﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 
-public record Error(string Message);
-public record UserNotFoundError() : Error("Invalid user.");
+/// <summary>
+/// A strongly typed error containing a reason that an action failed.
+/// This is used for business logic validation and other expected errors, not exceptions.
+/// </summary>
+public abstract record Error(string Message);
+/// <summary>
+/// An <see cref="Error"/> type that maps to a NotFoundResult at the api layer.
+/// </summary>
+/// <param name="Message"></param>
+public abstract record NotFoundError(string Message) : Error(Message);
+
+public record UserNotFoundError() : NotFoundError("Invalid user.");
 public record UserNotClaimedError() : Error("Member is not claimed by the organization.");
 public record InvalidUserStatusError() : Error("You cannot delete a member with Invited status.");
 public record CannotDeleteYourselfError() : Error("You cannot delete yourself.");

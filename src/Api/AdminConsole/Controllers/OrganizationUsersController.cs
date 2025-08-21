@@ -23,6 +23,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
@@ -511,19 +512,21 @@ public class OrganizationUsersController : Controller
     [HttpDelete("{id}/delete-account")]
     [HttpPost("{id}/delete-account")]
     [Authorize<ManageUsersRequirement>]
-    public async Task<IActionResult> DeleteAccount(Guid orgId, Guid id)
+    public async Task<IResult> DeleteAccount(Guid orgId, Guid id)
     {
         var currentUserId = _userService.GetProperUserId(User);
         if (currentUserId == null)
         {
-            return NotFound();
+            return TypedResults.NotFound(new ErrorResponseModel("Current user not found."));
         }
 
         var commandResult = await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUserId.Value);
 
-        return commandResult.Result.Match<IActionResult>(
-            error => BadRequest(error.Message),
-            _ => Ok()
+        return commandResult.Result.Match<IResult>(
+            error => error is NotFoundError
+                ? TypedResults.NotFound(new ErrorResponseModel(error.Message))
+                : TypedResults.BadRequest(new ErrorResponseModel(error.Message)),
+            TypedResults.Ok
         );
     }
 
