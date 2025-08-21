@@ -33,7 +33,6 @@ using static StripeConstants;
 
 public class SubscriberService(
     IBraintreeGateway braintreeGateway,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
     IOrganizationRepository organizationRepository,
@@ -802,28 +801,27 @@ public class SubscriberService(
             _ => false
         };
 
-        var setNonUSBusinessUseToReverseCharge =
-            featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
 
-        if (setNonUSBusinessUseToReverseCharge && isBusinessUseSubscriber)
+
+        if (isBusinessUseSubscriber)
         {
             switch (customer)
             {
                 case
                 {
                     Address.Country: not "US",
-                    TaxExempt: not StripeConstants.TaxExempt.Reverse
+                    TaxExempt: not TaxExempt.Reverse
                 }:
                     await stripeAdapter.CustomerUpdateAsync(customer.Id,
-                        new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
+                        new CustomerUpdateOptions { TaxExempt = TaxExempt.Reverse });
                     break;
                 case
                 {
                     Address.Country: "US",
-                    TaxExempt: StripeConstants.TaxExempt.Reverse
+                    TaxExempt: TaxExempt.Reverse
                 }:
                     await stripeAdapter.CustomerUpdateAsync(customer.Id,
-                        new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.None });
+                        new CustomerUpdateOptions { TaxExempt = TaxExempt.None });
                     break;
             }
 
