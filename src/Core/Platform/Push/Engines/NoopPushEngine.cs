@@ -1,10 +1,9 @@
-﻿#nullable enable
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Vault.Entities;
 
 namespace Bit.Core.Platform.Push.Internal;
 
-internal class NoopPushNotificationService : IPushEngine
+internal class NoopPushEngine : IPushEngine
 {
     public Task PushCipherAsync(Cipher cipher, PushType pushType, IEnumerable<Guid>? collectionIds) => Task.CompletedTask;
 

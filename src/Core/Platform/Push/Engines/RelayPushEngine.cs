@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.IdentityServer;
 using Bit.Core.Models;
@@ -19,18 +18,18 @@ namespace Bit.Core.Platform.Push.Internal;
 /// Used by Self-Hosted environments.
 /// Received by PushController endpoint in Api project.
 /// </summary>
-public class RelayPushNotificationService : BaseIdentityClientService, IPushEngine
+public class RelayPushEngine : BaseIdentityClientService, IPushEngine
 {
     private readonly IDeviceRepository _deviceRepository;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
 
-    public RelayPushNotificationService(
+    public RelayPushEngine(
         IHttpClientFactory httpFactory,
         IDeviceRepository deviceRepository,
         GlobalSettings globalSettings,
         IHttpContextAccessor httpContextAccessor,
-        ILogger<RelayPushNotificationService> logger)
+        ILogger<RelayPushEngine> logger)
         : base(
             httpFactory,
             globalSettings.PushRelayBaseUri,

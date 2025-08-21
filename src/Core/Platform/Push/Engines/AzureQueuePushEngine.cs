@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System.Text.Json;
+﻿using System.Text.Json;
 using Azure.Storage.Queues;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -13,17 +12,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Platform.Push.Internal;
 
-public class AzureQueuePushNotificationService : IPushEngine
+public class AzureQueuePushEngine : IPushEngine
 {
     private readonly QueueClient _queueClient;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public AzureQueuePushNotificationService(
+    public AzureQueuePushEngine(
         [FromKeyedServices("notifications")] QueueClient queueClient,
         IHttpContextAccessor httpContextAccessor,
         IGlobalSettings globalSettings,
-        ILogger<AzureQueuePushNotificationService> logger,
-        TimeProvider timeProvider)
+        ILogger<AzureQueuePushEngine> logger)
     {
         _queueClient = queueClient;
         _httpContextAccessor = httpContextAccessor;

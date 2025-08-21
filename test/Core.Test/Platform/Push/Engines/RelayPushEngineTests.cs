@@ -1,70 +1,110 @@
-﻿using System.Text.Json.Nodes;
+﻿#nullable enable
+
+using System.Text.Json.Nodes;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Entities;
 using Bit.Core.NotificationCenter.Entities;
-using Bit.Core.Platform.Push;
+using Bit.Core.Platform.Push.Internal;
+using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
+using NSubstitute;
 
-namespace Bit.Core.Test.Platform.Push.Services;
+namespace Bit.Core.Test.Platform.Push.Engines;
 
-public class NotificationsApiPushNotificationServiceTests : PushTestBase
+public class RelayPushNotificationServiceTests : PushTestBase
 {
-    public NotificationsApiPushNotificationServiceTests()
-    {
-        GlobalSettings.BaseServiceUri.InternalNotifications = "https://localhost:7777";
-        GlobalSettings.BaseServiceUri.InternalIdentity = "https://localhost:8888";
-    }
+    private static readonly Guid _deviceId = Guid.Parse("c4730f80-caaa-4772-97bd-5c0d23a2baa3");
+    private readonly IDeviceRepository _deviceRepository;
 
-    protected override string ExpectedClientUrl() => "https://localhost:7777/send";
+    public RelayPushNotificationServiceTests()
+    {
+        _deviceRepository = Substitute.For<IDeviceRepository>();
+
+        _deviceRepository.GetByIdentifierAsync(DeviceIdentifier)
+            .Returns(new Device
+            {
+                Id = _deviceId,
+            });
+
+        GlobalSettings.PushRelayBaseUri = "https://localhost:7777";
+        GlobalSettings.Installation.Id = Guid.Parse("478c608a-99fd-452a-94f0-af271654e6ee");
+        GlobalSettings.Installation.IdentityUri = "https://localhost:8888";
+    }
 
     protected override IPushEngine CreateService()
     {
-        return new NotificationsApiPushNotificationService(
+        return new RelayPushEngine(
             HttpClientFactory,
+            _deviceRepository,
             GlobalSettings,
             HttpContextAccessor,
-            NullLogger<NotificationsApiPushNotificationService>.Instance
+            NullLogger<RelayPushEngine>.Instance
         );
     }
 
-    protected override JsonNode GetPushSyncCipherCreatePayload(Cipher cipher, Guid collectionId)
+    protected override string ExpectedClientUrl() => "https://localhost:7777/push/send";
+
+    protected override JsonNode GetPushSyncCipherCreatePayload(Cipher cipher, Guid collectionIds)
     {
         return new JsonObject
         {
+            ["UserId"] = cipher.UserId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = DeviceIdentifier,
             ["Type"] = 1,
             ["Payload"] = new JsonObject
             {
                 ["Id"] = cipher.Id,
                 ["UserId"] = cipher.UserId,
                 ["OrganizationId"] = null,
-                ["CollectionIds"] = new JsonArray(collectionId),
+                // Currently CollectionIds are not passed along from the method signature
+                // to the request body. 
+                ["CollectionIds"] = null,
                 ["RevisionDate"] = cipher.RevisionDate,
             },
-            ["ContextId"] = DeviceIdentifier,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
-    protected override JsonNode GetPushSyncCipherUpdatePayload(Cipher cipher, Guid collectionId)
+
+    protected override JsonNode GetPushSyncCipherUpdatePayload(Cipher cipher, Guid collectionIds)
     {
         return new JsonObject
         {
+            ["UserId"] = cipher.UserId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = DeviceIdentifier,
             ["Type"] = 0,
             ["Payload"] = new JsonObject
             {
                 ["Id"] = cipher.Id,
                 ["UserId"] = cipher.UserId,
                 ["OrganizationId"] = null,
-                ["CollectionIds"] = new JsonArray(collectionId),
+                // Currently CollectionIds are not passed along from the method signature
+                // to the request body. 
+                ["CollectionIds"] = null,
                 ["RevisionDate"] = cipher.RevisionDate,
             },
-            ["ContextId"] = DeviceIdentifier,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
+
     protected override JsonNode GetPushSyncCipherDeletePayload(Cipher cipher)
     {
         return new JsonObject
         {
+            ["UserId"] = cipher.UserId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = DeviceIdentifier,
             ["Type"] = 2,
             ["Payload"] = new JsonObject
             {
@@ -74,7 +114,8 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
                 ["CollectionIds"] = null,
                 ["RevisionDate"] = cipher.RevisionDate,
             },
-            ["ContextId"] = DeviceIdentifier,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
 
@@ -82,6 +123,10 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
     {
         return new JsonObject
         {
+            ["UserId"] = folder.UserId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = DeviceIdentifier,
             ["Type"] = 7,
             ["Payload"] = new JsonObject
             {
@@ -89,7 +134,8 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
                 ["UserId"] = folder.UserId,
                 ["RevisionDate"] = folder.RevisionDate,
             },
-            ["ContextId"] = DeviceIdentifier,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
 
@@ -97,6 +143,10 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
     {
         return new JsonObject
         {
+            ["UserId"] = folder.UserId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = DeviceIdentifier,
             ["Type"] = 8,
             ["Payload"] = new JsonObject
             {
@@ -104,7 +154,8 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
                 ["UserId"] = folder.UserId,
                 ["RevisionDate"] = folder.RevisionDate,
             },
-            ["ContextId"] = DeviceIdentifier,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
 
@@ -112,6 +163,10 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
     {
         return new JsonObject
         {
+            ["UserId"] = folder.UserId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = DeviceIdentifier,
             ["Type"] = 3,
             ["Payload"] = new JsonObject
             {
@@ -119,7 +174,8 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
                 ["UserId"] = folder.UserId,
                 ["RevisionDate"] = folder.RevisionDate,
             },
-            ["ContextId"] = DeviceIdentifier,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
 
@@ -127,13 +183,18 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
     {
         return new JsonObject
         {
+            ["UserId"] = userId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = null,
             ["Type"] = 4,
             ["Payload"] = new JsonObject
             {
                 ["UserId"] = userId,
                 ["Date"] = FakeTimeProvider.GetUtcNow().UtcDateTime,
             },
-            ["ContextId"] = null,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
 
@@ -141,13 +202,18 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
     {
         return new JsonObject
         {
+            ["UserId"] = userId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = null,
             ["Type"] = 5,
             ["Payload"] = new JsonObject
             {
                 ["UserId"] = userId,
                 ["Date"] = FakeTimeProvider.GetUtcNow().UtcDateTime,
             },
-            ["ContextId"] = null,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
 
@@ -155,13 +221,18 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
     {
         return new JsonObject
         {
+            ["UserId"] = userId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = null,
             ["Type"] = 17,
             ["Payload"] = new JsonObject
             {
                 ["UserId"] = userId,
                 ["Date"] = FakeTimeProvider.GetUtcNow().UtcDateTime,
             },
-            ["ContextId"] = null,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
 
@@ -169,13 +240,18 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
     {
         return new JsonObject
         {
+            ["UserId"] = userId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = null,
             ["Type"] = 6,
             ["Payload"] = new JsonObject
             {
                 ["UserId"] = userId,
                 ["Date"] = FakeTimeProvider.GetUtcNow().UtcDateTime,
             },
-            ["ContextId"] = null,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
 
@@ -183,36 +259,49 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
     {
         return new JsonObject
         {
+            ["UserId"] = userId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = null,
             ["Type"] = 10,
             ["Payload"] = new JsonObject
             {
                 ["UserId"] = userId,
                 ["Date"] = FakeTimeProvider.GetUtcNow().UtcDateTime,
             },
-            ["ContextId"] = null,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
 
     protected override JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext)
     {
-        JsonNode? contextId = excludeCurrentContext ? DeviceIdentifier : null;
+        JsonNode? identifier = excludeCurrentContext ? DeviceIdentifier : null;
 
         return new JsonObject
         {
+            ["UserId"] = userId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = identifier,
             ["Type"] = 11,
             ["Payload"] = new JsonObject
             {
                 ["UserId"] = userId,
                 ["Date"] = FakeTimeProvider.GetUtcNow().UtcDateTime,
             },
-            ["ContextId"] = contextId,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
-
     protected override JsonNode GetPushSendCreatePayload(Send send)
     {
         return new JsonObject
         {
+            ["UserId"] = send.UserId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = DeviceIdentifier,
             ["Type"] = 12,
             ["Payload"] = new JsonObject
             {
@@ -220,14 +309,18 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
                 ["UserId"] = send.UserId,
                 ["RevisionDate"] = send.RevisionDate,
             },
-            ["ContextId"] = DeviceIdentifier,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
-
     protected override JsonNode GetPushSendUpdatePayload(Send send)
     {
         return new JsonObject
         {
+            ["UserId"] = send.UserId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = DeviceIdentifier,
             ["Type"] = 13,
             ["Payload"] = new JsonObject
             {
@@ -235,14 +328,18 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
                 ["UserId"] = send.UserId,
                 ["RevisionDate"] = send.RevisionDate,
             },
-            ["ContextId"] = DeviceIdentifier,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
-
     protected override JsonNode GetPushSendDeletePayload(Send send)
     {
         return new JsonObject
         {
+            ["UserId"] = send.UserId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = DeviceIdentifier,
             ["Type"] = 14,
             ["Payload"] = new JsonObject
             {
@@ -250,44 +347,56 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
                 ["UserId"] = send.UserId,
                 ["RevisionDate"] = send.RevisionDate,
             },
-            ["ContextId"] = DeviceIdentifier,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
-
     protected override JsonNode GetPushAuthRequestPayload(AuthRequest authRequest)
     {
         return new JsonObject
         {
+            ["UserId"] = authRequest.UserId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = DeviceIdentifier,
             ["Type"] = 15,
             ["Payload"] = new JsonObject
             {
                 ["Id"] = authRequest.Id,
                 ["UserId"] = authRequest.UserId,
             },
-            ["ContextId"] = DeviceIdentifier,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
-
     protected override JsonNode GetPushAuthRequestResponsePayload(AuthRequest authRequest)
     {
         return new JsonObject
         {
+            ["UserId"] = authRequest.UserId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = DeviceIdentifier,
             ["Type"] = 16,
             ["Payload"] = new JsonObject
             {
                 ["Id"] = authRequest.Id,
                 ["UserId"] = authRequest.UserId,
             },
-            ["ContextId"] = DeviceIdentifier,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
-
     protected override JsonNode GetPushNotificationResponsePayload(Notification notification, Guid? userId, Guid? organizationId)
     {
         JsonNode? installationId = notification.Global ? GlobalSettings.Installation.Id : null;
 
         return new JsonObject
         {
+            ["UserId"] = notification.UserId,
+            ["OrganizationId"] = notification.OrganizationId,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = DeviceIdentifier,
             ["Type"] = 20,
             ["Payload"] = new JsonObject
             {
@@ -295,8 +404,8 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
                 ["Priority"] = 3,
                 ["Global"] = notification.Global,
                 ["ClientType"] = 0,
-                ["UserId"] = notification.UserId,
-                ["OrganizationId"] = notification.OrganizationId,
+                ["UserId"] = userId,
+                ["OrganizationId"] = organizationId,
                 ["TaskId"] = notification.TaskId,
                 ["InstallationId"] = installationId,
                 ["Title"] = notification.Title,
@@ -306,16 +415,20 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
                 ["ReadDate"] = null,
                 ["DeletedDate"] = null,
             },
-            ["ContextId"] = DeviceIdentifier,
+            ["ClientType"] = 0,
+            ["InstallationId"] = installationId?.DeepClone(),
         };
     }
-
     protected override JsonNode GetPushNotificationStatusResponsePayload(Notification notification, NotificationStatus notificationStatus, Guid? userId, Guid? organizationId)
     {
         JsonNode? installationId = notification.Global ? GlobalSettings.Installation.Id : null;
 
         return new JsonObject
         {
+            ["UserId"] = notification.UserId,
+            ["OrganizationId"] = notification.OrganizationId,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = DeviceIdentifier,
             ["Type"] = 21,
             ["Payload"] = new JsonObject
             {
@@ -334,28 +447,36 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
                 ["ReadDate"] = notificationStatus.ReadDate,
                 ["DeletedDate"] = notificationStatus.DeletedDate,
             },
-            ["ContextId"] = DeviceIdentifier,
+            ["ClientType"] = 0,
+            ["InstallationId"] = installationId?.DeepClone(),
         };
     }
-
     protected override JsonNode GetPushSyncOrganizationStatusResponsePayload(Organization organization)
     {
         return new JsonObject
         {
+            ["UserId"] = null,
+            ["OrganizationId"] = organization.Id,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = null,
             ["Type"] = 18,
             ["Payload"] = new JsonObject
             {
                 ["OrganizationId"] = organization.Id,
                 ["Enabled"] = organization.Enabled,
             },
-            ["ContextId"] = null,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
-
     protected override JsonNode GetPushSyncOrganizationCollectionManagementSettingsResponsePayload(Organization organization)
     {
         return new JsonObject
         {
+            ["UserId"] = null,
+            ["OrganizationId"] = organization.Id,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = null,
             ["Type"] = 19,
             ["Payload"] = new JsonObject
             {
@@ -364,7 +485,8 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
                 ["LimitCollectionDeletion"] = organization.LimitCollectionDeletion,
                 ["LimitItemDeletion"] = organization.LimitItemDeletion,
             },
-            ["ContextId"] = null,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
 
@@ -372,13 +494,18 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
     {
         return new JsonObject
         {
+            ["UserId"] = userId,
+            ["OrganizationId"] = null,
+            ["DeviceId"] = _deviceId,
+            ["Identifier"] = null,
             ["Type"] = 22,
             ["Payload"] = new JsonObject
             {
                 ["UserId"] = userId,
                 ["Date"] = FakeTimeProvider.GetUtcNow().UtcDateTime,
             },
-            ["ContextId"] = null,
+            ["ClientType"] = null,
+            ["InstallationId"] = null,
         };
     }
 }

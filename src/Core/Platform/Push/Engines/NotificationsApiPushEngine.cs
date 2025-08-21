@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Services;
@@ -8,23 +7,22 @@ using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
-// This service is not in the `Internal` namespace because it has direct external references.
-namespace Bit.Core.Platform.Push;
+namespace Bit.Core.Platform.Push.Internal;
 
 /// <summary>
 /// Sends non-mobile push notifications to the Azure Queue Api, later received by Notifications Api.
 /// Used by Cloud-Hosted environments.
 /// Received by AzureQueueHostedService message receiver in Notifications project.
 /// </summary>
-public class NotificationsApiPushNotificationService : BaseIdentityClientService, IPushEngine
+public class NotificationsApiPushEngine : BaseIdentityClientService, IPushEngine
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public NotificationsApiPushNotificationService(
+    public NotificationsApiPushEngine(
         IHttpClientFactory httpFactory,
         GlobalSettings globalSettings,
         IHttpContextAccessor httpContextAccessor,
-        ILogger<NotificationsApiPushNotificationService> logger)
+        ILogger<NotificationsApiPushEngine> logger)
         : base(
             httpFactory,
             globalSettings.BaseServiceUri.InternalNotifications,

@@ -22,18 +22,18 @@ using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Platform.Push.Services;
+namespace Bit.Core.Test.Platform.Push.Engines;
 
 [QueueClientCustomize]
 [SutProviderCustomize]
-public class AzureQueuePushNotificationServiceTests
+public class AzureQueuePushEngineTests
 {
     private static readonly Guid _deviceId = Guid.Parse("c4730f80-caaa-4772-97bd-5c0d23a2baa3");
     private static readonly string _deviceIdentifier = "test_device_identifier";
     private readonly FakeTimeProvider _fakeTimeProvider;
     private readonly Core.Settings.GlobalSettings _globalSettings = new();
 
-    public AzureQueuePushNotificationServiceTests()
+    public AzureQueuePushEngineTests()
     {
         _fakeTimeProvider = new();
         _fakeTimeProvider.SetUtcNow(DateTime.UtcNow);
@@ -771,12 +771,11 @@ public class AzureQueuePushNotificationServiceTests
 
         var globalSettings = new Core.Settings.GlobalSettings();
 
-        var sut = new AzureQueuePushNotificationService(
+        var sut = new AzureQueuePushEngine(
             queueClient,
             httpContextAccessor,
             globalSettings,
-            NullLogger<AzureQueuePushNotificationService>.Instance,
-            _fakeTimeProvider
+            NullLogger<AzureQueuePushEngine>.Instance
         );
 
         await test(new EngineWrapper(sut, _fakeTimeProvider, _globalSettings.Installation.Id));

@@ -1,8 +1,7 @@
-﻿#nullable enable
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Vault.Entities;
 
-namespace Bit.Core.Platform.Push;
+namespace Bit.Core.Platform.Push.Internal;
 
 public interface IPushEngine
 {
