@@ -64,7 +64,7 @@ public class SendAccessGrantValidator(
                 return;
 
             case ResourcePassword rp:
-                // TODO PM-22675: Validate if the password is correct.
+                // Validate if the password is correct, or if we need to respond with a 400 stating a password has is required
                 context.Result = _sendPasswordRequestValidator.ValidateSendPassword(context, rp, sendIdGuid);
                 return;
             case EmailOtp eo:
@@ -87,7 +87,7 @@ public class SendAccessGrantValidator(
     private static (Guid, SendGrantValidatorResultTypes) GetRequestSendId(ExtensionGrantValidationContext context)
     {
         var request = context.Request.Raw;
-        var sendId = request.Get("send_id");
+        var sendId = request.Get(SendTokenAccessConstants.SendId);
 
         // if the sendId is null then the request is the wrong shape and the request is invalid
         if (sendId == null)
@@ -124,11 +124,19 @@ public class SendAccessGrantValidator(
             // Request is the wrong shape
             SendGrantValidatorResultTypes.MissingSendId => new GrantValidationResult(
                                 TokenRequestErrors.InvalidRequest,
-                                errorDescription: _sendGrantValidatorErrors[SendGrantValidatorResultTypes.MissingSendId]),
+                                errorDescription: _sendGrantValidatorErrors[SendGrantValidatorResultTypes.MissingSendId],
+                                new Dictionary<string, object>
+                                {
+                                    { SendTokenAccessConstants.SendAccessError, SendGrantValidatorResultTypes.MissingSendId.ToString() }
+                                }),
             // Request is correct shape but data is bad
             SendGrantValidatorResultTypes.InvalidSendId => new GrantValidationResult(
                                 TokenRequestErrors.InvalidGrant,
-                                errorDescription: _sendGrantValidatorErrors[SendGrantValidatorResultTypes.InvalidSendId]),
+                                errorDescription: _sendGrantValidatorErrors[SendGrantValidatorResultTypes.InvalidSendId],
+                                new Dictionary<string, object>
+                                {
+                                    { SendTokenAccessConstants.SendAccessError, SendGrantValidatorResultTypes.InvalidSendId.ToString() }
+                                }),
             // should never get here
             _ => new GrantValidationResult(TokenRequestErrors.InvalidRequest)
         };

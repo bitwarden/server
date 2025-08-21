@@ -16,31 +16,44 @@ public class SendPasswordRequestValidator(ISendPasswordHasher sendPasswordHasher
     /// <summary>
     /// static object that contains the error messages for the SendPasswordRequestValidator.
     /// </summary>
-    private static Dictionary<SendPasswordValidatorResultTypes, string> _sendPasswordValidatorErrors = new()
+    private static readonly Dictionary<string, string> _sendPasswordValidatorErrors = new()
     {
-        { SendPasswordValidatorResultTypes.RequestPasswordDoesNotMatch, "Request Password hash is invalid." }
+        { SendPasswordValidatorResult.RequestPasswordDoesNotMatch, "passwordHashB64 is invalid." },
+        { SendPasswordValidatorResult.RequestPasswordIsRequired, "passwordHashB64 is required." }
     };
 
     public GrantValidationResult ValidateSendPassword(ExtensionGrantValidationContext context, ResourcePassword resourcePassword, Guid sendId)
     {
         var request = context.Request.Raw;
-        var clientHashedPassword = request.Get("password_hash");
+        var clientHashedPassword = request.Get(SendTokenAccessConstants.ClientBase64HashedPassword);
 
-        if (string.IsNullOrEmpty(clientHashedPassword))
+        // It is an invalid request _only_ if the passwordHashB64 is missing which indicated bad shape.
+        if (clientHashedPassword == null)
         {
+            // Request is the wrong shape and doesn't contain a passwordHashB64 field.
             return new GrantValidationResult(
                 TokenRequestErrors.InvalidRequest,
-                errorDescription: _sendPasswordValidatorErrors[SendPasswordValidatorResultTypes.RequestPasswordDoesNotMatch]);
+                errorDescription: _sendPasswordValidatorErrors[SendPasswordValidatorResult.RequestPasswordIsRequired],
+                new Dictionary<string, object>
+                {
+                    { SendTokenAccessConstants.SendAccessError, SendPasswordValidatorResult.RequestPasswordIsRequired }
+                });
         }
 
+        // _sendPasswordHasher.PasswordHashMatches checks for an empty string so no need to do it before we make the call.
         var hashMatches = _sendPasswordHasher.PasswordHashMatches(
             resourcePassword.Hash, clientHashedPassword);
 
         if (!hashMatches)
         {
+            // Request is the correct shape but the passwordHashB64 doesn't match, hash could be empty.
             return new GrantValidationResult(
                 TokenRequestErrors.InvalidGrant,
-                errorDescription: _sendPasswordValidatorErrors[SendPasswordValidatorResultTypes.RequestPasswordDoesNotMatch]);
+                errorDescription: _sendPasswordValidatorErrors[SendPasswordValidatorResult.RequestPasswordDoesNotMatch],
+                new Dictionary<string, object>
+                {
+                    { SendTokenAccessConstants.SendAccessError, SendPasswordValidatorResult.RequestPasswordDoesNotMatch }
+                });
         }
 
         return BuildSendPasswordSuccessResult(sendId);
