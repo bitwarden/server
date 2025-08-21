@@ -14,9 +14,18 @@ public record ValidationResult<TRequest>(TRequest Request, OneOf<Error, None> Er
 
 public static class ValidationResultHelpers
 {
+    /// <summary>
+    /// Creates a successful <see cref="ValidationResult{TRequest}"/> with no error set.
+    /// </summary>
     public static ValidationResult<T> Valid<T>(T request) => new (request, new None());
+    /// <summary>
+    /// Creates a failed <see cref="ValidationResult{TRequest}"/> with the specified error.
+    /// </summary>
     public static ValidationResult<T> Invalid<T>(T request, Error error) => new (request, error);
 
+    /// <summary>
+    /// Extracts successfully validated results from a sequence of <see cref="ValidationResult{TRequest}"/>.
+    /// </summary>
     public static List<T> ValidResults<T>(this IEnumerable<ValidationResult<T>> results) =>
         results
             .Where(r => r.Error.IsT1)

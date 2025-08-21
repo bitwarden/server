@@ -11,41 +11,24 @@ using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 
+/// <summary>
+/// Represents the result of a command where successful execution returns no value (void).
+/// </summary>
+/// <param name="Id">An ID associated with the request, used to identify results where there are multiple requests.</param>
+/// <param name="Result">A <see cref="OneOf{Error, None}"/> type that contains an Error if the command execution failed.</param>
 public record CommandResult(Guid Id, OneOf<Error, None> Result);
 
-// Not used, but for demonstration purposes, if this did return a value:
-public record CommandResult<T>(Guid Id, OneOf<Error, T> Result);
-
-public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganizationUserAccountCommand
+public class DeleteClaimedOrganizationUserAccountCommand(
+    IUserService userService,
+    IEventService eventService,
+    IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
+    IOrganizationUserRepository organizationUserRepository,
+    IUserRepository userRepository,
+    IPushNotificationService pushService,
+    ILogger<DeleteClaimedOrganizationUserAccountCommand> logger,
+    IDeleteClaimedOrganizationUserAccountValidator deleteClaimedOrganizationUserAccountValidator)
+    : IDeleteClaimedOrganizationUserAccountCommand
 {
-    private readonly IUserService _userService;
-    private readonly IEventService _eventService;
-    private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
-    private readonly IDeleteClaimedOrganizationUserAccountValidator _deleteClaimedOrganizationUserAccountValidator;
-    private readonly ILogger<DeleteClaimedOrganizationUserAccountCommand> _logger;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IUserRepository _userRepository;
-    private readonly IPushNotificationService _pushService;
-    public DeleteClaimedOrganizationUserAccountCommand(
-        IUserService userService,
-        IEventService eventService,
-        IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
-        IOrganizationUserRepository organizationUserRepository,
-        IUserRepository userRepository,
-        IPushNotificationService pushService,
-        ILogger<DeleteClaimedOrganizationUserAccountCommand> logger,
-        IDeleteClaimedOrganizationUserAccountValidator deleteClaimedOrganizationUserAccountValidator)
-    {
-        _userService = userService;
-        _eventService = eventService;
-        _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
-        _organizationUserRepository = organizationUserRepository;
-        _userRepository = userRepository;
-        _pushService = pushService;
-        _logger = logger;
-        _deleteClaimedOrganizationUserAccountValidator = deleteClaimedOrganizationUserAccountValidator;
-    }
-
     public async Task<CommandResult> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
     {
         var result = await DeleteManyUsersAsync(organizationId, [organizationUserId], deletingUserId);
@@ -55,12 +38,12 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
     public async Task<IEnumerable<CommandResult>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid deletingUserId)
     {
         orgUserIds = orgUserIds.ToList();
-        var orgUsers = await _organizationUserRepository.GetManyAsync(orgUserIds);
+        var orgUsers = await organizationUserRepository.GetManyAsync(orgUserIds);
         var users = await GetUsersAsync(orgUsers);
-        var claimedStatuses = await _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, orgUserIds);
+        var claimedStatuses = await getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(organizationId, orgUserIds);
 
         var internalRequests = CreateInternalRequests(organizationId, deletingUserId, orgUserIds, orgUsers, users, claimedStatuses);
-        var validationResults = (await _deleteClaimedOrganizationUserAccountValidator.ValidateAsync(internalRequests)).ToList();
+        var validationResults = (await deleteClaimedOrganizationUserAccountValidator.ValidateAsync(internalRequests)).ToList();
 
         var validRequests = validationResults.ValidResults();
         await CancelPremiumsAsync(validRequests);
@@ -106,7 +89,7 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
          .Select(orgUser => orgUser.UserId!.Value)
          .ToList();
 
-        return await _userRepository.GetManyAsync(userIds);
+        return await userRepository.GetManyAsync(userIds);
     }
 
     private async Task LogDeletedOrganizationUsersAsync(IEnumerable<DeleteUserValidationRequest> requests)
@@ -119,7 +102,7 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
 
         if (events.Count != 0)
         {
-            await _eventService.LogOrganizationUserEventsAsync(events);
+            await eventService.LogOrganizationUserEventsAsync(events);
         }
     }
 
@@ -134,11 +117,11 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
             return;
         }
 
-        await _userRepository.DeleteManyAsync(users);
+        await userRepository.DeleteManyAsync(users);
 
         foreach (var user in users)
         {
-            await _pushService.PushLogOutAsync(user.Id);
+            await pushService.PushLogOutAsync(user.Id);
         }
     }
 
@@ -150,11 +133,11 @@ public class DeleteClaimedOrganizationUserAccountCommand : IDeleteClaimedOrganiz
         {
             try
             {
-                await _userService.CancelPremiumAsync(user);
+                await userService.CancelPremiumAsync(user);
             }
             catch (GatewayException exception)
             {
-                _logger.LogWarning(exception, "Failed to cancel premium subscription for {userId}.", user.Id);
+                logger.LogWarning(exception, "Failed to cancel premium subscription for {userId}.", user.Id);
             }
         }
     }
