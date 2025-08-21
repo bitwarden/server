@@ -1,4 +1,4 @@
-using Bit.SharedWeb.Swagger;
+﻿using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.OpenApi.Any;
