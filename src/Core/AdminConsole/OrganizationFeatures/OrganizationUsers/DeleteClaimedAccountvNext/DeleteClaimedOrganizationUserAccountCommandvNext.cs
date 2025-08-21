@@ -37,7 +37,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNext(
         var internalRequests = CreateInternalRequests(organizationId, deletingUserId, orgUserIds, orgUsers, users, claimedStatuses);
         var validationResults = (await deleteClaimedOrganizationUserAccountValidator.ValidateAsync(internalRequests)).ToList();
 
-        var validRequests = validationResults.ValidResults();
+        var validRequests = validationResults.ValidRequests();
         await CancelPremiumsAsync(validRequests);
         await HandleUserDeletionsAsync(validRequests);
         await LogDeletedOrganizationUsersAsync(validRequests);

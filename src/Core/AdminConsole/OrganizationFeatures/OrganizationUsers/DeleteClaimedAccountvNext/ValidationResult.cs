@@ -24,9 +24,9 @@ public static class ValidationResultHelpers
     public static ValidationResult<T> Invalid<T>(T request, Error error) => new (request, error);
 
     /// <summary>
-    /// Extracts successfully validated results from a sequence of <see cref="ValidationResult{TRequest}"/>.
+    /// Extracts successfully validated requests from a sequence of <see cref="ValidationResult{TRequest}"/>.
     /// </summary>
-    public static List<T> ValidResults<T>(this IEnumerable<ValidationResult<T>> results) =>
+    public static List<T> ValidRequests<T>(this IEnumerable<ValidationResult<T>> results) =>
         results
             .Where(r => r.Error.IsT1)
             .Select(r => r.Request)
