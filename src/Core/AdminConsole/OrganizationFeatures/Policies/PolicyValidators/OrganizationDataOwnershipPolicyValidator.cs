@@ -25,46 +25,49 @@ public class OrganizationDataOwnershipPolicyValidator(
 
     public override Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
 
-    public override Task OnSaveSideEffectsAsync(SavePolicyModel policyModel, Policy? currentPolicy)
-    {
-        var metadata = MapToOrganizationModelOwnershipPolicyModel(policyModel.Metadata);
-
-        // Here we will have command data associated with this particular policy validator.
-        if (metadata!.ExecuteSideEffect)
-        {
-
-        }
-
-        return Task.CompletedTask;
-    }
-
-    public static OrganizationModelOwnershipPolicyModel? MapToOrganizationModelOwnershipPolicyModel(IPolicyMetadataModel model)
-    {
-        if (model is OrganizationModelOwnershipPolicyModel ownershipModel)
-        {
-            return new OrganizationModelOwnershipPolicyModel(
-                defaultUserCollectionName: ownershipModel.DefaultUserCollectionName,
-                executeSideEffect: ownershipModel.ExecuteSideEffect
-            );
-        }
-
-        throw new InvalidOperationException($"Failure to map");
-    }
-
-    public override async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    public override async Task OnSaveSideEffectsAsync(SavePolicyModel policyModel, Policy? currentPolicy)
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
         {
             return;
         }
 
-        if (currentPolicy?.Enabled != true && policyUpdate.Enabled)
+        var metadata = MapToOrganizationModelOwnershipPolicyModel(policyModel.Metadata);
+
+        if (metadata == null || !ShouldCreateDefaultCollections(metadata))
         {
-            await UpsertDefaultCollectionsForUsersAsync(policyUpdate);
+            return;
         }
+
+        var policyUpdate = policyModel.Data;
+
+        if (currentPolicy?.Enabled == true || !policyUpdate.Enabled)
+        {
+            return;
+        }
+
+        await UpsertDefaultCollectionsForUsersAsync(policyUpdate, metadata.DefaultUserCollectionName);
     }
 
-    private async Task UpsertDefaultCollectionsForUsersAsync(PolicyUpdate policyUpdate)
+
+    private static bool ShouldCreateDefaultCollections(OrganizationModelOwnershipPolicyModel metadata) => string.IsNullOrWhiteSpace(metadata.DefaultUserCollectionName);
+
+    public static OrganizationModelOwnershipPolicyModel? MapToOrganizationModelOwnershipPolicyModel(IPolicyMetadataModel model)
+    {
+        if (model is OrganizationModelOwnershipPolicyModel ownershipModel)
+        {
+            return new OrganizationModelOwnershipPolicyModel(
+                defaultUserCollectionName: ownershipModel.DefaultUserCollectionName
+            );
+        }
+
+        throw new InvalidOperationException($"Failure to map");
+    }
+
+    public override Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
+
+
+    private async Task UpsertDefaultCollectionsForUsersAsync(PolicyUpdate policyUpdate, string defaultCollectionName)
     {
         var requirements = await GetUserPolicyRequirementsByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(policyUpdate.OrganizationId, policyUpdate.Type);
 
@@ -82,13 +85,7 @@ public class OrganizationDataOwnershipPolicyValidator(
         await collectionRepository.UpsertDefaultCollectionsAsync(
             policyUpdate.OrganizationId,
             userOrgIds,
-            GetDefaultUserCollectionName());
+            defaultCollectionName);
     }
 
-    private static string GetDefaultUserCollectionName()
-    {
-        // TODO: https://bitwarden.atlassian.net/browse/PM-24279
-        const string temporaryPlaceHolderValue = "Default";
-        return temporaryPlaceHolderValue;
-    }
 }

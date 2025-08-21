@@ -44,15 +44,12 @@ public record SavePolicyModel(PolicyUpdate Data, IActingUser? PerformedBy, IPoli
 public class OrganizationModelOwnershipPolicyModel : IPolicyMetadataModel
 {
 
-    public OrganizationModelOwnershipPolicyModel(string defaultUserCollectionName, bool executeSideEffect)
+    public OrganizationModelOwnershipPolicyModel(string defaultUserCollectionName)
     {
-        ExecuteSideEffect = executeSideEffect;
         DefaultUserCollectionName = defaultUserCollectionName;
     }
 
     public string DefaultUserCollectionName { get; set; }
-
-    public bool ExecuteSideEffect { get; set; }
 }
 
 public interface IPolicyMetadataModel

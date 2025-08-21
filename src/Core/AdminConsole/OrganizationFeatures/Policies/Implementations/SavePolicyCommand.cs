@@ -14,6 +14,7 @@ public class SavePolicyCommand : ISavePolicyCommand
 {
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IEventService _eventService;
+    private readonly IFeatureService _featureService;
     private readonly IPolicyRepository _policyRepository;
     private readonly IReadOnlyDictionary<PolicyType, IPolicyValidator> _policyValidators;
     private readonly TimeProvider _timeProvider;
@@ -21,12 +22,14 @@ public class SavePolicyCommand : ISavePolicyCommand
     public SavePolicyCommand(
         IApplicationCacheService applicationCacheService,
         IEventService eventService,
+        IFeatureService featureService,
         IPolicyRepository policyRepository,
         IEnumerable<IPolicyValidator> policyValidators,
         TimeProvider timeProvider)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
+        _featureService = featureService;
         _policyRepository = policyRepository;
         _timeProvider = timeProvider;
 
@@ -137,8 +140,7 @@ public class SavePolicyCommand : ISavePolicyCommand
 
         // Run side effects
 
-        var featureflag = true;
-        if (featureflag)
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyVNextEndpoint))
         {
             await validator.OnSaveSideEffectsAsync(policyModel, currentPolicy);
         }

@@ -92,6 +92,7 @@ public class SavePolicyCommandTests
             new SavePolicyCommand(
                 Substitute.For<IApplicationCacheService>(),
                 Substitute.For<IEventService>(),
+                Substitute.For<IFeatureService>(),
                 Substitute.For<IPolicyRepository>(),
                 [new FakeSingleOrgPolicyValidator(), new FakeSingleOrgPolicyValidator()],
                 Substitute.For<TimeProvider>()

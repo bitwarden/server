@@ -5,6 +5,7 @@ using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response.Helpers;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
@@ -215,8 +216,13 @@ public class PoliciesController : Controller
 
 
     [HttpPut("{type}/vnext")]
-    public async Task<PolicyResponseModel> PutVNext(Guid orgId, PolicyType type, [FromBody] PolicyVNextRequest model)
+    public async Task<PolicyResponseModel> PutVNext(Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
     {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PolicyVNextEndpoint))
+        {
+            throw new NotFoundException();
+        }
+
         if (!await _currentContext.ManagePolicies(orgId))
         {
             throw new NotFoundException();
@@ -227,8 +233,8 @@ public class PoliciesController : Controller
             throw new BadRequestException("Mismatched policy type");
         }
 
-        var policyUpdate = await model.ToPolicyUpdateAsync(orgId, _currentContext);
-        var policy = await _savePolicyCommand.SaveAsync(policyUpdate);
+        var savePolicyModel = await model.ToSavePolicyModelAsync(orgId, _currentContext);
+        var policy = await _savePolicyCommand.SaveAsync(savePolicyModel);
         return new PolicyResponseModel(policy);
     }
 

@@ -45,3 +45,18 @@ public class PolicyVNextRequest
         PerformedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId))
     };
 }
+
+public class SavePolicyRequest
+{
+    [Required]
+    public PolicyUpdate Data { get; set; }
+
+    public IPolicyMetadataModel Metadata { get; set; }
+
+    public async Task<SavePolicyModel> ToSavePolicyModelAsync(Guid organizationId, ICurrentContext currentContext)
+    {
+        var performedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId));
+        Data.OrganizationId = organizationId;
+        return new SavePolicyModel(Data, performedBy, Metadata ?? new EmptyMetadataModel());
+    }
+}
