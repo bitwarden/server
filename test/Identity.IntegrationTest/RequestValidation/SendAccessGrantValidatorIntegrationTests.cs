@@ -9,6 +9,7 @@ using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.IntegrationTestCommon.Factories;
 using Duende.IdentityServer.Validation;
+using IdentityModel;
 using NSubstitute;
 using Xunit;
 
@@ -245,16 +246,16 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
         var sendIdBase64 = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
         var parameters = new List<KeyValuePair<string, string>>
         {
-            new("grant_type", CustomGrantTypes.SendAccess),
-            new("client_id", BitwardenClient.Send ),
-            new("scope", ApiScopes.ApiSendAccess),
+            new(OidcConstants.TokenRequest.GrantType, CustomGrantTypes.SendAccess),
+            new(OidcConstants.TokenRequest.ClientId, BitwardenClient.Send ),
+            new(OidcConstants.TokenRequest.Scope, ApiScopes.ApiSendAccess),
             new("deviceType", ((int)DeviceType.FirefoxBrowser).ToString()),
-            new("send_id", sendIdBase64)
+            new(SendTokenAccessConstants.SendId, sendIdBase64)
         };
 
         if (!string.IsNullOrEmpty(password))
         {
-            parameters.Add(new("password_hash", password));
+            parameters.Add(new(SendTokenAccessConstants.ClientBase64HashedPassword, password));
         }
 
         if (!string.IsNullOrEmpty(emailOtp) && !string.IsNullOrEmpty(sendEmail))

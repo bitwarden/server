@@ -297,37 +297,28 @@ public class SendAccessGrantValidatorTests
 
         var rawRequestParameters = new NameValueCollection
         {
-            { "grant_type", CustomGrantTypes.SendAccess },
-            { "client_id", BitwardenClient.Send },
-            { "scope", ApiScopes.ApiSendAccess },
+            { OidcConstants.TokenRequest.GrantType, CustomGrantTypes.SendAccess },
+            { OidcConstants.TokenRequest.ClientId, BitwardenClient.Send },
+            { OidcConstants.TokenRequest.Scope, ApiScopes.ApiSendAccess },
             { "deviceType", ((int)DeviceType.FirefoxBrowser).ToString() },
-            { "send_id", sendIdBase64 }
+            { SendTokenAccessConstants.SendId, sendIdBase64 }
         };
 
         if (passwordHash != null)
         {
-            rawRequestParameters.Add("password_hash", passwordHash);
+            rawRequestParameters.Add(SendTokenAccessConstants.ClientBase64HashedPassword, passwordHash);
         }
 
         if (sendEmail != null)
         {
-            rawRequestParameters.Add("send_email", sendEmail);
+            rawRequestParameters.Add(SendTokenAccessConstants.SendAccessEmail, sendEmail);
         }
 
         if (otpCode != null && sendEmail != null)
         {
-            rawRequestParameters.Add("otp_code", otpCode);
+            rawRequestParameters.Add(SendTokenAccessConstants.SendAccessEmailOtp, otpCode);
         }
 
         return rawRequestParameters;
     }
-
-    // we need a list of sendAuthentication methods to test against since we cannot create new objects in the BitAutoData
-    public static Dictionary<string, SendAuthenticationMethod> SendAuthenticationMethods => new()
-    {
-        { "NeverAuthenticate", new NeverAuthenticate() },       // Send doesn't exist or is deleted
-        { "NotAuthenticated", new NotAuthenticated() },         // Public send, no auth needed
-        // TODO: PM-22675 - {"ResourcePassword", new ResourcePassword("clientHashedPassword")};  // Password protected send
-        // TODO: PM-22678 - {"EmailOtp", new EmailOtp(["emailOtp@test.dev"]};    // Email + OTP protected send
-    };
 }
