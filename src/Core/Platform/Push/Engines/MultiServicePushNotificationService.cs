@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Microsoft.Extensions.Logging;
@@ -8,7 +7,7 @@ namespace Bit.Core.Platform.Push.Internal;
 
 public class MultiServicePushNotificationService : IPushNotificationService
 {
-    private readonly IEnumerable<IPushEngine> _services;
+    private readonly IPushEngine[] _services;
 
     public Guid InstallationId { get; }
 
@@ -22,7 +21,8 @@ public class MultiServicePushNotificationService : IPushNotificationService
         GlobalSettings globalSettings,
         TimeProvider timeProvider)
     {
-        _services = services;
+        // Filter out any NoopPushEngine's
+        _services = [.. services.Where(engine => engine is not NoopPushEngine)];
 
         Logger = logger;
         Logger.LogInformation("Hub services: {Services}", _services.Count());

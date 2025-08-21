@@ -6,6 +6,9 @@ namespace Bit.Core.Platform.Push;
 /// <summary>
 /// Contains constants for all the available targets for a given notification.
 /// </summary>
+/// <remarks>
+/// Please reach out to the Platform team if you need a new target added.
+/// </remarks>
 public enum NotificationTarget
 {
     /// <summary>
