@@ -28,8 +28,6 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
         _factory.SubstituteService((IFeatureService featureService)
             =>
         {
-            featureService.IsEnabled(FeatureFlagKeys.ImportAsyncRefactor)
-                .Returns(true);
             featureService.IsEnabled(FeatureFlagKeys.DirectoryConnectorPreventUserRemoval)
                 .Returns(true);
         });

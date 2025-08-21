@@ -1301,6 +1301,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("PolicyId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid?>("ProviderId")
                         .HasColumnType("char(36)");
 

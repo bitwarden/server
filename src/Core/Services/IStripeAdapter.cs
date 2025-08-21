@@ -48,6 +48,7 @@ public interface IStripeAdapter
     Task<Stripe.PaymentMethod> PaymentMethodDetachAsync(string id, Stripe.PaymentMethodDetachOptions options = null);
     Task<Stripe.TaxId> TaxIdCreateAsync(string id, Stripe.TaxIdCreateOptions options);
     Task<Stripe.TaxId> TaxIdDeleteAsync(string customerId, string taxIdId, Stripe.TaxIdDeleteOptions options = null);
+    Task<Stripe.StripeList<Stripe.Tax.Registration>> TaxRegistrationsListAsync(Stripe.Tax.RegistrationListOptions options = null);
     Task<Stripe.StripeList<Stripe.Charge>> ChargeListAsync(Stripe.ChargeListOptions options);
     Task<Stripe.Refund> RefundCreateAsync(Stripe.RefundCreateOptions options);
     Task<Stripe.Card> CardDeleteAsync(string customerId, string cardId, Stripe.CardDeleteOptions options = null);

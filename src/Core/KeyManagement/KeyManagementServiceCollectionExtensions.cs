@@ -9,6 +9,7 @@ public static class KeyManagementServiceCollectionExtensions
     public static void AddKeyManagementServices(this IServiceCollection services)
     {
         services.AddKeyManagementCommands();
+        services.AddSendPasswordServices();
     }
 
     private static void AddKeyManagementCommands(this IServiceCollection services)
