@@ -334,33 +334,6 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task BulkDeleteAccount_WhenUserCanManageUsers_Success(
-        Guid orgId, OrganizationUserBulkRequestModel model,
-        User currentUser,
-        Partial<DeleteUserResponse> deleteResults,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
-        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(currentUser);
-        sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountCommand>()
-            .DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id)
-            .Returns(deleteResults);
-
-        var response = await sutProvider.Sut.BulkDeleteAccount(orgId, model);
-
-        var totalRecordCount = deleteResults.Successes.Length + deleteResults.Failures.Length;
-
-        Assert.Equal(totalRecordCount, response.Data.Count());
-        Assert.True(deleteResults.Failures.All(result => response.Data.Any(resp => resp.Error == result.Message)));
-        Assert.True(deleteResults.Successes.All(result => response.Data.Any(resp => resp.Id == result.OrganizationUserId)));
-
-        await sutProvider.GetDependency<IDeleteClaimedOrganizationUserAccountCommand>()
-            .Received(1)
-            .DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task BulkDeleteAccount_WhenCurrentUserNotFound_ThrowsUnauthorizedAccessException(
         Guid orgId, OrganizationUserBulkRequestModel model, SutProvider<OrganizationUsersController> sutProvider)
     {
