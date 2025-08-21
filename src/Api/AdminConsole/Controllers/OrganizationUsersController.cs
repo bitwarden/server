@@ -519,11 +519,11 @@ public class OrganizationUsersController : Controller
             return NotFound();
         }
 
-        var result = await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUserId.Value);
+        var commandResult = await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUserId.Value);
 
-        return result.Match<IActionResult>(
-            _ => Ok(),
-            failure => BadRequest(failure.Error.Message)
+        return commandResult.Result.Match<IActionResult>(
+            error => BadRequest(error.Message),
+            _ => Ok()
         );
     }
 
@@ -540,9 +540,9 @@ public class OrganizationUsersController : Controller
 
         var result = await _deleteClaimedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUserId.Value);
 
-        var responses = result.Select(r => r.Match(
-            success => new OrganizationUserBulkResponseModel(success.Id, ""),
-            failure => new OrganizationUserBulkResponseModel(failure.Id, failure.Error.Message)
+        var responses = result.Select(r => r.Result.Match(
+            error => new OrganizationUserBulkResponseModel(r.Id, error.Message),
+            _ => new OrganizationUserBulkResponseModel(r.Id, string.Empty)
         ));
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(responses);
