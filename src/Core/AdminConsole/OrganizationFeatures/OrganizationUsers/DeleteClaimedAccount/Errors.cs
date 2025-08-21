@@ -1,6 +1,4 @@
-﻿using Bit.Core.AdminConsole.Utilities.Errors;
-
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedUserAccount;
+﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 
 public record UserNotFoundError() : Error("Invalid user.");
 public record UserNotClaimedError() : Error("Member is not claimed by the organization.");

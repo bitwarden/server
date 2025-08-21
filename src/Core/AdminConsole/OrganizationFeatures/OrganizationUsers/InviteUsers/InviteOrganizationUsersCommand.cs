@@ -135,10 +135,10 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         var validatedRequest = validationResult as Valid<InviteOrganizationUsersValidationRequest>;
 
         var organizationUserToInviteEntities = invitesToSend
-            .Select(x => x.MapToDataModel(request.PerformedAt, validatedRequest!.Request.InviteOrganization))
+            .Select(x => x.MapToDataModel(request.PerformedAt, validatedRequest!.Value.InviteOrganization))
             .ToArray();
 
-        var organization = await organizationRepository.GetByIdAsync(validatedRequest!.Request.InviteOrganization.OrganizationId);
+        var organization = await organizationRepository.GetByIdAsync(validatedRequest!.Value.InviteOrganization.OrganizationId);
 
         try
         {
@@ -159,13 +159,13 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             await organizationUserRepository.DeleteManyAsync(organizationUserToInviteEntities.Select(x => x.OrganizationUser.Id));
 
             // Do this first so that SmSeats never exceed PM seats (due to current billing requirements)
-            await RevertSecretsManagerChangesAsync(validatedRequest, organization, validatedRequest.Request.InviteOrganization.SmSeats);
+            await RevertSecretsManagerChangesAsync(validatedRequest, organization, validatedRequest.Value.InviteOrganization.SmSeats);
 
             await RevertPasswordManagerChangesAsync(validatedRequest, organization);
 
             return new Failure<InviteOrganizationUsersResponse>(
                 new FailedToInviteUsersError(
-                    new InviteOrganizationUsersResponse(validatedRequest.Request)));
+                    new InviteOrganizationUsersResponse(validatedRequest.Value)));
         }
 
         return new Success<InviteOrganizationUsersResponse>(
@@ -187,9 +187,9 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task RevertPasswordManagerChangesAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
-        if (validatedResult.Request.PasswordManagerSubscriptionUpdate is { Seats: > 0, SeatsRequiredToAdd: > 0 })
+        if (validatedResult.Value.PasswordManagerSubscriptionUpdate is { Seats: > 0, SeatsRequiredToAdd: > 0 })
         {
-            organization.Seats = (short?)validatedResult.Request.PasswordManagerSubscriptionUpdate.Seats;
+            organization.Seats = (short?)validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats;
 
             await organizationRepository.ReplaceAsync(organization);
             await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
@@ -198,11 +198,11 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task RevertSecretsManagerChangesAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization, int? initialSmSeats)
     {
-        if (validatedResult.Request.SecretsManagerSubscriptionUpdate?.SmSeatsChanged is true)
+        if (validatedResult.Value.SecretsManagerSubscriptionUpdate?.SmSeatsChanged is true)
         {
             var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(
                 organization: organization,
-                plan: validatedResult.Request.InviteOrganization.Plan,
+                plan: validatedResult.Value.InviteOrganization.Plan,
                 autoscaling: false)
             {
                 SmSeats = initialSmSeats
@@ -226,32 +226,32 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task NotifyOwnersIfAutoscaleOccursAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
-        if (validatedResult.Request.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd > 0
+        if (validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd > 0
             && !organization.OwnersNotifiedOfAutoscaling.HasValue)
         {
             await mailService.SendOrganizationAutoscaledEmailAsync(
                 organization,
-                validatedResult.Request.PasswordManagerSubscriptionUpdate.Seats!.Value,
-                await GetOwnerEmailAddressesAsync(validatedResult.Request.InviteOrganization));
+                validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats!.Value,
+                await GetOwnerEmailAddressesAsync(validatedResult.Value.InviteOrganization));
 
-            organization.OwnersNotifiedOfAutoscaling = validatedResult.Request.PerformedAt.UtcDateTime;
+            organization.OwnersNotifiedOfAutoscaling = validatedResult.Value.PerformedAt.UtcDateTime;
             await organizationRepository.UpsertAsync(organization);
         }
     }
 
     private async Task NotifyOwnersIfPasswordManagerMaxSeatLimitReachedAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
-        if (!validatedResult.Request.PasswordManagerSubscriptionUpdate.MaxSeatsReached)
+        if (!validatedResult.Value.PasswordManagerSubscriptionUpdate.MaxSeatsReached)
         {
             return;
         }
 
         try
         {
-            var ownerEmails = await GetOwnerEmailAddressesAsync(validatedResult.Request.InviteOrganization);
+            var ownerEmails = await GetOwnerEmailAddressesAsync(validatedResult.Value.InviteOrganization);
 
             await mailService.SendOrganizationMaxSeatLimitReachedEmailAsync(organization,
-                validatedResult.Request.PasswordManagerSubscriptionUpdate.MaxAutoScaleSeats!.Value, ownerEmails);
+                validatedResult.Value.PasswordManagerSubscriptionUpdate.MaxAutoScaleSeats!.Value, ownerEmails);
         }
         catch (Exception ex)
         {
@@ -279,23 +279,23 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task AdjustSecretsManagerSeatsAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult)
     {
-        if (validatedResult.Request.SecretsManagerSubscriptionUpdate?.SmSeatsChanged is true)
+        if (validatedResult.Value.SecretsManagerSubscriptionUpdate?.SmSeatsChanged is true)
         {
-            await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(validatedResult.Request.SecretsManagerSubscriptionUpdate);
+            await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(validatedResult.Value.SecretsManagerSubscriptionUpdate);
         }
 
     }
 
     private async Task AdjustPasswordManagerSeatsAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
-        if (validatedResult.Request.PasswordManagerSubscriptionUpdate is { SeatsRequiredToAdd: > 0, UpdatedSeatTotal: > 0 })
+        if (validatedResult.Value.PasswordManagerSubscriptionUpdate is { SeatsRequiredToAdd: > 0, UpdatedSeatTotal: > 0 })
         {
             await organizationRepository.IncrementSeatCountAsync(
                 organization.Id,
-                validatedResult.Request.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd,
-                validatedResult.Request.PerformedAt.UtcDateTime);
+                validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd,
+                validatedResult.Value.PerformedAt.UtcDateTime);
 
-            organization.Seats = validatedResult.Request.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal;
+            organization.Seats = validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal;
             organization.SyncSeats = true;
 
             await applicationCacheService.UpsertOrganizationAbilityAsync(organization);

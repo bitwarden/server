@@ -1,6 +1,4 @@
-﻿using Bit.Core.Models.Data.Organizations;
-
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 
 public interface IDeleteClaimedOrganizationUserAccountCommand
 {

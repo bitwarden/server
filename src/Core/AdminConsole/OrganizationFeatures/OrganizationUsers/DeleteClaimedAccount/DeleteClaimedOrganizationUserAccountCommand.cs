@@ -2,15 +2,13 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf;
 
-
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 
 public record Success(Guid Id);
 public record Failure(Guid Id, Error Error);

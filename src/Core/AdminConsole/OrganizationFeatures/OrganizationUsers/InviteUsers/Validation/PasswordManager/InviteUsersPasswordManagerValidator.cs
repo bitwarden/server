@@ -75,7 +75,7 @@ public class InviteUsersPasswordManagerValidator(
         switch (ValidatePasswordManager(request))
         {
             case Valid<PasswordManagerSubscriptionUpdate> valid
-                when valid.Request.SeatsRequiredToAdd is 0:
+                when valid.Value.SeatsRequiredToAdd is 0:
                 return new Valid<PasswordManagerSubscriptionUpdate>(request);
 
             case Invalid<PasswordManagerSubscriptionUpdate> invalid:
