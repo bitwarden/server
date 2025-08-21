@@ -1,44 +1,11 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
-
-// public abstract record ValidationResult<T>(T Request)
-// {
-//     public static implicit operator ValidationResult<T>(T request) => new Valid<T>(request);
-//     public static implicit operator ValidationResult<T>(ValueTuple<T, Error> requestWithError) => new Invalid<T>(requestWithError.Item1, requestWithError.Item2);
-//
-//     public bool Valid => this is Valid<T>;
-//     public bool Invalid => this is Invalid<T>;
-//
-//     public TResult Match<TResult>(Func<Valid<T>, TResult> validFunc, Func<Invalid<T>, TResult> invalidFunc)
-//         => this switch
-//             {
-//                 Invalid<T> => invalidFunc((Invalid<T>)this),
-//                 Valid<T> => validFunc((Valid<T>)this),
-//                 _ => throw new Exception()
-//             };
-// }
-// public record Valid<T>(T Request) : ValidationResult<T>(Request);
-// public record Invalid<T>(T Request, Error Error) : ValidationResult<T>(Request);
-
-// public static class ValidationResultExtensions
-// {
-//     public static List<Valid<T>> ValidResults<T>(this IEnumerable<ValidationResult<T>> results) =>
-//         results.OfType<Valid<T>>().ToList();
-// }
-
-
-public static class ValidationResultExtensions
-{
-}
-
-public record Error(string Message);
 
 public class DeleteClaimedOrganizationUserAccountValidator(
     ICurrentContext currentContext,

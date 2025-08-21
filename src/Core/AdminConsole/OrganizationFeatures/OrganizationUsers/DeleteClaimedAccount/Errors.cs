@@ -1,5 +1,6 @@
 ﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 
+public record Error(string Message);
 public record UserNotFoundError() : Error("Invalid user.");
 public record UserNotClaimedError() : Error("Member is not claimed by the organization.");
 public record InvalidUserStatusError() : Error("You cannot delete a member with Invited status.");
