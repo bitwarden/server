@@ -2,6 +2,7 @@
 using Bit.Api.Tools.Authorization;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
+using Bit.Core.Health;
 using Bit.Core.IdentityServer;
 using Bit.Core.PhishingDomainFeatures;
 using Bit.Core.PhishingDomainFeatures.Interfaces;
@@ -10,7 +11,6 @@ using Bit.Core.Repositories.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.SecurityTasks;
-using Bit.SharedWeb.Health;
 using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.OpenApi.Models;

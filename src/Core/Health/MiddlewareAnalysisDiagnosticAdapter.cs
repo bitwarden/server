@@ -5,7 +5,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DiagnosticAdapter;
 
-namespace Bit.SharedWeb.Health;
+namespace Bit.Core.Health;
 
 public class MiddlewareAnalysisDiagnosticAdapter
 {

@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Bit.Core.Settings;
 
-namespace Bit.SharedWeb.Health;
+namespace Bit.Core.Health;
 
 public class DiagnosticsConfig
 {
