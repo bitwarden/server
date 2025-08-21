@@ -909,6 +909,44 @@ public class SubscriberService(
         }
     }
 
+    public async Task<bool> IsValidGatewayCustomerIdAsync(ISubscriber subscriber)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
+        {
+            // subscribers are allowed to have no customer id as a business rule
+            return true;
+        }
+        try
+        {
+            await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
+            return true;
+        }
+        catch (StripeException e) when (e.StripeError.Code == "resource_missing")
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> IsValidGatewaySubscriptionIdAsync(ISubscriber subscriber)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+        if (string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+        {
+            // subscribers are allowed to have no subscription id as a business rule
+            return true;
+        }
+        try
+        {
+            await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+            return true;
+        }
+        catch (StripeException e) when (e.StripeError.Code == "resource_missing")
+        {
+            return false;
+        }
+    }
+
     #region Shared Utilities
 
     private async Task AddBraintreeCustomerIdAsync(
