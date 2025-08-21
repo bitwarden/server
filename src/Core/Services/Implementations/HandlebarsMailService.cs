@@ -204,7 +204,7 @@ public class HandlebarsMailService : IMailService
         // Check if we've sent this email within the last hour
         var cacheKey = string.Format(FailedTwoFactorAttemptCacheKeyFormat, email);
         var cachedValue = await _distributedCache.GetAsync(cacheKey);
-        
+
         if (cachedValue != null)
         {
             // Email was already sent within the last hour, skip sending
