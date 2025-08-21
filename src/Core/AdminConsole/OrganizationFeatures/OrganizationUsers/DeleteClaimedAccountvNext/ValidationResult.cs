@@ -17,11 +17,11 @@ public static class ValidationResultHelpers
     /// <summary>
     /// Creates a successful <see cref="ValidationResult{TRequest}"/> with no error set.
     /// </summary>
-    public static ValidationResult<T> Valid<T>(T request) => new (request, new None());
+    public static ValidationResult<T> Valid<T>(T request) => new(request, new None());
     /// <summary>
     /// Creates a failed <see cref="ValidationResult{TRequest}"/> with the specified error.
     /// </summary>
-    public static ValidationResult<T> Invalid<T>(T request, Error error) => new (request, error);
+    public static ValidationResult<T> Invalid<T>(T request, Error error) => new(request, error);
 
     /// <summary>
     /// Extracts successfully validated requests from a sequence of <see cref="ValidationResult{TRequest}"/>.

@@ -578,7 +578,7 @@ public class OrganizationUsersController : Controller
 
     private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccountvNext(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
-        var currentUserId= _userService.GetProperUserId(User);
+        var currentUserId = _userService.GetProperUserId(User);
         if (currentUserId == null)
         {
             throw new UnauthorizedAccessException();
