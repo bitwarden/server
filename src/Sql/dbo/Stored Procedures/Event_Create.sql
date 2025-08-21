@@ -19,7 +19,8 @@
     @SystemUser TINYINT = null,
     @DomainName VARCHAR(256),
     @SecretId UNIQUEIDENTIFIER = null,
-    @ServiceAccountId UNIQUEIDENTIFIER = null
+    @ServiceAccountId UNIQUEIDENTIFIER = null,
+    @ProjectId UNIQUEIDENTIFIER = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -46,7 +47,8 @@ BEGIN
         [SystemUser],
         [DomainName],
         [SecretId],
-        [ServiceAccountId]
+        [ServiceAccountId],
+        [ProjectId]
     )
     VALUES
     (
@@ -70,6 +72,7 @@ BEGIN
         @SystemUser,
         @DomainName,
         @SecretId,
-        @ServiceAccountId
+        @ServiceAccountId,
+        @ProjectId
     )
 END
