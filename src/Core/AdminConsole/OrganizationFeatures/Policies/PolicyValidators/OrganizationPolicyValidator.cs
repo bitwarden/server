@@ -48,7 +48,7 @@ public abstract class OrganizationPolicyValidator(IPolicyRepository policyReposi
     );
 
     public abstract Task ProtoTypeOnSaveSideEffectsAsync(
-        SavePolicyRequest policyRequest,
+        SavePolicyModel policyModel,
         Policy? currentPolicy
     );
 }

@@ -33,5 +33,5 @@ public class ResetPasswordPolicyValidator : IPolicyValidator
     }
 
     public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
-    public Task ProtoTypeOnSaveSideEffectsAsync(SavePolicyRequest policyUpdate, Policy? currentPolicy) => throw new NotImplementedException();
+    public Task ProtoTypeOnSaveSideEffectsAsync(SavePolicyModel policyUpdate, Policy? currentPolicy) => throw new NotImplementedException();
 }

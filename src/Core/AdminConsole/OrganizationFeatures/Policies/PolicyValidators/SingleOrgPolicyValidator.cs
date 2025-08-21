@@ -67,7 +67,7 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         }
     }
 
-    public Task ProtoTypeOnSaveSideEffectsAsync(SavePolicyRequest policyUpdate, Policy? currentPolicy) => throw new NotImplementedException();
+    public Task ProtoTypeOnSaveSideEffectsAsync(SavePolicyModel policyUpdate, Policy? currentPolicy) => throw new NotImplementedException();
 
     private async Task RevokeNonCompliantUsersAsync(Guid organizationId, IActingUser performedBy)
     {

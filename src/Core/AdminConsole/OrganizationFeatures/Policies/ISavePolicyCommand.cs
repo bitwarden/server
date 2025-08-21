@@ -6,6 +6,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 public interface ISavePolicyCommand
 {
     Task<Policy> SaveAsync(PolicyUpdate policy);
-    Task<Policy> SavePrototypeAsync(SavePolicyRequest policyRequest);
+    Task<Policy> SaveAsync(SavePolicyModel policyModel);
 
 }

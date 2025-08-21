@@ -42,8 +42,16 @@ public class SavePolicyCommand : ISavePolicyCommand
         _policyValidators = policyValidatorsDict;
     }
 
+    [Obsolete("Please use the VNext version of this method, which uses SavePolicyModel.")]
     public async Task<Policy> SaveAsync(PolicyUpdate policyUpdate)
     {
+        return await SaveAsync(new SavePolicyModel(policyUpdate, policyUpdate.PerformedBy, new EmptyMetadataModel()));
+    }
+
+    public async Task<Policy> SaveAsync(SavePolicyModel policyModel)
+    {
+        var policyUpdate = policyModel.Data;
+
         var org = await _applicationCacheService.GetOrganizationAbilityAsync(policyUpdate.OrganizationId);
         if (org == null)
         {
@@ -74,27 +82,6 @@ public class SavePolicyCommand : ISavePolicyCommand
 
         await _policyRepository.UpsertAsync(policy);
         await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
-
-        return policy;
-    }
-
-    public async Task<Policy> SavePrototypeAsync(SavePolicyRequest policyRequest)
-    {
-        // This is just a prototype of how we can pass metadata through the command to the validator.
-        var policyUpdate = policyRequest.Data;
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, policyUpdate.Type)
-                     ?? new Policy
-                     {
-                         OrganizationId = policyUpdate.OrganizationId,
-                         Type = policyUpdate.Type,
-                         CreationDate = _timeProvider.GetUtcNow().UtcDateTime
-                     };
-
-        if (_policyValidators.TryGetValue(policyUpdate.Type, out var validator))
-        {
-
-            await validator.ProtoTypeOnSaveSideEffectsAsync(policyRequest, policy);
-        }
 
         return policy;
     }

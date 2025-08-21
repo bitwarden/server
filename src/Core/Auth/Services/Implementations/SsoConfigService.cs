@@ -68,7 +68,7 @@ public class SsoConfigService : ISsoConfigService
         if (config.GetData().MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
         {
 
-            await _savePolicyCommand.SaveAsync(new()
+            await _savePolicyCommand.SaveAsync((PolicyUpdate)new()
             {
                 OrganizationId = config.OrganizationId,
                 Type = PolicyType.SingleOrg,
@@ -84,7 +84,7 @@ public class SsoConfigService : ISsoConfigService
             resetPasswordPolicy.SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = true });
             await _savePolicyCommand.SaveAsync(resetPasswordPolicy);
 
-            await _savePolicyCommand.SaveAsync(new()
+            await _savePolicyCommand.SaveAsync((PolicyUpdate)new()
             {
                 OrganizationId = config.OrganizationId,
                 Type = PolicyType.RequireSso,

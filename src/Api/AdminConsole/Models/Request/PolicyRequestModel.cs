@@ -27,3 +27,21 @@ public class PolicyRequestModel
         PerformedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId))
     };
 }
+
+public class PolicyVNextRequest
+{
+
+    [Required]
+    public PolicyUpdate Data { get; set; }
+
+    public Dictionary<string, object> Metadata { get; set; }
+
+    public async Task<PolicyUpdate> ToPolicyUpdateAsync(Guid organizationId, ICurrentContext currentContext) => new()
+    {
+        // Type = Type!.Value,
+        OrganizationId = organizationId,
+        Data = Data != null ? JsonSerializer.Serialize(Data) : null,
+        // Enabled = Enabled.GetValueOrDefault(),
+        PerformedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId))
+    };
+}
