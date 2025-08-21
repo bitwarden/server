@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
-namespace Bit.SharedWeb.Health;
+namespace Bit.Core.Health;
 
 public static class HealthCheckServiceExtensions
 {

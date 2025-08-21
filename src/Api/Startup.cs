@@ -14,7 +14,7 @@ using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Auth.Entities;
 using Bit.Core.IdentityServer;
-using Bit.SharedWeb.Health;
+using Bit.Core.Health;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;

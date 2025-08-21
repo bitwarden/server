@@ -1,7 +1,7 @@
 ﻿#nullable enable
 
 using System.Diagnostics;
-using Bit.SharedWeb.Health;
+using Bit.Core.Health;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.SharedWeb.Utilities;
