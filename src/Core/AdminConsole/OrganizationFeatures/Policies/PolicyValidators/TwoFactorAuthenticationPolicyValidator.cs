@@ -56,7 +56,7 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
         }
     }
 
-    public Task ProtoTypeOnSaveSideEffectsAsync(SavePolicyModel policyUpdate, Policy? currentPolicy) => throw new NotImplementedException();
+    public Task OnSaveSideEffectsAsync(SavePolicyModel policyUpdate, Policy? currentPolicy) => throw new NotImplementedException();
 
     private async Task RevokeNonCompliantUsersAsync(Guid organizationId, IActingUser performedBy)
     {

@@ -166,7 +166,7 @@ public class TestOrganizationPolicyValidator : OrganizationPolicyValidator
         return Task.FromResult("");
     }
 
-    public override Task ProtoTypeOnSaveSideEffectsAsync(SavePolicyModel policyModel, Policy? currentPolicy) => throw new NotImplementedException();
+    public override Task OnSaveSideEffectsAsync(SavePolicyModel policyModel, Policy? currentPolicy) => throw new NotImplementedException();
 
     public override Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {

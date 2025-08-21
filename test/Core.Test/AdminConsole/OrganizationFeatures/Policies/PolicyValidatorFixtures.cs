@@ -27,7 +27,7 @@ public class FakeSingleOrgPolicyValidator : IPolicyValidator
         return Task.FromResult(0);
     }
 
-    public Task ProtoTypeOnSaveSideEffectsAsync(SavePolicyModel policyUpdate, Policy? currentPolicy) => throw new NotImplementedException();
+    public Task OnSaveSideEffectsAsync(SavePolicyModel policyUpdate, Policy? currentPolicy) => throw new NotImplementedException();
 }
 public class FakeRequireSsoPolicyValidator : IPolicyValidator
 {
@@ -35,7 +35,7 @@ public class FakeRequireSsoPolicyValidator : IPolicyValidator
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
     public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
     public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
-    public Task ProtoTypeOnSaveSideEffectsAsync(SavePolicyModel policyUpdate, Policy? currentPolicy) => throw new NotImplementedException();
+    public Task OnSaveSideEffectsAsync(SavePolicyModel policyUpdate, Policy? currentPolicy) => throw new NotImplementedException();
 }
 public class FakeVaultTimeoutPolicyValidator : IPolicyValidator
 {
@@ -50,5 +50,5 @@ public class FakeVaultTimeoutPolicyValidator : IPolicyValidator
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
     public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
     public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
-    public Task ProtoTypeOnSaveSideEffectsAsync(SavePolicyModel policyUpdate, Policy? currentPolicy) => throw new NotImplementedException();
+    public Task OnSaveSideEffectsAsync(SavePolicyModel policyUpdate, Policy? currentPolicy) => throw new NotImplementedException();
 }

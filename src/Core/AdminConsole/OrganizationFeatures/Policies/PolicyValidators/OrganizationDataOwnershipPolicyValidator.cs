@@ -25,10 +25,9 @@ public class OrganizationDataOwnershipPolicyValidator(
 
     public override Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
 
-    public override Task ProtoTypeOnSaveSideEffectsAsync(SavePolicyModel policyModel, Policy? currentPolicy)
+    public override Task OnSaveSideEffectsAsync(SavePolicyModel policyModel, Policy? currentPolicy)
     {
         var metadata = MapToOrganizationModelOwnershipPolicyModel(policyModel.Metadata);
-
 
         // Here we will have command data associated with this particular policy validator.
         if (metadata!.ExecuteSideEffect)
