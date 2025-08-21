@@ -98,7 +98,7 @@ public class OrganizationLicense : ILicense
 
         if (subscriptionInfo?.Subscription == null)
         {
-            if (org.PlanType == PlanType.Custom && org.ExpirationDate.HasValue)
+            if (org.ExpirationDate.HasValue)
             {
                 Expires = Refresh = org.ExpirationDate.Value;
                 Trial = false;

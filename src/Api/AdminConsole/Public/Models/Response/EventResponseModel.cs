@@ -28,6 +28,7 @@ public class EventResponseModel : IResponseModel
         IpAddress = ev.IpAddress;
         InstallationId = ev.InstallationId;
         SecretId = ev.SecretId;
+        ProjectId = ev.ProjectId;
         ServiceAccountId = ev.ServiceAccountId;
     }
 
@@ -96,6 +97,11 @@ public class EventResponseModel : IResponseModel
     /// </summary>
     /// <example>e68b8629-85eb-4929-92c0-b84464976ba4</example>
     public Guid? SecretId { get; set; }
+    /// <summary>
+    /// The unique identifier of the related project that the event describes.
+    /// </summary>
+    /// <example>e68b8629-85eb-4929-92c0-b84464976ba4</example>
+    public Guid? ProjectId { get; set; }
     /// <summary>
     /// The unique identifier of the related service account that the event describes.
     /// </summary>

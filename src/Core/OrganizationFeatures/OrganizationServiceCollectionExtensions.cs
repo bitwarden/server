@@ -188,6 +188,7 @@ public static class OrganizationServiceCollectionExtensions
 
         services.AddScoped<IInviteOrganizationUsersCommand, InviteOrganizationUsersCommand>();
         services.AddScoped<ISendOrganizationInvitesCommand, SendOrganizationInvitesCommand>();
+        services.AddScoped<IResendOrganizationInviteCommand, ResendOrganizationInviteCommand>();
 
         services.AddScoped<IInviteUsersValidator, InviteOrganizationUsersValidator>();
         services.AddScoped<IInviteUsersOrganizationValidator, InviteUsersOrganizationValidator>();
