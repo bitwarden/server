@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -9,6 +12,7 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -25,7 +29,7 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -232,8 +236,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.DisplayBusinessName() ||
-                                                            model.BillingEmail != organization.BillingEmail);
+        var updateBilling = ShouldUpdateBilling(model, organization);
 
         var hasRequiredPermissions = updateBilling
             ? await _currentContext.EditSubscription(orgIdGuid)
@@ -279,8 +282,7 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && (await _userService.GetOrganizationsClaimingUserAsync(user.Id)).Any(x => x.Id == id))
+        if ((await _userService.GetOrganizationsClaimingUserAsync(user.Id)).Any(x => x.Id == id))
         {
             throw new BadRequestException("Claimed user account cannot leave claiming organization. Contact your organization administrator for additional details.");
         }
@@ -579,5 +581,12 @@ public class OrganizationsController : Controller
         }
 
         return organization.PlanType;
+    }
+
+    private bool ShouldUpdateBilling(OrganizationUpdateRequestModel model, Organization organization)
+    {
+        var organizationNameChanged = model.Name != organization.Name;
+        var billingEmailChanged = model.BillingEmail != organization.BillingEmail;
+        return !_globalSettings.SelfHosted && (organizationNameChanged || billingEmailChanged);
     }
 }

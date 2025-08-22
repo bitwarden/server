@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
@@ -63,6 +66,12 @@ public class FreshdeskController : Controller
             note += $"<li>Region: {_billingSettings.FreshDesk.Region}</li>";
             var customFields = new Dictionary<string, object>();
             var user = await _userRepository.GetByEmailAsync(ticketContactEmail);
+            if (user == null)
+            {
+                note += $"<li>No user found: {ticketContactEmail}</li>";
+                await CreateNote(ticketId, note);
+            }
+
             if (user != null)
             {
                 var userLink = $"{_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}";
@@ -121,18 +130,7 @@ public class FreshdeskController : Controller
                     Content = JsonContent.Create(updateBody),
                 };
                 await CallFreshdeskApiAsync(updateRequest);
-
-                var noteBody = new Dictionary<string, object>
-                {
-                    { "body", $"<ul>{note}</ul>" },
-                    { "private", true }
-                };
-                var noteRequest = new HttpRequestMessage(HttpMethod.Post,
-                    string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/notes", ticketId))
-                {
-                    Content = JsonContent.Create(noteBody),
-                };
-                await CallFreshdeskApiAsync(noteRequest);
+                await CreateNote(ticketId, note);
             }
 
             return new OkResult();
@@ -146,7 +144,7 @@ public class FreshdeskController : Controller
 
     [HttpPost("webhook-onyx-ai")]
     public async Task<IActionResult> PostWebhookOnyxAi([FromQuery, Required] string key,
-        [FromBody, Required] FreshdeskWebhookModel model)
+        [FromBody, Required] FreshdeskOnyxAiWebhookModel model)
     {
         // ensure that the key is from Freshdesk
         if (!IsValidRequestFromFreshdesk(key))
@@ -154,28 +152,8 @@ public class FreshdeskController : Controller
             return new BadRequestResult();
         }
 
-        // get ticket info from Freshdesk
-        var getTicketRequest = new HttpRequestMessage(HttpMethod.Get,
-            string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}", model.TicketId));
-        var getTicketResponse = await CallFreshdeskApiAsync(getTicketRequest);
-
-        // check if we have a valid response from freshdesk
-        if (getTicketResponse.StatusCode != System.Net.HttpStatusCode.OK)
-        {
-            _logger.LogError("Error getting ticket info from Freshdesk. Ticket Id: {0}. Status code: {1}",
-                            model.TicketId, getTicketResponse.StatusCode);
-            return BadRequest("Failed to retrieve ticket info from Freshdesk");
-        }
-
-        // extract info from the response
-        var ticketInfo = await ExtractTicketInfoFromResponse(getTicketResponse);
-        if (ticketInfo == null)
-        {
-            return BadRequest("Failed to extract ticket info from Freshdesk response");
-        }
-
         // create the onyx `answer-with-citation` request
-        var onyxRequestModel = new OnyxAnswerWithCitationRequestModel(ticketInfo.DescriptionText);
+        var onyxRequestModel = new OnyxAnswerWithCitationRequestModel(model.TicketDescriptionText, _billingSettings.Onyx.PersonaId);
         var onyxRequest = new HttpRequestMessage(HttpMethod.Post,
                             string.Format("{0}/query/answer-with-citation", _billingSettings.Onyx.BaseUrl))
         {
@@ -208,6 +186,21 @@ public class FreshdeskController : Controller
         return true;
     }
 
+    private async Task CreateNote(string ticketId, string note)
+    {
+        var noteBody = new Dictionary<string, object>
+                {
+                    { "body", $"<ul>{note}</ul>" },
+                    { "private", true }
+                };
+        var noteRequest = new HttpRequestMessage(HttpMethod.Post,
+            string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/notes", ticketId))
+        {
+            Content = JsonContent.Create(noteBody),
+        };
+        await CallFreshdeskApiAsync(noteRequest);
+    }
+
     private async Task AddAnswerNoteToTicketAsync(string note, string ticketId)
     {
         // if there is no content, then we don't need to add a note
@@ -234,29 +227,6 @@ public class FreshdeskController : Controller
             _logger.LogError("Error adding note to Freshdesk ticket. Ticket Id: {0}. Status: {1}",
                             ticketId, addNoteResponse.ToString());
         }
-    }
-
-    private async Task<FreshdeskViewTicketModel> ExtractTicketInfoFromResponse(HttpResponseMessage getTicketResponse)
-    {
-        var responseString = string.Empty;
-        try
-        {
-            responseString = await getTicketResponse.Content.ReadAsStringAsync();
-            var ticketInfo = JsonSerializer.Deserialize<FreshdeskViewTicketModel>(responseString,
-                options: new System.Text.Json.JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                });
-
-            return ticketInfo;
-        }
-        catch (System.Exception ex)
-        {
-            _logger.LogError("Error deserializing ticket info from Freshdesk response. Response: {0}. Exception {1}",
-                            responseString, ex.ToString());
-        }
-
-        return null;
     }
 
     private async Task<HttpResponseMessage> CallFreshdeskApiAsync(HttpRequestMessage request, int retriedCount = 0)

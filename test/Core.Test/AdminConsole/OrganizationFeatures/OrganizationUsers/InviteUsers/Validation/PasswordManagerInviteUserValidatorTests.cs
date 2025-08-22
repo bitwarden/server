@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
-using Bit.Core.AdminConsole.Shared.Validation;
+using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Test.Common.AutoFixture;
@@ -67,7 +67,7 @@ public class InviteUsersPasswordManagerValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(subscriptionUpdate);
 
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
-        Assert.Equal(PasswordManagerSeatLimitHasBeenReachedError.Code, (result as Invalid<PasswordManagerSubscriptionUpdate>)!.ErrorMessageString);
+        Assert.Equal(PasswordManagerSeatLimitHasBeenReachedError.Code, (result as Invalid<PasswordManagerSubscriptionUpdate>)!.Error.Message);
     }
 
     [Theory]
@@ -88,6 +88,6 @@ public class InviteUsersPasswordManagerValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(subscriptionUpdate);
 
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
-        Assert.Equal(PasswordManagerPlanDoesNotAllowAdditionalSeatsError.Code, (result as Invalid<PasswordManagerSubscriptionUpdate>)!.ErrorMessageString);
+        Assert.Equal(PasswordManagerPlanDoesNotAllowAdditionalSeatsError.Code, (result as Invalid<PasswordManagerSubscriptionUpdate>)!.Error.Message);
     }
 }

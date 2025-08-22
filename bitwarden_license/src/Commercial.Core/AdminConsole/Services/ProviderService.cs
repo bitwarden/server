@@ -1,15 +1,20 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -52,6 +57,7 @@ public class ProviderService : IProviderService
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IPricingClient _pricingClient;
+    private readonly IProviderClientOrganizationSignUpCommand _providerClientOrganizationSignUpCommand;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
@@ -60,7 +66,8 @@ public class ProviderService : IProviderService
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
         ICurrentContext currentContext, IStripeAdapter stripeAdapter, IFeatureService featureService,
         IDataProtectorTokenFactory<ProviderDeleteTokenable> providerDeleteTokenDataFactory,
-        IApplicationCacheService applicationCacheService, IProviderBillingService providerBillingService, IPricingClient pricingClient)
+        IApplicationCacheService applicationCacheService, IProviderBillingService providerBillingService, IPricingClient pricingClient,
+        IProviderClientOrganizationSignUpCommand providerClientOrganizationSignUpCommand)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -80,9 +87,10 @@ public class ProviderService : IProviderService
         _applicationCacheService = applicationCacheService;
         _providerBillingService = providerBillingService;
         _pricingClient = pricingClient;
+        _providerClientOrganizationSignUpCommand = providerClientOrganizationSignUpCommand;
     }
 
-    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo = null)
+    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo, TokenizedPaymentSource tokenizedPaymentSource = null)
     {
         var owner = await _userService.GetUserByIdAsync(ownerUserId);
         if (owner == null)
@@ -111,7 +119,17 @@ public class ProviderService : IProviderService
         {
             throw new BadRequestException("Both address and postal code are required to set up your provider.");
         }
-        var customer = await _providerBillingService.SetupCustomer(provider, taxInfo);
+
+        if (tokenizedPaymentSource is not
+            {
+                Type: PaymentMethodType.BankAccount or PaymentMethodType.Card or PaymentMethodType.PayPal,
+                Token: not null and not ""
+            })
+        {
+            throw new BadRequestException("A payment method is required to set up your provider.");
+        }
+
+        var customer = await _providerBillingService.SetupCustomer(provider, taxInfo, tokenizedPaymentSource);
         provider.GatewayCustomerId = customer.Id;
         var subscription = await _providerBillingService.SetupSubscription(provider);
         provider.GatewaySubscriptionId = subscription.Id;
@@ -131,7 +149,15 @@ public class ProviderService : IProviderService
             throw new ArgumentException("Cannot create provider this way.");
         }
 
+        var existingProvider = await _providerRepository.GetByIdAsync(provider.Id);
+        var enabledStatusChanged = existingProvider != null && existingProvider.Enabled != provider.Enabled;
+
         await _providerRepository.ReplaceAsync(provider);
+
+        if (enabledStatusChanged && (provider.Type == ProviderType.Msp || provider.Type == ProviderType.BusinessUnit))
+        {
+            await UpdateClientOrganizationsEnabledStatusAsync(provider.Id, provider.Enabled);
+        }
     }
 
     public async Task<List<ProviderUser>> InviteUserAsync(ProviderUserInvite<string> invite)
@@ -269,11 +295,10 @@ public class ProviderService : IProviderService
 
         foreach (var user in users)
         {
-            if (!keyedFilteredUsers.ContainsKey(user.Id))
+            if (!keyedFilteredUsers.TryGetValue(user.Id, out var providerUser))
             {
                 continue;
             }
-            var providerUser = keyedFilteredUsers[user.Id];
             try
             {
                 if (providerUser.Status != ProviderUserStatusType.Accepted || providerUser.ProviderId != providerId)
@@ -546,12 +571,12 @@ public class ProviderService : IProviderService
 
         ThrowOnInvalidPlanType(provider.Type, organizationSignup.Plan);
 
-        var (organization, _, defaultCollection) = await _organizationService.SignupClientAsync(organizationSignup);
+        var signUpResponse = await _providerClientOrganizationSignUpCommand.SignUpClientOrganizationAsync(organizationSignup);
 
         var providerOrganization = new ProviderOrganization
         {
             ProviderId = providerId,
-            OrganizationId = organization.Id,
+            OrganizationId = signUpResponse.Organization.Id,
             Key = organizationSignup.OwnerKey,
         };
 
@@ -560,12 +585,12 @@ public class ProviderService : IProviderService
 
         // Give the owner Can Manage access over the default collection
         // The orgUser is not available when the org is created so we have to do it here as part of the invite
-        var defaultOwnerAccess = defaultCollection != null
+        var defaultOwnerAccess = signUpResponse.DefaultCollection != null
             ?
             [
                 new CollectionAccessSelection
                 {
-                    Id = defaultCollection.Id,
+                    Id = signUpResponse.DefaultCollection.Id,
                     HidePasswords = false,
                     ReadOnly = false,
                     Manage = true
@@ -573,7 +598,7 @@ public class ProviderService : IProviderService
             ]
             : Array.Empty<CollectionAccessSelection>();
 
-        await _organizationService.InviteUsersAsync(organization.Id, user.Id, systemUser: null,
+        await _organizationService.InviteUsersAsync(signUpResponse.Organization.Id, user.Id, systemUser: null,
             new (OrganizationUserInvite, string)[]
             {
                 (
@@ -706,6 +731,22 @@ public class ProviderService : IProviderService
                 break;
             default:
                 throw new BadRequestException($"Unsupported provider type {providerType}.");
+        }
+    }
+
+    private async Task UpdateClientOrganizationsEnabledStatusAsync(Guid providerId, bool enabled)
+    {
+        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
+
+        foreach (var providerOrganization in providerOrganizations)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
+            if (organization != null && organization.Enabled != enabled)
+            {
+                organization.Enabled = enabled;
+                await _organizationRepository.ReplaceAsync(organization);
+                await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            }
         }
     }
 }

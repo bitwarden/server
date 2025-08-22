@@ -1,8 +1,12 @@
-﻿using Bit.Api.Vault.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -37,6 +41,7 @@ public class SyncController : Controller
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
 
     public SyncController(
         IUserService userService,
@@ -51,7 +56,8 @@ public class SyncController : Controller
         GlobalSettings globalSettings,
         ICurrentContext currentContext,
         IFeatureService featureService,
-        IApplicationCacheService applicationCacheService)
+        IApplicationCacheService applicationCacheService,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -66,6 +72,7 @@ public class SyncController : Controller
         _currentContext = currentContext;
         _featureService = featureService;
         _applicationCacheService = applicationCacheService;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
     [HttpGet("")]
@@ -102,7 +109,7 @@ public class SyncController : Controller
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
         }
 
-        var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
+        var userTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
         var organizationClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(user.Id);
         var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);

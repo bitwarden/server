@@ -1,4 +1,7 @@
-﻿using Bit.Core.Models.BitStripe;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Models.BitStripe;
 using Stripe;
 
 namespace Bit.Core.Services;
@@ -19,6 +22,7 @@ public class StripeAdapter : IStripeAdapter
     private readonly Stripe.SetupIntentService _setupIntentService;
     private readonly Stripe.TestHelpers.TestClockService _testClockService;
     private readonly CustomerBalanceTransactionService _customerBalanceTransactionService;
+    private readonly Stripe.Tax.RegistrationService _taxRegistrationService;
 
     public StripeAdapter()
     {
@@ -36,6 +40,7 @@ public class StripeAdapter : IStripeAdapter
         _setupIntentService = new SetupIntentService();
         _testClockService = new Stripe.TestHelpers.TestClockService();
         _customerBalanceTransactionService = new CustomerBalanceTransactionService();
+        _taxRegistrationService = new Stripe.Tax.RegistrationService();
     }
 
     public Task<Stripe.Customer> CustomerCreateAsync(Stripe.CustomerCreateOptions options)
@@ -205,6 +210,11 @@ public class StripeAdapter : IStripeAdapter
         return _taxIdService.DeleteAsync(customerId, taxIdId);
     }
 
+    public Task<Stripe.StripeList<Stripe.Tax.Registration>> TaxRegistrationsListAsync(Stripe.Tax.RegistrationListOptions options = null)
+    {
+        return _taxRegistrationService.ListAsync(options);
+    }
+
     public Task<Stripe.StripeList<Stripe.Charge>> ChargeListAsync(Stripe.ChargeListOptions options)
     {
         return _chargeService.ListAsync(options);
@@ -283,4 +293,7 @@ public class StripeAdapter : IStripeAdapter
         }
         return items;
     }
+
+    public Task<Price> PriceGetAsync(string id, PriceGetOptions options = null)
+        => _priceService.GetAsync(id, options);
 }

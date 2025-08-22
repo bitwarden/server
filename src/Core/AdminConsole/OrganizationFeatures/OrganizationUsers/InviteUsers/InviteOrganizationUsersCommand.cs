@@ -1,35 +1,31 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Errors;
 using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Shared.Validation;
-using Bit.Core.Context;
+using Bit.Core.AdminConsole.Utilities.Commands;
+using Bit.Core.AdminConsole.Utilities.Errors;
+using Bit.Core.AdminConsole.Utilities.Validation;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Commands;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Microsoft.Extensions.Logging;
-using OrganizationUserInvite = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 
 public class InviteOrganizationUsersCommand(IEventService eventService,
     IOrganizationUserRepository organizationUserRepository,
     IInviteUsersValidator inviteUsersValidator,
-    IPaymentService paymentService,
     IOrganizationRepository organizationRepository,
-    IReferenceEventService referenceEventService,
-    ICurrentContext currentContext,
     IApplicationCacheService applicationCacheService,
     IMailService mailService,
     ILogger<InviteOrganizationUsersCommand> logger,
@@ -50,11 +46,11 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         {
             case Failure<InviteOrganizationUsersResponse> failure:
                 return new Failure<ScimInviteOrganizationUsersResponse>(
-                    failure.Errors.Select(error => new Error<ScimInviteOrganizationUsersResponse>(error.Message,
+                    new Error<ScimInviteOrganizationUsersResponse>(failure.Error.Message,
                         new ScimInviteOrganizationUsersResponse
                         {
-                            InvitedUser = error.ErroredValue.InvitedUsers.FirstOrDefault()
-                        })));
+                            InvitedUser = failure.Error.ErroredValue.InvitedUsers.FirstOrDefault()
+                        }));
 
             case Success<InviteOrganizationUsersResponse> success when success.Value.InvitedUsers.Any():
                 var user = success.Value.InvitedUsers.First();
@@ -77,6 +73,40 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         }
     }
 
+    public async Task<CommandResult<InviteOrganizationUsersResponse>> InviteImportedOrganizationUsersAsync(InviteOrganizationUsersRequest request)
+    {
+        var result = await InviteOrganizationUsersAsync(request);
+
+        switch (result)
+        {
+            case Failure<InviteOrganizationUsersResponse> failure:
+                return new Failure<InviteOrganizationUsersResponse>(
+                        new Error<InviteOrganizationUsersResponse>(
+                            failure.Error.Message,
+                            new InviteOrganizationUsersResponse(failure.Error.ErroredValue.InvitedUsers, request.InviteOrganization.OrganizationId)
+                            )
+                        );
+
+            case Success<InviteOrganizationUsersResponse> success when success.Value.InvitedUsers.Any():
+
+                List<(OrganizationUser, EventType, EventSystemUser, DateTime?)> events = new List<(OrganizationUser, EventType, EventSystemUser, DateTime?)>();
+                foreach (var user in success.Value.InvitedUsers)
+                {
+                    events.Add((user, EventType.OrganizationUser_Invited, EventSystemUser.PublicApi, request.PerformedAt.UtcDateTime));
+                }
+
+                await eventService.LogOrganizationUserEventsAsync(events);
+
+                return new Success<InviteOrganizationUsersResponse>(new InviteOrganizationUsersResponse(success.Value.InvitedUsers, request.InviteOrganization.OrganizationId)
+                );
+
+            default:
+                return new Failure<InviteOrganizationUsersResponse>(
+                    new InvalidResultTypeError<InviteOrganizationUsersResponse>(
+                        new InviteOrganizationUsersResponse(request.InviteOrganization.OrganizationId)));
+        }
+    }
+
     private async Task<CommandResult<InviteOrganizationUsersResponse>> InviteOrganizationUsersAsync(InviteOrganizationUsersRequest request)
     {
         var invitesToSend = (await FilterExistingUsersAsync(request)).ToArray();
@@ -93,7 +123,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             InviteOrganization = request.InviteOrganization,
             PerformedBy = request.PerformedBy,
             PerformedAt = request.PerformedAt,
-            OccupiedPmSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId),
+            OccupiedPmSeats = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId)).Total,
             OccupiedSmSeats = await organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId)
         });
 
@@ -121,8 +151,6 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             await SendAdditionalEmailsAsync(validatedRequest, organization);
 
             await SendInvitesAsync(organizationUserToInviteEntities, organization);
-
-            await PublishReferenceEventAsync(validatedRequest, organization);
         }
         catch (Exception ex)
         {
@@ -146,7 +174,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 organizationId: organization!.Id));
     }
 
-    private async Task<IEnumerable<OrganizationUserInvite>> FilterExistingUsersAsync(InviteOrganizationUsersRequest request)
+    private async Task<IEnumerable<OrganizationUserInviteCommandModel>> FilterExistingUsersAsync(InviteOrganizationUsersRequest request)
     {
         var existingEmails = new HashSet<string>(await organizationUserRepository.SelectKnownEmailsAsync(
                 request.InviteOrganization.OrganizationId, request.Invites.Select(i => i.Email), false),
@@ -159,14 +187,8 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task RevertPasswordManagerChangesAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
-        if (validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd > 0)
+        if (validatedResult.Value.PasswordManagerSubscriptionUpdate is { Seats: > 0, SeatsRequiredToAdd: > 0 })
         {
-            // When reverting seats, we have to tell payments service that the seats are going back down by what we attempted to add.
-            // However, this might lead to a problem if we don't actually update stripe but throw any ways.
-            // stripe could not be updated, and then we would decrement the number of seats in stripe accidentally.
-            var seatsToRemove = validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd;
-            await paymentService.AdjustSeatsAsync(organization, validatedResult.Value.InviteOrganization.Plan, -seatsToRemove);
-
             organization.Seats = (short?)validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats;
 
             await organizationRepository.ReplaceAsync(organization);
@@ -190,14 +212,6 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         }
     }
 
-    private async Task PublishReferenceEventAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult,
-        Organization organization) =>
-        await referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.InvitedUsers, organization, currentContext)
-            {
-                Users = validatedResult.Value.Invites.Length
-            });
-
     private async Task SendInvitesAsync(IEnumerable<CreateOrganizationUser> users, Organization organization) =>
         await sendOrganizationInvitesCommand.SendInvitesAsync(
             new SendInvitesRequest(
@@ -206,10 +220,26 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task SendAdditionalEmailsAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
-        await SendPasswordManagerMaxSeatLimitEmailsAsync(validatedResult, organization);
+        await NotifyOwnersIfAutoscaleOccursAsync(validatedResult, organization);
+        await NotifyOwnersIfPasswordManagerMaxSeatLimitReachedAsync(validatedResult, organization);
     }
 
-    private async Task SendPasswordManagerMaxSeatLimitEmailsAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
+    private async Task NotifyOwnersIfAutoscaleOccursAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
+    {
+        if (validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd > 0
+            && !organization.OwnersNotifiedOfAutoscaling.HasValue)
+        {
+            await mailService.SendOrganizationAutoscaledEmailAsync(
+                organization,
+                validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats!.Value,
+                await GetOwnerEmailAddressesAsync(validatedResult.Value.InviteOrganization));
+
+            organization.OwnersNotifiedOfAutoscaling = validatedResult.Value.PerformedAt.UtcDateTime;
+            await organizationRepository.UpsertAsync(organization);
+        }
+    }
+
+    private async Task NotifyOwnersIfPasswordManagerMaxSeatLimitReachedAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
         if (!validatedResult.Value.PasswordManagerSubscriptionUpdate.MaxSeatsReached)
         {
@@ -258,25 +288,17 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task AdjustPasswordManagerSeatsAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {
-        if (validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd <= 0)
+        if (validatedResult.Value.PasswordManagerSubscriptionUpdate is { SeatsRequiredToAdd: > 0, UpdatedSeatTotal: > 0 })
         {
-            return;
+            await organizationRepository.IncrementSeatCountAsync(
+                organization.Id,
+                validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd,
+                validatedResult.Value.PerformedAt.UtcDateTime);
+
+            organization.Seats = validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal;
+            organization.SyncSeats = true;
+
+            await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
         }
-
-        await paymentService.AdjustSeatsAsync(organization, validatedResult.Value.InviteOrganization.Plan, validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd);
-
-        organization.Seats = (short?)validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal;
-
-        await organizationRepository.ReplaceAsync(organization); // could optimize this with only a property update
-        await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
-
-        await referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, currentContext)
-            {
-                PlanName = validatedResult.Value.InviteOrganization.Plan.Name,
-                PlanType = validatedResult.Value.InviteOrganization.Plan.Type,
-                Seats = validatedResult.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal,
-                PreviousSeats = validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats
-            });
     }
 }

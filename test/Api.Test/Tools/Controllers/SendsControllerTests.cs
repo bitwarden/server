@@ -3,14 +3,15 @@ using AutoFixture.Xunit2;
 using Bit.Api.Tools.Controllers;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
+using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
@@ -26,29 +27,32 @@ public class SendsControllerTests : IDisposable
     private readonly GlobalSettings _globalSettings;
     private readonly IUserService _userService;
     private readonly ISendRepository _sendRepository;
-    private readonly ISendService _sendService;
+    private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
+    private readonly IAnonymousSendCommand _anonymousSendCommand;
+    private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly ILogger<SendsController> _logger;
-    private readonly ICurrentContext _currentContext;
 
     public SendsControllerTests()
     {
         _userService = Substitute.For<IUserService>();
         _sendRepository = Substitute.For<ISendRepository>();
-        _sendService = Substitute.For<ISendService>();
+        _nonAnonymousSendCommand = Substitute.For<INonAnonymousSendCommand>();
+        _anonymousSendCommand = Substitute.For<IAnonymousSendCommand>();
+        _sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
         _sendFileStorageService = Substitute.For<ISendFileStorageService>();
         _globalSettings = new GlobalSettings();
         _logger = Substitute.For<ILogger<SendsController>>();
-        _currentContext = Substitute.For<ICurrentContext>();
 
         _sut = new SendsController(
             _sendRepository,
             _userService,
-            _sendService,
+            _sendAuthorizationService,
+            _anonymousSendCommand,
+            _nonAnonymousSendCommand,
             _sendFileStorageService,
             _logger,
-            _globalSettings,
-            _currentContext
+            _globalSettings
         );
     }
 
@@ -68,7 +72,8 @@ public class SendsControllerTests : IDisposable
         send.Data = JsonSerializer.Serialize(new Dictionary<string, string>());
         send.HideEmail = true;
 
-        _sendService.AccessAsync(id, null).Returns((send, false, false));
+        _sendRepository.GetByIdAsync(Arg.Any<Guid>()).Returns(send);
+        _sendAuthorizationService.AccessAsync(send, null).Returns(SendAccessResult.Granted);
         _userService.GetUserByIdAsync(Arg.Any<Guid>()).Returns(user);
 
         var request = new SendAccessRequestModel();

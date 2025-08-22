@@ -55,7 +55,7 @@ public class UserRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Org",
-            BillingEmail = user3.Email, // TODO: EF does not enfore this being NOT NULL
+            BillingEmail = user3.Email, // TODO: EF does not enforce this being NOT NULL
             Plan = "Test", // TODO: EF does not enforce this being NOT NULl
         });
 

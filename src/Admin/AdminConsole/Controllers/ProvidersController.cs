@@ -1,22 +1,28 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
+using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Providers.Entities;
+using Bit.Core.Billing.Providers.Models;
+using Bit.Core.Billing.Providers.Repositories;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -34,51 +40,52 @@ namespace Bit.Admin.AdminConsole.Controllers;
 public class ProvidersController : Controller
 {
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationService _organizationService;
+    private readonly IResellerClientOrganizationSignUpCommand _resellerClientOrganizationSignUpCommand;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly GlobalSettings _globalSettings;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderService _providerService;
-    private readonly IUserService _userService;
     private readonly ICreateProviderCommand _createProviderCommand;
     private readonly IFeatureService _featureService;
     private readonly IProviderPlanRepository _providerPlanRepository;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IPricingClient _pricingClient;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IAccessControlService _accessControlService;
+    private readonly ISubscriberService _subscriberService;
     private readonly string _stripeUrl;
     private readonly string _braintreeMerchantUrl;
     private readonly string _braintreeMerchantId;
 
     public ProvidersController(
         IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService,
+        IResellerClientOrganizationSignUpCommand resellerClientOrganizationSignUpCommand,
         IProviderRepository providerRepository,
         IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderService providerService,
         GlobalSettings globalSettings,
         IApplicationCacheService applicationCacheService,
-        IUserService userService,
         ICreateProviderCommand createProviderCommand,
         IFeatureService featureService,
         IProviderPlanRepository providerPlanRepository,
         IProviderBillingService providerBillingService,
         IWebHostEnvironment webHostEnvironment,
         IPricingClient pricingClient,
-        IStripeAdapter stripeAdapter)
+        IStripeAdapter stripeAdapter,
+        IAccessControlService accessControlService,
+        ISubscriberService subscriberService)
     {
         _organizationRepository = organizationRepository;
-        _organizationService = organizationService;
+        _resellerClientOrganizationSignUpCommand = resellerClientOrganizationSignUpCommand;
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerService = providerService;
         _globalSettings = globalSettings;
         _applicationCacheService = applicationCacheService;
-        _userService = userService;
         _createProviderCommand = createProviderCommand;
         _featureService = featureService;
         _providerPlanRepository = providerPlanRepository;
@@ -88,6 +95,8 @@ public class ProvidersController : Controller
         _stripeUrl = webHostEnvironment.GetStripeUrl();
         _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
         _braintreeMerchantId = globalSettings.Braintree.MerchantId;
+        _accessControlService = accessControlService;
+        _subscriberService = subscriberService;
     }
 
     [RequirePermission(Permission.Provider_List_View)]
@@ -290,9 +299,31 @@ public class ProvidersController : Controller
             return View(oldModel);
         }
 
+        var originalProviderStatus = provider.Enabled;
+
         model.ToProvider(provider);
 
-        await _providerRepository.ReplaceAsync(provider);
+        // validate the stripe ids to prevent saving a bad one
+        if (provider.IsBillable())
+        {
+            if (!await _subscriberService.IsValidGatewayCustomerIdAsync(provider))
+            {
+                var oldModel = await GetEditModel(id);
+                ModelState.AddModelError(nameof(model.GatewayCustomerId), $"Invalid Gateway Customer Id: {model.GatewayCustomerId}");
+                return View(oldModel);
+            }
+            if (!await _subscriberService.IsValidGatewaySubscriptionIdAsync(provider))
+            {
+                var oldModel = await GetEditModel(id);
+                ModelState.AddModelError(nameof(model.GatewaySubscriptionId), $"Invalid Gateway Subscription Id: {model.GatewaySubscriptionId}");
+                return View(oldModel);
+            }
+        }
+
+        provider.Enabled = _accessControlService.UserHasPermission(Permission.Provider_CheckEnabledBox)
+            ? model.Enabled : originalProviderStatus;
+
+        await _providerService.UpdateAsync(provider);
         await _applicationCacheService.UpsertProviderAbilityAsync(provider);
 
         if (!provider.IsBillable())
@@ -372,10 +403,8 @@ public class ProvidersController : Controller
         }
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
-
-        var payByInvoice =
-            _featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) &&
-            (await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)).ApprovedToPayByInvoice();
+        var payByInvoice = _featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) &&
+                           ((await _subscriberService.GetCustomer(provider))?.ApprovedToPayByInvoice() ?? false);
 
         return new ProviderEditModel(
             provider, users, providerOrganizations,
@@ -459,7 +488,7 @@ public class ProvidersController : Controller
         }
 
         var organization = model.CreateOrganization(provider);
-        await _organizationService.CreatePendingOrganization(organization, model.Owners, User, _userService, model.SalesAssistedTrialStarted);
+        await _resellerClientOrganizationSignUpCommand.SignUpResellerClientAsync(organization, model.Owners);
         await _providerService.AddOrganization(providerId, organization.Id, null);
 
         return RedirectToAction("Edit", "Providers", new { id = providerId });
@@ -470,6 +499,19 @@ public class ProvidersController : Controller
     [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> Delete(Guid id, string providerName)
     {
+        var provider = await _providerRepository.GetByIdAsync(id);
+
+        if (provider is null)
+        {
+            return BadRequest("Provider does not exist");
+        }
+
+        if (provider.Status == ProviderStatusType.Pending)
+        {
+            await _providerService.DeleteAsync(provider);
+            return NoContent();
+        }
+
         if (string.IsNullOrWhiteSpace(providerName))
         {
             return BadRequest("Invalid provider name");
@@ -480,13 +522,6 @@ public class ProvidersController : Controller
         if (providerOrganizations.Count > 0)
         {
             return BadRequest("You must unlink all clients before you can delete a provider");
-        }
-
-        var provider = await _providerRepository.GetByIdAsync(id);
-
-        if (provider is null)
-        {
-            return BadRequest("Provider does not exist");
         }
 
         if (!string.Equals(providerName.Trim(), provider.DisplayName(), StringComparison.OrdinalIgnoreCase))

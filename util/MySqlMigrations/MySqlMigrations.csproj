@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <UserSecretsId>9f1cd3e0-70f2-4921-8068-b2538fd7c3f7</UserSecretsId>
@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.8">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="[8.0.8]">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
@@ -32,5 +32,6 @@
     <EmbeddedResource Include="HelperScripts\2024-04-25_00_EnableOrgsCollectionEnhancements.sql" />
     <EmbeddedResource Include="HelperScripts\2024-08-26_00_FinalFlexibleCollectionsDataMigrations.sql" />
     <EmbeddedResource Include="HelperScripts\2024-09-05_00_SyncDuoVersionFourMetadataToVersionTwo.sql" />
+    <EmbeddedResource Include="HelperScripts\2025-05-13_00_AddUseOrganizationDomains.sql" />
   </ItemGroup>
 </Project>

@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
@@ -53,7 +54,6 @@ IBaseRequestValidatorTestWrapper
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
         ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
@@ -61,7 +61,10 @@ IBaseRequestValidatorTestWrapper
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder) :
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IAuthRequestRepository authRequestRepository,
+        IMailService mailService) :
          base(
             userManager,
             userService,
@@ -69,7 +72,6 @@ IBaseRequestValidatorTestWrapper
             deviceValidator,
             twoFactorAuthenticationValidator,
             organizationUserRepository,
-            mailService,
             logger,
             currentContext,
             globalSettings,
@@ -77,7 +79,10 @@ IBaseRequestValidatorTestWrapper
             policyService,
             featureService,
             ssoConfigRepository,
-            userDecryptionOptionsBuilder)
+            userDecryptionOptionsBuilder,
+            policyRequirementQuery,
+            authRequestRepository,
+            mailService)
     {
     }
 
@@ -93,6 +98,7 @@ IBaseRequestValidatorTestWrapper
         return context.ValidatedTokenRequest.Subject ?? new ClaimsPrincipal();
     }
 
+    [Obsolete]
     protected override void SetErrorResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
@@ -100,6 +106,7 @@ IBaseRequestValidatorTestWrapper
         context.GrantResult = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
     }
 
+    [Obsolete]
     protected override void SetSsoResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
@@ -118,6 +125,7 @@ IBaseRequestValidatorTestWrapper
         return Task.CompletedTask;
     }
 
+    [Obsolete]
     protected override void SetTwoFactorResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)

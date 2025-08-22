@@ -22,7 +22,7 @@ public static class SubscriptionUpdateOptionsExtensions
         }
 
         // We might only need to check the automatic tax status.
-        if (!customer.HasTaxLocationVerified() && string.IsNullOrWhiteSpace(customer.Address?.Country))
+        if (!customer.HasRecognizedTaxLocation() && string.IsNullOrWhiteSpace(customer.Address?.Country))
         {
             return false;
         }

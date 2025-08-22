@@ -253,7 +253,6 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-
     public async Task UpdateUserKeyAndEncryptedDataV2Async(
         User user,
         IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
@@ -289,7 +288,6 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         UnprotectData(user);
     }
 
-
     public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
@@ -316,6 +314,14 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             UnprotectData(results);
             return results.ToList();
         }
+    }
+
+    public async Task<UserWithCalculatedPremium?> GetCalculatedPremiumAsync(Guid userId)
+    {
+        var result = await GetManyWithCalculatedPremiumAsync([userId]);
+
+        UnprotectData(result);
+        return result.SingleOrDefault();
     }
 
     private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)

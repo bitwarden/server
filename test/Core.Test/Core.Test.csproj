@@ -2,8 +2,6 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <RootNamespace>Bit.Core.Test</RootNamespace>
-    <!-- Temp exclusions until warnings are fixed -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS4014</WarningsNotAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="$(CoverletCollectorVersion)">

@@ -25,7 +25,8 @@ public class SendGridMailDeliveryServiceTests : IDisposable
         {
             Mail =
             {
-                SendGridApiKey = "SendGridApiKey"
+                SendGridApiKey = "SendGridApiKey",
+                SendGridApiHost = "https://api.sendgrid.com"
             }
         };
 

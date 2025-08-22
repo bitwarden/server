@@ -56,7 +56,9 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @AllowAdminAccessToAllCollectionItems BIT = 0,
     @UseRiskInsights BIT = 0,
     @LimitItemDeletion BIT = 0,
-    @UseAdminSponsoredFamilies BIT = 0
+    @UseOrganizationDomains BIT = 0,
+    @UseAdminSponsoredFamilies BIT = 0,
+    @SyncSeats BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -120,7 +122,9 @@ BEGIN
         [AllowAdminAccessToAllCollectionItems] = @AllowAdminAccessToAllCollectionItems,
         [UseRiskInsights] = @UseRiskInsights,
         [LimitItemDeletion] = @LimitItemDeletion,
-        [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies
+        [UseOrganizationDomains] = @UseOrganizationDomains,
+        [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
+        [SyncSeats] = @SyncSeats
     WHERE
         [Id] = @Id
 END

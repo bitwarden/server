@@ -2,7 +2,7 @@
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
-using Bit.Core.AdminConsole.Shared.Validation;
+using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -14,7 +14,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
-using OrganizationUserInvite = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 
@@ -36,13 +35,13 @@ public class InviteOrganizationUsersValidatorTests
         {
             Invites =
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test@email.com",
                     externalId: "test-external-id"),
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test2@email.com",
                     externalId: "test-external-id2"),
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test3@email.com",
                     externalId: "test-external-id3")
             ],
@@ -61,7 +60,7 @@ public class InviteOrganizationUsersValidatorTests
 
         _ = await sutProvider.Sut.ValidateAsync(request);
 
-        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
             .Received(1)
             .ValidateUpdateAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(x =>
                 x.SmSeatsChanged == true && x.SmSeats == 12));
@@ -82,13 +81,13 @@ public class InviteOrganizationUsersValidatorTests
         {
             Invites =
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test@email.com",
                     externalId: "test-external-id"),
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test2@email.com",
                     externalId: "test-external-id2"),
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test3@email.com",
                     externalId: "test-external-id3")
             ],
@@ -126,13 +125,13 @@ public class InviteOrganizationUsersValidatorTests
         {
             Invites =
             [
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test@email.com",
                     externalId: "test-external-id"),
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test2@email.com",
                     externalId: "test-external-id2"),
-                new OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                     email: "test3@email.com",
                     externalId: "test-external-id3")
             ],
@@ -156,6 +155,6 @@ public class InviteOrganizationUsersValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(request);
 
         Assert.IsType<Invalid<InviteOrganizationUsersValidationRequest>>(result);
-        Assert.Equal("Some Secrets Manager Failure", (result as Invalid<InviteOrganizationUsersValidationRequest>)!.ErrorMessageString);
+        Assert.Equal("Some Secrets Manager Failure", (result as Invalid<InviteOrganizationUsersValidationRequest>)!.Error.Message);
     }
 }

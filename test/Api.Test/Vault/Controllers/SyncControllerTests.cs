@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -64,6 +65,7 @@ public class SyncControllerTests
     {
         // Get dependencies
         var userService = sutProvider.GetDependency<IUserService>();
+        var twoFactorIsEnabledQuery = sutProvider.GetDependency<ITwoFactorIsEnabledQuery>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
         var folderRepository = sutProvider.GetDependency<IFolderRepository>();
@@ -119,7 +121,7 @@ public class SyncControllerTests
         collectionRepository.GetManyByUserIdAsync(user.Id).Returns(collections);
         collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
         // Back to standard test setup
-        userService.TwoFactorIsEnabledAsync(user).Returns(false);
+        twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
         userService.HasPremiumFromOrganization(user).Returns(false);
 
         // Execute GET
@@ -129,7 +131,7 @@ public class SyncControllerTests
         // Asserts
         // Assert that methods are called
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
-        await this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
+        await this.AssertMethodsCalledAsync(userService, twoFactorIsEnabledQuery, organizationUserRepository, providerUserRepository, folderRepository,
             cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs);
 
         Assert.IsType<SyncResponseModel>(result);
@@ -155,6 +157,7 @@ public class SyncControllerTests
     {
         // Get dependencies
         var userService = sutProvider.GetDependency<IUserService>();
+        var twoFactorIsEnabledQuery = sutProvider.GetDependency<ITwoFactorIsEnabledQuery>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
         var folderRepository = sutProvider.GetDependency<IFolderRepository>();
@@ -205,7 +208,7 @@ public class SyncControllerTests
 
         policyRepository.GetManyByUserIdAsync(user.Id).Returns(policies);
 
-        userService.TwoFactorIsEnabledAsync(user).Returns(false);
+        twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
         userService.HasPremiumFromOrganization(user).Returns(false);
 
         // Execute GET
@@ -216,7 +219,7 @@ public class SyncControllerTests
         // Assert that methods are called
 
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
-        await this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
+        await this.AssertMethodsCalledAsync(userService, twoFactorIsEnabledQuery, organizationUserRepository, providerUserRepository, folderRepository,
             cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs);
 
         Assert.IsType<SyncResponseModel>(result);
@@ -244,6 +247,7 @@ public class SyncControllerTests
     {
         // Get dependencies
         var userService = sutProvider.GetDependency<IUserService>();
+        var twoFactorIsEnabledQuery = sutProvider.GetDependency<ITwoFactorIsEnabledQuery>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
         var folderRepository = sutProvider.GetDependency<IFolderRepository>();
@@ -283,7 +287,7 @@ public class SyncControllerTests
         collectionRepository.GetManyByUserIdAsync(user.Id).Returns(collections);
         collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
         // Back to standard test setup
-        userService.TwoFactorIsEnabledAsync(user).Returns(false);
+        twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
         userService.HasPremiumFromOrganization(user).Returns(false);
 
         // Execute GET
@@ -293,7 +297,7 @@ public class SyncControllerTests
         // Assert that methods are called
 
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
-        await this.AssertMethodsCalledAsync(userService, organizationUserRepository, providerUserRepository, folderRepository,
+        await this.AssertMethodsCalledAsync(userService, twoFactorIsEnabledQuery, organizationUserRepository, providerUserRepository, folderRepository,
             cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs);
 
         Assert.IsType<SyncResponseModel>(result);
@@ -313,8 +317,58 @@ public class SyncControllerTests
         }
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task Get_HaveNoMasterPassword_UserDecryptionMasterPasswordUnlockIsNull(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        user.MasterPassword = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.Null(result.UserDecryption.MasterPasswordUnlock);
+    }
+
+    [Theory]
+    [BitAutoData(KdfType.PBKDF2_SHA256, 654_321, null, null)]
+    [BitAutoData(KdfType.Argon2id, 11, 128, 5)]
+    public async Task Get_HaveMasterPassword_UserDecryptionMasterPasswordUnlockNotNull(
+        KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism,
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        user.Key = "test-key";
+        user.MasterPassword = "test-master-password";
+        user.Kdf = kdfType;
+        user.KdfIterations = kdfIterations;
+        user.KdfMemory = kdfMemory;
+        user.KdfParallelism = kdfParallelism;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.NotNull(result.UserDecryption.MasterPasswordUnlock);
+        Assert.NotNull(result.UserDecryption.MasterPasswordUnlock.Kdf);
+        Assert.Equal(kdfType, result.UserDecryption.MasterPasswordUnlock.Kdf.KdfType);
+        Assert.Equal(kdfIterations, result.UserDecryption.MasterPasswordUnlock.Kdf.Iterations);
+        Assert.Equal(kdfMemory, result.UserDecryption.MasterPasswordUnlock.Kdf.Memory);
+        Assert.Equal(kdfParallelism, result.UserDecryption.MasterPasswordUnlock.Kdf.Parallelism);
+        Assert.Equal(user.Key, result.UserDecryption.MasterPasswordUnlock.MasterKeyEncryptedUserKey);
+        Assert.Equal(user.Email.ToLower(), result.UserDecryption.MasterPasswordUnlock.Salt);
+    }
 
     private async Task AssertMethodsCalledAsync(IUserService userService,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository, IFolderRepository folderRepository,
         ICipherRepository cipherRepository, ISendRepository sendRepository,
@@ -356,7 +410,7 @@ public class SyncControllerTests
                 .GetManyByUserIdAsync(default);
         }
 
-        await userService.ReceivedWithAnyArgs(1)
+        await twoFactorIsEnabledQuery.ReceivedWithAnyArgs(1)
             .TwoFactorIsEnabledAsync(default(ITwoFactorProvidersUser));
         await userService.ReceivedWithAnyArgs(1)
             .HasPremiumFromOrganization(default);

@@ -1,7 +1,9 @@
-﻿using System.Globalization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Globalization;
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Licenses.Models;
 using Bit.Core.Enums;
@@ -53,6 +55,8 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
             new(nameof(OrganizationLicenseConstants.Refresh), refresh.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.ExpirationWithoutGracePeriod), expirationWithoutGracePeriod.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.Trial), trial.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseAdminSponsoredFamilies), entity.UseAdminSponsoredFamilies.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseOrganizationDomains), entity.UseOrganizationDomains.ToString()),
         };
 
         if (entity.Name is not null)
@@ -109,12 +113,13 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
         {
             claims.Add(new Claim(nameof(OrganizationLicenseConstants.SmServiceAccounts), entity.SmServiceAccounts.ToString()));
         }
+        claims.Add(new Claim(nameof(OrganizationLicenseConstants.UseAdminSponsoredFamilies), entity.UseAdminSponsoredFamilies.ToString()));
 
         return Task.FromResult(claims);
     }
 
     private static bool IsTrialing(Organization org, SubscriptionInfo subscriptionInfo) =>
         subscriptionInfo?.Subscription is null
-            ? org.PlanType != PlanType.Custom || !org.ExpirationDate.HasValue
+            ? !org.ExpirationDate.HasValue
             : subscriptionInfo.Subscription.TrialEndDate > DateTime.UtcNow;
 }

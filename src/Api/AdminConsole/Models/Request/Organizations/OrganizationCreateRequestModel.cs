@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -75,6 +78,8 @@ public class OrganizationCreateRequestModel : IValidatableObject
 
     public string InitiationPath { get; set; }
 
+    public bool SkipTrial { get; set; }
+
     public virtual OrganizationSignup ToOrganizationSignup(User user)
     {
         var orgSignup = new OrganizationSignup
@@ -107,6 +112,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
                 BillingAddressCountry = BillingAddressCountry,
             },
             InitiationPath = InitiationPath,
+            SkipTrial = SkipTrial
         };
 
         Keys?.ToOrganizationSignup(orgSignup);

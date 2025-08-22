@@ -1,5 +1,10 @@
-﻿using Bit.Billing.Constants;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Billing.Constants;
 using Bit.Core;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Services;
@@ -15,19 +20,22 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
     private readonly IStripeFacade _stripeFacade;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IFeatureService _featureService;
+    private readonly IProviderRepository _providerRepository;
 
     public PaymentMethodAttachedHandler(
         ILogger<PaymentMethodAttachedHandler> logger,
         IStripeEventService stripeEventService,
         IStripeFacade stripeFacade,
         IStripeEventUtilityService stripeEventUtilityService,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IProviderRepository providerRepository)
     {
         _logger = logger;
         _stripeEventService = stripeEventService;
         _stripeFacade = stripeFacade;
         _stripeEventUtilityService = stripeEventUtilityService;
         _featureService = featureService;
+        _providerRepository = providerRepository;
     }
 
     public async Task HandleAsync(Event parsedEvent)
@@ -68,42 +76,49 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
          * If we have an invoiced provider subscription where the customer hasn't been marked as invoice-approved,
          * we need to try and set the default payment method and update the collection method to be "charge_automatically".
          */
-        if (invoicedProviderSubscription != null && !customer.ApprovedToPayByInvoice())
+        if (invoicedProviderSubscription != null &&
+            !customer.ApprovedToPayByInvoice() &&
+            Guid.TryParse(invoicedProviderSubscription.Metadata[StripeConstants.MetadataKeys.ProviderId], out var providerId))
         {
-            if (customer.InvoiceSettings.DefaultPaymentMethodId != paymentMethod.Id)
+            var provider = await _providerRepository.GetByIdAsync(providerId);
+
+            if (provider is { Type: ProviderType.Msp })
             {
+                if (customer.InvoiceSettings.DefaultPaymentMethodId != paymentMethod.Id)
+                {
+                    try
+                    {
+                        await _stripeFacade.UpdateCustomer(customer.Id,
+                            new CustomerUpdateOptions
+                            {
+                                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                                {
+                                    DefaultPaymentMethod = paymentMethod.Id
+                                }
+                            });
+                    }
+                    catch (Exception exception)
+                    {
+                        _logger.LogWarning(exception,
+                            "Failed to set customer's ({CustomerID}) default payment method during 'payment_method.attached' webhook",
+                            customer.Id);
+                    }
+                }
+
                 try
                 {
-                    await _stripeFacade.UpdateCustomer(customer.Id,
-                        new CustomerUpdateOptions
+                    await _stripeFacade.UpdateSubscription(invoicedProviderSubscription.Id,
+                        new SubscriptionUpdateOptions
                         {
-                            InvoiceSettings = new CustomerInvoiceSettingsOptions
-                            {
-                                DefaultPaymentMethod = paymentMethod.Id
-                            }
+                            CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically
                         });
                 }
                 catch (Exception exception)
                 {
                     _logger.LogWarning(exception,
-                        "Failed to set customer's ({CustomerID}) default payment method during 'payment_method.attached' webhook",
+                        "Failed to set subscription's ({SubscriptionID}) collection method to 'charge_automatically' during 'payment_method.attached' webhook",
                         customer.Id);
                 }
-            }
-
-            try
-            {
-                await _stripeFacade.UpdateSubscription(invoicedProviderSubscription.Id,
-                    new SubscriptionUpdateOptions
-                    {
-                        CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically
-                    });
-            }
-            catch (Exception exception)
-            {
-                _logger.LogWarning(exception,
-                    "Failed to set subscription's ({SubscriptionID}) collection method to 'charge_automatically' during 'payment_method.attached' webhook",
-                    customer.Id);
             }
         }
 
