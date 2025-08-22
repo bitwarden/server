@@ -12,7 +12,7 @@ public class GroupsRecipe(DatabaseContext db)
     /// <param name="groups">The number of groups to add.</param>
     /// <param name="organizationUserIds">The IDs of the users to create relationships with.</param>
     /// <param name="maxUsersWithRelationships">The maximum number of users to create relationships with.</param>
-    public void AddToOrganization(Guid organizationId, int groups, List<Guid> organizationUserIds, int maxUsersWithRelationships = 1000)
+    public List<Guid> AddToOrganization(Guid organizationId, int groups, List<Guid> organizationUserIds, int maxUsersWithRelationships = 1000)
     {
         var groupList = new List<Core.AdminConsole.Entities.Group>();
         for (var i = 0; i < groups; i++)
@@ -29,25 +29,30 @@ public class GroupsRecipe(DatabaseContext db)
         {
             db.BulkCopy(groupList);
 
-            var maxRelationships = Math.Min(organizationUserIds.Count, maxUsersWithRelationships);
-            var groupUsers = new List<Core.AdminConsole.Entities.GroupUser>();
-
-            for (var i = 0; i < maxRelationships; i++)
+            if (organizationUserIds.Any() && maxUsersWithRelationships > 0)
             {
-                var orgUserId = organizationUserIds[i];
+                var maxRelationships = Math.Min(organizationUserIds.Count, maxUsersWithRelationships);
+                var groupUsers = new List<Core.AdminConsole.Entities.GroupUser>();
 
-                var groupIndex = i % groupList.Count;
-                groupUsers.Add(new Core.AdminConsole.Entities.GroupUser
+                for (var i = 0; i < maxRelationships; i++)
                 {
-                    GroupId = groupList[groupIndex].Id,
-                    OrganizationUserId = orgUserId
-                });
-            }
+                    var orgUserId = organizationUserIds[i];
 
-            if (groupUsers.Any())
-            {
-                db.BulkCopy(groupUsers);
+                    var groupIndex = i % groupList.Count;
+                    groupUsers.Add(new Core.AdminConsole.Entities.GroupUser
+                    {
+                        GroupId = groupList[groupIndex].Id,
+                        OrganizationUserId = orgUserId
+                    });
+                }
+
+                if (groupUsers.Any())
+                {
+                    db.BulkCopy(groupUsers);
+                }
             }
         }
+
+        return groupList.Select(g => g.Id).ToList();
     }
 }

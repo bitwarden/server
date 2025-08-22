@@ -13,7 +13,7 @@ public class CollectionsRecipe(DatabaseContext db)
     /// <param name="collections">The number of collections to add.</param>
     /// <param name="organizationUserIds">The IDs of the users to create relationships with.</param>
     /// <param name="maxUsersWithRelationships">The maximum number of users to create relationships with.</param>
-    public void AddToOrganization(Guid organizationId, int collections, List<Guid> organizationUserIds, int maxUsersWithRelationships = 1000)
+    public List<Guid> AddToOrganization(Guid organizationId, int collections, List<Guid> organizationUserIds, int maxUsersWithRelationships = 1000)
     {
         var collectionList = new List<Core.Entities.Collection>();
         for (var i = 0; i < collections; i++)
@@ -33,7 +33,7 @@ public class CollectionsRecipe(DatabaseContext db)
         {
             db.BulkCopy(collectionList);
 
-            if (organizationUserIds.Any())
+            if (organizationUserIds.Any() && maxUsersWithRelationships > 0)
             {
                 var maxRelationships = Math.Min(organizationUserIds.Count, maxUsersWithRelationships);
                 var collectionUsers = new List<Core.Entities.CollectionUser>();
@@ -63,5 +63,7 @@ public class CollectionsRecipe(DatabaseContext db)
                 }
             }
         }
+
+        return collectionList.Select(c => c.Id).ToList();
     }
 }
