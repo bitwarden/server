@@ -10,6 +10,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -54,6 +55,7 @@ public class ProvidersController : Controller
 
     [HttpPut("{id:guid}")]
     [HttpPost("{id:guid}")]
+    [SwaggerExclude("POST")]
     public async Task<ProviderResponseModel> Put(Guid id, [FromBody] ProviderUpdateRequestModel model)
     {
         if (!_currentContext.ProviderProviderAdmin(id))
@@ -121,6 +123,7 @@ public class ProvidersController : Controller
 
     [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
+    [SwaggerExclude("POST")]
     public async Task Delete(Guid id)
     {
         if (!_currentContext.ProviderProviderAdmin(id))
