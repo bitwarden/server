@@ -3,7 +3,6 @@
 
 using System.Globalization;
 using Bit.Commercial.Core.Billing.Providers.Models;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -41,7 +40,6 @@ namespace Bit.Commercial.Core.Billing.Providers.Services;
 public class ProviderBillingService(
     IBraintreeGateway braintreeGateway,
     IEventService eventService,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -284,9 +282,7 @@ public class ProviderBillingService(
             ]
         };
 
-        var setNonUSBusinessUseToReverseCharge = featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
-
-        if (setNonUSBusinessUseToReverseCharge && providerCustomer.Address is not { Country: "US" })
+        if (providerCustomer.Address is not { Country: "US" })
         {
             customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
         }
@@ -529,9 +525,7 @@ public class ProviderBillingService(
             }
         };
 
-        var setNonUSBusinessUseToReverseCharge = featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
-
-        if (setNonUSBusinessUseToReverseCharge && taxInfo.BillingAddressCountry != "US")
+        if (taxInfo.BillingAddressCountry is not "US")
         {
             options.TaxExempt = StripeConstants.TaxExempt.Reverse;
         }
@@ -731,21 +725,8 @@ public class ProviderBillingService(
             TrialPeriodDays = trialPeriodDays
         };
 
-        var setNonUSBusinessUseToReverseCharge =
-            featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
 
-        if (setNonUSBusinessUseToReverseCharge)
-        {
-            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
-        }
-        else if (customer.HasRecognizedTaxLocation())
-        {
-            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
-            {
-                Enabled = customer.Address.Country == "US" ||
-                          customer.TaxIds.Any()
-            };
-        }
+        subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
 
         try
         {
