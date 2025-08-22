@@ -53,7 +53,7 @@ public class SelfHostedOrganizationLicensesController : Controller
     }
 
     [HttpPost("")]
-    public async Task<OrganizationResponseModel> PostLicenseAsync(OrganizationCreateLicenseRequestModel model)
+    public async Task<OrganizationResponseModel> CreateLicenseAsync(OrganizationCreateLicenseRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -74,7 +74,7 @@ public class SelfHostedOrganizationLicensesController : Controller
     }
 
     [HttpPost("{id}")]
-    public async Task PostLicenseAsync(string id, LicenseRequestModel model)
+    public async Task UpdateicenseAsync(string id, LicenseRequestModel model)
     {
         var orgIdGuid = new Guid(id);
         if (!await _currentContext.OrganizationOwner(orgIdGuid))
