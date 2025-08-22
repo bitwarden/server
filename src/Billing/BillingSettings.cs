@@ -40,5 +40,6 @@ public class BillingSettings
     {
         public virtual string ApiKey { get; set; }
         public virtual string BaseUrl { get; set; }
+        public virtual int PersonaId { get; set; }
     }
 }

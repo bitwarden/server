@@ -26,7 +26,6 @@ WORKDIR /source/util/Server
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Build project
-WORKDIR /source/util/Server
 RUN . /tmp/rid.txt && dotnet publish \
     -c release \
     --no-restore \
@@ -48,7 +47,8 @@ ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 EXPOSE 5000
 
-RUN apk add --no-cache curl \
+RUN apk add --no-cache \
+    curl \
     icu-libs \
     shadow \
     && apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community gosu

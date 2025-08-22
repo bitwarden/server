@@ -22,6 +22,7 @@ using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -53,6 +54,7 @@ public class ProvidersController : Controller
     private readonly IPricingClient _pricingClient;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IAccessControlService _accessControlService;
+    private readonly ISubscriberService _subscriberService;
     private readonly string _stripeUrl;
     private readonly string _braintreeMerchantUrl;
     private readonly string _braintreeMerchantId;
@@ -73,7 +75,8 @@ public class ProvidersController : Controller
         IWebHostEnvironment webHostEnvironment,
         IPricingClient pricingClient,
         IStripeAdapter stripeAdapter,
-        IAccessControlService accessControlService)
+        IAccessControlService accessControlService,
+        ISubscriberService subscriberService)
     {
         _organizationRepository = organizationRepository;
         _resellerClientOrganizationSignUpCommand = resellerClientOrganizationSignUpCommand;
@@ -93,6 +96,7 @@ public class ProvidersController : Controller
         _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
         _braintreeMerchantId = globalSettings.Braintree.MerchantId;
         _accessControlService = accessControlService;
+        _subscriberService = subscriberService;
     }
 
     [RequirePermission(Permission.Provider_List_View)]
@@ -299,6 +303,23 @@ public class ProvidersController : Controller
 
         model.ToProvider(provider);
 
+        // validate the stripe ids to prevent saving a bad one
+        if (provider.IsBillable())
+        {
+            if (!await _subscriberService.IsValidGatewayCustomerIdAsync(provider))
+            {
+                var oldModel = await GetEditModel(id);
+                ModelState.AddModelError(nameof(model.GatewayCustomerId), $"Invalid Gateway Customer Id: {model.GatewayCustomerId}");
+                return View(oldModel);
+            }
+            if (!await _subscriberService.IsValidGatewaySubscriptionIdAsync(provider))
+            {
+                var oldModel = await GetEditModel(id);
+                ModelState.AddModelError(nameof(model.GatewaySubscriptionId), $"Invalid Gateway Subscription Id: {model.GatewaySubscriptionId}");
+                return View(oldModel);
+            }
+        }
+
         provider.Enabled = _accessControlService.UserHasPermission(Permission.Provider_CheckEnabledBox)
             ? model.Enabled : originalProviderStatus;
 
@@ -382,10 +403,8 @@ public class ProvidersController : Controller
         }
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
-
-        var payByInvoice =
-            _featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) &&
-            (await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)).ApprovedToPayByInvoice();
+        var payByInvoice = _featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) &&
+                           ((await _subscriberService.GetCustomer(provider))?.ApprovedToPayByInvoice() ?? false);
 
         return new ProviderEditModel(
             provider, users, providerOrganizations,

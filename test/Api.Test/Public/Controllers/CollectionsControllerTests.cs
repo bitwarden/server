@@ -67,7 +67,6 @@ public class CollectionsControllerTests
         var jsonResult = Assert.IsType<JsonResult>(result);
         var response = Assert.IsType<CollectionResponseModel>(jsonResult.Value);
         Assert.Equal(collection.Id, response.Id);
-        Assert.Equal(collection.Type, response.Type);
     }
 
     [Theory, BitAutoData]

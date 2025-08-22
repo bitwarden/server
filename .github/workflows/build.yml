@@ -30,7 +30,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@87b7050bc53ea08284295505d98d2aa94301e852 # v4.2.0
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
 
       - name: Verify format
         run: dotnet format --verify-no-changes
@@ -117,10 +117,10 @@ jobs:
           fi
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@87b7050bc53ea08284295505d98d2aa94301e852 # v4.2.0
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
 
       - name: Set up Node
-        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           cache: "npm"
           cache-dependency-path: "**/package-lock.json"
@@ -166,10 +166,10 @@ jobs:
 
       ########## Set up Docker ##########
       - name: Set up QEMU emulators
-        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3.0.0
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
 
       ########## ACRs ##########
       - name: Log in to Azure
@@ -237,7 +237,7 @@ jobs:
 
       - name: Build Docker image
         id: build-artifacts
-        uses: docker/build-push-action@67a2d409c0a876cbe6b11854e3e25193efe4e62d # v6.12.0
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
@@ -252,7 +252,7 @@ jobs:
 
       - name: Install Cosign
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
+        uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
 
       - name: Sign image with Cosign
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -269,7 +269,7 @@ jobs:
 
       - name: Scan Docker image
         id: container-scan
-        uses: anchore/scan-action@abae793926ec39a78ab18002bc7fc45bbbd94342 # v6.0.0
+        uses: anchore/scan-action@2c901ab7378897c01b8efaa2d0c9bf519cc64b9e # v6.2.0
         with:
           image: ${{ steps.image-tags.outputs.primary_tag }}
           fail-build: false
@@ -299,7 +299,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@87b7050bc53ea08284295505d98d2aa94301e852 # v4.2.0
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
 
       - name: Log in to Azure
         uses: bitwarden/gh-actions/azure-login@main
@@ -376,62 +376,23 @@ jobs:
           path: docker-stub-EU.zip
           if-no-files-found: error
 
-      - name: Build Public API Swagger
+      - name: Build Swagger files
         run: |
-          cd ./src/Api
-          echo "Restore tools"
-          dotnet tool restore
-          echo "Publish"
-          dotnet publish -c "Release" -o obj/build-output/publish
-
-          dotnet swagger tofile --output ../../swagger.json --host https://api.bitwarden.com \
-            ./obj/build-output/publish/Api.dll public
-          cd ../..
-        env:
-          ASPNETCORE_ENVIRONMENT: Production
-          swaggerGen: "True"
-          DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX: 2
-          GLOBALSETTINGS__SQLSERVER__CONNECTIONSTRING: "placeholder"
+          cd ./dev
+          pwsh ./generate_openapi_files.ps1
 
       - name: Upload Public API Swagger artifact
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: swagger.json
-          path: swagger.json
+          path: api.public.json
           if-no-files-found: error
-
-      - name: Build Internal API Swagger
-        run: |
-          cd ./src/Api
-          echo "Restore API tools"
-          dotnet tool restore
-          echo "Publish API"
-          dotnet publish -c "Release" -o obj/build-output/publish
-
-          dotnet swagger tofile --output ../../internal.json --host https://api.bitwarden.com \
-            ./obj/build-output/publish/Api.dll internal
-
-          cd ../Identity
-
-          echo "Restore Identity tools"
-          dotnet tool restore
-          echo "Publish Identity"
-          dotnet publish -c "Release" -o obj/build-output/publish
-
-          dotnet swagger tofile --output ../../identity.json --host https://identity.bitwarden.com \
-            ./obj/build-output/publish/Identity.dll v1
-          cd ../..
-        env:
-          ASPNETCORE_ENVIRONMENT: Development
-          swaggerGen: "True"
-          DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX: 2
-          GLOBALSETTINGS__SQLSERVER__CONNECTIONSTRING: "placeholder"
 
       - name: Upload Internal API Swagger artifact
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: internal.json
-          path: internal.json
+          path: api.json
           if-no-files-found: error
 
       - name: Upload Identity Swagger artifact
@@ -464,7 +425,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@87b7050bc53ea08284295505d98d2aa94301e852 # v4.2.0
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
 
       - name: Print environment
         run: |

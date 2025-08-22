@@ -517,6 +517,7 @@ public class EventService : IEventService
         await _eventWriteService.CreateManyAsync(eventMessages);
     }
 
+
     public async Task LogServiceAccountPeopleEventAsync(Guid userId, UserServiceAccountAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null)
     {
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
@@ -640,6 +641,7 @@ public class EventService : IEventService
             _ => throw new InvalidOperationException("Unknown identity client type.")
         };
     }
+
 
     private async Task<Guid?> GetProviderIdAsync(Guid? orgId)
     {

@@ -32,6 +32,7 @@ public class EventsController : Controller
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
+
     public EventsController(
         IUserService userService,
         ICipherRepository cipherRepository,
