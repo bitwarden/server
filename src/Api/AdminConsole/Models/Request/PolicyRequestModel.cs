@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.Context;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Request;
 
@@ -51,23 +52,37 @@ public class SavePolicyRequest
             Enabled = Policy.Enabled.GetValueOrDefault(),
         };
 
-        var metadata = Metadata != null ? JsonSerializer.Serialize(Metadata) : new EmptyMetadataModel();
+        var metadata = MapMetadata();
 
         return new SavePolicyModel(updatedPolicy, performedBy, metadata);
     }
-}
 
-
-public class SavePolicyRequestTest
-{
-    [Required]
-    public string test { get; set; }
-
-    public async Task<SavePolicyModel> ToSavePolicyModelAsync(Guid organizationId, ICurrentContext currentContext)
+    private IPolicyMetadataModel MapMetadata()
     {
-        var performedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId));
-        // Data.OrganizationId = organizationId;
-        return new SavePolicyModel(new PolicyUpdate(), performedBy, new EmptyMetadataModel());
-    }
+        if (Metadata == null)
+        {
+            return new EmptyMetadataModel();
+        }
 
+        // Use JSON serialization to convert dictionary to specific metadata model
+        if (Policy.Type == PolicyType.OrganizationDataOwnership)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(Metadata);
+                // var deserialized = JsonSerializer.Deserialize<OrganizationModelOwnershipPolicyModel>(json);
+                // return deserialized != null ? deserialized : new EmptyMetadataModel();
+                //
+                return CoreHelpers.LoadClassFromJsonData<OrganizationModelOwnershipPolicyModel>(json);
+            }
+            catch
+            {
+                return new EmptyMetadataModel();
+            }
+        }
+
+        // Default to empty metadata for other policy types
+        return new EmptyMetadataModel();
+    }
 }
+

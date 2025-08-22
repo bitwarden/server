@@ -233,7 +233,7 @@ public class PoliciesController : Controller
         //     throw new BadRequestException("Mismatched policy type");
         // }
 
-        // var savePolicyModel = await model.ToSavePolicyModelAsync(orgId, _currentContext);
+        var savePolicyModel = await model.ToSavePolicyModelAsync(orgId, _currentContext);
         // var policy = await _savePolicyCommand.SaveAsync(savePolicyModel);
         return new PolicyResponseModel(new Policy());
     }

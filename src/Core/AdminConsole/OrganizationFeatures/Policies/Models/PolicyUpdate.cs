@@ -41,9 +41,19 @@ public record SavePolicyModel(PolicyUpdate Data, IActingUser? PerformedBy, IPoli
 }
 
 
-public class OrganizationModelOwnershipPolicyModel(string? defaultUserCollectionName) : IPolicyMetadataModel
+public class OrganizationModelOwnershipPolicyModel : IPolicyMetadataModel
 {
-    public string? DefaultUserCollectionName { get; set; } = defaultUserCollectionName;
+    public OrganizationModelOwnershipPolicyModel()
+    {
+
+    }
+
+    public OrganizationModelOwnershipPolicyModel(string? defaultUserCollectionName)
+    {
+        DefaultUserCollectionName = defaultUserCollectionName;
+    }
+
+    public string? DefaultUserCollectionName { get; set; }
 }
 
 public interface IPolicyMetadataModel
