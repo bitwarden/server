@@ -38,6 +38,13 @@ public class OrganizationDataOwnershipPolicyValidator(
             return;
         }
 
+        if (policyModel.Metadata is EmptyMetadataModel)
+        {
+            return;
+        }
+
+
+
         var policyUpdate = policyModel.Data;
 
         if (currentPolicy?.Enabled == true || !policyUpdate.Enabled)
@@ -56,7 +63,8 @@ public class OrganizationDataOwnershipPolicyValidator(
                 defaultUserCollectionName: ownershipModel.DefaultUserCollectionName
             );
         }
-
+        // Jimmy todo: This can be null if it's coming from the public API.
+        // The overloaded save method will always return an object, so this is bug.
         return null;
     }
 
