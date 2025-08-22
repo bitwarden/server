@@ -192,7 +192,7 @@ public class SendsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<SendResponseModel>> Get()
+    public async Task<ListResponseModel<SendResponseModel>> GetAll()
     {
         var userId = _userService.GetProperUserId(User).Value;
         var sends = await _sendRepository.GetManyByUserIdAsync(userId);
