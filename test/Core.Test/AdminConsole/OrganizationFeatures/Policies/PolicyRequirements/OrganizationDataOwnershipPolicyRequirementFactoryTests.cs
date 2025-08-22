@@ -37,7 +37,7 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void GetDefaultCollectionRequest_WithConfirmedUser(
+    public void GetDefaultCollectionRequest_WithConfirmedUser_ReturnsTrue(
     [PolicyDetails(PolicyType.OrganizationDataOwnership, userStatus: OrganizationUserStatusType.Confirmed)] PolicyDetails[] policies,
     SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
     {
@@ -55,7 +55,7 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void GetDefaultCollectionRequest_WithAcceptedUser(
+    public void GetDefaultCollectionRequest_WithAcceptedUser_ReturnsFalse(
         [PolicyDetails(PolicyType.OrganizationDataOwnership, userStatus: OrganizationUserStatusType.Accepted)] PolicyDetails[] policies,
         SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
     {
@@ -72,7 +72,7 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void GetDefaultCollectionRequest_WithNoPolicies(
+    public void GetDefaultCollectionRequest_WithNoPolicies_ReturnsFalse(
         SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
     {
         // Arrange

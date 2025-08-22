@@ -48,9 +48,9 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
 
     /// <summary>
     /// Gets a default collection request for enforcing the Organization Data Ownership policy.
-    /// Only accepted users are applicable.
+    /// Only confirmed users are applicable.
     /// This indicates whether the user should have a default collection created for them when the policy is enabled,
-    /// and if so, the relevant OrganizationUserId to create the collection for. Only accepted users are applicable.
+    /// and if so, the relevant OrganizationUserId to create the collection for.
     /// </summary>
     /// <param name="organizationId">The organization ID to create the request for.</param>
     /// <returns>A DefaultCollectionRequest containing the OrganizationUserId and a flag indicating whether to create a default collection.</returns>
