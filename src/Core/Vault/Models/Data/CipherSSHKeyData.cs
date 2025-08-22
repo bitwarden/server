@@ -10,4 +10,10 @@ public class CipherSSHKeyData : CipherData
     public string PrivateKey { get; set; }
     public string PublicKey { get; set; }
     public string KeyFingerprint { get; set; }
+
+    // New fields to preserve original encrypted key and optional passphrase
+    public string OriginalPrivateKey { get; set; }
+    // Booleans are typically transported as encrypted strings ("true"/"false") in Bitwarden models
+    public string IsEncrypted { get; set; }
+    public string SshKeyPassphrase { get; set; }
 }

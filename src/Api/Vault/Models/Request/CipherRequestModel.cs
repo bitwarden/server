@@ -261,6 +261,11 @@ public class CipherRequestModel
             PrivateKey = SSHKey.PrivateKey,
             PublicKey = SSHKey.PublicKey,
             KeyFingerprint = SSHKey.KeyFingerprint,
+
+            // Preserve original encrypted PEM and optional passphrase; track encryption flag
+            OriginalPrivateKey = SSHKey.OriginalPrivateKey,
+            IsEncrypted = SSHKey.IsEncrypted,
+            SshKeyPassphrase = SSHKey.SshKeyPassphrase,
         };
     }
 }
