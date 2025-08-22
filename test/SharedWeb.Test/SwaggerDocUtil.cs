@@ -1,73 +1,85 @@
-﻿using Bit.SharedWeb.Swagger;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using NSubstitute;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using System.Reflection;
 
 namespace SharedWeb.Test;
 
 public class SwaggerDocUtil
 {
-    public static (OpenApiDocument, DocumentFilterContext) CreateDocFromController<T>()
+    /// <summary>
+    /// Creates an OpenApiDocument and DocumentFilterContext from the specified controller type by setting up
+    /// a minimal service collection and using the SwaggerProvider to generate the document.
+    /// </summary>
+    public static (OpenApiDocument, DocumentFilterContext) CreateDocFromControllers(params Type[] controllerTypes)
     {
-        var type = typeof(T);
-        var paths = new OpenApiPaths();
-        var descriptions = new List<ApiDescription>();
-
-        // Get all public methods from the TestController
-        var methods = type.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly);
-
-        foreach (var method in methods)
+        if (controllerTypes.Length == 0)
         {
-            foreach (var attr in method.GetCustomAttributes(false))
-            {
-                string? relativePath = null;
-                OperationType operationType;
-
-                // Extract route and operation type based on attribute type
-                switch (attr)
-                {
-                    case HttpGetAttribute getAttr:
-                        relativePath = getAttr.Template;
-                        operationType = OperationType.Get;
-                        break;
-                    case HttpPostAttribute postAttr:
-                        relativePath = postAttr.Template;
-                        operationType = OperationType.Post;
-                        break;
-                    case HttpDeleteAttribute deleteAttr:
-                        relativePath = deleteAttr.Template;
-                        operationType = OperationType.Delete;
-                        break;
-                    case HttpPutAttribute putAttr:
-                        relativePath = putAttr.Template;
-                        operationType = OperationType.Put;
-                        break;
-                    case HttpPatchAttribute patchAttr:
-                        relativePath = patchAttr.Template;
-                        operationType = OperationType.Patch;
-                        break;
-                    case SwaggerExcludeAttribute: continue; // Skip SwaggerExcludeAttribute
-                    default:
-                        throw new InvalidOperationException($"Unsupported method attribute: {attr.GetType().Name}");
-                }
-
-                var absolutePath = relativePath.StartsWith('/') ? relativePath : "/" + relativePath;
-
-                // Add the operation to the path
-                paths.TryAdd(absolutePath, new OpenApiPathItem());
-                paths[absolutePath].Operations[operationType] = new OpenApiOperation();
-
-                descriptions.Add(new ApiDescription
-                {
-                    ActionDescriptor = new ControllerActionDescriptor { MethodInfo = method },
-                    HttpMethod = operationType.ToString().ToUpper(),
-                    RelativePath = relativePath
-                });
-            }
+            throw new ArgumentException("At least one controller type must be provided", nameof(controllerTypes));
         }
 
-        return (new OpenApiDocument { Paths = paths }, new DocumentFilterContext(descriptions, null, null));
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(Substitute.For<IWebHostEnvironment>());
+        services.AddControllers()
+        .ConfigureApplicationPartManager(manager =>
+        {
+            // Clear existing parts and feature providers
+            manager.ApplicationParts.Clear();
+            manager.FeatureProviders.Clear();
+
+            // Add a custom feature provider that only includes the specific controller types
+            manager.FeatureProviders.Add(new MultipleControllerFeatureProvider(controllerTypes));
+
+            // Add assembly parts for all unique assemblies containing the controllers
+            foreach (var assembly in controllerTypes.Select(t => t.Assembly).Distinct())
+            {
+                manager.ApplicationParts.Add(new AssemblyPart(assembly));
+            }
+        });
+        services.AddSwaggerGen(config =>
+        {
+            config.SwaggerDoc("v1", new OpenApiInfo { Title = "Test API", Version = "v1" });
+            config.CustomOperationIds(e => $"{e.ActionDescriptor.RouteValues["controller"]}_{e.ActionDescriptor.RouteValues["action"]}");
+        });
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Get API descriptions
+        var allApiDescriptions = serviceProvider.GetRequiredService<IApiDescriptionGroupCollectionProvider>()
+            .ApiDescriptionGroups.Items
+            .SelectMany(group => group.Items)
+                .ToList();
+
+        if (allApiDescriptions.Count == 0)
+        {
+            throw new InvalidOperationException("No API descriptions found for controller, ensure your controllers are defined correctly (public, not nested, inherit from ControllerBase, etc.)");
+        }
+
+        // Generate the swagger document and context
+        var document = serviceProvider.GetRequiredService<ISwaggerProvider>().GetSwagger("v1");
+        var schemaGenerator = serviceProvider.GetRequiredService<ISchemaGenerator>();
+        var context = new DocumentFilterContext(allApiDescriptions, schemaGenerator, new SchemaRepository());
+
+        return (document, context);
+    }
+}
+
+public class MultipleControllerFeatureProvider(params Type[] controllerTypes) : ControllerFeatureProvider
+{
+    private readonly HashSet<Type> _allowedControllerTypes = [.. controllerTypes];
+
+    protected override bool IsController(TypeInfo typeInfo)
+    {
+        return _allowedControllerTypes.Contains(typeInfo.AsType())
+          && typeInfo.IsClass
+          && !typeInfo.IsAbstract
+          && typeof(ControllerBase).IsAssignableFrom(typeInfo);
     }
 }

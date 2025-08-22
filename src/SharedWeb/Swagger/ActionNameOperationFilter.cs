@@ -9,10 +9,10 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 namespace Bit.SharedWeb.Swagger;
 
 /// <summary>
-/// When using the swagger schema for code generation, the functions name will be based on the operation ID.
-/// This ends up with functions with names like "ControllerName_FunctionName", as the operation IDs are required to be unique,
-/// but for functions we really just want the function name. This filter adds the function name as an extension to the operation,
-/// so that it can be used in the code generation templates.
+/// Adds the action name (function name) as an extension to each operation in the Swagger document.
+/// This can be useful for the code generation process, to generate more meaningful names for operations.
+/// Note that we add both the original action name and a snake_case version, as the codegen templates
+/// cannot do case conversions.
 /// </summary>
 public class ActionNameOperationFilter : IOperationFilter
 {

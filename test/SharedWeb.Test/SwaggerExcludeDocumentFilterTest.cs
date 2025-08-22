@@ -4,30 +4,30 @@ using Microsoft.OpenApi.Models;
 
 namespace SharedWeb.Test;
 
+public class TestController : ControllerBase
+{
+    [HttpDelete("test-delete")]
+    [HttpPost("test-delete/delete")]
+    [SwaggerExclude("POST")]
+    public void ActionWithPostExcluded() { }
+
+    [HttpPost("test-post")]
+    public void ActionWithoutExclude() { }
+
+    [HttpGet("test-allowed")]
+    [HttpGet("test-ignored")]
+    [HttpPost("test-ignored")]
+    [SwaggerExclude("GET", "ignored")]
+    public void ActionWithPathMatch() { }
+}
+
 public class SwaggerExcludeDocumentFilterTest
 {
-    private class TestController
-    {
-        [HttpDelete("test-delete")]
-        [HttpPost("test-delete/delete")]
-        [SwaggerExclude("POST")]
-        public void ActionWithPostExcluded() { }
-
-        [HttpPost("test-post")]
-        public void ActionWithoutExclude() { }
-
-        [HttpGet("test-allowed")]
-        [HttpGet("test-ignored")]
-        [HttpPost("test-ignored")]
-        [SwaggerExclude("GET", "ignored")]
-        public void ActionWithPathMatch() { }
-    }
-
     [Fact]
     public void SwaggerExcludeRemovesExcludedOperations()
     {
         // Arrange
-        var (swaggerDoc, context) = SwaggerDocUtil.CreateDocFromController<TestController>();
+        var (swaggerDoc, context) = SwaggerDocUtil.CreateDocFromControllers(typeof(TestController));
         var filter = new SwaggerExcludeDocumentFilter();
 
         // Act

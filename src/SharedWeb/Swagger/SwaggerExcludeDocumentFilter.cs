@@ -6,6 +6,12 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Bit.SharedWeb.Swagger;
 
+/// <summary>
+///  This document filter checks for the presence of the SwaggerExclude attribute on controller actions
+///  and removes the operations that match with the attribute from the Swagger document.
+/// It is meant to be used in cases where an action has multiple HTTP methods assigned to it, and we want
+///  to hide some of them from the Swagger documentation to avoid duplicate operation IDs.
+/// </summary>
 public class SwaggerExcludeDocumentFilter : IDocumentFilter
 {
     public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
