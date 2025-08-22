@@ -30,6 +30,7 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.SharedWeb.Swagger;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
@@ -167,7 +168,7 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
+    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> GetAll(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
         var request = new OrganizationUserUserDetailsQueryRequest
         {
@@ -361,6 +362,7 @@ public class OrganizationUsersController : Controller
 
     [HttpPut("{id}")]
     [HttpPost("{id}")]
+    [SwaggerExclude("POST")]
     [Authorize<ManageUsersRequirement>]
     public async Task Put(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
     {
@@ -493,6 +495,7 @@ public class OrganizationUsersController : Controller
 
     [HttpDelete("{id}")]
     [HttpPost("{id}/remove")]
+    [SwaggerExclude("POST")]
     [Authorize<ManageUsersRequirement>]
     public async Task Remove(Guid orgId, Guid id)
     {
@@ -502,6 +505,7 @@ public class OrganizationUsersController : Controller
 
     [HttpDelete("")]
     [HttpPost("remove")]
+    [SwaggerExclude("POST")]
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRemove(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
@@ -513,6 +517,7 @@ public class OrganizationUsersController : Controller
 
     [HttpDelete("{id}/delete-account")]
     [HttpPost("{id}/delete-account")]
+    [SwaggerExclude("POST")]
     [Authorize<ManageUsersRequirement>]
     public async Task DeleteAccount(Guid orgId, Guid id)
     {
@@ -527,6 +532,7 @@ public class OrganizationUsersController : Controller
 
     [HttpDelete("delete-account")]
     [HttpPost("delete-account")]
+    [SwaggerExclude("POST")]
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccount(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
@@ -542,40 +548,45 @@ public class OrganizationUsersController : Controller
             new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.ErrorMessage)));
     }
 
-    [HttpPatch("{id}/revoke")]
     [HttpPut("{id}/revoke")]
+    [HttpPatch("{id}/revoke")]
+    [SwaggerExclude("PATCH")]
     [Authorize<ManageUsersRequirement>]
     public async Task RevokeAsync(Guid orgId, Guid id)
     {
         await RestoreOrRevokeUserAsync(orgId, id, _revokeOrganizationUserCommand.RevokeUserAsync);
     }
 
-    [HttpPatch("revoke")]
     [HttpPut("revoke")]
+    [HttpPatch("revoke")]
+    [SwaggerExclude("PATCH")]
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRevokeAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         return await RestoreOrRevokeUsersAsync(orgId, model, _revokeOrganizationUserCommand.RevokeUsersAsync);
     }
 
-    [HttpPatch("{id}/restore")]
     [HttpPut("{id}/restore")]
+    [HttpPatch("{id}/restore")]
+    [SwaggerExclude("PATCH")]
     [Authorize<ManageUsersRequirement>]
     public async Task RestoreAsync(Guid orgId, Guid id)
     {
         await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId));
     }
 
-    [HttpPatch("restore")]
     [HttpPut("restore")]
+    [HttpPatch("restore")]
+    [SwaggerExclude("PATCH")]
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRestoreAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         return await RestoreOrRevokeUsersAsync(orgId, model, (orgId, orgUserIds, restoringUserId) => _restoreOrganizationUserCommand.RestoreUsersAsync(orgId, orgUserIds, restoringUserId, _userService));
     }
 
-    [HttpPatch("enable-secrets-manager")]
     [HttpPut("enable-secrets-manager")]
+    [HttpPatch("enable-secrets-manager")]
+    [SwaggerExclude("PATCH")]
     [Authorize<ManageUsersRequirement>]
     public async Task BulkEnableSecretsManagerAsync(Guid orgId,
         [FromBody] OrganizationUserBulkRequestModel model)

@@ -14,6 +14,7 @@ using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -164,6 +165,7 @@ public class GroupsController : Controller
 
     [HttpPut("{id}")]
     [HttpPost("{id}")]
+    [SwaggerExclude("POST")]
     public async Task<GroupResponseModel> Put(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
         if (!await _currentContext.ManageGroups(orgId))
@@ -239,6 +241,7 @@ public class GroupsController : Controller
 
     [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
+    [SwaggerExclude("POST")]
     public async Task Delete(string orgId, string id)
     {
         var group = await _groupRepository.GetByIdAsync(new Guid(id));
@@ -252,6 +255,7 @@ public class GroupsController : Controller
 
     [HttpDelete("")]
     [HttpPost("delete")]
+    [SwaggerExclude("POST")]
     public async Task BulkDelete([FromBody] GroupBulkRequestModel model)
     {
         var groups = await _groupRepository.GetManyByManyIds(model.Ids);
@@ -269,7 +273,8 @@ public class GroupsController : Controller
 
     [HttpDelete("{id}/user/{orgUserId}")]
     [HttpPost("{id}/delete-user/{orgUserId}")]
-    public async Task Delete(string orgId, string id, string orgUserId)
+    [SwaggerExclude("POST")]
+    public async Task DeleteUser(string orgId, string id, string orgUserId)
     {
         var group = await _groupRepository.GetByIdAsync(new Guid(id));
         if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))

@@ -38,6 +38,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -226,6 +227,7 @@ public class OrganizationsController : Controller
 
     [HttpPut("{id}")]
     [HttpPost("{id}")]
+    [SwaggerExclude("POST")]
     public async Task<OrganizationResponseModel> Put(string id, [FromBody] OrganizationUpdateRequestModel model)
     {
         var orgIdGuid = new Guid(id);
@@ -292,6 +294,7 @@ public class OrganizationsController : Controller
 
     [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
+    [SwaggerExclude("POST")]
     public async Task Delete(string id, [FromBody] SecretVerificationRequestModel model)
     {
         var orgIdGuid = new Guid(id);
