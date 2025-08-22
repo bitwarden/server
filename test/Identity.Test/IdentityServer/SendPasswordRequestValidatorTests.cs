@@ -41,7 +41,7 @@ public class SendPasswordRequestValidatorTests
         // Assert
         Assert.True(result.IsError);
         Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, result.Error);
-        Assert.Equal("passwordHashB64 is required.", result.ErrorDescription);
+        Assert.Equal($"{SendAccessConstants.TokenRequest.ClientB64HashedPassword} is required.", result.ErrorDescription);
 
         // Verify password hasher was not called
         sutProvider.GetDependency<ISendPasswordHasher>()
@@ -75,7 +75,7 @@ public class SendPasswordRequestValidatorTests
         // Assert
         Assert.True(result.IsError);
         Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, result.Error);
-        Assert.Equal("passwordHashB64 is invalid.", result.ErrorDescription);
+        Assert.Equal($"{SendAccessConstants.TokenRequest.ClientB64HashedPassword} is invalid.", result.ErrorDescription);
 
         // Verify password hasher was called with correct parameters
         sutProvider.GetDependency<ISendPasswordHasher>()

@@ -15,7 +15,7 @@ public class SendPasswordRequestValidator(ISendPasswordHasher sendPasswordHasher
     /// <summary>
     /// static object that contains the error messages for the SendPasswordRequestValidator.
     /// </summary>
-    private static readonly Dictionary<string, string> _sendPasswordValidatorErrors = new()
+    private static readonly Dictionary<string, string> _sendPasswordValidatorErrorDescriptions = new()
     {
         { SendAccessConstants.PasswordValidatorResults.RequestPasswordDoesNotMatch, $"{SendAccessConstants.TokenRequest.ClientB64HashedPassword} is invalid." },
         { SendAccessConstants.PasswordValidatorResults.RequestPasswordIsRequired, $"{SendAccessConstants.TokenRequest.ClientB64HashedPassword} is required." }
@@ -32,7 +32,7 @@ public class SendPasswordRequestValidator(ISendPasswordHasher sendPasswordHasher
             // Request is the wrong shape and doesn't contain a passwordHashB64 field.
             return new GrantValidationResult(
                 TokenRequestErrors.InvalidRequest,
-                errorDescription: _sendPasswordValidatorErrors[SendAccessConstants.PasswordValidatorResults.RequestPasswordIsRequired],
+                errorDescription: _sendPasswordValidatorErrorDescriptions[SendAccessConstants.PasswordValidatorResults.RequestPasswordIsRequired],
                 new Dictionary<string, object>
                 {
                     { SendAccessConstants.SendAccessError, SendAccessConstants.PasswordValidatorResults.RequestPasswordIsRequired }
@@ -48,7 +48,7 @@ public class SendPasswordRequestValidator(ISendPasswordHasher sendPasswordHasher
             // Request is the correct shape but the passwordHashB64 doesn't match, hash could be empty.
             return new GrantValidationResult(
                 TokenRequestErrors.InvalidGrant,
-                errorDescription: _sendPasswordValidatorErrors[SendAccessConstants.PasswordValidatorResults.RequestPasswordDoesNotMatch],
+                errorDescription: _sendPasswordValidatorErrorDescriptions[SendAccessConstants.PasswordValidatorResults.RequestPasswordDoesNotMatch],
                 new Dictionary<string, object>
                 {
                     { SendAccessConstants.SendAccessError, SendAccessConstants.PasswordValidatorResults.RequestPasswordDoesNotMatch }

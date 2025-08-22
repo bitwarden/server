@@ -20,7 +20,7 @@ public class SendAccessGrantValidator(
     string IExtensionGrantValidator.GrantType => CustomGrantTypes.SendAccess;
 
     private static readonly Dictionary<string, string>
-    _sendGrantValidatorErrors = new()
+    _sendGrantValidatorErrorDescriptions = new()
     {
         { SendAccessConstants.GrantValidatorResults.MissingSendId, $"{SendAccessConstants.TokenRequest.SendId} is required." },
         { SendAccessConstants.GrantValidatorResults.InvalidSendId, $"{SendAccessConstants.TokenRequest.SendId} is invalid." }
@@ -123,7 +123,7 @@ public class SendAccessGrantValidator(
             // Request is the wrong shape
             SendAccessConstants.GrantValidatorResults.MissingSendId => new GrantValidationResult(
                                 TokenRequestErrors.InvalidRequest,
-                                errorDescription: _sendGrantValidatorErrors[SendAccessConstants.GrantValidatorResults.MissingSendId],
+                                errorDescription: _sendGrantValidatorErrorDescriptions[SendAccessConstants.GrantValidatorResults.MissingSendId],
                                 new Dictionary<string, object>
                                 {
                                     { SendAccessConstants.SendAccessError, SendAccessConstants.GrantValidatorResults.MissingSendId}
@@ -131,7 +131,7 @@ public class SendAccessGrantValidator(
             // Request is correct shape but data is bad
             SendAccessConstants.GrantValidatorResults.InvalidSendId => new GrantValidationResult(
                                 TokenRequestErrors.InvalidGrant,
-                                errorDescription: _sendGrantValidatorErrors[SendAccessConstants.GrantValidatorResults.InvalidSendId],
+                                errorDescription: _sendGrantValidatorErrorDescriptions[SendAccessConstants.GrantValidatorResults.InvalidSendId],
                                 new Dictionary<string, object>
                                 {
                                     { SendAccessConstants.SendAccessError, SendAccessConstants.GrantValidatorResults.InvalidSendId }
