@@ -89,7 +89,7 @@ public class CipherRepositoryTests
             OrganizationId = organization.Id
         });
 
-        await Task.Delay(100, TestContext.Current.CancellationToken);
+        await Task.Delay(100);
 
         await collectionRepository.UpdateUsersAsync(collection.Id, new[]
         {
@@ -102,7 +102,7 @@ public class CipherRepositoryTests
             },
         });
 
-        await Task.Delay(100, TestContext.Current.CancellationToken);
+        await Task.Delay(100);
 
         await cipherRepository.CreateAsync(new CipherDetails
         {
