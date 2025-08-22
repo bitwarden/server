@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using System.Runtime.CompilerServices;
+using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest;
 
@@ -8,5 +9,9 @@ public class DatabaseTheoryAttribute : TheoryAttribute
     public DatabaseTheoryAttribute()
     {
 
+    }
+
+    public DatabaseTheoryAttribute([CallerFilePath] string? sourceFilePath = null, [CallerLineNumber] int sourceLineNumber = -1) : base(sourceFilePath, sourceLineNumber)
+    {
     }
 }

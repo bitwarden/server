@@ -67,11 +67,11 @@ public class DatabaseDataAttribute : DataAttribute
 
             if (!database.Enabled)
             {
-                // theories.Add(new TheoryDataRow()
-                //     .WithTestDisplayName($"{testMethod.DeclaringType.FullName}.{database.Type}.{testMethod.Name}")
-                //     .WithSkip("Not-Enabled")
-                //     .WithTrait("Database", database.Type.ToString())
-                // );
+                var theory = new TheoryDataRow()
+                    .WithSkip("Not-Enabled")
+                    .WithTrait("Database", database.Type.ToString());
+                theory.Label = database.Type.ToString();
+                theories.Add(theory);
                 continue;
             }
 
@@ -93,19 +93,20 @@ public class DatabaseDataAttribute : DataAttribute
             disposalTracker.Add(serviceProvider);
 
             var serviceTheory = new ServiceBasedTheoryDataRow(serviceProvider, testMethod)
-                .WithTestDisplayName($"{testMethod.DeclaringType.FullName}.{database.Type}.{testMethod.Name}")
                 .WithTrait("Database", database.Type.ToString())
                 .WithTrait("ConnectionString", database.ConnectionString);
+
+            serviceTheory.Label = database.Type.ToString();
             theories.Add(serviceTheory);
         }
 
         foreach (var unconfiguredDatabase in unconfiguredDatabases)
         {
-            // theories.Add(new TheoryDataRow()
-            //     .WithTestDisplayName($"{testMethod.DeclaringType.FullName}.{unconfiguredDatabase}.{testMethod.Name}")
-            //     .WithSkip("Unconfigured")
-            //     .WithTrait("Database", unconfiguredDatabase.ToString())
-            // );
+            var theory = new TheoryDataRow()
+                .WithSkip("Unconfigured")
+                .WithTrait("Database", unconfiguredDatabase.ToString());
+            theory.Label = unconfiguredDatabase.ToString();
+            theories.Add(theory);
         }
 
         return new(theories);
