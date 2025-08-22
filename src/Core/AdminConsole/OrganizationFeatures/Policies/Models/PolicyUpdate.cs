@@ -17,7 +17,7 @@ public record PolicyUpdate
     public string? Data { get; set; }
     public bool Enabled { get; set; }
 
-    [Obsolete("Use SavePolicyRequest. instead.")]
+    [Obsolete("Use SavePolicyRequest instead.")]
     public IActingUser? PerformedBy { get; set; }
 
     public T GetDataModel<T>() where T : IPolicyDataModel, new()
@@ -32,10 +32,10 @@ public record PolicyUpdate
 }
 
 // Jimmy TODO: consider using VNext in these models
-public record SavePolicyModel(PolicyUpdate Data, IActingUser? PerformedBy, IPolicyMetadataModel metadata)
+public record SavePolicyModel(PolicyUpdate Data, IActingUser? PerformedBy, IPolicyMetadataModel Metadata)
 {
     public PolicyUpdate Data { get; init; } = Data;
-    public IPolicyMetadataModel Metadata { get; init; } = metadata;
+    public IPolicyMetadataModel Metadata { get; init; } = Metadata;
 
     public IActingUser? PerformedBy { get; init; } = PerformedBy;
 }

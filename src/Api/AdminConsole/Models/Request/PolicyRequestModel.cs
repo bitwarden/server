@@ -52,37 +52,51 @@ public class SavePolicyRequest
             Enabled = Policy.Enabled.GetValueOrDefault(),
         };
 
-        var metadata = MapMetadata();
+        var metadata = MapToPolicyMetadata();
 
         return new SavePolicyModel(updatedPolicy, performedBy, metadata);
     }
 
-    private IPolicyMetadataModel MapMetadata()
+    private IPolicyMetadataModel MapToPolicyMetadata()
     {
         if (Metadata == null)
         {
             return new EmptyMetadataModel();
         }
 
-        // Use JSON serialization to convert dictionary to specific metadata model
-        if (Policy.Type == PolicyType.OrganizationDataOwnership)
+        return Policy.Type switch
         {
-            try
-            {
-                var json = JsonSerializer.Serialize(Metadata);
-                // var deserialized = JsonSerializer.Deserialize<OrganizationModelOwnershipPolicyModel>(json);
-                // return deserialized != null ? deserialized : new EmptyMetadataModel();
-                //
-                return CoreHelpers.LoadClassFromJsonData<OrganizationModelOwnershipPolicyModel>(json);
-            }
-            catch
-            {
-                return new EmptyMetadataModel();
-            }
-        }
+            PolicyType.OrganizationDataOwnership => MapToPolicyMetadata<OrganizationModelOwnershipPolicyModel>(),
+            PolicyType.TwoFactorAuthentication => new EmptyMetadataModel(),
+            PolicyType.MasterPassword => new EmptyMetadataModel(),
+            PolicyType.PasswordGenerator => new EmptyMetadataModel(),
+            PolicyType.SingleOrg => new EmptyMetadataModel(),
+            PolicyType.RequireSso => new EmptyMetadataModel(),
+            PolicyType.DisableSend => new EmptyMetadataModel(),
+            PolicyType.SendOptions => new EmptyMetadataModel(),
+            PolicyType.ResetPassword => new EmptyMetadataModel(),
+            PolicyType.MaximumVaultTimeout => new EmptyMetadataModel(),
+            PolicyType.DisablePersonalVaultExport => new EmptyMetadataModel(),
+            PolicyType.ActivateAutofill => new EmptyMetadataModel(),
+            PolicyType.AutomaticAppLogIn => new EmptyMetadataModel(),
+            PolicyType.FreeFamiliesSponsorshipPolicy => new EmptyMetadataModel(),
+            PolicyType.RemoveUnlockWithPin => new EmptyMetadataModel(),
+            PolicyType.RestrictedItemTypesPolicy => new EmptyMetadataModel(),
+            _ => new EmptyMetadataModel()
+        };
+    }
 
-        // Default to empty metadata for other policy types
-        return new EmptyMetadataModel();
+    private IPolicyMetadataModel MapToPolicyMetadata<T>() where T : IPolicyMetadataModel, new()
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(Metadata);
+            return CoreHelpers.LoadClassFromJsonData<T>(json);
+        }
+        catch
+        {
+            return new EmptyMetadataModel();
+        }
     }
 }
 
