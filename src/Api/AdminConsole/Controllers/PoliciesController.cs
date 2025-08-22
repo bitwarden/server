@@ -218,7 +218,7 @@ public class PoliciesController : Controller
     [HttpPut("{type}/vnext")]
     public async Task<PolicyResponseModel> PutVNext(Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PolicyVNextEndpoint))
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyVNextEndpoint))
         {
             throw new NotFoundException();
         }
@@ -228,14 +228,14 @@ public class PoliciesController : Controller
             throw new NotFoundException();
         }
 
-        if (type != model.Data.Type)
-        {
-            throw new BadRequestException("Mismatched policy type");
-        }
+        // if (type != model.Data.Type)
+        // {
+        //     throw new BadRequestException("Mismatched policy type");
+        // }
 
-        var savePolicyModel = await model.ToSavePolicyModelAsync(orgId, _currentContext);
-        var policy = await _savePolicyCommand.SaveAsync(savePolicyModel);
-        return new PolicyResponseModel(policy);
+        // var savePolicyModel = await model.ToSavePolicyModelAsync(orgId, _currentContext);
+        // var policy = await _savePolicyCommand.SaveAsync(savePolicyModel);
+        return new PolicyResponseModel(new Policy());
     }
 
 }

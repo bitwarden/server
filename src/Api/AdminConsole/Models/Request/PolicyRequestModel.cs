@@ -27,36 +27,47 @@ public class PolicyRequestModel
         PerformedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId))
     };
 }
+// Jimmy todo: Make sure to move the classes into their own files.
 
-public class PolicyVNextRequest
-{
-
-    [Required]
-    public PolicyUpdate Data { get; set; }
-
-    public Dictionary<string, object> Metadata { get; set; }
-
-    public async Task<PolicyUpdate> ToPolicyUpdateAsync(Guid organizationId, ICurrentContext currentContext) => new()
-    {
-        // Type = Type!.Value,
-        OrganizationId = organizationId,
-        Data = Data != null ? JsonSerializer.Serialize(Data) : null,
-        // Enabled = Enabled.GetValueOrDefault(),
-        PerformedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId))
-    };
-}
 
 public class SavePolicyRequest
 {
     [Required]
-    public PolicyUpdate Data { get; set; }
+    public PolicyRequestModel Policy { get; set; }
 
-    public IPolicyMetadataModel Metadata { get; set; }
+    // public IPolicyMetadataModel Metadata { get; set; }
+
+    public Dictionary<string, object> Metadata { get; set; }
 
     public async Task<SavePolicyModel> ToSavePolicyModelAsync(Guid organizationId, ICurrentContext currentContext)
     {
         var performedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId));
-        Data.OrganizationId = organizationId;
-        return new SavePolicyModel(Data, performedBy, Metadata ?? new EmptyMetadataModel());
+
+        var updatedPolicy = new PolicyUpdate()
+        {
+            Type = Policy.Type!.Value,
+            OrganizationId = organizationId,
+            Data = Policy.Data != null ? JsonSerializer.Serialize(Policy.Data) : null,
+            Enabled = Policy.Enabled.GetValueOrDefault(),
+        };
+
+        var metadata = Metadata != null ? JsonSerializer.Serialize(Metadata) : new EmptyMetadataModel();
+
+        return new SavePolicyModel(updatedPolicy, performedBy, metadata);
     }
+}
+
+
+public class SavePolicyRequestTest
+{
+    [Required]
+    public string test { get; set; }
+
+    public async Task<SavePolicyModel> ToSavePolicyModelAsync(Guid organizationId, ICurrentContext currentContext)
+    {
+        var performedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId));
+        // Data.OrganizationId = organizationId;
+        return new SavePolicyModel(new PolicyUpdate(), performedBy, new EmptyMetadataModel());
+    }
+
 }
