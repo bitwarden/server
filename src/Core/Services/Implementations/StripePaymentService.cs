@@ -1,11 +1,10 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
+
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
@@ -136,69 +135,17 @@ public class StripePaymentService : IPaymentService
 
         if (subscriptionUpdate is CompleteSubscriptionUpdate)
         {
-            var setNonUSBusinessUseToReverseCharge =
-                _featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
-
-            if (setNonUSBusinessUseToReverseCharge)
-            {
-                if (sub.Customer is
-                    {
-                        Address.Country: not "US",
-                        TaxExempt: not StripeConstants.TaxExempt.Reverse
-                    })
+            if (sub.Customer is
                 {
-                    await _stripeAdapter.CustomerUpdateAsync(sub.CustomerId,
-                        new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
-                }
-
-                subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
-            }
-            else if (sub.Customer.HasRecognizedTaxLocation())
+                    Address.Country: not "US",
+                    TaxExempt: not StripeConstants.TaxExempt.Reverse
+                })
             {
-                switch (subscriber)
-                {
-                    case User:
-                        {
-                            subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
-                            break;
-                        }
-                    case Organization:
-                        {
-                            if (sub.Customer.Address.Country == "US")
-                            {
-                                subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
-                            }
-                            else
-                            {
-                                var familyPriceIds = (await Task.WhenAll(
-                                        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019),
-                                        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)))
-                                    .Select(plan => plan.PasswordManager.StripePlanId);
-
-                                var updateIsForPersonalUse = updatedItemOptions
-                                    .Select(option => option.Price)
-                                    .Intersect(familyPriceIds)
-                                    .Any();
-
-                                subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
-                                {
-                                    Enabled = updateIsForPersonalUse || sub.Customer.TaxIds.Any()
-                                };
-                            }
-
-                            break;
-                        }
-                    case Provider:
-                        {
-                            subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
-                            {
-                                Enabled = sub.Customer.Address.Country == "US" ||
-                                          sub.Customer.TaxIds.Any()
-                            };
-                            break;
-                        }
-                }
+                await _stripeAdapter.CustomerUpdateAsync(sub.CustomerId,
+                    new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
             }
+
+            subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
 
         if (!subscriptionUpdate.UpdateNeeded(sub))
