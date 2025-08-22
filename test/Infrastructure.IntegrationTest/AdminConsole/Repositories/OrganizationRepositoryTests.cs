@@ -8,7 +8,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class OrganizationRepositoryTests
 {
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetByClaimedUserDomainAsync_WithVerifiedDomain_Success(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -107,7 +107,7 @@ public class OrganizationRepositoryTests
         Assert.Empty(user3Response);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetByVerifiedUserEmailDomainAsync_WithUnverifiedDomains_ReturnsEmpty(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -160,7 +160,7 @@ public class OrganizationRepositoryTests
         Assert.Empty(result);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetByVerifiedUserEmailDomainAsync_WithMultipleVerifiedDomains_ReturnsAllMatchingOrganizations(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -243,7 +243,7 @@ public class OrganizationRepositoryTests
         Assert.Contains(result, org => org.Id == organization2.Id);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetByVerifiedUserEmailDomainAsync_WithNonExistentUser_ReturnsEmpty(
         IOrganizationRepository organizationRepository)
     {
@@ -255,7 +255,7 @@ public class OrganizationRepositoryTests
     }
 
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetManyByIdsAsync_ExistingOrganizations_ReturnsOrganizations(IOrganizationRepository organizationRepository)
     {
         var email = "test@email.com";

@@ -12,7 +12,7 @@ public class AuthRequestRepositoryTests
     private static readonly TimeSpan _adminRequestExpiration = TimeSpan.FromDays(6);
     private static readonly TimeSpan _afterAdminApprovalExpiration = TimeSpan.FromHours(12);
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task DeleteExpiredAsync_Works(
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository)
@@ -70,7 +70,7 @@ public class AuthRequestRepositoryTests
         Assert.True(numberOfDeleted >= 4);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task UpdateManyAsync_Works(
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository)

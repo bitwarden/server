@@ -8,7 +8,7 @@ namespace Bit.Infrastructure.IntegrationTest.Repositories;
 
 public class UserRepositoryTests
 {
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task DeleteAsync_Works(IUserRepository userRepository)
     {
         var user = await userRepository.CreateAsync(new User
@@ -25,7 +25,7 @@ public class UserRepositoryTests
         Assert.Null(deletedUser);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task DeleteManyAsync_Works(IUserRepository userRepository, IOrganizationUserRepository organizationUserRepository, IOrganizationRepository organizationRepository)
     {
         var user1 = await userRepository.CreateAsync(new User

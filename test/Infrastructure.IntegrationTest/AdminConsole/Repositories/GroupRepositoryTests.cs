@@ -6,7 +6,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class GroupRepositoryTests
 {
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task AddGroupUsersByIdAsync_CreatesGroupUsers(
         IGroupRepository groupRepository,
         IUserRepository userRepository,
@@ -33,7 +33,7 @@ public class GroupRepositoryTests
         Assert.Equal(orgUserIds!.Order(), actual.Order());
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task AddGroupUsersByIdAsync_IgnoresExistingGroupUsers(
         IGroupRepository groupRepository,
         IUserRepository userRepository,
@@ -65,7 +65,7 @@ public class GroupRepositoryTests
         Assert.Equal(orgUserIds!.Order(), actual.Order());
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task AddGroupUsersByIdAsync_IgnoresUsersNotInOrganization(
         IGroupRepository groupRepository,
         IUserRepository userRepository,
@@ -99,7 +99,7 @@ public class GroupRepositoryTests
         Assert.DoesNotContain(orgUser3.Id, actual);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task AddGroupUsersByIdAsync_IgnoresDuplicateUsers(
         IGroupRepository groupRepository,
         IUserRepository userRepository,

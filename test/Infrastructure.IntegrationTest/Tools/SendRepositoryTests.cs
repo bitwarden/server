@@ -8,7 +8,7 @@ namespace Bit.Infrastructure.IntegrationTest.Tools;
 
 public class SendRepositoryTests
 {
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task CreateAsync_Works(ISendRepository sendRepository)
     {
         var expirationDate = DateTime.UtcNow.AddDays(7);
@@ -36,7 +36,7 @@ public class SendRepositoryTests
         Assert.Equal("{\"Text\": \"2.t|t|t\"}", sendFromDatabase.Data);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     // This test runs best on a fresh database and may fail on subsequent runs with other tests.
     public async Task GetByDeletionDateAsync_Works(ISendRepository sendRepository)
     {

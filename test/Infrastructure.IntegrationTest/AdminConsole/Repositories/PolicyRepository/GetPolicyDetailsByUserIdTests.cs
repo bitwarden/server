@@ -16,7 +16,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.PolicyRep
 
 public class GetPolicyDetailsByUserIdTests
 {
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetPolicyDetailsByUserId_NonInvitedUsers_Works(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -105,7 +105,7 @@ public class GetPolicyDetailsByUserIdTests
         Assert.Equivalent(new Permissions { ManagePolicies = true }, actualPolicyDetails2.GetOrganizationUserCustomPermissions(), strict: true);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetPolicyDetailsByUserId_InvitedUser_Works(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -148,7 +148,7 @@ public class GetPolicyDetailsByUserIdTests
         Assert.Equivalent(expectedPolicyDetails, actualPolicyDetails.Single());
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetPolicyDetailsByUserId_RevokedConfirmedUser_Works(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -192,7 +192,7 @@ public class GetPolicyDetailsByUserIdTests
         Assert.Equivalent(expectedPolicyDetails, actualPolicyDetails.Single());
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetPolicyDetailsByUserId_RevokedInvitedUser_DoesntReturnPolicies(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -227,7 +227,7 @@ public class GetPolicyDetailsByUserIdTests
         Assert.Empty(actualPolicyDetails);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetPolicyDetailsByUserId_SetsIsProvider(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -283,7 +283,7 @@ public class GetPolicyDetailsByUserIdTests
         Assert.Equivalent(expectedPolicyDetails, actualPolicyDetails.Single());
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetPolicyDetailsByUserId_IgnoresDisabledOrganizations(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -312,7 +312,7 @@ public class GetPolicyDetailsByUserIdTests
         Assert.Empty(actualPolicyDetails);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetPolicyDetailsByUserId_IgnoresDowngradedOrganizations(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -342,7 +342,7 @@ public class GetPolicyDetailsByUserIdTests
         Assert.Empty(actualPolicyDetails);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetPolicyDetailsByUserId_IgnoresDisabledPolicies(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,

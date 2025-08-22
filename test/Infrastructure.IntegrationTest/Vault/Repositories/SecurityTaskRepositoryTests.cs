@@ -14,7 +14,7 @@ namespace Bit.Infrastructure.IntegrationTest.Vault.Repositories;
 
 public class SecurityTaskRepositoryTests
 {
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task CreateAsync(
         IOrganizationRepository organizationRepository,
         ICipherRepository cipherRepository,
@@ -46,7 +46,7 @@ public class SecurityTaskRepositoryTests
         Assert.NotNull(task);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task ReadByIdAsync(
         IOrganizationRepository organizationRepository,
         ICipherRepository cipherRepository,
@@ -84,7 +84,7 @@ public class SecurityTaskRepositoryTests
         Assert.Equal(task.Status, readTask.Status);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task UpdateAsync(
         IOrganizationRepository organizationRepository,
         ICipherRepository cipherRepository,
@@ -125,7 +125,7 @@ public class SecurityTaskRepositoryTests
         Assert.Equal(SecurityTaskStatus.Completed, updatedTask.Status);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetManyByUserIdAsync_ReturnsExpectedTasks(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -224,7 +224,7 @@ public class SecurityTaskRepositoryTests
         Assert.DoesNotContain(task3, completedTasks, new SecurityTaskComparer());
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task CreateManyAsync(
         IOrganizationRepository organizationRepository,
         ICipherRepository cipherRepository,

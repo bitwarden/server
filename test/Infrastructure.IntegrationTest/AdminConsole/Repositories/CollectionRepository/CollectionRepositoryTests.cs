@@ -14,7 +14,7 @@ public class CollectionRepositoryTests
     /// <summary>
     /// Test to ensure that access relationships are retrieved when requested
     /// </summary>
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetByIdWithPermissionsAsync_WithRelationships_Success(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
@@ -80,7 +80,7 @@ public class CollectionRepositoryTests
     /// Test to ensure that a user's explicitly assigned permissions replaces any group permissions
     /// that user may belong to
     /// </summary>
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetByIdWithPermissionsAsync_UserOverrideGroup_Success(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
@@ -149,7 +149,7 @@ public class CollectionRepositoryTests
     /// Test to ensure that the returned permissions are the most permissive combination of group permissions when
     /// multiple groups are assigned to the same collection with different permissions
     /// </summary>
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetByIdWithPermissionsAsync_CombineGroupPermissions_Success(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
@@ -225,7 +225,7 @@ public class CollectionRepositoryTests
     /// <summary>
     /// Test to ensure the basic usage works as expected
     /// </summary>
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetManyByOrganizationIdWithPermissionsAsync_Success(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
@@ -357,7 +357,7 @@ public class CollectionRepositoryTests
     /// <summary>
     /// Test to ensure collections assigned to multiple groups do not duplicate in the results
     /// </summary>
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetManyByOrganizationIdWithPermissionsAsync_GroupBy_Success(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
@@ -483,16 +483,11 @@ public class CollectionRepositoryTests
         });
     }
 
-<<<<<<< HEAD:test/Infrastructure.IntegrationTest/Vault/Repositories/CollectionRepositoryTests.cs
-    [Theory, DatabaseData]
-    public async Task ReplaceAsync_Works(
-=======
     /// <summary>
     /// Test to ensure collections are properly retrieved by organization
     /// </summary>
     [DatabaseTheory, DatabaseData]
     public async Task GetManyByOrganizationIdAsync_Success(
->>>>>>> origin/main:test/Infrastructure.IntegrationTest/AdminConsole/Repositories/CollectionRepository/CollectionRepositoryTests.cs
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
@@ -590,12 +585,8 @@ public class CollectionRepositoryTests
         var collection2 = new Collection { Name = "Collection 2", OrganizationId = organization.Id, };
         await collectionRepository.CreateAsync(collection2, null, null);
 
-<<<<<<< HEAD:test/Infrastructure.IntegrationTest/Vault/Repositories/CollectionRepositoryTests.cs
-        var actualGroup2 = Assert.Single(groups, g => g.Id == group2.Id);
-=======
         var collection3 = new Collection { Name = "Collection 3", OrganizationId = organization.Id, };
         await collectionRepository.CreateAsync(collection3, null, null);
->>>>>>> origin/main:test/Infrastructure.IntegrationTest/AdminConsole/Repositories/CollectionRepository/CollectionRepositoryTests.cs
 
         // Create a default user collection (should not be returned by this method)
         var defaultCollection = new Collection
@@ -606,37 +597,15 @@ public class CollectionRepositoryTests
         };
         await collectionRepository.CreateAsync(defaultCollection, null, null);
 
-<<<<<<< HEAD:test/Infrastructure.IntegrationTest/Vault/Repositories/CollectionRepositoryTests.cs
-        var actualGroup3 = Assert.Single(groups, g => g.Id == group3.Id);
-=======
         var collections = await collectionRepository.GetManySharedCollectionsByOrganizationIdAsync(organization.Id);
->>>>>>> origin/main:test/Infrastructure.IntegrationTest/AdminConsole/Repositories/CollectionRepository/CollectionRepositoryTests.cs
 
         Assert.NotNull(collections);
         Assert.Equal(3, collections.Count); // Should only return the 3 shared collections, excluding the default user collection
         Assert.All(collections, c => Assert.Equal(organization.Id, c.OrganizationId));
 
-<<<<<<< HEAD:test/Infrastructure.IntegrationTest/Vault/Repositories/CollectionRepositoryTests.cs
-        var users = info.Users.ToArray();
-
-        Assert.Equal(2, users.Length);
-
-        var actualOrgUser2 = Assert.Single(users, u => u.Id == orgUser2.Id);
-
-        Assert.False(actualOrgUser2.Manage);
-        Assert.False(actualOrgUser2.HidePasswords);
-        Assert.True(actualOrgUser2.ReadOnly);
-
-        var actualOrgUser3 = Assert.Single(users, u => u.Id == orgUser3.Id);
-
-        Assert.True(actualOrgUser3.Manage);
-        Assert.False(actualOrgUser3.HidePasswords);
-        Assert.True(actualOrgUser3.ReadOnly);
-=======
         Assert.Contains(collections, c => c.Name == "Collection 1");
         Assert.Contains(collections, c => c.Name == "Collection 2");
         Assert.Contains(collections, c => c.Name == "Collection 3");
         Assert.DoesNotContain(collections, c => c.Name == "My Items");
->>>>>>> origin/main:test/Infrastructure.IntegrationTest/AdminConsole/Repositories/CollectionRepository/CollectionRepositoryTests.cs
     }
 }

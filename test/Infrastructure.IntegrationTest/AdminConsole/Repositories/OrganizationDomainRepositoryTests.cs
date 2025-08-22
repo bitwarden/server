@@ -7,7 +7,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class OrganizationDomainRepositoryTests
 {
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetExpiredOrganizationDomainsAsync_ShouldReturn3DaysOldUnverifiedDomains(
      IUserRepository userRepository,
      IOrganizationRepository organizationRepository,
@@ -74,7 +74,7 @@ public class OrganizationDomainRepositoryTests
         Assert.NotNull(expectedDomain2);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetExpiredOrganizationDomainsAsync_ShouldNotReturnDomainsUnder3DaysOld(
      IUserRepository userRepository,
      IOrganizationRepository organizationRepository,
@@ -120,7 +120,7 @@ public class OrganizationDomainRepositoryTests
         Assert.Null(expectedDomain2);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetExpiredOrganizationDomainsAsync_ShouldNotReturnVerifiedDomains(
      IUserRepository userRepository,
      IOrganizationRepository organizationRepository,
@@ -189,7 +189,7 @@ public class OrganizationDomainRepositoryTests
         Assert.Null(expectedDomain2);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetManyByNextRunDateAsync_ShouldReturnUnverifiedDomains(
      IOrganizationRepository organizationRepository,
      IOrganizationDomainRepository organizationDomainRepository)
@@ -228,7 +228,7 @@ public class OrganizationDomainRepositoryTests
         Assert.NotNull(expectedDomain);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetManyByNextRunDateAsync_ShouldNotReturnUnverifiedDomains_WhenNextRunDateIsOutside36hoursWindow(
         IOrganizationRepository organizationRepository,
         IOrganizationDomainRepository organizationDomainRepository)
@@ -267,7 +267,7 @@ public class OrganizationDomainRepositoryTests
         Assert.Null(expectedDomain);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetManyByNextRunDateAsync_ShouldNotReturnVerifiedDomains(
         IOrganizationRepository organizationRepository,
         IOrganizationDomainRepository organizationDomainRepository)
@@ -307,7 +307,7 @@ public class OrganizationDomainRepositoryTests
         Assert.Null(expectedDomain);
     }
 
-    [Theory, DatabaseData]
+    [DatabaseTheory, DatabaseData]
     public async Task GetVerifiedDomainsByOrganizationIdsAsync_ShouldVerifiedDomainsMatchesOrganizationIds(
         IOrganizationRepository organizationRepository,
         IOrganizationDomainRepository organizationDomainRepository)
