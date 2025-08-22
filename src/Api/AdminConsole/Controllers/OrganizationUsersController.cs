@@ -287,6 +287,30 @@ public class OrganizationUsersController : Controller
         await _confirmOrganizationUserCommand.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id);
     }
 
+    // TODO: build a pre-accept get to return information about the org invite acceptance process
+    // [HttpPost("{organizationUserId}/pre-accept")]
+    // public async Task<void> PreAccept(Guid orgId, Guid organizationUserId, [FromBody] string orgInviteToken)
+    // {
+    // TODO: Build a query to return user requirements about the organization invite acceptance process
+    // We need to tell the client if the user needs to be enrolled in admin account recovery which will
+    // affect the subsequent call to the accept method below.
+    // We need to tell the client if the user needs to set a master password which will affect the
+    // navigation after successful acceptance.
+
+    // We will need to perform token validation like this in the query:
+    // var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+    //     _orgUserInviteTokenDataFactory, emailToken, orgUser);
+
+    // Get an org user and figure if they have the ManageResetPassword permission. The gotcha here is that the
+    // user might not yet be linked to the org user.
+
+    // Note: result object should contain something like "TdeUserNeedsToSetMasterPassword" instead of
+    // "requireSetMasterPassword"
+
+    // Thomas comment: the actual accept endpoint below can use the same query as the pre-accept endpoint to check what extra properties the accept request needs to supply
+    // }
+
+
     [HttpPost("{organizationUserId}/accept")]
     public async Task Accept(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptRequestModel model)
     {
