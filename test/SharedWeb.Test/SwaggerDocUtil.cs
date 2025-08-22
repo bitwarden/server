@@ -1,14 +1,14 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using System.Reflection;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
+using NSubstitute;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
-using NSubstitute;
-using Microsoft.AspNetCore.Mvc.ApplicationParts;
-using System.Reflection;
 
 namespace SharedWeb.Test;
 
