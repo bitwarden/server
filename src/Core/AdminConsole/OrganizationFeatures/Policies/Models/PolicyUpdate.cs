@@ -30,37 +30,3 @@ public record PolicyUpdate
         Data = CoreHelpers.ClassToJsonData(dataModel);
     }
 }
-
-// Jimmy TODO: consider using VNext in these models
-public record SavePolicyModel(PolicyUpdate Data, IActingUser? PerformedBy, IPolicyMetadataModel Metadata)
-{
-    public PolicyUpdate Data { get; init; } = Data;
-    public IPolicyMetadataModel Metadata { get; init; } = Metadata;
-
-    public IActingUser? PerformedBy { get; init; } = PerformedBy;
-}
-
-
-public class OrganizationModelOwnershipPolicyModel : IPolicyMetadataModel
-{
-    public OrganizationModelOwnershipPolicyModel()
-    {
-
-    }
-
-    public OrganizationModelOwnershipPolicyModel(string? defaultUserCollectionName)
-    {
-        DefaultUserCollectionName = defaultUserCollectionName;
-    }
-
-    public string? DefaultUserCollectionName { get; set; }
-}
-
-public interface IPolicyMetadataModel
-{
-}
-
-public record EmptyMetadataModel : IPolicyMetadataModel
-{
-
-}
