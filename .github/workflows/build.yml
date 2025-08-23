@@ -500,7 +500,7 @@ jobs:
 
   trigger-k8s-deploy:
     name: Trigger k8s deploy
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && ( github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc' )
     runs-on: ubuntu-22.04
     needs:
       - build-artifacts
@@ -524,7 +524,8 @@ jobs:
       - name: Log out from Azure
         uses: bitwarden/gh-actions/azure-logout@main
 
-      - name: Trigger k8s deploy
+      - name: Trigger k8s deploy for US-DEV
+        if: github.ref == 'refs/heads/main'
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           github-token: ${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
@@ -537,6 +538,25 @@ jobs:
               inputs: {
                 environment: 'US-DEV Cloud',
                 tag: 'main'
+              }
+            })
+
+      - name: Trigger k8s deploy for US-QA
+        if: github.event_name != 'pull_request' && ( github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc' )
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          github-token: ${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          script: |
+            const tag = context.ref === 'refs/heads/rc' ? 'rc' : 'hotfix-rc';
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'bitwarden',
+              repo: 'devops',
+              workflow_id: 'deploy-k8s.yml',
+              ref: 'rc',
+              inputs: {
+                environment: 'US-QA Cloud',
+                tag: tag
               }
             })
 
