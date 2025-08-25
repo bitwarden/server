@@ -1284,6 +1284,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid?>("PolicyId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("ProviderId")
                         .HasColumnType("TEXT");
 
