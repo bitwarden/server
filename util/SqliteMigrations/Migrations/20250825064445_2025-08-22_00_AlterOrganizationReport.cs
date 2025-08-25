@@ -2,10 +2,10 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations;
+namespace Bit.SqliteMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class _20250813_00_AlterOrganizationReport : Migration
+public partial class _20250822_00_AlterOrganizationReport : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
@@ -18,16 +18,14 @@ public partial class _20250813_00_AlterOrganizationReport : Migration
         migrationBuilder.AddColumn<string>(
             name: "ApplicationData",
             table: "OrganizationReport",
-            type: "longtext",
-            nullable: true)
-            .Annotation("MySql:CharSet", "utf8mb4");
+            type: "TEXT",
+            nullable: true);
 
         migrationBuilder.AddColumn<string>(
             name: "SummaryData",
             table: "OrganizationReport",
-            type: "longtext",
-            nullable: true)
-            .Annotation("MySql:CharSet", "utf8mb4");
+            type: "TEXT",
+            nullable: true);
     }
 
     /// <inheritdoc />

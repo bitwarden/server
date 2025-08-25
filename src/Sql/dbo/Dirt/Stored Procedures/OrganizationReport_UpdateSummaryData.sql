@@ -1,7 +1,8 @@
 CREATE PROCEDURE [dbo].[OrganizationReport_UpdateSummaryData]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
-    @SummaryData NVARCHAR(MAX)
+    @SummaryData NVARCHAR(MAX),
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -9,7 +10,7 @@ BEGIN
     UPDATE [dbo].[OrganizationReport]
     SET
         [SummaryData] = @SummaryData,
-        [RevisionDate] = GETUTCDATE()
+        [RevisionDate] = @RevisionDate
     WHERE [Id] = @Id
       AND [OrganizationId] = @OrganizationId;
 END

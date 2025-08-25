@@ -8,7 +8,6 @@ public interface IOrganizationReportRepository : IRepository<OrganizationReport,
 {
     // Whole OrganizationReport methods
     Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId);
-    Task<OrganizationReport> GetByOrganizationIdAsync(Guid organizationName);
 
     // SummaryData methods
     Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetSummaryDataByDateRangeAsync(Guid organizationId, DateTime startDate, DateTime endDate);

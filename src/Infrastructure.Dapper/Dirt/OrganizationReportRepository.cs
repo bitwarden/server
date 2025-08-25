@@ -24,19 +24,6 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
     {
     }
 
-    public async Task<OrganizationReport> GetByOrganizationIdAsync(Guid organizationId)
-    {
-        using (var connection = new SqlConnection(ReadOnlyConnectionString))
-        {
-            var results = await connection.QueryAsync<OrganizationReport>(
-                $"[{Schema}].[OrganizationReport_ReadByOrganizationId]",
-                new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
-
-            return results.FirstOrDefault();
-        }
-    }
-
     public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))

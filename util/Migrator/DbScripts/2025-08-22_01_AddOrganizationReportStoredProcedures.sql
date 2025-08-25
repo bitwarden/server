@@ -21,7 +21,6 @@ GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_GetSummariesByDateRange]
     @OrganizationId UNIQUEIDENTIFIER,
-    @Id UNIQUEIDENTIFIER,
     @StartDate DATETIME2(7),
     @EndDate DATETIME2(7)
 AS
@@ -34,7 +33,6 @@ SELECT
     [SummaryData]
 FROM [dbo].[OrganizationReport]
 WHERE [OrganizationId] = @OrganizationId
-  AND [Id] = @Id
   AND [RevisionDate] >= @StartDate
   AND [RevisionDate] <= @EndDate
 ORDER BY [RevisionDate] DESC
