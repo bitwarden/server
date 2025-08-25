@@ -976,7 +976,7 @@ public class CipherRepositoryTests
         Assert.Equal("new_attachments", updatedCipher2.Attachments);
     }
 
-    [DatabaseTheory, DatabaseData(EnabledFeatureFlags = new[] { FeatureFlagKeys.CipherRepositoryBulkResourceCreation })]
+    [DatabaseTheory, DatabaseData(EnabledFeatureFlags = [FeatureFlagKeys.CipherRepositoryBulkResourceCreation])]
     public async Task CreateAsync_WithFolders_WhenBulkResourceCreationFlagEnabled_Works(
         IUserRepository userRepository, ICipherRepository cipherRepository, IFolderRepository folderRepository)
     {
@@ -1012,7 +1012,7 @@ public class CipherRepositoryTests
         Assert.NotNull(readFolder2);
     }
 
-    [DatabaseTheory, DatabaseData(EnabledFeatureFlags = new[] { FeatureFlagKeys.CipherRepositoryBulkResourceCreation })]
+    [DatabaseTheory, DatabaseData(EnabledFeatureFlags = [FeatureFlagKeys.CipherRepositoryBulkResourceCreation])]
     public async Task CreateAsync_WithCollectionsAndUsers_WhenBulkResourceCreationFlagEnabled_Works(
         IOrganizationRepository orgRepository,
         IOrganizationUserRepository orgUserRepository,
@@ -1082,7 +1082,7 @@ public class CipherRepositoryTests
         Assert.False(foundCollectionUser.HidePasswords);
     }
 
-    [DatabaseTheory, DatabaseData(EnabledFeatureFlags = new[] { FeatureFlagKeys.CipherRepositoryBulkResourceCreation })]
+    [DatabaseTheory, DatabaseData(EnabledFeatureFlags = [FeatureFlagKeys.CipherRepositoryBulkResourceCreation])]
     public async Task UpdateCiphersAsync_WhenBulkResourceCreationFlagEnabled_Works(
         IUserRepository userRepository, ICipherRepository cipherRepository)
     {
