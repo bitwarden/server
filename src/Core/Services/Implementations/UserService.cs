@@ -1046,20 +1046,6 @@ public class UserService : UserManager<User>, IUserService
         return secret;
     }
 
-    public async Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType, TaxInfo taxInfo)
-    {
-        if (paymentToken.StartsWith("btok_"))
-        {
-            throw new BadRequestException("Invalid token.");
-        }
-
-        var tokenizedPaymentSource = new TokenizedPaymentSource(paymentMethodType, paymentToken);
-        var taxInformation = TaxInformation.From(taxInfo);
-
-        await _premiumUserBillingService.UpdatePaymentMethod(user, tokenizedPaymentSource, taxInformation);
-        await SaveUserAsync(user);
-    }
-
     public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
     {
         var eop = endOfPeriod.GetValueOrDefault(true);

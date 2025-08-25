@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Api.Billing.Models.Responses;
+﻿using Bit.Api.Billing.Models.Responses;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Requests;
 using Bit.Core.Services;
@@ -28,20 +27,6 @@ public class AccountsBillingController(
 
         var billingInfo = await paymentService.GetBillingHistoryAsync(user);
         return new BillingHistoryResponseModel(billingInfo);
-    }
-
-    [HttpGet("payment-method")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<BillingPaymentResponseModel> GetPaymentMethodAsync()
-    {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var billingInfo = await paymentService.GetBillingAsync(user);
-        return new BillingPaymentResponseModel(billingInfo);
     }
 
     [HttpGet("invoices")]

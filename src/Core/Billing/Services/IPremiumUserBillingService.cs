@@ -31,9 +31,4 @@ public interface IPremiumUserBillingService
     /// </code>
     /// </example>
     Task Finalize(PremiumUserSale sale);
-
-    Task UpdatePaymentMethod(
-        User user,
-        TokenizedPaymentSource tokenizedPaymentSource,
-        TaxInformation taxInformation);
 }

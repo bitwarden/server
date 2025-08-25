@@ -101,16 +101,5 @@ public interface IProviderBillingService
     Task<Subscription> SetupSubscription(
         Provider provider);
 
-    /// <summary>
-    /// Updates the <paramref name="provider"/>'s payment source and tax information and then sets their subscription's collection_method to be "charge_automatically".
-    /// </summary>
-    /// <param name="provider">The <paramref name="provider"/> to update the payment source and tax information for.</param>
-    /// <param name="tokenizedPaymentSource">The tokenized payment source (ex. Credit Card) to attach to the <paramref name="provider"/>.</param>
-    /// <param name="taxInformation">The <paramref name="provider"/>'s updated tax information.</param>
-    Task UpdatePaymentMethod(
-        Provider provider,
-        TokenizedPaymentSource tokenizedPaymentSource,
-        TaxInformation taxInformation);
-
     Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command);
 }
