@@ -199,6 +199,8 @@ public class PoliciesController : Controller
     [HttpPut("{type}")]
     public async Task<PolicyResponseModel> Put(Guid orgId, PolicyType type, [FromBody] PolicyRequestModel model)
     {
+
+        // Jimmy Todo: add view model check
         if (!await _currentContext.ManagePolicies(orgId))
         {
             throw new NotFoundException();
@@ -218,24 +220,29 @@ public class PoliciesController : Controller
     [HttpPut("{type}/vnext")]
     public async Task<PolicyResponseModel> PutVNext(Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyVNextEndpoint))
-        {
-            throw new NotFoundException();
-        }
-
-        if (!await _currentContext.ManagePolicies(orgId))
-        {
-            throw new NotFoundException();
-        }
-
-        // if (type != model.Data.Type)
-        // {
-        //     throw new BadRequestException("Mismatched policy type");
-        // }
+        await ValidatePolicyContextRequest();
 
         var savePolicyModel = await model.ToSavePolicyModelAsync(orgId, _currentContext);
-        // var policy = await _savePolicyCommand.SaveAsync(savePolicyModel);
-        return new PolicyResponseModel(new Policy());
+        var policy = await _savePolicyCommand.SaveAsync(savePolicyModel);
+        return new PolicyResponseModel(policy);
+
+        async Task ValidatePolicyContextRequest()
+        {
+            if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
+            {
+                throw new NotFoundException();
+            }
+
+            if (!await _currentContext.ManagePolicies(orgId))
+            {
+                throw new NotFoundException();
+            }
+
+            if (type != model?.Policy.Type)
+            {
+                throw new BadRequestException("Mismatched policy type");
+            }
+        }
     }
 
 }

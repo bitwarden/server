@@ -37,29 +37,9 @@ public class SavePolicyRequest
 
     private IPolicyMetadataModel MapToPolicyMetadata()
     {
-        if (Metadata == null)
-        {
-            return new EmptyMetadataModel();
-        }
-
-        return Policy.Type switch
+        return Policy?.Type switch
         {
             PolicyType.OrganizationDataOwnership => MapToPolicyMetadata<OrganizationModelOwnershipPolicyModel>(),
-            PolicyType.TwoFactorAuthentication => new EmptyMetadataModel(),
-            PolicyType.MasterPassword => new EmptyMetadataModel(),
-            PolicyType.PasswordGenerator => new EmptyMetadataModel(),
-            PolicyType.SingleOrg => new EmptyMetadataModel(),
-            PolicyType.RequireSso => new EmptyMetadataModel(),
-            PolicyType.DisableSend => new EmptyMetadataModel(),
-            PolicyType.SendOptions => new EmptyMetadataModel(),
-            PolicyType.ResetPassword => new EmptyMetadataModel(),
-            PolicyType.MaximumVaultTimeout => new EmptyMetadataModel(),
-            PolicyType.DisablePersonalVaultExport => new EmptyMetadataModel(),
-            PolicyType.ActivateAutofill => new EmptyMetadataModel(),
-            PolicyType.AutomaticAppLogIn => new EmptyMetadataModel(),
-            PolicyType.FreeFamiliesSponsorshipPolicy => new EmptyMetadataModel(),
-            PolicyType.RemoveUnlockWithPin => new EmptyMetadataModel(),
-            PolicyType.RestrictedItemTypesPolicy => new EmptyMetadataModel(),
             _ => new EmptyMetadataModel()
         };
     }

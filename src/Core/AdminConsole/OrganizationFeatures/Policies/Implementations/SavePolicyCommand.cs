@@ -139,8 +139,7 @@ public class SavePolicyCommand : ISavePolicyCommand
         }
 
         // Run side effects
-
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyVNextEndpoint))
+        if (_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
         {
             await validator.OnSaveSideEffectsAsync(policyModel, currentPolicy);
         }
