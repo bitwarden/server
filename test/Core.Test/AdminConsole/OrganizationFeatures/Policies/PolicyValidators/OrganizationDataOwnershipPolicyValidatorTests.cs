@@ -5,7 +5,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
@@ -178,10 +177,16 @@ public class OrganizationDataOwnershipPolicyValidatorTests
     public async Task OnSaveSideEffectsAsync_WithRequirements_ShouldUpsertDefaultCollections(
         [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy? currentPolicy,
+        [OrganizationPolicyDetails(PolicyType.OrganizationDataOwnership)] IEnumerable<OrganizationPolicyDetails> orgPolicyDetails,
         OrganizationDataOwnershipPolicyRequirementFactory factory)
     {
         // Arrange
-        var policyRepository = ArrangePolicyRepositoryWithUsers(policyUpdate);
+        foreach (var policyDetail in orgPolicyDetails)
+        {
+            policyDetail.OrganizationId = policyUpdate.OrganizationId;
+        }
+
+        var policyRepository = ArrangePolicyRepository(orgPolicyDetails);
         var collectionRepository = Substitute.For<ICollectionRepository>();
         var logger = Substitute.For<ILogger<OrganizationDataOwnershipPolicyValidator>>();
 
@@ -199,18 +204,12 @@ public class OrganizationDataOwnershipPolicyValidatorTests
                 _defaultUserCollectionName);
     }
 
-    private static IPolicyRepository ArrangePolicyRepositoryWithUsers(PolicyUpdate policyUpdate)
-    {
-        var policyDetails = GenerateOrganizationPolicyDetails(policyUpdate);
-        return ArrangePolicyRepository(policyDetails);
-    }
-
     private static IPolicyRepository ArrangePolicyRepositoryWithOutUsers()
     {
         return ArrangePolicyRepository([]);
     }
 
-    private static IPolicyRepository ArrangePolicyRepository(List<OrganizationPolicyDetails> policyDetails)
+    private static IPolicyRepository ArrangePolicyRepository(IEnumerable<OrganizationPolicyDetails> policyDetails)
     {
         var policyRepository = Substitute.For<IPolicyRepository>();
 
@@ -237,41 +236,4 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         return sut;
     }
 
-    private static List<OrganizationPolicyDetails> GenerateOrganizationPolicyDetails(PolicyUpdate policyUpdate)
-    {
-        var policyDetails = new List<OrganizationPolicyDetails>
-        {
-            new()
-            {
-                OrganizationId = policyUpdate.OrganizationId,
-                OrganizationUserId = Guid.NewGuid(),
-                PolicyType = PolicyType.OrganizationDataOwnership,
-                UserId = Guid.NewGuid(),
-                PolicyData = "{}",
-                OrganizationUserType = OrganizationUserType.User,
-                OrganizationUserStatus = OrganizationUserStatusType.Confirmed
-            },
-            new()
-            {
-                OrganizationId = policyUpdate.OrganizationId,
-                OrganizationUserId = Guid.NewGuid(),
-                PolicyType = PolicyType.OrganizationDataOwnership,
-                UserId = Guid.NewGuid(),
-                PolicyData = "{}",
-                OrganizationUserType = OrganizationUserType.User,
-                OrganizationUserStatus = OrganizationUserStatusType.Confirmed
-            },
-            new()
-            {
-                OrganizationId = policyUpdate.OrganizationId,
-                OrganizationUserId = Guid.NewGuid(),
-                PolicyType = PolicyType.OrganizationDataOwnership,
-                UserId = Guid.NewGuid(),
-                PolicyData = "{}",
-                OrganizationUserType = OrganizationUserType.User,
-                OrganizationUserStatus = OrganizationUserStatusType.Confirmed
-            }
-        };
-        return policyDetails;
-    }
 }
