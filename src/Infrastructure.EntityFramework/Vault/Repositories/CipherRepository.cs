@@ -979,6 +979,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         var query = from c in dbContext.Ciphers.AsNoTracking()
                     where c.UserId == null
                        && c.OrganizationId == organizationId
+                       && c.Organization.Enabled
                        && (
                             c.CollectionCiphers.Count() == 0
                             || c.CollectionCiphers.Any(cc => (int)cc.Collection.Type != defaultTypeInt)
