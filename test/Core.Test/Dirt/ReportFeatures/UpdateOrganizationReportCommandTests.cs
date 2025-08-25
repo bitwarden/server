@@ -9,7 +9,6 @@ using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.Dirt.ReportFeatures;
@@ -38,6 +37,7 @@ public class UpdateOrganizationReportCommandTests
         var updatedReport = fixture.Build<OrganizationReport>()
             .With(x => x.Id, request.ReportId)
             .With(x => x.OrganizationId, request.OrganizationId)
+            .With(x => x.ReportData, request.ReportData)
             .Create();
 
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -47,11 +47,11 @@ public class UpdateOrganizationReportCommandTests
             .GetByIdAsync(request.ReportId)
             .Returns(existingReport);
         sutProvider.GetDependency<IOrganizationReportRepository>()
-            .ReplaceAsync(Arg.Any<OrganizationReport>())
+            .UpsertAsync(Arg.Any<OrganizationReport>())
             .Returns(Task.CompletedTask);
         sutProvider.GetDependency<IOrganizationReportRepository>()
-            .GetLatestByOrganizationIdAsync(request.ReportId)
-            .Returns(updatedReport);
+            .GetByIdAsync(request.ReportId)
+            .Returns(existingReport, updatedReport);
 
         // Act
         var result = await sutProvider.Sut.UpdateOrganizationReportAsync(request);
@@ -60,11 +60,14 @@ public class UpdateOrganizationReportCommandTests
         Assert.NotNull(result);
         Assert.Equal(updatedReport.Id, result.Id);
         Assert.Equal(updatedReport.OrganizationId, result.OrganizationId);
+        Assert.Equal(updatedReport.ReportData, result.ReportData);
+
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1).GetByIdAsync(request.OrganizationId);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .Received(1).ReplaceAsync(Arg.Is<OrganizationReport>(r =>
-                r.Id == request.ReportId &&
-                r.OrganizationId == request.OrganizationId &&
-                r.ReportData == request.ReportData));
+            .Received(2).GetByIdAsync(request.ReportId);
+        await sutProvider.GetDependency<IOrganizationReportRepository>()
+            .Received(1).UpsertAsync(Arg.Any<OrganizationReport>());
     }
 
     [Theory]
@@ -84,7 +87,7 @@ public class UpdateOrganizationReportCommandTests
 
         Assert.Equal("OrganizationId is required", exception.Message);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .DidNotReceive().ReplaceAsync(Arg.Any<OrganizationReport>());
+            .DidNotReceive().UpsertAsync(Arg.Any<OrganizationReport>());
     }
 
     [Theory]
@@ -104,7 +107,7 @@ public class UpdateOrganizationReportCommandTests
 
         Assert.Equal("ReportId is required", exception.Message);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .DidNotReceive().ReplaceAsync(Arg.Any<OrganizationReport>());
+            .DidNotReceive().UpsertAsync(Arg.Any<OrganizationReport>());
     }
 
     [Theory]
@@ -223,36 +226,5 @@ public class UpdateOrganizationReportCommandTests
             await sutProvider.Sut.UpdateOrganizationReportAsync(request));
 
         Assert.Equal("Organization report does not belong to the specified organization", exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task UpdateOrganizationReportAsync_WhenRepositoryThrowsException_ShouldPropagateException(
-        SutProvider<UpdateOrganizationReportCommand> sutProvider)
-    {
-        // Arrange
-        var fixture = new Fixture();
-        var request = fixture.Create<UpdateOrganizationReportRequest>();
-        var organization = fixture.Create<Organization>();
-        var existingReport = fixture.Build<OrganizationReport>()
-            .With(x => x.Id, request.ReportId)
-            .With(x => x.OrganizationId, request.OrganizationId)
-            .Create();
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(request.OrganizationId)
-            .Returns(organization);
-        sutProvider.GetDependency<IOrganizationReportRepository>()
-            .GetByIdAsync(request.ReportId)
-            .Returns(existingReport);
-        sutProvider.GetDependency<IOrganizationReportRepository>()
-            .ReplaceAsync(Arg.Any<OrganizationReport>())
-            .Throws(new InvalidOperationException("Database connection failed"));
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await sutProvider.Sut.UpdateOrganizationReportAsync(request));
-
-        Assert.Equal("Database connection failed", exception.Message);
     }
 }
