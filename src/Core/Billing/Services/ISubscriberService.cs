@@ -157,4 +157,22 @@ public interface ISubscriberService
     Task VerifyBankAccount(
         ISubscriber subscriber,
         string descriptorCode);
+
+    /// <summary>
+    /// Validates whether the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> exists in the gateway.
+    /// If the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> is <see langword="null"/> or empty, returns <see langword="true"/>.
+    /// </summary>
+    /// <param name="subscriber">The subscriber whose gateway customer ID should be validated.</param>
+    /// <returns><see langword="true"/> if the gateway customer ID is valid or empty; <see langword="false"/> if the customer doesn't exist in the gateway.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
+    Task<bool> IsValidGatewayCustomerIdAsync(ISubscriber subscriber);
+
+    /// <summary>
+    /// Validates whether the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewaySubscriptionId"/> exists in the gateway.
+    /// If the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewaySubscriptionId"/> is <see langword="null"/> or empty, returns <see langword="true"/>.
+    /// </summary>
+    /// <param name="subscriber">The subscriber whose gateway subscription ID should be validated.</param>
+    /// <returns><see langword="true"/> if the gateway subscription ID is valid or empty; <see langword="false"/> if the subscription doesn't exist in the gateway.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
+    Task<bool> IsValidGatewaySubscriptionIdAsync(ISubscriber subscriber);
 }

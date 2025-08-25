@@ -43,7 +43,7 @@ public class OrganizationPolicyValidatorTests
         var policyDetails = new List<OrganizationPolicyDetails>
         {
             new() { UserId = userId1, OrganizationId = organizationId },
-            new() { UserId = userId1, OrganizationId = organizationId },
+            new() { UserId = userId1, OrganizationId = Guid.NewGuid() },
             new() { UserId = userId2, OrganizationId = organizationId }
         };
 
@@ -65,7 +65,11 @@ public class OrganizationPolicyValidatorTests
         // Assert
         Assert.Equal(2, result.Count());
 
-        factory.Received(2).Create(Arg.Any<IEnumerable<PolicyDetails>>());
+        factory.Received(2).Create(Arg.Any<IEnumerable<OrganizationPolicyDetails>>());
+        factory.Received(1).Create(Arg.Is<IEnumerable<OrganizationPolicyDetails>>(
+            results => results.Count() == 1 && results.First().UserId == userId2));
+        factory.Received(1).Create(Arg.Is<IEnumerable<OrganizationPolicyDetails>>(
+            results => results.Count() == 2 && results.First().UserId == userId1));
     }
 
     [Theory, BitAutoData]
