@@ -1,4 +1,4 @@
-CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+CREATE OR ALTER VIEW [dbo].[OrganizationUserOrganizationDetailsView]
 AS
 SELECT
     OU.[UserId],
@@ -69,3 +69,18 @@ LEFT JOIN
     [dbo].[SsoConfig] SS ON SS.[OrganizationId] = OU.[OrganizationId]
 LEFT JOIN
     [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserID] = OU.[Id]
+GO
+
+--Manually refresh [dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatus]
+IF OBJECT_ID('[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatus]') IS NOT NULL
+    BEGIN
+        EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatus]';
+    END
+GO
+
+--Manually refresh [dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]
+IF OBJECT_ID('[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]') IS NOT NULL
+    BEGIN
+        EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]';
+    END
+GO
