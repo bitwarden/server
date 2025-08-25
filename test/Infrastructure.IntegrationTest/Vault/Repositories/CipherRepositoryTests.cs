@@ -9,11 +9,13 @@ using Bit.Core.Models.Data;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Xunit;
+using CipherType = Bit.Core.Vault.Enums.CipherType;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;
 
@@ -989,10 +991,10 @@ public class CipherRepositoryTests
             SecurityStamp = "stamp",
         });
 
-        var folder1 = new Folder { Id = Guid.NewGuid(), UserId = user.Id, Name = "Test Folder 1" };
-        var folder2 = new Folder { Id = Guid.NewGuid(), UserId = user.Id, Name = "Test Folder 2" };
-        var cipher1 = new Cipher { Id = Guid.NewGuid(), Type = CipherType.Login, UserId = user.Id, Data = "" };
-        var cipher2 = new Cipher { Id = Guid.NewGuid(), Type = CipherType.SecureNote, UserId = user.Id, Data = "" };
+        var folder1 = new Folder { Id = CoreHelpers.GenerateComb(), UserId = user.Id, Name = "Test Folder 1" };
+        var folder2 = new Folder { Id = CoreHelpers.GenerateComb(), UserId = user.Id, Name = "Test Folder 2" };
+        var cipher1 = new Cipher { Id = CoreHelpers.GenerateComb(), Type = CipherType.Login, UserId = user.Id, Data = "" };
+        var cipher2 = new Cipher { Id = CoreHelpers.GenerateComb(), Type = CipherType.SecureNote, UserId = user.Id, Data = "" };
 
         // Act
         await cipherRepository.CreateAsync(
@@ -1045,8 +1047,8 @@ public class CipherRepositoryTests
             Type = OrganizationUserType.Owner,
         });
 
-        var collection = new Collection { Id = Guid.NewGuid(), Name = "Test Collection", OrganizationId = org.Id };
-        var cipher = new Cipher { Id = Guid.NewGuid(), Type = CipherType.Login, OrganizationId = org.Id, Data = "" };
+        var collection = new Collection { Id = CoreHelpers.GenerateComb(), Name = "Test Collection", OrganizationId = org.Id };
+        var cipher = new Cipher { Id = CoreHelpers.GenerateComb(), Type = CipherType.Login, OrganizationId = org.Id, Data = "" };
         var collectionCipher = new CollectionCipher { CollectionId = collection.Id, CipherId = cipher.Id };
         var collectionUser = new CollectionUser
         {
@@ -1098,8 +1100,8 @@ public class CipherRepositoryTests
             SecurityStamp = "stamp",
         });
 
-        var c1 = new Cipher { Id = Guid.NewGuid(), Type = CipherType.Login, UserId = user.Id, Data = "" };
-        var c2 = new Cipher { Id = Guid.NewGuid(), Type = CipherType.Login, UserId = user.Id, Data = "" };
+        var c1 = new Cipher { Id = CoreHelpers.GenerateComb(), Type = CipherType.Login, UserId = user.Id, Data = "" };
+        var c2 = new Cipher { Id = CoreHelpers.GenerateComb(), Type = CipherType.Login, UserId = user.Id, Data = "" };
         await cipherRepository.CreateAsync(
             userId: user.Id,
             ciphers: [c1, c2],
