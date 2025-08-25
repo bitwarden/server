@@ -19,32 +19,6 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Update]
-    @Id UNIQUEIDENTIFIER,
-    @OrganizationId UNIQUEIDENTIFIER,
-    @ReportData NVARCHAR(MAX),
-    @CreationDate DATETIME2(7),
-    @ContentEncryptionKey VARCHAR(MAX),
-    @SummaryData NVARCHAR(MAX),
-    @ApplicationData NVARCHAR(MAX),
-    @RevisionDate DATETIME2(7)
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-UPDATE [dbo].[OrganizationReport]
-SET
-    [OrganizationId] = @OrganizationId,
-    [ReportData] = @ReportData,
-    [CreationDate] = @CreationDate,
-    [ContentEncryptionKey] = @ContentEncryptionKey,
-    [SummaryData] = @SummaryData,
-    [ApplicationData] = @ApplicationData,
-    [RevisionDate] = @RevisionDate
-WHERE [Id] = @Id;
-END
-GO
-
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_GetSummariesByDateRange]
     @OrganizationId UNIQUEIDENTIFIER,
     @StartDate DATETIME2(7),
@@ -166,5 +140,30 @@ BEGIN
         [RevisionDate] = @RevisionDate
     WHERE [Id] = @Id
       AND [OrganizationId] = @OrganizationId;
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Update]
+    @Id UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @ReportData NVARCHAR(MAX),
+    @CreationDate DATETIME2(7),
+    @ContentEncryptionKey VARCHAR(MAX),
+    @SummaryData NVARCHAR(MAX),
+    @ApplicationData NVARCHAR(MAX),
+    @RevisionDate DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE [dbo].[OrganizationReport]
+    SET
+        [OrganizationId] = @OrganizationId,
+        [ReportData] = @ReportData,
+        [CreationDate] = @CreationDate,
+        [ContentEncryptionKey] = @ContentEncryptionKey,
+        [SummaryData] = @SummaryData,
+        [ApplicationData] = @ApplicationData,
+        [RevisionDate] = @RevisionDate
+    WHERE [Id] = @Id;
 END
 GO

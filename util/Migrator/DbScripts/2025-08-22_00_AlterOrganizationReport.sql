@@ -3,7 +3,7 @@ SELECT * FROM sys.indexes WHERE name = 'IX_OrganizationReport_OrganizationId_Dat
 AND object_id = OBJECT_ID('dbo.OrganizationReport')
 )
 BEGIN
-    DROP INDEX [IX_OrganizationReport_OrganizationId_Date] ON [dbo].[OrganizationReport];
+    DROP INDEX [IX_OrganizationReport_OrganizationId_Date] ON [dbo].[OrganizationReport];qw
 END
 GO
 
