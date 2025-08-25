@@ -20,7 +20,7 @@ INSERT INTO [dbo].[OrganizationReport](
     [ContentEncryptionKey],
     [SummaryData],
     [ApplicationData],
-[RevisionDate]
+    [RevisionDate]
 )
 VALUES (
     @Id,

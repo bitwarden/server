@@ -55,7 +55,12 @@ public class OrganizationReportsController : Controller
     [HttpGet("{orgId}/latest")]
     public async Task<IActionResult> GetLatestOrganizationReportAsync(Guid orgId)
     {
-        GuardOrganizationAccessAsync(orgId);
+        var guardResult = await GuardOrganizationAccessAsync(orgId);
+
+        if (guardResult)
+        {
+            throw new NotFoundException("Access denied.");
+        }
 
         var latestReport = await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(orgId);
 
@@ -65,16 +70,16 @@ public class OrganizationReportsController : Controller
     [HttpGet("{orgId}/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportAsync(Guid orgId, Guid reportId)
     {
-        GuardOrganizationAccessAsync(orgId);
+        var guardResult = await GuardOrganizationAccessAsync(orgId);
+
+        if (guardResult)
+        {
+            throw new NotFoundException("Access denied.");
+        }
 
         var report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
 
         if (report == null)
-        {
-            throw new NotFoundException("Report not found for the specified organization.");
-        }
-
-        if (report.OrganizationId.Equals(orgId))
         {
             throw new NotFoundException("Report not found for the specified organization.");
         }
@@ -85,7 +90,12 @@ public class OrganizationReportsController : Controller
     [HttpPost("{orgId}")]
     public async Task<IActionResult> CreateOrganizationReportAsync(Guid orgId, [FromBody] AddOrganizationReportRequest request)
     {
-        GuardOrganizationAccessAsync(orgId);
+        var guardResult = await GuardOrganizationAccessAsync(orgId);
+
+        if (guardResult)
+        {
+            throw new NotFoundException("Access denied.");
+        }
 
         if (request.OrganizationId != orgId)
         {
@@ -96,10 +106,15 @@ public class OrganizationReportsController : Controller
         return Ok(report);
     }
 
-    [HttpPatch("{orgId}/")]
+    [HttpPatch("{orgId}/{reportId}")]
     public async Task<IActionResult> UpdateOrganizationReportAsync(Guid orgId, [FromBody] UpdateOrganizationReportRequest request)
     {
-        GuardOrganizationAccessAsync(orgId);
+        var guardResult = await GuardOrganizationAccessAsync(orgId);
+
+        if (guardResult)
+        {
+            throw new NotFoundException("Access denied.");
+        }
 
         if (request.OrganizationId != orgId)
         {
@@ -118,7 +133,12 @@ public class OrganizationReportsController : Controller
     public async Task<IActionResult> GetOrganizationReportSummaryDataByDateRangeAsync(
         Guid orgId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
     {
-        GuardOrganizationAccessAsync(orgId);
+        var guardResult = await GuardOrganizationAccessAsync(orgId);
+
+        if (guardResult)
+        {
+            throw new NotFoundException("Access denied.");
+        }
 
         if (orgId.Equals(null))
         {
@@ -134,7 +154,12 @@ public class OrganizationReportsController : Controller
     [HttpGet("{orgId}/data/summary/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportSummaryAsync(Guid orgId, Guid reportId)
     {
-        GuardOrganizationAccessAsync(orgId);
+        var guardResult = await GuardOrganizationAccessAsync(orgId);
+
+        if (guardResult)
+        {
+            throw new NotFoundException("Access denied.");
+        }
 
         var summaryData =
             await _getOrganizationReportSummaryDataQuery.GetOrganizationReportSummaryDataAsync(orgId, reportId);
@@ -156,7 +181,12 @@ public class OrganizationReportsController : Controller
     [HttpPatch("{orgId}/data/summary")]
     public async Task<IActionResult> UpdateOrganizationReportSummaryAsync(Guid orgId, [FromBody] UpdateOrganizationReportSummaryRequest request)
     {
-        GuardOrganizationAccessAsync(request.OrganizationId);
+        var guardResult = await GuardOrganizationAccessAsync(orgId);
+
+        if (guardResult)
+        {
+            throw new NotFoundException("Access denied.");
+        }
 
         if (request.OrganizationId != orgId)
         {
@@ -174,7 +204,12 @@ public class OrganizationReportsController : Controller
     [HttpGet("{orgId}/data/report/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportDataAsync(Guid orgId, Guid reportId)
     {
-        GuardOrganizationAccessAsync(orgId);
+        var guardResult = await GuardOrganizationAccessAsync(orgId);
+
+        if (guardResult)
+        {
+            throw new NotFoundException("Access denied.");
+        }
 
         var reportData = await _getOrganizationReportDataQuery.GetOrganizationReportDataAsync(orgId, reportId);
         return Ok(reportData);
@@ -183,7 +218,12 @@ public class OrganizationReportsController : Controller
     [HttpPatch("{orgId}/data/report")]
     public async Task<IActionResult> UpdateOrganizationReportDataAsync(Guid orgId, [FromBody] UpdateOrganizationReportDataRequest request)
     {
-        GuardOrganizationAccessAsync(orgId);
+        var guardResult = await GuardOrganizationAccessAsync(orgId);
+
+        if (guardResult)
+        {
+            throw new NotFoundException("Access denied.");
+        }
 
         if (request.OrganizationId != orgId)
         {
@@ -203,7 +243,12 @@ public class OrganizationReportsController : Controller
     {
         try
         {
-            GuardOrganizationAccessAsync(orgId);
+            var guardResult = await GuardOrganizationAccessAsync(orgId);
+
+            if (guardResult)
+            {
+                throw new NotFoundException("Access denied.");
+            }
 
             var applicationData = await _getOrganizationReportApplicationDataQuery.GetOrganizationReportApplicationDataAsync(orgId, reportId);
 
@@ -230,7 +275,12 @@ public class OrganizationReportsController : Controller
     {
         try
         {
-            GuardOrganizationAccessAsync(orgId);
+            var guardResult = await GuardOrganizationAccessAsync(orgId);
+
+            if (guardResult)
+            {
+                throw new NotFoundException("Access denied.");
+            }
 
             if (request.OrganizationId != orgId)
             {
@@ -250,11 +300,9 @@ public class OrganizationReportsController : Controller
     #endregion
 
 
-    private async void GuardOrganizationAccessAsync(Guid organizationId)
+    private async Task<bool> GuardOrganizationAccessAsync(Guid organizationId)
     {
-        if (!await _currentContext.AccessReports(organizationId))
-        {
-            throw new NotFoundException();
-        }
+
+        return !await _currentContext.AccessReports(organizationId);
     }
 }

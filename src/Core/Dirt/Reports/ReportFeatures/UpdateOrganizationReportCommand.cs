@@ -1,4 +1,7 @@
-﻿using Bit.Core.Dirt.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
@@ -53,23 +56,18 @@ public class UpdateOrganizationReportCommand : IUpdateOrganizationReportCommand
                 throw new BadRequestException("Organization report does not belong to the specified organization");
             }
 
-            var updatedRecord = new OrganizationReport()
-            {
-                Id = existingReport.Id,
-                OrganizationId = request.OrganizationId,
-                CreationDate = existingReport.CreationDate,
-                ContentEncryptionKey = request.ContentEncryptionKey,
-                SummaryData = request.SummaryData,
-                ApplicationData = request.ApplicationData,
-                RevisionDate = DateTime.UtcNow
-            };
+            existingReport.ContentEncryptionKey = request.ContentEncryptionKey;
+            existingReport.SummaryData = request.SummaryData;
+            existingReport.ReportData = request.ReportData;
+            existingReport.ApplicationData = request.ApplicationData;
+            existingReport.RevisionDate = DateTime.UtcNow;
 
-            await _organizationReportRepo.ReplaceAsync(updatedRecord);
+            await _organizationReportRepo.UpsertAsync(existingReport);
 
             _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully updated organization report {reportId} for organization {organizationId}",
                 request.ReportId, request.OrganizationId);
 
-            return await _organizationReportRepo.GetLatestByOrganizationIdAsync(request.ReportId);
+            return await _organizationReportRepo.GetByIdAsync(request.ReportId);
         }
         catch (Exception ex) when (!(ex is BadRequestException || ex is NotFoundException))
         {
