@@ -11,130 +11,235 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
+using Xunit;
 using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Bit.Infrastructure.IntegrationTest;
 
 public class DatabaseDataAttribute : DataAttribute
 {
+    private static IConfiguration? _cachedConfiguration;
+    private static IConfiguration GetConfiguration()
+    {
+        return _cachedConfiguration ??= new ConfigurationBuilder()
+            .AddUserSecrets<DatabaseDataAttribute>(optional: true, reloadOnChange: false)
+            .AddEnvironmentVariables("BW_TEST_")
+            .AddCommandLine(Environment.GetCommandLineArgs())
+            .Build();
+    }
+
+
     public bool SelfHosted { get; set; }
     public bool UseFakeTimeProvider { get; set; }
     public string? MigrationName { get; set; }
     public string[] EnabledFeatureFlags { get; set; } = [];
 
-    public override IEnumerable<object[]> GetData(MethodInfo testMethod)
+    private void AddSqlMigrationTester(IServiceCollection services, string connectionString, string migrationName)
     {
-        var parameters = testMethod.GetParameters();
-
-        var config = DatabaseTheoryAttribute.GetConfiguration();
-
-        var serviceProviders = GetDatabaseProviders(config);
-
-        foreach (var provider in serviceProviders)
-        {
-            var objects = new object[parameters.Length];
-            for (var i = 0; i < parameters.Length; i++)
-            {
-                objects[i] = provider.GetRequiredService(parameters[i].ParameterType);
-            }
-            yield return objects;
-        }
+        services.AddSingleton<IMigrationTesterService, SqlMigrationTesterService>(_ => new SqlMigrationTesterService(connectionString, migrationName));
     }
 
-    protected virtual IEnumerable<IServiceProvider> GetDatabaseProviders(IConfiguration config)
+    private void AddEfMigrationTester(IServiceCollection services, SupportedDatabaseProviders databaseType, string migrationName)
     {
-        // This is for the device repository integration testing.
-        var userRequestExpiration = 15;
-
-        var configureLogging = (ILoggingBuilder builder) =>
+        services.AddSingleton<IMigrationTesterService, EfMigrationTesterService>(sp =>
         {
-            if (!config.GetValue<bool>("Quiet"))
+            var dbContext = sp.GetRequiredService<DatabaseContext>();
+            return new EfMigrationTesterService(dbContext, databaseType, migrationName);
+        });
+    }
+
+    private void AddInlineFeatureService(IServiceCollection services)
+    {
+        services.AddSingleton<IFeatureService>(new InlineFeatureService(EnabledFeatureFlags));
+    }
+
+    public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
+    {
+        var config = GetConfiguration();
+
+        HashSet<SupportedDatabaseProviders> unconfiguredDatabases =
+        [
+            SupportedDatabaseProviders.MySql,
+            SupportedDatabaseProviders.Postgres,
+            SupportedDatabaseProviders.Sqlite,
+            SupportedDatabaseProviders.SqlServer
+        ];
+
+        var theories = new List<ITheoryDataRow>();
+
+        foreach (var database in config.GetDatabases())
+        {
+            unconfiguredDatabases.Remove(database.Type);
+
+            if (!database.Enabled)
             {
-                builder.AddConfiguration(config);
-                builder.AddConsole();
-                builder.AddDebug();
+                var theory = new TheoryDataRow()
+                    .WithSkip("Not-Enabled")
+                    .WithTrait("Database", database.Type.ToString());
+                theory.Label = database.Type.ToString();
+                theories.Add(theory);
+                continue;
             }
-        };
 
-        var databases = config.GetDatabases();
+            var services = new ServiceCollection();
+            AddCommonServices(services);
 
-        foreach (var database in databases)
-        {
             if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
             {
-                var dapperSqlServerCollection = new ServiceCollection();
-                AddCommonServices(dapperSqlServerCollection, configureLogging);
-                dapperSqlServerCollection.AddDapperRepositories(SelfHosted);
-                var globalSettings = new GlobalSettings
-                {
-                    DatabaseProvider = "sqlServer",
-                    SqlServer = new GlobalSettings.SqlSettings
-                    {
-                        ConnectionString = database.ConnectionString,
-                    },
-                    PasswordlessAuth = new GlobalSettings.PasswordlessAuthSettings
-                    {
-                        UserRequestExpiration = TimeSpan.FromMinutes(userRequestExpiration),
-                    }
-                };
-                dapperSqlServerCollection.AddSingleton(globalSettings);
-                dapperSqlServerCollection.AddSingleton<IGlobalSettings>(globalSettings);
-                dapperSqlServerCollection.AddSingleton(database);
-                dapperSqlServerCollection.AddDistributedSqlServerCache(o =>
-                {
-                    o.ConnectionString = database.ConnectionString;
-                    o.SchemaName = "dbo";
-                    o.TableName = "Cache";
-                });
-
-                dapperSqlServerCollection.AddSingleton<IFeatureService>(new InlineFeatureService(EnabledFeatureFlags));
-
-                if (!string.IsNullOrEmpty(MigrationName))
-                {
-                    AddSqlMigrationTester(dapperSqlServerCollection, database.ConnectionString, MigrationName);
-                }
-
-                yield return dapperSqlServerCollection.BuildServiceProvider();
+                // Dapper services
+                AddDapperServices(services, database);
             }
             else
             {
-                var efCollection = new ServiceCollection();
-                AddCommonServices(efCollection, configureLogging);
-                efCollection.SetupEntityFramework(database.ConnectionString, database.Type);
-                efCollection.AddPasswordManagerEFRepositories(SelfHosted);
-
-                var globalSettings = new GlobalSettings
-                {
-                    PasswordlessAuth = new GlobalSettings.PasswordlessAuthSettings
-                    {
-                        UserRequestExpiration = TimeSpan.FromMinutes(userRequestExpiration),
-                    }
-                };
-                efCollection.AddSingleton(globalSettings);
-                efCollection.AddSingleton<IGlobalSettings>(globalSettings);
-
-                efCollection.AddSingleton(database);
-                efCollection.AddSingleton<IDistributedCache, EntityFrameworkCache>();
-
-                efCollection.AddSingleton<IFeatureService>(new InlineFeatureService(EnabledFeatureFlags));
-
-                if (!string.IsNullOrEmpty(MigrationName))
-                {
-                    AddEfMigrationTester(efCollection, database.Type, MigrationName);
-                }
-
-                yield return efCollection.BuildServiceProvider();
+                // Ef services
+                AddEfServices(services, database);
             }
+
+            var serviceProvider = services.BuildServiceProvider();
+            disposalTracker.Add(serviceProvider);
+
+            var serviceTheory = new ServiceBasedTheoryDataRow(serviceProvider, testMethod)
+                .WithTrait("Database", database.Type.ToString())
+                .WithTrait("ConnectionString", database.ConnectionString);
+
+            serviceTheory.Label = database.Type.ToString();
+            theories.Add(serviceTheory);
+        }
+
+        foreach (var unconfiguredDatabase in unconfiguredDatabases)
+        {
+            var theory = new TheoryDataRow()
+                .WithSkip("Unconfigured")
+                .WithTrait("Database", unconfiguredDatabase.ToString());
+            theory.Label = unconfiguredDatabase.ToString();
+            theories.Add(theory);
+        }
+
+        return new(theories);
+    }
+
+    private void AddCommonServices(IServiceCollection services)
+    {
+        // Common services
+        services.AddDataProtection();
+        services.AddLogging(logging =>
+        {
+            logging.AddProvider(new XUnitLoggerProvider());
+        });
+        if (UseFakeTimeProvider)
+        {
+            services.AddSingleton<TimeProvider, FakeTimeProvider>();
         }
     }
 
-    // This is a simple offline feature service that honors the EnabledFeatureFlags.
+    private void AddDapperServices(IServiceCollection services, Database database)
+    {
+        services.AddDapperRepositories(SelfHosted);
+        var globalSettings = new GlobalSettings
+        {
+            DatabaseProvider = "sqlServer",
+            SqlServer = new GlobalSettings.SqlSettings
+            {
+                ConnectionString = database.ConnectionString,
+            },
+            PasswordlessAuth = new GlobalSettings.PasswordlessAuthSettings
+            {
+                UserRequestExpiration = TimeSpan.FromMinutes(15),
+            }
+        };
+        services.AddSingleton(globalSettings);
+        services.AddSingleton<IGlobalSettings>(globalSettings);
+        services.AddSingleton(database);
+        services.AddDistributedSqlServerCache(o =>
+        {
+            o.ConnectionString = database.ConnectionString;
+            o.SchemaName = "dbo";
+            o.TableName = "Cache";
+        });
+
+        if (EnabledFeatureFlags.Length > 0)
+        {
+            AddInlineFeatureService(services);
+        }
+
+        if (!string.IsNullOrEmpty(MigrationName))
+        {
+            AddSqlMigrationTester(services, database.ConnectionString, MigrationName);
+        }
+    }
+
+    private void AddEfServices(IServiceCollection services, Database database)
+    {
+        services.SetupEntityFramework(database.ConnectionString, database.Type);
+        services.AddPasswordManagerEFRepositories(SelfHosted);
+
+        var globalSettings = new GlobalSettings
+        {
+            PasswordlessAuth = new GlobalSettings.PasswordlessAuthSettings
+            {
+                UserRequestExpiration = TimeSpan.FromMinutes(15),
+            },
+        };
+        services.AddSingleton(globalSettings);
+        services.AddSingleton<IGlobalSettings>(globalSettings);
+
+        services.AddSingleton(database);
+        services.AddSingleton<IDistributedCache, EntityFrameworkCache>();
+
+        if (EnabledFeatureFlags.Length > 0)
+        {
+            AddInlineFeatureService(services);
+        }
+
+        if (!string.IsNullOrEmpty(MigrationName))
+        {
+            AddEfMigrationTester(services, database.Type, MigrationName);
+        }
+    }
+
+    public override bool SupportsDiscoveryEnumeration()
+    {
+        return true;
+    }
+
+    private class ServiceBasedTheoryDataRow : TheoryDataRowBase
+    {
+        private readonly IServiceProvider _serviceProvider;
+        private readonly MethodInfo _testMethod;
+
+        public ServiceBasedTheoryDataRow(IServiceProvider serviceProvider, MethodInfo testMethod)
+        {
+            _serviceProvider = serviceProvider;
+            _testMethod = testMethod;
+        }
+
+        protected override object?[] GetData()
+        {
+            var parameters = _testMethod.GetParameters();
+
+            var services = new object?[parameters.Length];
+
+            for (var i = 0; i < parameters.Length; i++)
+            {
+                var parameter = parameters[i];
+                // TODO: Could support keyed services/optional/nullable
+                services[i] = _serviceProvider.GetRequiredService(parameter.ParameterType);
+            }
+
+            return services;
+        }
+    }
+
+    /// <summary>
+    /// This is a simple offline feature service that honors the <see cref="EnabledFeatureFlags"/>.
+    /// </summary>
     internal sealed class InlineFeatureService : IFeatureService
     {
         private readonly HashSet<string> _enabled;
         public InlineFeatureService(IEnumerable<string> enabled)
         {
-            _enabled = new HashSet<string>(enabled ?? Array.Empty<string>());
+            _enabled = new HashSet<string>(enabled ?? []);
         }
 
         public bool IsOnline() => true;
@@ -149,30 +254,5 @@ public class DatabaseDataAttribute : DataAttribute
         public int GetIntVariation(string key, int defaultValue = 0) => defaultValue;
         public string GetStringVariation(string key, string defaultValue = null) => defaultValue;
         public Dictionary<string, object> GetAll() => new();
-    }
-
-    private void AddCommonServices(IServiceCollection services, Action<ILoggingBuilder> configureLogging)
-    {
-        services.AddLogging(configureLogging);
-        services.AddDataProtection();
-
-        if (UseFakeTimeProvider)
-        {
-            services.AddSingleton<TimeProvider, FakeTimeProvider>();
-        }
-    }
-
-    private void AddSqlMigrationTester(IServiceCollection services, string connectionString, string migrationName)
-    {
-        services.AddSingleton<IMigrationTesterService, SqlMigrationTesterService>(_ => new SqlMigrationTesterService(connectionString, migrationName));
-    }
-
-    private void AddEfMigrationTester(IServiceCollection services, SupportedDatabaseProviders databaseType, string migrationName)
-    {
-        services.AddSingleton<IMigrationTesterService, EfMigrationTesterService>(sp =>
-        {
-            var dbContext = sp.GetRequiredService<DatabaseContext>();
-            return new EfMigrationTesterService(dbContext, databaseType, migrationName);
-        });
     }
 }
