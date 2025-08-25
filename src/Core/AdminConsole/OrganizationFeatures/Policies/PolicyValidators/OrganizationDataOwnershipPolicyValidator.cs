@@ -31,19 +31,15 @@ public class OrganizationDataOwnershipPolicyValidator(
             return;
         }
 
-        var metadata = MapToOrganizationModelOwnershipPolicyModel(policyModel.Metadata);
-
-        if (metadata == null || string.IsNullOrWhiteSpace(metadata.DefaultUserCollectionName))
+        if (policyModel.Metadata is not OrganizationModelOwnershipPolicyModel metadata)
         {
             return;
         }
 
-        if (policyModel.Metadata is EmptyMetadataModel)
+        if (string.IsNullOrWhiteSpace(metadata.DefaultUserCollectionName))
         {
             return;
         }
-
-
 
         var policyUpdate = policyModel.Data;
 
@@ -53,19 +49,6 @@ public class OrganizationDataOwnershipPolicyValidator(
         }
 
         await UpsertDefaultCollectionsForUsersAsync(policyUpdate, metadata.DefaultUserCollectionName);
-    }
-
-    private static OrganizationModelOwnershipPolicyModel? MapToOrganizationModelOwnershipPolicyModel(IPolicyMetadataModel model)
-    {
-        if (model is OrganizationModelOwnershipPolicyModel ownershipModel)
-        {
-            return new OrganizationModelOwnershipPolicyModel(
-                defaultUserCollectionName: ownershipModel.DefaultUserCollectionName
-            );
-        }
-        // Jimmy todo: This can be null if it's coming from the public API.
-        // The overloaded save method will always return an object, so this is bug.
-        return null;
     }
 
     public override Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
