@@ -28,8 +28,14 @@ public class GetOrganizationReportQuery : IGetOrganizationReportQuery
 
         _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching organization reports for organization by Id: {reportId}", reportId);
 
-        return await _organizationReportRepo.GetByIdAsync(reportId)
-            ?? throw new NotFoundException("Organization report not found.");
+        var results = await _organizationReportRepo.GetByIdAsync(reportId);
+
+        if (results == null)
+        {
+            throw new NotFoundException($"No report found for Id: {reportId}");
+        }
+
+        return results;
     }
 
     public async Task<OrganizationReport> GetLatestOrganizationReportAsync(Guid organizationId)

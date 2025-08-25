@@ -102,7 +102,7 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
             };
 
             var results = await connection.QueryAsync<OrganizationReportSummaryDataResponse>(
-                $"[{Schema}].[OrganizationReport_GetSummaryDataByDateRange]",
+                $"[{Schema}].[OrganizationReport_GetSummariesByDateRange]",
                 parameters,
                 commandType: CommandType.StoredProcedure);
 

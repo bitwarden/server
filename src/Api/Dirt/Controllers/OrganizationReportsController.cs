@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Dirt.Controllers;
 
-[Route("reports/organization")]
+[Route("reports/organizations")]
 [Authorize("Application")]
 public class OrganizationReportsController : Controller
 {
@@ -55,7 +55,7 @@ public class OrganizationReportsController : Controller
     [HttpGet("{orgId}/latest")]
     public async Task<IActionResult> GetLatestOrganizationReportAsync(Guid orgId)
     {
-        GuardOrganizationAccess(orgId);
+        GuardOrganizationAccessAsync(orgId);
 
         var latestReport = await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(orgId);
 
@@ -65,7 +65,7 @@ public class OrganizationReportsController : Controller
     [HttpGet("{orgId}/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportAsync(Guid orgId, Guid reportId)
     {
-        GuardOrganizationAccess(orgId);
+        GuardOrganizationAccessAsync(orgId);
 
         var report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
 
@@ -74,7 +74,7 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException("Report not found for the specified organization.");
         }
 
-        if (report.OrganizationId != orgId)
+        if (report.OrganizationId.Equals(orgId))
         {
             throw new NotFoundException("Report not found for the specified organization.");
         }
@@ -85,7 +85,7 @@ public class OrganizationReportsController : Controller
     [HttpPost("{orgId}")]
     public async Task<IActionResult> CreateOrganizationReportAsync(Guid orgId, [FromBody] AddOrganizationReportRequest request)
     {
-        GuardOrganizationAccess(orgId);
+        GuardOrganizationAccessAsync(orgId);
 
         if (request.OrganizationId != orgId)
         {
@@ -99,7 +99,7 @@ public class OrganizationReportsController : Controller
     [HttpPatch("{orgId}/")]
     public async Task<IActionResult> UpdateOrganizationReportAsync(Guid orgId, [FromBody] UpdateOrganizationReportRequest request)
     {
-        GuardOrganizationAccess(orgId);
+        GuardOrganizationAccessAsync(orgId);
 
         if (request.OrganizationId != orgId)
         {
@@ -114,20 +114,19 @@ public class OrganizationReportsController : Controller
 
     # region SummaryData Field Endpoints
 
-    [HttpPost("{orgId}/data/summary/date-range")]
+    [HttpGet("{orgId}/data/summary")]
     public async Task<IActionResult> GetOrganizationReportSummaryDataByDateRangeAsync(
-        Guid orgId,
-        [FromBody] GetOrganizationReportSummaryDataByDateRangeRequest request)
+        Guid orgId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
     {
-        GuardOrganizationAccess(orgId);
+        GuardOrganizationAccessAsync(orgId);
 
-        if (request.OrganizationId != orgId)
+        if (orgId.Equals(null))
         {
-            throw new BadRequestException("Organization ID in the request body must match the route parameter");
+            throw new BadRequestException("Organization ID is required.");
         }
 
         var summaryDataList = await _getOrganizationReportSummaryDataByDateRangeQuery
-            .GetOrganizationReportSummaryDataByDateRangeAsync(request.OrganizationId, request.StartDate, request.EndDate);
+            .GetOrganizationReportSummaryDataByDateRangeAsync(orgId, startDate, endDate);
 
         return Ok(summaryDataList);
     }
@@ -135,7 +134,7 @@ public class OrganizationReportsController : Controller
     [HttpGet("{orgId}/data/summary/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportSummaryAsync(Guid orgId, Guid reportId)
     {
-        GuardOrganizationAccess(orgId);
+        GuardOrganizationAccessAsync(orgId);
 
         var summaryData =
             await _getOrganizationReportSummaryDataQuery.GetOrganizationReportSummaryDataAsync(orgId, reportId);
@@ -157,7 +156,7 @@ public class OrganizationReportsController : Controller
     [HttpPatch("{orgId}/data/summary")]
     public async Task<IActionResult> UpdateOrganizationReportSummaryAsync(Guid orgId, [FromBody] UpdateOrganizationReportSummaryRequest request)
     {
-        GuardOrganizationAccess(request.OrganizationId);
+        GuardOrganizationAccessAsync(request.OrganizationId);
 
         if (request.OrganizationId != orgId)
         {
@@ -175,7 +174,7 @@ public class OrganizationReportsController : Controller
     [HttpGet("{orgId}/data/report/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportDataAsync(Guid orgId, Guid reportId)
     {
-        GuardOrganizationAccess(orgId);
+        GuardOrganizationAccessAsync(orgId);
 
         var reportData = await _getOrganizationReportDataQuery.GetOrganizationReportDataAsync(orgId, reportId);
         return Ok(reportData);
@@ -184,7 +183,7 @@ public class OrganizationReportsController : Controller
     [HttpPatch("{orgId}/data/report")]
     public async Task<IActionResult> UpdateOrganizationReportDataAsync(Guid orgId, [FromBody] UpdateOrganizationReportDataRequest request)
     {
-        GuardOrganizationAccess(orgId);
+        GuardOrganizationAccessAsync(orgId);
 
         if (request.OrganizationId != orgId)
         {
@@ -204,7 +203,7 @@ public class OrganizationReportsController : Controller
     {
         try
         {
-            GuardOrganizationAccess(orgId);
+            GuardOrganizationAccessAsync(orgId);
 
             var applicationData = await _getOrganizationReportApplicationDataQuery.GetOrganizationReportApplicationDataAsync(orgId, reportId);
 
@@ -231,7 +230,7 @@ public class OrganizationReportsController : Controller
     {
         try
         {
-            GuardOrganizationAccess(orgId);
+            GuardOrganizationAccessAsync(orgId);
 
             if (request.OrganizationId != orgId)
             {
@@ -251,9 +250,9 @@ public class OrganizationReportsController : Controller
     #endregion
 
 
-    private void GuardOrganizationAccess(Guid organizationId)
+    private async void GuardOrganizationAccessAsync(Guid organizationId)
     {
-        if (!_currentContext.AccessReports(organizationId).Result)
+        if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
         }
