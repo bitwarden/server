@@ -84,6 +84,11 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException("Report not found for the specified organization.");
         }
 
+        if (report.OrganizationId != orgId)
+        {
+            throw new BadRequestException("Organization ID in the request body must match the route parameter");
+        }
+
         return Ok(report);
     }
 
@@ -172,7 +177,7 @@ public class OrganizationReportsController : Controller
 
         if (summaryData.OrganizationId != orgId)
         {
-            throw new NotFoundException("Report not found for the specified organization.");
+            throw new BadRequestException("Organization ID in the request body must match the route parameter");
         }
 
         return Ok(summaryData);
@@ -217,6 +222,17 @@ public class OrganizationReportsController : Controller
         }
 
         var reportData = await _getOrganizationReportDataQuery.GetOrganizationReportDataAsync(orgId, reportId);
+
+        if (reportData == null)
+        {
+            throw new NotFoundException("Organization report data not found.");
+        }
+
+        if (reportData.OrganizationId != orgId)
+        {
+            throw new BadRequestException("Organization ID in the request body must match the route parameter");
+        }
+
         return Ok(reportData);
     }
 
@@ -265,6 +281,11 @@ public class OrganizationReportsController : Controller
             if (applicationData == null)
             {
                 throw new NotFoundException("Organization report application data not found.");
+            }
+
+            if (applicationData.OrganizationId != orgId)
+            {
+                throw new BadRequestException("Organization ID in the request body must match the route parameter");
             }
 
             return Ok(applicationData);

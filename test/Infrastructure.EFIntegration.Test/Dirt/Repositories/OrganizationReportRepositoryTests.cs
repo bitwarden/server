@@ -122,11 +122,11 @@ public class OrganizationReportRepositoryTests
         // Arrange
         var (org, firstReport) = await CreateOrganizationAndReportAsync(sqlOrganizationRepo, sqlOrganizationReportRepo);
 
-        // Create a second report for the same organization
+        // Create a second report for the same organization with a later revision date
         var fixture = new Fixture();
         var secondReport = fixture.Build<OrganizationReport>()
             .With(x => x.OrganizationId, org.Id)
-            .With(x => x.CreationDate, DateTime.UtcNow.AddMinutes(1))
+            .With(x => x.RevisionDate, DateTime.UtcNow.AddMinutes(1))
             .Create();
         await sqlOrganizationReportRepo.CreateAsync(secondReport);
 
@@ -136,7 +136,7 @@ public class OrganizationReportRepositoryTests
         // Assert
         Assert.NotNull(latestReport);
         Assert.Equal(org.Id, latestReport.OrganizationId);
-        Assert.True(latestReport.CreationDate >= firstReport.CreationDate);
+        Assert.True(latestReport.RevisionDate >= firstReport.RevisionDate);
     }
 
     [CiSkippedTheory, EfOrganizationReportAutoData]

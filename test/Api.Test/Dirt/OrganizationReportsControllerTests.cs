@@ -123,6 +123,7 @@ public class OrganizationReportControllerTests
         OrganizationReport expectedReport)
     {
         // Arrange
+        expectedReport.OrganizationId = orgId;
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(true);
@@ -190,6 +191,7 @@ public class OrganizationReportControllerTests
         OrganizationReport expectedReport)
     {
         // Arrange
+        expectedReport.OrganizationId = orgId;
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(true);
@@ -219,6 +221,7 @@ public class OrganizationReportControllerTests
         OrganizationReport expectedReport)
     {
         // Arrange
+        expectedReport.OrganizationId = orgId;
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(true);
@@ -571,7 +574,7 @@ public class OrganizationReportControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetOrganizationReportSummaryAsync_WithMismatchedOrgId_ThrowsNotFoundException(
+    public async Task GetOrganizationReportSummaryAsync_WithMismatchedOrgId_ThrowsBadRequestException(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         Guid reportId,
@@ -589,10 +592,10 @@ public class OrganizationReportControllerTests
             .Returns(summaryData);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.GetOrganizationReportSummaryAsync(orgId, reportId));
 
-        Assert.Equal("Report not found for the specified organization.", exception.Message);
+        Assert.Equal("Organization ID in the request body must match the route parameter", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -744,6 +747,7 @@ public class OrganizationReportControllerTests
         OrganizationReportDataResponse expectedReportData)
     {
         // Arrange
+        expectedReportData.OrganizationId = orgId;
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(true);
@@ -789,6 +793,7 @@ public class OrganizationReportControllerTests
         OrganizationReportDataResponse expectedReportData)
     {
         // Arrange
+        expectedReportData.OrganizationId = orgId;
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(true);
@@ -959,6 +964,7 @@ public class OrganizationReportControllerTests
         OrganizationReportApplicationDataResponse expectedApplicationData)
     {
         // Arrange
+        expectedApplicationData.OrganizationId = orgId;
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(true);
@@ -1026,6 +1032,8 @@ public class OrganizationReportControllerTests
         OrganizationReportApplicationDataResponse expectedApplicationData)
     {
         // Arrange
+        expectedApplicationData.OrganizationId = orgId;
+
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(true);

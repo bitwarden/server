@@ -8,14 +8,16 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Update]
     @ApplicationData NVARCHAR(MAX),
     @RevisionDate DATETIME2(7)
 AS
+BEGIN
     SET NOCOUNT ON;
-UPDATE [dbo].[OrganizationReport]
-SET
-    [OrganizationId] = @OrganizationId,
-    [ReportData] = @ReportData,
-    [CreationDate] = @CreationDate,
-    [ContentEncryptionKey] = @ContentEncryptionKey,
-    [SummaryData] = @SummaryData,
-    [ApplicationData] = @ApplicationData,
-    [RevisionDate] = @RevisionDate
-WHERE [Id] = @Id;
+    UPDATE [dbo].[OrganizationReport]
+    SET
+        [OrganizationId] = @OrganizationId,
+        [ReportData] = @ReportData,
+        [CreationDate] = @CreationDate,
+        [ContentEncryptionKey] = @ContentEncryptionKey,
+        [SummaryData] = @SummaryData,
+        [ApplicationData] = @ApplicationData,
+        [RevisionDate] = @RevisionDate
+    WHERE [Id] = @Id;
+END;
