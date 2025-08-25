@@ -7,7 +7,7 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.Test.AdminConsole.AutoFixture;
 
-internal class PolicyDetailsCustomization(
+internal class OrganizationPolicyDetailsCustomization(
     PolicyType policyType,
     OrganizationUserType userType,
     bool isProvider,
@@ -15,7 +15,7 @@ internal class PolicyDetailsCustomization(
 {
     public void Customize(IFixture fixture)
     {
-        fixture.Customize<PolicyDetails>(composer => composer
+        fixture.Customize<OrganizationPolicyDetails>(composer => composer
             .With(o => o.PolicyType, policyType)
             .With(o => o.OrganizationUserType, userType)
             .With(o => o.IsProvider, isProvider)
@@ -24,14 +24,12 @@ internal class PolicyDetailsCustomization(
     }
 }
 
-public class PolicyDetailsAttribute(
+public class OrganizationPolicyDetailsAttribute(
     PolicyType policyType,
     OrganizationUserType userType = OrganizationUserType.User,
     bool isProvider = false,
     OrganizationUserStatusType userStatus = OrganizationUserStatusType.Confirmed) : CustomizeAttribute
 {
     public override ICustomization GetCustomization(ParameterInfo parameter)
-        => new PolicyDetailsCustomization(policyType, userType, isProvider, userStatus);
+        => new OrganizationPolicyDetailsCustomization(policyType, userType, isProvider, userStatus);
 }
-
-

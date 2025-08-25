@@ -479,7 +479,7 @@ public class ConfirmOrganizationUserCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
-            .CreateDefaultCollectionsAsync(
+            .UpsertDefaultCollectionsAsync(
                 organization.Id,
                 Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.Id)),
                 collectionName);
@@ -505,7 +505,7 @@ public class ConfirmOrganizationUserCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceive()
-            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+            .UpsertDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -531,6 +531,6 @@ public class ConfirmOrganizationUserCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceive()
-            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+            .UpsertDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 }
