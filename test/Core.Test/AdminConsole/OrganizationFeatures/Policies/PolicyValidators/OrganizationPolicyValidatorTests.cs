@@ -43,7 +43,7 @@ public class OrganizationPolicyValidatorTests
         var policyDetails = new List<OrganizationPolicyDetails>
         {
             new() { UserId = userId1, OrganizationId = organizationId },
-            new() { UserId = userId1, OrganizationId = organizationId },
+            new() { UserId = userId1, OrganizationId = Guid.NewGuid() },
             new() { UserId = userId2, OrganizationId = organizationId }
         };
 
