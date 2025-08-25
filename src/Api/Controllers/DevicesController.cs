@@ -13,6 +13,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -75,7 +76,7 @@ public class DevicesController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<DeviceAuthRequestResponseModel>> Get()
+    public async Task<ListResponseModel<DeviceAuthRequestResponseModel>> GetAll()
     {
         var devicesWithPendingAuthData = await _deviceRepository.GetManyByUserIdWithDeviceAuth(_userService.GetProperUserId(User).Value);
 
@@ -100,6 +101,7 @@ public class DevicesController : Controller
 
     [HttpPut("{id}")]
     [HttpPost("{id}")]
+    [SwaggerExclude("POST")]
     public async Task<DeviceResponseModel> Put(string id, [FromBody] DeviceRequestModel model)
     {
         var device = await _deviceRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
@@ -116,6 +118,7 @@ public class DevicesController : Controller
 
     [HttpPut("{identifier}/keys")]
     [HttpPost("{identifier}/keys")]
+    [SwaggerExclude("POST")]
     public async Task<DeviceResponseModel> PutKeys(string identifier, [FromBody] DeviceKeysRequestModel model)
     {
         var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
@@ -188,6 +191,7 @@ public class DevicesController : Controller
 
     [HttpPut("identifier/{identifier}/token")]
     [HttpPost("identifier/{identifier}/token")]
+    [SwaggerExclude("POST")]
     public async Task PutToken(string identifier, [FromBody] DeviceTokenRequestModel model)
     {
         var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
@@ -201,6 +205,7 @@ public class DevicesController : Controller
 
     [HttpPut("identifier/{identifier}/web-push-auth")]
     [HttpPost("identifier/{identifier}/web-push-auth")]
+    [SwaggerExclude("POST")]
     public async Task PutWebPushAuth(string identifier, [FromBody] WebPushAuthRequestModel model)
     {
         var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
@@ -219,6 +224,7 @@ public class DevicesController : Controller
     [AllowAnonymous]
     [HttpPut("identifier/{identifier}/clear-token")]
     [HttpPost("identifier/{identifier}/clear-token")]
+    [SwaggerExclude("POST")]
     public async Task PutClearToken(string identifier)
     {
         var device = await _deviceRepository.GetByIdentifierAsync(identifier);
@@ -232,6 +238,7 @@ public class DevicesController : Controller
 
     [HttpDelete("{id}")]
     [HttpPost("{id}/deactivate")]
+    [SwaggerExclude("POST")]
     public async Task Deactivate(string id)
     {
         var device = await _deviceRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
@@ -248,12 +255,12 @@ public class DevicesController : Controller
     public async Task<bool> GetByIdentifierQuery(
             [Required][FromHeader(Name = "X-Request-Email")] string Email,
             [Required][FromHeader(Name = "X-Device-Identifier")] string DeviceIdentifier)
-        => await GetByIdentifier(CoreHelpers.Base64UrlDecodeString(Email), DeviceIdentifier);
+        => await GetByEmailAndIdentifier(CoreHelpers.Base64UrlDecodeString(Email), DeviceIdentifier);
 
     [Obsolete("Path is deprecated due to encoding issues, use /knowndevice instead.")]
     [AllowAnonymous]
     [HttpGet("knowndevice/{email}/{identifier}")]
-    public async Task<bool> GetByIdentifier(string email, string identifier)
+    public async Task<bool> GetByEmailAndIdentifier(string email, string identifier)
     {
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(identifier))
         {

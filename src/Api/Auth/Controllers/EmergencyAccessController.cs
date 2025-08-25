@@ -12,6 +12,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -80,6 +81,7 @@ public class EmergencyAccessController : Controller
 
     [HttpPut("{id}")]
     [HttpPost("{id}")]
+    [SwaggerExclude("POST")]
     public async Task Put(Guid id, [FromBody] EmergencyAccessUpdateRequestModel model)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
@@ -94,6 +96,7 @@ public class EmergencyAccessController : Controller
 
     [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
+    [SwaggerExclude("POST")]
     public async Task Delete(Guid id)
     {
         var userId = _userService.GetProperUserId(User);
@@ -136,7 +139,7 @@ public class EmergencyAccessController : Controller
     }
 
     [HttpPost("{id}/approve")]
-    public async Task Accept(Guid id)
+    public async Task Approve(Guid id)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         await _emergencyAccessService.ApproveAsync(id, user);

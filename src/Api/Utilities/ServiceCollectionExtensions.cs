@@ -82,15 +82,7 @@ public static class ServiceCollectionExtensions
             config.DescribeAllParametersInCamelCase();
             // config.UseReferencedDefinitionsForEnums();
 
-            config.SchemaFilter<EnumSchemaFilter>();
-            config.SchemaFilter<EncryptedStringSchemaFilter>();
-
-            // These two filters require debug symbols/git, so only add them in development mode
-            if (environment.IsDevelopment())
-            {
-                config.DocumentFilter<GitCommitDocumentFilter>();
-                config.OperationFilter<SourceFileLineOperationFilter>();
-            }
+            config.InitializeSwaggerFilters(environment);
 
             var apiFilePath = Path.Combine(AppContext.BaseDirectory, "Api.xml");
             config.IncludeXmlComments(apiFilePath, true);

@@ -20,6 +20,7 @@ using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -345,6 +346,7 @@ public class AccountsController : Controller
 
     [HttpPut("profile")]
     [HttpPost("profile")]
+    [SwaggerExclude("POST")]
     public async Task<ProfileResponseModel> PutProfile([FromBody] UpdateProfileRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -365,6 +367,7 @@ public class AccountsController : Controller
 
     [HttpPut("avatar")]
     [HttpPost("avatar")]
+    [SwaggerExclude("POST")]
     public async Task<ProfileResponseModel> PutAvatar([FromBody] UpdateAvatarRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -431,6 +434,7 @@ public class AccountsController : Controller
 
     [HttpDelete]
     [HttpPost("delete")]
+    [SwaggerExclude("POST")]
     public async Task Delete([FromBody] SecretVerificationRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -638,8 +642,9 @@ public class AccountsController : Controller
         await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user);
     }
 
-    [HttpPost("verify-devices")]
     [HttpPut("verify-devices")]
+    [HttpPost("verify-devices")]
+    [SwaggerExclude("POST")]
     public async Task SetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
