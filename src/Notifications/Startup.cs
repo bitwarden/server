@@ -61,6 +61,7 @@ public class Startup
         }
         services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
         services.AddSingleton<ConnectionCounter>();
+        services.AddSingleton<HubHelpers>();
 
         // Mvc
         services.AddMvc();
