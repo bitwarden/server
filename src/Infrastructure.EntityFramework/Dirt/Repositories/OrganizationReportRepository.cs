@@ -20,22 +20,6 @@ public class OrganizationReportRepository :
         IMapper mapper) : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationReports)
     { }
 
-    public async Task<OrganizationReport> GetByOrganizationIdAsync(Guid organizationId)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var result = await dbContext.OrganizationReports
-                .Where(p => p.OrganizationId == organizationId)
-                .FirstOrDefaultAsync();
-
-            if (result == null) return default;
-
-            return Mapper.Map<OrganizationReport>(result);
-
-        }
-    }
-
     public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -53,7 +37,7 @@ public class OrganizationReportRepository :
         }
     }
 
-    public async Task<OrganizationReport> UpdateSummaryDataAsync(Guid reportId, string summaryData)
+    public async Task<OrganizationReport> UpdateSummaryDataAsync(Guid orgId, Guid reportId, string summaryData)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -61,7 +45,7 @@ public class OrganizationReportRepository :
 
             // Update only SummaryData and RevisionDate
             await dbContext.OrganizationReports
-                .Where(p => p.Id == reportId)
+                .Where(p => p.Id == reportId && p.OrganizationId == orgId)
                 .UpdateAsync(p => new Models.OrganizationReport
                 {
                     SummaryData = summaryData,

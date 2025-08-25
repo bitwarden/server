@@ -37,13 +37,14 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
         }
     }
 
-    public async Task<OrganizationReport> UpdateSummaryDataAsync(Guid reportId, string summaryData)
+    public async Task<OrganizationReport> UpdateSummaryDataAsync(Guid orgId, Guid reportId, string summaryData)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var parameters = new
             {
                 Id = reportId,
+                OrganizationId = orgId,
                 SummaryData = summaryData,
                 RevisionDate = DateTime.UtcNow
             };

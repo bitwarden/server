@@ -47,7 +47,7 @@ public class UpdateOrganizationReportSummaryCommandTests
             .GetByIdAsync(request.ReportId)
             .Returns(existingReport);
         sutProvider.GetDependency<IOrganizationReportRepository>()
-            .UpdateSummaryDataAsync(request.ReportId, request.SummaryData)
+            .UpdateSummaryDataAsync(request.OrganizationId, request.ReportId, request.SummaryData)
             .Returns(updatedReport);
 
         // Act
@@ -58,7 +58,7 @@ public class UpdateOrganizationReportSummaryCommandTests
         Assert.Equal(updatedReport.Id, result.Id);
         Assert.Equal(updatedReport.OrganizationId, result.OrganizationId);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .Received(1).UpdateSummaryDataAsync(request.ReportId, request.SummaryData);
+            .Received(1).UpdateSummaryDataAsync(request.OrganizationId, request.ReportId, request.SummaryData);
     }
 
     [Theory]
@@ -78,7 +78,7 @@ public class UpdateOrganizationReportSummaryCommandTests
 
         Assert.Equal("OrganizationId is required", exception.Message);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .DidNotReceive().UpdateSummaryDataAsync(Arg.Any<Guid>(), Arg.Any<string>());
+            .DidNotReceive().UpdateSummaryDataAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<string>());
     }
 
     [Theory]
@@ -98,7 +98,7 @@ public class UpdateOrganizationReportSummaryCommandTests
 
         Assert.Equal("ReportId is required", exception.Message);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .DidNotReceive().UpdateSummaryDataAsync(Arg.Any<Guid>(), Arg.Any<string>());
+            .DidNotReceive().UpdateSummaryDataAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<string>());
     }
 
     [Theory]
@@ -240,7 +240,7 @@ public class UpdateOrganizationReportSummaryCommandTests
             .GetByIdAsync(request.ReportId)
             .Returns(existingReport);
         sutProvider.GetDependency<IOrganizationReportRepository>()
-            .UpdateSummaryDataAsync(request.ReportId, request.SummaryData)
+            .UpdateSummaryDataAsync(request.OrganizationId, request.ReportId, request.SummaryData)
             .Throws(new InvalidOperationException("Database connection failed"));
 
         // Act & Assert

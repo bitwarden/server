@@ -12,7 +12,7 @@ public interface IOrganizationReportRepository : IRepository<OrganizationReport,
     // SummaryData methods
     Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetSummaryDataByDateRangeAsync(Guid organizationId, DateTime startDate, DateTime endDate);
     Task<OrganizationReportSummaryDataResponse> GetSummaryDataAsync(Guid organizationId, Guid reportId);
-    Task<OrganizationReport> UpdateSummaryDataAsync(Guid reportId, string summaryData);
+    Task<OrganizationReport> UpdateSummaryDataAsync(Guid orgId, Guid reportId, string summaryData);
 
     // ReportData methods
     Task<OrganizationReportDataResponse> GetReportDataAsync(Guid organizationId, Guid reportId);
