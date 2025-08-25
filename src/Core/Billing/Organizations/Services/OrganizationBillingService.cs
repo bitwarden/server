@@ -26,7 +26,6 @@ namespace Bit.Core.Billing.Organizations.Services;
 
 public class OrganizationBillingService(
     IBraintreeGateway braintreeGateway,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -273,11 +272,9 @@ public class OrganizationBillingService(
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             };
 
-            var setNonUSBusinessUseToReverseCharge =
-                featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
 
-            if (setNonUSBusinessUseToReverseCharge &&
-                planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
+
+            if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
                 customerSetup.TaxInformation.Country != "US")
             {
                 customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
@@ -491,24 +488,10 @@ public class OrganizationBillingService(
             };
         }
 
-        var setNonUSBusinessUseToReverseCharge =
-            featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
-
-        if (setNonUSBusinessUseToReverseCharge && customer.HasBillingLocation())
+        if (customer.HasBillingLocation())
         {
             subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
-        else if (customer.HasRecognizedTaxLocation())
-        {
-            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
-            {
-                Enabled =
-                    subscriptionSetup.PlanType.GetProductTier() == ProductTierType.Families ||
-                    customer.Address.Country == "US" ||
-                    customer.TaxIds.Any()
-            };
-        }
-
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
     }
 
@@ -519,9 +502,7 @@ public class OrganizationBillingService(
         var customer = await subscriberService.GetCustomerOrThrow(organization,
             new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
 
-        var setNonUSBusinessUseToReverseCharge = featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
-
-        if (!setNonUSBusinessUseToReverseCharge || subscriptionSetup.PlanType.GetProductTier() is
+        if (subscriptionSetup.PlanType.GetProductTier() is
                 not (ProductTierType.Teams or
                 ProductTierType.TeamsStarter or
                 ProductTierType.Enterprise))

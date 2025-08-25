@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Api.AdminConsole.Authorization;
+﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 
