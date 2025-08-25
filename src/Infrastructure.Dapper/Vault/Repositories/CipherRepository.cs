@@ -3,13 +3,16 @@
 
 using System.Data;
 using System.Text.Json;
+using Bit.Core;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Bit.Infrastructure.Dapper.AdminConsole.Helpers;
 using Bit.Infrastructure.Dapper.Repositories;
 using Bit.Infrastructure.Dapper.Vault.Helpers;
 using Dapper;
@@ -19,13 +22,17 @@ namespace Bit.Infrastructure.Dapper.Vault.Repositories;
 
 public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 {
-    public CipherRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+    private readonly IFeatureService _featureService;
+
+    public CipherRepository(GlobalSettings globalSettings, IFeatureService featureService)
+        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString, featureService)
     { }
 
-    public CipherRepository(string connectionString, string readOnlyConnectionString)
+    public CipherRepository(string connectionString, string readOnlyConnectionString, IFeatureService featureService)
         : base(connectionString, readOnlyConnectionString)
-    { }
+    {
+        _featureService = featureService;
+    }
 
     public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
     {
@@ -369,17 +376,24 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             }
 
             // Bulk copy data into temp table
-            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+            if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
             {
-                bulkCopy.DestinationTableName = "#TempCipher";
-                var ciphersTable = ciphers.ToDataTable();
-                foreach (DataColumn col in ciphersTable.Columns)
+                await BulkResourceCreationService.CreateTempCiphersAsync(connection, transaction, ciphers);
+            }
+            else
+            {
+                using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                 {
-                    bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
-                }
+                    bulkCopy.DestinationTableName = "#TempCipher";
+                    var ciphersTable = ciphers.ToDataTable();
+                    foreach (DataColumn col in ciphersTable.Columns)
+                    {
+                        bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+                    }
 
-                ciphersTable.PrimaryKey = new DataColumn[] { ciphersTable.Columns[0] };
-                await bulkCopy.WriteToServerAsync(ciphersTable);
+                    ciphersTable.PrimaryKey = new DataColumn[] { ciphersTable.Columns[0] };
+                    await bulkCopy.WriteToServerAsync(ciphersTable);
+                }
             }
 
             // Update cipher table from temp table
@@ -436,11 +450,18 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                     }
 
                     // 2. Bulk copy into temp tables.
-                    using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                    if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
                     {
-                        bulkCopy.DestinationTableName = "#TempCipher";
-                        var dataTable = BuildCiphersTable(bulkCopy, ciphers);
-                        bulkCopy.WriteToServer(dataTable);
+                        await BulkResourceCreationService.CreateTempCiphersAsync(connection, transaction, ciphers);
+                    }
+                    else
+                    {
+                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        {
+                            bulkCopy.DestinationTableName = "#TempCipher";
+                            var dataTable = BuildCiphersTable(bulkCopy, ciphers);
+                            bulkCopy.WriteToServer(dataTable);
+                        }
                     }
 
                     // 3. Insert into real tables from temp tables and clean up.
@@ -507,19 +528,33 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 {
                     if (folders.Any())
                     {
-                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
                         {
-                            bulkCopy.DestinationTableName = "[dbo].[Folder]";
-                            var dataTable = BuildFoldersTable(bulkCopy, folders);
-                            bulkCopy.WriteToServer(dataTable);
+                            await BulkResourceCreationService.CreateFoldersAsync(connection, transaction, folders);
+                        }
+                        else
+                        {
+                            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                            {
+                                bulkCopy.DestinationTableName = "[dbo].[Folder]";
+                                var dataTable = BuildFoldersTable(bulkCopy, folders);
+                                bulkCopy.WriteToServer(dataTable);
+                            }
                         }
                     }
 
-                    using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                    if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
                     {
-                        bulkCopy.DestinationTableName = "[dbo].[Cipher]";
-                        var dataTable = BuildCiphersTable(bulkCopy, ciphers);
-                        bulkCopy.WriteToServer(dataTable);
+                        await BulkResourceCreationService.CreateCiphersAsync(connection, transaction, ciphers);
+                    }
+                    else
+                    {
+                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        {
+                            bulkCopy.DestinationTableName = "[dbo].[Cipher]";
+                            var dataTable = BuildCiphersTable(bulkCopy, ciphers);
+                            bulkCopy.WriteToServer(dataTable);
+                        }
                     }
 
                     await connection.ExecuteAsync(
@@ -554,40 +589,68 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             {
                 try
                 {
-                    using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                    if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
                     {
-                        bulkCopy.DestinationTableName = "[dbo].[Cipher]";
-                        var dataTable = BuildCiphersTable(bulkCopy, ciphers);
-                        bulkCopy.WriteToServer(dataTable);
+                        await BulkResourceCreationService.CreateCiphersAsync(connection, transaction, ciphers);
+                    }
+                    else
+                    {
+                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        {
+                            bulkCopy.DestinationTableName = "[dbo].[Cipher]";
+                            var dataTable = BuildCiphersTable(bulkCopy, ciphers);
+                            bulkCopy.WriteToServer(dataTable);
+                        }
                     }
 
                     if (collections.Any())
                     {
-                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
                         {
-                            bulkCopy.DestinationTableName = "[dbo].[Collection]";
-                            var dataTable = BuildCollectionsTable(bulkCopy, collections);
-                            bulkCopy.WriteToServer(dataTable);
+                            await BulkResourceCreationService.CreateCollectionsAsync(connection, transaction, collections);
+                        }
+                        else
+                        {
+                            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                            {
+                                bulkCopy.DestinationTableName = "[dbo].[Collection]";
+                                var dataTable = BuildCollectionsTable(bulkCopy, collections);
+                                bulkCopy.WriteToServer(dataTable);
+                            }
                         }
                     }
 
                     if (collectionCiphers.Any())
                     {
-                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
                         {
-                            bulkCopy.DestinationTableName = "[dbo].[CollectionCipher]";
-                            var dataTable = BuildCollectionCiphersTable(bulkCopy, collectionCiphers);
-                            bulkCopy.WriteToServer(dataTable);
+                            await BulkResourceCreationService.CreateCollectionCiphersAsync(connection, transaction, collectionCiphers);
+                        }
+                        else
+                        {
+                            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                            {
+                                bulkCopy.DestinationTableName = "[dbo].[CollectionCipher]";
+                                var dataTable = BuildCollectionCiphersTable(bulkCopy, collectionCiphers);
+                                bulkCopy.WriteToServer(dataTable);
+                            }
                         }
                     }
 
                     if (collectionUsers.Any())
                     {
-                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
                         {
-                            bulkCopy.DestinationTableName = "[dbo].[CollectionUser]";
-                            var dataTable = BuildCollectionUsersTable(bulkCopy, collectionUsers);
-                            bulkCopy.WriteToServer(dataTable);
+                            await BulkResourceCreationService.CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
+                        }
+                        else
+                        {
+                            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                            {
+                                bulkCopy.DestinationTableName = "[dbo].[CollectionUser]";
+                                var dataTable = BuildCollectionUsersTable(bulkCopy, collectionUsers);
+                                bulkCopy.WriteToServer(dataTable);
+                            }
                         }
                     }
 
