@@ -466,7 +466,7 @@ public class HandlebarsMailService : IMailService
         bool hasPaymentMethod = true,
         string? paymentMethodDescription = null)
     {
-        var message = CreateDefaultMessage("Your Subscription Will Renew Soon", emails);
+        var message = CreateDefaultMessage("Your upcoming Bitwarden invoice", emails);
         var model = new InvoiceUpcomingViewModel
         {
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
