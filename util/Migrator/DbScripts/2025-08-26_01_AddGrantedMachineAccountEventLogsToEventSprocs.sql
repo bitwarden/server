@@ -22,7 +22,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Event_Create]
     @SecretId UNIQUEIDENTIFIER = NULL,
     @ServiceAccountId UNIQUEIDENTIFIER = NULL,
     @ProjectId UNIQUEIDENTIFIER = NULL,
-    @GrantedServiceAccountId UNIQUEIDENTIFIER = NULL,
+    @GrantedServiceAccountId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
