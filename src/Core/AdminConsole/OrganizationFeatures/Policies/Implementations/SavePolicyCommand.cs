@@ -53,7 +53,7 @@ public class SavePolicyCommand : ISavePolicyCommand
 
     public async Task<Policy> SaveAsync(SavePolicyModel policyModel)
     {
-        var policyUpdate = policyModel.Data;
+        var policyUpdate = policyModel.PolicyUpdate;
 
         var org = await _applicationCacheService.GetOrganizationAbilityAsync(policyUpdate.OrganizationId);
         if (org == null)

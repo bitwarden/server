@@ -199,8 +199,6 @@ public class PoliciesController : Controller
     [HttpPut("{type}")]
     public async Task<PolicyResponseModel> Put(Guid orgId, PolicyType type, [FromBody] PolicyRequestModel model)
     {
-
-        // Jimmy Todo: add view model check
         if (!await _currentContext.ManagePolicies(orgId))
         {
             throw new NotFoundException();
@@ -228,6 +226,7 @@ public class PoliciesController : Controller
 
         async Task ValidatePolicyContextRequest()
         {
+            // Jimmy Todo: add view model check
             if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
             {
                 throw new NotFoundException();

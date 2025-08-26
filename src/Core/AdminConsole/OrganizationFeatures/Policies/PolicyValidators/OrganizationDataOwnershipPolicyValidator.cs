@@ -41,7 +41,7 @@ public class OrganizationDataOwnershipPolicyValidator(
             return;
         }
 
-        var policyUpdate = policyModel.Data;
+        var policyUpdate = policyModel.PolicyUpdate;
 
         if (currentPolicy?.Enabled == true || !policyUpdate.Enabled)
         {

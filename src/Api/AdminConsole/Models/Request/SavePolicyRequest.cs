@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
@@ -14,9 +11,9 @@ namespace Bit.Api.AdminConsole.Models.Request;
 public class SavePolicyRequest
 {
     [Required]
-    public PolicyRequestModel Policy { get; set; }
+    public PolicyRequestModel Policy { get; set; } = null!;
 
-    public Dictionary<string, object> Metadata { get; set; }
+    public Dictionary<string, object>? Metadata { get; set; }
 
     public async Task<SavePolicyModel> ToSavePolicyModelAsync(Guid organizationId, ICurrentContext currentContext)
     {
