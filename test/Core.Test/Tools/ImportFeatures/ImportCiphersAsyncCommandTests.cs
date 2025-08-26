@@ -48,7 +48,7 @@ public class ImportCiphersAsyncCommandTests
         // Assert
         await sutProvider.GetDependency<ICipherRepository>()
             .Received(1)
-            .CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>(), false);
+            .CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 
@@ -80,7 +80,7 @@ public class ImportCiphersAsyncCommandTests
         // Assert
         await sutProvider.GetDependency<ICipherRepository>()
             .Received(1)
-            .CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>(), true);
+            .CreateAsync_vNext(importingUserId, ciphers, Arg.Any<List<Folder>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 
@@ -112,7 +112,7 @@ public class ImportCiphersAsyncCommandTests
 
         await sutProvider.GetDependency<ICipherRepository>()
             .Received(1)
-            .CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>(), false);
+            .CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 
@@ -148,7 +148,7 @@ public class ImportCiphersAsyncCommandTests
 
         await sutProvider.GetDependency<ICipherRepository>()
             .Received(1)
-            .CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>(), true);
+            .CreateAsync_vNext(importingUserId, ciphers, Arg.Any<List<Folder>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 
@@ -254,8 +254,7 @@ public class ImportCiphersAsyncCommandTests
             Arg.Is<IEnumerable<CollectionUser>>(cus =>
                 cus.Count() == collections.Count - 1 &&
                 !cus.Any(cu => cu.CollectionId == collections[0].Id) && // Check that access was not added for the collection that already existed in the organization
-                cus.All(cu => cu.OrganizationUserId == importingOrganizationUser.Id && cu.Manage == true)),
-            false);
+                cus.All(cu => cu.OrganizationUserId == importingOrganizationUser.Id && cu.Manage == true)));
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 
@@ -306,7 +305,7 @@ public class ImportCiphersAsyncCommandTests
 
         await sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId);
 
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync_vNext(
             ciphers,
             Arg.Is<IEnumerable<Collection>>(cols => cols.Count() == collections.Count - 1 &&
                         !cols.Any(c => c.Id == collections[0].Id) && // Check that the collection that already existed in the organization was not added
@@ -315,8 +314,7 @@ public class ImportCiphersAsyncCommandTests
             Arg.Is<IEnumerable<CollectionUser>>(cus =>
                 cus.Count() == collections.Count - 1 &&
                 !cus.Any(cu => cu.CollectionId == collections[0].Id) && // Check that access was not added for the collection that already existed in the organization
-                cus.All(cu => cu.OrganizationUserId == importingOrganizationUser.Id && cu.Manage == true)),
-            true);
+                cus.All(cu => cu.OrganizationUserId == importingOrganizationUser.Id && cu.Manage == true)));
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 

@@ -104,7 +104,14 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         if (model.Ciphers.Any())
         {
             var useBulkResourceCreationService = _featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation);
-            saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation(user.Id, model.Ciphers, useBulkResourceCreationService));
+            if (useBulkResourceCreationService)
+            {
+                saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation_vNext(user.Id, model.Ciphers));
+            }
+            else
+            {
+                saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation(user.Id, model.Ciphers));
+            }
         }
 
         if (model.Folders.Any())

@@ -965,7 +965,7 @@ public class CipherRepositoryTests
         cipher1.Type = CipherType.SecureNote;
         cipher2.Attachments = "new_attachments";
 
-        await cipherRepository.UpdateCiphersAsync(user.Id, [cipher1, cipher2], useBulkResourceCreationService: false);
+        await cipherRepository.UpdateCiphersAsync(user.Id, [cipher1, cipher2]);
 
         var updatedCipher1 = await cipherRepository.GetByIdAsync(cipher1.Id);
         var updatedCipher2 = await cipherRepository.GetByIdAsync(cipher2.Id);
@@ -978,7 +978,7 @@ public class CipherRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task CreateAsync_WithFolders_UsingBulkResourceCreationService_Works(
+    public async Task CreateAsync_vNext_WithFolders_Works(
         IUserRepository userRepository, ICipherRepository cipherRepository, IFolderRepository folderRepository)
     {
         // Arrange
@@ -996,11 +996,10 @@ public class CipherRepositoryTests
         var cipher2 = new Cipher { Id = CoreHelpers.GenerateComb(), Type = CipherType.SecureNote, UserId = user.Id, Data = "" };
 
         // Act
-        await cipherRepository.CreateAsync(
+        await cipherRepository.CreateAsync_vNext(
             userId: user.Id,
             ciphers: [cipher1, cipher2],
-            folders: [folder1, folder2],
-            useBulkResourceCreationService: true);
+            folders: [folder1, folder2]);
 
         // Assert
         var readCipher1 = await cipherRepository.GetByIdAsync(cipher1.Id);
@@ -1015,7 +1014,7 @@ public class CipherRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task CreateAsync_WithCollectionsAndUsers_UsingBulkResourceCreationService_Works(
+    public async Task CreateAsync_vNext_WithCollectionsAndUsers_Works(
         IOrganizationRepository orgRepository,
         IOrganizationUserRepository orgUserRepository,
         ICollectionRepository collectionRepository,
@@ -1060,12 +1059,11 @@ public class CipherRepositoryTests
         };
 
         // Act
-        await cipherRepository.CreateAsync(
+        await cipherRepository.CreateAsync_vNext(
             ciphers: [cipher],
             collections: [collection],
             collectionCiphers: [collectionCipher],
-            collectionUsers: [collectionUser],
-            useBulkResourceCreationService: true);
+            collectionUsers: [collectionUser]);
 
         // Assert
         var orgCiphers = await cipherRepository.GetManyByOrganizationIdAsync(org.Id);
@@ -1086,7 +1084,7 @@ public class CipherRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task UpdateCiphersAsync_UsingBulkResourceCreationService_Works(
+    public async Task UpdateCiphersAsync_vNext_Works(
         IUserRepository userRepository, ICipherRepository cipherRepository)
     {
         // Arrange
@@ -1106,17 +1104,13 @@ public class CipherRepositoryTests
         await cipherRepository.CreateAsync(
             userId: user.Id,
             ciphers: [c1, c2],
-            folders: [],
-            useBulkResourceCreationService: false);
+            folders: []);
 
         c1.Type = expectedNewType;
         c2.Attachments = expectedNewAttachments;
 
         // Act
-        await cipherRepository.UpdateCiphersAsync(
-            userId: user.Id,
-            ciphers: [c1, c2],
-            useBulkResourceCreationService: true);
+        await cipherRepository.UpdateCiphersAsync_vNext(user.Id, [c1, c2]);
 
         // Assert
         var updated1 = await cipherRepository.GetByIdAsync(c1.Id);

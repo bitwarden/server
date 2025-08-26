@@ -670,7 +670,7 @@ public class CipherServiceTests
 
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organization.Id, collectionIds, sharingUserId);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
-            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()), false);
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
     }
 
     [Theory]
@@ -695,8 +695,8 @@ public class CipherServiceTests
         var sharingUserId = ciphers.First().UserId.Value;
 
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organization.Id, collectionIds, sharingUserId);
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
-            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()), true);
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync_vNext(sharingUserId,
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
     }
 
     [Theory]
@@ -1116,7 +1116,7 @@ public class CipherServiceTests
 
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
-            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()), false);
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
     }
 
     [Theory, BitAutoData]
@@ -1142,8 +1142,8 @@ public class CipherServiceTests
         var sharingUserId = ciphers.First().UserId.Value;
 
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId);
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
-            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()), true);
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync_vNext(sharingUserId,
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
     }
 
     private class SaveDetailsAsyncDependencies
