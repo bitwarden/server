@@ -8,7 +8,7 @@ using Duende.IdentityServer.Validation;
 
 namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 
-public class SendPasswordRequestValidator(ISendPasswordHasher sendPasswordHasher) : ISendPasswordRequestValidator
+public class SendPasswordRequestValidator(ISendPasswordHasher sendPasswordHasher) : ISendAuthenticationMethodValidator<ResourcePassword>
 {
     private readonly ISendPasswordHasher _sendPasswordHasher = sendPasswordHasher;
 
@@ -21,7 +21,7 @@ public class SendPasswordRequestValidator(ISendPasswordHasher sendPasswordHasher
         { SendAccessConstants.PasswordValidatorResults.RequestPasswordIsRequired, $"{SendAccessConstants.TokenRequest.ClientB64HashedPassword} is required." }
     };
 
-    public GrantValidationResult ValidateSendPassword(ExtensionGrantValidationContext context, ResourcePassword resourcePassword, Guid sendId)
+    public GrantValidationResult ValidateRequest(ExtensionGrantValidationContext context, ResourcePassword resourcePassword, Guid sendId)
     {
         var request = context.Request.Raw;
         var clientHashedPassword = request.Get(SendAccessConstants.TokenRequest.ClientB64HashedPassword);
@@ -67,7 +67,7 @@ public class SendPasswordRequestValidator(ISendPasswordHasher sendPasswordHasher
     {
         var claims = new List<Claim>
         {
-            new(Claims.SendId, sendId.ToString()),
+            new(Claims.SendAccessClaims.SendId, sendId.ToString()),
             new(Claims.Type, IdentityClientType.Send.ToString())
         };
 

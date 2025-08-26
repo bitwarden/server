@@ -36,7 +36,7 @@ public class SendPasswordRequestValidatorTests
         };
 
         // Act
-        var result = sutProvider.Sut.ValidateSendPassword(context, resourcePassword, sendId);
+        var result = sutProvider.Sut.ValidateRequest(context, resourcePassword, sendId);
 
         // Assert
         Assert.True(result.IsError);
@@ -70,7 +70,7 @@ public class SendPasswordRequestValidatorTests
             .Returns(false);
 
         // Act
-        var result = sutProvider.Sut.ValidateSendPassword(context, resourcePassword, sendId);
+        var result = sutProvider.Sut.ValidateRequest(context, resourcePassword, sendId);
 
         // Assert
         Assert.True(result.IsError);
@@ -104,7 +104,7 @@ public class SendPasswordRequestValidatorTests
             .Returns(true);
 
         // Act
-        var result = sutProvider.Sut.ValidateSendPassword(context, resourcePassword, sendId);
+        var result = sutProvider.Sut.ValidateRequest(context, resourcePassword, sendId);
 
         // Assert
         Assert.False(result.IsError);
@@ -142,7 +142,7 @@ public class SendPasswordRequestValidatorTests
             .Returns(false);
 
         // Act
-        var result = sutProvider.Sut.ValidateSendPassword(context, resourcePassword, sendId);
+        var result = sutProvider.Sut.ValidateRequest(context, resourcePassword, sendId);
 
         // Assert
         Assert.True(result.IsError);
@@ -175,7 +175,7 @@ public class SendPasswordRequestValidatorTests
             .Returns(false);
 
         // Act
-        var result = sutProvider.Sut.ValidateSendPassword(context, resourcePassword, sendId);
+        var result = sutProvider.Sut.ValidateRequest(context, resourcePassword, sendId);
 
         // Assert
         Assert.True(result.IsError);
@@ -208,7 +208,7 @@ public class SendPasswordRequestValidatorTests
             .Returns(true);
 
         // Act
-        var result = sutProvider.Sut.ValidateSendPassword(context, resourcePassword, sendId);
+        var result = sutProvider.Sut.ValidateRequest(context, resourcePassword, sendId);
 
         // Assert
         Assert.True(result.IsError);
@@ -241,7 +241,7 @@ public class SendPasswordRequestValidatorTests
             .Returns(true);
 
         // Act
-        var result = sutProvider.Sut.ValidateSendPassword(context, resourcePassword, sendId);
+        var result = sutProvider.Sut.ValidateRequest(context, resourcePassword, sendId);
 
         // Assert
         Assert.False(result.IsError);

@@ -13,7 +13,8 @@ namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 
 public class SendAccessGrantValidator(
     ISendAuthenticationQuery _sendAuthenticationQuery,
-    ISendPasswordRequestValidator _sendPasswordRequestValidator,
+    ISendAuthenticationMethodValidator<ResourcePassword> _sendPasswordRequestValidator,
+    ISendAuthenticationMethodValidator<EmailOtp> _sendEmailOtpRequestValidator,
     IFeatureService _featureService)
 : IExtensionGrantValidator
 {
@@ -63,13 +64,15 @@ public class SendAccessGrantValidator(
                 return;
 
             case ResourcePassword rp:
-                // Validate if the password is correct, or if we need to respond with a 400 stating a password has is required
-                context.Result = _sendPasswordRequestValidator.ValidateSendPassword(context, rp, sendIdGuid);
+                // Validate if the password is correct, or if we need to respond with a 400 stating a password is invalid or required.
+                context.Result = _sendPasswordRequestValidator.ValidateRequest(context, rp, sendIdGuid);
                 return;
             case EmailOtp eo:
             // TODO PM-22678: We will either send the OTP here or validate it based on if otp exists in the request.
             // SendOtpToEmail(eo.Emails) or ValidateOtp(eo.Emails);
             // break;
+                context.Result = _sendEmailOtpRequestValidator.ValidateRequest(context, eo, sendIdGuid);
+                return;
 
             default:
                 // shouldn’t ever hit this
@@ -145,7 +148,7 @@ public class SendAccessGrantValidator(
     {
         var claims = new List<Claim>
         {
-            new(Claims.SendId, sendId.ToString()),
+            new(Claims.SendAccessClaims.SendId, sendId.ToString()),
             new(Claims.Type, IdentityClientType.Send.ToString())
         };
 
