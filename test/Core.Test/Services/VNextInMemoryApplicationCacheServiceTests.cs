@@ -14,6 +14,7 @@ using Xunit;
 
 namespace Bit.Core.Test.Services;
 
+[SutProviderCustomize]
 public class VNextInMemoryApplicationCacheServiceTests
 
 {
