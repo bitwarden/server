@@ -183,4 +183,72 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
 
         return await policyWithAffectedUsers.ToListAsync();
     }
+
+    public async Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetailsByUserIdsAndPolicyType(IEnumerable<Guid> userIds, PolicyType policyType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var userIdsList = userIds.ToList();
+
+        var providerOrganizations = from pu in dbContext.ProviderUsers
+                                    join po in dbContext.ProviderOrganizations on pu.ProviderId equals po.ProviderId
+                                    where userIdsList.Contains(pu.UserId ?? Guid.Empty)
+                                    select new { pu.UserId, po.OrganizationId };
+
+        // Branch 1: Accepted users linked by UserId
+        var acceptedUsers = from p in dbContext.Policies
+                            join ou in dbContext.OrganizationUsers on p.OrganizationId equals ou.OrganizationId
+                            join o in dbContext.Organizations on p.OrganizationId equals o.Id
+                            where
+                                p.Enabled
+                                && p.Type == policyType
+                                && o.Enabled
+                                && o.UsePolicies
+                                && ou.Status != OrganizationUserStatusType.Invited
+                                && userIdsList.Contains(ou.UserId ?? Guid.Empty)
+                            select new OrganizationPolicyDetails
+                            {
+                                OrganizationUserId = ou.Id,
+                                OrganizationId = p.OrganizationId,
+                                PolicyType = p.Type,
+                                PolicyData = p.Data,
+                                OrganizationUserType = ou.Type,
+                                OrganizationUserStatus = ou.Status,
+                                OrganizationUserPermissionsData = ou.Permissions,
+                                UserId = ou.UserId ?? Guid.Empty,
+                                IsProvider = providerOrganizations.Any(po => po.UserId == ou.UserId)
+                            };
+
+        // Branch 2: Invited users matched by email
+        var invitedUsers = from p in dbContext.Policies
+                           join ou in dbContext.OrganizationUsers on p.OrganizationId equals ou.OrganizationId
+                           join o in dbContext.Organizations on p.OrganizationId equals o.Id
+                           join u in dbContext.Users on ou.Email equals u.Email
+                           where
+                               p.Enabled
+                               && o.Enabled
+                               && o.UsePolicies
+                               && ou.Status == OrganizationUserStatusType.Invited
+                               && userIdsList.Contains(u.Id)
+                               && p.Type == policyType
+                           select new OrganizationPolicyDetails
+                           {
+                               OrganizationUserId = ou.Id,
+                               OrganizationId = p.OrganizationId,
+                               PolicyType = p.Type,
+                               PolicyData = p.Data,
+                               OrganizationUserType = ou.Type,
+                               OrganizationUserStatus = ou.Status,
+                               OrganizationUserPermissionsData = ou.Permissions,
+                               UserId = u.Id,
+                               IsProvider = providerOrganizations
+                                   .Any(po => po.UserId == u.Id && po.OrganizationId == ou.OrganizationId)
+                           };
+
+        // Combine results using Union
+        var results = acceptedUsers.Union(invitedUsers);
+
+        return await results.ToListAsync();
+    }
 }
