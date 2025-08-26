@@ -252,6 +252,8 @@ public static class ServiceCollectionExtensions
         services.AddOptionality();
         services.AddTokenizers();
 
+
+        // Jimmy todo: Reconsider this to see how it affects InMemoryServiceBusApplicationCacheService.
         services.AddSingleton<IVNextInMemoryApplicationCacheService, VNextInMemoryApplicationCacheService>();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&

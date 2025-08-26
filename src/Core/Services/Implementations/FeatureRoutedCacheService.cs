@@ -5,68 +5,93 @@ using Bit.Core.Models.Data.Organizations;
 
 namespace Bit.Core.Services.Implementations;
 
-public class FeatureRoutedCacheService : IFeatureRoutedCacheService
+public class FeatureRoutedCacheService(
+    IFeatureService featureService,
+    IVNextInMemoryApplicationCacheService vNextInMemoryApplicationCacheService,
+    IApplicationCacheService inMemoryApplicationCacheService)
+    : IFeatureRoutedCacheService
 {
-    private readonly IFeatureService _featureService;
-    private readonly IVNextInMemoryApplicationCacheService _vNextInMemoryApplicationCacheService;
-    private readonly InMemoryApplicationCacheService _inMemoryApplicationCacheService;
-
-    public FeatureRoutedCacheService(
-        IFeatureService featureService,
-        IVNextInMemoryApplicationCacheService vNextInMemoryApplicationCacheService,
-        InMemoryApplicationCacheService inMemoryApplicationCacheService)
+    public async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
     {
-        _featureService = featureService;
-        _vNextInMemoryApplicationCacheService = vNextInMemoryApplicationCacheService;
-        _inMemoryApplicationCacheService = inMemoryApplicationCacheService;
+        if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))
+        {
+            return await vNextInMemoryApplicationCacheService.GetOrganizationAbilitiesAsync();
+        }
+        else
+        {
+            return await inMemoryApplicationCacheService.GetOrganizationAbilitiesAsync();
+        }
     }
 
-    public Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
+    public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId)
     {
-        return _featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            ? _vNextInMemoryApplicationCacheService.GetOrganizationAbilitiesAsync()
-            : _inMemoryApplicationCacheService.GetOrganizationAbilitiesAsync();
+        if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))
+        {
+            return await vNextInMemoryApplicationCacheService.GetOrganizationAbilityAsync(orgId);
+        }
+        else
+        {
+            return await inMemoryApplicationCacheService.GetOrganizationAbilityAsync(orgId);
+        }
     }
 
-    public Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId)
+    public async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
     {
-        return _featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            ? _vNextInMemoryApplicationCacheService.GetOrganizationAbilityAsync(orgId)
-            : _inMemoryApplicationCacheService.GetOrganizationAbilityAsync(orgId);
+        if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))
+        {
+            return await vNextInMemoryApplicationCacheService.GetProviderAbilitiesAsync();
+        }
+        else
+        {
+            return await inMemoryApplicationCacheService.GetProviderAbilitiesAsync();
+        }
     }
 
-    public Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
+    public async Task UpsertOrganizationAbilityAsync(Organization organization)
     {
-        return _featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            ? _vNextInMemoryApplicationCacheService.GetProviderAbilitiesAsync()
-            : _inMemoryApplicationCacheService.GetProviderAbilitiesAsync();
+        if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))
+        {
+            await vNextInMemoryApplicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        }
+        else
+        {
+            await inMemoryApplicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        }
     }
 
-    public Task UpsertOrganizationAbilityAsync(Organization organization)
+    public async Task UpsertProviderAbilityAsync(Provider provider)
     {
-        return _featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            ? _vNextInMemoryApplicationCacheService.UpsertOrganizationAbilityAsync(organization)
-            : _inMemoryApplicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))
+        {
+            await vNextInMemoryApplicationCacheService.UpsertProviderAbilityAsync(provider);
+        }
+        else
+        {
+            await inMemoryApplicationCacheService.UpsertProviderAbilityAsync(provider);
+        }
     }
 
-    public Task UpsertProviderAbilityAsync(Provider provider)
+    public async Task DeleteOrganizationAbilityAsync(Guid organizationId)
     {
-        return _featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            ? _vNextInMemoryApplicationCacheService.UpsertProviderAbilityAsync(provider)
-            : _inMemoryApplicationCacheService.UpsertProviderAbilityAsync(provider);
+        if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))
+        {
+            await vNextInMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
+        }
+        else
+        {
+            await inMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
+        }
     }
 
-    public Task DeleteOrganizationAbilityAsync(Guid organizationId)
+    public async Task DeleteProviderAbilityAsync(Guid providerId)
     {
-        return _featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            ? _vNextInMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId)
-            : _inMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
-    }
-
-    public Task DeleteProviderAbilityAsync(Guid providerId)
-    {
-        return _featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            ? _vNextInMemoryApplicationCacheService.DeleteProviderAbilityAsync(providerId)
-            : _inMemoryApplicationCacheService.DeleteProviderAbilityAsync(providerId);
+        if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))
+        {
+            await vNextInMemoryApplicationCacheService.DeleteProviderAbilityAsync(providerId);
+        }
+        else
+        {
+            await inMemoryApplicationCacheService.DeleteProviderAbilityAsync(providerId);
+        }
     }
 }
