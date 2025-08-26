@@ -45,6 +45,7 @@ using Bit.Core.Resources;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Services;
+using Bit.Core.Services.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.ImportFeatures;
@@ -250,6 +251,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
         services.AddOptionality();
         services.AddTokenizers();
+
+        services.AddSingleton<IVNextInMemoryApplicationCacheService, VNextInMemoryApplicationCacheService>();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
@@ -823,6 +826,7 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddScoped<IFeatureService, LaunchDarklyFeatureService>();
+        services.AddScoped<IFeatureRoutedCacheService, FeatureRoutedCacheService>();
 
         return services;
     }

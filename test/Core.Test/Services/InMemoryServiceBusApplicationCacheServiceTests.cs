@@ -24,7 +24,6 @@ public class InMemoryServiceBusApplicationCacheServiceTests
         _sut = new InMemoryServiceBusApplicationCacheService(
             _organizationRepository,
             _providerRepository,
-            TimeProvider.System,
             _globalSettings
         );
     }
