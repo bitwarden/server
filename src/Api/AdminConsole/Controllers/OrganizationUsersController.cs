@@ -541,7 +541,7 @@ public class OrganizationUsersController : Controller
         var currentUserId = _userService.GetProperUserId(User);
         if (currentUserId == null)
         {
-            return TypedResults.NotFound(new ErrorResponseModel("Current user not found."));
+            return TypedResults.Unauthorized();
         }
 
         var commandResult = await _deleteClaimedOrganizationUserAccountCommandvNext.DeleteUserAsync(orgId, id, currentUserId.Value);
