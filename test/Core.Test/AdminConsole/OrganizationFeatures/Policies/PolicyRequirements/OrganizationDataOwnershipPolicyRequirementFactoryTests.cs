@@ -37,7 +37,7 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void GetDefaultCollectionRequest_WithConfirmedUser_ReturnsTrue(
+    public void GetDefaultCollectionRequestOnPolicyEnable_WithConfirmedUser_ReturnsTrue(
     [PolicyDetails(PolicyType.OrganizationDataOwnership, userStatus: OrganizationUserStatusType.Confirmed)] PolicyDetails[] policies,
     SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
     {
@@ -47,7 +47,7 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
         var organizationId = policies[0].OrganizationId;
 
         // Act
-        var result = requirement.GetDefaultCollectionRequest(organizationId);
+        var result = requirement.GetDefaultCollectionRequestOnPolicyEnable(organizationId);
 
         // Assert
         Assert.Equal(expectedOrganizationUserId, result.OrganizationUserId);
@@ -55,7 +55,7 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void GetDefaultCollectionRequest_WithAcceptedUser_ReturnsFalse(
+    public void GetDefaultCollectionRequestOnPolicyEnable_WithAcceptedUser_ReturnsFalse(
         [PolicyDetails(PolicyType.OrganizationDataOwnership, userStatus: OrganizationUserStatusType.Accepted)] PolicyDetails[] policies,
         SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
     {
@@ -64,7 +64,7 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
         var organizationId = policies[0].OrganizationId;
 
         // Act
-        var result = requirement.GetDefaultCollectionRequest(organizationId);
+        var result = requirement.GetDefaultCollectionRequestOnPolicyEnable(organizationId);
 
         // Assert
         Assert.Equal(Guid.Empty, result.OrganizationUserId);
@@ -72,7 +72,7 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void GetDefaultCollectionRequest_WithNoPolicies_ReturnsFalse(
+    public void GetDefaultCollectionRequestOnPolicyEnable_WithNoPolicies_ReturnsFalse(
         SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
     {
         // Arrange
@@ -80,7 +80,7 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
         var organizationId = Guid.NewGuid();
 
         // Act
-        var result = requirement.GetDefaultCollectionRequest(organizationId);
+        var result = requirement.GetDefaultCollectionRequestOnPolicyEnable(organizationId);
 
         // Assert
         Assert.Equal(Guid.Empty, result.OrganizationUserId);
@@ -88,7 +88,7 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
-    public void GetDefaultCollectionRequest_WithMixedStatuses(
+    public void GetDefaultCollectionRequestOnPolicyEnable_WithMixedStatuses(
         [PolicyDetails(PolicyType.OrganizationDataOwnership)] PolicyDetails[] policies,
         SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
     {
@@ -102,8 +102,8 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
         acceptedPolicy.OrganizationUserStatus = OrganizationUserStatusType.Accepted;
 
         // Act
-        var confirmedResult = requirement.GetDefaultCollectionRequest(confirmedPolicy.OrganizationId);
-        var acceptedResult = requirement.GetDefaultCollectionRequest(acceptedPolicy.OrganizationId);
+        var confirmedResult = requirement.GetDefaultCollectionRequestOnPolicyEnable(confirmedPolicy.OrganizationId);
+        var acceptedResult = requirement.GetDefaultCollectionRequestOnPolicyEnable(acceptedPolicy.OrganizationId);
 
         // Assert
         Assert.Equal(Guid.Empty, acceptedResult.OrganizationUserId);

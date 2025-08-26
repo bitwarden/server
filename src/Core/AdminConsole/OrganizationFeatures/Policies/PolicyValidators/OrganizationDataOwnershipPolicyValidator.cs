@@ -43,7 +43,7 @@ public class OrganizationDataOwnershipPolicyValidator(
         var requirements = await GetUserPolicyRequirementsByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(policyUpdate.OrganizationId, policyUpdate.Type);
 
         var userOrgIds = requirements
-            .Select(requirement => requirement.GetDefaultCollectionRequest(policyUpdate.OrganizationId))
+            .Select(requirement => requirement.GetDefaultCollectionRequestOnPolicyEnable(policyUpdate.OrganizationId))
             .Where(request => request.ShouldCreateDefaultCollection)
             .Select(request => request.OrganizationUserId);
 
