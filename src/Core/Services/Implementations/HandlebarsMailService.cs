@@ -24,6 +24,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
 using Core.Auth.Enums;
 using HandlebarsDotNet;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Core.Services;
 
@@ -31,10 +32,12 @@ public class HandlebarsMailService : IMailService
 {
     private const string Namespace = "Bit.Core.MailTemplates.Handlebars";
     private const string _utcTimeZoneDisplay = "UTC";
+    private const string FailedTwoFactorAttemptCacheKeyFormat = "FailedTwoFactorAttemptEmail_{0}";
 
     private readonly GlobalSettings _globalSettings;
     private readonly IMailDeliveryService _mailDeliveryService;
     private readonly IMailEnqueuingService _mailEnqueuingService;
+    private readonly IDistributedCache _distributedCache;
     private readonly Dictionary<string, HandlebarsTemplate<object, object>> _templateCache = new();
 
     private bool _registeredHelpersAndPartials = false;
@@ -42,11 +45,13 @@ public class HandlebarsMailService : IMailService
     public HandlebarsMailService(
         GlobalSettings globalSettings,
         IMailDeliveryService mailDeliveryService,
-        IMailEnqueuingService mailEnqueuingService)
+        IMailEnqueuingService mailEnqueuingService,
+        IDistributedCache distributedCache)
     {
         _globalSettings = globalSettings;
         _mailDeliveryService = mailDeliveryService;
         _mailEnqueuingService = mailEnqueuingService;
+        _distributedCache = distributedCache;
     }
 
     public async Task SendVerifyEmailEmailAsync(string email, Guid userId, string token)
@@ -196,6 +201,16 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendFailedTwoFactorAttemptEmailAsync(string email, TwoFactorProviderType failedType, DateTime utcNow, string ip)
     {
+        // Check if we've sent this email within the last hour
+        var cacheKey = string.Format(FailedTwoFactorAttemptCacheKeyFormat, email);
+        var cachedValue = await _distributedCache.GetAsync(cacheKey);
+
+        if (cachedValue != null)
+        {
+            // Email was already sent within the last hour, skip sending
+            return;
+        }
+
         var message = CreateDefaultMessage("Failed two-step login attempt detected", email);
         var model = new FailedAuthAttemptModel()
         {
@@ -211,6 +226,13 @@ public class HandlebarsMailService : IMailService
         await AddMessageContentAsync(message, "Auth.FailedTwoFactorAttempt", model);
         message.Category = "FailedTwoFactorAttempt";
         await _mailDeliveryService.SendEmailAsync(message);
+
+        // Set cache entry with 1 hour expiration to prevent sending again
+        var cacheOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
+        };
+        await _distributedCache.SetAsync(cacheKey, [1], cacheOptions);
     }
 
     public async Task SendMasterPasswordHintEmailAsync(string email, string hint)

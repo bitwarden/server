@@ -5,6 +5,7 @@ using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.ClientProviders;
 using Bit.Identity.IdentityServer.RequestValidators;
+using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.SharedWeb.Utilities;
 using Duende.IdentityServer.ResponseHandling;
 using Duende.IdentityServer.Services;
@@ -25,6 +26,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IDeviceValidator, DeviceValidator>();
         services.AddTransient<ITwoFactorAuthenticationValidator, TwoFactorAuthenticationValidator>();
         services.AddTransient<ILoginApprovingClientTypes, LoginApprovingClientTypes>();
+        services.AddTransient<ISendPasswordRequestValidator, SendPasswordRequestValidator>();
 
         var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
         var identityServerBuilder = services
@@ -55,7 +57,8 @@ public static class ServiceCollectionExtensions
             .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
             .AddClientStore<DynamicClientStore>()
             .AddIdentityServerCertificate(env, globalSettings)
-            .AddExtensionGrantValidator<WebAuthnGrantValidator>();
+            .AddExtensionGrantValidator<WebAuthnGrantValidator>()
+            .AddExtensionGrantValidator<SendAccessGrantValidator>();
 
         if (!globalSettings.SelfHosted)
         {
