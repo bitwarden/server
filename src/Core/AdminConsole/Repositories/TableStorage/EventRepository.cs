@@ -39,7 +39,7 @@ public class EventRepository : IEventRepository
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         return await GetManyAsync($"OrganizationId={secret.OrganizationId}",
-            $"SecretId={secret.Id}__Date={{0}}", startDate, endDate, pageOptions);
+            $"SecretId={secret.Id}__Date={{0}}", startDate, endDate, pageOptions); ;
     }
 
     public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Project project,

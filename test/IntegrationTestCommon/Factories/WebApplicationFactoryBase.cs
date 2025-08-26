@@ -2,7 +2,7 @@
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Platform.Push;
-using Bit.Core.Platform.PushRegistration.Internal;
+using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;

@@ -7,6 +7,7 @@ using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -38,26 +39,28 @@ namespace Bit.Admin.AdminConsole.Controllers;
 [SelfHosted(NotSelfHostedOnly = true)]
 public class ProvidersController : Controller
 {
-    private readonly string _stripeUrl;
-    private readonly string _braintreeMerchantUrl;
-    private readonly string _braintreeMerchantId;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IResellerClientOrganizationSignUpCommand _resellerClientOrganizationSignUpCommand;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
-    private readonly IProviderService _providerService;
     private readonly GlobalSettings _globalSettings;
     private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IProviderService _providerService;
     private readonly ICreateProviderCommand _createProviderCommand;
+    private readonly IFeatureService _featureService;
     private readonly IProviderPlanRepository _providerPlanRepository;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IPricingClient _pricingClient;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IAccessControlService _accessControlService;
     private readonly ISubscriberService _subscriberService;
+    private readonly string _stripeUrl;
+    private readonly string _braintreeMerchantUrl;
+    private readonly string _braintreeMerchantId;
 
-    public ProvidersController(IOrganizationRepository organizationRepository,
+    public ProvidersController(
+        IOrganizationRepository organizationRepository,
         IResellerClientOrganizationSignUpCommand resellerClientOrganizationSignUpCommand,
         IProviderRepository providerRepository,
         IProviderUserRepository providerUserRepository,
@@ -66,6 +69,7 @@ public class ProvidersController : Controller
         GlobalSettings globalSettings,
         IApplicationCacheService applicationCacheService,
         ICreateProviderCommand createProviderCommand,
+        IFeatureService featureService,
         IProviderPlanRepository providerPlanRepository,
         IProviderBillingService providerBillingService,
         IWebHostEnvironment webHostEnvironment,
@@ -83,14 +87,15 @@ public class ProvidersController : Controller
         _globalSettings = globalSettings;
         _applicationCacheService = applicationCacheService;
         _createProviderCommand = createProviderCommand;
+        _featureService = featureService;
         _providerPlanRepository = providerPlanRepository;
         _providerBillingService = providerBillingService;
         _pricingClient = pricingClient;
         _stripeAdapter = stripeAdapter;
-        _accessControlService = accessControlService;
         _stripeUrl = webHostEnvironment.GetStripeUrl();
         _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
         _braintreeMerchantId = globalSettings.Braintree.MerchantId;
+        _accessControlService = accessControlService;
         _subscriberService = subscriberService;
     }
 
@@ -339,17 +344,21 @@ public class ProvidersController : Controller
                     ]);
                 await _providerBillingService.UpdateSeatMinimums(updateMspSeatMinimumsCommand);
 
-                var customer = await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId);
-                if (model.PayByInvoice != customer.ApprovedToPayByInvoice())
+                if (_featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically))
                 {
-                    var approvedToPayByInvoice = model.PayByInvoice ? "1" : "0";
-                    await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+                    var customer = await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId);
+
+                    if (model.PayByInvoice != customer.ApprovedToPayByInvoice())
                     {
-                        Metadata = new Dictionary<string, string>
+                        var approvedToPayByInvoice = model.PayByInvoice ? "1" : "0";
+                        await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
                         {
-                            [StripeConstants.MetadataKeys.InvoiceApproved] = approvedToPayByInvoice
-                        }
-                    });
+                            Metadata = new Dictionary<string, string>
+                            {
+                                [StripeConstants.MetadataKeys.InvoiceApproved] = approvedToPayByInvoice
+                            }
+                        });
+                    }
                 }
                 break;
             case ProviderType.BusinessUnit:
@@ -394,7 +403,8 @@ public class ProvidersController : Controller
         }
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
-        var payByInvoice = ((await _subscriberService.GetCustomer(provider))?.ApprovedToPayByInvoice() ?? false);
+        var payByInvoice = _featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) &&
+                           ((await _subscriberService.GetCustomer(provider))?.ApprovedToPayByInvoice() ?? false);
 
         return new ProviderEditModel(
             provider, users, providerOrganizations,

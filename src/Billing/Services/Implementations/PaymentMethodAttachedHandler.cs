@@ -2,10 +2,12 @@
 #nullable disable
 
 using Bit.Billing.Constants;
+using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Services;
 using Stripe;
 using Event = Stripe.Event;
 
@@ -17,22 +19,41 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeFacade _stripeFacade;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
+    private readonly IFeatureService _featureService;
     private readonly IProviderRepository _providerRepository;
 
-    public PaymentMethodAttachedHandler(ILogger<PaymentMethodAttachedHandler> logger,
+    public PaymentMethodAttachedHandler(
+        ILogger<PaymentMethodAttachedHandler> logger,
         IStripeEventService stripeEventService,
         IStripeFacade stripeFacade,
         IStripeEventUtilityService stripeEventUtilityService,
+        IFeatureService featureService,
         IProviderRepository providerRepository)
     {
         _logger = logger;
         _stripeEventService = stripeEventService;
         _stripeFacade = stripeFacade;
         _stripeEventUtilityService = stripeEventUtilityService;
+        _featureService = featureService;
         _providerRepository = providerRepository;
     }
 
     public async Task HandleAsync(Event parsedEvent)
+    {
+        var updateMSPToChargeAutomatically =
+            _featureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically);
+
+        if (updateMSPToChargeAutomatically)
+        {
+            await HandleVNextAsync(parsedEvent);
+        }
+        else
+        {
+            await HandleVCurrentAsync(parsedEvent);
+        }
+    }
+
+    private async Task HandleVNextAsync(Event parsedEvent)
     {
         var paymentMethod = await _stripeEventService.GetPaymentMethod(parsedEvent, true, ["customer.subscriptions.data.latest_invoice"]);
 
@@ -106,6 +127,42 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
 
         if (unpaidSubscriptions == null || unpaidSubscriptions.Count == 0)
         {
+            return;
+        }
+
+        foreach (var unpaidSubscription in unpaidSubscriptions)
+        {
+            await AttemptToPayOpenSubscriptionAsync(unpaidSubscription);
+        }
+    }
+
+    private async Task HandleVCurrentAsync(Event parsedEvent)
+    {
+        var paymentMethod = await _stripeEventService.GetPaymentMethod(parsedEvent);
+        if (paymentMethod is null)
+        {
+            _logger.LogWarning("Attempted to handle the event payment_method.attached but paymentMethod was null");
+            return;
+        }
+
+        var subscriptionListOptions = new SubscriptionListOptions
+        {
+            Customer = paymentMethod.CustomerId,
+            Status = StripeSubscriptionStatus.Unpaid,
+            Expand = ["data.latest_invoice"]
+        };
+
+        StripeList<Subscription> unpaidSubscriptions;
+        try
+        {
+            unpaidSubscriptions = await _stripeFacade.ListSubscriptions(subscriptionListOptions);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e,
+                "Attempted to get unpaid invoices for customer {CustomerId} but encountered an error while calling Stripe",
+                paymentMethod.CustomerId);
+
             return;
         }
 
