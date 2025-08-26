@@ -8,7 +8,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.Collectio
 
 public class UpsertDefaultCollectionsTests
 {
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task UpsertDefaultCollectionsAsync_ShouldCreateDefaultCollection_WhenUsersDoNotHaveDefaultCollection(
         IOrganizationRepository organizationRepository,
         IUserRepository userRepository,
@@ -36,7 +36,7 @@ public class UpsertDefaultCollectionsTests
         await CleanupAsync(organizationRepository, userRepository, organization, resultOrganizationUsers);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task UpsertDefaultCollectionsAsync_ShouldUpsertCreateDefaultCollection_ForUsersWithAndWithoutDefaultCollectionsExist(
         IOrganizationRepository organizationRepository,
         IUserRepository userRepository,
@@ -74,7 +74,7 @@ public class UpsertDefaultCollectionsTests
         await CleanupAsync(organizationRepository, userRepository, organization, affectedOrgUsers);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task UpsertDefaultCollectionsAsync_ShouldNotCreateDefaultCollection_WhenUsersAlreadyHaveOne(
         IOrganizationRepository organizationRepository,
         IUserRepository userRepository,
