@@ -11,9 +11,9 @@ using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Duende.IdentityModel;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
-using IdentityModel;
 using NSubstitute;
 using Xunit;
 
@@ -65,7 +65,7 @@ public class SendAccessGrantValidatorTests
 
         // Assert
         Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, context.Result.Error);
-        Assert.Equal("send_id is required.", context.Result.ErrorDescription);
+        Assert.Equal($"{SendAccessConstants.TokenRequest.SendId} is required.", context.Result.ErrorDescription);
     }
 
     [Theory, BitAutoData]
@@ -84,7 +84,7 @@ public class SendAccessGrantValidatorTests
         tokenRequest.Raw = CreateTokenRequestBody(Guid.Empty);
 
         // To preserve the CreateTokenRequestBody method for more general usage we over write the sendId
-        tokenRequest.Raw.Set("send_id", "invalid-guid-format");
+        tokenRequest.Raw.Set(SendAccessConstants.TokenRequest.SendId, "invalid-guid-format");
         context.Request = tokenRequest;
 
         // Act
@@ -92,7 +92,7 @@ public class SendAccessGrantValidatorTests
 
         // Assert
         Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
-        Assert.Equal("send_id is invalid.", context.Result.ErrorDescription);
+        Assert.Equal($"{SendAccessConstants.TokenRequest.SendId} is invalid.", context.Result.ErrorDescription);
     }
 
     [Theory, BitAutoData]
@@ -111,7 +111,7 @@ public class SendAccessGrantValidatorTests
 
         // Assert
         Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
-        Assert.Equal("send_id is invalid.", context.Result.ErrorDescription);
+        Assert.Equal($"{SendAccessConstants.TokenRequest.SendId} is invalid.", context.Result.ErrorDescription);
     }
 
     [Theory, BitAutoData]
@@ -135,7 +135,7 @@ public class SendAccessGrantValidatorTests
 
         // Assert
         Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
-        Assert.Equal("send_id is invalid.", context.Result.ErrorDescription);
+        Assert.Equal($"{SendAccessConstants.TokenRequest.SendId} is invalid.", context.Result.ErrorDescription);
     }
 
     [Theory, BitAutoData]
@@ -297,37 +297,28 @@ public class SendAccessGrantValidatorTests
 
         var rawRequestParameters = new NameValueCollection
         {
-            { "grant_type", CustomGrantTypes.SendAccess },
-            { "client_id", BitwardenClient.Send },
-            { "scope", ApiScopes.ApiSendAccess },
+            { OidcConstants.TokenRequest.GrantType, CustomGrantTypes.SendAccess },
+            { OidcConstants.TokenRequest.ClientId, BitwardenClient.Send },
+            { OidcConstants.TokenRequest.Scope, ApiScopes.ApiSendAccess },
             { "deviceType", ((int)DeviceType.FirefoxBrowser).ToString() },
-            { "send_id", sendIdBase64 }
+            { SendAccessConstants.TokenRequest.SendId, sendIdBase64 }
         };
 
         if (passwordHash != null)
         {
-            rawRequestParameters.Add("password_hash", passwordHash);
+            rawRequestParameters.Add(SendAccessConstants.TokenRequest.ClientB64HashedPassword, passwordHash);
         }
 
         if (sendEmail != null)
         {
-            rawRequestParameters.Add("send_email", sendEmail);
+            rawRequestParameters.Add(SendAccessConstants.TokenRequest.Email, sendEmail);
         }
 
         if (otpCode != null && sendEmail != null)
         {
-            rawRequestParameters.Add("otp_code", otpCode);
+            rawRequestParameters.Add(SendAccessConstants.TokenRequest.Otp, otpCode);
         }
 
         return rawRequestParameters;
     }
-
-    // we need a list of sendAuthentication methods to test against since we cannot create new objects in the BitAutoData
-    public static Dictionary<string, SendAuthenticationMethod> SendAuthenticationMethods => new()
-    {
-        { "NeverAuthenticate", new NeverAuthenticate() },       // Send doesn't exist or is deleted
-        { "NotAuthenticated", new NotAuthenticated() },         // Public send, no auth needed
-        // TODO: PM-22675 - {"ResourcePassword", new ResourcePassword("clientHashedPassword")};  // Password protected send
-        // TODO: PM-22678 - {"EmailOtp", new EmailOtp(["emailOtp@test.dev"]};    // Email + OTP protected send
-    };
 }
