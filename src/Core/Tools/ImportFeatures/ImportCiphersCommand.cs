@@ -108,7 +108,8 @@ public class ImportCiphersCommand : IImportCiphersCommand
         }
 
         // Create it all
-        await _cipherRepository.CreateAsync(importingUserId, ciphers, newFolders);
+        var useBulkResourceCreationService = _featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation);
+        await _cipherRepository.CreateAsync(importingUserId, ciphers, newFolders, useBulkResourceCreationService);
 
         // push
         await _pushService.PushSyncVaultAsync(importingUserId);
@@ -183,7 +184,8 @@ public class ImportCiphersCommand : IImportCiphersCommand
         }
 
         // Create it all
-        await _cipherRepository.CreateAsync(ciphers, newCollections, collectionCiphers, newCollectionUsers);
+        var useBulkResourceCreationService = _featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation);
+        await _cipherRepository.CreateAsync(ciphers, newCollections, collectionCiphers, newCollectionUsers, useBulkResourceCreationService);
 
         // push
         await _pushService.PushSyncVaultAsync(importingUserId);

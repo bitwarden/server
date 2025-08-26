@@ -146,7 +146,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
     }
 
     public async Task CreateAsync(Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers,
-        IEnumerable<Core.Vault.Entities.Folder> folders)
+        IEnumerable<Core.Vault.Entities.Folder> folders, bool useBulkResourceCreationService)
     {
         ciphers = ciphers.ToList();
         if (!ciphers.Any())
@@ -170,7 +170,8 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
     public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers,
         IEnumerable<Core.Entities.Collection> collections,
         IEnumerable<Core.Entities.CollectionCipher> collectionCiphers,
-        IEnumerable<Core.Entities.CollectionUser> collectionUsers)
+        IEnumerable<Core.Entities.CollectionUser> collectionUsers,
+        bool useBulkResourceCreationService)
     {
         if (!ciphers.Any())
         {
@@ -869,7 +870,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task UpdateCiphersAsync(Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers)
+    public async Task UpdateCiphersAsync(Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers, bool useBulkResourceCreationService)
     {
         if (!ciphers.Any())
         {
@@ -945,7 +946,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
 
     /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
-        Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers)
+        Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers, bool useBulkResourceCreationService)
     {
         return async (SqlConnection _, SqlTransaction _) =>
         {

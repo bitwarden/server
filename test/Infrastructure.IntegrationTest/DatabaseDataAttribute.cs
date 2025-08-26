@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
@@ -33,7 +32,6 @@ public class DatabaseDataAttribute : DataAttribute
     public bool SelfHosted { get; set; }
     public bool UseFakeTimeProvider { get; set; }
     public string? MigrationName { get; set; }
-    public string[] EnabledFeatureFlags { get; set; } = [];
 
     private void AddSqlMigrationTester(IServiceCollection services, string connectionString, string migrationName)
     {
@@ -47,11 +45,6 @@ public class DatabaseDataAttribute : DataAttribute
             var dbContext = sp.GetRequiredService<DatabaseContext>();
             return new EfMigrationTesterService(dbContext, databaseType, migrationName);
         });
-    }
-
-    private void AddInlineFeatureService(IServiceCollection services)
-    {
-        services.AddSingleton<IFeatureService>(new InlineFeatureService(EnabledFeatureFlags));
     }
 
     public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
@@ -158,11 +151,6 @@ public class DatabaseDataAttribute : DataAttribute
             o.TableName = "Cache";
         });
 
-        if (EnabledFeatureFlags.Length > 0)
-        {
-            AddInlineFeatureService(services);
-        }
-
         if (!string.IsNullOrEmpty(MigrationName))
         {
             AddSqlMigrationTester(services, database.ConnectionString, MigrationName);
@@ -186,11 +174,6 @@ public class DatabaseDataAttribute : DataAttribute
 
         services.AddSingleton(database);
         services.AddSingleton<IDistributedCache, EntityFrameworkCache>();
-
-        if (EnabledFeatureFlags.Length > 0)
-        {
-            AddInlineFeatureService(services);
-        }
 
         if (!string.IsNullOrEmpty(MigrationName))
         {
@@ -229,30 +212,5 @@ public class DatabaseDataAttribute : DataAttribute
 
             return services;
         }
-    }
-
-    /// <summary>
-    /// This is a simple offline feature service that honors the <see cref="EnabledFeatureFlags"/>.
-    /// </summary>
-    internal sealed class InlineFeatureService : IFeatureService
-    {
-        private readonly HashSet<string> _enabled;
-        public InlineFeatureService(IEnumerable<string> enabled)
-        {
-            _enabled = new HashSet<string>(enabled ?? []);
-        }
-
-        public bool IsOnline() => true;
-        public bool IsEnabled(string key, bool defaultValue = false)
-        {
-            if (string.IsNullOrWhiteSpace(key))
-            {
-                return defaultValue;
-            }
-            return _enabled.Contains(key);
-        }
-        public int GetIntVariation(string key, int defaultValue = 0) => defaultValue;
-        public string GetStringVariation(string key, string defaultValue = null) => defaultValue;
-        public Dictionary<string, object> GetAll() => new();
     }
 }

@@ -670,7 +670,33 @@ public class CipherServiceTests
 
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organization.Id, collectionIds, sharingUserId);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
-            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()), false);
+    }
+
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData("Correct Time")]
+    public async Task ShareManyAsync_CorrectRevisionDate_WithBulkResourceCreationServiceEnabled_Passes(string revisionDateString,
+        SutProvider<CipherService> sutProvider, IEnumerable<CipherDetails> ciphers, Organization organization, List<Guid> collectionIds)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id)
+            .Returns(new Organization
+            {
+                PlanType = PlanType.EnterpriseAnnually,
+                MaxStorageGb = 100
+            });
+
+        var cipherInfos = ciphers.Select(c => (c,
+            string.IsNullOrEmpty(revisionDateString) ? null : (DateTime?)c.RevisionDate));
+        var sharingUserId = ciphers.First().UserId.Value;
+
+        await sutProvider.Sut.ShareManyAsync(cipherInfos, organization.Id, collectionIds, sharingUserId);
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()), true);
     }
 
     [Theory]
@@ -1090,7 +1116,34 @@ public class CipherServiceTests
 
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
-            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()), false);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ShareManyAsync_PaidOrgWithAttachment_WithBulkResourceCreationServiceEnabled_Passes(SutProvider<CipherService> sutProvider,
+        IEnumerable<CipherDetails> ciphers, Guid organizationId, List<Guid> collectionIds)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
+            .Returns(new Organization
+            {
+                PlanType = PlanType.EnterpriseAnnually,
+                MaxStorageGb = 100
+            });
+        ciphers.FirstOrDefault().Attachments =
+            "{\"attachment1\":{\"Size\":\"250\",\"FileName\":\"superCoolFile\","
+            + "\"Key\":\"superCoolFile\",\"ContainerName\":\"testContainer\",\"Validated\":false}}";
+
+        var cipherInfos = ciphers.Select(c => (c,
+           (DateTime?)c.RevisionDate));
+        var sharingUserId = ciphers.First().UserId.Value;
+
+        await sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId);
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
+            Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()), true);
     }
 
     private class SaveDetailsAsyncDependencies

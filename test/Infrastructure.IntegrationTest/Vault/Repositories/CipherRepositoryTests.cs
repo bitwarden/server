@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
@@ -966,7 +965,7 @@ public class CipherRepositoryTests
         cipher1.Type = CipherType.SecureNote;
         cipher2.Attachments = "new_attachments";
 
-        await cipherRepository.UpdateCiphersAsync(user.Id, [cipher1, cipher2]);
+        await cipherRepository.UpdateCiphersAsync(user.Id, [cipher1, cipher2], useBulkResourceCreationService: false);
 
         var updatedCipher1 = await cipherRepository.GetByIdAsync(cipher1.Id);
         var updatedCipher2 = await cipherRepository.GetByIdAsync(cipher2.Id);
@@ -978,8 +977,8 @@ public class CipherRepositoryTests
         Assert.Equal("new_attachments", updatedCipher2.Attachments);
     }
 
-    [DatabaseTheory, DatabaseData(EnabledFeatureFlags = [FeatureFlagKeys.CipherRepositoryBulkResourceCreation])]
-    public async Task CreateAsync_WithFolders_WhenBulkResourceCreationFlagEnabled_Works(
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateAsync_WithFolders_UsingBulkResourceCreationService_Works(
         IUserRepository userRepository, ICipherRepository cipherRepository, IFolderRepository folderRepository)
     {
         // Arrange
@@ -1000,7 +999,8 @@ public class CipherRepositoryTests
         await cipherRepository.CreateAsync(
             userId: user.Id,
             ciphers: [cipher1, cipher2],
-            folders: [folder1, folder2]);
+            folders: [folder1, folder2],
+            useBulkResourceCreationService: true);
 
         // Assert
         var readCipher1 = await cipherRepository.GetByIdAsync(cipher1.Id);
@@ -1014,8 +1014,8 @@ public class CipherRepositoryTests
         Assert.NotNull(readFolder2);
     }
 
-    [DatabaseTheory, DatabaseData(EnabledFeatureFlags = [FeatureFlagKeys.CipherRepositoryBulkResourceCreation])]
-    public async Task CreateAsync_WithCollectionsAndUsers_WhenBulkResourceCreationFlagEnabled_Works(
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateAsync_WithCollectionsAndUsers_UsingBulkResourceCreationService_Works(
         IOrganizationRepository orgRepository,
         IOrganizationUserRepository orgUserRepository,
         ICollectionRepository collectionRepository,
@@ -1064,7 +1064,8 @@ public class CipherRepositoryTests
             ciphers: [cipher],
             collections: [collection],
             collectionCiphers: [collectionCipher],
-            collectionUsers: [collectionUser]);
+            collectionUsers: [collectionUser],
+            useBulkResourceCreationService: true);
 
         // Assert
         var orgCiphers = await cipherRepository.GetManyByOrganizationIdAsync(org.Id);
@@ -1084,8 +1085,8 @@ public class CipherRepositoryTests
         Assert.False(foundCollectionUser.HidePasswords);
     }
 
-    [DatabaseTheory, DatabaseData(EnabledFeatureFlags = [FeatureFlagKeys.CipherRepositoryBulkResourceCreation])]
-    public async Task UpdateCiphersAsync_WhenBulkResourceCreationFlagEnabled_Works(
+    [DatabaseTheory, DatabaseData]
+    public async Task UpdateCiphersAsync_UsingBulkResourceCreationService_Works(
         IUserRepository userRepository, ICipherRepository cipherRepository)
     {
         // Arrange
@@ -1105,7 +1106,8 @@ public class CipherRepositoryTests
         await cipherRepository.CreateAsync(
             userId: user.Id,
             ciphers: [c1, c2],
-            folders: []);
+            folders: [],
+            useBulkResourceCreationService: false);
 
         c1.Type = expectedNewType;
         c2.Attachments = expectedNewAttachments;
@@ -1113,7 +1115,8 @@ public class CipherRepositoryTests
         // Act
         await cipherRepository.UpdateCiphersAsync(
             userId: user.Id,
-            ciphers: [c1, c2]);
+            ciphers: [c1, c2],
+            useBulkResourceCreationService: true);
 
         // Assert
         var updated1 = await cipherRepository.GetByIdAsync(c1.Id);

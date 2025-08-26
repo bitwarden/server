@@ -3,10 +3,8 @@
 
 using System.Data;
 using System.Text.Json;
-using Bit.Core;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.UserKey;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -22,17 +20,13 @@ namespace Bit.Infrastructure.Dapper.Vault.Repositories;
 
 public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 {
-    private readonly IFeatureService _featureService;
-
-    public CipherRepository(GlobalSettings globalSettings, IFeatureService featureService)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString, featureService)
+    public CipherRepository(GlobalSettings globalSettings)
+        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     { }
 
-    public CipherRepository(string connectionString, string readOnlyConnectionString, IFeatureService featureService)
+    public CipherRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
-    {
-        _featureService = featureService;
-    }
+    { }
 
     public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
     {
@@ -360,7 +354,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
     /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
-        Guid userId, IEnumerable<Cipher> ciphers)
+        Guid userId, IEnumerable<Cipher> ciphers, bool useBulkResourceCreationService)
     {
         return async (SqlConnection connection, SqlTransaction transaction) =>
         {
@@ -376,7 +370,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             }
 
             // Bulk copy data into temp table
-            if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
+            if (useBulkResourceCreationService)
             {
                 await BulkResourceCreationService.CreateTempCiphersAsync(connection, transaction, ciphers);
             }
@@ -422,7 +416,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         };
     }
 
-    public async Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers)
+    public async Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers, bool useBulkResourceCreationService)
     {
         if (!ciphers.Any())
         {
@@ -450,7 +444,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                     }
 
                     // 2. Bulk copy into temp tables.
-                    if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
+                    if (useBulkResourceCreationService)
                     {
                         await BulkResourceCreationService.CreateTempCiphersAsync(connection, transaction, ciphers);
                     }
@@ -511,7 +505,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task CreateAsync(Guid userId, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
+    public async Task CreateAsync(Guid userId, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, bool useBulkResourceCreationService)
     {
         if (!ciphers.Any())
         {
@@ -528,7 +522,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 {
                     if (folders.Any())
                     {
-                        if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
+                        if (useBulkResourceCreationService)
                         {
                             await BulkResourceCreationService.CreateFoldersAsync(connection, transaction, folders);
                         }
@@ -543,7 +537,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                         }
                     }
 
-                    if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
+                    if (useBulkResourceCreationService)
                     {
                         await BulkResourceCreationService.CreateCiphersAsync(connection, transaction, ciphers);
                     }
@@ -574,7 +568,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
     }
 
     public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
-        IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers)
+        IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers, bool useBulkResourceCreationService)
     {
         if (!ciphers.Any())
         {
@@ -589,7 +583,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             {
                 try
                 {
-                    if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
+                    if (useBulkResourceCreationService)
                     {
                         await BulkResourceCreationService.CreateCiphersAsync(connection, transaction, ciphers);
                     }
@@ -605,7 +599,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
                     if (collections.Any())
                     {
-                        if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
+                        if (useBulkResourceCreationService)
                         {
                             await BulkResourceCreationService.CreateCollectionsAsync(connection, transaction, collections);
                         }
@@ -622,7 +616,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
                     if (collectionCiphers.Any())
                     {
-                        if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
+                        if (useBulkResourceCreationService)
                         {
                             await BulkResourceCreationService.CreateCollectionCiphersAsync(connection, transaction, collectionCiphers);
                         }
@@ -639,7 +633,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
                     if (collectionUsers.Any())
                     {
-                        if (_featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation))
+                        if (useBulkResourceCreationService)
                         {
                             await BulkResourceCreationService.CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
                         }

@@ -46,7 +46,41 @@ public class ImportCiphersAsyncCommandTests
         await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, importingUserId);
 
         // Assert
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>());
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>(), false);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportIntoIndividualVaultAsync_WithBulkResourceCreationServiceEnabled_Success(
+        Guid importingUserId,
+        List<CipherDetails> ciphers,
+        SutProvider<ImportCiphersCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation)
+            .Returns(true);
+
+        sutProvider.GetDependency<IPolicyService>()
+            .AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.OrganizationDataOwnership)
+            .Returns(false);
+
+        sutProvider.GetDependency<IFolderRepository>()
+            .GetManyByUserIdAsync(importingUserId)
+            .Returns(new List<Folder>());
+
+        var folders = new List<Folder> { new Folder { UserId = importingUserId } };
+
+        var folderRelationships = new List<KeyValuePair<int, int>>();
+
+        // Act
+        await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, importingUserId);
+
+        // Assert
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>(), true);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 
@@ -76,7 +110,45 @@ public class ImportCiphersAsyncCommandTests
 
         await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, importingUserId);
 
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>());
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>(), false);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportIntoIndividualVaultAsync_WithBulkResourceCreationServiceEnabled_WithPolicyRequirementsEnabled_WithOrganizationDataOwnershipPolicyDisabled_Success(
+        Guid importingUserId,
+        List<CipherDetails> ciphers,
+        SutProvider<ImportCiphersCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation)
+            .Returns(true);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            .Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(importingUserId)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(
+                OrganizationDataOwnershipState.Disabled,
+                []));
+
+        sutProvider.GetDependency<IFolderRepository>()
+            .GetManyByUserIdAsync(importingUserId)
+            .Returns(new List<Folder>());
+
+        var folders = new List<Folder> { new Folder { UserId = importingUserId } };
+
+        var folderRelationships = new List<KeyValuePair<int, int>>();
+
+        await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, importingUserId);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>(), true);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 
@@ -182,7 +254,69 @@ public class ImportCiphersAsyncCommandTests
             Arg.Is<IEnumerable<CollectionUser>>(cus =>
                 cus.Count() == collections.Count - 1 &&
                 !cus.Any(cu => cu.CollectionId == collections[0].Id) && // Check that access was not added for the collection that already existed in the organization
-                cus.All(cu => cu.OrganizationUserId == importingOrganizationUser.Id && cu.Manage == true)));
+                cus.All(cu => cu.OrganizationUserId == importingOrganizationUser.Id && cu.Manage == true)),
+            false);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportIntoOrganizationalVaultAsync_WithBulkResourceCreationServiceEnabled_Success(
+        Organization organization,
+        Guid importingUserId,
+        OrganizationUser importingOrganizationUser,
+        List<Collection> collections,
+        List<CipherDetails> ciphers,
+        SutProvider<ImportCiphersCommand> sutProvider)
+    {
+        organization.MaxCollections = null;
+        importingOrganizationUser.OrganizationId = organization.Id;
+
+        foreach (var collection in collections)
+        {
+            collection.OrganizationId = organization.Id;
+        }
+
+        foreach (var cipher in ciphers)
+        {
+            cipher.OrganizationId = organization.Id;
+        }
+
+        KeyValuePair<int, int>[] collectionRelationships = {
+            new(0, 0),
+            new(1, 1),
+            new(2, 2)
+        };
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, importingUserId)
+            .Returns(importingOrganizationUser);
+
+        // Set up a collection that already exists in the organization
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(new List<Collection> { collections[0] });
+
+        await sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId);
+
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(
+            ciphers,
+            Arg.Is<IEnumerable<Collection>>(cols => cols.Count() == collections.Count - 1 &&
+                        !cols.Any(c => c.Id == collections[0].Id) && // Check that the collection that already existed in the organization was not added
+                        cols.All(c => collections.Any(x => c.Name == x.Name))),
+            Arg.Is<IEnumerable<CollectionCipher>>(c => c.Count() == ciphers.Count),
+            Arg.Is<IEnumerable<CollectionUser>>(cus =>
+                cus.Count() == collections.Count - 1 &&
+                !cus.Any(cu => cu.CollectionId == collections[0].Id) && // Check that access was not added for the collection that already existed in the organization
+                cus.All(cu => cu.OrganizationUserId == importingOrganizationUser.Id && cu.Manage == true)),
+            true);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
 
