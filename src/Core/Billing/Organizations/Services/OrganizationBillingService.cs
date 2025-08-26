@@ -383,7 +383,7 @@ public class OrganizationBillingService(
                 {
                     case PaymentMethodType.BankAccount:
                         {
-                            await setupIntentCache.Remove(organization.Id);
+                            await setupIntentCache.RemoveSetupIntentForSubscriber(organization.Id);
                             break;
                         }
                     case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
