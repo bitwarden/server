@@ -82,7 +82,7 @@ BEGIN
 END
 GO
 
--- Create or alter Event_ReadPageByProjectId procedure
+-- Create or alter Event_ReadPageByServiceAccountId procedure
 CREATE OR ALTER PROCEDURE [dbo].[Event_ReadPageByServiceAccountId]
     @GrantedServiceAccountId UNIQUEIDENTIFIER,
     @StartDate DATETIME2(7),
@@ -115,7 +115,8 @@ BEGIN
         e.DomainName,
         e.SecretId,
         e.ServiceAccountId,
-        e.ProjectId
+        e.ProjectId,
+        e.GrantedServiceAccountId
     FROM
         [dbo].[EventView] e
     WHERE
