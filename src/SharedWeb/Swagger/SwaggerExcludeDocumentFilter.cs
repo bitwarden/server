@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using System.Reflection;
 
 namespace Bit.SharedWeb.Swagger;
 
@@ -20,8 +21,7 @@ public class SwaggerExcludeDocumentFilter : IDocumentFilter
         {
             // Check if the descriptor is a controller action and it has the SwaggerExclude attribute
             if (apiDesc.ActionDescriptor is not ControllerActionDescriptor actionDesc) continue;
-            var hideAttributes = actionDesc.MethodInfo.GetCustomAttributes(typeof(SwaggerExcludeAttribute), true) as SwaggerExcludeAttribute[];
-            if (hideAttributes == null || hideAttributes.Length == 0) continue;
+            var hideAttributes = actionDesc.MethodInfo.GetCustomAttributes<SwaggerExcludeAttribute>(true);
 
             var currentHttpMethod = apiDesc.HttpMethod;
             var currentPath = apiDesc.RelativePath;
