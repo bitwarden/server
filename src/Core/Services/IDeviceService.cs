@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Entities;
-using Bit.Core.Platform.PushRegistration;
+using Bit.Core.NotificationHub;
 
 namespace Bit.Core.Services;
 

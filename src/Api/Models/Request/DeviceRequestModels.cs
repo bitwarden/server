@@ -4,7 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Platform.PushRegistration;
+using Bit.Core.NotificationHub;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request;

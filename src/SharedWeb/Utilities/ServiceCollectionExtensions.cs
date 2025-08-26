@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
+using Azure.Storage.Queues;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -34,10 +35,11 @@ using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
 using Bit.Core.KeyManagement;
 using Bit.Core.NotificationCenter;
+using Bit.Core.NotificationHub;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Platform;
 using Bit.Core.Platform.Push;
-using Bit.Core.Platform.PushRegistration.Internal;
+using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
 using Bit.Core.SecretsManager.Repositories;
@@ -280,8 +282,46 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
         }
 
-        services.AddPush(globalSettings);
-        services.AddPushRegistration();
+        services.TryAddSingleton(TimeProvider.System);
+
+        services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
+        if (globalSettings.SelfHosted)
+        {
+            if (globalSettings.Installation.Id == Guid.Empty)
+            {
+                throw new InvalidOperationException("Installation Id must be set for self-hosted installations.");
+            }
+
+            if (CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
+                CoreHelpers.SettingHasValue(globalSettings.Installation.Key))
+            {
+                services.TryAddEnumerable(ServiceDescriptor.Singleton<IPushEngine, RelayPushNotificationService>());
+                services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
+            }
+            else
+            {
+                services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
+            }
+
+            if (CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
+                CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
+            {
+                services.TryAddEnumerable(ServiceDescriptor.Singleton<IPushEngine, NotificationsApiPushNotificationService>());
+            }
+        }
+        else
+        {
+            services.AddSingleton<INotificationHubPool, NotificationHubPool>();
+            services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IPushEngine, NotificationHubPushNotificationService>());
+            services.TryAddSingleton<IPushRelayer, NotificationHubPushNotificationService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
+            {
+                services.AddKeyedSingleton("notifications",
+                    (_, _) => new QueueClient(globalSettings.Notifications.ConnectionString, "notifications"));
+                services.TryAddEnumerable(ServiceDescriptor.Singleton<IPushEngine, AzureQueuePushNotificationService>());
+            }
+        }
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
         {

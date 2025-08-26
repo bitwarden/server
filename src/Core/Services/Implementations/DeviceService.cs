@@ -3,8 +3,8 @@ using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.NotificationHub;
 using Bit.Core.Platform.Push;
-using Bit.Core.Platform.PushRegistration;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 
