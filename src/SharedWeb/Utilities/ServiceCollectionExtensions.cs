@@ -826,6 +826,7 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddScoped<IFeatureService, LaunchDarklyFeatureService>();
+        services.AddScoped<IExampleScopedService, ExampleScopedService>();
 
         return services;
     }
