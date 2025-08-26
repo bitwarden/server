@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-namespace Bit.SharedWeb.Swagger;
+﻿namespace Bit.SharedWeb.Swagger;
 
 /// <summary>
 /// Attribute to mark controller functions that should have some of their routes
@@ -21,11 +19,10 @@ public class SwaggerExcludeAttribute(string httpMethod, string? path = null) : A
 
     public bool Matches(string httpMethod, string? path)
     {
-        if (!httpMethod.Equals(HttpMethod, StringComparison.CurrentCultureIgnoreCase)) return false;
+        if (!httpMethod.Equals(HttpMethod, StringComparison.OrdinalIgnoreCase)) return false;
 
         if (Path == null) return true;
 
-        return path?.Contains(Path, StringComparison.CurrentCultureIgnoreCase) ?? false;
+        return path?.Contains(Path, StringComparison.OrdinalIgnoreCase) ?? false;
     }
-
 }

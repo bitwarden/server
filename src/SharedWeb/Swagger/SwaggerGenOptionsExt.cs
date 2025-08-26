@@ -5,7 +5,6 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Bit.SharedWeb.Swagger;
 
-
 public static class SwaggerGenOptionsExt
 {
 
@@ -32,6 +31,5 @@ public static class SwaggerGenOptionsExt
             config.DocumentFilter<GitCommitDocumentFilter>();
             config.OperationFilter<SourceFileLineOperationFilter>();
         }
-
     }
 }

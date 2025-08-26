@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using Microsoft.AspNetCore.Mvc.Controllers;
+﻿using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -69,5 +67,4 @@ public class SwaggerExcludeDocumentFilter : IDocumentFilter
             _ => throw new ArgumentException($"Unsupported HTTP method: {httpMethod}")
         };
     }
-
 }

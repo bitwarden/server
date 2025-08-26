@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using Microsoft.OpenApi.Models;
+﻿using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Bit.SharedWeb.Swagger;
@@ -17,7 +15,7 @@ public class CheckDuplicateOperationIdsDocumentFilter(bool printDuplicates = tru
 
     public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
     {
-        var operationIdMap = new Dictionary<string, List<(string path, OpenApiPathItem pathItem, OperationType method, OpenApiOperation operation)>>();
+        var operationIdMap = new Dictionary<string, List<(string Path, OpenApiPathItem PathItem, OperationType Method, OpenApiOperation Operation)>>();
 
         foreach (var (path, pathItem) in swaggerDoc.Paths)
         {
@@ -79,5 +77,4 @@ public class CheckDuplicateOperationIdsDocumentFilter(bool printDuplicates = tru
             throw new InvalidOperationException($"Duplicate operation IDs found in Swagger schema");
         }
     }
-
 }
