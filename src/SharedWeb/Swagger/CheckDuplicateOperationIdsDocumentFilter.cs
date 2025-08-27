@@ -41,8 +41,8 @@ public class CheckDuplicateOperationIdsDocumentFilter(bool printDuplicates = tru
                 Console.WriteLine($"\n######## Duplicate operationIds found in the schema ({duplicates.Count} found) ########\n");
 
                 Console.WriteLine("## Common causes of duplicate operation IDs:");
-                Console.WriteLine("- Multiple HTTP methods (GET, POST, etc.) on the same controller function, without using [SwaggerExclude()]");
-                Console.WriteLine("    Solution: Use [SwaggerExclude()] to hide the all HTTP methods except one");
+                Console.WriteLine("- Multiple HTTP methods (GET, POST, etc.) on the same controller function");
+                Console.WriteLine("    Solution: Split the methods into separate functions, and if appropiate, mark the deprecated ones with [Obsolete]");
                 Console.WriteLine();
                 Console.WriteLine("- Overloaded controller functions with the same name");
                 Console.WriteLine("    Solution: Rename the overloaded functions to have unique names, or combine them into a single function with optional parameters");
