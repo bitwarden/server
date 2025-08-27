@@ -9,7 +9,7 @@ namespace Bit.Core.Services.Implementations;
 /// <summary>
 /// A feature-flagged routing service for application caching that bridges the gap between
 /// scoped dependency injection (IFeatureService) and singleton services (cache implementations).
-/// This service allows dynamic routing between IVCurrentInMemoryApplicationCacheService and 
+/// This service allows dynamic routing between IVCurrentInMemoryApplicationCacheService and
 /// IVNextInMemoryApplicationCacheService based on the PM23845_VNextApplicationCache feature flag.
 /// </summary>
 /// <remarks>
@@ -17,7 +17,7 @@ namespace Bit.Core.Services.Implementations;
 /// - IFeatureService is registered as Scoped in the DI container
 /// - IVNextInMemoryApplicationCacheService and IVCurrentInMemoryApplicationCacheService are registered as Singleton
 /// - We need to evaluate feature flags at request time while maintaining singleton cache behavior
-/// 
+///
 /// The service acts as a scoped proxy that can access the scoped IFeatureService while
 /// delegating actual cache operations to the appropriate singleton implementation.
 /// </remarks>
@@ -33,10 +33,8 @@ public class FeatureRoutedCacheService(
         {
             return await vNextInMemoryApplicationCacheService.GetOrganizationAbilitiesAsync();
         }
-        else
-        {
-            return await inMemoryApplicationCacheService.GetOrganizationAbilitiesAsync();
-        }
+
+        return await inMemoryApplicationCacheService.GetOrganizationAbilitiesAsync();
     }
 
     public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId)

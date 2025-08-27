@@ -37,7 +37,7 @@ public class FeatureRoutedCacheServiceTests
             .Received(1)
             .GetOrganizationAbilitiesAsync();
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .DidNotReceive()
             .GetOrganizationAbilitiesAsync();
     }
@@ -51,7 +51,7 @@ public class FeatureRoutedCacheServiceTests
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
             .Returns(false);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .GetOrganizationAbilitiesAsync()
             .Returns(expectedResult);
 
@@ -60,7 +60,7 @@ public class FeatureRoutedCacheServiceTests
 
         // Assert
         Assert.Equal(expectedResult, result);
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .Received(1)
             .GetOrganizationAbilitiesAsync();
 
@@ -92,9 +92,9 @@ public class FeatureRoutedCacheServiceTests
             .Received(1)
             .GetOrganizationAbilityAsync(orgId);
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .DidNotReceive()
-            .GetOrganizationAbilitiesAsync();
+            .GetOrganizationAbilityAsync(orgId);
     }
 
     [Theory, BitAutoData]
@@ -108,7 +108,7 @@ public class FeatureRoutedCacheServiceTests
             .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
             .Returns(false);
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .GetOrganizationAbilityAsync(orgId)
             .Returns(expectedResult);
 
@@ -117,7 +117,7 @@ public class FeatureRoutedCacheServiceTests
 
         // Assert
         Assert.Equal(expectedResult, result);
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .Received(1)
             .GetOrganizationAbilityAsync(orgId);
 
@@ -148,7 +148,7 @@ public class FeatureRoutedCacheServiceTests
             .Received(1)
             .GetProviderAbilitiesAsync();
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .DidNotReceive()
             .GetProviderAbilitiesAsync();
     }
@@ -163,7 +163,7 @@ public class FeatureRoutedCacheServiceTests
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
             .Returns(false);
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .GetProviderAbilitiesAsync()
             .Returns(expectedResult);
 
@@ -172,7 +172,7 @@ public class FeatureRoutedCacheServiceTests
 
         // Assert
         Assert.Equal(expectedResult, result);
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .Received(1)
             .GetProviderAbilitiesAsync();
 
@@ -199,7 +199,7 @@ public class FeatureRoutedCacheServiceTests
             .Received(1)
             .UpsertOrganizationAbilityAsync(organization);
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .DidNotReceive()
             .GetProviderAbilitiesAsync();
     }
@@ -218,7 +218,7 @@ public class FeatureRoutedCacheServiceTests
         await sutProvider.Sut.UpsertOrganizationAbilityAsync(organization);
 
         // Assert
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .Received(1)
             .UpsertOrganizationAbilityAsync(organization);
 
@@ -245,7 +245,7 @@ public class FeatureRoutedCacheServiceTests
             .Received(1)
             .UpsertProviderAbilityAsync(provider);
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .DidNotReceive()
             .UpsertProviderAbilityAsync(provider);
     }
@@ -264,7 +264,7 @@ public class FeatureRoutedCacheServiceTests
         await sutProvider.Sut.UpsertProviderAbilityAsync(provider);
 
         // Assert
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .Received(1)
             .UpsertProviderAbilityAsync(provider);
 
@@ -291,7 +291,7 @@ public class FeatureRoutedCacheServiceTests
             .Received(1)
             .DeleteOrganizationAbilityAsync(organizationId);
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .DidNotReceive()
             .DeleteOrganizationAbilityAsync(organizationId);
     }
@@ -310,7 +310,7 @@ public class FeatureRoutedCacheServiceTests
         await sutProvider.Sut.DeleteOrganizationAbilityAsync(organizationId);
 
         // Assert
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .Received(1)
             .DeleteOrganizationAbilityAsync(organizationId);
 
@@ -337,7 +337,7 @@ public class FeatureRoutedCacheServiceTests
             .Received(1)
             .DeleteProviderAbilityAsync(providerId);
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .DidNotReceive()
             .DeleteProviderAbilityAsync(providerId);
     }
@@ -356,7 +356,7 @@ public class FeatureRoutedCacheServiceTests
         await sutProvider.Sut.DeleteProviderAbilityAsync(providerId);
 
         // Assert
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .Received(1)
             .DeleteProviderAbilityAsync(providerId);
 
