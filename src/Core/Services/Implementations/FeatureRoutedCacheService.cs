@@ -26,7 +26,7 @@ public class FeatureRoutedCacheService(
     IVNextInMemoryApplicationCacheService vNextInMemoryApplicationCacheService,
     IVCurrentInMemoryApplicationCacheService inMemoryApplicationCacheService,
     IApplicationCacheServiceBusMessaging serviceBusMessaging)
-    : IApplicationCacheService, IApplicationCacheBackwardProcessor
+    : IApplicationCacheService
 {
     public async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
     {
@@ -118,8 +118,14 @@ public class FeatureRoutedCacheService(
         }
         else
         {
-            // Jimmy todo: Ensure this hit InMemoryServiceBusApplicationCacheService
-            // await (InMemoryServiceBusApplicationCacheService) inMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
+            if (inMemoryApplicationCacheService is InMemoryServiceBusApplicationCacheService serviceBusCache)
+            {
+                await serviceBusCache.UpsertOrganizationAbilityAsync(organization);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Expected {nameof(inMemoryApplicationCacheService)} to be of type {nameof(InMemoryServiceBusApplicationCacheService)}");
+            }
         }
     }
 
@@ -131,8 +137,14 @@ public class FeatureRoutedCacheService(
         }
         else
         {
-            // Jimmy todo: Ensure this hit InMemoryServiceBusApplicationCacheService
-            // await (InMemoryServiceBusApplicationCacheService) inMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
+            if (inMemoryApplicationCacheService is InMemoryServiceBusApplicationCacheService serviceBusCache)
+            {
+                await serviceBusCache.DeleteOrganizationAbilityAsync(organizationId);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Expected {nameof(inMemoryApplicationCacheService)} to be of type {nameof(InMemoryServiceBusApplicationCacheService)}");
+            }
         }
     }
 }

@@ -59,7 +59,6 @@ public class Startup
 
         if (usingServiceBusAppCache)
         {
-            services.AddScoped<IApplicationCacheBackwardProcessor, FeatureRoutedCacheService>();
             services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
             services.AddSingleton<IApplicationCacheServiceBusMessaging, ServiceBusApplicationCacheMessaging>();
         }

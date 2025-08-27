@@ -1,9 +1,9 @@
 ﻿using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
-using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Services.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Hosting;
@@ -15,7 +15,7 @@ namespace Bit.Core.HostedServices;
 
 public class ApplicationCacheHostedService : IHostedService, IDisposable
 {
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly FeatureRoutedCacheService? _applicationCacheService;
     private readonly IOrganizationRepository _organizationRepository;
     protected readonly ILogger<ApplicationCacheHostedService> _logger;
     private readonly ServiceBusClient _serviceBusClient;
@@ -35,7 +35,7 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
     {
         _topicName = globalSettings.ServiceBus.ApplicationCacheTopicName;
         _subName = CoreHelpers.GetApplicationCacheServiceBusSubscriptionName(globalSettings);
-        _applicationCacheService = applicationCacheService;
+        _applicationCacheService = applicationCacheService as FeatureRoutedCacheService;
         _organizationRepository = organizationRepository;
         _logger = logger;
         _serviceBusClient = new ServiceBusClient(globalSettings.ServiceBus.ConnectionString);
@@ -133,7 +133,7 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
 
     private async Task ProcessMessageAsync(ServiceBusReceivedMessage message, CancellationToken cancellationToken)
     {
-        if (message.Subject != _subName && _applicationCacheService is IApplicationCacheBackwardProcessor serviceBusProcessor)
+        if (message.Subject != _subName && _applicationCacheService != null)
         {
             switch ((ApplicationCacheMessageType)message.ApplicationProperties["type"])
             {
@@ -142,11 +142,11 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
                     var upsertedOrg = await _organizationRepository.GetByIdAsync(upsertedOrgId);
                     if (upsertedOrg != null)
                     {
-                        await serviceBusProcessor.BaseUpsertOrganizationAbilityAsync(upsertedOrg);
+                        await _applicationCacheService.BaseUpsertOrganizationAbilityAsync(upsertedOrg);
                     }
                     break;
                 case ApplicationCacheMessageType.DeleteOrganizationAbility:
-                    await serviceBusProcessor.BaseDeleteOrganizationAbilityAsync(
+                    await _applicationCacheService.BaseDeleteOrganizationAbilityAsync(
                         (Guid)message.ApplicationProperties["id"]);
                     break;
                 default:
