@@ -8,8 +8,8 @@ namespace Bit.Core.Services.Implementations;
 public class FeatureRoutedCacheService(
     IFeatureService featureService,
     IVNextInMemoryApplicationCacheService vNextInMemoryApplicationCacheService,
-    IApplicationCacheService inMemoryApplicationCacheService)
-    : IFeatureRoutedCacheService
+    IVCurrentInMemoryApplicationCacheService inMemoryApplicationCacheService)
+    : IApplicationCacheService
 {
     public async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
     {

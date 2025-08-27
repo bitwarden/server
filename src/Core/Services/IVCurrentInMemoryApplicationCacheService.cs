@@ -5,7 +5,7 @@ using Bit.Core.Models.Data.Organizations;
 
 namespace Bit.Core.Services;
 
-public interface IFeatureRoutedCacheService
+public interface IVCurrentInMemoryApplicationCacheService
 {
     Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync();
 #nullable enable

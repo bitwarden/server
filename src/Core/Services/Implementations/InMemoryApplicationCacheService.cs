@@ -10,7 +10,7 @@ using Bit.Core.Repositories;
 
 namespace Bit.Core.Services;
 
-public class InMemoryApplicationCacheService : IApplicationCacheService
+public class InMemoryApplicationCacheService : IVCurrentInMemoryApplicationCacheService
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderRepository _providerRepository;

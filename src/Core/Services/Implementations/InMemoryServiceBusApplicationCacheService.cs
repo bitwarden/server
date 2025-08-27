@@ -8,7 +8,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Services;
 
-public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCacheService, IApplicationCacheService
+public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCacheService, IVCurrentInMemoryApplicationCacheService
 {
     private readonly ServiceBusClient _serviceBusClient;
     private readonly ServiceBusSender _topicMessageSender;

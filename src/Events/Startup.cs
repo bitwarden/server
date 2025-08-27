@@ -2,6 +2,7 @@
 using Bit.Core.Context;
 using Bit.Core.IdentityServer;
 using Bit.Core.Services;
+using Bit.Core.Services.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -52,15 +53,15 @@ public class Startup
         // Services
         var usingServiceBusAppCache = CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName);
-
+        services.AddSingleton<IApplicationCacheService, FeatureRoutedCacheService>();
         services.AddSingleton<IVNextInMemoryApplicationCacheService, VNextInMemoryApplicationCacheService>();
         if (usingServiceBusAppCache)
         {
-            services.AddSingleton<IApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
+            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
         }
         else
         {
-            services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
+            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryApplicationCacheService>();
         }
 
         services.AddEventWriteServices(globalSettings);

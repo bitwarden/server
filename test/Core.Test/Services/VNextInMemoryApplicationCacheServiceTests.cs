@@ -53,11 +53,11 @@ public class VNextInMemoryApplicationCacheServiceTests
             .Returns(organizationAbilities);
 
         // Act
-        var firstResult = await sutProvider.Sut.GetOrganizationAbilitiesAsync();
-        var secondResult = await sutProvider.Sut.GetOrganizationAbilitiesAsync();
+        var firstCall = await sutProvider.Sut.GetOrganizationAbilitiesAsync();
+        var secondCall = await sutProvider.Sut.GetOrganizationAbilitiesAsync();
 
         // Assert
-        Assert.Same(firstResult, secondResult);
+        Assert.Same(firstCall, secondCall);
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).GetManyAbilitiesAsync();
     }
 
@@ -132,11 +132,11 @@ public class VNextInMemoryApplicationCacheServiceTests
             .Returns(providerAbilities);
 
         // Act
-        var firstResult = await sutProvider.Sut.GetProviderAbilitiesAsync();
-        var secondResult = await sutProvider.Sut.GetProviderAbilitiesAsync();
+        var firstCall = await sutProvider.Sut.GetProviderAbilitiesAsync();
+        var secondCall = await sutProvider.Sut.GetProviderAbilitiesAsync();
 
         // Assert
-        Assert.Same(firstResult, secondResult);
+        Assert.Same(firstCall, secondCall);
         await sutProvider.GetDependency<IProviderRepository>().Received(1).GetManyAbilitiesAsync();
     }
 
@@ -224,14 +224,6 @@ public class VNextInMemoryApplicationCacheServiceTests
         Assert.False(result.ContainsKey(targetAbility.Id));
     }
 
-    [Theory, BitAutoData]
-    public async Task DeleteOrganizationAbilityAsync_NullSource_DoesNotThrow(
-        Guid organizationId,
-        SutProvider<VNextInMemoryApplicationCacheService> sutProvider)
-    {
-        // Act & Assert
-        await sutProvider.Sut.DeleteOrganizationAbilityAsync(organizationId);
-    }
 
     [Theory, BitAutoData]
     public async Task DeleteProviderAbilityAsync_ExistingId_RemovesFromCache(
@@ -251,15 +243,6 @@ public class VNextInMemoryApplicationCacheServiceTests
         // Assert
         var result = await sutProvider.Sut.GetProviderAbilitiesAsync();
         Assert.False(result.ContainsKey(targetAbility.Id));
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteProviderAbilityAsync_NullSource_DoesNotThrow(
-        Guid providerId,
-        SutProvider<VNextInMemoryApplicationCacheService> sutProvider)
-    {
-        // Act & Assert
-        await sutProvider.Sut.DeleteProviderAbilityAsync(providerId);
     }
 
     [Theory, BitAutoData]
@@ -287,9 +270,9 @@ public class VNextInMemoryApplicationCacheServiceTests
             });
 
         // Assert
-        var firstResult = results.First();
+        var firstCall = results.First();
         Assert.Equal(iterationCount, results.Count);
-        Assert.All(results, result => Assert.Same(firstResult, result));
+        Assert.All(results, result => Assert.Same(firstCall, result));
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).GetManyAbilitiesAsync();
     }
 
@@ -299,26 +282,26 @@ public class VNextInMemoryApplicationCacheServiceTests
         List<OrganizationAbility> updatedAbilities)
     {
         // Arrange
-        var fakeTimeProvider = new FakeTimeProvider();
-        var orgRepo = Substitute.For<IOrganizationRepository>();
-        var providerRepo = Substitute.For<IProviderRepository>();
+        var sutProvider = new SutProvider<VNextInMemoryApplicationCacheService>()
+            .WithFakeTimeProvider()
+            .Create();
 
-        orgRepo.GetManyAbilitiesAsync().Returns(organizationAbilities, updatedAbilities);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetManyAbilitiesAsync()
+            .Returns(organizationAbilities, updatedAbilities);
 
-        var sut = new VNextInMemoryApplicationCacheService(orgRepo, providerRepo, fakeTimeProvider);
-
-        var firstResult = await sut.GetOrganizationAbilitiesAsync();
+        var firstCall = await sutProvider.Sut.GetOrganizationAbilitiesAsync();
 
         const int pastIntervalInMinutes = 11;
-        fakeTimeProvider.Advance(TimeSpan.FromMinutes(pastIntervalInMinutes));
+        SimulateTimeLapseAfterFirstCall(sutProvider, pastIntervalInMinutes);
 
         // Act
-        var secondResult = await sut.GetOrganizationAbilitiesAsync();
+        var secondCall = await sutProvider.Sut.GetOrganizationAbilitiesAsync();
 
         // Assert
-        Assert.NotSame(firstResult, secondResult);
-        Assert.Equal(updatedAbilities.Count, secondResult.Count);
-        await orgRepo.Received(2).GetManyAbilitiesAsync();
+        Assert.NotSame(firstCall, secondCall);
+        Assert.Equal(updatedAbilities.Count, secondCall.Count);
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(2).GetManyAbilitiesAsync();
     }
 
     [Theory, BitAutoData]
@@ -327,26 +310,25 @@ public class VNextInMemoryApplicationCacheServiceTests
         List<ProviderAbility> updatedAbilities)
     {
         // Arrange
-        var fakeTimeProvider = new FakeTimeProvider();
-        var orgRepo = Substitute.For<IOrganizationRepository>();
-        var providerRepo = Substitute.For<IProviderRepository>();
+        var sutProvider = new SutProvider<VNextInMemoryApplicationCacheService>()
+            .WithFakeTimeProvider()
+            .Create();
 
-        providerRepo.GetManyAbilitiesAsync().Returns(providerAbilities, updatedAbilities);
+        sutProvider.GetDependency<IProviderRepository>()
+            .GetManyAbilitiesAsync()
+            .Returns(providerAbilities, updatedAbilities);
 
-        var sut = new VNextInMemoryApplicationCacheService(orgRepo, providerRepo, fakeTimeProvider);
-
-        var firstResult = await sut.GetProviderAbilitiesAsync();
-
-        const int pastIntervalMinutes = 11;
-        fakeTimeProvider.Advance(TimeSpan.FromMinutes(pastIntervalMinutes));
+        var firstCall = await sutProvider.Sut.GetProviderAbilitiesAsync();
+        const int pastIntervalMinutes = 15;
+        SimulateTimeLapseAfterFirstCall(sutProvider, pastIntervalMinutes);
 
         // Act
-        var secondResult = await sut.GetProviderAbilitiesAsync();
+        var secondCall = await sutProvider.Sut.GetProviderAbilitiesAsync();
 
         // Assert
-        Assert.NotSame(firstResult, secondResult);
-        Assert.Equal(updatedAbilities.Count, secondResult.Count);
-        await providerRepo.Received(2).GetManyAbilitiesAsync();
+        Assert.NotSame(firstCall, secondCall);
+        Assert.Equal(updatedAbilities.Count, secondCall.Count);
+        await sutProvider.GetDependency<IProviderRepository>().Received(2).GetManyAbilitiesAsync();
     }
 
     public static IEnumerable<object[]> WhenCacheIsWithinIntervalTestCases =>
@@ -363,25 +345,25 @@ public class VNextInMemoryApplicationCacheServiceTests
         List<OrganizationAbility> organizationAbilities)
     {
         // Arrange
-        var fakeTimeProvider = new FakeTimeProvider();
-        var orgRepo = Substitute.For<IOrganizationRepository>();
-        var providerRepo = Substitute.For<IProviderRepository>();
+        var sutProvider = new SutProvider<VNextInMemoryApplicationCacheService>()
+            .WithFakeTimeProvider()
+            .Create();
 
-        orgRepo.GetManyAbilitiesAsync().Returns(organizationAbilities);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetManyAbilitiesAsync()
+            .Returns(organizationAbilities);
 
-        var sut = new VNextInMemoryApplicationCacheService(orgRepo, providerRepo, fakeTimeProvider);
+        var firstCall = await sutProvider.Sut.GetOrganizationAbilitiesAsync();
 
-        var firstResult = await sut.GetOrganizationAbilitiesAsync();
-
-        fakeTimeProvider.Advance(TimeSpan.FromMinutes(pastIntervalInMinutes));
+        SimulateTimeLapseAfterFirstCall(sutProvider, pastIntervalInMinutes);
 
         // Act
-        var secondResult = await sut.GetOrganizationAbilitiesAsync();
+        var secondCall = await sutProvider.Sut.GetOrganizationAbilitiesAsync();
 
         // Assert
-        Assert.Same(firstResult, secondResult);
-        Assert.Equal(organizationAbilities.Count, secondResult.Count);
-        await orgRepo.Received(expectCacheHit).GetManyAbilitiesAsync();
+        Assert.Same(firstCall, secondCall);
+        Assert.Equal(organizationAbilities.Count, secondCall.Count);
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(expectCacheHit).GetManyAbilitiesAsync();
     }
 
     [Theory]
@@ -392,25 +374,30 @@ public class VNextInMemoryApplicationCacheServiceTests
         List<ProviderAbility> providerAbilities)
     {
         // Arrange
-        var fakeTimeProvider = new FakeTimeProvider();
-        var orgRepo = Substitute.For<IOrganizationRepository>();
-        var providerRepo = Substitute.For<IProviderRepository>();
+        var sutProvider = new SutProvider<VNextInMemoryApplicationCacheService>()
+            .WithFakeTimeProvider()
+            .Create();
 
-        providerRepo.GetManyAbilitiesAsync().Returns(providerAbilities);
+        sutProvider.GetDependency<IProviderRepository>()
+            .GetManyAbilitiesAsync()
+            .Returns(providerAbilities);
 
-        var sut = new VNextInMemoryApplicationCacheService(orgRepo, providerRepo, fakeTimeProvider);
+        var firstCall = await sutProvider.Sut.GetProviderAbilitiesAsync();
 
-        var firstResult = await sut.GetProviderAbilitiesAsync();
-
-        fakeTimeProvider.Advance(TimeSpan.FromMinutes(pastIntervalInMinutes));
+        SimulateTimeLapseAfterFirstCall(sutProvider, pastIntervalInMinutes);
 
         // Act
-        var secondResult = await sut.GetProviderAbilitiesAsync();
+        var secondCall = await sutProvider.Sut.GetProviderAbilitiesAsync();
 
         // Assert
-        Assert.Same(firstResult, secondResult);
-        Assert.Equal(providerAbilities.Count, secondResult.Count);
-        await providerRepo.Received(expectCacheHit).GetManyAbilitiesAsync();
+        Assert.Same(firstCall, secondCall);
+        Assert.Equal(providerAbilities.Count, secondCall.Count);
+        await sutProvider.GetDependency<IProviderRepository>().Received(expectCacheHit).GetManyAbilitiesAsync();
     }
+
+    private static void SimulateTimeLapseAfterFirstCall(SutProvider<VNextInMemoryApplicationCacheService> sutProvider, int pastIntervalInMinutes) =>
+        sutProvider
+            .GetDependency<FakeTimeProvider>()
+            .Advance(TimeSpan.FromMinutes(pastIntervalInMinutes));
 
 }

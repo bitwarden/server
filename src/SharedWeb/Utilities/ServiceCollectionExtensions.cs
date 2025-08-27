@@ -255,15 +255,15 @@ public static class ServiceCollectionExtensions
 
         // Jimmy todo: Reconsider this to see how it affects InMemoryServiceBusApplicationCacheService.
         services.AddSingleton<IVNextInMemoryApplicationCacheService, VNextInMemoryApplicationCacheService>();
-
+        services.AddSingleton<IApplicationCacheService, FeatureRoutedCacheService>();
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
         {
-            services.AddSingleton<IApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
+            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
         }
         else
         {
-            services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
+            services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryApplicationCacheService>();
         }
 
         var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
@@ -828,7 +828,6 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddScoped<IFeatureService, LaunchDarklyFeatureService>();
-        services.AddScoped<IFeatureRoutedCacheService, FeatureRoutedCacheService>();
 
         return services;
     }
