@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Utilities;
-using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers;
