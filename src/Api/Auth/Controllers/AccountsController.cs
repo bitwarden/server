@@ -20,7 +20,6 @@ using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -345,8 +344,6 @@ public class AccountsController : Controller
     }
 
     [HttpPut("profile")]
-    [HttpPost("profile")]
-    [SwaggerExclude("POST")]
     public async Task<ProfileResponseModel> PutProfile([FromBody] UpdateProfileRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -365,9 +362,14 @@ public class AccountsController : Controller
         return response;
     }
 
+    [HttpPost("profile")]
+    [Obsolete("This endpoint is deprecated. Use PUT /profile instead.")]
+    public async Task<ProfileResponseModel> PostProfile([FromBody] UpdateProfileRequestModel model)
+    {
+        return await PutProfile(model);
+    }
+
     [HttpPut("avatar")]
-    [HttpPost("avatar")]
-    [SwaggerExclude("POST")]
     public async Task<ProfileResponseModel> PutAvatar([FromBody] UpdateAvatarRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -383,6 +385,13 @@ public class AccountsController : Controller
 
         var response = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);
         return response;
+    }
+
+    [HttpPost("avatar")]
+    [Obsolete("This endpoint is deprecated. Use PUT /avatar instead.")]
+    public async Task<ProfileResponseModel> PostAvatar([FromBody] UpdateAvatarRequestModel model)
+    {
+        return await PutAvatar(model);
     }
 
     [HttpGet("revision-date")]
@@ -433,8 +442,6 @@ public class AccountsController : Controller
     }
 
     [HttpDelete]
-    [HttpPost("delete")]
-    [SwaggerExclude("POST")]
     public async Task Delete([FromBody] SecretVerificationRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -469,6 +476,13 @@ public class AccountsController : Controller
         }
 
         throw new BadRequestException(ModelState);
+    }
+
+    [HttpPost("delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE / instead.")]
+    public async Task PostDelete([FromBody] SecretVerificationRequestModel model)
+    {
+        await Delete(model);
     }
 
     [AllowAnonymous]
@@ -643,8 +657,6 @@ public class AccountsController : Controller
     }
 
     [HttpPut("verify-devices")]
-    [HttpPost("verify-devices")]
-    [SwaggerExclude("POST")]
     public async Task SetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
@@ -657,6 +669,13 @@ public class AccountsController : Controller
         user.VerifyDevices = request.VerifyDevices;
 
         await _userService.SaveUserAsync(user);
+    }
+
+    [HttpPost("verify-devices")]
+    [Obsolete("This endpoint is deprecated. Use PUT /verify-devices instead.")]
+    public async Task PostSetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
+    {
+        await SetUserVerifyDevicesAsync(request);
     }
 
     private async Task<IEnumerable<Guid>> GetOrganizationIdsClaimingUserAsync(Guid userId)

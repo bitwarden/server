@@ -13,7 +13,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -100,8 +99,6 @@ public class DevicesController : Controller
     }
 
     [HttpPut("{id}")]
-    [HttpPost("{id}")]
-    [SwaggerExclude("POST")]
     public async Task<DeviceResponseModel> Put(string id, [FromBody] DeviceRequestModel model)
     {
         var device = await _deviceRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
@@ -116,9 +113,14 @@ public class DevicesController : Controller
         return response;
     }
 
+    [HttpPost("{id}")]
+    [Obsolete("This endpoint is deprecated. Use PUT /{id} instead.")]
+    public async Task<DeviceResponseModel> Post(string id, [FromBody] DeviceRequestModel model)
+    {
+        return await Put(id, model);
+    }
+
     [HttpPut("{identifier}/keys")]
-    [HttpPost("{identifier}/keys")]
-    [SwaggerExclude("POST")]
     public async Task<DeviceResponseModel> PutKeys(string identifier, [FromBody] DeviceKeysRequestModel model)
     {
         var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
@@ -131,6 +133,13 @@ public class DevicesController : Controller
 
         var response = new DeviceResponseModel(device);
         return response;
+    }
+
+    [HttpPost("{identifier}/keys")]
+    [Obsolete("This endpoint is deprecated. Use PUT /{identifier}/keys instead.")]
+    public async Task<DeviceResponseModel> PostKeys(string identifier, [FromBody] DeviceKeysRequestModel model)
+    {
+        return await PutKeys(identifier, model);
     }
 
     [HttpPost("{identifier}/retrieve-keys")]
@@ -190,8 +199,6 @@ public class DevicesController : Controller
     }
 
     [HttpPut("identifier/{identifier}/token")]
-    [HttpPost("identifier/{identifier}/token")]
-    [SwaggerExclude("POST")]
     public async Task PutToken(string identifier, [FromBody] DeviceTokenRequestModel model)
     {
         var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
@@ -203,9 +210,14 @@ public class DevicesController : Controller
         await _deviceService.SaveAsync(model.ToDevice(device));
     }
 
+    [HttpPost("identifier/{identifier}/token")]
+    [Obsolete("This endpoint is deprecated. Use PUT /identifier/{identifier}/token instead.")]
+    public async Task PostToken(string identifier, [FromBody] DeviceTokenRequestModel model)
+    {
+        await PutToken(identifier, model);
+    }
+
     [HttpPut("identifier/{identifier}/web-push-auth")]
-    [HttpPost("identifier/{identifier}/web-push-auth")]
-    [SwaggerExclude("POST")]
     public async Task PutWebPushAuth(string identifier, [FromBody] WebPushAuthRequestModel model)
     {
         var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
@@ -221,10 +233,15 @@ public class DevicesController : Controller
         );
     }
 
+    [HttpPost("identifier/{identifier}/web-push-auth")]
+    [Obsolete("This endpoint is deprecated. Use PUT /identifier/{identifier}/web-push-auth instead.")]
+    public async Task PostWebPushAuth(string identifier, [FromBody] WebPushAuthRequestModel model)
+    {
+        await PutWebPushAuth(identifier, model);
+    }
+
     [AllowAnonymous]
     [HttpPut("identifier/{identifier}/clear-token")]
-    [HttpPost("identifier/{identifier}/clear-token")]
-    [SwaggerExclude("POST")]
     public async Task PutClearToken(string identifier)
     {
         var device = await _deviceRepository.GetByIdentifierAsync(identifier);
@@ -236,9 +253,15 @@ public class DevicesController : Controller
         await _deviceService.ClearTokenAsync(device);
     }
 
+    [AllowAnonymous]
+    [HttpPost("identifier/{identifier}/clear-token")]
+    [Obsolete("This endpoint is deprecated. Use PUT /identifier/{identifier}/clear-token instead.")]
+    public async Task PostClearToken(string identifier)
+    {
+        await PutClearToken(identifier);
+    }
+
     [HttpDelete("{id}")]
-    [HttpPost("{id}/deactivate")]
-    [SwaggerExclude("POST")]
     public async Task Deactivate(string id)
     {
         var device = await _deviceRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
@@ -248,6 +271,13 @@ public class DevicesController : Controller
         }
 
         await _deviceService.DeactivateAsync(device);
+    }
+
+    [HttpPost("{id}/deactivate")]
+    [Obsolete("This endpoint is deprecated. Use DELETE /{id} instead.")]
+    public async Task PostDeactivate(string id)
+    {
+        await Deactivate(id);
     }
 
     [AllowAnonymous]

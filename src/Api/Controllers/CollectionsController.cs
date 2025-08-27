@@ -12,7 +12,6 @@ using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -174,8 +173,6 @@ public class CollectionsController : Controller
     }
 
     [HttpPut("{id}")]
-    [HttpPost("{id}")]
-    [SwaggerExclude("POST")]
     public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
@@ -198,6 +195,13 @@ public class CollectionsController : Controller
         var collectionWithPermissions = await _collectionRepository.GetByIdWithPermissionsAsync(collection.Id, _currentContext.UserId.Value, false);
 
         return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
+    }
+
+    [HttpPost("{id}")]
+    [Obsolete("This endpoint is deprecated. Use PUT /{id} instead.")]
+    public async Task<CollectionResponseModel> Post(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
+    {
+        return await Put(orgId, id, model);
     }
 
     [HttpPost("bulk-access")]
@@ -224,8 +228,6 @@ public class CollectionsController : Controller
     }
 
     [HttpDelete("{id}")]
-    [HttpPost("{id}/delete")]
-    [SwaggerExclude("POST")]
     public async Task Delete(Guid orgId, Guid id)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
@@ -238,9 +240,14 @@ public class CollectionsController : Controller
         await _deleteCollectionCommand.DeleteAsync(collection);
     }
 
+    [HttpPost("{id}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE /{id} instead.")]
+    public async Task PostDelete(Guid orgId, Guid id)
+    {
+        await Delete(orgId, id);
+    }
+
     [HttpDelete("")]
-    [HttpPost("delete")]
-    [SwaggerExclude("POST")]
     public async Task DeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
     {
         var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Ids);
@@ -251,5 +258,12 @@ public class CollectionsController : Controller
         }
 
         await _deleteCollectionCommand.DeleteManyAsync(collections);
+    }
+
+    [HttpPost("delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE / instead.")]
+    public async Task PostDeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
+    {
+        await DeleteMany(orgId, model);
     }
 }

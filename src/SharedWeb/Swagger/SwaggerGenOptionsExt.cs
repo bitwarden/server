@@ -16,8 +16,6 @@ public static class SwaggerGenOptionsExt
 
         config.OperationFilter<ActionNameOperationFilter>();
 
-        config.DocumentFilter<SwaggerExcludeDocumentFilter>();
-
         // Set the operation ID to the name of the controller followed by the name of the function.
         // Note that the "Controller" suffix for the controllers, and the "Async" suffix for the actions
         // are removed already, so we don't need to do that ourselves.
