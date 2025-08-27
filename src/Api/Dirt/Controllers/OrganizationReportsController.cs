@@ -86,7 +86,7 @@ public class OrganizationReportsController : Controller
 
         if (report.OrganizationId != orgId)
         {
-            throw new BadRequestException("Organization ID in the request body must match the route parameter");
+            throw new BadRequestException("Invalid report id");
         }
 
         return Ok(report);
@@ -177,7 +177,7 @@ public class OrganizationReportsController : Controller
 
         if (summaryData.OrganizationId != orgId)
         {
-            throw new BadRequestException("Organization ID in the request body must match the route parameter");
+            throw new BadRequestException("Invalid report id");
         }
 
         return Ok(summaryData);
@@ -230,7 +230,7 @@ public class OrganizationReportsController : Controller
 
         if (reportData.OrganizationId != orgId)
         {
-            throw new BadRequestException("Organization ID in the request body must match the route parameter");
+            throw new BadRequestException("Invalid report id");
         }
 
         return Ok(reportData);
@@ -285,7 +285,7 @@ public class OrganizationReportsController : Controller
 
             if (applicationData.OrganizationId != orgId)
             {
-                throw new BadRequestException("Organization ID in the request body must match the route parameter");
+                throw new BadRequestException("Invalid report id");
             }
 
             return Ok(applicationData);

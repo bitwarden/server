@@ -595,7 +595,7 @@ public class OrganizationReportControllerTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.GetOrganizationReportSummaryAsync(orgId, reportId));
 
-        Assert.Equal("Organization ID in the request body must match the route parameter", exception.Message);
+        Assert.Equal("Invalid report id", exception.Message);
     }
 
     [Theory, BitAutoData]
