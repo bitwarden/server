@@ -13,7 +13,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.PolicyRep
 
 public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
 {
-    [DatabaseTheory]
+    [Theory]
     [DatabaseData]
     public async Task ShouldReturnCorrectPolicyDetailsForAcceptedUsersAsync(
         IUserRepository userRepository,
@@ -87,7 +87,7 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.Equal(OrganizationUserStatusType.Accepted, result2.OrganizationUserStatus);
     }
 
-    [DatabaseTheory]
+    [Theory]
     [DatabaseData]
     public async Task ShouldReturnCorrectPolicyDetailsForInvitedUsersAsync(
         IUserRepository userRepository,
@@ -162,7 +162,7 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.Equal(OrganizationUserStatusType.Invited, result2.OrganizationUserStatus);
     }
 
-    [DatabaseTheory]
+    [Theory]
     [DatabaseData]
     public async Task ShouldContainProviderDataAsync(
         IUserRepository userRepository,
@@ -240,7 +240,7 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.Equal(organization.Id, result.OrganizationId);
     }
 
-    [DatabaseTheory]
+    [Theory]
     [DatabaseData]
     public async Task ShouldOnlyReturnInputPolicyType(
         IUserRepository userRepository,
@@ -295,7 +295,7 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.All(resultsList, r => Assert.Equal(PolicyType.TwoFactorAuthentication, r.PolicyType));
     }
 
-    [DatabaseTheory]
+    [Theory]
     [DatabaseData]
     public async Task ShouldNotReturnDisabledPoliciesAsync(
         IUserRepository userRepository,
@@ -338,7 +338,7 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.Empty(results);
     }
 
-    [DatabaseTheory]
+    [Theory]
     [DatabaseData]
     public async Task ShouldNotReturnResultsForDisabledOrganizationsAsync(
         IUserRepository userRepository,
@@ -397,7 +397,7 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.Empty(results);
     }
 
-    [DatabaseTheory]
+    [Theory]
     [DatabaseData]
     public async Task ShouldNotReturnResultsForOrganizationsNotUsingPoliciesAsync(
         IUserRepository userRepository,
@@ -456,7 +456,7 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.Empty(results);
     }
 
-    [DatabaseTheory]
+    [Theory]
     [DatabaseData]
     public async Task ShouldReturnEmptyForEmptyUserIdsListAsync(
         IOrganizationRepository organizationRepository,
@@ -481,7 +481,7 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.Empty(results);
     }
 
-    [DatabaseTheory]
+    [Theory]
     [DatabaseData]
     public async Task ShouldReturnResultsFromMultipleOrganizationsAsync(
         IUserRepository userRepository,
