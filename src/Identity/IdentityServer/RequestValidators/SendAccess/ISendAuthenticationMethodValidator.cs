@@ -11,5 +11,5 @@ public interface ISendAuthenticationMethodValidator<T> where T : SendAuthenticat
     /// <param name="authMethod">SendAuthenticationRecord that contains the information to be compared against the context</param>
     /// <param name="sendId">the sendId being accessed</param>
     /// <returns>returns the result of the validation; A failed result will be an error a successful will contain the claims and a success</returns>
-    GrantValidationResult ValidateRequest(ExtensionGrantValidationContext context, T authMethod, Guid sendId);
+    Task<GrantValidationResult> ValidateRequestAsync(ExtensionGrantValidationContext context, T authMethod, Guid sendId);
 }

@@ -21,7 +21,7 @@ namespace Bit.Identity.Test.IdentityServer;
 public class SendPasswordRequestValidatorTests
 {
     [Theory, BitAutoData]
-    public void ValidateSendPassword_MissingPasswordHash_ReturnsInvalidRequest(
+    public async Task ValidateSendPassword_MissingPasswordHash_ReturnsInvalidRequest(
         SutProvider<SendPasswordRequestValidator> sutProvider,
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         ResourcePassword resourcePassword,
@@ -36,7 +36,7 @@ public class SendPasswordRequestValidatorTests
         };
 
         // Act
-        var result = sutProvider.Sut.ValidateRequest(context, resourcePassword, sendId);
+        var result = await sutProvider.Sut.ValidateRequestAsync(context, resourcePassword, sendId);
 
         // Assert
         Assert.True(result.IsError);
@@ -50,7 +50,7 @@ public class SendPasswordRequestValidatorTests
     }
 
     [Theory, BitAutoData]
-    public void ValidateSendPassword_PasswordHashMismatch_ReturnsInvalidGrant(
+    public async Task ValidateSendPassword_PasswordHashMismatch_ReturnsInvalidGrant(
         SutProvider<SendPasswordRequestValidator> sutProvider,
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         ResourcePassword resourcePassword,
@@ -70,7 +70,7 @@ public class SendPasswordRequestValidatorTests
             .Returns(false);
 
         // Act
-        var result = sutProvider.Sut.ValidateRequest(context, resourcePassword, sendId);
+        var result = await sutProvider.Sut.ValidateRequestAsync(context, resourcePassword, sendId);
 
         // Assert
         Assert.True(result.IsError);
@@ -84,7 +84,7 @@ public class SendPasswordRequestValidatorTests
     }
 
     [Theory, BitAutoData]
-    public void ValidateSendPassword_PasswordHashMatches_ReturnsSuccess(
+    public async Task ValidateSendPassword_PasswordHashMatches_ReturnsSuccess(
         SutProvider<SendPasswordRequestValidator> sutProvider,
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         ResourcePassword resourcePassword,
@@ -104,7 +104,7 @@ public class SendPasswordRequestValidatorTests
             .Returns(true);
 
         // Act
-        var result = sutProvider.Sut.ValidateRequest(context, resourcePassword, sendId);
+        var result = await sutProvider.Sut.ValidateRequestAsync(context, resourcePassword, sendId);
 
         // Assert
         Assert.False(result.IsError);
@@ -123,7 +123,7 @@ public class SendPasswordRequestValidatorTests
     }
 
     [Theory, BitAutoData]
-    public void ValidateSendPassword_EmptyPasswordHash_CallsPasswordHasher(
+    public async Task ValidateSendPassword_EmptyPasswordHash_CallsPasswordHasher(
         SutProvider<SendPasswordRequestValidator> sutProvider,
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         ResourcePassword resourcePassword,
@@ -142,7 +142,7 @@ public class SendPasswordRequestValidatorTests
             .Returns(false);
 
         // Act
-        var result = sutProvider.Sut.ValidateRequest(context, resourcePassword, sendId);
+        var result = await sutProvider.Sut.ValidateRequestAsync(context, resourcePassword, sendId);
 
         // Assert
         Assert.True(result.IsError);
@@ -155,7 +155,7 @@ public class SendPasswordRequestValidatorTests
     }
 
     [Theory, BitAutoData]
-    public void ValidateSendPassword_WhitespacePasswordHash_CallsPasswordHasher(
+    public async Task ValidateSendPassword_WhitespacePasswordHash_CallsPasswordHasher(
         SutProvider<SendPasswordRequestValidator> sutProvider,
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         ResourcePassword resourcePassword,
@@ -175,7 +175,7 @@ public class SendPasswordRequestValidatorTests
             .Returns(false);
 
         // Act
-        var result = sutProvider.Sut.ValidateRequest(context, resourcePassword, sendId);
+        var result = await sutProvider.Sut.ValidateRequestAsync(context, resourcePassword, sendId);
 
         // Assert
         Assert.True(result.IsError);
@@ -187,7 +187,7 @@ public class SendPasswordRequestValidatorTests
     }
 
     [Theory, BitAutoData]
-    public void ValidateSendPassword_MultiplePasswordHashParameters_ReturnsInvalidGrant(
+    public async Task ValidateSendPassword_MultiplePasswordHashParameters_ReturnsInvalidGrant(
         SutProvider<SendPasswordRequestValidator> sutProvider,
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         ResourcePassword resourcePassword,
@@ -208,7 +208,7 @@ public class SendPasswordRequestValidatorTests
             .Returns(true);
 
         // Act
-        var result = sutProvider.Sut.ValidateRequest(context, resourcePassword, sendId);
+        var result = await sutProvider.Sut.ValidateRequestAsync(context, resourcePassword, sendId);
 
         // Assert
         Assert.True(result.IsError);
@@ -221,7 +221,7 @@ public class SendPasswordRequestValidatorTests
     }
 
     [Theory, BitAutoData]
-    public void ValidateSendPassword_SuccessResult_ContainsCorrectClaims(
+    public async Task ValidateSendPassword_SuccessResult_ContainsCorrectClaims(
         SutProvider<SendPasswordRequestValidator> sutProvider,
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         ResourcePassword resourcePassword,
@@ -241,7 +241,7 @@ public class SendPasswordRequestValidatorTests
             .Returns(true);
 
         // Act
-        var result = sutProvider.Sut.ValidateRequest(context, resourcePassword, sendId);
+        var result = await sutProvider.Sut.ValidateRequestAsync(context, resourcePassword, sendId);
 
         // Assert
         Assert.False(result.IsError);

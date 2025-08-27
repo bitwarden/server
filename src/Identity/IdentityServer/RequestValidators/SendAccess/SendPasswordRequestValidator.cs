@@ -21,7 +21,7 @@ public class SendPasswordRequestValidator(ISendPasswordHasher sendPasswordHasher
         { SendAccessConstants.PasswordValidatorResults.RequestPasswordIsRequired, $"{SendAccessConstants.TokenRequest.ClientB64HashedPassword} is required." }
     };
 
-    public GrantValidationResult ValidateRequest(ExtensionGrantValidationContext context, ResourcePassword resourcePassword, Guid sendId)
+    public Task<GrantValidationResult> ValidateRequestAsync(ExtensionGrantValidationContext context, ResourcePassword resourcePassword, Guid sendId)
     {
         var request = context.Request.Raw;
         var clientHashedPassword = request.Get(SendAccessConstants.TokenRequest.ClientB64HashedPassword);
@@ -30,13 +30,13 @@ public class SendPasswordRequestValidator(ISendPasswordHasher sendPasswordHasher
         if (clientHashedPassword == null)
         {
             // Request is the wrong shape and doesn't contain a passwordHashB64 field.
-            return new GrantValidationResult(
+            return Task.FromResult(new GrantValidationResult(
                 TokenRequestErrors.InvalidRequest,
                 errorDescription: _sendPasswordValidatorErrorDescriptions[SendAccessConstants.PasswordValidatorResults.RequestPasswordIsRequired],
                 new Dictionary<string, object>
                 {
                     { SendAccessConstants.SendAccessError, SendAccessConstants.PasswordValidatorResults.RequestPasswordIsRequired }
-                });
+                }));
         }
 
         // _sendPasswordHasher.PasswordHashMatches checks for an empty string so no need to do it before we make the call.
@@ -46,16 +46,16 @@ public class SendPasswordRequestValidator(ISendPasswordHasher sendPasswordHasher
         if (!hashMatches)
         {
             // Request is the correct shape but the passwordHashB64 doesn't match, hash could be empty.
-            return new GrantValidationResult(
+            return Task.FromResult(new GrantValidationResult(
                 TokenRequestErrors.InvalidGrant,
                 errorDescription: _sendPasswordValidatorErrorDescriptions[SendAccessConstants.PasswordValidatorResults.RequestPasswordDoesNotMatch],
                 new Dictionary<string, object>
                 {
                     { SendAccessConstants.SendAccessError, SendAccessConstants.PasswordValidatorResults.RequestPasswordDoesNotMatch }
-                });
+                }));
         }
 
-        return BuildSendPasswordSuccessResult(sendId);
+        return Task.FromResult(BuildSendPasswordSuccessResult(sendId));
     }
 
     /// <summary>

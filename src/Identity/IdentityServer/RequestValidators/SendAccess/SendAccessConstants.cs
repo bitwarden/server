@@ -66,8 +66,33 @@ public static class SendAccessConstants
         /// </summary>
         public const string EmailRequired = "email_required";
         /// <summary>
+        /// Represents the error code indicating that an email address is invalid.
+        /// </summary>
+        public const string EmailInvalid = "email_invalid";
+        /// <summary>
         /// Represents the status indicating that both email and OTP are required, and the OTP has been sent.
         /// </summary>
         public const string EmailOtpSent = "email_and_otp_required_otp_sent";
+        /// <summary>
+        /// Represents the status indicating that both email and OTP are required, and the OTP is invalid.
+        /// </summary>
+        public const string EmailOtpInvalid = "email_and_otp_required_otp_invalid";
+        /// <summary>
+        /// For what ever reason the OTP was not able to be generated
+        /// </summary>
+        public const string OtpGenerationFailed = "otp_generation_failed";
+    }
+
+    /// <summary>
+    /// These are the constants for the OTP token that is generated during the email otp authentication process.
+    /// </summary>
+    public static class OtpToken
+    {
+        public const string Purpose = "send_access_email_otp";
+        public const string TokenProviderName = "send_access_email_otp";
+        /// <summary>
+        /// This will be send_id {0} and email {1}
+        /// </summary>
+        public const string TokenUniqueIdentifier = "{0}_{1}";
     }
 }

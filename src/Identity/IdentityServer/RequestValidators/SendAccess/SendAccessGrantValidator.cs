@@ -65,13 +65,11 @@ public class SendAccessGrantValidator(
 
             case ResourcePassword rp:
                 // Validate if the password is correct, or if we need to respond with a 400 stating a password is invalid or required.
-                context.Result = _sendPasswordRequestValidator.ValidateRequest(context, rp, sendIdGuid);
+                context.Result = await _sendPasswordRequestValidator.ValidateRequestAsync(context, rp, sendIdGuid);
                 return;
             case EmailOtp eo:
-            // TODO PM-22678: We will either send the OTP here or validate it based on if otp exists in the request.
-            // SendOtpToEmail(eo.Emails) or ValidateOtp(eo.Emails);
             // break;
-                context.Result = _sendEmailOtpRequestValidator.ValidateRequest(context, eo, sendIdGuid);
+                context.Result = await _sendEmailOtpRequestValidator.ValidateRequestAsync(context, eo, sendIdGuid);
                 return;
 
             default:
