@@ -256,7 +256,7 @@ public static class ServiceCollectionExtensions
 
         // Jimmy todo: Reconsider this to see how it affects InMemoryServiceBusApplicationCacheService.
         services.AddSingleton<IVNextInMemoryApplicationCacheService, VNextInMemoryApplicationCacheService>();
-        services.AddSingleton<IApplicationCacheService, FeatureRoutedCacheService>();
+        services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
         {

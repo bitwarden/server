@@ -54,7 +54,7 @@ public class Startup
         // Services
         var usingServiceBusAppCache = CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName);
-        services.AddSingleton<IApplicationCacheService, FeatureRoutedCacheService>();
+        services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
         services.AddSingleton<IVNextInMemoryApplicationCacheService, VNextInMemoryApplicationCacheService>();
         if (usingServiceBusAppCache)
         {
