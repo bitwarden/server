@@ -13,6 +13,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -141,6 +142,7 @@ public class OrganizationConnectionsController : Controller
 
     [HttpDelete("{organizationConnectionId}")]
     [HttpPost("{organizationConnectionId}/delete")]
+    [SwaggerExclude("POST")]
     public async Task DeleteConnection(Guid organizationConnectionId)
     {
         var connection = await _organizationConnectionRepository.GetByIdAsync(organizationConnectionId);
