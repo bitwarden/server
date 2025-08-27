@@ -1,6 +1,8 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response.Helpers;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -216,31 +218,13 @@ public class PoliciesController : Controller
 
 
     [HttpPut("{type}/vnext")]
+    [RequireFeatureAttribute(FeatureFlagKeys.CreateDefaultLocation)]
+    [Authorize<ManagePoliciesRequirement>]
     public async Task<PolicyResponseModel> PutVNext(Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
     {
-        await ValidatePolicyContextRequest();
-
         // This logic will be fleshed out in the following PRs in PM-24279
         var savePolicyModel = await model.ToSavePolicyModelAsync(orgId, _currentContext);
         return new PolicyResponseModel(new Policy());
-
-        async Task ValidatePolicyContextRequest()
-        {
-            if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
-            {
-                throw new NotFoundException();
-            }
-
-            if (!await _currentContext.ManagePolicies(orgId))
-            {
-                throw new NotFoundException();
-            }
-
-            if (type != model?.Policy.Type)
-            {
-                throw new BadRequestException("Mismatched policy type");
-            }
-        }
     }
 
 }
