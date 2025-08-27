@@ -106,7 +106,6 @@ public static class AuthenticationSchemes
 public static class FeatureFlagKeys
 {
     /* Admin Console Team */
-    public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string LimitItemDeletion = "pm-15493-restrict-item-deletion-to-can-manage-permission";
     public const string PolicyRequirements = "pm-14439-policy-requirements";
@@ -152,7 +151,6 @@ public static class FeatureFlagKeys
     public const string UsePricingService = "use-pricing-service";
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
     public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
-    public const string PM199566_UpdateMSPToChargeAutomatically = "pm-199566-update-msp-to-charge-automatically";
     public const string UseOrganizationWarningsService = "use-organization-warnings-service";
     public const string PM21881_ManagePaymentDetailsOutsideCheckout = "pm-21881-manage-payment-details-outside-checkout";
     public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
