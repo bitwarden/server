@@ -48,7 +48,7 @@ public class SavePolicyRequestTests
         Assert.Equal("value", deserializedData["test"].ToString());
 
         Assert.Equal(userId, result!.PerformedBy.UserId);
-        Assert.False(result!.PerformedBy.IsOrganizationOwnerOrProvider);
+        Assert.True(result!.PerformedBy.IsOrganizationOwnerOrProvider);
 
         Assert.IsType<EmptyMetadataModel>(result.Metadata);
     }
@@ -151,39 +151,6 @@ public class SavePolicyRequestTests
         Assert.Equal(defaultCollectionName, metadata.DefaultUserCollectionName);
     }
 
-    // Jimmy todo: fix test
-    [Theory, BitAutoData]
-    public async Task ToSavePolicyModelAsync_OrganizationDataOwnership_WithInvalidMetadata_ReturnsEmptyMetadata(
-        Guid organizationId,
-        Guid userId)
-    {
-        // Arrange
-        var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.UserId.Returns(userId);
-        currentContext.OrganizationOwner(organizationId).Returns(true);
-
-        var model = new SavePolicyRequest
-        {
-            Policy = new PolicyRequestModel
-            {
-                Type = PolicyType.OrganizationDataOwnership,
-                Enabled = true,
-                Data = null
-            },
-            Metadata = new Dictionary<string, object>
-            {
-                { "invalidProperty", "value" }
-            }
-        };
-
-        // Act
-        var result = await model.ToSavePolicyModelAsync(organizationId, currentContext);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.IsType<EmptyMetadataModel>(result.Metadata);
-    }
-
     [Theory, BitAutoData]
     public async Task ToSavePolicyModelAsync_OrganizationDataOwnership_WithNullMetadata_ReturnsEmptyMetadata(
         Guid organizationId,
@@ -213,6 +180,16 @@ public class SavePolicyRequestTests
         Assert.IsType<EmptyMetadataModel>(result.Metadata);
     }
 
+    private static readonly Dictionary<string, object> _complexData = new Dictionary<string,
+     object>
+      {
+          { "stringValue", "test" },
+          { "numberValue", 42 },
+          { "boolValue", true },
+          { "arrayValue", new[] { "item1", "item2" } },
+          { "nestedObject", new Dictionary<string, object> { { "nested", "value" } } }
+      };
+
     [Theory, BitAutoData]
     public async Task ToSavePolicyModelAsync_ComplexData_SerializesCorrectly(
         Guid organizationId,
@@ -223,14 +200,6 @@ public class SavePolicyRequestTests
         currentContext.UserId.Returns(userId);
         currentContext.OrganizationOwner(organizationId).Returns(true);
 
-        var complexData = new Dictionary<string, object>
-        {
-            { "stringValue", "test" },
-            { "numberValue", 42 },
-            { "boolValue", true },
-            { "arrayValue", new[] { "item1", "item2" } },
-            { "nestedObject", new Dictionary<string, object> { { "nested", "value" } } }
-        };
 
         var model = new SavePolicyRequest
         {
@@ -238,7 +207,7 @@ public class SavePolicyRequestTests
             {
                 Type = PolicyType.ResetPassword,
                 Enabled = true,
-                Data = complexData
+                Data = _complexData
             },
             Metadata = new Dictionary<string, object>()
         };

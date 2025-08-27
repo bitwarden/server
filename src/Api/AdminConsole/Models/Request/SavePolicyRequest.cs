@@ -34,6 +34,11 @@ public class SavePolicyRequest
 
     private IPolicyMetadataModel MapToPolicyMetadata()
     {
+        if (Metadata == null)
+        {
+            return new EmptyMetadataModel();
+        }
+
         return Policy?.Type switch
         {
             PolicyType.OrganizationDataOwnership => MapToPolicyMetadata<OrganizationModelOwnershipPolicyModel>(),
