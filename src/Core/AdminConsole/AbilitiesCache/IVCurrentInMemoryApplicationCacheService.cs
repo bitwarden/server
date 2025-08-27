@@ -3,7 +3,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Models.Data.Organizations;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.AdminConsole.AbilitiesCache;
 
 public interface IVCurrentInMemoryApplicationCacheService
 {

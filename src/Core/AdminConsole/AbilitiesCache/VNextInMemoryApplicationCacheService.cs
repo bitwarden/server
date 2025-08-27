@@ -6,7 +6,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.AdminConsole.AbilitiesCache;
 
 public class VNextInMemoryApplicationCacheService(
     IOrganizationRepository organizationRepository,

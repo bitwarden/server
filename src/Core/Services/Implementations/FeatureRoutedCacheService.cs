@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Models.Data.Organizations;
@@ -29,10 +30,7 @@ public class FeatureRoutedCacheService(
         {
             return await vNextInMemoryApplicationCacheService.GetOrganizationAbilityAsync(orgId);
         }
-        else
-        {
-            return await inMemoryApplicationCacheService.GetOrganizationAbilityAsync(orgId);
-        }
+        return await inMemoryApplicationCacheService.GetOrganizationAbilityAsync(orgId);
     }
 
     public async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
@@ -41,10 +39,7 @@ public class FeatureRoutedCacheService(
         {
             return await vNextInMemoryApplicationCacheService.GetProviderAbilitiesAsync();
         }
-        else
-        {
-            return await inMemoryApplicationCacheService.GetProviderAbilitiesAsync();
-        }
+        return await inMemoryApplicationCacheService.GetProviderAbilitiesAsync();
     }
 
     public async Task UpsertOrganizationAbilityAsync(Organization organization)

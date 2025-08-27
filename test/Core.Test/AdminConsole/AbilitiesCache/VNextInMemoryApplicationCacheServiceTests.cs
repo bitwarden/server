@@ -5,14 +5,14 @@ using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Services;
+namespace Bit.Core.Test.AdminConsole.AbilitiesCache;
 
 [SutProviderCustomize]
 public class VNextInMemoryApplicationCacheServiceTests
