@@ -33,19 +33,24 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
                 throw new BadRequestException(errorMessage);
             }
 
-            IEnumerable<OrganizationReportSummaryDataResponse> summaryDataList = await _organizationReportRepo
-                .GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
+            IEnumerable<OrganizationReportSummaryDataResponse> summaryDataList = (await _organizationReportRepo
+                    .GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate)) ??
+                Enumerable.Empty<OrganizationReportSummaryDataResponse>();
 
-            if (summaryDataList == null)
+            var resultList = summaryDataList.ToList();
+
+            if (!resultList.Any())
             {
                 _logger.LogInformation(Constants.BypassFiltersEventId, "No summary data found for organization {organizationId} in date range {startDate} to {endDate}",
                     organizationId, startDate, endDate);
                 return Enumerable.Empty<OrganizationReportSummaryDataResponse>();
             }
+            else
+            {
+                _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully retrieved {count} organization report summary data records for organization {organizationId} in date range {startDate} to {endDate}",
+                    resultList.Count, organizationId, startDate, endDate);
 
-            var resultList = summaryDataList.ToList();
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully retrieved {count} organization report summary data records for organization {organizationId} in date range {startDate} to {endDate}",
-                resultList.Count, organizationId, startDate, endDate);
+            }
 
             return resultList;
         }

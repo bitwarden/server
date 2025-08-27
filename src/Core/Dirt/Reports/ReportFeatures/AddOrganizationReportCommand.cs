@@ -66,7 +66,11 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
             return (false, "Invalid Organization");
         }
 
-        // ensure that we have report data
+        if (string.IsNullOrWhiteSpace(request.ContentEncryptionKey))
+        {
+            return (false, "Content Encryption Key is required");
+        }
+
         if (string.IsNullOrWhiteSpace(request.ReportData))
         {
             return (false, "Report Data is required");
@@ -74,7 +78,12 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
 
         if (string.IsNullOrWhiteSpace(request.SummaryData))
         {
-            return (false, "Report Data is required");
+            return (false, "Summary Data is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ApplicationData))
+        {
+            return (false, "Application Data is required");
         }
 
         return (true, string.Empty);
