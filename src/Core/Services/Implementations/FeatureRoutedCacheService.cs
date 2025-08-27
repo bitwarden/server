@@ -24,8 +24,9 @@ namespace Bit.Core.Services.Implementations;
 public class FeatureRoutedCacheService(
     IFeatureService featureService,
     IVNextInMemoryApplicationCacheService vNextInMemoryApplicationCacheService,
-    IVCurrentInMemoryApplicationCacheService inMemoryApplicationCacheService)
-    : IApplicationCacheService
+    IVCurrentInMemoryApplicationCacheService inMemoryApplicationCacheService,
+    IApplicationCacheServiceBusMessaging serviceBusMessaging)
+    : IApplicationCacheService, IApplicationCacheBackwardProcessor
 {
     public async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
     {
@@ -65,6 +66,8 @@ public class FeatureRoutedCacheService(
         {
             await inMemoryApplicationCacheService.UpsertOrganizationAbilityAsync(organization);
         }
+
+        await serviceBusMessaging.NotifyOrganizationAbilityUpsertedAsync(organization);
     }
 
     public async Task UpsertProviderAbilityAsync(Provider provider)
@@ -89,6 +92,8 @@ public class FeatureRoutedCacheService(
         {
             await inMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
         }
+
+        await serviceBusMessaging.NotifyOrganizationAbilityDeletedAsync(organizationId);
     }
 
     public async Task DeleteProviderAbilityAsync(Guid providerId)
@@ -100,6 +105,34 @@ public class FeatureRoutedCacheService(
         else
         {
             await inMemoryApplicationCacheService.DeleteProviderAbilityAsync(providerId);
+        }
+
+        await serviceBusMessaging.NotifyProviderAbilityDeletedAsync(providerId);
+    }
+
+    public async Task BaseUpsertOrganizationAbilityAsync(Organization organization)
+    {
+        if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))
+        {
+            await vNextInMemoryApplicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        }
+        else
+        {
+            // Jimmy todo: Ensure this hit InMemoryServiceBusApplicationCacheService
+            // await (InMemoryServiceBusApplicationCacheService) inMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
+        }
+    }
+
+    public async Task BaseDeleteOrganizationAbilityAsync(Guid organizationId)
+    {
+        if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))
+        {
+            await vNextInMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
+        }
+        else
+        {
+            // Jimmy todo: Ensure this hit InMemoryServiceBusApplicationCacheService
+            // await (InMemoryServiceBusApplicationCacheService) inMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
         }
     }
 }

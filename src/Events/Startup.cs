@@ -56,13 +56,17 @@ public class Startup
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName);
         services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
         services.AddSingleton<IVNextInMemoryApplicationCacheService, VNextInMemoryApplicationCacheService>();
+
         if (usingServiceBusAppCache)
         {
+            services.AddScoped<IApplicationCacheBackwardProcessor, FeatureRoutedCacheService>();
             services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
+            services.AddSingleton<IApplicationCacheServiceBusMessaging, ServiceBusApplicationCacheMessaging>();
         }
         else
         {
             services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryApplicationCacheService>();
+            services.AddSingleton<IApplicationCacheServiceBusMessaging, NoOpApplicationCacheMessaging>();
         }
 
         services.AddEventWriteServices(globalSettings);

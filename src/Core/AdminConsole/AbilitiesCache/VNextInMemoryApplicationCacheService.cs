@@ -129,10 +129,6 @@ public class VNextInMemoryApplicationCacheService(
 
         bool SkipRefresh()
         {
-            var test1 = timeProvider.GetUtcNow();
-            var test2 = getLastRefresh();
-            var test3 = timeProvider.GetUtcNow() - getLastRefresh() <= refreshInterval;
-
             return timeProvider.GetUtcNow() - getLastRefresh() <= refreshInterval;
         }
     }
