@@ -1,5 +1,4 @@
 ﻿using System.Collections.Specialized;
-using System.Threading.Tasks;
 using Bit.Core.Auth.UserFeatures.SendAccess;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
