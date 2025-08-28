@@ -40,7 +40,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        IMailService mailService)
         : base(
             userManager,
             userService,
@@ -57,7 +58,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
             policyRequirementQuery,
-            authRequestRepository)
+            authRequestRepository,
+            mailService)
     {
         _userManager = userManager;
         _currentContext = currentContext;
