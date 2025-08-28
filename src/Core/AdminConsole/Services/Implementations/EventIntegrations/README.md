@@ -197,22 +197,37 @@ interface and therefore can also handle directly all the message publishing func
 
 Organizations can configure integration configurations to send events to different endpoints -- each
 handler maps to a specific integration and checks for the configuration when it receives an event.
-Currently, there are integrations / handlers for Slack and webhooks (as mentioned above).
+Currently, there are integrations / handlers for Slack, webhooks, and HTTP Event Collector (HEC).
 
 ### `OrganizationIntegration`
 
 - The top-level object that enables a specific integration for the organization.
 - Includes any properties that apply to the entire integration across all events.
-    - For Slack, it consists of the token: `{ "token": "xoxb-token-from-slack" }`
-    - For webhooks, it is `null`. However, even though there is no configuration, an organization must
-      have a webhook `OrganizationIntegration` to enable configuration via `OrganizationIntegrationConfiguration`.
+    - For Slack, it consists of the token: `{ "Token": "xoxb-token-from-slack" }`.
+    - For webhooks, it is optional. Webhooks can either be configured at this level or the configuration level,
+      but the configuration level takes precedence. However, even though it is optional, an organization must
+      have a webhook `OrganizationIntegration` (even will a `null` `Configuration`) to enable configuration
+      via `OrganizationIntegrationConfiguration`.
+    - For HEC, it consists of the scheme, token, and URI:
+
+```json
+    {
+      "Scheme": "Bearer",
+      "Token": "Auth-token-from-HEC-service",
+      "Uri": "https://example.com/api"
+    }
+```
 
 ### `OrganizationIntegrationConfiguration`
 
 - This contains the configurations specific to each `EventType` for the integration.
 - `Configuration` contains the event-specific configuration.
     - For Slack, this would contain what channel to send the message to: `{ "channelId": "C123456" }`
-    - For Webhook, this is the URL the request should be sent to: `{ "url": "https://api.example.com" }`
+    - For webhooks, this is the URL the request should be sent to: `{ "url": "https://api.example.com" }`
+      - Optionally this also can include a `Scheme` and `Token` if this webhook needs Authentication.
+      - As stated above, all of this information can be specified here or at the `OrganizationIntegration`
+        level, but any properties declared here will take precedence over the ones above.
+    - For HEC, this must be null. HEC is configured only at the `OrganizationIntegration` level.
 - `Template` contains a template string that is expected to be filled in with the contents of the actual event.
     - The tokens in the string are wrapped in `#` characters. For instance, the UserId would be `#UserId#`.
     - The `IntegrationTemplateProcessor` does the actual work of replacing these tokens with introspected values from
@@ -225,6 +240,8 @@ Currently, there are integrations / handlers for Slack and webhooks (as mentione
 - This is the combination of both the `OrganizationIntegration` and `OrganizationIntegrationConfiguration` into
   a single object. The combined contents tell the integration's handler all the details needed to send to an
   external service.
+- `OrganizationIntegrationConfiguration` takes precedence over `OrganizationIntegration` - any keys present in
+  both will receive the value declared in `OrganizationIntegrationConfiguration`.
 - An array of `OrganizationIntegrationConfigurationDetails` is what the `EventIntegrationHandler` fetches from
   the database to determine what to publish at the integration level.
 
@@ -273,6 +290,35 @@ graph TD
     C1 -->|Has many| B1_2[IntegrationFilterRule]
     C1 -->|Can contain| C2[IntegrationFilterGroup...]
 ```
+## Caching
+
+To reduce database load and improve performance, integration configurations are cached in-memory as a Dictionary
+with a periodic load of all configurations. Without caching, each incoming `EventMessage` would trigger a database
+query to retrieve the relevant `OrganizationIntegrationConfigurationDetails`.
+
+By loading all configurations into memory on a fixed interval, we ensure:
+
+- Consistent performance for reads.
+- Reduced database pressure.
+- Predictable refresh timing, independent of event activity.
+
+### Architecture / Design
+
+- The cache is read-only for consumers. It is only updated in bulk by a background refresh process.
+- The cache is fully replaced on each refresh to avoid locking or partial state.
+- Reads return a `List<OrganizationIntegrationConfigurationDetails>` for a given key or an empty list if no
+  match exists.
+- Failures or delays in the loading process do not affect the existing cache state. The cache will continue serving
+  the last known good state until the update replaces the whole cache.
+
+### Background Refresh
+
+A hosted service (`IntegrationConfigurationDetailsCacheService`) runs in the background and:
+
+- Loads all configuration records at application startup.
+- Refreshes the cache on a configurable interval.
+- Logs timing and entry count on success.
+- Logs exceptions on failure without disrupting application flow.
 
 # Building a new integration
 
@@ -353,34 +399,43 @@ These names added here are what must match the values provided in the secrets or
 in Global Settings. This must be in place (and the local ASB emulator restarted) before you can use any
 code locally that accesses ASB resources.
 
+## ListenerConfiguration
+
+New integrations will need their own subclass of `ListenerConfiguration` which also conforms to
+`IIntegrationListenerConfiguration`. This class provides a way of accessing the previously configured
+RabbitMQ queues and ASB subscriptions by referring to the values created in `GlobalSettings`. This new
+listener configuration will be used to type the listener and provide the means to access the necessary
+configurations for the integration.
+
 ## ServiceCollectionExtensions
+
 In our `ServiceCollectionExtensions`, we pull all the above pieces together to start listeners on each message
-tier with handlers to process the integration. There are a number of helper methods in here to make this simple
-to add a new integration - one call per platform.
+tier with handlers to process the integration.
 
-Also note that if an integration needs a custom singleton / service defined, the add listeners method is a
-good place to set that up. For instance, `SlackIntegrationHandler` needs a `SlackService`, so the singleton
-declaration is right above the add integration method for slack. Same thing for webhooks when it comes to
-defining a custom HttpClient by name.
+The core method for all event integration setup is `AddEventIntegrationServices`. This method is called by
+both of the add listeners methods, which ensures that we have one common place to set up cross-messaging-platform
+dependencies and integrations. For instance, `SlackIntegrationHandler` needs a `SlackService`, so
+`AddEventIntegrationServices` has a call to `AddSlackService`. Same thing for webhooks when it
+comes to defining a custom HttpClient by name.
 
-1. In `AddRabbitMqListeners` add the integration:
+1. In `AddEventIntegrationServices` create the listener configuration:
+
 ``` csharp
-        services.AddRabbitMqIntegration<ExampleIntegrationConfigurationDetails, ExampleIntegrationHandler>(
-            globalSettings.EventLogging.RabbitMq.ExampleEventsQueueName,
-            globalSettings.EventLogging.RabbitMq.ExampleIntegrationQueueName,
-            globalSettings.EventLogging.RabbitMq.ExampleIntegrationRetryQueueName,
-            globalSettings.EventLogging.RabbitMq.MaxRetries,
-            IntegrationType.Example);
+        var exampleConfiguration = new ExampleListenerConfiguration(globalSettings);
 ```
 
-2. In `AddAzureServiceBusListeners` add the integration:
+2. Add the integration to both the RabbitMQ and ASB specific declarations:
+
 ``` csharp
-services.AddAzureServiceBusIntegration<ExampleIntegrationConfigurationDetails, ExampleIntegrationHandler>(
-            eventSubscriptionName: globalSettings.EventLogging.AzureServiceBus.ExampleEventSubscriptionName,
-            integrationSubscriptionName: globalSettings.EventLogging.AzureServiceBus.ExampleIntegrationSubscriptionName,
-            integrationType: IntegrationType.Example,
-            globalSettings: globalSettings);
+        services.AddRabbitMqIntegration<ExampleIntegrationConfigurationDetails, ExampleListenerConfiguration>(exampleConfiguration);
 ```
+
+and
+
+``` csharp
+        services.AddAzureServiceBusIntegration<ExampleIntegrationConfigurationDetails, ExampleListenerConfiguration>(exampleConfiguration);
+```
+
 
 # Deploying a new integration
 

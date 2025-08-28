@@ -1,4 +1,7 @@
-﻿using System.Diagnostics;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -125,7 +128,7 @@ public static class Helpers
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             var escapedArgs = cmd.Replace("\"", "\\\"");
-            process.StartInfo.FileName = "/bin/bash";
+            process.StartInfo.FileName = "/bin/sh";
             process.StartInfo.Arguments = $"-c \"{escapedArgs}\"";
         }
         else

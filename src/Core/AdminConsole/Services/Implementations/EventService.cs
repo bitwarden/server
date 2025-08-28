@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.AdminConsole.Models.Data.Provider;
@@ -409,9 +412,30 @@ public class EventService : IEventService
         await _eventWriteService.CreateAsync(e);
     }
 
-    public async Task LogServiceAccountSecretEventAsync(Guid serviceAccountId, Secret secret, EventType type, DateTime? date = null)
+    public async Task LogUserSecretsEventAsync(Guid userId, IEnumerable<Secret> secrets, EventType type, DateTime? date = null)
     {
-        await LogServiceAccountSecretsEventAsync(serviceAccountId, new[] { secret }, type, date);
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var eventMessages = new List<IEvent>();
+
+        foreach (var secret in secrets)
+        {
+            if (!CanUseEvents(orgAbilities, secret.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = secret.OrganizationId,
+                Type = type,
+                SecretId = secret.Id,
+                UserId = userId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
     }
 
     public async Task LogServiceAccountSecretsEventAsync(Guid serviceAccountId, IEnumerable<Secret> secrets, EventType type, DateTime? date = null)
@@ -431,6 +455,58 @@ public class EventService : IEventService
                 OrganizationId = secret.OrganizationId,
                 Type = type,
                 SecretId = secret.Id,
+                ServiceAccountId = serviceAccountId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+    public async Task LogUserProjectsEventAsync(Guid userId, IEnumerable<Project> projects, EventType type, DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var eventMessages = new List<IEvent>();
+
+        foreach (var project in projects)
+        {
+            if (!CanUseEvents(orgAbilities, project.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = project.OrganizationId,
+                Type = type,
+                ProjectId = project.Id,
+                UserId = userId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+    public async Task LogServiceAccountProjectsEventAsync(Guid serviceAccountId, IEnumerable<Project> projects, EventType type, DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var eventMessages = new List<IEvent>();
+
+        foreach (var project in projects)
+        {
+            if (!CanUseEvents(orgAbilities, project.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = project.OrganizationId,
+                Type = type,
+                ProjectId = project.Id,
                 ServiceAccountId = serviceAccountId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };

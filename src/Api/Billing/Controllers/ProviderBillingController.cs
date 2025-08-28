@@ -1,7 +1,9 @@
-﻿using Bit.Api.Billing.Models.Requests;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Commercial.Core.Billing.Providers.Services;
-using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Models;
@@ -24,7 +26,6 @@ namespace Bit.Api.Billing.Controllers;
 [Authorize("Application")]
 public class ProviderBillingController(
     ICurrentContext currentContext,
-    IFeatureService featureService,
     ILogger<BaseProviderController> logger,
     IPricingClient pricingClient,
     IProviderBillingService providerBillingService,
@@ -136,27 +137,15 @@ public class ProviderBillingController(
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
-        var getProviderPriceFromStripe = featureService.IsEnabled(FeatureFlagKeys.PM21383_GetProviderPriceFromStripe);
-
         var configuredProviderPlans = await Task.WhenAll(providerPlans.Select(async providerPlan =>
         {
             var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
+            var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, plan.Type);
+            var price = await stripeAdapter.PriceGetAsync(priceId);
 
-            decimal unitAmount;
-
-            if (getProviderPriceFromStripe)
-            {
-                var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, plan.Type);
-                var price = await stripeAdapter.PriceGetAsync(priceId);
-
-                unitAmount = price.UnitAmountDecimal.HasValue
-                    ? price.UnitAmountDecimal.Value / 100M
-                    : plan.PasswordManager.ProviderPortalSeatPrice;
-            }
-            else
-            {
-                unitAmount = plan.PasswordManager.ProviderPortalSeatPrice;
-            }
+            var unitAmount = price.UnitAmountDecimal.HasValue
+                ? price.UnitAmountDecimal.Value / 100M
+                : plan.PasswordManager.ProviderPortalSeatPrice;
 
             return new ConfiguredProviderPlan(
                 providerPlan.Id,

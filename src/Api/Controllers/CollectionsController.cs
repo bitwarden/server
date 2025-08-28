@@ -1,4 +1,7 @@
-﻿using Bit.Api.Models.Request;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.Context;
@@ -19,7 +22,6 @@ namespace Bit.Api.Controllers;
 public class CollectionsController : Controller
 {
     private readonly ICollectionRepository _collectionRepository;
-    private readonly ICollectionService _collectionService;
     private readonly ICreateCollectionCommand _createCollectionCommand;
     private readonly IUpdateCollectionCommand _updateCollectionCommand;
     private readonly IDeleteCollectionCommand _deleteCollectionCommand;
@@ -30,7 +32,6 @@ public class CollectionsController : Controller
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
-        ICollectionService collectionService,
         ICreateCollectionCommand createCollectionCommand,
         IUpdateCollectionCommand updateCollectionCommand,
         IDeleteCollectionCommand deleteCollectionCommand,
@@ -40,7 +41,6 @@ public class CollectionsController : Controller
         IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand)
     {
         _collectionRepository = collectionRepository;
-        _collectionService = collectionService;
         _createCollectionCommand = createCollectionCommand;
         _updateCollectionCommand = updateCollectionCommand;
         _deleteCollectionCommand = deleteCollectionCommand;
@@ -109,7 +109,7 @@ public class CollectionsController : Controller
         var readAllAuthorized = (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadAll(orgId))).Succeeded;
         if (readAllAuthorized)
         {
-            orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgId);
+            orgCollections = await _collectionRepository.GetManySharedCollectionsByOrganizationIdAsync(orgId);
         }
         else
         {
@@ -146,7 +146,7 @@ public class CollectionsController : Controller
     }
 
     [HttpPost("")]
-    public async Task<CollectionResponseModel> Post(Guid orgId, [FromBody] CollectionRequestModel model)
+    public async Task<CollectionResponseModel> Post(Guid orgId, [FromBody] CreateCollectionRequestModel model)
     {
         var collection = model.ToCollection(orgId);
 
@@ -174,7 +174,7 @@ public class CollectionsController : Controller
 
     [HttpPut("{id}")]
     [HttpPost("{id}")]
-    public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] CollectionRequestModel model)
+    public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;

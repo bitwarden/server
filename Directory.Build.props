@@ -3,62 +3,40 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
 
-    <Version>2025.6.2</Version>
+    <Version>2025.8.1</Version>
 
     <RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-    <!-- Treat it as a test project if the project hasn't set their own value and it follows our test project conventions -->
+    
     <IsTestProject Condition="'$(IsTestProject)' == '' and ($(MSBuildProjectName.EndsWith('.Test')) or $(MSBuildProjectName.EndsWith('.IntegrationTest')))">true</IsTestProject>
     <Nullable Condition="'$(Nullable)' == '' and '$(IsTestProject)' == 'true'">annotations</Nullable>
-    <!-- Uncomment the below line when we are ready to enable nullable repo wide -->
-    <!-- <Nullable Condition="'$(Nullable)' == '' and '$(IsTestProject)' != 'true'">enable</Nullable> -->
+    <Nullable Condition="'$(Nullable)' == '' and '$(IsTestProject)' != 'true'">enable</Nullable>
     <TreatWarningsAsErrors Condition="'$(TreatWarningsAsErrors)' == ''">true</TreatWarningsAsErrors>
   </PropertyGroup>
 
-  <!--
-    This section is for packages that we use multiple times throughout the solution
-    It gives us a single place to manage the version to ensure we are using the same version
-    across the solution.
-  -->
+  
   <PropertyGroup>
-    <!--
-      NuGet: https://www.nuget.org/packages/Microsoft.NET.Test.Sdk
-    -->
+    
     <MicrosoftNetTestSdkVersion>17.8.0</MicrosoftNetTestSdkVersion>
-    <!--
-      NuGet: https://www.nuget.org/packages/xunit
-    -->
+    
     <XUnitVersion>2.6.6</XUnitVersion>
-    <!--
-      NuGet: https://www.nuget.org/packages/xunit.runner.visualstudio
-    -->
+    
     <XUnitRunnerVisualStudioVersion>2.5.6</XUnitRunnerVisualStudioVersion>
-    <!--
-      NuGet: https://www.nuget.org/packages/coverlet.collector
-    -->
+    
     <CoverletCollectorVersion>6.0.0</CoverletCollectorVersion>
-    <!--
-      NuGet: https://www.nuget.org/packages/NSubstitute
-    -->
+    
     <NSubstituteVersion>5.1.0</NSubstituteVersion>
-    <!--
-      NuGet: https://www.nuget.org/packages/AutoFixture.Xunit2
-    -->
+    
     <AutoFixtureXUnit2Version>4.18.1</AutoFixtureXUnit2Version>
-    <!--
-      NuGet: https://www.nuget.org/packages/AutoFixture.AutoNSubstitute
-    -->
+    
     <AutoFixtureAutoNSubstituteVersion>4.18.1</AutoFixtureAutoNSubstituteVersion>
   </PropertyGroup>
 
-  <!--
-    This section is for getting & setting the gitHash value, which can easily be accessed
-    via the Core.Utilities.AssemblyHelpers class.
-  -->
+  
   <Target Name="SetSourceRevisionId" BeforeTargets="CoreGenerateAssemblyInfo">
     <Exec Command="git describe --long --always --dirty --exclude=* --abbrev=8" ConsoleToMSBuild="True" IgnoreExitCode="False">
-      <Output PropertyName="SourceRevisionId" TaskParameter="ConsoleOutput"/>
+      <Output PropertyName="SourceRevisionId" TaskParameter="ConsoleOutput" />
     </Exec>
   </Target>
   <Target Name="WriteRevision" AfterTargets="SetSourceRevisionId">
