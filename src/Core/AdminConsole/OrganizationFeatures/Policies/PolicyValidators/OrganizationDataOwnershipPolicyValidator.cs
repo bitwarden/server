@@ -1,5 +1,4 @@
-﻿#nullable enable
-
+﻿
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
@@ -17,7 +16,7 @@ public class OrganizationDataOwnershipPolicyValidator(
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories,
     IFeatureService featureService,
     ILogger<OrganizationDataOwnershipPolicyValidator> logger)
-    : OrganizationPolicyValidator(policyRepository, factories)
+    : OrganizationPolicyValidator(policyRepository, factories), IPostSavePolicySideEffect
 {
     public override PolicyType Type => PolicyType.OrganizationDataOwnership;
 
@@ -25,20 +24,37 @@ public class OrganizationDataOwnershipPolicyValidator(
 
     public override Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
 
-    public override async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    public async Task ExecuteSideEffectsAsync(SavePolicyModel policyModel, Policy? currentPolicy)
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
         {
             return;
         }
 
-        if (currentPolicy?.Enabled != true && policyUpdate.Enabled)
+        if (policyModel.Metadata is not OrganizationModelOwnershipPolicyModel metadata)
         {
-            await UpsertDefaultCollectionsForUsersAsync(policyUpdate);
+            return;
         }
+
+        if (string.IsNullOrWhiteSpace(metadata.DefaultUserCollectionName))
+        {
+            return;
+        }
+
+        var policyUpdate = policyModel.PolicyUpdate;
+
+        if (currentPolicy?.Enabled == true || !policyUpdate.Enabled)
+        {
+            return;
+        }
+
+        await UpsertDefaultCollectionsForUsersAsync(policyUpdate, metadata.DefaultUserCollectionName);
     }
 
-    private async Task UpsertDefaultCollectionsForUsersAsync(PolicyUpdate policyUpdate)
+    public override Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
+
+
+    private async Task UpsertDefaultCollectionsForUsersAsync(PolicyUpdate policyUpdate, string defaultCollectionName)
     {
         var requirements = await GetUserPolicyRequirementsByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(policyUpdate.OrganizationId, policyUpdate.Type);
 
@@ -56,13 +72,7 @@ public class OrganizationDataOwnershipPolicyValidator(
         await collectionRepository.UpsertDefaultCollectionsAsync(
             policyUpdate.OrganizationId,
             userOrgIds,
-            GetDefaultUserCollectionName());
+            defaultCollectionName);
     }
 
-    private static string GetDefaultUserCollectionName()
-    {
-        // TODO: https://bitwarden.atlassian.net/browse/PM-24279
-        const string temporaryPlaceHolderValue = "Default";
-        return temporaryPlaceHolderValue;
-    }
 }

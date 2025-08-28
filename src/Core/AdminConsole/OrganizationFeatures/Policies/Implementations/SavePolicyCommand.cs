@@ -78,6 +78,18 @@ public class SavePolicyCommand : ISavePolicyCommand
         return policy;
     }
 
+    public async Task<Policy> VNextSaveAsync(SavePolicyModel policyModel)
+    {
+        var policy = await SaveAsync(policyModel.PolicyUpdate);
+
+
+
+        return policy;
+    }
+
+
+
+
     private async Task RunValidatorAsync(IPolicyValidator validator, PolicyUpdate policyUpdate)
     {
         var savedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(policyUpdate.OrganizationId);
