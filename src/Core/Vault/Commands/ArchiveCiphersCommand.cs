@@ -42,6 +42,8 @@ public class ArchiveCiphersCommand : IArchiveCiphersCommand
 
         var revisionDate = await _cipherRepository.ArchiveAsync(archivingCiphers.Select(c => c.Id), archivingUserId);
 
+        // Adding specifyKind because revisionDate is currently coming back as Unspecified from the database
+        revisionDate = DateTime.SpecifyKind(revisionDate, DateTimeKind.Utc);
         var events = archivingCiphers.Select(c =>
         {
             c.RevisionDate = revisionDate;

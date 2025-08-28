@@ -41,7 +41,8 @@ public class UnarchiveCiphersCommand : IUnarchiveCiphersCommand
             .Select(CipherOrganizationDetails (c) => c).ToList();
 
         var revisionDate = await _cipherRepository.UnarchiveAsync(unarchivingCiphers.Select(c => c.Id), unarchivingUserId);
-
+        // Adding specifyKind because revisionDate is currently coming back as Unspecified from the database
+        revisionDate = DateTime.SpecifyKind(revisionDate, DateTimeKind.Utc);
         var events = unarchivingCiphers.Select(c =>
         {
             c.RevisionDate = revisionDate;
