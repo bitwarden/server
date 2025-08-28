@@ -1,10 +1,13 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response.Helpers;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
@@ -212,4 +215,16 @@ public class PoliciesController : Controller
         var policy = await _savePolicyCommand.SaveAsync(policyUpdate);
         return new PolicyResponseModel(policy);
     }
+
+
+    [HttpPut("{type}/vnext")]
+    [RequireFeatureAttribute(FeatureFlagKeys.CreateDefaultLocation)]
+    [Authorize<ManagePoliciesRequirement>]
+    public async Task<PolicyResponseModel> PutVNext(Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
+    {
+        // This logic will be fleshed out in the following PRs in PM-24279
+        var savePolicyModel = await model.ToSavePolicyModelAsync(orgId, _currentContext);
+        return new PolicyResponseModel(new Policy());
+    }
+
 }
