@@ -3,9 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
-public interface ISavePolicyCommand
+public interface IPostSavePolicySideEffect
 {
-    Task<Policy> SaveAsync(PolicyUpdate policy);
-    Task<Policy> VNextSaveAsync(SavePolicyModel policyModel);
-
+    public Task ExecuteSideEffectsAsync(SavePolicyModel policyRequest, Policy? postUpdatedPolicy);
 }
