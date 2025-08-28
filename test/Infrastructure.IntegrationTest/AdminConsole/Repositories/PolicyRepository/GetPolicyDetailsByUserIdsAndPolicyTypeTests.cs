@@ -15,53 +15,30 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
 {
     [Theory]
     [DatabaseData]
-    public async Task ShouldReturnCorrectPolicyDetailsForAcceptedUsersAsync(
+    public async Task GetPolicyDetailsByUserIdsAndPolicyType_GivenTwoUsersForAnEnterpriseOrgWithTwoFactorEnabled_WhenUsersHaveBeenConfirmedOrAccepted_ThenShouldReturnCorrectPolicyDetailsAsync(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         IPolicyRepository policyRepository)
     {
         // Arrange
-        var user1 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 1",
-            Email = $"test1+{Guid.NewGuid()}@example.com",
-            ApiKey = "TEST_API_KEY",
-            SecurityStamp = Guid.NewGuid().ToString(),
-        });
+        var user1 = await userRepository.CreateAsync(GetDefaultUser());
 
-        var user2 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 2",
-            Email = $"test2+{Guid.NewGuid()}@example.com",
-            ApiKey = "TEST_API_KEY",
-            SecurityStamp = Guid.NewGuid().ToString(),
-        });
+        var user2 = await userRepository.CreateAsync(GetDefaultUser());
 
         var organization = await CreateEnterpriseOrgAsync(organizationRepository);
+
         var policy = await policyRepository.CreateAsync(new Policy
         {
             OrganizationId = organization.Id,
             Type = PolicyType.TwoFactorAuthentication,
-            Data = "{\"require\":true}",
-            Enabled = true,
+            Data = string.Empty,
+            Enabled = true
         });
 
-        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user1.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.User,
-        });
+        var orgUser1 = await organizationUserRepository.CreateAsync(GetAcceptedOrganizationUser(organization, user1));
 
-        var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user2.Id,
-            Status = OrganizationUserStatusType.Accepted,
-            Type = OrganizationUserType.User,
-        });
+        var orgUser2 = await organizationUserRepository.CreateAsync(GetConfirmedOrganizationUser(organization, user2));
 
         // Act
         var results = await policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
@@ -77,43 +54,35 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.Equal(organization.Id, result1.OrganizationId);
         Assert.Equal(PolicyType.TwoFactorAuthentication, result1.PolicyType);
         Assert.Equal(policy.Data, result1.PolicyData);
-        Assert.Equal(OrganizationUserStatusType.Confirmed, result1.OrganizationUserStatus);
+        Assert.Equal(OrganizationUserStatusType.Accepted, result1.OrganizationUserStatus);
 
         var result2 = resultsList.First(r => r.UserId == user2.Id);
         Assert.Equal(orgUser2.Id, result2.OrganizationUserId);
         Assert.Equal(organization.Id, result2.OrganizationId);
         Assert.Equal(PolicyType.TwoFactorAuthentication, result2.PolicyType);
         Assert.Equal(policy.Data, result2.PolicyData);
-        Assert.Equal(OrganizationUserStatusType.Accepted, result2.OrganizationUserStatus);
+        Assert.Equal(OrganizationUserStatusType.Confirmed, result2.OrganizationUserStatus);
+
+        await organizationRepository.DeleteAsync(organization);
+        await userRepository.DeleteManyAsync([user1, user2]);
     }
 
     [Theory]
     [DatabaseData]
-    public async Task ShouldReturnCorrectPolicyDetailsForInvitedUsersAsync(
+    public async Task GetPolicyDetailsByUserIdsAndPolicyType_GivenTwoUsersForEnterpriseOrgWithMasterPasswordEnabled_WhenUsersHaveBeenInvited_ThenShouldReturnCorrectPolicyDetailsForInvitedUsersAsync(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         IPolicyRepository policyRepository)
     {
         // Arrange
-        var user1 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 1",
-            Email = $"test1+{Guid.NewGuid()}@example.com",
-            ApiKey = "TEST_API_KEY",
-            SecurityStamp = Guid.NewGuid().ToString(),
-        });
+        var user1 = await userRepository.CreateAsync(GetDefaultUser());
 
-        var user2 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 2",
-            Email = $"test2+{Guid.NewGuid()}@example.com",
-            ApiKey = "TEST_API_KEY",
-            SecurityStamp = Guid.NewGuid().ToString(),
-        });
+        var user2 = await userRepository.CreateAsync(GetDefaultUser());
 
         var organization = await CreateEnterpriseOrgAsync(organizationRepository);
-        var policy = await policyRepository.CreateAsync(new Policy
+
+        _ = await policyRepository.CreateAsync(new Policy
         {
             OrganizationId = organization.Id,
             Type = PolicyType.MasterPassword,
@@ -121,24 +90,9 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
             Enabled = true,
         });
 
-        // Create invited org users (matching by email, not UserId)
-        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = null, // Invited users don't have UserId
-            Email = user1.Email,
-            Status = OrganizationUserStatusType.Invited,
-            Type = OrganizationUserType.User,
-        });
+        var orgUser1 = await organizationUserRepository.CreateAsync(GetInvitedOrganizationUser(organization, user1));
 
-        var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = null, // Invited users don't have UserId
-            Email = user2.Email,
-            Status = OrganizationUserStatusType.Invited,
-            Type = OrganizationUserType.User,
-        });
+        var orgUser2 = await organizationUserRepository.CreateAsync(GetInvitedOrganizationUser(organization, user2));
 
         // Act
         var results = await policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
@@ -160,11 +114,14 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.Equal(organization.Id, result2.OrganizationId);
         Assert.Equal(PolicyType.MasterPassword, result2.PolicyType);
         Assert.Equal(OrganizationUserStatusType.Invited, result2.OrganizationUserStatus);
+
+        await organizationRepository.DeleteAsync(organization);
+        await userRepository.DeleteManyAsync([user1, user2]);
     }
 
     [Theory]
     [DatabaseData]
-    public async Task ShouldContainProviderDataAsync(
+    public async Task GetPolicyDetailsByUserIdsAndPolicyType_GivenConfirmedUserEnterpriseOrgWithPolicyEnabled_WhenUserIsAProvider_ThenShouldContainProviderDataAsync(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
@@ -174,30 +131,13 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         IPolicyRepository policyRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@example.com",
-            ApiKey = "TEST_API_KEY",
-            SecurityStamp = Guid.NewGuid().ToString(),
-        });
+        var user = await userRepository.CreateAsync(GetDefaultUser());
 
         var organization = await CreateEnterpriseOrgAsync(organizationRepository);
-        var policy = await policyRepository.CreateAsync(new Policy
-        {
-            OrganizationId = organization.Id,
-            Type = PolicyType.SingleOrg,
-            Data = "{}",
-            Enabled = true,
-        });
 
-        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.User
-        });
+        _ = await policyRepository.CreateAsync(GetPolicy(PolicyType.SingleOrg, organization));
+
+        _ = await organizationUserRepository.CreateAsync(GetConfirmedOrganizationUser(organization, user));
 
         var provider = await providerRepository.CreateAsync(new Provider
         {
@@ -208,7 +148,7 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
             BusinessAddress3 = "Floor 7",
             BusinessCountry = "US",
             BusinessTaxNumber = "123456789",
-            BillingEmail = $"billing+{Guid.NewGuid()}@example.com",
+            BillingEmail = $"billing+{Guid.NewGuid()}@example.com"
         });
 
         await providerUserRepository.CreateAsync(new ProviderUser
@@ -216,13 +156,13 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
             ProviderId = provider.Id,
             UserId = user.Id,
             Status = ProviderUserStatusType.Confirmed,
-            Type = ProviderUserType.ProviderAdmin,
+            Type = ProviderUserType.ProviderAdmin
         });
 
         await providerOrganizationRepository.CreateAsync(new ProviderOrganization
         {
             ProviderId = provider.Id,
-            OrganizationId = organization.Id,
+            OrganizationId = organization.Id
         });
 
         // Act
@@ -238,51 +178,30 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         Assert.True(result.IsProvider);
         Assert.Equal(user.Id, result.UserId);
         Assert.Equal(organization.Id, result.OrganizationId);
+
+        await organizationRepository.DeleteAsync(organization);
+        await userRepository.DeleteManyAsync([user]);
     }
 
     [Theory]
     [DatabaseData]
-    public async Task ShouldOnlyReturnInputPolicyType(
+    public async Task GetPolicyDetailsByUserIdsAndPolicyType_GivenEnterpriseOrgWithTwoEnabledPolicies_WhenRequestingTwoFactor_ShouldOnlyReturnInputPolicyType(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         IPolicyRepository policyRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@example.com",
-            ApiKey = "TEST_API_KEY",
-            SecurityStamp = Guid.NewGuid().ToString(),
-        });
+        var user = await userRepository.CreateAsync(GetDefaultUser());
 
         var organization = await CreateEnterpriseOrgAsync(organizationRepository);
 
         // Create multiple policies
-        var twoFactorPolicy = await policyRepository.CreateAsync(new Policy
-        {
-            OrganizationId = organization.Id,
-            Type = PolicyType.TwoFactorAuthentication,
-            Data = "{\"require\":true}",
-            Enabled = true,
-        });
+        _ = await policyRepository.CreateAsync(GetPolicy(PolicyType.TwoFactorAuthentication, organization));
 
-        var masterPasswordPolicy = await policyRepository.CreateAsync(new Policy
-        {
-            OrganizationId = organization.Id,
-            Type = PolicyType.MasterPassword,
-            Data = "{\"minComplexity\":4}",
-            Enabled = true,
-        });
+        _ = await policyRepository.CreateAsync(GetPolicy(PolicyType.MasterPassword, organization));
 
-        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.User,
-        });
+        _ = await organizationUserRepository.CreateAsync(GetConfirmedOrganizationUser(organization, user));
 
         // Act - Request only TwoFactorAuthentication policy
         var results = await policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
@@ -293,41 +212,32 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
         var resultsList = results.ToList();
         Assert.Single(resultsList);
         Assert.All(resultsList, r => Assert.Equal(PolicyType.TwoFactorAuthentication, r.PolicyType));
+
+        await organizationRepository.DeleteAsync(organization);
+        await userRepository.DeleteManyAsync([user]);
     }
 
     [Theory]
     [DatabaseData]
-    public async Task ShouldNotReturnDisabledPoliciesAsync(
+    public async Task GetPolicyDetailsByUserIdsAndPolicyType_GivenEnterpriseOrg_WhenSendPolicyIsDisabled_ShouldNotReturnDisabledPoliciesAsync(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         IPolicyRepository policyRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@example.com",
-            ApiKey = "TEST_API_KEY",
-            SecurityStamp = Guid.NewGuid().ToString(),
-        });
+        var user = await userRepository.CreateAsync(GetDefaultUser());
 
         var organization = await CreateEnterpriseOrgAsync(organizationRepository);
-        var policy = await policyRepository.CreateAsync(new Policy
+        _ = await policyRepository.CreateAsync(new Policy
         {
             OrganizationId = organization.Id,
             Type = PolicyType.DisableSend,
             Data = "{}",
-            Enabled = false, // Disabled policy
+            Enabled = false // Disabled policy
         });
 
-        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.User,
-        });
+        _ = await organizationUserRepository.CreateAsync(GetConfirmedOrganizationUser(organization, user));
 
         // Act
         var results = await policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
@@ -336,24 +246,20 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
 
         // Assert
         Assert.Empty(results);
+        await organizationRepository.DeleteAsync(organization);
+        await userRepository.DeleteManyAsync([user]);
     }
 
     [Theory]
     [DatabaseData]
-    public async Task ShouldNotReturnResultsForDisabledOrganizationsAsync(
+    public async Task GetPolicyDetailsByUserIdsAndPolicyType_GivenEnterpriseOrgWithPolicies_WhenOrgIsDisabled_ThenShouldNotReturnResults(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         IPolicyRepository policyRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@example.com",
-            ApiKey = "TEST_API_KEY",
-            SecurityStamp = Guid.NewGuid().ToString(),
-        });
+        var user = await userRepository.CreateAsync(GetDefaultUser());
 
         var organization = await organizationRepository.CreateAsync(new Organization
         {
@@ -372,21 +278,9 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
             Enabled = false, // Disabled organization
         });
 
-        var policy = await policyRepository.CreateAsync(new Policy
-        {
-            OrganizationId = organization.Id,
-            Type = PolicyType.RequireSso,
-            Data = "{}",
-            Enabled = true,
-        });
+        _ = await policyRepository.CreateAsync(GetPolicy(PolicyType.RequireSso, organization));
 
-        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.User,
-        });
+        _ = await organizationUserRepository.CreateAsync(GetConfirmedOrganizationUser(organization, user));
 
         // Act
         var results = await policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
@@ -395,24 +289,21 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
 
         // Assert
         Assert.Empty(results);
+
+        await organizationRepository.DeleteAsync(organization);
+        await userRepository.DeleteManyAsync([user]);
     }
 
     [Theory]
     [DatabaseData]
-    public async Task ShouldNotReturnResultsForOrganizationsNotUsingPoliciesAsync(
+    public async Task GetPolicyDetailsByUserIdsAndPolicyType_GivenOrganization_WhenNotUsingPolicies_ThenShouldNotReturnResults(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         IPolicyRepository policyRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@example.com",
-            ApiKey = "TEST_API_KEY",
-            SecurityStamp = Guid.NewGuid().ToString(),
-        });
+        var user = await userRepository.CreateAsync(GetDefaultUser());
 
         var organization = await organizationRepository.CreateAsync(new Organization
         {
@@ -431,21 +322,9 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
             Enabled = true,
         });
 
-        var policy = await policyRepository.CreateAsync(new Policy
-        {
-            OrganizationId = organization.Id,
-            Type = PolicyType.PasswordGenerator,
-            Data = "{}",
-            Enabled = true
-        });
+        var policy = await policyRepository.CreateAsync(GetPolicy(PolicyType.PasswordGenerator, organization));
 
-        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.User,
-        });
+        _ = await organizationUserRepository.CreateAsync(GetConfirmedOrganizationUser(organization, user));
 
         // Act
         var results = await policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
@@ -454,23 +333,21 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
 
         // Assert
         Assert.Empty(results);
+
+        await organizationRepository.DeleteAsync(organization);
+        await userRepository.DeleteManyAsync([user]);
     }
 
     [Theory]
     [DatabaseData]
-    public async Task ShouldReturnEmptyForEmptyUserIdsListAsync(
+    public async Task GetPolicyDetailsByUserIdsAndPolicyType_GivenOrganization_WhenRequestingWithNoUsers_ShouldReturnEmptyList(
         IOrganizationRepository organizationRepository,
         IPolicyRepository policyRepository)
     {
         // Arrange
         var organization = await CreateEnterpriseOrgAsync(organizationRepository);
-        var policy = await policyRepository.CreateAsync(new Policy
-        {
-            OrganizationId = organization.Id,
-            Type = PolicyType.TwoFactorAuthentication,
-            Data = "{}",
-            Enabled = true,
-        });
+
+        _ = await policyRepository.CreateAsync(GetPolicy(PolicyType.TwoFactorAuthentication, organization));
 
         // Act
         var results = await policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
@@ -483,55 +360,25 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
 
     [Theory]
     [DatabaseData]
-    public async Task ShouldReturnResultsFromMultipleOrganizationsAsync(
+    public async Task GetPolicyDetailsByUserIdsAndPolicyType_GivenTwoOrganizations_WhenUserIsAMemberOfBoth_ShouldReturnResultsForBothOrganizations(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         IPolicyRepository policyRepository)
     {
         // Arrange
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@example.com",
-            ApiKey = "TEST_API_KEY",
-            SecurityStamp = Guid.NewGuid().ToString(),
-        });
+        var user = await userRepository.CreateAsync(GetDefaultUser());
 
         var organization1 = await CreateEnterpriseOrgAsync(organizationRepository);
         var organization2 = await CreateEnterpriseOrgAsync(organizationRepository);
 
-        var policy1 = await policyRepository.CreateAsync(new Policy
-        {
-            OrganizationId = organization1.Id,
-            Type = PolicyType.TwoFactorAuthentication,
-            Data = "{}",
-            Enabled = true,
-        });
+        _ = await policyRepository.CreateAsync(GetPolicy(PolicyType.TwoFactorAuthentication, organization1));
 
-        var policy2 = await policyRepository.CreateAsync(new Policy
-        {
-            OrganizationId = organization2.Id,
-            Type = PolicyType.TwoFactorAuthentication,
-            Data = "{}",
-            Enabled = true,
-        });
+        _ = await policyRepository.CreateAsync(GetPolicy(PolicyType.TwoFactorAuthentication, organization2));
 
-        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization1.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.User,
-        });
+        _ = await organizationUserRepository.CreateAsync(GetConfirmedOrganizationUser(organization1, user));
 
-        var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization2.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.User,
-        });
+        _ = await organizationUserRepository.CreateAsync(GetConfirmedOrganizationUser(organization2, user));
 
         // Act
         var results = await policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
@@ -566,4 +413,45 @@ public class GetPolicyDetailsByUserIdsAndPolicyTypeTests
             Enabled = true,
         });
     }
+
+    private static User GetDefaultUser() => new()
+    {
+        Name = $"Test User {Guid.NewGuid()}",
+        Email = $"test+{Guid.NewGuid()}@example.com",
+        ApiKey = $"test.api.key.{Guid.NewGuid()}"[..30],
+        SecurityStamp = Guid.NewGuid().ToString()
+    };
+
+    private static OrganizationUser GetAcceptedOrganizationUser(Organization organization, User user) => new()
+    {
+        OrganizationId = organization.Id,
+        UserId = user.Id,
+        Status = OrganizationUserStatusType.Accepted,
+        Type = OrganizationUserType.User
+    };
+
+    private static OrganizationUser GetConfirmedOrganizationUser(Organization organization, User user) => new()
+    {
+        OrganizationId = organization.Id,
+        UserId = user.Id,
+        Status = OrganizationUserStatusType.Confirmed,
+        Type = OrganizationUserType.User
+    };
+
+    private static OrganizationUser GetInvitedOrganizationUser(Organization organization, User user) => new()
+    {
+        OrganizationId = organization.Id,
+        UserId = null, // Invited users don't have UserId
+        Email = user.Email,
+        Status = OrganizationUserStatusType.Invited,
+        Type = OrganizationUserType.User,
+    };
+
+    private static Policy GetPolicy(PolicyType policyType, Organization organization) => new()
+    {
+        OrganizationId = organization.Id,
+        Type = policyType,
+        Data = "{\"test\": \"value\"}",
+        Enabled = true
+    };
 }
