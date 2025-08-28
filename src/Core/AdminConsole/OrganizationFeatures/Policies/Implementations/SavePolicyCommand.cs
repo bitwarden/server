@@ -17,18 +17,20 @@ public class SavePolicyCommand : ISavePolicyCommand
     private readonly IPolicyRepository _policyRepository;
     private readonly IReadOnlyDictionary<PolicyType, IPolicyValidator> _policyValidators;
     private readonly TimeProvider _timeProvider;
+    private readonly IPostSavePolicySideEffect _postSavePolicySideEffect;
 
-    public SavePolicyCommand(
-        IApplicationCacheService applicationCacheService,
+    public SavePolicyCommand(IApplicationCacheService applicationCacheService,
         IEventService eventService,
         IPolicyRepository policyRepository,
         IEnumerable<IPolicyValidator> policyValidators,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IPostSavePolicySideEffect postSavePolicySideEffect)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
         _policyRepository = policyRepository;
         _timeProvider = timeProvider;
+        _postSavePolicySideEffect = postSavePolicySideEffect;
 
         var policyValidatorsDict = new Dictionary<PolicyType, IPolicyValidator>();
         foreach (var policyValidator in policyValidators)
@@ -82,7 +84,7 @@ public class SavePolicyCommand : ISavePolicyCommand
     {
         var policy = await SaveAsync(policyModel.PolicyUpdate);
 
-
+        await _postSavePolicySideEffect.ExecuteSideEffectsAsync(policyModel, policy);
 
         return policy;
     }

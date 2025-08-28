@@ -24,14 +24,14 @@ public class OrganizationDataOwnershipPolicyValidator(
 
     public override Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
 
-    public async Task ExecuteSideEffectsAsync(SavePolicyModel policyModel, Policy? currentPolicy)
+    public async Task ExecuteSideEffectsAsync(SavePolicyModel policyRequest, Policy? postUpdatedPolicy)
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
         {
             return;
         }
 
-        if (policyModel.Metadata is not OrganizationModelOwnershipPolicyModel metadata)
+        if (policyRequest.Metadata is not OrganizationModelOwnershipPolicyModel metadata)
         {
             return;
         }
@@ -41,9 +41,9 @@ public class OrganizationDataOwnershipPolicyValidator(
             return;
         }
 
-        var policyUpdate = policyModel.PolicyUpdate;
+        var policyUpdate = policyRequest.PolicyUpdate;
 
-        if (currentPolicy?.Enabled == true || !policyUpdate.Enabled)
+        if (postUpdatedPolicy?.Enabled == true || !policyUpdate.Enabled)
         {
             return;
         }
