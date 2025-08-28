@@ -15,7 +15,7 @@ using Duende.IdentityServer.Validation;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Identity.Test.IdentityServer;
+namespace Bit.Identity.Test.IdentityServer.SendAccess;
 
 [SutProviderCustomize]
 public class SendPasswordRequestValidatorTests
@@ -113,7 +113,7 @@ public class SendPasswordRequestValidatorTests
         Assert.Equal(sendId, sub.GetSendId());
 
         // Verify claims
-        Assert.Contains(sub.Claims, c => c.Type == Claims.SendId && c.Value == sendId.ToString());
+        Assert.Contains(sub.Claims, c => c.Type == Claims.SendAccessClaims.SendId && c.Value == sendId.ToString());
         Assert.Contains(sub.Claims, c => c.Type == Claims.Type && c.Value == IdentityClientType.Send.ToString());
 
         // Verify password hasher was called
@@ -247,7 +247,7 @@ public class SendPasswordRequestValidatorTests
         Assert.False(result.IsError);
         var sub = result.Subject;
 
-        var sendIdClaim = sub.Claims.FirstOrDefault(c => c.Type == Claims.SendId);
+        var sendIdClaim = sub.Claims.FirstOrDefault(c => c.Type == Claims.SendAccessClaims.SendId);
         Assert.NotNull(sendIdClaim);
         Assert.Equal(sendId.ToString(), sendIdClaim.Value);
 
