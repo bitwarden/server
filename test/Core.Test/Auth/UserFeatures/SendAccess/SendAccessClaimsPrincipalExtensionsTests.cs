@@ -12,7 +12,7 @@ public class SendAccessClaimsPrincipalExtensionsTests
     {
         // Arrange
         var guid = Guid.NewGuid();
-        var claims = new[] { new Claim(Claims.SendId, guid.ToString()) };
+        var claims = new[] { new Claim(Claims.SendAccessClaims.SendId, guid.ToString()) };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
 
         // Act
@@ -37,7 +37,7 @@ public class SendAccessClaimsPrincipalExtensionsTests
     public void GetSendId_ThrowsInvalidOperationException_WhenClaimValueIsInvalid()
     {
         // Arrange
-        var claims = new[] { new Claim(Claims.SendId, "not-a-guid") };
+        var claims = new[] { new Claim(Claims.SendAccessClaims.SendId, "not-a-guid") };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
 
         // Act & Assert
