@@ -16,7 +16,7 @@ public class OrganizationDataOwnershipPolicyValidator(
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories,
     IFeatureService featureService,
     ILogger<OrganizationDataOwnershipPolicyValidator> logger)
-    : OrganizationPolicyValidator(policyRepository, factories), IPostSavePolicySideEffect
+    : OrganizationPolicyValidator(policyRepository, factories), IPostSavePolicySideEffect, IPolicyValidator
 {
     public override PolicyType Type => PolicyType.OrganizationDataOwnership;
 
