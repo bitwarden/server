@@ -30,7 +30,7 @@ public class SendAccessClaimsPrincipalExtensionsTests
 
         // Act & Assert
         var ex = Assert.Throws<InvalidOperationException>(() => principal.GetSendId());
-        Assert.Equal("Send ID claim not found.", ex.Message);
+        Assert.Equal("send_id claim not found.", ex.Message);
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public class SendAccessClaimsPrincipalExtensionsTests
 
         // Act & Assert
         var ex = Assert.Throws<InvalidOperationException>(() => principal.GetSendId());
-        Assert.Equal("Invalid Send ID claim value.", ex.Message);
+        Assert.Equal("Invalid send_id claim value.", ex.Message);
     }
 
     [Fact]
