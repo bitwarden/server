@@ -54,7 +54,7 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
     /// </summary>
     /// <param name="organizationId">The organization ID to create the request for.</param>
     /// <returns>A DefaultCollectionRequest containing the OrganizationUserId and a flag indicating whether to create a default collection.</returns>
-    public DefaultCollectionRequest GetDefaultCollectionRequest(Guid organizationId)
+    public DefaultCollectionRequest GetDefaultCollectionRequestOnPolicyEnable(Guid organizationId)
     {
         var policyDetail = _policyDetails
             .FirstOrDefault(p => p.OrganizationId == organizationId);
