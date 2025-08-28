@@ -1,4 +1,4 @@
-using System.Collections.Specialized;
+﻿using System.Collections.Specialized;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Enums;
 using Bit.Core.Identity;

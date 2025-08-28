@@ -1,4 +1,4 @@
-namespace Bit.Core.Models.Mail.Auth;
+﻿namespace Bit.Core.Models.Mail.Auth;
 
 /// <summary>
 /// Send email OTP view model

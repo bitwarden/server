@@ -68,7 +68,7 @@ public class SendAccessGrantValidator(
                 context.Result = await _sendPasswordRequestValidator.ValidateRequestAsync(context, rp, sendIdGuid);
                 return;
             case EmailOtp eo:
-            // break;
+                // break;
                 context.Result = await _sendEmailOtpRequestValidator.ValidateRequestAsync(context, eo, sendIdGuid);
                 return;
 

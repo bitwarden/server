@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Identity.TokenProviders;
+﻿using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Enums;
 using Bit.Core.IdentityServer;
 using Bit.Core.Services;
@@ -38,7 +38,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests : IClassFixture<Identi
 
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
                 sendAuthQuery.GetAuthenticationMethod(sendId)
-                    .Returns(new EmailOtp(["test@example.com" ]));
+                    .Returns(new EmailOtp(["test@example.com"]));
                 services.AddSingleton(sendAuthQuery);
             });
         }).CreateClient();
