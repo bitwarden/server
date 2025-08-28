@@ -220,11 +220,13 @@ public class PoliciesController : Controller
     [HttpPut("{type}/vnext")]
     [RequireFeatureAttribute(FeatureFlagKeys.CreateDefaultLocation)]
     [Authorize<ManagePoliciesRequirement>]
-    public async Task<PolicyResponseModel> PutVNext(Guid orgId, PolicyType type, [FromBody] SavePolicyRequest model)
+    public async Task<PolicyResponseModel> PutVNext(Guid orgId, [FromBody] SavePolicyRequest model)
     {
-        // This logic will be fleshed out in the following PRs in PM-24279
         var savePolicyModel = await model.ToSavePolicyModelAsync(orgId, _currentContext);
-        return new PolicyResponseModel(new Policy());
+
+        var policy = await _savePolicyCommand.VNextSaveAsync(savePolicyModel);
+
+        return new PolicyResponseModel(policy);
     }
 
 }

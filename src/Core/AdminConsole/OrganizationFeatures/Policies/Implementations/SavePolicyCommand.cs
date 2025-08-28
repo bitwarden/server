@@ -84,13 +84,18 @@ public class SavePolicyCommand : ISavePolicyCommand
     {
         var policy = await SaveAsync(policyModel.PolicyUpdate);
 
-        await _postSavePolicySideEffect.ExecuteSideEffectsAsync(policyModel, policy);
+        await ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(policyModel, policy);
 
         return policy;
     }
 
-
-
+    private async Task ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(SavePolicyModel policyModel, Policy policy)
+    {
+        if (policy.Type == PolicyType.OrganizationDataOwnership)
+        {
+            await _postSavePolicySideEffect.ExecuteSideEffectsAsync(policyModel, policy);
+        }
+    }
 
     private async Task RunValidatorAsync(IPolicyValidator validator, PolicyUpdate policyUpdate)
     {
