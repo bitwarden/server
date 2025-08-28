@@ -95,4 +95,9 @@ public static class SendAccessConstants
         /// </summary>
         public const string TokenUniqueIdentifier = "{0}_{1}";
     }
+
+    public static class OtpEmail
+    {
+        public const string Subject = "Your Bitwarden Send verification code is {0}";
+    }
 }

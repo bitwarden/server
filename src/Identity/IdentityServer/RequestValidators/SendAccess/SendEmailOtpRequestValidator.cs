@@ -61,7 +61,10 @@ public class SendEmailOtpRequestValidator(
                 return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.OtpGenerationFailed);
             }
 
-            await mailService.SendSendEmailOtpEmailAsync(email, token, SendAccessConstants.OtpToken.Purpose);
+            await mailService.SendSendEmailOtpEmailAsync(
+                email,
+                token,
+                string.Format(SendAccessConstants.OtpEmail.Subject, token));
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailOtpSent);
         }
 
@@ -112,8 +115,8 @@ public class SendEmailOtpRequestValidator(
     /// <summary>
     /// Builds a successful validation result for the Send password send_access grant.
     /// </summary>
-    /// <param name="sendId"></param>
-    /// <returns></returns>
+    /// <param name="sendId">Guid of the send being accessed.</param>
+    /// <returns>successful grant validation result</returns>
     private static GrantValidationResult BuildSuccessResult(Guid sendId, string email)
     {
         var claims = new List<Claim>

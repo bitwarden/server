@@ -30,7 +30,7 @@ public interface IMailService
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
     Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, TwoFactorEmailPurpose purpose);
-    Task SendSendEmailOtpEmailAsync(string email, string token, string purpose);
+    Task SendSendEmailOtpEmailAsync(string email, string token, string subject);
     Task SendFailedTwoFactorAttemptEmailAsync(string email, TwoFactorProviderType type, DateTime utcNow, string ip);
     Task SendNoMasterPasswordHintEmailAsync(string email);
     Task SendMasterPasswordHintEmailAsync(string email, string hint);

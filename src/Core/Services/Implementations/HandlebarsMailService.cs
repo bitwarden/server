@@ -200,21 +200,20 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendSendEmailOtpEmailAsync(string email, string token, string purpose)
+    public async Task SendSendEmailOtpEmailAsync(string email, string token, string subject)
     {
-        var message = CreateDefaultMessage("Your Bitwarden Send Verification Code", email);
+        var message = CreateDefaultMessage(subject, email);
         var requestDateTime = DateTime.UtcNow;
         var model = new DefaultEmailOtpViewModel
         {
             Token = token,
-            EmailTotpAction = purpose,
             TheDate = requestDateTime.ToLongDateString(),
             TheTime = requestDateTime.ToShortTimeString(),
             TimeZone = _utcTimeZoneDisplay,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
         };
-        await AddMessageContentAsync(message, "Auth.DefaultEmailOtp", model);
+        await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         message.Category = "TwoFactorEmail";
         await _mailDeliveryService.SendEmailAsync(message);
