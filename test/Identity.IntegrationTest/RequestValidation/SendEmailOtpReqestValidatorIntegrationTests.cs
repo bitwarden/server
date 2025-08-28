@@ -50,7 +50,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests : IClassFixture<Identi
 
         // Assert
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains(OidcConstants.TokenErrors.InvalidGrant, content);
+        Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
         Assert.Contains("email is required", content);
     }
 
@@ -139,7 +139,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests : IClassFixture<Identi
         Assert.True(response.IsSuccessStatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains(OidcConstants.TokenResponse.AccessToken, content);
-        Assert.Contains(OidcConstants.TokenResponse.BearerTokenType, content.ToLower());
+        Assert.Contains(OidcConstants.TokenResponse.BearerTokenType, content);
     }
 
     [Fact]

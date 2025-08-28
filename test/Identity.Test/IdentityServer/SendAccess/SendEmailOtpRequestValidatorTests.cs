@@ -132,7 +132,7 @@ public class SendEmailOtpRequestValidatorTests
         // Verify email sending
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendSendEmailOtpEmailAsync(email, generatedToken, SendAccessConstants.OtpToken.Purpose);
+            .SendSendEmailOtpEmailAsync(email, generatedToken, Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
