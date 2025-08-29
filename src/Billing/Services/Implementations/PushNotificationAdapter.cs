@@ -63,7 +63,8 @@ public class PushNotificationAdapter(
             TargetId = organization.Id,
             Payload = new OrganizationStatusPushNotification
             {
-                OrganizationId = organization.Id, Enabled = organization.Enabled,
+                OrganizationId = organization.Id,
+                Enabled = organization.Enabled,
             },
             ExcludeCurrentContext = false,
         });

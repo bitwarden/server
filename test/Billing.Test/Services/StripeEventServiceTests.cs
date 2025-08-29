@@ -658,11 +658,11 @@ public class StripeEventServiceTests
         var stripeEvent = CreateMockEvent("evt_test", "setup_intent.succeeded", mockSetupIntent);
         var organizationId = Guid.NewGuid();
         var organizationCustomerId = "cus_org_test";
-        
-        var mockOrganization = new Core.AdminConsole.Entities.Organization 
-        { 
-            Id = organizationId, 
-            GatewayCustomerId = organizationCustomerId 
+
+        var mockOrganization = new Core.AdminConsole.Entities.Organization
+        {
+            Id = organizationId,
+            GatewayCustomerId = organizationCustomerId
         };
         var customer = CreateMockCustomer();
 
@@ -694,11 +694,11 @@ public class StripeEventServiceTests
         var stripeEvent = CreateMockEvent("evt_test", "setup_intent.succeeded", mockSetupIntent);
         var providerId = Guid.NewGuid();
         var providerCustomerId = "cus_provider_test";
-        
+
         var mockProvider = new Core.AdminConsole.Entities.Provider.Provider
-        { 
-            Id = providerId, 
-            GatewayCustomerId = providerCustomerId 
+        {
+            Id = providerId,
+            GatewayCustomerId = providerCustomerId
         };
         var customer = CreateMockCustomer();
 
@@ -756,17 +756,17 @@ public class StripeEventServiceTests
         var stripeEvent = CreateMockEvent("evt_test", "setup_intent.succeeded", mockSetupIntent);
         var subscriberId = Guid.NewGuid();
         var providerCustomerId = "cus_provider_test";
-        
-        var mockOrganizationWithoutCustomerId = new Core.AdminConsole.Entities.Organization 
-        { 
-            Id = subscriberId, 
-            GatewayCustomerId = null 
+
+        var mockOrganizationWithoutCustomerId = new Core.AdminConsole.Entities.Organization
+        {
+            Id = subscriberId,
+            GatewayCustomerId = null
         };
-        
+
         var mockProvider = new Core.AdminConsole.Entities.Provider.Provider
-        { 
-            Id = subscriberId, 
-            GatewayCustomerId = providerCustomerId 
+        {
+            Id = subscriberId,
+            GatewayCustomerId = providerCustomerId
         };
         var customer = CreateMockCustomer();
 
@@ -801,11 +801,11 @@ public class StripeEventServiceTests
         var mockSetupIntent = new SetupIntent { Id = "seti_test" };
         var stripeEvent = CreateMockEvent("evt_test", "setup_intent.succeeded", mockSetupIntent);
         var subscriberId = Guid.NewGuid();
-        
+
         var mockProviderWithoutCustomerId = new Core.AdminConsole.Entities.Provider.Provider
-        { 
-            Id = subscriberId, 
-            GatewayCustomerId = null 
+        {
+            Id = subscriberId,
+            GatewayCustomerId = null
         };
 
         _setupIntentCache.GetSubscriberIdForSetupIntent(mockSetupIntent.Id)
