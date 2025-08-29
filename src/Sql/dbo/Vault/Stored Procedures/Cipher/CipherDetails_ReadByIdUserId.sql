@@ -5,7 +5,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-SELECT
+    SELECT
         [Id],
         [UserId],
         [OrganizationId],
@@ -20,6 +20,7 @@ SELECT
         [Reprompt],
         [Key],
         [OrganizationUseTotp],
+        [ArchivedDate],
         MAX ([Edit]) AS [Edit],
         MAX ([ViewPassword]) AS [ViewPassword],
         MAX ([Manage]) AS [Manage]
@@ -41,5 +42,6 @@ SELECT
         [DeletedDate],
         [Reprompt],
         [Key],
-        [OrganizationUseTotp]
+        [OrganizationUseTotp],
+        [ArchivedDate]
 END
