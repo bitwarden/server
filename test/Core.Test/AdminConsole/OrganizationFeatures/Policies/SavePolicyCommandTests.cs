@@ -94,8 +94,8 @@ public class SavePolicyCommandTests
                 Substitute.For<IEventService>(),
                 Substitute.For<IPolicyRepository>(),
                 [new FakeSingleOrgPolicyValidator(), new FakeSingleOrgPolicyValidator()],
-                Substitute.For<TimeProvider>()
-            ));
+                Substitute.For<TimeProvider>(),
+                Substitute.For<IPostSavePolicySideEffect>()));
         Assert.Contains("Duplicate PolicyValidator for SingleOrg policy", exception.Message);
     }
 
@@ -289,6 +289,7 @@ public class SavePolicyCommandTests
         return new SutProvider<SavePolicyCommand>()
             .WithFakeTimeProvider()
             .SetDependency(policyValidators ?? [])
+            .SetDependency(Substitute.For<IPostSavePolicySideEffect>())
             .Create();
     }
 
