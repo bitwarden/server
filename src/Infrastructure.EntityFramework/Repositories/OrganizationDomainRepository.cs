@@ -30,6 +30,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(claimedDomains);
     }
 
+    // L
     public async Task<ICollection<Core.Entities.OrganizationDomain>> GetDomainsByOrganizationIdAsync(Guid orgId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
@@ -152,7 +153,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         var dbContext = GetDatabaseContext(scope);
 
         var expiredDomains = await dbContext.OrganizationDomains
-            .Where(x => x.LastCheckedDate < DateTime.UtcNow.AddDays(-expirationPeriod))
+            .Where(x => x.LastCheckedDate < DateTime.UtcNow.AddDays(-expirationPeriod) && x.VerifiedDate == null)
             .ToListAsync();
         dbContext.OrganizationDomains.RemoveRange(expiredDomains);
         return await dbContext.SaveChangesAsync() > 0;
