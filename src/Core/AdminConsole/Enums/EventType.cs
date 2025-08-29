@@ -71,6 +71,14 @@ public enum EventType : int
     Organization_DisabledKeyConnector = 1607,
     Organization_SponsorshipsSynced = 1608,
     Organization_CollectionManagement_Updated = 1609,
+    Organization_CollectionManagement_LimitCollectionCreationEnabled = 1610,
+    Organization_CollectionManagement_LimitCollectionCreationDisabled = 1611,
+    Organization_CollectionManagement_LimitCollectionDeletionEnabled = 1612,
+    Organization_CollectionManagement_LimitCollectionDeletionDisabled = 1613,
+    Organization_CollectionManagement_LimitItemDeletionEnabled = 1614,
+    Organization_CollectionManagement_LimitItemDeletionDisabled = 1615,
+    Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsEnabled = 1616,
+    Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsDisabled = 1617,
 
     Policy_Updated = 1700,
 
