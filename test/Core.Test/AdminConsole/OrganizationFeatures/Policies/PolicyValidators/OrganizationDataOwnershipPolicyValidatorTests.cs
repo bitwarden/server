@@ -179,7 +179,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
             };
         }
     }
-    [Theory, BitAutoData]
+    [Theory]
     [BitMemberAutoData(nameof(ShouldUpsertDefaultCollectionsTestCases))]
     public async Task ExecuteSideEffectsAsync_WithRequirements_ShouldUpsertDefaultCollections(
         Policy postUpdatedPolicy,
