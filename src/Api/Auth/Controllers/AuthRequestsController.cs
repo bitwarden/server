@@ -102,6 +102,31 @@ public class AuthRequestsController(
     public async Task<AuthRequestResponseModel> Put(Guid id, [FromBody] AuthRequestUpdateRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
+
+        // If the Approving Device is attempting to approve a request
+        if (model.RequestApproved == true)
+        {
+            // Get the current auth request to find the device identifier
+            var currentAuthRequest = await _authRequestService.GetAuthRequestAsync(id, userId);
+            if (currentAuthRequest == null)
+            {
+                throw new NotFoundException();
+            }
+
+            // Get all pending auth requests for this user (returns most recent per device)
+            var pendingRequests = await _authRequestRepository.GetManyPendingAuthRequestByUserId(userId);
+
+            // Find the most recent request for the same device
+            var mostRecentForDevice = pendingRequests
+                .FirstOrDefault(pendingRequest => pendingRequest.RequestDeviceIdentifier == currentAuthRequest.RequestDeviceIdentifier);
+
+            var isMostRecentRequestForDevice = mostRecentForDevice?.Id == id;
+            if (!isMostRecentRequestForDevice)
+            {
+                throw new BadRequestException("This request is no longer valid. Make sure to approve the most recent request.");
+            }
+        }
+
         var authRequest = await _authRequestService.UpdateAuthRequestAsync(id, userId, model);
         return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
     }
