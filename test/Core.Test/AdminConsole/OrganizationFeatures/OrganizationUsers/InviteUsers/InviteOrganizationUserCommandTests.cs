@@ -19,6 +19,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -104,6 +105,8 @@ public class InviteOrganizationUserCommandTests
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
 
+        var requestDate = timeProvider.GetUtcNow();
+
         var request = new InviteOrganizationUsersRequest(
             invites: [
                 new OrganizationUserInviteCommandModel(
@@ -117,7 +120,7 @@ public class InviteOrganizationUserCommandTests
             ],
             inviteOrganization: inviteOrganization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            requestDate);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
@@ -145,9 +148,12 @@ public class InviteOrganizationUserCommandTests
         // Assert
         Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
 
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
+        await sutProvider.GetDependency<IOrganizationRepository>()
             .Received(1)
-            .CreateManyAsync(Arg.Is<IEnumerable<CreateOrganizationUser>>(users =>
+            .AddUsersToPasswordManagerAsync(organization.Id,
+                requestDate.UtcDateTime,
+                Arg.Any<Plan>(),
+                Arg.Is<IEnumerable<CreateOrganizationUser>>(users =>
                 users.Any(user => user.OrganizationUser.Email == request.Invites.First().Email)));
 
         await sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
@@ -401,7 +407,8 @@ public class InviteOrganizationUserCommandTests
         organization.MaxAutoscaleSeats = 2;
         ownerDetails.Type = OrganizationUserType.Owner;
 
-        var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+        var plan = new FreePlan();
+        var inviteOrganization = new InviteOrganization(organization, plan);
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
@@ -453,7 +460,10 @@ public class InviteOrganizationUserCommandTests
         // Assert
         Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
 
-        await orgRepository.Received(1).IncrementSeatCountAsync(organization.Id, passwordManagerUpdate.SeatsRequiredToAdd, request.PerformedAt.UtcDateTime);
+        await orgRepository.Received(1).AddUsersToPasswordManagerAsync(organization.Id,
+            request.PerformedAt.UtcDateTime,
+            plan,
+            Arg.Any<IEnumerable<CreateOrganizationUser>>());
 
         await sutProvider.GetDependency<IApplicationCacheService>()
             .Received(1)
