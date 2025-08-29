@@ -15,6 +15,7 @@ using Bit.Core.Billing.Models.Mail;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
+using Bit.Core.Models.Mail.Auth;
 using Bit.Core.Models.Mail.Billing;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
@@ -194,6 +195,25 @@ public class HandlebarsMailService : IMailService
             DisplayTwoFactorReminder = purpose == TwoFactorEmailPurpose.NewDeviceVerification
         };
         await AddMessageContentAsync(message, "Auth.TwoFactorEmail", model);
+        message.MetaData.Add("SendGridBypassListManagement", true);
+        message.Category = "TwoFactorEmail";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendSendEmailOtpEmailAsync(string email, string token, string subject)
+    {
+        var message = CreateDefaultMessage(subject, email);
+        var requestDateTime = DateTime.UtcNow;
+        var model = new DefaultEmailOtpViewModel
+        {
+            Token = token,
+            TheDate = requestDateTime.ToLongDateString(),
+            TheTime = requestDateTime.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+        };
+        await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         message.Category = "TwoFactorEmail";
         await _mailDeliveryService.SendEmailAsync(message);
