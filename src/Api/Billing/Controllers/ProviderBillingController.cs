@@ -1,7 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Commercial.Core.Billing.Providers.Services;
 using Bit.Core.AdminConsole.Repositories;
@@ -10,7 +9,6 @@ using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
@@ -77,51 +75,6 @@ public class ProviderBillingController(
             "text/csv");
     }
 
-    [HttpPut("payment-method")]
-    public async Task<IResult> UpdatePaymentMethodAsync(
-        [FromRoute] Guid providerId,
-        [FromBody] UpdatePaymentMethodRequestBody requestBody)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        var tokenizedPaymentSource = requestBody.PaymentSource.ToDomain();
-        var taxInformation = requestBody.TaxInformation.ToDomain();
-
-        await providerBillingService.UpdatePaymentMethod(
-            provider,
-            tokenizedPaymentSource,
-            taxInformation);
-
-        return TypedResults.Ok();
-    }
-
-    [HttpPost("payment-method/verify-bank-account")]
-    public async Task<IResult> VerifyBankAccountAsync(
-        [FromRoute] Guid providerId,
-        [FromBody] VerifyBankAccountRequestBody requestBody)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        if (requestBody.DescriptorCode.Length != 6 || !requestBody.DescriptorCode.StartsWith("SM"))
-        {
-            return Error.BadRequest("Statement descriptor should be a 6-character value that starts with 'SM'");
-        }
-
-        await subscriberService.VerifyBankAccount(provider, requestBody.DescriptorCode);
-
-        return TypedResults.Ok();
-    }
-
     [HttpGet("subscription")]
     public async Task<IResult> GetSubscriptionAsync([FromRoute] Guid providerId)
     {
@@ -172,54 +125,5 @@ public class ProviderBillingController(
             paymentSource);
 
         return TypedResults.Ok(response);
-    }
-
-    [HttpGet("tax-information")]
-    public async Task<IResult> GetTaxInformationAsync([FromRoute] Guid providerId)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        var taxInformation = await subscriberService.GetTaxInformation(provider);
-
-        var response = TaxInformationResponse.From(taxInformation);
-
-        return TypedResults.Ok(response);
-    }
-
-    [HttpPut("tax-information")]
-    public async Task<IResult> UpdateTaxInformationAsync(
-        [FromRoute] Guid providerId,
-        [FromBody] TaxInformationRequestBody requestBody)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        if (requestBody is not { Country: not null, PostalCode: not null })
-        {
-            return Error.BadRequest("Country and postal code are required to update your tax information.");
-        }
-
-        var taxInformation = new TaxInformation(
-            requestBody.Country,
-            requestBody.PostalCode,
-            requestBody.TaxId,
-            requestBody.TaxIdType,
-            requestBody.Line1,
-            requestBody.Line2,
-            requestBody.City,
-            requestBody.State);
-
-        await subscriberService.UpdateTaxInformation(provider, taxInformation);
-
-        return TypedResults.Ok();
     }
 }

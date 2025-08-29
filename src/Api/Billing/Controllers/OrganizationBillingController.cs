@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
@@ -29,7 +28,6 @@ public class OrganizationBillingController(
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
     IPricingClient pricingClient,
-    ISubscriberService subscriberService,
     IPaymentHistoryService paymentHistoryService,
     IUserService userService) : BaseBillingController
 {
@@ -118,150 +116,6 @@ public class OrganizationBillingController(
             startAfter);
 
         return TypedResults.Ok(transactions);
-    }
-
-    [HttpGet]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<IResult> GetBillingAsync(Guid organizationId)
-    {
-        if (!await currentContext.ViewBillingHistory(organizationId))
-        {
-            return Error.Unauthorized();
-        }
-
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
-
-        if (organization == null)
-        {
-            return Error.NotFound();
-        }
-
-        var billingInfo = await paymentService.GetBillingAsync(organization);
-
-        var response = new BillingResponseModel(billingInfo);
-
-        return TypedResults.Ok(response);
-    }
-
-    [HttpGet("payment-method")]
-    public async Task<IResult> GetPaymentMethodAsync([FromRoute] Guid organizationId)
-    {
-        if (!await currentContext.EditPaymentMethods(organizationId))
-        {
-            return Error.Unauthorized();
-        }
-
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
-
-        if (organization == null)
-        {
-            return Error.NotFound();
-        }
-
-        var paymentMethod = await subscriberService.GetPaymentMethod(organization);
-
-        var response = PaymentMethodResponse.From(paymentMethod);
-
-        return TypedResults.Ok(response);
-    }
-
-    [HttpPut("payment-method")]
-    public async Task<IResult> UpdatePaymentMethodAsync(
-        [FromRoute] Guid organizationId,
-        [FromBody] UpdatePaymentMethodRequestBody requestBody)
-    {
-        if (!await currentContext.EditPaymentMethods(organizationId))
-        {
-            return Error.Unauthorized();
-        }
-
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
-
-        if (organization == null)
-        {
-            return Error.NotFound();
-        }
-
-        var tokenizedPaymentSource = requestBody.PaymentSource.ToDomain();
-
-        var taxInformation = requestBody.TaxInformation.ToDomain();
-
-        await organizationBillingService.UpdatePaymentMethod(organization, tokenizedPaymentSource, taxInformation);
-
-        return TypedResults.Ok();
-    }
-
-    [HttpPost("payment-method/verify-bank-account")]
-    public async Task<IResult> VerifyBankAccountAsync(
-        [FromRoute] Guid organizationId,
-        [FromBody] VerifyBankAccountRequestBody requestBody)
-    {
-        if (!await currentContext.EditPaymentMethods(organizationId))
-        {
-            return Error.Unauthorized();
-        }
-
-        if (requestBody.DescriptorCode.Length != 6 || !requestBody.DescriptorCode.StartsWith("SM"))
-        {
-            return Error.BadRequest("Statement descriptor should be a 6-character value that starts with 'SM'");
-        }
-
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
-
-        if (organization == null)
-        {
-            return Error.NotFound();
-        }
-
-        await subscriberService.VerifyBankAccount(organization, requestBody.DescriptorCode);
-
-        return TypedResults.Ok();
-    }
-
-    [HttpGet("tax-information")]
-    public async Task<IResult> GetTaxInformationAsync([FromRoute] Guid organizationId)
-    {
-        if (!await currentContext.EditPaymentMethods(organizationId))
-        {
-            return Error.Unauthorized();
-        }
-
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
-
-        if (organization == null)
-        {
-            return Error.NotFound();
-        }
-
-        var taxInformation = await subscriberService.GetTaxInformation(organization);
-
-        var response = TaxInformationResponse.From(taxInformation);
-
-        return TypedResults.Ok(response);
-    }
-
-    [HttpPut("tax-information")]
-    public async Task<IResult> UpdateTaxInformationAsync(
-        [FromRoute] Guid organizationId,
-        [FromBody] TaxInformationRequestBody requestBody)
-    {
-        if (!await currentContext.EditPaymentMethods(organizationId))
-        {
-            return Error.Unauthorized();
-        }
-
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
-
-        if (organization == null)
-        {
-            return Error.NotFound();
-        }
-
-        var taxInformation = requestBody.ToDomain();
-
-        await subscriberService.UpdateTaxInformation(organization, taxInformation);
-
-        return TypedResults.Ok();
     }
 
     [HttpPost("restart-subscription")]

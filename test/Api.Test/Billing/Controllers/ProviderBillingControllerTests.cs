@@ -1,5 +1,4 @@
 ﻿using Bit.Api.Billing.Controllers;
-using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Commercial.Core.Billing.Providers.Services;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -11,8 +10,6 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
-using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.BitStripe;
@@ -404,51 +401,6 @@ public class ProviderBillingControllerTests
         Assert.Equal(overdueInvoice.Created.AddDays(14), response.Suspension.SuspensionDate);
         Assert.Equal(overdueInvoice.PeriodEnd, response.Suspension.UnpaidPeriodEndDate);
         Assert.Equal(14, response.Suspension.GracePeriod);
-    }
-
-    #endregion
-
-    #region UpdateTaxInformationAsync
-
-    [Theory, BitAutoData]
-    public async Task UpdateTaxInformation_NoCountry_BadRequest(
-        Provider provider,
-        TaxInformationRequestBody requestBody,
-        SutProvider<ProviderBillingController> sutProvider)
-    {
-        ConfigureStableProviderAdminInputs(provider, sutProvider);
-
-        requestBody.Country = null;
-
-        var result = await sutProvider.Sut.UpdateTaxInformationAsync(provider.Id, requestBody);
-
-        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
-
-        var response = (BadRequest<ErrorResponseModel>)result;
-
-        Assert.Equal("Country and postal code are required to update your tax information.", response.Value.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateTaxInformation_Ok(
-        Provider provider,
-        TaxInformationRequestBody requestBody,
-        SutProvider<ProviderBillingController> sutProvider)
-    {
-        ConfigureStableProviderAdminInputs(provider, sutProvider);
-
-        await sutProvider.Sut.UpdateTaxInformationAsync(provider.Id, requestBody);
-
-        await sutProvider.GetDependency<ISubscriberService>().Received(1).UpdateTaxInformation(
-            provider, Arg.Is<TaxInformation>(
-                options =>
-                    options.Country == requestBody.Country &&
-                    options.PostalCode == requestBody.PostalCode &&
-                    options.TaxId == requestBody.TaxId &&
-                    options.Line1 == requestBody.Line1 &&
-                    options.Line2 == requestBody.Line2 &&
-                    options.City == requestBody.City &&
-                    options.State == requestBody.State));
     }
 
     #endregion
