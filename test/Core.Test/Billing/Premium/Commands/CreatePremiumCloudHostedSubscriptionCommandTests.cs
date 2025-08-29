@@ -87,7 +87,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Assert
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
-        Assert.Equal("You can't subtract storage!", badRequest.Response);
+        Assert.Equal("You can't subtract storage.", badRequest.Response);
     }
 
     [Theory]
