@@ -7,25 +7,40 @@ using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Reports.Repositories;
 using Bit.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
 public class MemberAccessReportQuery(
     IOrganizationMemberBaseDetailRepository organizationMemberBaseDetailRepository,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-    IApplicationCacheService applicationCacheService) : IMemberAccessReportQuery
+    IApplicationCacheService applicationCacheService,
+    ILogger<MemberAccessReportQuery> logger) : IMemberAccessReportQuery
 {
     public async Task<IEnumerable<MemberAccessReportDetail>> GetMemberAccessReportsAsync(
         MemberAccessReportRequest request)
     {
+        logger.LogInformation(Constants.BypassFiltersEventId, "Starting MemberAccessReport generation for OrganizationId: {OrganizationId}", request.OrganizationId);
+
         var baseDetails =
             await organizationMemberBaseDetailRepository.GetOrganizationMemberBaseDetailsByOrganizationId(
                 request.OrganizationId);
 
+        logger.LogInformation(Constants.BypassFiltersEventId, "Retrieved {BaseDetailsCount} base details for OrganizationId: {OrganizationId}",
+            baseDetails.Count(), request.OrganizationId);
+
         var orgUsers = baseDetails.Select(x => x.UserGuid.GetValueOrDefault()).Distinct();
+        var orgUsersCount = orgUsers.Count();
+        logger.LogInformation(Constants.BypassFiltersEventId, "Found {UniqueUsersCount} unique users for OrganizationId: {OrganizationId}",
+            orgUsersCount, request.OrganizationId);
+
         var orgUsersTwoFactorEnabled = await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUsers);
+        logger.LogInformation(Constants.BypassFiltersEventId, "Retrieved two-factor status for {UsersCount} users for OrganizationId: {OrganizationId}",
+            orgUsersTwoFactorEnabled.Count(), request.OrganizationId);
 
         var orgAbility = await applicationCacheService.GetOrganizationAbilityAsync(request.OrganizationId);
+        logger.LogInformation(Constants.BypassFiltersEventId, "Retrieved organization ability (UseResetPassword: {UseResetPassword}) for OrganizationId: {OrganizationId}",
+            orgAbility?.UseResetPassword, request.OrganizationId);
 
         var accessDetails = baseDetails
             .GroupBy(b => new
@@ -61,6 +76,10 @@ public class MemberAccessReportQuery(
                 Manage = g.Key.Manage,
                 CipherIds = g.Select(c => c.CipherId)
             });
+
+        var accessDetailsCount = accessDetails.Count();
+        logger.LogInformation(Constants.BypassFiltersEventId, "Completed MemberAccessReport generation for OrganizationId: {OrganizationId}. Generated {AccessDetailsCount} access detail records",
+            request.OrganizationId, accessDetailsCount);
 
         return accessDetails;
     }
