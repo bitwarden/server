@@ -19,7 +19,9 @@ public interface IOrganizationService
     Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
     Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
     Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate);
-    Task UpdateAsync(Organization organization, bool updateBilling = false, EventType eventType = EventType.Organization_Updated);
+    Task UpdateAsync(Organization organization, bool updateBilling = false);
+    Task<Organization> UpdateCollectionManagementSettingsAsync(Guid organizationId, bool limitCollectionCreation,
+        bool limitCollectionDeletion, bool limitItemDeletion, bool allowAdminAccessToAllCollectionItems);
     Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
     Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
     Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser,

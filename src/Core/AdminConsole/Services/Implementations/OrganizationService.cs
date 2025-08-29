@@ -378,8 +378,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task UpdateAsync(Organization organization, bool updateBilling = false,
-        EventType eventType = EventType.Organization_Updated)
+    public async Task UpdateAsync(Organization organization, bool updateBilling = false)
     {
         if (organization.Id == default(Guid))
         {
@@ -395,7 +394,7 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        await ReplaceAndUpdateCacheAsync(organization, eventType);
+        await ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
 
         if (updateBilling && !string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
         {
@@ -420,11 +419,38 @@ public class OrganizationService : IOrganizationService
                     },
                 });
         }
+    }
 
-        if (eventType == EventType.Organization_CollectionManagement_Updated)
+    public async Task<Organization> UpdateCollectionManagementSettingsAsync(Guid organizationId, bool limitCollectionCreation,
+        bool limitCollectionDeletion, bool limitItemDeletion, bool allowAdminAccessToAllCollectionItems)
+    {
+        var existingOrganization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (existingOrganization == null)
         {
-            await _pushNotificationService.PushSyncOrganizationCollectionManagementSettingsAsync(organization);
+            throw new NotFoundException();
         }
+
+        // Create logging actions based on what will change
+        var loggingActions = CreateCollectionManagementLoggingActions(
+            existingOrganization, limitCollectionCreation, limitCollectionDeletion,
+            limitItemDeletion, allowAdminAccessToAllCollectionItems);
+
+        existingOrganization.LimitCollectionCreation = limitCollectionCreation;
+        existingOrganization.LimitCollectionDeletion = limitCollectionDeletion;
+        existingOrganization.LimitItemDeletion = limitItemDeletion;
+        existingOrganization.AllowAdminAccessToAllCollectionItems = allowAdminAccessToAllCollectionItems;
+        existingOrganization.RevisionDate = DateTime.UtcNow;
+
+        await ReplaceAndUpdateCacheAsync(existingOrganization);
+
+        if (loggingActions.Any())
+        {
+            await Task.WhenAll(loggingActions.Select(action => action()));
+        }
+
+        await _pushNotificationService.PushSyncOrganizationCollectionManagementSettingsAsync(existingOrganization);
+
+        return existingOrganization;
     }
 
     public async Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type)
@@ -1213,5 +1239,46 @@ public class OrganizationService : IOrganizationService
         }
 
         return status;
+    }
+
+    private List<Func<Task>> CreateCollectionManagementLoggingActions(
+        Organization existingOrganization, bool limitCollectionCreation, bool limitCollectionDeletion,
+        bool limitItemDeletion, bool allowAdminAccessToAllCollectionItems)
+    {
+        var loggingActions = new List<Func<Task>>();
+
+        if (existingOrganization.LimitCollectionCreation != limitCollectionCreation)
+        {
+            var eventType = limitCollectionCreation
+                ? EventType.Organization_CollectionManagement_LimitCollectionCreationEnabled
+                : EventType.Organization_CollectionManagement_LimitCollectionCreationDisabled;
+            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
+        }
+
+        if (existingOrganization.LimitCollectionDeletion != limitCollectionDeletion)
+        {
+            var eventType = limitCollectionDeletion
+                ? EventType.Organization_CollectionManagement_LimitCollectionDeletionEnabled
+                : EventType.Organization_CollectionManagement_LimitCollectionDeletionDisabled;
+            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
+        }
+
+        if (existingOrganization.LimitItemDeletion != limitItemDeletion)
+        {
+            var eventType = limitItemDeletion
+                ? EventType.Organization_CollectionManagement_LimitItemDeletionEnabled
+                : EventType.Organization_CollectionManagement_LimitItemDeletionDisabled;
+            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
+        }
+
+        if (existingOrganization.AllowAdminAccessToAllCollectionItems != allowAdminAccessToAllCollectionItems)
+        {
+            var eventType = allowAdminAccessToAllCollectionItems
+                ? EventType.Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsEnabled
+                : EventType.Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsDisabled;
+            loggingActions.Add(() => _eventService.LogOrganizationEventAsync(existingOrganization, eventType));
+        }
+
+        return loggingActions;
     }
 }
