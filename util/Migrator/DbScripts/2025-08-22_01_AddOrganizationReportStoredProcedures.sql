@@ -40,7 +40,6 @@ END
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_GetSummaryDataById]
-    @OrganizationId UNIQUEIDENTIFIER,
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -51,7 +50,7 @@ SELECT
     [OrganizationId],
     [SummaryData]
 FROM [dbo].[OrganizationReportView]
-WHERE [OrganizationId] = @OrganizationId AND [Id] = @Id
+WHERE [Id] = @Id
 END
 GO
 
@@ -74,7 +73,6 @@ END
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_GetReportDataById]
-    @OrganizationId UNIQUEIDENTIFIER,
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -85,8 +83,7 @@ BEGIN
         [OrganizationId],
         [ReportData]
     FROM [dbo].[OrganizationReportView]
-    WHERE [OrganizationId] = @OrganizationId
-      AND [Id] = @Id
+    WHERE [Id] = @Id
 END
 GO
 
