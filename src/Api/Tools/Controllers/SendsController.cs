@@ -16,6 +16,7 @@ using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
+using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -33,6 +34,9 @@ public class SendsController : Controller
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly IAnonymousSendCommand _anonymousSendCommand;
     private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
+
+    private readonly ISendOwnerQuery _sendOwnerQuery;
+
     private readonly ILogger<SendsController> _logger;
     private readonly GlobalSettings _globalSettings;
 
@@ -42,6 +46,7 @@ public class SendsController : Controller
         ISendAuthorizationService sendAuthorizationService,
         IAnonymousSendCommand anonymousSendCommand,
         INonAnonymousSendCommand nonAnonymousSendCommand,
+        ISendOwnerQuery sendOwnerQuery,
         ISendFileStorageService sendFileStorageService,
         ILogger<SendsController> logger,
         GlobalSettings globalSettings)
@@ -51,6 +56,7 @@ public class SendsController : Controller
         _sendAuthorizationService = sendAuthorizationService;
         _anonymousSendCommand = anonymousSendCommand;
         _nonAnonymousSendCommand = nonAnonymousSendCommand;
+        _sendOwnerQuery = sendOwnerQuery;
         _sendFileStorageService = sendFileStorageService;
         _logger = logger;
         _globalSettings = globalSettings;
@@ -181,23 +187,19 @@ public class SendsController : Controller
     [HttpGet("{id}")]
     public async Task<SendResponseModel> Get(string id)
     {
-        var userId = _userService.GetProperUserId(User).Value;
-        var send = await _sendRepository.GetByIdAsync(new Guid(id));
-        if (send == null || send.UserId != userId)
-        {
-            throw new NotFoundException();
-        }
-
-        return new SendResponseModel(send, _globalSettings);
+        var sendId = new Guid(id);
+        var send = await _sendOwnerQuery.Get(sendId, User);
+        return new SendResponseModel(send);
     }
 
     [HttpGet("")]
     public async Task<ListResponseModel<SendResponseModel>> Get()
     {
-        var userId = _userService.GetProperUserId(User).Value;
-        var sends = await _sendRepository.GetManyByUserIdAsync(userId);
-        var responses = sends.Select(s => new SendResponseModel(s, _globalSettings));
-        return new ListResponseModel<SendResponseModel>(responses);
+        var sends = await _sendOwnerQuery.GetOwned(User);
+        var responses = sends.Select(s => new SendResponseModel(s));
+        var result = new ListResponseModel<SendResponseModel>(responses);
+
+        return result;
     }
 
     [HttpPost("")]
@@ -207,7 +209,7 @@ public class SendsController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var send = model.ToSend(userId, _sendAuthorizationService);
         await _nonAnonymousSendCommand.SaveSendAsync(send);
-        return new SendResponseModel(send, _globalSettings);
+        return new SendResponseModel(send);
     }
 
     [HttpPost("file/v2")]
@@ -236,7 +238,7 @@ public class SendsController : Controller
         {
             Url = uploadUrl,
             FileUploadType = _sendFileStorageService.FileUploadType,
-            SendResponse = new SendResponseModel(send, _globalSettings)
+            SendResponse = new SendResponseModel(send)
         };
     }
 
@@ -260,7 +262,7 @@ public class SendsController : Controller
         {
             Url = await _sendFileStorageService.GetSendFileUploadUrlAsync(send, fileId),
             FileUploadType = _sendFileStorageService.FileUploadType,
-            SendResponse = new SendResponseModel(send, _globalSettings),
+            SendResponse = new SendResponseModel(send),
         };
     }
 
@@ -294,7 +296,7 @@ public class SendsController : Controller
         }
 
         await _nonAnonymousSendCommand.SaveSendAsync(model.ToSend(send, _sendAuthorizationService));
-        return new SendResponseModel(send, _globalSettings);
+        return new SendResponseModel(send);
     }
 
     [HttpPut("{id}/remove-password")]
@@ -309,7 +311,7 @@ public class SendsController : Controller
 
         send.Password = null;
         await _nonAnonymousSendCommand.SaveSendAsync(send);
-        return new SendResponseModel(send, _globalSettings);
+        return new SendResponseModel(send);
     }
 
     [HttpDelete("{id}")]
