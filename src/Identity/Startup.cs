@@ -66,15 +66,7 @@ public class Startup
 
         services.AddSwaggerGen(config =>
         {
-            config.SchemaFilter<EnumSchemaFilter>();
-            config.SchemaFilter<EncryptedStringSchemaFilter>();
-
-            // These two filters require debug symbols/git, so only add them in development mode
-            if (Environment.IsDevelopment())
-            {
-                config.DocumentFilter<GitCommitDocumentFilter>();
-                config.OperationFilter<SourceFileLineOperationFilter>();
-            }
+            config.InitializeSwaggerFilters(Environment);
 
             config.SwaggerDoc("v1", new OpenApiInfo { Title = "Bitwarden Identity", Version = "v1" });
         });
