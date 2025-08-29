@@ -68,7 +68,7 @@ public class UpdateOrganizationReportApplicationDataCommand : IUpdateOrganizatio
         }
     }
 
-    private async Task<(bool IsValid, string errorMessage)> ValidateRequestAsync(UpdateOrganizationReportApplicationDataRequest request)
+    private async Task<(bool isValid, string errorMessage)> ValidateRequestAsync(UpdateOrganizationReportApplicationDataRequest request)
     {
         if (request.OrganizationId == Guid.Empty)
         {

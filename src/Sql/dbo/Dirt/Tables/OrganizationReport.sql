@@ -14,7 +14,7 @@ GO
 
 
 CREATE NONCLUSTERED INDEX [IX_OrganizationReport_OrganizationId]
-   ON [dbo].[OrganizationReport]([OrganizationId] ASC);
+   ON [dbo].[OrganizationReport] ([OrganizationId] ASC);
 GO
 
 

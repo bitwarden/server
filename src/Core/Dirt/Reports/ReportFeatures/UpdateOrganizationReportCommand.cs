@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Dirt.Entities;
+﻿using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
@@ -67,7 +64,14 @@ public class UpdateOrganizationReportCommand : IUpdateOrganizationReportCommand
             _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully updated organization report {reportId} for organization {organizationId}",
                 request.ReportId, request.OrganizationId);
 
-            return await _organizationReportRepo.GetByIdAsync(request.ReportId);
+            var response = await _organizationReportRepo.GetByIdAsync(request.ReportId);
+
+            if (response == null)
+            {
+                _logger.LogWarning(Constants.BypassFiltersEventId, "Organization report {reportId} not found after update", request.ReportId);
+                throw new NotFoundException("Organization report not found after update");
+            }
+            return response;
         }
         catch (Exception ex) when (!(ex is BadRequestException || ex is NotFoundException))
         {

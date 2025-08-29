@@ -10,7 +10,7 @@ BEGIN
         [Id],
         [OrganizationId],
         [SummaryData]
-    FROM [dbo].[OrganizationReport]
+    FROM [dbo].[OrganizationReportView]
     WHERE [OrganizationId] = @OrganizationId
         AND [RevisionDate] >= @StartDate
         AND [RevisionDate] <= @EndDate

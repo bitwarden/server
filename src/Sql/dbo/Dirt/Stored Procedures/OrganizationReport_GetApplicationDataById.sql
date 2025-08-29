@@ -1,5 +1,4 @@
 CREATE PROCEDURE [dbo].[OrganizationReport_GetApplicationDataById]
-    @OrganizationId UNIQUEIDENTIFIER,
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -9,8 +8,7 @@ BEGIN
         [Id],
         [OrganizationId],
         [ApplicationData]
-    FROM [dbo].[OrganizationReport]
-    WHERE [OrganizationId] = @OrganizationId
-    AND [Id] = @Id
+    FROM [dbo].[OrganizationReportView]
+    WHERE [Id] = @Id
 END
 

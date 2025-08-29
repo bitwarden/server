@@ -13,7 +13,7 @@ BEGIN
         [SummaryData],
         [ApplicationData],
         [RevisionDate]
-    FROM [dbo].[OrganizationReport]
+    FROM [dbo].[OrganizationReportView]
     WHERE [OrganizationId] = @OrganizationId
     ORDER BY [RevisionDate] DESC
 END

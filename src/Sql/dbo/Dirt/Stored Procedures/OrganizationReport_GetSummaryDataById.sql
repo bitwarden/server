@@ -1,5 +1,4 @@
 CREATE PROCEDURE [dbo].[OrganizationReport_GetSummaryDataById]
-    @OrganizationId UNIQUEIDENTIFIER,
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -9,8 +8,8 @@ BEGIN
         [Id],
         [OrganizationId],
         [SummaryData]
-    FROM [dbo].[OrganizationReport]
-    WHERE [OrganizationId] = @OrganizationId AND [Id] = @Id
+    FROM [dbo].[OrganizationReportView]
+    WHERE [Id] = @Id
 END
 
 

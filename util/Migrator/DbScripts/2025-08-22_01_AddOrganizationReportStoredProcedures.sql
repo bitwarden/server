@@ -13,7 +13,7 @@ BEGIN
         [SummaryData],
         [ApplicationData],
         [RevisionDate]
-    FROM [dbo].[OrganizationReport]
+    FROM [dbo].[OrganizationReportView]
     WHERE [OrganizationId] = @OrganizationId
     ORDER BY [RevisionDate] DESC
 END
@@ -31,7 +31,7 @@ SELECT
     [Id],
     [OrganizationId],
     [SummaryData]
-FROM [dbo].[OrganizationReport]
+FROM [dbo].[OrganizationReportView]
 WHERE [OrganizationId] = @OrganizationId
   AND [RevisionDate] >= @StartDate
   AND [RevisionDate] <= @EndDate
@@ -50,7 +50,7 @@ SELECT
     [Id],
     [OrganizationId],
     [SummaryData]
-FROM [dbo].[OrganizationReport]
+FROM [dbo].[OrganizationReportView]
 WHERE [OrganizationId] = @OrganizationId AND [Id] = @Id
 END
 GO
@@ -84,7 +84,7 @@ BEGIN
         [Id],
         [OrganizationId],
         [ReportData]
-    FROM [dbo].[OrganizationReport]
+    FROM [dbo].[OrganizationReportView]
     WHERE [OrganizationId] = @OrganizationId
       AND [Id] = @Id
 END
@@ -109,7 +109,6 @@ END
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_GetApplicationDataById]
-    @OrganizationId UNIQUEIDENTIFIER,
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -119,9 +118,8 @@ BEGIN
         [Id],
         [OrganizationId],
         [ApplicationData]
-    FROM [dbo].[OrganizationReport]
-    WHERE [OrganizationId] = @OrganizationId
-      AND [Id] = @Id;
+    FROM [dbo].[OrganizationReportView]
+    WHERE [Id] = @Id;
 END
 GO
 
