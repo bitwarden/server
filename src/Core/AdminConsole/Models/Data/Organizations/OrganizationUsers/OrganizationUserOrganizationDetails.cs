@@ -49,6 +49,7 @@ public class OrganizationUserOrganizationDetails
     public string ProviderName { get; set; }
     public ProviderType? ProviderType { get; set; }
     public string FamilySponsorshipFriendlyName { get; set; }
+    public bool? SsoEnabled { get; set; }
     public string SsoConfig { get; set; }
     public DateTime? FamilySponsorshipLastSyncDate { get; set; }
     public DateTime? FamilySponsorshipValidUntil { get; set; }
