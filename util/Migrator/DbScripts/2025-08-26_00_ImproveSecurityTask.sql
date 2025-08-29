@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
+CREATE OR ALTER PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
     @UserId UNIQUEIDENTIFIER,
     @Status TINYINT = NULL
 AS
@@ -84,4 +84,69 @@ BEGIN
     ORDER BY
         ST.CreationDate DESC
     OPTION (RECOMPILE);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID('dbo.CollectionGroup')
+        AND name = 'IX_CollectionGroup_GroupId_ReadOnly'
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_CollectionGroup_GroupId_ReadOnly
+      ON dbo.CollectionGroup (GroupId, ReadOnly)
+      INCLUDE (CollectionId);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID('dbo.CollectionUser')
+        AND name = 'IX_CollectionUser_OrganizationUserId_ReadOnly'
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_CollectionUser_OrganizationUserId_ReadOnly
+      ON dbo.CollectionUser (OrganizationUserId, ReadOnly)
+      INCLUDE (CollectionId);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID('dbo.SecurityTask')
+        AND name = 'IX_SecurityTask_Status_OrgId_CreationDateDesc'
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_SecurityTask_Status_OrgId_CreationDateDesc
+      ON dbo.SecurityTask (Status, OrganizationId, CreationDate DESC)
+      INCLUDE (CipherId, [Type], RevisionDate);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID('dbo.CollectionCipher')
+        AND name = 'IX_CollectionCipher_CollectionId_CipherId'
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_CollectionCipher_CollectionId_CipherId
+        ON dbo.CollectionCipher (CollectionId, CipherId);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID('dbo.OrganizationUser')
+        AND name = 'IX_OrganizationUser_UserId_Status_Filtered'
+)
+BEGIN
+CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserId_Status_Filtered]
+    ON [dbo].[OrganizationUser] (UserId)
+    INCLUDE (Id, OrganizationId)
+    WHERE Status = 2;
 END
