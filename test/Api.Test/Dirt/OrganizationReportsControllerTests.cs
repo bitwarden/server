@@ -595,7 +595,7 @@ public class OrganizationReportControllerTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.GetOrganizationReportSummaryAsync(orgId, reportId));
 
-        Assert.Equal("Invalid report id", exception.Message);
+        Assert.Equal("Invalid report ID", exception.Message);
     }
 
     [Theory, BitAutoData]
