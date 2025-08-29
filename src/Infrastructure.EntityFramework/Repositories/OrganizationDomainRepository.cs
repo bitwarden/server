@@ -30,7 +30,6 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(claimedDomains);
     }
 
-    // L
     public async Task<ICollection<Core.Entities.OrganizationDomain>> GetDomainsByOrganizationIdAsync(Guid orgId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
