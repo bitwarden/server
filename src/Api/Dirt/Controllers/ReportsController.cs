@@ -23,9 +23,6 @@ public class ReportsController : Controller
     private readonly IAddPasswordHealthReportApplicationCommand _addPwdHealthReportAppCommand;
     private readonly IGetPasswordHealthReportApplicationQuery _getPwdHealthReportAppQuery;
     private readonly IDropPasswordHealthReportApplicationCommand _dropPwdHealthReportAppCommand;
-    private readonly IAddOrganizationReportCommand _addOrganizationReportCommand;
-    private readonly IDropOrganizationReportCommand _dropOrganizationReportCommand;
-    private readonly IGetOrganizationReportQuery _getOrganizationReportQuery;
 
     public ReportsController(
         ICurrentContext currentContext,
@@ -33,10 +30,7 @@ public class ReportsController : Controller
         IRiskInsightsReportQuery riskInsightsReportQuery,
         IAddPasswordHealthReportApplicationCommand addPasswordHealthReportApplicationCommand,
         IGetPasswordHealthReportApplicationQuery getPasswordHealthReportApplicationQuery,
-        IDropPasswordHealthReportApplicationCommand dropPwdHealthReportAppCommand,
-        IGetOrganizationReportQuery getOrganizationReportQuery,
-        IAddOrganizationReportCommand addOrganizationReportCommand,
-        IDropOrganizationReportCommand dropOrganizationReportCommand
+        IDropPasswordHealthReportApplicationCommand dropPwdHealthReportAppCommand
     )
     {
         _currentContext = currentContext;
@@ -45,9 +39,6 @@ public class ReportsController : Controller
         _addPwdHealthReportAppCommand = addPasswordHealthReportApplicationCommand;
         _getPwdHealthReportAppQuery = getPasswordHealthReportApplicationQuery;
         _dropPwdHealthReportAppCommand = dropPwdHealthReportAppCommand;
-        _getOrganizationReportQuery = getOrganizationReportQuery;
-        _addOrganizationReportCommand = addOrganizationReportCommand;
-        _dropOrganizationReportCommand = dropOrganizationReportCommand;
     }
 
     /// <summary>
