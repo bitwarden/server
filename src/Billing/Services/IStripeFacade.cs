@@ -38,6 +38,12 @@ public interface IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
 
+    Task<SetupIntent> GetSetupIntent(
+        string setupIntentId,
+        SetupIntentGetOptions setupIntentGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
+
     Task<StripeList<Invoice>> ListInvoices(
         InvoiceListOptions options = null,
         RequestOptions requestOptions = null,

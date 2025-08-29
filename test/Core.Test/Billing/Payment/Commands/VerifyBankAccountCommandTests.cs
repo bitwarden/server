@@ -35,7 +35,7 @@ public class VerifyBankAccountCommandTests
 
         const string setupIntentId = "seti_123";
 
-        _setupIntentCache.Get(organization.Id).Returns(setupIntentId);
+        _setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id).Returns(setupIntentId);
 
         var setupIntent = new SetupIntent
         {
@@ -50,7 +50,10 @@ public class VerifyBankAccountCommandTests
                 },
             NextAction = new SetupIntentNextAction
             {
-                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
+                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits
+                {
+                    HostedVerificationUrl = "https://example.com"
+                }
             },
             Status = "requires_action"
         };
@@ -70,7 +73,7 @@ public class VerifyBankAccountCommandTests
         var maskedBankAccount = maskedPaymentMethod.AsT0;
         Assert.Equal("Chase", maskedBankAccount.BankName);
         Assert.Equal("9999", maskedBankAccount.Last4);
-        Assert.True(maskedBankAccount.Verified);
+        Assert.Equal("https://example.com", maskedBankAccount.HostedVerificationUrl);
 
         await _stripeAdapter.Received(1).SetupIntentVerifyMicroDeposit(setupIntent.Id,
             Arg.Is<SetupIntentVerifyMicrodepositsOptions>(options => options.DescriptorCode == "DESCRIPTOR_CODE"));

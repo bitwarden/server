@@ -29,7 +29,7 @@ public class VerifyBankAccountCommand(
         ISubscriber subscriber,
         string descriptorCode) => HandleAsync<MaskedPaymentMethod>(async () =>
     {
-        var setupIntentId = await setupIntentCache.Get(subscriber.Id);
+        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriber.Id);
 
         if (string.IsNullOrEmpty(setupIntentId))
         {
