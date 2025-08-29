@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -20,8 +21,7 @@ public interface IOrganizationService
     Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
     Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate);
     Task UpdateAsync(Organization organization, bool updateBilling = false);
-    Task<Organization> UpdateCollectionManagementSettingsAsync(Guid organizationId, bool limitCollectionCreation,
-        bool limitCollectionDeletion, bool limitItemDeletion, bool allowAdminAccessToAllCollectionItems);
+    Task<Organization> UpdateCollectionManagementSettingsAsync(Guid organizationId, OrganizationCollectionManagementSettings settings);
     Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
     Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
     Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser,

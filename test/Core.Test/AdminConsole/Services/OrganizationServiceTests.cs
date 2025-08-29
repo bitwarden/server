@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
@@ -27,7 +28,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Fakes;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
-using NSubstitute.ReceivedExtensions;
 using NSubstitute.ReturnsExtensions;
 using Stripe;
 using Xunit;
@@ -1247,13 +1247,16 @@ public class OrganizationServiceTests
             .GetByIdAsync(existingOrganization.Id)
             .Returns(existingOrganization);
 
+        var settings = new OrganizationCollectionManagementSettings
+        {
+            LimitCollectionCreation = newLimitCollectionCreation,
+            LimitCollectionDeletion = newLimitCollectionDeletion,
+            LimitItemDeletion = newLimitItemDeletion,
+            AllowAdminAccessToAllCollectionItems = newAllowAdminAccessToAllCollectionItems
+        };
+
         // Act
-        await sutProvider.Sut.UpdateCollectionManagementSettingsAsync(
-            existingOrganization.Id,
-            newLimitCollectionCreation,
-            newLimitCollectionDeletion,
-            newLimitItemDeletion,
-            newAllowAdminAccessToAllCollectionItems);
+        await sutProvider.Sut.UpdateCollectionManagementSettingsAsync(existingOrganization.Id, settings);
 
         // Assert
         var eventService = sutProvider.GetDependency<IEventService>();
@@ -1312,7 +1315,7 @@ public class OrganizationServiceTests
 
     [Theory, BitAutoData]
     public async Task UpdateCollectionManagementSettingsAsync_WhenOrganizationNotFound_ThrowsNotFoundException(
-        Guid organizationId, SutProvider<OrganizationService> sutProvider)
+        Guid organizationId, OrganizationCollectionManagementSettings settings, SutProvider<OrganizationService> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -1320,8 +1323,7 @@ public class OrganizationServiceTests
             .Returns((Organization)null);
 
         // Act/Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateCollectionManagementSettingsAsync(
-            organizationId, false, false, false, false));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateCollectionManagementSettingsAsync(organizationId, settings));
 
         await sutProvider.GetDependency<IOrganizationRepository>()
             .Received(1)

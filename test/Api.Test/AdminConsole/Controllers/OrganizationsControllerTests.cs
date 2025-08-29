@@ -7,6 +7,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -310,10 +311,11 @@ public class OrganizationsControllerTests : IDisposable
         _organizationService
             .UpdateCollectionManagementSettingsAsync(
                 organization.Id,
-                model.LimitCollectionCreation,
-                model.LimitCollectionDeletion,
-                model.LimitItemDeletion,
-                model.AllowAdminAccessToAllCollectionItems)
+                Arg.Is<OrganizationCollectionManagementSettings>(s =>
+                    s.LimitCollectionCreation == model.LimitCollectionCreation &&
+                    s.LimitCollectionDeletion == model.LimitCollectionDeletion &&
+                    s.LimitItemDeletion == model.LimitItemDeletion &&
+                    s.AllowAdminAccessToAllCollectionItems == model.AllowAdminAccessToAllCollectionItems))
             .Returns(organization);
 
         // Act
@@ -324,9 +326,10 @@ public class OrganizationsControllerTests : IDisposable
             .Received(1)
             .UpdateCollectionManagementSettingsAsync(
                 organization.Id,
-                model.LimitCollectionCreation,
-                model.LimitCollectionDeletion,
-                model.LimitItemDeletion,
-                model.AllowAdminAccessToAllCollectionItems);
+                Arg.Is<OrganizationCollectionManagementSettings>(s =>
+                    s.LimitCollectionCreation == model.LimitCollectionCreation &&
+                    s.LimitCollectionDeletion == model.LimitCollectionDeletion &&
+                    s.LimitItemDeletion == model.LimitItemDeletion &&
+                    s.AllowAdminAccessToAllCollectionItems == model.AllowAdminAccessToAllCollectionItems));
     }
 }

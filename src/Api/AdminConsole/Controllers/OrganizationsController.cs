@@ -559,12 +559,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var organization = await _organizationService.UpdateCollectionManagementSettingsAsync(
-            id,
-            model.LimitCollectionCreation,
-            model.LimitCollectionDeletion,
-            model.LimitItemDeletion,
-            model.AllowAdminAccessToAllCollectionItems);
+        var organization = await _organizationService.UpdateCollectionManagementSettingsAsync(id, model.ToSettings());
         var plan = await _pricingClient.GetPlan(organization.PlanType);
         return new OrganizationResponseModel(organization, plan);
     }
