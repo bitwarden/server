@@ -33,7 +33,6 @@ namespace Bit.Api.AdminConsole.Controllers;
 public class PoliciesController : Controller
 {
     private readonly ICurrentContext _currentContext;
-    private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
     private readonly IOrganizationRepository _organizationRepository;
@@ -52,7 +51,6 @@ public class PoliciesController : Controller
         GlobalSettings globalSettings,
         IDataProtectionProvider dataProtectionProvider,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        IFeatureService featureService,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
         IOrganizationRepository organizationRepository,
         ISavePolicyCommand savePolicyCommand)
@@ -66,7 +64,6 @@ public class PoliciesController : Controller
             "OrganizationServiceDataProtector");
         _organizationRepository = organizationRepository;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
-        _featureService = featureService;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
         _savePolicyCommand = savePolicyCommand;
     }
@@ -222,9 +219,9 @@ public class PoliciesController : Controller
     [Authorize<ManagePoliciesRequirement>]
     public async Task<PolicyResponseModel> PutVNext(Guid orgId, [FromBody] SavePolicyRequest model)
     {
-        var savePolicyModel = await model.ToSavePolicyModelAsync(orgId, _currentContext);
+        var savePolicyRequest = await model.ToSavePolicyModelAsync(orgId, _currentContext);
 
-        var policy = await _savePolicyCommand.VNextSaveAsync(savePolicyModel);
+        var policy = await _savePolicyCommand.VNextSaveAsync(savePolicyRequest);
 
         return new PolicyResponseModel(policy);
     }

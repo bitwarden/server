@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.Repositories;
@@ -80,22 +78,22 @@ public class SavePolicyCommand : ISavePolicyCommand
         return policy;
     }
 
-    public async Task<Policy> VNextSaveAsync(SavePolicyModel policyModel)
+    public async Task<Policy> VNextSaveAsync(SavePolicyModel policyRequest)
     {
-        var (_, currentPolicy) = await GetCurrentPolicyStateAsync(policyModel.PolicyUpdate);
+        var (_, currentPolicy) = await GetCurrentPolicyStateAsync(policyRequest.PolicyUpdate);
 
-        var policy = await SaveAsync(policyModel.PolicyUpdate);
+        var policy = await SaveAsync(policyRequest.PolicyUpdate);
 
-        await ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(policyModel, policy, currentPolicy);
+        await ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(policyRequest, policy, currentPolicy);
 
         return policy;
     }
 
-    private async Task ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(SavePolicyModel policyModel, Policy postUpdatedPolicy, Policy? previousPolicyState)
+    private async Task ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(SavePolicyModel policyRequest, Policy postUpdatedPolicy, Policy? previousPolicyState)
     {
         if (postUpdatedPolicy.Type == PolicyType.OrganizationDataOwnership)
         {
-            await _postSavePolicySideEffect.ExecuteSideEffectsAsync(policyModel, postUpdatedPolicy, previousPolicyState);
+            await _postSavePolicySideEffect.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
         }
     }
 
