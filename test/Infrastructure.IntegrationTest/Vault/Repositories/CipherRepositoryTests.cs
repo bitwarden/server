@@ -8,11 +8,13 @@ using Bit.Core.Models.Data;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Xunit;
+using CipherType = Bit.Core.Vault.Enums.CipherType;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;
 
@@ -973,6 +975,161 @@ public class CipherRepositoryTests
 
         Assert.Equal(CipherType.SecureNote, updatedCipher1.Type);
         Assert.Equal("new_attachments", updatedCipher2.Attachments);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateAsync_vNext_WithFolders_Works(
+        IUserRepository userRepository, ICipherRepository cipherRepository, IFolderRepository folderRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var folder1 = new Folder { Id = CoreHelpers.GenerateComb(), UserId = user.Id, Name = "Test Folder 1" };
+        var folder2 = new Folder { Id = CoreHelpers.GenerateComb(), UserId = user.Id, Name = "Test Folder 2" };
+        var cipher1 = new Cipher { Id = CoreHelpers.GenerateComb(), Type = CipherType.Login, UserId = user.Id, Data = "" };
+        var cipher2 = new Cipher { Id = CoreHelpers.GenerateComb(), Type = CipherType.SecureNote, UserId = user.Id, Data = "" };
+
+        // Act
+        await cipherRepository.CreateAsync_vNext(
+            userId: user.Id,
+            ciphers: [cipher1, cipher2],
+            folders: [folder1, folder2]);
+
+        // Assert
+        var readCipher1 = await cipherRepository.GetByIdAsync(cipher1.Id);
+        var readCipher2 = await cipherRepository.GetByIdAsync(cipher2.Id);
+        Assert.NotNull(readCipher1);
+        Assert.NotNull(readCipher2);
+
+        var readFolder1 = await folderRepository.GetByIdAsync(folder1.Id);
+        var readFolder2 = await folderRepository.GetByIdAsync(folder2.Id);
+        Assert.NotNull(readFolder1);
+        Assert.NotNull(readFolder2);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateAsync_vNext_WithCollectionsAndUsers_Works(
+        IOrganizationRepository orgRepository,
+        IOrganizationUserRepository orgUserRepository,
+        ICollectionRepository collectionRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var org = await orgRepository.CreateAsync(new Organization
+        {
+            Name = "Test Organization",
+            BillingEmail = user.Email,
+            Plan = "Test"
+        });
+
+        var orgUser = await orgUserRepository.CreateAsync(new OrganizationUser
+        {
+            UserId = user.Id,
+            OrganizationId = org.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+        });
+
+        var collection = new Collection { Id = CoreHelpers.GenerateComb(), Name = "Test Collection", OrganizationId = org.Id };
+        var cipher = new Cipher { Id = CoreHelpers.GenerateComb(), Type = CipherType.Login, OrganizationId = org.Id, Data = "" };
+        var collectionCipher = new CollectionCipher { CollectionId = collection.Id, CipherId = cipher.Id };
+        var collectionUser = new CollectionUser
+        {
+            CollectionId = collection.Id,
+            OrganizationUserId = orgUser.Id,
+            HidePasswords = false,
+            ReadOnly = false,
+            Manage = true
+        };
+
+        // Act
+        await cipherRepository.CreateAsync_vNext(
+            ciphers: [cipher],
+            collections: [collection],
+            collectionCiphers: [collectionCipher],
+            collectionUsers: [collectionUser]);
+
+        // Assert
+        var orgCiphers = await cipherRepository.GetManyByOrganizationIdAsync(org.Id);
+        Assert.Contains(orgCiphers, c => c.Id == cipher.Id);
+
+        var collCiphers = await collectionCipherRepository.GetManyByOrganizationIdAsync(org.Id);
+        Assert.Contains(collCiphers, cc => cc.CipherId == cipher.Id && cc.CollectionId == collection.Id);
+
+        var collectionsInOrg = await collectionRepository.GetManyByOrganizationIdAsync(org.Id);
+        Assert.Contains(collectionsInOrg, c => c.Id == collection.Id);
+
+        var collectionUsers = await collectionRepository.GetManyUsersByIdAsync(collection.Id);
+        var foundCollectionUser = collectionUsers.FirstOrDefault(cu => cu.Id == orgUser.Id);
+        Assert.NotNull(foundCollectionUser);
+        Assert.True(foundCollectionUser.Manage);
+        Assert.False(foundCollectionUser.ReadOnly);
+        Assert.False(foundCollectionUser.HidePasswords);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task UpdateCiphersAsync_vNext_Works(
+        IUserRepository userRepository, ICipherRepository cipherRepository)
+    {
+        // Arrange
+        var expectedNewType = CipherType.SecureNote;
+        var expectedNewAttachments = "bulk_new_attachments";
+
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var c1 = new Cipher { Id = CoreHelpers.GenerateComb(), Type = CipherType.Login, UserId = user.Id, Data = "" };
+        var c2 = new Cipher { Id = CoreHelpers.GenerateComb(), Type = CipherType.Login, UserId = user.Id, Data = "" };
+        await cipherRepository.CreateAsync(
+            userId: user.Id,
+            ciphers: [c1, c2],
+            folders: []);
+
+        c1.Type = expectedNewType;
+        c2.Attachments = expectedNewAttachments;
+
+        // Act
+        await cipherRepository.UpdateCiphersAsync_vNext(user.Id, [c1, c2]);
+
+        // Assert
+        var updated1 = await cipherRepository.GetByIdAsync(c1.Id);
+        Assert.NotNull(updated1);
+        Assert.Equal(c1.Id, updated1.Id);
+        Assert.Equal(expectedNewType, updated1.Type);
+        Assert.Equal(c1.UserId, updated1.UserId);
+        Assert.Equal(c1.Data, updated1.Data);
+        Assert.Equal(c1.OrganizationId, updated1.OrganizationId);
+        Assert.Equal(c1.Attachments, updated1.Attachments);
+
+        var updated2 = await cipherRepository.GetByIdAsync(c2.Id);
+        Assert.NotNull(updated2);
+        Assert.Equal(c2.Id, updated2.Id);
+        Assert.Equal(c2.Type, updated2.Type);
+        Assert.Equal(c2.UserId, updated2.UserId);
+        Assert.Equal(c2.Data, updated2.Data);
+        Assert.Equal(c2.OrganizationId, updated2.OrganizationId);
+        Assert.Equal(expectedNewAttachments, updated2.Attachments);
     }
 
     [DatabaseTheory, DatabaseData]
