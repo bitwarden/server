@@ -44,4 +44,15 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     /// You probably do not want to call it directly.
     /// </remarks>
     Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetailsByOrganizationIdAsync(Guid organizationId, PolicyType policyType);
+
+    /// <summary>
+    /// Retrieves policy details for a list of users filtered by the specified policy type.
+    /// </summary>
+    /// <param name="userIds">A collection of user identifiers for which the policy details are to be fetched.</param>
+    /// <param name="policyType">The type of policy for which the details are required.</param>
+    /// <returns>
+    /// An asynchronous task that returns a collection of <see cref="OrganizationPolicyDetails"/> objects containing the policy information
+    /// associated with the specified users and policy type.
+    /// </returns>
+    Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetailsByUserIdsAndPolicyType(IEnumerable<Guid> userIds, PolicyType policyType);
 }
