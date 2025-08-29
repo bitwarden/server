@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250311152204_AddArchivedDateToCipher")]
+    [Migration("20250829152204_AddArchivedDateToCipher")]
     partial class AddArchivedDateToCipher
     {
         /// <inheritdoc />
