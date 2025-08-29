@@ -218,7 +218,7 @@ public class StripeEventService : IStripeEventService
 
     private static string GetCustomerRegion(IDictionary<string, string> customerMetadata)
     {
-        const string defaultRegion = "US";
+        const string defaultRegion = Core.Constants.CountryAbbreviations.UnitedStates;
 
         if (customerMetadata is null)
         {

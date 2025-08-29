@@ -52,6 +52,19 @@ public static class Constants
     /// regardless of whether there is a proration or not.
     /// </summary>
     public const string AlwaysInvoice = "always_invoice";
+
+    /// <summary>
+    /// Used primarily to determine whether a customer's business is inside or outside the United States
+    /// for billing purposes.
+    /// </summary>
+    public static class CountryAbbreviations
+    {
+        /// <summary>
+        /// Abbreviation for The United States.
+        /// This value must match what Stripe uses for the `Country` field value for the United States.
+        /// </summary>
+        public const string UnitedStates = "US";
+    }
 }
 
 public static class AuthConstants
