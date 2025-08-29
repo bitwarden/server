@@ -42,8 +42,6 @@ public class OrganizationServiceTests
 {
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>();
 
-
-
     [Theory]
     [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
          InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
@@ -1227,6 +1225,107 @@ public class OrganizationServiceTests
         await organizationRepository
             .Received(1)
             .GetByIdentifierAsync(Arg.Is<string>(id => id == organization.Identifier));
+    }
+
+    [Theory]
+    [BitAutoData(false, true, false, true)]
+    [BitAutoData(true, false, true, false)]
+    public async Task UpdateCollectionManagementSettingsAsync_WhenSettingsChanged_LogsSpecificEvents(
+        bool newLimitCollectionCreation,
+        bool newLimitCollectionDeletion,
+        bool newLimitItemDeletion,
+        bool newAllowAdminAccessToAllCollectionItems,
+        Organization existingOrganization, SutProvider<OrganizationService> sutProvider)
+    {
+        // Arrange
+        existingOrganization.LimitCollectionCreation = false;
+        existingOrganization.LimitCollectionDeletion = false;
+        existingOrganization.LimitItemDeletion = false;
+        existingOrganization.AllowAdminAccessToAllCollectionItems = false;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(existingOrganization.Id)
+            .Returns(existingOrganization);
+
+        // Act
+        await sutProvider.Sut.UpdateCollectionManagementSettingsAsync(
+            existingOrganization.Id,
+            newLimitCollectionCreation,
+            newLimitCollectionDeletion,
+            newLimitItemDeletion,
+            newAllowAdminAccessToAllCollectionItems);
+
+        // Assert
+        var eventService = sutProvider.GetDependency<IEventService>();
+        if (newLimitCollectionCreation)
+        {
+            await eventService.Received(1).LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitCollectionCreationEnabled));
+        }
+        else
+        {
+            await eventService.DidNotReceive().LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitCollectionCreationEnabled));
+        }
+
+        if (newLimitCollectionDeletion)
+        {
+            await eventService.Received(1).LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitCollectionDeletionEnabled));
+        }
+        else
+        {
+            await eventService.DidNotReceive().LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitCollectionDeletionEnabled));
+        }
+
+        if (newLimitItemDeletion)
+        {
+            await eventService.Received(1).LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitItemDeletionEnabled));
+        }
+        else
+        {
+            await eventService.DidNotReceive().LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_LimitItemDeletionEnabled));
+        }
+
+        if (newAllowAdminAccessToAllCollectionItems)
+        {
+            await eventService.Received(1).LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsEnabled));
+        }
+        else
+        {
+            await eventService.DidNotReceive().LogOrganizationEventAsync(
+                Arg.Is<Organization>(org => org.Id == existingOrganization.Id),
+                Arg.Is<EventType>(e => e == EventType.Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsEnabled));
+        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateCollectionManagementSettingsAsync_WhenOrganizationNotFound_ThrowsNotFoundException(
+        Guid organizationId, SutProvider<OrganizationService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organizationId)
+            .Returns((Organization)null);
+
+        // Act/Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateCollectionManagementSettingsAsync(
+            organizationId, false, false, false, false));
+
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .GetByIdAsync(organizationId);
     }
 
     // Must set real guids in order for dictionary of guids to not throw aggregate exceptions
