@@ -5,5 +5,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
 public interface IPostSavePolicySideEffect
 {
-    public Task ExecuteSideEffectsAsync(SavePolicyModel policyRequest, Policy? postUpdatedPolicy);
+    public Task ExecuteSideEffectsAsync(SavePolicyModel policyRequest, Policy postUpdatedPolicy,
+        Policy? previousPolicyState);
 }

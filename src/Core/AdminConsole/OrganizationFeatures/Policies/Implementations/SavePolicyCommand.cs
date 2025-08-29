@@ -82,27 +82,26 @@ public class SavePolicyCommand : ISavePolicyCommand
 
     public async Task<Policy> VNextSaveAsync(SavePolicyModel policyModel)
     {
+        var (_, currentPolicy) = await GetCurrentPolicyStateAsync(policyModel.PolicyUpdate);
+
         var policy = await SaveAsync(policyModel.PolicyUpdate);
 
-        await ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(policyModel, policy);
+        await ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(policyModel, policy, currentPolicy);
 
         return policy;
     }
 
-    private async Task ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(SavePolicyModel policyModel, Policy policy)
+    private async Task ExecutePostPolicySaveSideEffectsForSupportedPoliciesAsync(SavePolicyModel policyModel, Policy postUpdatedPolicy, Policy? previousPolicyState)
     {
-        if (policy.Type == PolicyType.OrganizationDataOwnership)
+        if (postUpdatedPolicy.Type == PolicyType.OrganizationDataOwnership)
         {
-            await _postSavePolicySideEffect.ExecuteSideEffectsAsync(policyModel, policy);
+            await _postSavePolicySideEffect.ExecuteSideEffectsAsync(policyModel, postUpdatedPolicy, previousPolicyState);
         }
     }
 
     private async Task RunValidatorAsync(IPolicyValidator validator, PolicyUpdate policyUpdate)
     {
-        var savedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(policyUpdate.OrganizationId);
-        // Note: policies may be missing from this dict if they have never been enabled
-        var savedPoliciesDict = savedPolicies.ToDictionary(p => p.Type);
-        var currentPolicy = savedPoliciesDict.GetValueOrDefault(policyUpdate.Type);
+        var (savedPoliciesDict, currentPolicy) = await GetCurrentPolicyStateAsync(policyUpdate);
 
         // If enabling this policy - check that all policy requirements are satisfied
         if (currentPolicy is not { Enabled: true } && policyUpdate.Enabled)
@@ -145,5 +144,14 @@ public class SavePolicyCommand : ISavePolicyCommand
 
         // Run side effects
         await validator.OnSaveSideEffectsAsync(policyUpdate, currentPolicy);
+    }
+
+    private async Task<(Dictionary<PolicyType, Policy> savedPoliciesDict, Policy? currentPolicy)> GetCurrentPolicyStateAsync(PolicyUpdate policyUpdate)
+    {
+        var savedPolicies = await _policyRepository.GetManyByOrganizationIdAsync(policyUpdate.OrganizationId);
+        // Note: policies may be missing from this dict if they have never been enabled
+        var savedPoliciesDict = savedPolicies.ToDictionary(p => p.Type);
+        var currentPolicy = savedPoliciesDict.GetValueOrDefault(policyUpdate.Type);
+        return (savedPoliciesDict, currentPolicy);
     }
 }

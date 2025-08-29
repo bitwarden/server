@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
@@ -14,9 +13,8 @@ public class OrganizationDataOwnershipPolicyValidator(
     IPolicyRepository policyRepository,
     ICollectionRepository collectionRepository,
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories,
-    IFeatureService featureService,
-    ILogger<OrganizationDataOwnershipPolicyValidator> logger)
-    : OrganizationPolicyValidator(policyRepository, factories), IPostSavePolicySideEffect, IPolicyValidator
+    IFeatureService featureService)
+    : OrganizationPolicyValidator(policyRepository, factories), IPostSavePolicySideEffect
 {
     public override PolicyType Type => PolicyType.OrganizationDataOwnership;
 
@@ -24,7 +22,10 @@ public class OrganizationDataOwnershipPolicyValidator(
 
     public override Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
 
-    public async Task ExecuteSideEffectsAsync(SavePolicyModel policyRequest, Policy? postUpdatedPolicy)
+    public async Task ExecuteSideEffectsAsync(
+        SavePolicyModel policyRequest,
+        Policy postUpdatedPolicy,
+        Policy? previousPolicyState)
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
         {
@@ -41,14 +42,14 @@ public class OrganizationDataOwnershipPolicyValidator(
             return;
         }
 
-        var policyUpdate = policyRequest.PolicyUpdate;
+        var isFirstTimeEnabled = postUpdatedPolicy.Enabled && previousPolicyState == null;
+        var reEnabled = previousPolicyState?.Enabled == false
+                        && postUpdatedPolicy.Enabled;
 
-        if (postUpdatedPolicy?.Enabled == true || !policyUpdate.Enabled)
+        if (isFirstTimeEnabled || reEnabled)
         {
-            return;
+            await UpsertDefaultCollectionsForUsersAsync(policyRequest.PolicyUpdate, metadata.DefaultUserCollectionName);
         }
-
-        await UpsertDefaultCollectionsForUsersAsync(policyUpdate, metadata.DefaultUserCollectionName);
     }
 
     public override Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
@@ -65,7 +66,6 @@ public class OrganizationDataOwnershipPolicyValidator(
 
         if (!userOrgIds.Any())
         {
-            logger.LogError("No UserOrganizationIds found for {OrganizationId}", policyUpdate.OrganizationId);
             return;
         }
 
