@@ -82,10 +82,20 @@ public class CipherMiniResponseModel : ResponseModel
     public dynamic Data { get; set; }
     public string Name { get; set; }
     public string Notes { get; set; }
+
+    [Obsolete("This property is deprecated and will be removed in an upcoming release.")]
     public CipherLoginModel Login { get; set; }
+
+    [Obsolete("This property is deprecated and will be removed in an upcoming release.")]
     public CipherCardModel Card { get; set; }
+
+    [Obsolete("This property is deprecated and will be removed in an upcoming release.")]
     public CipherIdentityModel Identity { get; set; }
+
+    [Obsolete("This property is deprecated and will be removed in an upcoming release.")]
     public CipherSecureNoteModel SecureNote { get; set; }
+
+    [Obsolete("This property is deprecated and will be removed in an upcoming release.")]
     public CipherSSHKeyModel SSHKey { get; set; }
     public IEnumerable<CipherFieldModel> Fields { get; set; }
     public IEnumerable<CipherPasswordHistoryModel> PasswordHistory { get; set; }
