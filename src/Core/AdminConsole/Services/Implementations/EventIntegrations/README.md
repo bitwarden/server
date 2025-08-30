@@ -399,34 +399,43 @@ These names added here are what must match the values provided in the secrets or
 in Global Settings. This must be in place (and the local ASB emulator restarted) before you can use any
 code locally that accesses ASB resources.
 
+## ListenerConfiguration
+
+New integrations will need their own subclass of `ListenerConfiguration` which also conforms to
+`IIntegrationListenerConfiguration`. This class provides a way of accessing the previously configured
+RabbitMQ queues and ASB subscriptions by referring to the values created in `GlobalSettings`. This new
+listener configuration will be used to type the listener and provide the means to access the necessary
+configurations for the integration.
+
 ## ServiceCollectionExtensions
+
 In our `ServiceCollectionExtensions`, we pull all the above pieces together to start listeners on each message
-tier with handlers to process the integration. There are a number of helper methods in here to make this simple
-to add a new integration - one call per platform.
+tier with handlers to process the integration.
 
-Also note that if an integration needs a custom singleton / service defined, the add listeners method is a
-good place to set that up. For instance, `SlackIntegrationHandler` needs a `SlackService`, so the singleton
-declaration is right above the add integration method for slack. Same thing for webhooks when it comes to
-defining a custom HttpClient by name.
+The core method for all event integration setup is `AddEventIntegrationServices`. This method is called by
+both of the add listeners methods, which ensures that we have one common place to set up cross-messaging-platform
+dependencies and integrations. For instance, `SlackIntegrationHandler` needs a `SlackService`, so
+`AddEventIntegrationServices` has a call to `AddSlackService`. Same thing for webhooks when it
+comes to defining a custom HttpClient by name.
 
-1. In `AddRabbitMqListeners` add the integration:
+1. In `AddEventIntegrationServices` create the listener configuration:
+
 ``` csharp
-        services.AddRabbitMqIntegration<ExampleIntegrationConfigurationDetails, ExampleIntegrationHandler>(
-            globalSettings.EventLogging.RabbitMq.ExampleEventsQueueName,
-            globalSettings.EventLogging.RabbitMq.ExampleIntegrationQueueName,
-            globalSettings.EventLogging.RabbitMq.ExampleIntegrationRetryQueueName,
-            globalSettings.EventLogging.RabbitMq.MaxRetries,
-            IntegrationType.Example);
+        var exampleConfiguration = new ExampleListenerConfiguration(globalSettings);
 ```
 
-2. In `AddAzureServiceBusListeners` add the integration:
+2. Add the integration to both the RabbitMQ and ASB specific declarations:
+
 ``` csharp
-services.AddAzureServiceBusIntegration<ExampleIntegrationConfigurationDetails, ExampleIntegrationHandler>(
-            eventSubscriptionName: globalSettings.EventLogging.AzureServiceBus.ExampleEventSubscriptionName,
-            integrationSubscriptionName: globalSettings.EventLogging.AzureServiceBus.ExampleIntegrationSubscriptionName,
-            integrationType: IntegrationType.Example,
-            globalSettings: globalSettings);
+        services.AddRabbitMqIntegration<ExampleIntegrationConfigurationDetails, ExampleListenerConfiguration>(exampleConfiguration);
 ```
+
+and
+
+``` csharp
+        services.AddAzureServiceBusIntegration<ExampleIntegrationConfigurationDetails, ExampleListenerConfiguration>(exampleConfiguration);
+```
+
 
 # Deploying a new integration
 

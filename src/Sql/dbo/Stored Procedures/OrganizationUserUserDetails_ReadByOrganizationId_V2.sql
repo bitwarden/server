@@ -26,6 +26,8 @@ BEGIN
         SELECT cu.*
         FROM [dbo].[CollectionUser] cu
         INNER JOIN [dbo].[OrganizationUser] ou ON cu.OrganizationUserId = ou.Id
-        WHERE ou.OrganizationId = @OrganizationId
+        INNER JOIN [dbo].[Collection] c ON cu.CollectionId = c.Id
+        WHERE ou.OrganizationId = @OrganizationId 
+            AND c.Type = 0 -- SharedCollections only
     END
 END

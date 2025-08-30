@@ -127,4 +127,16 @@ public class NoopEventService : IEventService
     {
         return Task.FromResult(0);
     }
+
+    public Task LogUserProjectsEventAsync(Guid userId, IEnumerable<Project> projects, EventType type,
+        DateTime? date = null)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task LogServiceAccountProjectsEventAsync(Guid serviceAccountId, IEnumerable<Project> projects, EventType type,
+        DateTime? date = null)
+    {
+        return Task.FromResult(0);
+    }
 }

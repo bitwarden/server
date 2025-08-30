@@ -39,4 +39,6 @@ public static class Claims
         public const string ManageResetPassword = "manageresetpassword";
         public const string ManageScim = "managescim";
     }
+
+    public const string SendId = "send_id";
 }

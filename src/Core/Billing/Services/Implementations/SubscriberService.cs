@@ -33,7 +33,6 @@ using static StripeConstants;
 
 public class SubscriberService(
     IBraintreeGateway braintreeGateway,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
     IOrganizationRepository organizationRepository,
@@ -802,28 +801,27 @@ public class SubscriberService(
             _ => false
         };
 
-        var setNonUSBusinessUseToReverseCharge =
-            featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
 
-        if (setNonUSBusinessUseToReverseCharge && isBusinessUseSubscriber)
+
+        if (isBusinessUseSubscriber)
         {
             switch (customer)
             {
                 case
                 {
                     Address.Country: not "US",
-                    TaxExempt: not StripeConstants.TaxExempt.Reverse
+                    TaxExempt: not TaxExempt.Reverse
                 }:
                     await stripeAdapter.CustomerUpdateAsync(customer.Id,
-                        new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
+                        new CustomerUpdateOptions { TaxExempt = TaxExempt.Reverse });
                     break;
                 case
                 {
                     Address.Country: "US",
-                    TaxExempt: StripeConstants.TaxExempt.Reverse
+                    TaxExempt: TaxExempt.Reverse
                 }:
                     await stripeAdapter.CustomerUpdateAsync(customer.Id,
-                        new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.None });
+                        new CustomerUpdateOptions { TaxExempt = TaxExempt.None });
                     break;
             }
 
@@ -906,6 +904,44 @@ public class SubscriberService(
 
             logger.LogError(stripeException, "An unhandled Stripe exception was thrown while verifying subscriber's ({SubscriberID}) bank account", subscriber.Id);
             throw new BillingException();
+        }
+    }
+
+    public async Task<bool> IsValidGatewayCustomerIdAsync(ISubscriber subscriber)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+        if (string.IsNullOrEmpty(subscriber.GatewayCustomerId))
+        {
+            // subscribers are allowed to have no customer id as a business rule
+            return true;
+        }
+        try
+        {
+            await stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
+            return true;
+        }
+        catch (StripeException e) when (e.StripeError.Code == "resource_missing")
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> IsValidGatewaySubscriptionIdAsync(ISubscriber subscriber)
+    {
+        ArgumentNullException.ThrowIfNull(subscriber);
+        if (string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+        {
+            // subscribers are allowed to have no subscription id as a business rule
+            return true;
+        }
+        try
+        {
+            await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+            return true;
+        }
+        catch (StripeException e) when (e.StripeError.Code == "resource_missing")
+        {
+            return false;
         }
     }
 

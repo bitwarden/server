@@ -109,7 +109,7 @@ public class CollectionsController : Controller
         var readAllAuthorized = (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadAll(orgId))).Succeeded;
         if (readAllAuthorized)
         {
-            orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgId);
+            orgCollections = await _collectionRepository.GetManySharedCollectionsByOrganizationIdAsync(orgId);
         }
         else
         {
@@ -146,7 +146,7 @@ public class CollectionsController : Controller
     }
 
     [HttpPost("")]
-    public async Task<CollectionResponseModel> Post(Guid orgId, [FromBody] CollectionRequestModel model)
+    public async Task<CollectionResponseModel> Post(Guid orgId, [FromBody] CreateCollectionRequestModel model)
     {
         var collection = model.ToCollection(orgId);
 
@@ -174,7 +174,7 @@ public class CollectionsController : Controller
 
     [HttpPut("{id}")]
     [HttpPost("{id}")]
-    public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] CollectionRequestModel model)
+    public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;
