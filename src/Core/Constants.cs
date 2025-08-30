@@ -188,7 +188,6 @@ public static class FeatureFlagKeys
 
     /* Platform Team */
     public const string PersistPopupView = "persist-popup-view";
-    public const string WebPush = "web-push";
     public const string IpcChannelFramework = "ipc-channel-framework";
     public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
 
