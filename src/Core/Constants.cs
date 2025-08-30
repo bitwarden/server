@@ -116,6 +116,7 @@ public static class FeatureFlagKeys
     public const string DirectoryConnectorPreventUserRemoval = "pm-24592-directory-connector-prevent-user-removal";
 
     /* Auth Team */
+    public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
     public const string EmailVerification = "email-verification";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
     public const string BrowserExtensionLoginApproval = "pm-14938-browser-extension-login-approvals";
