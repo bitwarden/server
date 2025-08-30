@@ -22,7 +22,9 @@ on:
         required: false
         type: string
 
-permissions: {}
+permissions:
+  pull-requests: write
+  contents: write
 
 jobs:
   setup:
@@ -227,9 +229,3 @@ jobs:
         run: |
           git switch --quiet --create $BRANCH_NAME
           git push --quiet --set-upstream origin $BRANCH_NAME
-
-  move_edd_db_scripts:
-    name: Move EDD database scripts
-    needs: cut_branch
-    uses: ./.github/workflows/_move_edd_db_scripts.yml
-    secrets: inherit
