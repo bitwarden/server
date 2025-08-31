@@ -27,6 +27,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyValidator, ResetPasswordPolicyValidator>();
         services.AddScoped<IPolicyValidator, MaximumVaultTimeoutPolicyValidator>();
         services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
+        services.AddScoped<IPolicyValidator, RestrictedItemTypesPolicyValidator>();
         // This validator will be hooked up in https://bitwarden.atlassian.net/browse/PM-24279.
         // services.AddScoped<IPolicyValidator, OrganizationDataOwnershipPolicyValidator>();
     }
