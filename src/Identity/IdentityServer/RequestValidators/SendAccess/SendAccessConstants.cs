@@ -1,4 +1,5 @@
 ﻿using Duende.IdentityServer.Validation;
+using Bit.Core.Auth.Identity.TokenProviders;
 
 namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 
@@ -34,7 +35,7 @@ public static class SendAccessConstants
     public static class GrantValidatorResults
     {
         /// <summary>
-        /// The sendId is valid and the request is well formed.
+        /// The sendId is valid and the request is well formed. Not returned in any response.
         /// </summary>
         public const string ValidSendGuid = "valid_send_guid";
         /// <summary>
@@ -76,7 +77,7 @@ public static class SendAccessConstants
         /// <summary>
         /// Represents the status indicating that both email and OTP are required, and the OTP is invalid.
         /// </summary>
-        public const string EmailOtpInvalid = "email_and_otp_required_otp_invalid";
+        public const string EmailOtpInvalid = "otp_invalid";
         /// <summary>
         /// For what ever reason the OTP was not able to be generated
         /// </summary>
@@ -85,11 +86,13 @@ public static class SendAccessConstants
 
     /// <summary>
     /// These are the constants for the OTP token that is generated during the email otp authentication process.
+    /// These items are required by <see cref="IOtpTokenProvider{TOptions}"/> to aid in the creation of a unique lookup key.
+    /// Look up key format is: {TokenProviderName}_{Purpose}_{TokenUniqueIdentifier}
     /// </summary>
     public static class OtpToken
     {
-        public const string Purpose = "send_access_email_otp";
-        public const string TokenProviderName = "send_access_email_otp";
+        public const string TokenProviderName = "send_access";
+        public const string Purpose = "email_otp";
         /// <summary>
         /// This will be send_id {0} and email {1}
         /// </summary>

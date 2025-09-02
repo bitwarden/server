@@ -215,7 +215,8 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
-        message.Category = "TwoFactorEmail";
+        // TODO - PM-25380 change to string constant
+        message.Category = "SendEmailOtp";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 

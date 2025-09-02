@@ -62,16 +62,14 @@ public class SendAccessGrantValidator(
                 // automatically issue access token
                 context.Result = BuildBaseSuccessResult(sendIdGuid);
                 return;
-
             case ResourcePassword rp:
                 // Validate if the password is correct, or if we need to respond with a 400 stating a password is invalid or required.
                 context.Result = await _sendPasswordRequestValidator.ValidateRequestAsync(context, rp, sendIdGuid);
                 return;
             case EmailOtp eo:
-                // break;
+                // Validate if the request has the correct email and OTP. If not, respond with a 400 and information about the failure.
                 context.Result = await _sendEmailOtpRequestValidator.ValidateRequestAsync(context, eo, sendIdGuid);
                 return;
-
             default:
                 // shouldn’t ever hit this
                 throw new InvalidOperationException($"Unknown auth method: {method.GetType()}");
@@ -115,28 +113,27 @@ public class SendAccessGrantValidator(
     /// <summary>
     /// Builds an error result for the specified error type.
     /// </summary>
-    /// <param name="error">The error type.</param>
+    /// <param name="error">This error is a constant string from <see cref="SendAccessConstants.GrantValidatorResults"/></param>
     /// <returns>The error result.</returns>
     private static GrantValidationResult BuildErrorResult(string error)
     {
+        var customResponse = new Dictionary<string, object>
+            {
+                { SendAccessConstants.SendAccessError, error }
+            };
+
         return error switch
         {
             // Request is the wrong shape
             SendAccessConstants.GrantValidatorResults.MissingSendId => new GrantValidationResult(
                                 TokenRequestErrors.InvalidRequest,
-                                errorDescription: _sendGrantValidatorErrorDescriptions[SendAccessConstants.GrantValidatorResults.MissingSendId],
-                                new Dictionary<string, object>
-                                {
-                                    { SendAccessConstants.SendAccessError, SendAccessConstants.GrantValidatorResults.MissingSendId}
-                                }),
+                                errorDescription: _sendGrantValidatorErrorDescriptions[error],
+                                customResponse),
             // Request is correct shape but data is bad
             SendAccessConstants.GrantValidatorResults.InvalidSendId => new GrantValidationResult(
                                 TokenRequestErrors.InvalidGrant,
-                                errorDescription: _sendGrantValidatorErrorDescriptions[SendAccessConstants.GrantValidatorResults.InvalidSendId],
-                                new Dictionary<string, object>
-                                {
-                                    { SendAccessConstants.SendAccessError, SendAccessConstants.GrantValidatorResults.InvalidSendId }
-                                }),
+                                errorDescription: _sendGrantValidatorErrorDescriptions[error],
+                                customResponse),
             // should never get here
             _ => new GrantValidationResult(TokenRequestErrors.InvalidRequest)
         };
