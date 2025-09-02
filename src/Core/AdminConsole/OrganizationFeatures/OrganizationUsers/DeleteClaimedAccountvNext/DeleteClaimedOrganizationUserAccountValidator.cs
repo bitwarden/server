@@ -46,7 +46,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNext(
 
         // Cannot delete an owner unless you are an owner or provider
         if (request.OrganizationUser.Type == OrganizationUserType.Owner &&
-            await currentContext.OrganizationOwner(request.OrganizationId))
+            !await currentContext.OrganizationOwner(request.OrganizationId))
         {
             return Invalid(request, new CannotDeleteOwnersError());
         }
