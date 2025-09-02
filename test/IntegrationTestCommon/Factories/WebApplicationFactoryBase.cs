@@ -153,7 +153,6 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
             // Web push notifications
             { "globalSettings:webPush:vapidPublicKey", "BGBtAM0bU3b5jsB14IjBYarvJZ6rWHilASLudTTYDDBi7a-3kebo24Yus_xYeOMZ863flAXhFAbkL6GVSrxgErg" },
-            { "globalSettings:launchDarkly:flagValues:web-push", "true" },
         };
 
         // Some database drivers modify the connection string
