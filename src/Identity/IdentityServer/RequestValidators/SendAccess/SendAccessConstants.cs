@@ -1,5 +1,5 @@
-﻿using Duende.IdentityServer.Validation;
-using Bit.Core.Auth.Identity.TokenProviders;
+﻿using Bit.Core.Auth.Identity.TokenProviders;
+using Duende.IdentityServer.Validation;
 
 namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 
