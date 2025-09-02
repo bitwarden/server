@@ -281,6 +281,90 @@ public class SavePolicyCommandTests
         await AssertPolicyNotSavedAsync(sutProvider);
     }
 
+    [Theory, BitAutoData]
+    public async Task VNextSaveAsync_OrganizationDataOwnershipPolicy_ExecutesPostSaveSideEffects(
+        [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.OrganizationDataOwnership, false)] Policy currentPolicy)
+    {
+        // Arrange
+        var sutProvider = SutProviderFactory();
+        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+
+        currentPolicy.OrganizationId = policyUpdate.OrganizationId;
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, policyUpdate.Type)
+            .Returns(currentPolicy);
+
+        ArrangeOrganization(sutProvider, policyUpdate);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns([currentPolicy]);
+
+        // Act
+        var result = await sutProvider.Sut.VNextSaveAsync(savePolicyModel);
+
+        // Assert
+        await sutProvider.GetDependency<IPolicyRepository>()
+            .Received(1)
+            .UpsertAsync(result);
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogPolicyEventAsync(result, EventType.Policy_Updated);
+
+        await sutProvider.GetDependency<IPostSavePolicySideEffect>()
+            .Received(1)
+            .ExecuteSideEffectsAsync(savePolicyModel, result, currentPolicy);
+    }
+
+    private static IEnumerable<PolicyType> SampleUnsupportedTestCases()
+    {
+        yield return PolicyType.SingleOrg;
+        yield return PolicyType.TwoFactorAuthentication;
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(SampleUnsupportedTestCases))]
+    public async Task VNextSaveAsync_NonOrganizationDataOwnershipPolicy_DoesNotExecutePostSaveSideEffects(
+         PolicyType policyType,
+         Policy currentPolicy,
+         [PolicyUpdate] PolicyUpdate policyUpdate)
+    {
+        // Arrange
+        policyUpdate.Type = policyType;
+        currentPolicy.Type = policyType;
+        currentPolicy.OrganizationId = policyUpdate.OrganizationId;
+
+
+        var sutProvider = SutProviderFactory();
+        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, policyUpdate.Type)
+            .Returns(currentPolicy);
+
+        ArrangeOrganization(sutProvider, policyUpdate);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns([currentPolicy]);
+
+        // Act
+        var result = await sutProvider.Sut.VNextSaveAsync(savePolicyModel);
+
+        // Assert
+        await sutProvider.GetDependency<IPolicyRepository>()
+            .Received(1)
+            .UpsertAsync(result);
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogPolicyEventAsync(result, EventType.Policy_Updated);
+
+        await sutProvider.GetDependency<IPostSavePolicySideEffect>()
+            .DidNotReceiveWithAnyArgs()
+            .ExecuteSideEffectsAsync(default!, default!, default!);
+    }
+
     /// <summary>
     /// Returns a new SutProvider with the PolicyValidators registered in the Sut.
     /// </summary>
