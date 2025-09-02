@@ -53,7 +53,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
         var result = await sutProvider.Sut.DeleteUserAsync(organizationId, organizationUser.Id, deletingUserId);
 
         Assert.Equal(organizationUser.Id, result.Id);
-        Assert.True(result.Result.IsT1);
+        Assert.True(result.IsSuccess);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
@@ -127,7 +127,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
 
         var resultsList = results.ToList();
         Assert.Equal(2, resultsList.Count);
-        Assert.All(resultsList, result => Assert.True(result.Result.IsT1));
+        Assert.All(resultsList, result => Assert.True(result.IsSuccess));
 
         await AssertSuccessfulUserOperations(sutProvider, [user1, user2], [orgUser1, orgUser2]);
     }
@@ -170,12 +170,12 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
         Assert.Equal(2, resultsList.Count);
 
         Assert.Equal(orgUserId1, resultsList[0].Id);
-        Assert.True(resultsList[0].Result.IsT0);
-        Assert.IsType<UserNotClaimedError>(resultsList[0].Result.AsT0);
+        Assert.True(resultsList[0].IsError);
+        Assert.IsType<UserNotClaimedError>(resultsList[0].AsError);
 
         Assert.Equal(orgUserId2, resultsList[1].Id);
-        Assert.True(resultsList[1].Result.IsT0);
-        Assert.IsType<InvalidUserStatusError>(resultsList[1].Result.AsT0);
+        Assert.True(resultsList[1].IsError);
+        Assert.IsType<InvalidUserStatusError>(resultsList[1].AsError);
 
         await AssertNoUserOperations(sutProvider);
     }
@@ -233,9 +233,9 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
         var validResult = resultsList.First(r => r.Id == validOrgUserId);
         var invalidResult = resultsList.First(r => r.Id == invalidOrgUserId);
 
-        Assert.True(validResult.Result.IsT1);
-        Assert.True(invalidResult.Result.IsT0);
-        Assert.IsType<UserNotFoundError>(invalidResult.Result.AsT0);
+        Assert.True(validResult.IsSuccess);
+        Assert.True(invalidResult.IsError);
+        Assert.IsType<UserNotFoundError>(invalidResult.AsError);
 
         await AssertSuccessfulUserOperations(sutProvider, [validUser], [validOrgUser]);
     }
@@ -280,7 +280,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
 
         var resultsList = results.ToList();
         Assert.Single(resultsList);
-        Assert.True(resultsList.First().Result.IsT1);
+        Assert.True(resultsList.First().IsSuccess);
 
         await sutProvider.GetDependency<IUserService>().Received(1).CancelPremiumAsync(user);
         await AssertSuccessfulUserOperations(sutProvider, [user], [orgUser]);

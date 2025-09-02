@@ -21,13 +21,13 @@ public class DeleteClaimedOrganizationUserAccountCommandvNext(
     IDeleteClaimedOrganizationUserAccountValidatorvNext deleteClaimedOrganizationUserAccountValidatorvNext)
     : IDeleteClaimedOrganizationUserAccountCommandvNext
 {
-    public async Task<CommandResult> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
+    public async Task<BulkCommandResult> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId)
     {
         var result = await DeleteManyUsersAsync(organizationId, [organizationUserId], deletingUserId);
         return result.Single();
     }
 
-    public async Task<IEnumerable<CommandResult>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid deletingUserId)
+    public async Task<IEnumerable<BulkCommandResult>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid deletingUserId)
     {
         orgUserIds = orgUserIds.ToList();
         var orgUsers = await organizationUserRepository.GetManyAsync(orgUserIds);
@@ -43,8 +43,8 @@ public class DeleteClaimedOrganizationUserAccountCommandvNext(
         await LogDeletedOrganizationUsersAsync(validRequests);
 
         return validationResults.Select(v => v.Error.Match(
-            error => new CommandResult(v.Request.OrganizationUserId, error),
-            _ => new CommandResult(v.Request.OrganizationUserId, new None())
+            error => new BulkCommandResult(v.Request.OrganizationUserId, error),
+            _ => new BulkCommandResult(v.Request.OrganizationUserId, new None())
         ));
     }
 

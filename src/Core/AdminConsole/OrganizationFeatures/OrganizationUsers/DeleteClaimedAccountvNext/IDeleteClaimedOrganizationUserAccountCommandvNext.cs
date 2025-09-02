@@ -5,7 +5,7 @@ public interface IDeleteClaimedOrganizationUserAccountCommandvNext
     /// <summary>
     /// Removes a user from an organization and deletes all of their associated user data.
     /// </summary>
-    Task<CommandResult> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId);
+    Task<BulkCommandResult> DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid deletingUserId);
 
     /// <summary>
     /// Removes multiple users from an organization and deletes all of their associated user data.
@@ -13,5 +13,5 @@ public interface IDeleteClaimedOrganizationUserAccountCommandvNext
     /// <returns>
     /// An error message for each user that could not be removed, otherwise null.
     /// </returns>
-    Task<IEnumerable<CommandResult>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid deletingUserId);
+    Task<IEnumerable<BulkCommandResult>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid deletingUserId);
 }
