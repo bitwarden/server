@@ -1,4 +1,4 @@
-using Bit.Core.Vault.Models.Data;
+﻿using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Core.Vault.Commands.Interfaces;
 
