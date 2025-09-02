@@ -213,8 +213,8 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
                 services.AddSingleton(sendAuthQuery);
 
                 // Mock password validator to return success
-                var passwordValidator = Substitute.For<ISendPasswordRequestValidator>();
-                passwordValidator.ValidateSendPassword(
+                var passwordValidator = Substitute.For<ISendAuthenticationMethodValidator<ResourcePassword>>();
+                passwordValidator.ValidateRequestAsync(
                     Arg.Any<ExtensionGrantValidationContext>(),
                     Arg.Any<ResourcePassword>(),
                     Arg.Any<Guid>())

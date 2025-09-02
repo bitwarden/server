@@ -29,7 +29,7 @@ public class ApiResources
             }),
             new(ApiScopes.ApiSendAccess, [
                 JwtClaimTypes.Subject,
-                Claims.SendId
+                Claims.SendAccessClaims.SendId
             ]),
             new(ApiScopes.Internal, new[] { JwtClaimTypes.Subject }),
             new(ApiScopes.ApiPush, new[] { JwtClaimTypes.Subject }),
