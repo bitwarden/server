@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -443,7 +443,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
         var orgUserList = expectedOrgUsers.ToList();
 
         await sutProvider.GetDependency<IUserRepository>().Received(1)
-            .DeleteManyAsync(Arg.Is<IEnumerable<User>>(users => 
+            .DeleteManyAsync(Arg.Is<IEnumerable<User>>(users =>
                 userList.All(expectedUser => users.Any(u => u.Id == expectedUser.Id))));
 
         foreach (var user in userList)
@@ -453,7 +453,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNextTests
 
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
-                orgUserList.All(expectedOrgUser => 
+                orgUserList.All(expectedOrgUser =>
                     events.Any(e => e.Item1.Id == expectedOrgUser.Id && e.Item2 == EventType.OrganizationUser_Deleted))));
     }
 
