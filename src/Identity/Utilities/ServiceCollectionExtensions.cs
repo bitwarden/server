@@ -1,5 +1,5 @@
-﻿using Bit.Core.Auth.Repositories;
-using Bit.Core.IdentityServer;
+﻿using Bit.Core.Auth.IdentityServer;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Utilities;
