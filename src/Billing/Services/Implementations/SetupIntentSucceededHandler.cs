@@ -42,14 +42,8 @@ public class SetupIntentSucceededHandler(
         var organization = await organizationRepository.GetByIdAsync(subscriberId.Value);
         var provider = await providerRepository.GetByIdAsync(subscriberId.Value);
 
-        if (organization != null)
-        {
-            await SetPaymentMethodAsync(organization, setupIntent.PaymentMethod);
-        }
-        else if (provider != null)
-        {
-            await SetPaymentMethodAsync(provider, setupIntent.PaymentMethod);
-        }
+        OneOf<Organization, Provider> entity = organization != null ? organization : provider!;
+        await SetPaymentMethodAsync(entity, setupIntent.PaymentMethod);
     }
 
     private async Task SetPaymentMethodAsync(
