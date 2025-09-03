@@ -4,6 +4,7 @@ on:
 
 jobs:
   test:
+    permissions: none
     name: Test
     runs-on: ubuntu-24.04
     steps:
