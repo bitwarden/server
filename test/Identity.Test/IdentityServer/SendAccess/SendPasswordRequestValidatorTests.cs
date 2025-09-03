@@ -15,7 +15,7 @@ using Duende.IdentityServer.Validation;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Identity.Test.IdentityServer;
+namespace Bit.Identity.Test.IdentityServer.SendAccess;
 
 [SutProviderCustomize]
 public class SendPasswordRequestValidatorTests

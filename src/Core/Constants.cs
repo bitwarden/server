@@ -163,6 +163,7 @@ public static class FeatureFlagKeys
     public const string UserSdkForDecryption = "use-sdk-for-decryption";
     public const string PM17987_BlockType0 = "pm-17987-block-type-0";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
+    public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
 
     /* Mobile Team */
     public const string NativeCarouselFlow = "native-carousel-flow";
@@ -187,6 +188,7 @@ public static class FeatureFlagKeys
     public const string PersistPopupView = "persist-popup-view";
     public const string IpcChannelFramework = "ipc-channel-framework";
     public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
+    public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
 
     /* Tools Team */
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
