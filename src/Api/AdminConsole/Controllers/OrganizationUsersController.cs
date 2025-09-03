@@ -546,7 +546,7 @@ public class OrganizationUsersController : Controller
 
         var commandResult = await _deleteClaimedOrganizationUserAccountCommandvNext.DeleteUserAsync(orgId, id, currentUserId.Value);
 
-        return commandResult.Match<IResult>(
+        return commandResult.Result.Match<IResult>(
             error => error is NotFoundError
                 ? TypedResults.NotFound(new ErrorResponseModel(error.Message))
                 : TypedResults.BadRequest(new ErrorResponseModel(error.Message)),
@@ -586,7 +586,7 @@ public class OrganizationUsersController : Controller
 
         var result = await _deleteClaimedOrganizationUserAccountCommandvNext.DeleteManyUsersAsync(orgId, model.Ids, currentUserId.Value);
 
-        var responses = result.Select(r => r.Match(
+        var responses = result.Select(r => r.Result.Match(
             error => new OrganizationUserBulkResponseModel(r.Id, error.Message),
             _ => new OrganizationUserBulkResponseModel(r.Id, string.Empty)
         ));

@@ -42,7 +42,7 @@ public class DeleteClaimedOrganizationUserAccountCommandvNext(
         await HandleUserDeletionsAsync(validRequests);
         await LogDeletedOrganizationUsersAsync(validRequests);
 
-        return validationResults.Select(v => v.Error.Match(
+        return validationResults.Select(v => v.Match(
             error => new BulkCommandResult(v.Request.OrganizationUserId, error),
             _ => new BulkCommandResult(v.Request.OrganizationUserId, new None())
         ));

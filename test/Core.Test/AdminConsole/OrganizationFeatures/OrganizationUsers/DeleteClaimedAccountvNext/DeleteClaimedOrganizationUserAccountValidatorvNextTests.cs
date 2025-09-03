@@ -43,7 +43,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
 
         var resultsList = results.ToList();
         Assert.Single(resultsList);
-        Assert.True(resultsList[0].Error.IsT1);
+        Assert.True(resultsList[0].IsValid);
         Assert.Equal(request, resultsList[0].Request);
     }
 
@@ -91,7 +91,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
 
         var resultsList = results.ToList();
         Assert.Equal(2, resultsList.Count);
-        Assert.All(resultsList, result => Assert.True(result.Error.IsT1));
+        Assert.All(resultsList, result => Assert.True(result.IsValid));
     }
 
     [Theory]
@@ -116,8 +116,8 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
 
         var resultsList = results.ToList();
         Assert.Single(resultsList);
-        Assert.True(resultsList[0].Error.IsT0);
-        Assert.IsType<UserNotFoundError>(resultsList[0].Error.AsT0);
+        Assert.True(resultsList[0].IsError);
+        Assert.IsType<UserNotFoundError>(resultsList[0].AsError);
     }
 
     [Theory]
@@ -142,8 +142,8 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
 
         var resultsList = results.ToList();
         Assert.Single(resultsList);
-        Assert.True(resultsList[0].Error.IsT0);
-        Assert.IsType<UserNotFoundError>(resultsList[0].Error.AsT0);
+        Assert.True(resultsList[0].IsError);
+        Assert.IsType<UserNotFoundError>(resultsList[0].AsError);
     }
 
     [Theory]
@@ -171,8 +171,8 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
 
         var resultsList = results.ToList();
         Assert.Single(resultsList);
-        Assert.True(resultsList[0].Error.IsT0);
-        Assert.IsType<InvalidUserStatusError>(resultsList[0].Error.AsT0);
+        Assert.True(resultsList[0].IsError);
+        Assert.IsType<InvalidUserStatusError>(resultsList[0].AsError);
     }
 
     [Theory]
@@ -199,8 +199,8 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
 
         var resultsList = results.ToList();
         Assert.Single(resultsList);
-        Assert.True(resultsList[0].Error.IsT0);
-        Assert.IsType<CannotDeleteYourselfError>(resultsList[0].Error.AsT0);
+        Assert.True(resultsList[0].IsError);
+        Assert.IsType<CannotDeleteYourselfError>(resultsList[0].AsError);
     }
 
     [Theory]
@@ -228,8 +228,8 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
 
         var resultsList = results.ToList();
         Assert.Single(resultsList);
-        Assert.True(resultsList[0].Error.IsT0);
-        Assert.IsType<UserNotClaimedError>(resultsList[0].Error.AsT0);
+        Assert.True(resultsList[0].IsError);
+        Assert.IsType<UserNotClaimedError>(resultsList[0].AsError);
     }
 
     [Theory]
@@ -259,8 +259,8 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
 
         var resultsList = results.ToList();
         Assert.Single(resultsList);
-        Assert.True(resultsList[0].Error.IsT0);
-        Assert.IsType<CannotDeleteOwnersError>(resultsList[0].Error.AsT0);
+        Assert.True(resultsList[0].IsError);
+        Assert.IsType<CannotDeleteOwnersError>(resultsList[0].AsError);
     }
 
     [Theory]
@@ -290,7 +290,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
 
         var resultsList = results.ToList();
         Assert.Single(resultsList);
-        Assert.True(resultsList[0].Error.IsT1);
+        Assert.True(resultsList[0].IsValid);
     }
 
     [Theory]
@@ -324,8 +324,8 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
 
         var resultsList = results.ToList();
         Assert.Single(resultsList);
-        Assert.True(resultsList[0].Error.IsT0);
-        Assert.IsType<SoleOwnerError>(resultsList[0].Error.AsT0);
+        Assert.True(resultsList[0].IsError);
+        Assert.IsType<SoleOwnerError>(resultsList[0].AsError);
     }
 
     [Theory]
@@ -359,8 +359,8 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
 
         var resultsList = results.ToList();
         Assert.Single(resultsList);
-        Assert.True(resultsList[0].Error.IsT0);
-        Assert.IsType<SoleProviderError>(resultsList[0].Error.AsT0);
+        Assert.True(resultsList[0].IsError);
+        Assert.IsType<SoleProviderError>(resultsList[0].AsError);
     }
 
     [Theory]
@@ -390,8 +390,8 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
 
         var resultsList = results.ToList();
         Assert.Single(resultsList);
-        Assert.True(resultsList[0].Error.IsT0);
-        Assert.IsType<CannotDeleteAdminsError>(resultsList[0].Error.AsT0);
+        Assert.True(resultsList[0].IsError);
+        Assert.IsType<CannotDeleteAdminsError>(resultsList[0].AsError);
     }
 
     [Theory]
@@ -421,7 +421,7 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
 
         var resultsList = results.ToList();
         Assert.Single(resultsList);
-        Assert.True(resultsList[0].Error.IsT1);
+        Assert.True(resultsList[0].IsValid);
     }
 
     [Theory]
@@ -469,9 +469,9 @@ public class DeleteClaimedOrganizationUserAccountValidatorvNextTests
         var validResult = resultsList.First(r => r.Request == validRequest);
         var invalidResult = resultsList.First(r => r.Request == invalidRequest);
 
-        Assert.True(validResult.Error.IsT1);
-        Assert.True(invalidResult.Error.IsT0);
-        Assert.IsType<InvalidUserStatusError>(invalidResult.Error.AsT0);
+        Assert.True(validResult.IsValid);
+        Assert.True(invalidResult.IsError);
+        Assert.IsType<InvalidUserStatusError>(invalidResult.AsError);
     }
 
     private static void SetupMocks(

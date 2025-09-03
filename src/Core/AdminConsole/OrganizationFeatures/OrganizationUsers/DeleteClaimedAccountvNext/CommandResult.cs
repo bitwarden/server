@@ -30,10 +30,13 @@ public class CommandResult(OneOf<Error, None> result) : CommandResult<None>(resu
     public static implicit operator CommandResult(Error error) => new (error);
 }
 
+/// <summary>
+/// A wrapper for <see cref="CommandResult{T}"/> with an ID, to identify the result in bulk operations.
+/// </summary>
 public record BulkCommandResult<T>(Guid Id, CommandResult<T> Result);
 
-public class BulkCommandResult(Guid id, OneOf<Error, None> result) : CommandResult(result)
-{
-    public Guid Id { get; } = id;
-}
+/// <summary>
+/// A wrapper for <see cref="CommandResult"/> with an ID, to identify the result in bulk operations.
+/// </summary>
+public record BulkCommandResult(Guid Id, CommandResult Result);
 

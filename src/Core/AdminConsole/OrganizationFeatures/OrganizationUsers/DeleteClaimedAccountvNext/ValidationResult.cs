@@ -7,10 +7,17 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteCla
 /// Represents the result of validating a request.
 /// This is for use within the Core layer, e.g. validating a command request.
 /// </summary>
-/// <param name="Request">The request that has been validated.</param>
-/// <param name="Error">A <see cref="OneOf{Error, None}"/> type that contains an Error if validation failed.</param>
+/// <param name="request">The request that has been validated.</param>
+/// <param name="error">A <see cref="OneOf{Error, None}"/> type that contains an Error if validation failed.</param>
 /// <typeparam name="TRequest">The request type.</typeparam>
-public record ValidationResult<TRequest>(TRequest Request, OneOf<Error, None> Error);
+public class ValidationResult<TRequest>(TRequest request, OneOf<Error, None> error) : OneOfBase<Error, None>(error)
+{
+    public TRequest Request { get; } = request;
+
+    public bool IsError => IsT0;
+    public bool IsValid => IsT1;
+    public Error AsError => AsT0;
+}
 
 public static class ValidationResultHelpers
 {
@@ -28,7 +35,7 @@ public static class ValidationResultHelpers
     /// </summary>
     public static List<T> ValidRequests<T>(this IEnumerable<ValidationResult<T>> results) =>
         results
-            .Where(r => r.Error.IsT1)
+            .Where(r => r.IsValid)
             .Select(r => r.Request)
             .ToList();
 }
