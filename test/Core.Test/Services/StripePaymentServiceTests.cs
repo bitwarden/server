@@ -209,7 +209,7 @@ public class StripePaymentServiceTests
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
-                Tax = 8,
+                TotalTaxes = [new InvoiceTotalTax { Amount = 8 }],
                 Total = 408
             });
 
@@ -251,7 +251,7 @@ public class StripePaymentServiceTests
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
-                Tax = 8,
+                TotalTaxes = [new InvoiceTotalTax { Amount = 8 }],
                 Total = 408
             });
 
@@ -293,7 +293,7 @@ public class StripePaymentServiceTests
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
-                Tax = 8,
+                TotalTaxes = [new InvoiceTotalTax { Amount = 8 }],
                 Total = 408
             });
 
@@ -335,7 +335,7 @@ public class StripePaymentServiceTests
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
-                Tax = 8,
+                TotalTaxes = [new InvoiceTotalTax { Amount = 8 }],
                 Total = 408
             });
 
@@ -377,7 +377,7 @@ public class StripePaymentServiceTests
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
-                Tax = 8,
+                TotalTaxes = [new InvoiceTotalTax { Amount = 8 }],
                 Total = 408
             });
 
@@ -419,7 +419,7 @@ public class StripePaymentServiceTests
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
-                Tax = 8,
+                TotalTaxes = [new InvoiceTotalTax { Amount = 8 }],
                 Total = 408
             });
 
@@ -461,7 +461,7 @@ public class StripePaymentServiceTests
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
-                Tax = 8,
+                TotalTaxes = [new InvoiceTotalTax { Amount = 8 }],
                 Total = 408
             });
 
@@ -503,7 +503,7 @@ public class StripePaymentServiceTests
             .Returns(new Invoice
             {
                 TotalExcludingTax = 400,
-                Tax = 8,
+                TotalTaxes = [new InvoiceTotalTax { Amount = 8 }],
                 Total = 408
             });
 
