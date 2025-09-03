@@ -269,7 +269,7 @@ public class PreviewTaxAmountCommandTests
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }]}; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }] }; // $10.00 in cents
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(expectedInvoice);
 
@@ -302,7 +302,7 @@ public class PreviewTaxAmountCommandTests
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }]}; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }] }; // $10.00 in cents
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(expectedInvoice);
 
@@ -335,7 +335,7 @@ public class PreviewTaxAmountCommandTests
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }]}; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }] }; // $10.00 in cents
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(expectedInvoice);
 
@@ -368,7 +368,7 @@ public class PreviewTaxAmountCommandTests
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }]}; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }] }; // $10.00 in cents
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(expectedInvoice);
 
@@ -401,7 +401,7 @@ public class PreviewTaxAmountCommandTests
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }]}; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }] }; // $10.00 in cents
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(expectedInvoice);
 
@@ -434,7 +434,7 @@ public class PreviewTaxAmountCommandTests
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }]}; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }] }; // $10.00 in cents
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(expectedInvoice);
 
@@ -467,7 +467,7 @@ public class PreviewTaxAmountCommandTests
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }]}; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }] }; // $10.00 in cents
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(expectedInvoice);
 
@@ -501,7 +501,7 @@ public class PreviewTaxAmountCommandTests
 
         _pricingClient.GetPlanOrThrow(parameters.PlanType).Returns(plan);
 
-        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }]}; // $10.00 in cents
+        var expectedInvoice = new Invoice { TotalTaxes = [new InvoiceTotalTax { Amount = 1000 }] }; // $10.00 in cents
         _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
             .Returns(expectedInvoice);
 
