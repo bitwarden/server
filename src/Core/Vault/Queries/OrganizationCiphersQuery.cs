@@ -24,7 +24,7 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
         var orgCiphers = ciphers.Where(c => c.OrganizationId == organizationId).ToList();
         var orgCipherIds = orgCiphers.Select(c => c.Id);
 
-        var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
+        var collectionCiphers = await _collectionCipherRepository.GetManySharedByOrganizationIdAsync(organizationId);
         var collectionCiphersGroupDict = collectionCiphers
             .Where(c => orgCipherIds.Contains(c.CipherId))
             .GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
