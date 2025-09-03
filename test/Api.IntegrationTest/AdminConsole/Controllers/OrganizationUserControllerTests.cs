@@ -1,10 +1,13 @@
 ﻿using System.Net;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Request;
+using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccountvNext;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -13,6 +16,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using NSubstitute;
+using Stripe;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -30,6 +34,10 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             featureService
                 .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
                 .Returns(true);
+
+            featureService
+                .IsEnabled(FeatureFlagKeys.DeleteClaimedUserAccountRefactor)
+                .Returns(true);
         });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
@@ -41,6 +49,91 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
 
     private Organization _organization = null!;
     private string _ownerEmail = null!;
+
+    [Fact]
+    public async Task BulkDeleteAccount_Success()
+    {
+        var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Owner);
+
+        await _loginHelper.LoginAsync(userEmail);
+
+        var (_, orgUserToDelete) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id, OrganizationUserType.User);
+        await OrganizationTestHelpers.CreateVerifiedDomainAsync(_factory, _organization.Id, "bitwarden.com");
+
+        var userRepository = _factory.GetService<IUserRepository>();
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+
+        Assert.NotNull(orgUserToDelete.UserId);
+        Assert.NotNull(await userRepository.GetByIdAsync(orgUserToDelete.UserId.Value));
+        Assert.NotNull(await organizationUserRepository.GetByIdAsync(orgUserToDelete.Id));
+
+        var request = new OrganizationUserBulkRequestModel
+        {
+            Ids = [orgUserToDelete.Id]
+        };
+
+        var httpResponse = await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/delete-account", request);
+        var content = await httpResponse.Content.ReadFromJsonAsync<ListResponseModel<OrganizationUserBulkResponseModel>>();
+        Assert.Single(content.Data, r => r.Id == orgUserToDelete.Id && r.Error == string.Empty);
+
+        Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
+        Assert.Null(await userRepository.GetByIdAsync(orgUserToDelete.UserId.Value));
+        Assert.Null(await organizationUserRepository.GetByIdAsync(orgUserToDelete.Id));
+    }
+
+    [Fact]
+    public async Task BulkDeleteAccount_MixedResults()
+    {
+        var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Admin);
+
+        await _loginHelper.LoginAsync(userEmail);
+
+        // Can delete users
+        var (_, validOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id, OrganizationUserType.User);
+        // Cannot delete owners
+        var (_, invalidOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id, OrganizationUserType.Owner);
+        await OrganizationTestHelpers.CreateVerifiedDomainAsync(_factory, _organization.Id, "bitwarden.com");
+
+        var userRepository = _factory.GetService<IUserRepository>();
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+
+        Assert.NotNull(validOrgUser.UserId);
+        Assert.NotNull(invalidOrgUser.UserId);
+
+        var arrangedUsers =
+            await userRepository.GetManyAsync([validOrgUser.UserId.Value, invalidOrgUser.UserId.Value]);
+        Assert.Equal(2, arrangedUsers.Count());
+
+        var arrangedOrgUsers =
+            await organizationUserRepository.GetManyAsync([validOrgUser.Id, invalidOrgUser.Id]);
+        Assert.Equal(2, arrangedOrgUsers.Count);
+
+        var request = new OrganizationUserBulkRequestModel
+        {
+            Ids = [validOrgUser.Id, invalidOrgUser.Id]
+        };
+
+        var httpResponse = await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/delete-account", request);
+
+        Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
+        var debug = await httpResponse.Content.ReadAsStringAsync();
+        var content = await httpResponse.Content.ReadFromJsonAsync<ListResponseModel<OrganizationUserBulkResponseModel>>();
+        Assert.Equal(2, content.Data.Count());
+        Assert.Contains(content.Data, r => r.Id == validOrgUser.Id && r.Error == string.Empty);
+        Assert.Contains(content.Data, r =>
+            r.Id == invalidOrgUser.Id &&
+            string.Equals(r.Error, new CannotDeleteOwnersError().Message, StringComparison.Ordinal));
+
+        var actualUsers =
+            await userRepository.GetManyAsync([validOrgUser.UserId.Value, invalidOrgUser.UserId.Value]);
+        Assert.Single(actualUsers, u => u.Id == invalidOrgUser.UserId.Value);
+
+        var actualOrgUsers =
+            await organizationUserRepository.GetManyAsync([validOrgUser.Id, invalidOrgUser.Id]);
+        Assert.Single(actualOrgUsers, ou => ou.Id == invalidOrgUser.Id);
+    }
 
     [Theory]
     [InlineData(OrganizationUserType.User)]
@@ -57,9 +150,34 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             Ids = new List<Guid> { Guid.NewGuid() }
         };
 
-        var httpResponse = await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/remove", request);
+        var httpResponse = await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/delete-account", request);
 
         Assert.Equal(HttpStatusCode.Forbidden, httpResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteAccount_Success()
+    {
+        var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Owner);
+
+        await _loginHelper.LoginAsync(userEmail);
+
+        var (_, orgUserToDelete) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id, OrganizationUserType.User);
+        await OrganizationTestHelpers.CreateVerifiedDomainAsync(_factory, _organization.Id, "bitwarden.com");
+
+        var userRepository = _factory.GetService<IUserRepository>();
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+
+        Assert.NotNull(orgUserToDelete.UserId);
+        Assert.NotNull(await userRepository.GetByIdAsync(orgUserToDelete.UserId.Value));
+        Assert.NotNull(await organizationUserRepository.GetByIdAsync(orgUserToDelete.Id));
+
+        var httpResponse = await _client.DeleteAsync($"organizations/{_organization.Id}/users/{orgUserToDelete.Id}/delete-account");
+
+        Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
+        Assert.Null(await userRepository.GetByIdAsync(orgUserToDelete.UserId.Value));
+        Assert.Null(await organizationUserRepository.GetByIdAsync(orgUserToDelete.Id));
     }
 
     [Theory]
@@ -74,7 +192,7 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
 
         var userToRemove = Guid.NewGuid();
 
-        var httpResponse = await _client.DeleteAsync($"organizations/{_organization.Id}/users/{userToRemove}");
+        var httpResponse = await _client.DeleteAsync($"organizations/{_organization.Id}/users/{userToRemove}/delete-account");
 
         Assert.Equal(HttpStatusCode.Forbidden, httpResponse.StatusCode);
     }
