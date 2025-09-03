@@ -5,7 +5,8 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        CC.*
+        CC.CollectionId,
+        CC.CipherId
     FROM
         [dbo].[CollectionCipher] CC
     INNER JOIN
