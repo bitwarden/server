@@ -4,7 +4,8 @@ on:
 
 jobs:
   test:
-    permissions: none
+    permissions:
+      contents: read
     name: Test
     runs-on: ubuntu-24.04
     steps:
