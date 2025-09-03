@@ -16,7 +16,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using NSubstitute;
-using Stripe;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
