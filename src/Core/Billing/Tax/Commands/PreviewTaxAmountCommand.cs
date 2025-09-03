@@ -100,17 +100,11 @@ public class PreviewTaxAmountCommand(
                 }
             }
 
-            if (planType.GetProductTier() == ProductTierType.Families)
+            options.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true };
+            if (parameters.PlanType.IsBusinessProductTierType() &&
+                parameters.TaxInformation.Country != Core.Constants.CountryAbbreviations.UnitedStates)
             {
-                options.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true };
-            }
-            else
-            {
-                options.AutomaticTax = new InvoiceAutomaticTaxOptions
-                {
-                    Enabled = options.CustomerDetails.Address.Country == "US" ||
-                              options.CustomerDetails.TaxIds is [_, ..]
-                };
+                options.CustomerDetails.TaxExempt = StripeConstants.TaxExempt.Reverse;
             }
 
             var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);

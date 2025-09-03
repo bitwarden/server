@@ -41,7 +41,6 @@ namespace Bit.Commercial.Core.Billing.Providers.Services;
 public class ProviderBillingService(
     IBraintreeGateway braintreeGateway,
     IEventService eventService,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -284,9 +283,7 @@ public class ProviderBillingService(
             ]
         };
 
-        var setNonUSBusinessUseToReverseCharge = featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
-
-        if (setNonUSBusinessUseToReverseCharge && providerCustomer.Address is not { Country: "US" })
+        if (providerCustomer.Address is not { Country: Constants.CountryAbbreviations.UnitedStates })
         {
             customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
         }
@@ -483,8 +480,10 @@ public class ProviderBillingService(
     public async Task<Customer> SetupCustomer(
         Provider provider,
         TaxInfo taxInfo,
-        TokenizedPaymentSource tokenizedPaymentSource = null)
+        TokenizedPaymentSource tokenizedPaymentSource)
     {
+        ArgumentNullException.ThrowIfNull(tokenizedPaymentSource);
+
         if (taxInfo is not
             {
                 BillingAddressCountry: not null and not "",
@@ -527,9 +526,7 @@ public class ProviderBillingService(
             }
         };
 
-        var setNonUSBusinessUseToReverseCharge = featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
-
-        if (setNonUSBusinessUseToReverseCharge && taxInfo.BillingAddressCountry != "US")
+        if (taxInfo.BillingAddressCountry is not Constants.CountryAbbreviations.UnitedStates)
         {
             options.TaxExempt = StripeConstants.TaxExempt.Reverse;
         }
@@ -560,56 +557,50 @@ public class ProviderBillingService(
             }
         }
 
-        var requireProviderPaymentMethodDuringSetup =
-            featureService.IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup);
-
         var braintreeCustomerId = "";
 
-        if (requireProviderPaymentMethodDuringSetup)
+        if (tokenizedPaymentSource is not
+            {
+                Type: PaymentMethodType.BankAccount or PaymentMethodType.Card or PaymentMethodType.PayPal,
+                Token: not null and not ""
+            })
         {
-            if (tokenizedPaymentSource is not
+            logger.LogError("Cannot create customer for provider ({ProviderID}) with invalid payment method", provider.Id);
+            throw new BillingException();
+        }
+
+        var (type, token) = tokenizedPaymentSource;
+
+        // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
+        switch (type)
+        {
+            case PaymentMethodType.BankAccount:
                 {
-                    Type: PaymentMethodType.BankAccount or PaymentMethodType.Card or PaymentMethodType.PayPal,
-                    Token: not null and not ""
-                })
-            {
-                logger.LogError("Cannot create customer for provider ({ProviderID}) without a payment method", provider.Id);
-                throw new BillingException();
-            }
+                    var setupIntent =
+                        (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = token }))
+                        .FirstOrDefault();
 
-            var (type, token) = tokenizedPaymentSource;
-
-            // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
-            switch (type)
-            {
-                case PaymentMethodType.BankAccount:
+                    if (setupIntent == null)
                     {
-                        var setupIntent =
-                            (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = token }))
-                            .FirstOrDefault();
+                        logger.LogError("Cannot create customer for provider ({ProviderID}) without a setup intent for their bank account", provider.Id);
+                        throw new BillingException();
+                    }
 
-                        if (setupIntent == null)
-                        {
-                            logger.LogError("Cannot create customer for provider ({ProviderID}) without a setup intent for their bank account", provider.Id);
-                            throw new BillingException();
-                        }
-
-                        await setupIntentCache.Set(provider.Id, setupIntent.Id);
-                        break;
-                    }
-                case PaymentMethodType.Card:
-                    {
-                        options.PaymentMethod = token;
-                        options.InvoiceSettings.DefaultPaymentMethod = token;
-                        break;
-                    }
-                case PaymentMethodType.PayPal:
-                    {
-                        braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(provider, token);
-                        options.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
-                        break;
-                    }
-            }
+                    await setupIntentCache.Set(provider.Id, setupIntent.Id);
+                    break;
+                }
+            case PaymentMethodType.Card:
+                {
+                    options.PaymentMethod = token;
+                    options.InvoiceSettings.DefaultPaymentMethod = token;
+                    break;
+                }
+            case PaymentMethodType.PayPal:
+                {
+                    braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(provider, token);
+                    options.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
+                    break;
+                }
         }
 
         try
@@ -631,25 +622,22 @@ public class ProviderBillingService(
 
         async Task Revert()
         {
-            if (requireProviderPaymentMethodDuringSetup && tokenizedPaymentSource != null)
+            // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
+            switch (tokenizedPaymentSource.Type)
             {
-                // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
-                switch (tokenizedPaymentSource.Type)
-                {
-                    case PaymentMethodType.BankAccount:
-                        {
-                            var setupIntentId = await setupIntentCache.Get(provider.Id);
-                            await stripeAdapter.SetupIntentCancel(setupIntentId,
-                                new SetupIntentCancelOptions { CancellationReason = "abandoned" });
-                            await setupIntentCache.Remove(provider.Id);
-                            break;
-                        }
-                    case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
-                        {
-                            await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
-                            break;
-                        }
-                }
+                case PaymentMethodType.BankAccount:
+                    {
+                        var setupIntentId = await setupIntentCache.Get(provider.Id);
+                        await stripeAdapter.SetupIntentCancel(setupIntentId,
+                            new SetupIntentCancelOptions { CancellationReason = "abandoned" });
+                        await setupIntentCache.Remove(provider.Id);
+                        break;
+                    }
+                case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
+                    {
+                        await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
+                        break;
+                    }
             }
         }
     }
@@ -692,9 +680,6 @@ public class ProviderBillingService(
             });
         }
 
-        var requireProviderPaymentMethodDuringSetup =
-            featureService.IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup);
-
         var setupIntentId = await setupIntentCache.Get(provider.Id);
 
         var setupIntent = !string.IsNullOrEmpty(setupIntentId)
@@ -705,10 +690,9 @@ public class ProviderBillingService(
             : null;
 
         var usePaymentMethod =
-            requireProviderPaymentMethodDuringSetup &&
-            (!string.IsNullOrEmpty(customer.InvoiceSettings.DefaultPaymentMethodId) ||
-             customer.Metadata.ContainsKey(BraintreeCustomerIdKey) ||
-             (setupIntent != null && setupIntent.IsUnverifiedBankAccount()));
+            !string.IsNullOrEmpty(customer.InvoiceSettings?.DefaultPaymentMethodId) ||
+            customer.Metadata?.ContainsKey(BraintreeCustomerIdKey) == true ||
+            setupIntent?.IsUnverifiedBankAccount() == true;
 
         int? trialPeriodDays = provider.Type switch
         {
@@ -731,24 +715,9 @@ public class ProviderBillingService(
             },
             OffSession = true,
             ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
-            TrialPeriodDays = trialPeriodDays
+            TrialPeriodDays = trialPeriodDays,
+            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
         };
-
-        var setNonUSBusinessUseToReverseCharge =
-            featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
-
-        if (setNonUSBusinessUseToReverseCharge)
-        {
-            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
-        }
-        else if (customer.HasRecognizedTaxLocation())
-        {
-            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
-            {
-                Enabled = customer.Address.Country == "US" ||
-                          customer.TaxIds.Any()
-            };
-        }
 
         try
         {

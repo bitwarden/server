@@ -22,7 +22,7 @@ namespace Bit.Api.Test.Controllers;
 public class CollectionsControllerTests
 {
     [Theory, BitAutoData]
-    public async Task Post_Success(Organization organization, CollectionRequestModel collectionRequest,
+    public async Task Post_Success(Organization organization, CreateCollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
         Collection ExpectedCollection() => Arg.Is<Collection>(c =>
@@ -46,9 +46,10 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Put_Success(Collection collection, CollectionRequestModel collectionRequest,
+    public async Task Put_Success(Collection collection, UpdateCollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
+        collection.DefaultUserCollectionEmail = null;
         Collection ExpectedCollection() => Arg.Is<Collection>(c => c.Id == collection.Id &&
             c.Name == collectionRequest.Name && c.ExternalId == collectionRequest.ExternalId &&
             c.OrganizationId == collection.OrganizationId);
@@ -72,7 +73,7 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Put_WithNoCollectionPermission_ThrowsNotFound(Collection collection, CollectionRequestModel collectionRequest,
+    public async Task Put_WithNoCollectionPermission_ThrowsNotFound(Collection collection, UpdateCollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
         sutProvider.GetDependency<IAuthorizationService>()
@@ -176,7 +177,7 @@ public class CollectionsControllerTests
             .GetManySharedCollectionsByOrganizationIdAsync(organization.Id)
             .Returns(collections);
 
-        var response = await sutProvider.Sut.Get(organization.Id);
+        var response = await sutProvider.Sut.GetAll(organization.Id);
 
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManySharedCollectionsByOrganizationIdAsync(organization.Id);
 
@@ -218,7 +219,7 @@ public class CollectionsControllerTests
             .GetManyByUserIdAsync(userId)
             .Returns(collections);
 
-        var result = await sutProvider.Sut.Get(organization.Id);
+        var result = await sutProvider.Sut.GetAll(organization.Id);
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().GetManyByOrganizationIdAsync(organization.Id);
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId);
@@ -483,5 +484,177 @@ public class CollectionsControllerTests
             );
         await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().DidNotReceiveWithAnyArgs()
             .AddAccessAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_With_NonNullName_DoesNotPreserveExistingName(Collection existingCollection, UpdateCollectionRequestModel collectionRequest,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        // Arrange
+        var newName = "new name";
+        var originalName = "original name";
+
+        existingCollection.Name = originalName;
+        existingCollection.DefaultUserCollectionEmail = null;
+
+        collectionRequest.Name = newName;
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdAsync(existingCollection.Id)
+            .Returns(existingCollection);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                existingCollection,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        // Act
+        await sutProvider.Sut.Put(existingCollection.OrganizationId, existingCollection.Id, collectionRequest);
+
+        // Assert
+        await sutProvider.GetDependency<IUpdateCollectionCommand>()
+            .Received(1)
+            .UpdateAsync(
+                Arg.Is<Collection>(c => c.Id == existingCollection.Id && c.Name == newName),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_WithNullName_DoesPreserveExistingName(Collection existingCollection, UpdateCollectionRequestModel collectionRequest,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        // Arrange
+        var originalName = "original name";
+
+        existingCollection.Name = originalName;
+        existingCollection.DefaultUserCollectionEmail = null;
+
+        collectionRequest.Name = null;
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdAsync(existingCollection.Id)
+            .Returns(existingCollection);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                existingCollection,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        // Act
+        await sutProvider.Sut.Put(existingCollection.OrganizationId, existingCollection.Id, collectionRequest);
+
+        // Assert
+        await sutProvider.GetDependency<IUpdateCollectionCommand>()
+            .Received(1)
+            .UpdateAsync(
+                Arg.Is<Collection>(c => c.Id == existingCollection.Id && c.Name == originalName),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_WithDefaultUserCollectionEmail_DoesPreserveExistingName(Collection existingCollection, UpdateCollectionRequestModel collectionRequest,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        // Arrange
+        var originalName = "original name";
+        var defaultUserCollectionEmail = "user@email.com";
+
+        existingCollection.Name = originalName;
+        existingCollection.DefaultUserCollectionEmail = defaultUserCollectionEmail;
+
+        collectionRequest.Name = "new name";
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdAsync(existingCollection.Id)
+            .Returns(existingCollection);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                existingCollection,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        // Act
+        await sutProvider.Sut.Put(existingCollection.OrganizationId, existingCollection.Id, collectionRequest);
+
+        // Assert
+        await sutProvider.GetDependency<IUpdateCollectionCommand>()
+            .Received(1)
+            .UpdateAsync(
+                Arg.Is<Collection>(c => c.Id == existingCollection.Id && c.Name == originalName && c.DefaultUserCollectionEmail == defaultUserCollectionEmail),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_WithEmptyName_DoesPreserveExistingName(Collection existingCollection, UpdateCollectionRequestModel collectionRequest,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        // Arrange
+        var originalName = "original name";
+
+        existingCollection.Name = originalName;
+        existingCollection.DefaultUserCollectionEmail = null;
+
+        collectionRequest.Name = ""; // Empty string
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdAsync(existingCollection.Id)
+            .Returns(existingCollection);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                existingCollection,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        // Act
+        await sutProvider.Sut.Put(existingCollection.OrganizationId, existingCollection.Id, collectionRequest);
+
+        // Assert
+        await sutProvider.GetDependency<IUpdateCollectionCommand>()
+            .Received(1)
+            .UpdateAsync(
+                Arg.Is<Collection>(c => c.Id == existingCollection.Id && c.Name == originalName),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_WithWhitespaceOnlyName_DoesPreserveExistingName(Collection existingCollection, UpdateCollectionRequestModel collectionRequest,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        // Arrange
+        var originalName = "original name";
+
+        existingCollection.Name = originalName;
+        existingCollection.DefaultUserCollectionEmail = null;
+
+        collectionRequest.Name = "   "; // Whitespace only
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdAsync(existingCollection.Id)
+            .Returns(existingCollection);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                existingCollection,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        // Act
+        await sutProvider.Sut.Put(existingCollection.OrganizationId, existingCollection.Id, collectionRequest);
+
+        // Assert
+        await sutProvider.GetDependency<IUpdateCollectionCommand>()
+            .Received(1)
+            .UpdateAsync(
+                Arg.Is<Collection>(c => c.Id == existingCollection.Id && c.Name == originalName),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
     }
 }

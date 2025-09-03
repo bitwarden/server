@@ -8,6 +8,7 @@ using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.IntegrationTestCommon.Factories;
+using Duende.IdentityModel;
 using Duende.IdentityServer.Validation;
 using NSubstitute;
 using Xunit;
@@ -96,8 +97,8 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
         }).CreateClient();
 
         var requestBody = new FormUrlEncodedContent([
-            new KeyValuePair<string, string>("grant_type", CustomGrantTypes.SendAccess),
-            new KeyValuePair<string, string>("client_id", BitwardenClient.Send)
+            new KeyValuePair<string, string>(OidcConstants.TokenRequest.GrantType, CustomGrantTypes.SendAccess),
+            new KeyValuePair<string, string>(OidcConstants.TokenRequest.ClientId, BitwardenClient.Send)
         ]);
 
         // Act
@@ -105,8 +106,8 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
 
         // Assert
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("invalid_request", content);
-        Assert.Contains("send_id is required", content);
+        Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
+        Assert.Contains($"{SendAccessConstants.TokenRequest.SendId} is required", content);
     }
 
     [Fact]
@@ -212,8 +213,8 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
                 services.AddSingleton(sendAuthQuery);
 
                 // Mock password validator to return success
-                var passwordValidator = Substitute.For<ISendPasswordRequestValidator>();
-                passwordValidator.ValidateSendPassword(
+                var passwordValidator = Substitute.For<ISendAuthenticationMethodValidator<ResourcePassword>>();
+                passwordValidator.ValidateRequestAsync(
                     Arg.Any<ExtensionGrantValidationContext>(),
                     Arg.Any<ResourcePassword>(),
                     Arg.Any<Guid>())
@@ -245,16 +246,16 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
         var sendIdBase64 = CoreHelpers.Base64UrlEncode(sendId.ToByteArray());
         var parameters = new List<KeyValuePair<string, string>>
         {
-            new("grant_type", CustomGrantTypes.SendAccess),
-            new("client_id", BitwardenClient.Send ),
-            new("scope", ApiScopes.ApiSendAccess),
+            new(OidcConstants.TokenRequest.GrantType, CustomGrantTypes.SendAccess),
+            new(OidcConstants.TokenRequest.ClientId, BitwardenClient.Send ),
+            new(OidcConstants.TokenRequest.Scope, ApiScopes.ApiSendAccess),
             new("deviceType", ((int)DeviceType.FirefoxBrowser).ToString()),
-            new("send_id", sendIdBase64)
+            new(SendAccessConstants.TokenRequest.SendId, sendIdBase64)
         };
 
         if (!string.IsNullOrEmpty(password))
         {
-            parameters.Add(new("password_hash", password));
+            parameters.Add(new(SendAccessConstants.TokenRequest.ClientB64HashedPassword, password));
         }
 
         if (!string.IsNullOrEmpty(emailOtp) && !string.IsNullOrEmpty(sendEmail))

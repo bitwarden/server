@@ -6,7 +6,6 @@ using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer.Enums;
-using Bit.Identity.IdentityServer.RequestValidators.SendAccess.Enums;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 
@@ -14,17 +13,18 @@ namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 
 public class SendAccessGrantValidator(
     ISendAuthenticationQuery _sendAuthenticationQuery,
-    ISendPasswordRequestValidator _sendPasswordRequestValidator,
+    ISendAuthenticationMethodValidator<ResourcePassword> _sendPasswordRequestValidator,
+    ISendAuthenticationMethodValidator<EmailOtp> _sendEmailOtpRequestValidator,
     IFeatureService _featureService)
 : IExtensionGrantValidator
 {
     string IExtensionGrantValidator.GrantType => CustomGrantTypes.SendAccess;
 
-    private static readonly Dictionary<SendGrantValidatorResultTypes, string>
-    _sendGrantValidatorErrors = new()
+    private static readonly Dictionary<string, string>
+    _sendGrantValidatorErrorDescriptions = new()
     {
-        { SendGrantValidatorResultTypes.MissingSendId, "send_id is required." },
-        { SendGrantValidatorResultTypes.InvalidSendId, "send_id is invalid." }
+        { SendAccessConstants.GrantValidatorResults.MissingSendId, $"{SendAccessConstants.TokenRequest.SendId} is required." },
+        { SendAccessConstants.GrantValidatorResults.InvalidSendId, $"{SendAccessConstants.TokenRequest.SendId} is invalid." }
     };
 
 
@@ -38,7 +38,7 @@ public class SendAccessGrantValidator(
         }
 
         var (sendIdGuid, result) = GetRequestSendId(context);
-        if (result != SendGrantValidatorResultTypes.ValidSendGuid)
+        if (result != SendAccessConstants.GrantValidatorResults.ValidSendGuid)
         {
             context.Result = BuildErrorResult(result);
             return;
@@ -55,23 +55,21 @@ public class SendAccessGrantValidator(
                 // We should only map to password or email + OTP protected.
                 // If user submits password guess for a falsely protected send, then we will return invalid password.
                 // If user submits email + OTP guess for a falsely protected send, then we will return email sent, do not actually send an email.
-                context.Result = BuildErrorResult(SendGrantValidatorResultTypes.InvalidSendId);
+                context.Result = BuildErrorResult(SendAccessConstants.GrantValidatorResults.InvalidSendId);
                 return;
 
             case NotAuthenticated:
                 // automatically issue access token
                 context.Result = BuildBaseSuccessResult(sendIdGuid);
                 return;
-
             case ResourcePassword rp:
-                // TODO PM-22675: Validate if the password is correct.
-                context.Result = _sendPasswordRequestValidator.ValidateSendPassword(context, rp, sendIdGuid);
+                // Validate if the password is correct, or if we need to respond with a 400 stating a password is invalid or required.
+                context.Result = await _sendPasswordRequestValidator.ValidateRequestAsync(context, rp, sendIdGuid);
                 return;
             case EmailOtp eo:
-            // TODO PM-22678: We will either send the OTP here or validate it based on if otp exists in the request.
-            // SendOtpToEmail(eo.Emails) or ValidateOtp(eo.Emails);
-            // break;
-
+                // Validate if the request has the correct email and OTP. If not, respond with a 400 and information about the failure.
+                context.Result = await _sendEmailOtpRequestValidator.ValidateRequestAsync(context, eo, sendIdGuid);
+                return;
             default:
                 // shouldn’t ever hit this
                 throw new InvalidOperationException($"Unknown auth method: {method.GetType()}");
@@ -84,15 +82,15 @@ public class SendAccessGrantValidator(
     /// </summary>
     /// <param name="context">request context</param>
     /// <returns>a parsed sendId Guid and success result or a Guid.Empty and error type otherwise</returns>
-    private static (Guid, SendGrantValidatorResultTypes) GetRequestSendId(ExtensionGrantValidationContext context)
+    private static (Guid, string) GetRequestSendId(ExtensionGrantValidationContext context)
     {
         var request = context.Request.Raw;
-        var sendId = request.Get("send_id");
+        var sendId = request.Get(SendAccessConstants.TokenRequest.SendId);
 
         // if the sendId is null then the request is the wrong shape and the request is invalid
         if (sendId == null)
         {
-            return (Guid.Empty, SendGrantValidatorResultTypes.MissingSendId);
+            return (Guid.Empty, SendAccessConstants.GrantValidatorResults.MissingSendId);
         }
         // the send_id is not null so the request is the correct shape, so we will attempt to parse it
         try
@@ -102,33 +100,40 @@ public class SendAccessGrantValidator(
             // Guid.Empty indicates an invalid send_id return invalid grant
             if (sendGuid == Guid.Empty)
             {
-                return (Guid.Empty, SendGrantValidatorResultTypes.InvalidSendId);
+                return (Guid.Empty, SendAccessConstants.GrantValidatorResults.InvalidSendId);
             }
-            return (sendGuid, SendGrantValidatorResultTypes.ValidSendGuid);
+            return (sendGuid, SendAccessConstants.GrantValidatorResults.ValidSendGuid);
         }
         catch
         {
-            return (Guid.Empty, SendGrantValidatorResultTypes.InvalidSendId);
+            return (Guid.Empty, SendAccessConstants.GrantValidatorResults.InvalidSendId);
         }
     }
 
     /// <summary>
     /// Builds an error result for the specified error type.
     /// </summary>
-    /// <param name="error">The error type.</param>
+    /// <param name="error">This error is a constant string from <see cref="SendAccessConstants.GrantValidatorResults"/></param>
     /// <returns>The error result.</returns>
-    private static GrantValidationResult BuildErrorResult(SendGrantValidatorResultTypes error)
+    private static GrantValidationResult BuildErrorResult(string error)
     {
+        var customResponse = new Dictionary<string, object>
+            {
+                { SendAccessConstants.SendAccessError, error }
+            };
+
         return error switch
         {
             // Request is the wrong shape
-            SendGrantValidatorResultTypes.MissingSendId => new GrantValidationResult(
+            SendAccessConstants.GrantValidatorResults.MissingSendId => new GrantValidationResult(
                                 TokenRequestErrors.InvalidRequest,
-                                errorDescription: _sendGrantValidatorErrors[SendGrantValidatorResultTypes.MissingSendId]),
+                                errorDescription: _sendGrantValidatorErrorDescriptions[error],
+                                customResponse),
             // Request is correct shape but data is bad
-            SendGrantValidatorResultTypes.InvalidSendId => new GrantValidationResult(
+            SendAccessConstants.GrantValidatorResults.InvalidSendId => new GrantValidationResult(
                                 TokenRequestErrors.InvalidGrant,
-                                errorDescription: _sendGrantValidatorErrors[SendGrantValidatorResultTypes.InvalidSendId]),
+                                errorDescription: _sendGrantValidatorErrorDescriptions[error],
+                                customResponse),
             // should never get here
             _ => new GrantValidationResult(TokenRequestErrors.InvalidRequest)
         };
@@ -138,7 +143,7 @@ public class SendAccessGrantValidator(
     {
         var claims = new List<Claim>
         {
-            new(Claims.SendId, sendId.ToString()),
+            new(Claims.SendAccessClaims.SendId, sendId.ToString()),
             new(Claims.Type, IdentityClientType.Send.ToString())
         };
 

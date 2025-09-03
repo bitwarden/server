@@ -153,7 +153,7 @@ jobs:
         uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Import GPG keys
-        uses: crazy-max/ghaction-import-gpg@cb9bde2e2525e640591a934b1fd28eef1dcaf5e5 # v6.2.0
+        uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec # v6.3.0
         with:
           gpg_private_key: ${{ steps.retrieve-secrets.outputs.github-gpg-private-key }}
           passphrase: ${{ steps.retrieve-secrets.outputs.github-gpg-private-key-passphrase }}

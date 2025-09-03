@@ -325,7 +325,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         c.CreationDate,
                         c.RevisionDate,
                         c.ExternalId,
-                        c.Unmanaged
+                        c.Unmanaged,
+                        c.DefaultUserCollectionEmail
                     }).Select(collectionGroup => new CollectionAdminDetails
                     {
                         Id = collectionGroup.Key.Id,
@@ -339,7 +340,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                             Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                         Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
-                        Unmanaged = collectionGroup.Key.Unmanaged
+                        Unmanaged = collectionGroup.Key.Unmanaged,
+                        DefaultUserCollectionEmail = collectionGroup.Key.DefaultUserCollectionEmail
                     }).ToList();
             }
             else
@@ -353,7 +355,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                          c.CreationDate,
                                          c.RevisionDate,
                                          c.ExternalId,
-                                         c.Unmanaged
+                                         c.Unmanaged,
+                                         c.DefaultUserCollectionEmail
                                      }
                     into collectionGroup
                                      select new CollectionAdminDetails
@@ -369,7 +372,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                              Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                                          Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                                          Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
-                                         Unmanaged = collectionGroup.Key.Unmanaged
+                                         Unmanaged = collectionGroup.Key.Unmanaged,
+                                         DefaultUserCollectionEmail = collectionGroup.Key.DefaultUserCollectionEmail
                                      }).ToListAsync();
             }
 
@@ -789,7 +793,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         // SaveChangesAsync is expected to be called outside this method
     }
 
-    public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName)
+    public async Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName)
     {
         if (!affectedOrgUserIds.Any())
         {

@@ -21,7 +21,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Identity;
 using Bit.Core.Settings;
-using IdentityModel;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.DataProtection;
 using MimeKit;
 
