@@ -16,8 +16,8 @@ public class CommandResult<T>(OneOf<Error, T> result) : OneOfBase<Error, T>(resu
     public Error AsError => AsT0;
     public T AsSuccess => AsT1;
 
-    public static implicit operator CommandResult<T>(T value) => new (value);
-    public static implicit operator CommandResult<T>(Error error) => new (error);
+    public static implicit operator CommandResult<T>(T value) => new(value);
+    public static implicit operator CommandResult<T>(Error error) => new(error);
 }
 
 /// <summary>
@@ -26,8 +26,8 @@ public class CommandResult<T>(OneOf<Error, T> result) : OneOfBase<Error, T>(resu
 /// </summary>
 public class CommandResult(OneOf<Error, None> result) : CommandResult<None>(result)
 {
-    public static implicit operator CommandResult(None none) => new (none);
-    public static implicit operator CommandResult(Error error) => new (error);
+    public static implicit operator CommandResult(None none) => new(none);
+    public static implicit operator CommandResult(Error error) => new(error);
 }
 
 /// <summary>
