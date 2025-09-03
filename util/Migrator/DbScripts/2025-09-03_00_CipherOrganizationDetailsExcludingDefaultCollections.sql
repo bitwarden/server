@@ -26,7 +26,7 @@ AS
     LEFT JOIN [dbo].[CollectionCipher] CC ON CC.[CipherId] = C.[Id]
     LEFT JOIN [dbo].[Collection] COL ON CC.[CollectionId] = COL.[Id]
     WHERE C.[UserId] IS NULL -- Organization ciphers only
-      AND O.[Enabled] = 1; -- Only enabled organizations
+        AND O.[Enabled] = 1; -- Only enabled organizations
 GO
 
  -- Stored procedure that filters out ciphers that ONLY belong to default collections
@@ -41,8 +41,7 @@ CREATE OR ALTER PROCEDURE
           SELECT DISTINCT [Id]
           FROM [dbo].[OrganizationCipherDetailsWithCollectionsView]
           WHERE [OrganizationId] = @OrganizationId
-            AND ([CollectionId] IS NULL
-                 OR [CollectionType] <> 1)
+              AND ([CollectionId] IS NULL OR [CollectionType] <> 1)
       )
 
       SELECT
@@ -64,7 +63,7 @@ CREATE OR ALTER PROCEDURE
       FROM [dbo].[OrganizationCipherDetailsWithCollectionsView] V
       INNER JOIN [NonDefaultCiphers] NDC ON V.[Id] = NDC.[Id]
       WHERE V.[OrganizationId] = @OrganizationId
-      AND (V.[CollectionId] IS NULL OR V.[CollectionType] <> 1)
+          AND (V.[CollectionId] IS NULL OR V.[CollectionType] <> 1)
       ORDER BY V.[RevisionDate] DESC;
   END;
   GO
@@ -78,8 +77,7 @@ IF NOT EXISTS (
 BEGIN
     CREATE NONCLUSTERED INDEX [IX_Cipher_OrganizationId_Filtered_OrgCiphersOnly]
           ON [dbo].[Cipher] ([OrganizationId])
-          INCLUDE ([Id], [Type], [Data], [Favorites], [Folders], [Attachments], [CreationDate],
-    [RevisionDate], [DeletedDate], [Reprompt], [Key])
+          INCLUDE ([Id], [Type], [Data], [Favorites], [Folders], [Attachments], [CreationDate], [RevisionDate], [DeletedDate], [Reprompt], [Key])
           WHERE [UserId] IS NULL;
 
 END;

@@ -37,6 +37,5 @@ CREATE NONCLUSTERED INDEX [IX_Cipher_DeletedDate]
 GO
 CREATE NONCLUSTERED INDEX [IX_Cipher_OrganizationId_Filtered_OrgCiphersOnly]
       ON [dbo].[Cipher] ([OrganizationId])
-      INCLUDE ([Id], [Type], [Data], [Favorites], [Folders], [Attachments], [CreationDate],
-[RevisionDate], [DeletedDate], [Reprompt], [Key])
+      INCLUDE ([Id], [Type], [Data], [Favorites], [Folders], [Attachments], [CreationDate], [RevisionDate], [DeletedDate], [Reprompt], [Key])
       WHERE [UserId] IS NULL;

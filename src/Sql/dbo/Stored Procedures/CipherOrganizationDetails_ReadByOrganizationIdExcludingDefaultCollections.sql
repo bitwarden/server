@@ -10,8 +10,8 @@ CREATE PROCEDURE
           SELECT DISTINCT [Id]
           FROM [dbo].[OrganizationCipherDetailsWithCollectionsView]
           WHERE [OrganizationId] = @OrganizationId
-            AND ([CollectionId] IS NULL
-                 OR [CollectionType] <> 1)
+              AND ([CollectionId] IS NULL
+              OR [CollectionType] <> 1)
       )
 
       SELECT
@@ -33,7 +33,7 @@ CREATE PROCEDURE
       FROM [dbo].[OrganizationCipherDetailsWithCollectionsView] V
       INNER JOIN [NonDefaultCiphers] NDC ON V.[Id] = NDC.[Id]
       WHERE V.[OrganizationId] = @OrganizationId
-      AND (V.[CollectionId] IS NULL OR V.[CollectionType] <> 1)
+          AND (V.[CollectionId] IS NULL OR V.[CollectionType] <> 1)
       ORDER BY V.[RevisionDate] DESC;
   END;
   GO
