@@ -277,7 +277,7 @@ public class OrganizationReportsController : Controller
     }
 
     [HttpPatch("{orgId}/data/application/{reportId}")]
-    public async Task<IActionResult> UpdateOrganizationReportApplicationDataAsync(Guid orgId, [FromBody] UpdateOrganizationReportApplicationDataRequest request)
+    public async Task<IActionResult> UpdateOrganizationReportApplicationDataAsync(Guid orgId, Guid reportId, [FromBody] UpdateOrganizationReportApplicationDataRequest request)
     {
         try
         {
@@ -292,12 +292,14 @@ public class OrganizationReportsController : Controller
                 throw new BadRequestException("Organization ID in the request body must match the route parameter");
             }
 
-            var updatedReport = await _updateOrganizationReportApplicationDataCommand.UpdateOrganizationReportApplicationDataAsync(request);
-
-            if (updatedReport.Id != request.Id)
+            if (request.Id != reportId)
             {
                 throw new BadRequestException("Report ID in the request body must match the route parameter");
             }
+
+            var updatedReport = await _updateOrganizationReportApplicationDataCommand.UpdateOrganizationReportApplicationDataAsync(request);
+
+
 
             return Ok(updatedReport);
         }

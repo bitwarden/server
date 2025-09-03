@@ -1059,6 +1059,7 @@ public class OrganizationReportControllerTests
     public async Task UpdateOrganizationReportApplicationDataAsync_WithValidRequest_ReturnsOkResult(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
+        Guid reportId,
         UpdateOrganizationReportApplicationDataRequest request,
         OrganizationReport expectedReport)
     {
@@ -1075,7 +1076,7 @@ public class OrganizationReportControllerTests
             .Returns(expectedReport);
 
         // Act
-        var result = await sutProvider.Sut.UpdateOrganizationReportApplicationDataAsync(orgId, request);
+        var result = await sutProvider.Sut.UpdateOrganizationReportApplicationDataAsync(orgId, reportId, request);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -1086,6 +1087,7 @@ public class OrganizationReportControllerTests
     public async Task UpdateOrganizationReportApplicationDataAsync_WithoutAccess_ThrowsNotFoundException(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
+        Guid reportId,
         UpdateOrganizationReportApplicationDataRequest request)
     {
         // Arrange
@@ -1095,7 +1097,7 @@ public class OrganizationReportControllerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.UpdateOrganizationReportApplicationDataAsync(orgId, request));
+            sutProvider.Sut.UpdateOrganizationReportApplicationDataAsync(orgId, reportId, request));
 
         // Verify that the command was not called
         await sutProvider.GetDependency<IUpdateOrganizationReportApplicationDataCommand>()
@@ -1107,6 +1109,7 @@ public class OrganizationReportControllerTests
     public async Task UpdateOrganizationReportApplicationDataAsync_WithMismatchedOrgId_ThrowsBadRequestException(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
+        Guid reportId,
         UpdateOrganizationReportApplicationDataRequest request)
     {
         // Arrange
@@ -1118,7 +1121,7 @@ public class OrganizationReportControllerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UpdateOrganizationReportApplicationDataAsync(orgId, request));
+            sutProvider.Sut.UpdateOrganizationReportApplicationDataAsync(orgId, reportId, request));
 
         Assert.Equal("Organization ID in the request body must match the route parameter", exception.Message);
 
@@ -1132,12 +1135,12 @@ public class OrganizationReportControllerTests
     public async Task UpdateOrganizationReportApplicationDataAsync_WithMismatchedReportId_ThrowsBadRequestException(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
+        Guid reportId,
         UpdateOrganizationReportApplicationDataRequest request,
         OrganizationReport updatedReport)
     {
         // Arrange
         request.OrganizationId = orgId;
-        updatedReport.Id = Guid.NewGuid(); // Different from request.Id
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
@@ -1149,7 +1152,7 @@ public class OrganizationReportControllerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UpdateOrganizationReportApplicationDataAsync(orgId, request));
+            sutProvider.Sut.UpdateOrganizationReportApplicationDataAsync(orgId, reportId, request));
 
         Assert.Equal("Report ID in the request body must match the route parameter", exception.Message);
     }
@@ -1158,12 +1161,14 @@ public class OrganizationReportControllerTests
     public async Task UpdateOrganizationReportApplicationDataAsync_CallsCorrectMethods(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
+        Guid reportId,
         UpdateOrganizationReportApplicationDataRequest request,
         OrganizationReport expectedReport)
     {
         // Arrange
         request.OrganizationId = orgId;
-        expectedReport.Id = request.Id;
+        request.Id = reportId;
+        expectedReport.Id = reportId;
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
@@ -1174,7 +1179,7 @@ public class OrganizationReportControllerTests
             .Returns(expectedReport);
 
         // Act
-        await sutProvider.Sut.UpdateOrganizationReportApplicationDataAsync(orgId, request);
+        await sutProvider.Sut.UpdateOrganizationReportApplicationDataAsync(orgId, reportId, request);
 
         // Assert
         await sutProvider.GetDependency<ICurrentContext>()
