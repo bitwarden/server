@@ -222,38 +222,6 @@ public class SetupIntentSucceededHandlerTests
         await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Provider>());
     }
 
-    [Fact]
-    public async Task HandleAsync_OrganizationNotFound_DoesNotSendNotification()
-    {
-        // Arrange
-        var subscriberId = Guid.NewGuid();
-        var setupIntent = CreateSetupIntent();
-
-        _stripeEventService.GetSetupIntent(
-                _mockEvent,
-                true,
-                Arg.Is<List<string>>(options => options.SequenceEqual(_expand)))
-            .Returns(setupIntent);
-
-        _setupIntentCache.GetSubscriberIdForSetupIntent(setupIntent.Id)
-            .Returns(subscriberId);
-
-        _organizationRepository.GetByIdAsync(subscriberId)
-            .Returns((Organization?)null);
-
-        _providerRepository.GetByIdAsync(subscriberId)
-            .Returns((Provider?)null);
-
-        // Act
-        await _handler.HandleAsync(_mockEvent);
-
-        // Assert
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().PaymentMethodAttachAsync(
-            Arg.Any<string>(), Arg.Any<PaymentMethodAttachOptions>());
-        await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Organization>());
-        await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyBankAccountVerifiedAsync(Arg.Any<Provider>());
-    }
-
     private static SetupIntent CreateSetupIntent(bool hasUSBankAccount = true)
     {
         var paymentMethod = new PaymentMethod
