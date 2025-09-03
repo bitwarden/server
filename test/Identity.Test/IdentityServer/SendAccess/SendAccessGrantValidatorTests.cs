@@ -17,7 +17,7 @@ using Duende.IdentityServer.Validation;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Identity.Test.IdentityServer;
+namespace Bit.Identity.Test.IdentityServer.SendAccess;
 
 [SutProviderCustomize]
 public class SendAccessGrantValidatorTests
@@ -167,7 +167,7 @@ public class SendAccessGrantValidatorTests
         // get the claims from the subject
         var claims = subject.Claims.ToList();
         Assert.NotEmpty(claims);
-        Assert.Contains(claims, c => c.Type == Claims.SendId && c.Value == sendId.ToString());
+        Assert.Contains(claims, c => c.Type == Claims.SendAccessClaims.SendId && c.Value == sendId.ToString());
         Assert.Contains(claims, c => c.Type == Claims.Type && c.Value == IdentityClientType.Send.ToString());
     }
 
@@ -189,8 +189,8 @@ public class SendAccessGrantValidatorTests
             .GetAuthenticationMethod(sendId)
             .Returns(resourcePassword);
 
-        sutProvider.GetDependency<ISendPasswordRequestValidator>()
-            .ValidateSendPassword(context, resourcePassword, sendId)
+        sutProvider.GetDependency<ISendAuthenticationMethodValidator<ResourcePassword>>()
+            .ValidateRequestAsync(context, resourcePassword, sendId)
             .Returns(expectedResult);
 
         // Act
@@ -198,15 +198,16 @@ public class SendAccessGrantValidatorTests
 
         // Assert
         Assert.Equal(expectedResult, context.Result);
-        sutProvider.GetDependency<ISendPasswordRequestValidator>()
+        await sutProvider.GetDependency<ISendAuthenticationMethodValidator<ResourcePassword>>()
             .Received(1)
-            .ValidateSendPassword(context, resourcePassword, sendId);
+            .ValidateRequestAsync(context, resourcePassword, sendId);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_EmailOtpMethod_NotImplemented_ThrowsError(
+    public async Task ValidateAsync_EmailOtpMethod_CallsEmailOtp(
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         SutProvider<SendAccessGrantValidator> sutProvider,
+        GrantValidationResult expectedResult,
         Guid sendId,
         EmailOtp emailOtp)
     {
@@ -216,15 +217,22 @@ public class SendAccessGrantValidatorTests
             sendId,
             tokenRequest);
 
-
         sutProvider.GetDependency<ISendAuthenticationQuery>()
             .GetAuthenticationMethod(sendId)
             .Returns(emailOtp);
 
+        sutProvider.GetDependency<ISendAuthenticationMethodValidator<EmailOtp>>()
+            .ValidateRequestAsync(context, emailOtp, sendId)
+            .Returns(expectedResult);
+
         // Act
+        await sutProvider.Sut.ValidateAsync(context);
+
         // Assert
-        // Currently the EmailOtp case doesn't set a result, so it should be null
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.ValidateAsync(context));
+        Assert.Equal(expectedResult, context.Result);
+        await sutProvider.GetDependency<ISendAuthenticationMethodValidator<EmailOtp>>()
+            .Received(1)
+            .ValidateRequestAsync(context, emailOtp, sendId);
     }
 
     [Theory, BitAutoData]
@@ -256,7 +264,7 @@ public class SendAccessGrantValidatorTests
     public void GrantType_ReturnsCorrectType()
     {
         // Arrange & Act
-        var validator = new SendAccessGrantValidator(null!, null!, null!);
+        var validator = new SendAccessGrantValidator(null!, null!, null!, null!);
 
         // Assert
         Assert.Equal(CustomGrantTypes.SendAccess, ((IExtensionGrantValidator)validator).GrantType);
