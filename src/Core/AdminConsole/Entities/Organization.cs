@@ -30,6 +30,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// This value is HTML encoded. For display purposes use the method DisplayBusinessName() instead.
     /// </summary>
     [MaxLength(50)]
+    [Obsolete("This property has been deprecated. Use the 'Name' property instead.")]
     public string? BusinessName { get; set; }
     [MaxLength(50)]
     public string? BusinessAddress1 { get; set; }
@@ -123,6 +124,11 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// </summary>
     public bool UseAdminSponsoredFamilies { get; set; }
 
+    /// <summary>
+    /// If set to true, organization needs their seat count synced with their subscription
+    /// </summary>
+    public bool SyncSeats { get; set; }
+
     public void SetNewId()
     {
         if (Id == default(Guid))
@@ -142,6 +148,8 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// <summary>
     /// Returns the business name of the organization, HTML decoded ready for display.
     /// </summary>
+    ///
+    [Obsolete("This method has been deprecated. Use the 'DisplayName()' method instead.")]
     public string? DisplayBusinessName()
     {
         return WebUtility.HtmlDecode(BusinessName);

@@ -200,6 +200,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<long?>("Storage")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("SyncSeats")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("TwoFactorProviders")
                         .HasColumnType("TEXT");
 
@@ -1279,6 +1282,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("PolicyId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ProjectId")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("ProviderId")

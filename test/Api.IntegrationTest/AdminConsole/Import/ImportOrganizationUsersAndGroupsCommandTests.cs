@@ -26,8 +26,11 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
     {
         _factory = factory;
         _factory.SubstituteService((IFeatureService featureService)
-            => featureService.IsEnabled(FeatureFlagKeys.ImportAsyncRefactor)
-                .Returns(true));
+            =>
+        {
+            featureService.IsEnabled(FeatureFlagKeys.DirectoryConnectorPreventUserRemoval)
+                .Returns(true);
+        });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -308,5 +311,30 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
         Assert.Equal(existingGroup.Id, existingGroupInDb.Id);
         Assert.Equal("new-name", existingGroupInDb.Name);
         Assert.Equal(existingGroup.ExternalId, existingGroupInDb.ExternalId);
+    }
+
+    [Fact]
+    public async Task Import_Remove_Member_Without_Master_Password_Throws_400_Error()
+    {
+        // ARRANGE: a member without a master password
+        await OrganizationTestHelpers.CreateUserWithoutMasterPasswordAsync(_factory, Guid.NewGuid() + "@example.com",
+            _organization.Id);
+
+        // ACT: an import request that would remove that member
+        var request = new OrganizationImportRequestModel
+        {
+            LargeImport = false,
+            OverwriteExisting = true, // removes all members not in the request
+            Groups = [],
+            Members = []
+        };
+
+        var response = await _client.PostAsync($"/public/organization/import", JsonContent.Create(request));
+
+        // ASSERT: that a 400 error is thrown with the correct error message
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Sync failed. To proceed, disable the 'Remove and re-add users during next sync' setting and try again.", responseContent);
     }
 }

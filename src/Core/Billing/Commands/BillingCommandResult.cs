@@ -28,4 +28,10 @@ public class BillingCommandResult<T> : OneOfBase<T, BadRequest, Conflict, Unhand
     public static implicit operator BillingCommandResult<T>(BadRequest badRequest) => new(badRequest);
     public static implicit operator BillingCommandResult<T>(Conflict conflict) => new(conflict);
     public static implicit operator BillingCommandResult<T>(Unhandled unhandled) => new(unhandled);
+
+    public Task TapAsync(Func<T, Task> f) => Match(
+        f,
+        _ => Task.CompletedTask,
+        _ => Task.CompletedTask,
+        _ => Task.CompletedTask);
 }

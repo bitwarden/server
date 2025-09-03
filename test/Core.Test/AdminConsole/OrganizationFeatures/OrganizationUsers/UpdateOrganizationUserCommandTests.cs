@@ -245,21 +245,41 @@ public class UpdateOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateUserAsync_WithDefaultUserCollectionType_Throws(OrganizationUser user, OrganizationUser originalUser,
-        List<CollectionAccessSelection> collectionAccess, Guid? savingUserId, SutProvider<UpdateOrganizationUserCommand> sutProvider,
-        Organization organization)
+    public async Task UpdateUserAsync_WithMixedCollectionTypes_FiltersOutDefaultUserCollections(
+        OrganizationUser user, OrganizationUser originalUser, Collection sharedCollection, Collection defaultUserCollection,
+        Guid? savingUserId, SutProvider<UpdateOrganizationUserCommand> sutProvider, Organization organization)
     {
+        user.Permissions = null;
+        sharedCollection.Type = CollectionType.SharedCollection;
+        defaultUserCollection.Type = CollectionType.DefaultUserCollection;
+        sharedCollection.OrganizationId = defaultUserCollection.OrganizationId = organization.Id;
+
         Setup(sutProvider, organization, user, originalUser);
 
-        // Return collections with DefaultUserCollection type
+        var collectionAccess = new List<CollectionAccessSelection>
+        {
+            new() { Id = sharedCollection.Id, ReadOnly = true, HidePasswords = false, Manage = false },
+            new() { Id = defaultUserCollection.Id, ReadOnly = false, HidePasswords = true, Manage = false }
+        };
+
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
-                .Select(guid => new Collection { Id = guid, OrganizationId = user.OrganizationId, Type = CollectionType.DefaultUserCollection }).ToList());
+            .Returns(new List<Collection>
+            {
+                new() { Id = sharedCollection.Id, OrganizationId = user.OrganizationId, Type = CollectionType.SharedCollection },
+                new() { Id = defaultUserCollection.Id, OrganizationId = user.OrganizationId, Type = CollectionType.DefaultUserCollection }
+            });
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateUserAsync(user, OrganizationUserType.User, savingUserId, collectionAccess, null));
-        Assert.Contains("You cannot modify member access for collections with the type as DefaultUserCollection.", exception.Message);
+        await sutProvider.Sut.UpdateUserAsync(user, OrganizationUserType.User, savingUserId, collectionAccess, null);
+
+        // Verify that ReplaceAsync was called with only the shared collection (default user collection filtered out)
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            user,
+            Arg.Is<IEnumerable<CollectionAccessSelection>>(collections =>
+                collections.Count() == 1 &&
+                collections.First().Id == sharedCollection.Id
+            )
+        );
     }
 
     private void Setup(SutProvider<UpdateOrganizationUserCommand> sutProvider, Organization organization,

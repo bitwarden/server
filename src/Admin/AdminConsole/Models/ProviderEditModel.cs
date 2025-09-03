@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Enums;
 using Bit.SharedWeb.Utilities;
@@ -38,6 +39,7 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         GatewaySubscriptionUrl = gatewaySubscriptionUrl;
         Type = provider.Type;
         PayByInvoice = payByInvoice;
+        Enabled = provider.Enabled;
 
         if (Type == ProviderType.BusinessUnit)
         {
@@ -78,18 +80,21 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
     [Display(Name = "Enterprise Seats Minimum")]
     public int? EnterpriseMinimumSeats { get; set; }
 
+    [Display(Name = "Enabled")]
+    public bool Enabled { get; set; }
+
     public virtual Provider ToProvider(Provider existingProvider)
     {
         existingProvider.BillingEmail = BillingEmail?.ToLowerInvariant().Trim();
         existingProvider.BillingPhone = BillingPhone?.ToLowerInvariant().Trim();
-        switch (Type)
+        existingProvider.Enabled = Enabled;
+        if (Type.IsStripeSupported())
         {
-            case ProviderType.Msp:
-                existingProvider.Gateway = Gateway;
-                existingProvider.GatewayCustomerId = GatewayCustomerId;
-                existingProvider.GatewaySubscriptionId = GatewaySubscriptionId;
-                break;
+            existingProvider.Gateway = Gateway;
+            existingProvider.GatewayCustomerId = GatewayCustomerId;
+            existingProvider.GatewaySubscriptionId = GatewaySubscriptionId;
         }
+
         return existingProvider;
     }
 

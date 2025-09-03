@@ -52,6 +52,19 @@ public static class Constants
     /// regardless of whether there is a proration or not.
     /// </summary>
     public const string AlwaysInvoice = "always_invoice";
+
+    /// <summary>
+    /// Used primarily to determine whether a customer's business is inside or outside the United States
+    /// for billing purposes.
+    /// </summary>
+    public static class CountryAbbreviations
+    {
+        /// <summary>
+        /// Abbreviation for The United States.
+        /// This value must match what Stripe uses for the `Country` field value for the United States.
+        /// </summary>
+        public const string UnitedStates = "US";
+    }
 }
 
 public static class AuthConstants
@@ -106,27 +119,24 @@ public static class AuthenticationSchemes
 public static class FeatureFlagKeys
 {
     /* Admin Console Team */
-    public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string LimitItemDeletion = "pm-15493-restrict-item-deletion-to-can-manage-permission";
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string EventBasedOrganizationIntegrations = "event-based-organization-integrations";
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
-    public const string ImportAsyncRefactor = "pm-22583-refactor-import-async";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
-    public const string MembersGetEndpointOptimization = "pm-23113-optimize-get-members-endpoint";
+    public const string DirectoryConnectorPreventUserRemoval = "pm-24592-directory-connector-prevent-user-removal";
+    public const string CipherRepositoryBulkResourceCreation = "pm-24951-cipher-repository-bulk-resource-creation-service";
 
     /* Auth Team */
-    public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
     public const string EmailVerification = "email-verification";
-    public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
     public const string BrowserExtensionLoginApproval = "pm-14938-browser-extension-login-approvals";
     public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
-    public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
+    public const string FailedTwoFactorEmail = "pm-24425-send-2fa-failed-email";
 
     /* Autofill Team */
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
@@ -150,16 +160,11 @@ public static class FeatureFlagKeys
     public const string TrialPayment = "PM-8163-trial-payment";
     public const string PM17772_AdminInitiatedSponsorships = "pm-17772-admin-initiated-sponsorships";
     public const string UsePricingService = "use-pricing-service";
-    public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
     public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
-    public const string PM199566_UpdateMSPToChargeAutomatically = "pm-199566-update-msp-to-charge-automatically";
-    public const string PM19956_RequireProviderPaymentMethodDuringSetup = "pm-19956-require-provider-payment-method-during-setup";
     public const string UseOrganizationWarningsService = "use-organization-warnings-service";
-    public const string PM20322_AllowTrialLength0 = "pm-20322-allow-trial-length-0";
-    public const string PM21092_SetNonUSBusinessUseToReverseCharge = "pm-21092-set-non-us-business-use-to-reverse-charge";
-    public const string PM21383_GetProviderPriceFromStripe = "pm-21383-get-provider-price-from-stripe";
     public const string PM21881_ManagePaymentDetailsOutsideCheckout = "pm-21881-manage-payment-details-outside-checkout";
     public const string PM21821_ProviderPortalTakeover = "pm-21821-provider-portal-takeover";
+    public const string PM22415_TaxIDWarnings = "pm-22415-tax-id-warnings";
 
     /* Key Management Team */
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
@@ -171,6 +176,7 @@ public static class FeatureFlagKeys
     public const string UserSdkForDecryption = "use-sdk-for-decryption";
     public const string PM17987_BlockType0 = "pm-17987-block-type-0";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
+    public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
 
     /* Mobile Team */
     public const string NativeCarouselFlow = "native-carousel-flow";
@@ -189,17 +195,18 @@ public static class FeatureFlagKeys
     public const string UserManagedPrivilegedApps = "pm-18970-user-managed-privileged-apps";
     public const string EnablePMPreloginSettings = "enable-pm-prelogin-settings";
     public const string AppIntents = "app-intents";
+    public const string SendAccess = "pm-19394-send-access-control";
 
     /* Platform Team */
     public const string PersistPopupView = "persist-popup-view";
-    public const string StorageReseedRefactor = "storage-reseed-refactor";
-    public const string WebPush = "web-push";
     public const string IpcChannelFramework = "ipc-channel-framework";
     public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
+    public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
 
     /* Tools Team */
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
+    public const string UseChromiumImporter = "pm-23982-chromium-importer";
 
     /* Vault Team */
     public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";

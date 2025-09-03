@@ -49,6 +49,7 @@ public class CollectionDetailsResponseModel : CollectionResponseModel
         ReadOnly = collectionDetails.ReadOnly;
         HidePasswords = collectionDetails.HidePasswords;
         Manage = collectionDetails.Manage;
+        DefaultUserCollectionEmail = collectionDetails.DefaultUserCollectionEmail;
     }
 
     public bool ReadOnly { get; set; }

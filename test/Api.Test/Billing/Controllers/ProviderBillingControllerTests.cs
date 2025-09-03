@@ -1,8 +1,6 @@
 ﻿using Bit.Api.Billing.Controllers;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Commercial.Core.Billing.Providers.Services;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -345,9 +343,6 @@ public class ProviderBillingControllerTests
                 AllocatedSeats = 90
             }
         };
-
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PM21383_GetProviderPriceFromStripe)
-            .Returns(true);
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
