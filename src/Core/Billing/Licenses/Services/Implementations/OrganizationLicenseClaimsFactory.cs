@@ -1,7 +1,9 @@
-﻿using System.Globalization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Globalization;
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Licenses.Models;
 using Bit.Core.Enums;
@@ -118,6 +120,6 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
 
     private static bool IsTrialing(Organization org, SubscriptionInfo subscriptionInfo) =>
         subscriptionInfo?.Subscription is null
-            ? org.PlanType != PlanType.Custom || !org.ExpirationDate.HasValue
+            ? !org.ExpirationDate.HasValue
             : subscriptionInfo.Subscription.TrialEndDate > DateTime.UtcNow;
 }

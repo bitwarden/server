@@ -1,5 +1,4 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Providers;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -263,7 +262,8 @@ public class RemoveOrganizationFromProviderCommandTests
             org =>
                 org.BillingEmail == "a@example.com" &&
                 org.GatewaySubscriptionId == "subscription_id" &&
-                org.Status == OrganizationStatusType.Created));
+                org.Status == OrganizationStatusType.Created &&
+                org.Enabled == true)); // Verify organization is enabled when new subscription is created
 
         await sutProvider.GetDependency<IProviderOrganizationRepository>().Received(1)
             .DeleteAsync(providerOrganization);
@@ -331,9 +331,6 @@ public class RemoveOrganizationFromProviderCommandTests
             Id = "subscription_id"
         });
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge).Returns(true);
-
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 
         await stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(options =>
@@ -354,7 +351,8 @@ public class RemoveOrganizationFromProviderCommandTests
             org =>
                 org.BillingEmail == "a@example.com" &&
                 org.GatewaySubscriptionId == "subscription_id" &&
-                org.Status == OrganizationStatusType.Created));
+                org.Status == OrganizationStatusType.Created &&
+                org.Enabled == true)); // Verify organization is enabled when new subscription is created
 
         await sutProvider.GetDependency<IProviderOrganizationRepository>().Received(1)
             .DeleteAsync(providerOrganization);
@@ -390,4 +388,62 @@ public class RemoveOrganizationFromProviderCommandTests
                 }
             }
         };
+
+    [Theory, BitAutoData]
+    public async Task RemoveOrganizationFromProvider_DisabledOrganization_ConsolidatedBilling_EnablesOrganization(
+        Provider provider,
+        ProviderOrganization providerOrganization,
+        Organization organization,
+        SutProvider<RemoveOrganizationFromProviderCommand> sutProvider)
+    {
+        // Arrange: Set up a disabled organization that meets the criteria for consolidated billing
+        provider.Status = ProviderStatusType.Billable;
+        providerOrganization.ProviderId = provider.Id;
+        organization.Status = OrganizationStatusType.Managed;
+        organization.PlanType = PlanType.TeamsMonthly;
+        organization.Enabled = false; // Start with a disabled organization
+
+        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().HasConfirmedOwnersExceptAsync(
+                providerOrganization.OrganizationId,
+                [],
+                includeProvider: false)
+            .Returns(true);
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+
+        organizationRepository.GetOwnerEmailAddressesById(organization.Id).Returns([
+            "owner@example.com"
+        ]);
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, Arg.Any<CustomerUpdateOptions>())
+            .Returns(new Customer
+            {
+                Id = "customer_id",
+                Address = new Address
+                {
+                    Country = "US"
+                }
+            });
+
+        stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(new Subscription
+        {
+            Id = "new_subscription_id"
+        });
+
+        // Act
+        await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
+
+        // Assert: Verify the disabled organization is now enabled
+        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(
+            org =>
+                org.Enabled == true && // The previously disabled organization should now be enabled
+                org.Status == OrganizationStatusType.Created &&
+                org.GatewaySubscriptionId == "new_subscription_id"));
+    }
 }

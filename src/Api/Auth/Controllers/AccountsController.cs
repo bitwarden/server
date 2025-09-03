@@ -1,4 +1,7 @@
-﻿using Bit.Api.AdminConsole.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
@@ -7,6 +10,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
@@ -34,6 +38,8 @@ public class AccountsController : Controller
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
+    private readonly ITwoFactorEmailService _twoFactorEmailService;
+
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -44,7 +50,8 @@ public class AccountsController : Controller
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IFeatureService featureService
+        IFeatureService featureService,
+        ITwoFactorEmailService twoFactorEmailService
         )
     {
         _organizationService = organizationService;
@@ -56,6 +63,8 @@ public class AccountsController : Controller
         _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _featureService = featureService;
+        _twoFactorEmailService = twoFactorEmailService;
+
     }
 
 
@@ -335,7 +344,6 @@ public class AccountsController : Controller
     }
 
     [HttpPut("profile")]
-    [HttpPost("profile")]
     public async Task<ProfileResponseModel> PutProfile([FromBody] UpdateProfileRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -354,8 +362,14 @@ public class AccountsController : Controller
         return response;
     }
 
+    [HttpPost("profile")]
+    [Obsolete("This endpoint is deprecated. Use PUT /profile instead.")]
+    public async Task<ProfileResponseModel> PostProfile([FromBody] UpdateProfileRequestModel model)
+    {
+        return await PutProfile(model);
+    }
+
     [HttpPut("avatar")]
-    [HttpPost("avatar")]
     public async Task<ProfileResponseModel> PutAvatar([FromBody] UpdateAvatarRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -371,6 +385,13 @@ public class AccountsController : Controller
 
         var response = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);
         return response;
+    }
+
+    [HttpPost("avatar")]
+    [Obsolete("This endpoint is deprecated. Use PUT /avatar instead.")]
+    public async Task<ProfileResponseModel> PostAvatar([FromBody] UpdateAvatarRequestModel model)
+    {
+        return await PutAvatar(model);
     }
 
     [HttpGet("revision-date")]
@@ -421,7 +442,6 @@ public class AccountsController : Controller
     }
 
     [HttpDelete]
-    [HttpPost("delete")]
     public async Task Delete([FromBody] SecretVerificationRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -456,6 +476,13 @@ public class AccountsController : Controller
         }
 
         throw new BadRequestException(ModelState);
+    }
+
+    [HttpPost("delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE / instead.")]
+    public async Task PostDelete([FromBody] SecretVerificationRequestModel model)
+    {
+        await Delete(model);
     }
 
     [AllowAnonymous]
@@ -619,10 +646,16 @@ public class AccountsController : Controller
     [HttpPost("resend-new-device-otp")]
     public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificationRequestModel request)
     {
-        await _userService.ResendNewDeviceVerificationEmail(request.Email, request.Secret);
+        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+        if (!await _userService.VerifySecretAsync(user, request.Secret))
+        {
+            await Task.Delay(2000);
+            throw new BadRequestException(string.Empty, "User verification failed.");
+        }
+
+        await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user);
     }
 
-    [HttpPost("verify-devices")]
     [HttpPut("verify-devices")]
     public async Task SetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
     {
@@ -636,6 +669,13 @@ public class AccountsController : Controller
         user.VerifyDevices = request.VerifyDevices;
 
         await _userService.SaveUserAsync(user);
+    }
+
+    [HttpPost("verify-devices")]
+    [Obsolete("This endpoint is deprecated. Use PUT /verify-devices instead.")]
+    public async Task PostSetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
+    {
+        await SetUserVerifyDevicesAsync(request);
     }
 
     private async Task<IEnumerable<Guid>> GetOrganizationIdsClaimingUserAsync(Guid userId)

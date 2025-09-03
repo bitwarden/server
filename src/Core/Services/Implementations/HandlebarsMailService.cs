@@ -8,12 +8,14 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Mail;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Mail;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
+using Bit.Core.Models.Mail.Auth;
 using Bit.Core.Models.Mail.Billing;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
@@ -21,7 +23,9 @@ using Bit.Core.SecretsManager.Models.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
+using Core.Auth.Enums;
 using HandlebarsDotNet;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Core.Services;
 
@@ -29,10 +33,12 @@ public class HandlebarsMailService : IMailService
 {
     private const string Namespace = "Bit.Core.MailTemplates.Handlebars";
     private const string _utcTimeZoneDisplay = "UTC";
+    private const string FailedTwoFactorAttemptCacheKeyFormat = "FailedTwoFactorAttemptEmail_{0}";
 
     private readonly GlobalSettings _globalSettings;
     private readonly IMailDeliveryService _mailDeliveryService;
     private readonly IMailEnqueuingService _mailEnqueuingService;
+    private readonly IDistributedCache _distributedCache;
     private readonly Dictionary<string, HandlebarsTemplate<object, object>> _templateCache = new();
 
     private bool _registeredHelpersAndPartials = false;
@@ -40,11 +46,13 @@ public class HandlebarsMailService : IMailService
     public HandlebarsMailService(
         GlobalSettings globalSettings,
         IMailDeliveryService mailDeliveryService,
-        IMailEnqueuingService mailEnqueuingService)
+        IMailEnqueuingService mailEnqueuingService,
+        IDistributedCache distributedCache)
     {
         _globalSettings = globalSettings;
         _mailDeliveryService = mailDeliveryService;
         _mailEnqueuingService = mailEnqueuingService;
+        _distributedCache = distributedCache;
     }
 
     public async Task SendVerifyEmailEmailAsync(string email, Guid userId, string token)
@@ -166,14 +174,14 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true)
+    public async Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, TwoFactorEmailPurpose purpose)
     {
         var message = CreateDefaultMessage("Your Bitwarden Verification Code", email);
         var requestDateTime = DateTime.UtcNow;
         var model = new TwoFactorEmailTokenViewModel
         {
             Token = token,
-            EmailTotpAction = authentication ? "logging in" : "setting up two-step login",
+            EmailTotpAction = (purpose == TwoFactorEmailPurpose.Setup) ? "setting up two-step login" : "logging in",
             AccountEmail = accountEmail,
             TheDate = requestDateTime.ToLongDateString(),
             TheTime = requestDateTime.ToShortTimeString(),
@@ -182,11 +190,70 @@ public class HandlebarsMailService : IMailService
             DeviceType = deviceType,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
+            // We only want to remind users to set up 2FA if they're getting a new device verification email.
+            // For login with 2FA, and setup of 2FA, we do not want to show the reminder because users are already doing so.
+            DisplayTwoFactorReminder = purpose == TwoFactorEmailPurpose.NewDeviceVerification
         };
         await AddMessageContentAsync(message, "Auth.TwoFactorEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         message.Category = "TwoFactorEmail";
         await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendSendEmailOtpEmailAsync(string email, string token, string subject)
+    {
+        var message = CreateDefaultMessage(subject, email);
+        var requestDateTime = DateTime.UtcNow;
+        var model = new DefaultEmailOtpViewModel
+        {
+            Token = token,
+            TheDate = requestDateTime.ToLongDateString(),
+            TheTime = requestDateTime.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+        };
+        await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmail", model);
+        message.MetaData.Add("SendGridBypassListManagement", true);
+        // TODO - PM-25380 change to string constant
+        message.Category = "SendEmailOtp";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendFailedTwoFactorAttemptEmailAsync(string email, TwoFactorProviderType failedType, DateTime utcNow, string ip)
+    {
+        // Check if we've sent this email within the last hour
+        var cacheKey = string.Format(FailedTwoFactorAttemptCacheKeyFormat, email);
+        var cachedValue = await _distributedCache.GetAsync(cacheKey);
+
+        if (cachedValue != null)
+        {
+            // Email was already sent within the last hour, skip sending
+            return;
+        }
+
+        var message = CreateDefaultMessage("Failed two-step login attempt detected", email);
+        var model = new FailedAuthAttemptModel()
+        {
+            TheDate = utcNow.ToLongDateString(),
+            TheTime = utcNow.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+            IpAddress = ip,
+            AffectedEmail = email,
+            TwoFactorType = failedType,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
+
+        };
+        await AddMessageContentAsync(message, "Auth.FailedTwoFactorAttempt", model);
+        message.Category = "FailedTwoFactorAttempt";
+        await _mailDeliveryService.SendEmailAsync(message);
+
+        // Set cache entry with 1 hour expiration to prevent sending again
+        var cacheOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
+        };
+        await _distributedCache.SetAsync(cacheKey, [1], cacheOptions);
     }
 
     public async Task SendMasterPasswordHintEmailAsync(string email, string hint)
@@ -411,6 +478,33 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendProviderInvoiceUpcoming(
+        IEnumerable<string> emails,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        string? collectionMethod = null,
+        bool hasPaymentMethod = true,
+        string? paymentMethodDescription = null)
+    {
+        var message = CreateDefaultMessage("Your upcoming Bitwarden invoice", emails);
+        var model = new InvoiceUpcomingViewModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+            AmountDue = amount,
+            DueDate = dueDate,
+            Items = items,
+            MentionInvoices = false,
+            CollectionMethod = collectionMethod,
+            HasPaymentMethod = hasPaymentMethod,
+            PaymentMethodDescription = paymentMethodDescription
+        };
+        await AddMessageContentAsync(message, "ProviderInvoiceUpcoming", model);
+        message.Category = "ProviderInvoiceUpcoming";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices)
     {
         var message = CreateDefaultMessage("Payment Failed", email);
@@ -492,7 +586,7 @@ public class HandlebarsMailService : IMailService
             SiteName = _globalSettings.SiteName,
             DeviceType = deviceType,
             TheDate = timestamp.ToLongDateString(),
-            TheTime = timestamp.ToShortTimeString(),
+            TheTime = timestamp.ToString("hh:mm:ss tt"),
             TimeZone = _utcTimeZoneDisplay,
             IpAddress = ip
         };
@@ -641,6 +735,8 @@ public class HandlebarsMailService : IMailService
         Handlebars.RegisterTemplate("SecurityTasksHtmlLayout", securityTasksHtmlLayoutSource);
         var securityTasksTextLayoutSource = await ReadSourceAsync("Layouts.SecurityTasks.text");
         Handlebars.RegisterTemplate("SecurityTasksTextLayout", securityTasksTextLayoutSource);
+        var providerFullHtmlLayoutSource = await ReadSourceAsync("Layouts.ProviderFull.html");
+        Handlebars.RegisterTemplate("ProviderFull", providerFullHtmlLayoutSource);
 
         Handlebars.RegisterHelper("date", (writer, context, parameters) =>
         {
@@ -795,6 +891,19 @@ public class HandlebarsMailService : IMailService
             {
                 writer.WriteSafeString(string.Empty);
             }
+        });
+
+        // Equality comparison helper for conditional templates.
+        Handlebars.RegisterHelper("eq", (context, arguments) =>
+        {
+            if (arguments.Length != 2)
+            {
+                return false;
+            }
+
+            var value1 = arguments[0]?.ToString();
+            var value2 = arguments[1]?.ToString();
+            return string.Equals(value1, value2, StringComparison.OrdinalIgnoreCase);
         });
     }
 

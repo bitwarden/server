@@ -13,3 +13,8 @@
     CONSTRAINT [FK_ProviderUser_Provider] FOREIGN KEY ([ProviderId]) REFERENCES [dbo].[Provider] ([Id]) ON DELETE CASCADE,
     CONSTRAINT [FK_ProviderUser_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );
+
+
+GO
+CREATE NONCLUSTERED INDEX IX_ProviderUser_UserIdProviderId
+       ON [dbo].[ProviderUser] ([UserId], [ProviderId]);

@@ -6,6 +6,9 @@ BEGIN
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @Ids
 
+    -- Migrate DefaultCollection to SharedCollection
+    EXEC [dbo].[OrganizationUser_MigrateDefaultCollection] @Ids
+
     DECLARE @UserAndOrganizationIds [dbo].[TwoGuidIdArray]
 
     INSERT INTO @UserAndOrganizationIds

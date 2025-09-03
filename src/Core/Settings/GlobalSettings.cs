@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Settings;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Settings;
 using Bit.Core.Settings.LoggingSettings;
 
 namespace Bit.Core.Settings;
@@ -86,6 +89,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
     public virtual IPhishingDomainSettings PhishingDomain { get; set; } = new PhishingDomainSettings();
 
+    public virtual int SendAccessTokenLifetimeInMinutes { get; set; } = 5;
     public virtual bool EnableEmailVerification { get; set; }
     public virtual string KdfDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }
@@ -284,6 +288,8 @@ public class GlobalSettings : IGlobalSettings
     {
         public AzureServiceBusSettings AzureServiceBus { get; set; } = new AzureServiceBusSettings();
         public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
+        public int IntegrationCacheRefreshIntervalMinutes { get; set; } = 10;
+        public int MaxRetries { get; set; } = 3;
 
         public class AzureServiceBusSettings
         {
@@ -291,7 +297,6 @@ public class GlobalSettings : IGlobalSettings
             private string _eventTopicName;
             private string _integrationTopicName;
 
-            public int MaxRetries { get; set; } = 3;
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
             public virtual string SlackEventSubscriptionName { get; set; } = "events-slack-subscription";
             public virtual string SlackIntegrationSubscriptionName { get; set; } = "integration-slack-subscription";
@@ -327,7 +332,6 @@ public class GlobalSettings : IGlobalSettings
             private string _eventExchangeName;
             private string _integrationExchangeName;
 
-            public int MaxRetries { get; set; } = 3;
             public int RetryTiming { get; set; } = 30000; // 30s
             public bool UseDelayPlugin { get; set; } = false;
             public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";

@@ -15,4 +15,13 @@ public interface IPolicyRequirementQuery
     /// <param name="userId">The user that you need to enforce the policy against.</param>
     /// <typeparam name="T">The IPolicyRequirement that corresponds to the policy you want to enforce.</typeparam>
     Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement;
+
+    /// <summary>
+    /// Get all organization user IDs within an organization that are affected by a given policy type.
+    /// Respects role/status/provider exemptions via the policy factory's Enforce predicate.
+    /// </summary>
+    /// <param name="organizationId">The organization to check.</param>
+    /// <typeparam name="T">The IPolicyRequirement that corresponds to the policy type to evaluate.</typeparam>
+    /// <returns>Organization user IDs for whom the policy applies within the organization.</returns>
+    Task<IEnumerable<Guid>> GetManyByOrganizationIdAsync<T>(Guid organizationId) where T : IPolicyRequirement;
 }

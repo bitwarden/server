@@ -1,4 +1,7 @@
-﻿using Bit.Billing.Constants;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Billing.Constants;
 using Bit.Core.Settings;
 using Stripe;
 
@@ -215,7 +218,7 @@ public class StripeEventService : IStripeEventService
 
     private static string GetCustomerRegion(IDictionary<string, string> customerMetadata)
     {
-        const string defaultRegion = "US";
+        const string defaultRegion = Core.Constants.CountryAbbreviations.UnitedStates;
 
         if (customerMetadata is null)
         {

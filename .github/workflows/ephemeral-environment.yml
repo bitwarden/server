@@ -4,6 +4,10 @@ on:
   pull_request:
     types: [labeled]
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   setup-ephemeral-environment:
     name: Setup Ephemeral Environment

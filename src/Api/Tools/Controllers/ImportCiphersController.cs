@@ -1,4 +1,7 @@
-﻿using Bit.Api.Tools.Models.Request.Accounts;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Tools.Models.Request.Accounts;
 using Bit.Api.Tools.Models.Request.Organizations;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.Context;
@@ -60,7 +63,7 @@ public class ImportCiphersController : Controller
     }
 
     [HttpPost("import-organization")]
-    public async Task PostImport([FromQuery] string organizationId,
+    public async Task PostImportOrganization([FromQuery] string organizationId,
         [FromBody] ImportOrganizationCiphersRequestModel model)
     {
         if (!_globalSettings.SelfHosted &&

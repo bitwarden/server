@@ -1,4 +1,7 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -32,6 +35,8 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly ILogger _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
+    private readonly IAuthRequestRepository _authRequestRepository;
+    private readonly IMailService _mailService;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -56,7 +61,10 @@ public abstract class BaseRequestValidator<T> where T : class
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        IAuthRequestRepository authRequestRepository,
+        IMailService mailService
+        )
     {
         _userManager = userManager;
         _userService = userService;
@@ -73,6 +81,8 @@ public abstract class BaseRequestValidator<T> where T : class
         SsoConfigRepository = ssoConfigRepository;
         UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
         PolicyRequirementQuery = policyRequirementQuery;
+        _authRequestRepository = authRequestRepository;
+        _mailService = mailService;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -153,6 +163,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 else
                 {
+                    await SendFailedTwoFactorEmail(user, twoFactorProviderType);
                     await UpdateFailedAuthDetailsAsync(user);
                     await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                 }
@@ -185,6 +196,14 @@ public abstract class BaseRequestValidator<T> where T : class
         {
             await FailAuthForLegacyUserAsync(user, context);
             return;
+        }
+
+        // TODO: PM-24324 - This should be its own validator at some point.
+        // 6. Auth request handling
+        if (validatorContext.ValidatedAuthRequest != null)
+        {
+            validatorContext.ValidatedAuthRequest.AuthenticationDate = DateTime.UtcNow;
+            await _authRequestRepository.ReplaceAsync(validatorContext.ValidatedAuthRequest);
         }
 
         await BuildSuccessResultAsync(user, context, validatorContext.Device, returnRememberMeToken);
@@ -358,6 +377,14 @@ public abstract class BaseRequestValidator<T> where T : class
         await _userRepository.ReplaceAsync(user);
     }
 
+    private async Task SendFailedTwoFactorEmail(User user, TwoFactorProviderType failedAttemptType)
+    {
+        if (FeatureService.IsEnabled(FeatureFlagKeys.FailedTwoFactorEmail))
+        {
+            await _mailService.SendFailedTwoFactorAttemptEmailAsync(user.Email, failedAttemptType, DateTime.UtcNow, CurrentContext.IpAddress);
+        }
+    }
+
     private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicyAsync(User user)
     {
         // Check current context/cache to see if user is in any organizations, avoids extra DB call if not
@@ -401,8 +428,8 @@ public abstract class BaseRequestValidator<T> where T : class
     /// <summary>
     /// Builds the custom response that will be sent to the client upon successful authentication, which
     /// includes the information needed for the client to initialize the user's account in state.
-    /// </summary> 
-    /// <param name="user">The authenticated user.</param> 
+    /// </summary>
+    /// <param name="user">The authenticated user.</param>
     /// <param name="context">The current request context.</param>
     /// <param name="device">The device used for authentication.</param>
     /// <param name="sendRememberToken">Whether to send a 2FA remember token.</param>
