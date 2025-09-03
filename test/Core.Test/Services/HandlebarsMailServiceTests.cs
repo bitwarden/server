@@ -247,11 +247,18 @@ public class HandlebarsMailServiceTests
         }
     }
 
-    // Remove this test when we add actual tests. It only proves that
-    // we've properly constructed the system under test.
     [Fact]
-    public void ServiceExists()
+    public async Task SendSendEmailOtpEmailAsync_SendsEmail()
     {
-        Assert.NotNull(_sut);
+        // Arrange
+        var email = "test@example.com";
+        var token = "aToken";
+        var subject = string.Format("Your Bitwarden Send verification code is {0}", token);
+
+        // Act
+        await _sut.SendSendEmailOtpEmailAsync(email, token, subject);
+
+        // Assert
+        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Any<MailMessage>());
     }
 }
