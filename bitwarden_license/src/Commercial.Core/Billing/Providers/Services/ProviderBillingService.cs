@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using Bit.Commercial.Core.Billing.Providers.Models;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -282,7 +283,7 @@ public class ProviderBillingService(
             ]
         };
 
-        if (providerCustomer.Address is not { Country: "US" })
+        if (providerCustomer.Address is not { Country: Constants.CountryAbbreviations.UnitedStates })
         {
             customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
         }
@@ -525,7 +526,7 @@ public class ProviderBillingService(
             }
         };
 
-        if (taxInfo.BillingAddressCountry is not "US")
+        if (taxInfo.BillingAddressCountry is not Constants.CountryAbbreviations.UnitedStates)
         {
             options.TaxExempt = StripeConstants.TaxExempt.Reverse;
         }
