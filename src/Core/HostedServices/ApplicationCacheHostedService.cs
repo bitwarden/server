@@ -3,6 +3,7 @@ using Azure.Messaging.ServiceBus.Administration;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Services.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Hosting;
@@ -14,7 +15,7 @@ namespace Bit.Core.HostedServices;
 
 public class ApplicationCacheHostedService : IHostedService, IDisposable
 {
-    private readonly InMemoryServiceBusApplicationCacheService? _applicationCacheService;
+    private readonly FeatureRoutedCacheService? _applicationCacheService;
     private readonly IOrganizationRepository _organizationRepository;
     protected readonly ILogger<ApplicationCacheHostedService> _logger;
     private readonly ServiceBusClient _serviceBusClient;
@@ -34,7 +35,7 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
     {
         _topicName = globalSettings.ServiceBus.ApplicationCacheTopicName;
         _subName = CoreHelpers.GetApplicationCacheServiceBusSubscriptionName(globalSettings);
-        _applicationCacheService = applicationCacheService as InMemoryServiceBusApplicationCacheService;
+        _applicationCacheService = applicationCacheService as FeatureRoutedCacheService;
         _organizationRepository = organizationRepository;
         _logger = logger;
         _serviceBusClient = new ServiceBusClient(globalSettings.ServiceBus.ConnectionString);
