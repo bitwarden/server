@@ -1,12 +1,10 @@
 ﻿// ReSharper disable SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault
-#nullable enable
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Stripe;
 
-namespace Bit.Commercial.Core.Billing.Providers.Services;
+namespace Bit.Core.Billing.Providers.Services;
 
 public static class ProviderPriceAdapter
 {
@@ -52,7 +50,7 @@ public static class ProviderPriceAdapter
     /// <param name="planType">The plan type correlating to the desired Stripe price ID.</param>
     /// <returns>A Stripe <see cref="Stripe.Price"/> ID.</returns>
     /// <exception cref="BillingException">Thrown when the provider's type is not <see cref="ProviderType.Msp"/> or <see cref="ProviderType.BusinessUnit"/>.</exception>
-    /// <exception cref="BillingException">Thrown when the provided <see cref="planType"/> does not relate to a Stripe price ID.</exception>
+    /// <exception cref="BillingException">Thrown when the provided <paramref name="planType"/> does not relate to a Stripe price ID.</exception>
     public static string GetPriceId(
         Provider provider,
         Subscription subscription,
@@ -104,7 +102,7 @@ public static class ProviderPriceAdapter
     /// <param name="planType">The plan type correlating to the desired Stripe price ID.</param>
     /// <returns>A Stripe <see cref="Stripe.Price"/> ID.</returns>
     /// <exception cref="BillingException">Thrown when the provider's type is not <see cref="ProviderType.Msp"/> or <see cref="ProviderType.BusinessUnit"/>.</exception>
-    /// <exception cref="BillingException">Thrown when the provided <see cref="planType"/> does not relate to a Stripe price ID.</exception>
+    /// <exception cref="BillingException">Thrown when the provided <paramref name="planType"/> does not relate to a Stripe price ID.</exception>
     public static string GetActivePriceId(
         Provider provider,
         PlanType planType)
