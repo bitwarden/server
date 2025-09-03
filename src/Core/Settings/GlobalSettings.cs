@@ -463,6 +463,14 @@ public class GlobalSettings : IGlobalSettings
         public string RedisConnectionString { get; set; }
         public string CosmosConnectionString { get; set; }
         public string LicenseKey { get; set; } = "eyJhbGciOiJQUzI1NiIsImtpZCI6IklkZW50aXR5U2VydmVyTGljZW5zZWtleS83Y2VhZGJiNzgxMzA0NjllODgwNjg5MTAyNTQxNGYxNiIsInR5cCI6ImxpY2Vuc2Urand0In0.eyJpc3MiOiJodHRwczovL2R1ZW5kZXNvZnR3YXJlLmNvbSIsImF1ZCI6IklkZW50aXR5U2VydmVyIiwiaWF0IjoxNzM0NTY2NDAwLCJleHAiOjE3NjQ5NzkyMDAsImNvbXBhbnlfbmFtZSI6IkJpdHdhcmRlbiBJbmMuIiwiY29udGFjdF9pbmZvIjoiY29udGFjdEBkdWVuZGVzb2Z0d2FyZS5jb20iLCJlZGl0aW9uIjoiU3RhcnRlciIsImlkIjoiNjg3OCIsImZlYXR1cmUiOlsiaXN2IiwidW5saW1pdGVkX2NsaWVudHMiXSwicHJvZHVjdCI6IkJpdHdhcmRlbiJ9.TYc88W_t2t0F2AJV3rdyKwGyQKrKFriSAzm1tWFNHNR9QizfC-8bliGdT4Wgeie-ynCXs9wWaF-sKC5emg--qS7oe2iIt67Qd88WS53AwgTvAddQRA4NhGB1R7VM8GAikLieSos-DzzwLYRgjZdmcsprItYGSJuY73r-7-F97ta915majBytVxGF966tT9zF1aYk0bA8FS6DcDYkr5f7Nsy8daS_uIUAgNa_agKXtmQPqKujqtUb6rgWEpSp4OcQcG-8Dpd5jHqoIjouGvY-5LTgk5WmLxi_m-1QISjxUJrUm-UGao3_VwV5KFGqYrz8csdTl-HS40ihWcsWnrV0ug";
+        /// <summary>
+        /// Global override for sliding refresh token lifetime in seconds. If null, uses the constructor parameter value.
+        /// </summary>
+        public int? SlidingRefreshTokenLifetimeSeconds { get; set; }
+        /// <summary>
+        /// Global override for absolute refresh token lifetime in seconds. If null, uses the constructor parameter value.
+        /// </summary>
+        public int? AbsoluteRefreshTokenLifetimeSeconds { get; set; }
     }
 
     public class DataProtectionSettings
