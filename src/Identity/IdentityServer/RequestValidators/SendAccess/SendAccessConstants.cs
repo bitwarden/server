@@ -1,4 +1,5 @@
-﻿using Duende.IdentityServer.Validation;
+﻿using Bit.Core.Auth.Identity.TokenProviders;
+using Duende.IdentityServer.Validation;
 
 namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 
@@ -34,7 +35,7 @@ public static class SendAccessConstants
     public static class GrantValidatorResults
     {
         /// <summary>
-        /// The sendId is valid and the request is well formed.
+        /// The sendId is valid and the request is well formed. Not returned in any response.
         /// </summary>
         public const string ValidSendGuid = "valid_send_guid";
         /// <summary>
@@ -66,8 +67,40 @@ public static class SendAccessConstants
         /// </summary>
         public const string EmailRequired = "email_required";
         /// <summary>
+        /// Represents the error code indicating that an email address is invalid.
+        /// </summary>
+        public const string EmailInvalid = "email_invalid";
+        /// <summary>
         /// Represents the status indicating that both email and OTP are required, and the OTP has been sent.
         /// </summary>
         public const string EmailOtpSent = "email_and_otp_required_otp_sent";
+        /// <summary>
+        /// Represents the status indicating that both email and OTP are required, and the OTP is invalid.
+        /// </summary>
+        public const string EmailOtpInvalid = "otp_invalid";
+        /// <summary>
+        /// For what ever reason the OTP was not able to be generated
+        /// </summary>
+        public const string OtpGenerationFailed = "otp_generation_failed";
+    }
+
+    /// <summary>
+    /// These are the constants for the OTP token that is generated during the email otp authentication process.
+    /// These items are required by <see cref="IOtpTokenProvider{TOptions}"/> to aid in the creation of a unique lookup key.
+    /// Look up key format is: {TokenProviderName}_{Purpose}_{TokenUniqueIdentifier}
+    /// </summary>
+    public static class OtpToken
+    {
+        public const string TokenProviderName = "send_access";
+        public const string Purpose = "email_otp";
+        /// <summary>
+        /// This will be send_id {0} and email {1}
+        /// </summary>
+        public const string TokenUniqueIdentifier = "{0}_{1}";
+    }
+
+    public static class OtpEmail
+    {
+        public const string Subject = "Your Bitwarden Send verification code is {0}";
     }
 }
