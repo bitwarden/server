@@ -294,6 +294,11 @@ public class OrganizationReportsController : Controller
 
             var updatedReport = await _updateOrganizationReportApplicationDataCommand.UpdateOrganizationReportApplicationDataAsync(request);
 
+            if (updatedReport.Id != request.Id)
+            {
+                throw new BadRequestException("Report ID in the request body must match the route parameter");
+            }
+
             return Ok(updatedReport);
         }
         catch (Exception ex) when (!(ex is BadRequestException || ex is NotFoundException))

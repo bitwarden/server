@@ -1064,6 +1064,7 @@ public class OrganizationReportControllerTests
     {
         // Arrange
         request.OrganizationId = orgId;
+        expectedReport.Id = request.Id;
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
@@ -1128,6 +1129,32 @@ public class OrganizationReportControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task UpdateOrganizationReportApplicationDataAsync_WithMismatchedReportId_ThrowsBadRequestException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        UpdateOrganizationReportApplicationDataRequest request,
+        OrganizationReport updatedReport)
+    {
+        // Arrange
+        request.OrganizationId = orgId;
+        updatedReport.Id = Guid.NewGuid(); // Different from request.Id
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessReports(orgId)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUpdateOrganizationReportApplicationDataCommand>()
+            .UpdateOrganizationReportApplicationDataAsync(request)
+            .Returns(updatedReport);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.UpdateOrganizationReportApplicationDataAsync(orgId, request));
+
+        Assert.Equal("Report ID in the request body must match the route parameter", exception.Message);
+    }
+
+    [Theory, BitAutoData]
     public async Task UpdateOrganizationReportApplicationDataAsync_CallsCorrectMethods(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
@@ -1136,6 +1163,7 @@ public class OrganizationReportControllerTests
     {
         // Arrange
         request.OrganizationId = orgId;
+        expectedReport.Id = request.Id;
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
