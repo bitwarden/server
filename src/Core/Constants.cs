@@ -114,6 +114,7 @@ public static class FeatureFlagKeys
     public const string SeparateCustomRolePermissions = "pm-19917-separate-custom-role-permissions";
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string DirectoryConnectorPreventUserRemoval = "pm-24592-directory-connector-prevent-user-removal";
+    public const string CipherRepositoryBulkResourceCreation = "pm-24951-cipher-repository-bulk-resource-creation-service";
 
     /* Auth Team */
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
