@@ -1,8 +1,10 @@
-﻿#nullable enable
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Enums;
 
 namespace Bit.Core.Models;
+
+// New push notification payload models should not be defined in this file
+// they should instead be defined in file owned by your team.
 
 public class PushNotificationData<T>
 {
@@ -56,6 +58,7 @@ public class NotificationPushNotification
     public Guid? UserId { get; set; }
     public Guid? OrganizationId { get; set; }
     public Guid? InstallationId { get; set; }
+    public Guid? TaskId { get; set; }
     public string? Title { get; set; }
     public string? Body { get; set; }
     public DateTime CreationDate { get; set; }

@@ -1,4 +1,6 @@
-﻿using Bit.Core.Models.Data;
+﻿#nullable enable
+
+using Bit.Core.Models.Data;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Services;

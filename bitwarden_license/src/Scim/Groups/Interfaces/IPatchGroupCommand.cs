@@ -5,5 +5,5 @@ namespace Bit.Scim.Groups.Interfaces;
 
 public interface IPatchGroupCommand
 {
-    Task PatchGroupAsync(Organization organization, Guid id, ScimPatchModel model);
+    Task PatchGroupAsync(Group group, ScimPatchModel model);
 }

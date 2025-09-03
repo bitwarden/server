@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -50,9 +51,10 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
 
         // Check org to sponsor's product type
         var requiredSponsoredProductType = StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value)?.SponsoredProductTierType;
+        var sponsoredOrganizationProductTier = sponsoredOrganization.PlanType.GetProductTier();
+
         if (requiredSponsoredProductType == null ||
-            sponsoredOrganization == null ||
-            StaticStore.GetPlan(sponsoredOrganization.PlanType).ProductTier != requiredSponsoredProductType.Value)
+            sponsoredOrganizationProductTier != requiredSponsoredProductType.Value)
         {
             throw new BadRequestException("Can only redeem sponsorship offer on families organizations.");
         }

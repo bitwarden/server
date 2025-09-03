@@ -1,0 +1,31 @@
+name: Build on PR Target
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    branches:
+      - "main"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check-run:
+    name: Check PR run
+    uses: bitwarden/gh-actions/.github/workflows/check-run.yml@main
+    permissions:
+      contents: read
+
+  run-workflow:
+    name: Run Build on PR Target
+    needs: check-run
+    if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      security-events: write

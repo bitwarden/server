@@ -1,4 +1,8 @@
-﻿using Stripe;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Stripe;
+using Stripe.TestHelpers;
 
 namespace Bit.Billing.Services;
 
@@ -13,6 +17,12 @@ public interface IStripeFacade
     Task<Customer> GetCustomer(
         string customerId,
         CustomerGetOptions customerGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
+
+    Task<Customer> UpdateCustomer(
+        string customerId,
+        CustomerUpdateOptions customerUpdateOptions = null,
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
 
@@ -87,6 +97,12 @@ public interface IStripeFacade
 
     Task<Discount> DeleteSubscriptionDiscount(
         string subscriptionId,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
+
+    Task<TestClock> GetTestClock(
+        string testClockId,
+        TestClockGetOptions testClockGetOptions = null,
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
 }

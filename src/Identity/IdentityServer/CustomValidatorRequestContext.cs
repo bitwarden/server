@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Models.Business;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Duende.IdentityServer.Validation;
 
@@ -9,7 +12,7 @@ public class CustomValidatorRequestContext
     public User User { get; set; }
     /// <summary>
     /// This is the device that the user is using to authenticate. It can be either known or unknown.
-    /// We set it here since the ResourceOwnerPasswordValidator needs the device to know if CAPTCHA is required.
+    /// We set it here since the ResourceOwnerPasswordValidator needs the device to do device validation.
     /// The option to set it here saves a trip to the database.
     /// </summary>
     public Device Device { get; set; }
@@ -39,5 +42,10 @@ public class CustomValidatorRequestContext
     /// This will be null if the authentication request is successful.
     /// </summary>
     public Dictionary<string, object> CustomResponse { get; set; }
-    public CaptchaResponse CaptchaResponse { get; set; }
+
+    /// <summary>
+    /// A validated auth request
+    /// <see cref="AuthRequest.IsValidForAuthentication"/>
+    /// </summary>
+    public AuthRequest ValidatedAuthRequest { get; set; }
 }

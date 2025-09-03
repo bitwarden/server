@@ -1,5 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
+using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 
@@ -7,7 +11,7 @@ namespace Bit.Core.AdminConsole.Services.NoopImplementations;
 
 public class NoopProviderService : IProviderService
 {
-    public Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo = null) => throw new NotImplementedException();
+    public Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo, TokenizedPaymentSource tokenizedPaymentSource = null) => throw new NotImplementedException();
 
     public Task UpdateAsync(Provider provider, bool updateBilling = false) => throw new NotImplementedException();
 

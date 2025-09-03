@@ -20,6 +20,7 @@ public class GroupsControllerPatchTests : IClassFixture<ScimApplicationFactory>,
     {
         var databaseContext = _factory.GetDatabaseContext();
         _factory.ReinitializeDbForTests(databaseContext);
+
         return Task.CompletedTask;
     }
 

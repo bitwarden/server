@@ -1,4 +1,5 @@
-﻿using Bit.Api.Auth.Jobs;
+﻿using Bit.Api.AdminConsole.Jobs;
+using Bit.Api.Auth.Jobs;
 using Bit.Core.Jobs;
 using Bit.Core.Settings;
 using Quartz;
@@ -58,6 +59,18 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 0 * * * ?")
             .Build();
+        var updatePhishingDomainsTrigger = TriggerBuilder.Create()
+            .WithIdentity("UpdatePhishingDomainsTrigger")
+            .StartNow()
+            .WithSimpleSchedule(x => x
+                .WithIntervalInHours(24)
+                .RepeatForever())
+            .Build();
+        var updateOrgSubscriptionsTrigger = TriggerBuilder.Create()
+            .WithIdentity("UpdateOrgSubscriptionsTrigger")
+            .StartNow()
+            .WithCronSchedule("0 0 */3 * * ?") // top of every 3rd hour
+            .Build();
 
 
         var jobs = new List<Tuple<Type, ITrigger>>
@@ -68,6 +81,8 @@ public class JobsHostedService : BaseJobsHostedService
             new Tuple<Type, ITrigger>(typeof(ValidateUsersJob), everyTopOfTheSixthHourTrigger),
             new Tuple<Type, ITrigger>(typeof(ValidateOrganizationsJob), everyTwelfthHourAndThirtyMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(ValidateOrganizationDomainJob), validateOrganizationDomainTrigger),
+            new Tuple<Type, ITrigger>(typeof(UpdatePhishingDomainsJob), updatePhishingDomainsTrigger),
+            new (typeof(OrganizationSubscriptionUpdateJob), updateOrgSubscriptionsTrigger),
         };
 
         if (_globalSettings.SelfHosted && _globalSettings.EnableCloudCommunication)
@@ -96,6 +111,8 @@ public class JobsHostedService : BaseJobsHostedService
         services.AddTransient<ValidateUsersJob>();
         services.AddTransient<ValidateOrganizationsJob>();
         services.AddTransient<ValidateOrganizationDomainJob>();
+        services.AddTransient<UpdatePhishingDomainsJob>();
+        services.AddTransient<OrganizationSubscriptionUpdateJob>();
     }
 
     public static void AddCommercialSecretsManagerJobServices(IServiceCollection services)

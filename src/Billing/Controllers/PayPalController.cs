@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text;
 using Bit.Billing.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Services;
@@ -51,8 +54,8 @@ public class PayPalController : Controller
     [HttpPost("ipn")]
     public async Task<IActionResult> PostIpn()
     {
-        var key = HttpContext.Request.Query.ContainsKey("key")
-            ? HttpContext.Request.Query["key"].ToString()
+        var key = HttpContext.Request.Query.TryGetValue("key", out var keyValue)
+            ? keyValue.ToString()
             : null;
 
         if (string.IsNullOrEmpty(key))

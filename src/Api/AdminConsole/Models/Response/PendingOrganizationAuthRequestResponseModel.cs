@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Models.Api;
@@ -23,6 +26,7 @@ public class PendingOrganizationAuthRequestResponseModel : ResponseModel
         RequestDeviceType = authRequest.RequestDeviceType.GetType().GetMember(authRequest.RequestDeviceType.ToString())
             .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
         RequestIpAddress = authRequest.RequestIpAddress;
+        RequestCountryName = authRequest.RequestCountryName;
         CreationDate = authRequest.CreationDate;
     }
 
@@ -34,5 +38,6 @@ public class PendingOrganizationAuthRequestResponseModel : ResponseModel
     public string RequestDeviceIdentifier { get; set; }
     public string RequestDeviceType { get; set; }
     public string RequestIpAddress { get; set; }
+    public string RequestCountryName { get; set; }
     public DateTime CreationDate { get; set; }
 }

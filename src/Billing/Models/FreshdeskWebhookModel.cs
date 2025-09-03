@@ -1,4 +1,7 @@
-﻿using System.Text.Json.Serialization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json.Serialization;
 
 namespace Bit.Billing.Models;
 
@@ -12,4 +15,10 @@ public class FreshdeskWebhookModel
 
     [JsonPropertyName("ticket_tags")]
     public string TicketTags { get; set; }
+}
+
+public class FreshdeskOnyxAiWebhookModel : FreshdeskWebhookModel
+{
+    [JsonPropertyName("ticket_description_text")]
+    public string TicketDescriptionText { get; set; }
 }

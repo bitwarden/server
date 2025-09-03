@@ -76,4 +76,24 @@ public class SecurityTaskRepository : Repository<Core.Vault.Entities.SecurityTas
 
         return tasksList;
     }
+
+    /// <inheritdoc />
+    public async Task<Core.Vault.Entities.SecurityTaskMetrics> GetTaskMetricsAsync(Guid organizationId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var metrics = await (from st in dbContext.SecurityTasks
+                             join o in dbContext.Organizations on st.OrganizationId equals o.Id
+                             where st.OrganizationId == organizationId && o.Enabled
+                             select st)
+                           .GroupBy(x => 1)
+                           .Select(g => new Core.Vault.Entities.SecurityTaskMetrics(
+                               g.Count(x => x.Status == SecurityTaskStatus.Completed),
+                               g.Count()
+                           ))
+                           .FirstOrDefaultAsync();
+
+        return metrics ?? new Core.Vault.Entities.SecurityTaskMetrics(0, 0);
+    }
 }

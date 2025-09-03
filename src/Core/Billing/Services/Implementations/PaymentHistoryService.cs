@@ -5,14 +5,12 @@ using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Billing.Services.Implementations;
 
 public class PaymentHistoryService(
     IStripeAdapter stripeAdapter,
-    ITransactionRepository transactionRepository,
-    ILogger<PaymentHistoryService> logger) : IPaymentHistoryService
+    ITransactionRepository transactionRepository) : IPaymentHistoryService
 {
     public async Task<IEnumerable<BillingHistoryInfo.BillingInvoice>> GetInvoiceHistoryAsync(
         ISubscriber subscriber,

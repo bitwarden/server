@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Api.Models.Request;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -60,6 +63,10 @@ public class OrganizationUserConfirmRequestModel
 {
     [Required]
     public string Key { get; set; }
+
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string DefaultUserCollectionName { get; set; }
 }
 
 public class OrganizationUserBulkConfirmRequestModelEntry
@@ -74,6 +81,10 @@ public class OrganizationUserBulkConfirmRequestModel
 {
     [Required]
     public IEnumerable<OrganizationUserBulkConfirmRequestModelEntry> Keys { get; set; }
+
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string DefaultUserCollectionName { get; set; }
 
     public Dictionary<Guid, string> ToDictionary()
     {

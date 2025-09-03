@@ -3,7 +3,6 @@ using System.Text;
 using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Context;
@@ -15,9 +14,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Identity.Controllers;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -38,11 +34,9 @@ public class AccountsControllerTests : IDisposable
     private readonly ILogger<AccountsController> _logger;
     private readonly IUserRepository _userRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
-    private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
     private readonly GlobalSettings _globalSettings;
@@ -54,11 +48,9 @@ public class AccountsControllerTests : IDisposable
         _logger = Substitute.For<ILogger<AccountsController>>();
         _userRepository = Substitute.For<IUserRepository>();
         _registerUserCommand = Substitute.For<IRegisterUserCommand>();
-        _captchaValidationService = Substitute.For<ICaptchaValidationService>();
         _assertionOptionsDataProtector = Substitute.For<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>();
         _getWebAuthnLoginCredentialAssertionOptionsCommand = Substitute.For<IGetWebAuthnLoginCredentialAssertionOptionsCommand>();
         _sendVerificationEmailForRegistrationCommand = Substitute.For<ISendVerificationEmailForRegistrationCommand>();
-        _referenceEventService = Substitute.For<IReferenceEventService>();
         _featureService = Substitute.For<IFeatureService>();
         _registrationEmailVerificationTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>();
         _globalSettings = Substitute.For<GlobalSettings>();
@@ -68,11 +60,9 @@ public class AccountsControllerTests : IDisposable
             _logger,
             _userRepository,
             _registerUserCommand,
-            _captchaValidationService,
             _assertionOptionsDataProtector,
             _getWebAuthnLoginCredentialAssertionOptionsCommand,
             _sendVerificationEmailForRegistrationCommand,
-            _referenceEventService,
             _featureService,
             _registrationEmailVerificationTokenDataFactory,
             _globalSettings
@@ -144,50 +134,6 @@ public class AccountsControllerTests : IDisposable
         }
     }
 
-    [Fact]
-    public async Task PostRegister_ShouldRegisterUser()
-    {
-        var passwordHash = "abcdef";
-        var token = "123456";
-        var userGuid = new Guid();
-        _registerUserCommand.RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), passwordHash, token, userGuid)
-                    .Returns(Task.FromResult(IdentityResult.Success));
-        var request = new RegisterRequestModel
-        {
-            Name = "Example User",
-            Email = "user@example.com",
-            MasterPasswordHash = passwordHash,
-            MasterPasswordHint = "example",
-            Token = token,
-            OrganizationUserId = userGuid
-        };
-
-        await _sut.PostRegister(request);
-
-        await _registerUserCommand.Received(1).RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), passwordHash, token, userGuid);
-    }
-
-    [Fact]
-    public async Task PostRegister_WhenUserServiceFails_ShouldThrowBadRequestException()
-    {
-        var passwordHash = "abcdef";
-        var token = "123456";
-        var userGuid = new Guid();
-        _registerUserCommand.RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), passwordHash, token, userGuid)
-                    .Returns(Task.FromResult(IdentityResult.Failed()));
-        var request = new RegisterRequestModel
-        {
-            Name = "Example User",
-            Email = "user@example.com",
-            MasterPasswordHash = passwordHash,
-            MasterPasswordHint = "example",
-            Token = token,
-            OrganizationUserId = userGuid
-        };
-
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegister(request));
-    }
-
     [Theory]
     [BitAutoData]
     public async Task PostRegisterSendEmailVerification_WhenTokenReturnedFromCommand_Returns200WithToken(string email, string name, bool receiveMarketingEmails)
@@ -211,8 +157,6 @@ public class AccountsControllerTests : IDisposable
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(200, okResult.StatusCode);
         Assert.Equal(token, okResult.Value);
-
-        await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e => e.Type == ReferenceEventType.SignupEmailSubmit));
     }
 
     [Theory]
@@ -235,7 +179,6 @@ public class AccountsControllerTests : IDisposable
         // Assert
         var noContentResult = Assert.IsType<NoContentResult>(result);
         Assert.Equal(204, noContentResult.StatusCode);
-        await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e => e.Type == ReferenceEventType.SignupEmailSubmit));
     }
 
     [Theory, BitAutoData]
@@ -452,12 +395,6 @@ public class AccountsControllerTests : IDisposable
         // Assert
         var okResult = Assert.IsType<OkResult>(result);
         Assert.Equal(200, okResult.StatusCode);
-
-        await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
-            e.Type == ReferenceEventType.SignupEmailClicked
-            && e.EmailVerificationTokenValid == true
-            && e.UserAlreadyExists == false
-            ));
     }
 
     [Theory, BitAutoData]
@@ -483,12 +420,6 @@ public class AccountsControllerTests : IDisposable
 
         // Act & assert
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterVerificationEmailClicked(requestModel));
-
-        await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
-            e.Type == ReferenceEventType.SignupEmailClicked
-            && e.EmailVerificationTokenValid == false
-            && e.UserAlreadyExists == false
-        ));
     }
 
 
@@ -515,12 +446,6 @@ public class AccountsControllerTests : IDisposable
 
         // Act & assert
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterVerificationEmailClicked(requestModel));
-
-        await _referenceEventService.Received(1).RaiseEventAsync(Arg.Is<ReferenceEvent>(e =>
-            e.Type == ReferenceEventType.SignupEmailClicked
-            && e.EmailVerificationTokenValid == true
-            && e.UserAlreadyExists == true
-        ));
     }
 
     private void SetDefaultKdfHmacKey(byte[]? newKey)

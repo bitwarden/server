@@ -16,7 +16,11 @@ public static class DeviceTypes
         DeviceType.LinuxDesktop,
         DeviceType.MacOsDesktop,
         DeviceType.WindowsDesktop,
-        DeviceType.UWP,
+        DeviceType.UWP
+    ];
+
+    public static IReadOnlyCollection<DeviceType> CliTypes { get; } =
+    [
         DeviceType.WindowsCLI,
         DeviceType.MacOsCLI,
         DeviceType.LinuxCLI
@@ -41,6 +45,7 @@ public static class DeviceTypes
         DeviceType.IEBrowser,
         DeviceType.SafariBrowser,
         DeviceType.VivaldiBrowser,
+        DeviceType.DuckDuckGoBrowser,
         DeviceType.UnknownBrowser
     ];
 
@@ -50,6 +55,7 @@ public static class DeviceTypes
         {
             not null when MobileTypes.Contains(deviceType.Value) => ClientType.Mobile,
             not null when DesktopTypes.Contains(deviceType.Value) => ClientType.Desktop,
+            not null when CliTypes.Contains(deviceType.Value) => ClientType.Cli,
             not null when BrowserExtensionTypes.Contains(deviceType.Value) => ClientType.Browser,
             not null when BrowserTypes.Contains(deviceType.Value) => ClientType.Web,
             _ => ClientType.All

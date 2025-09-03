@@ -1,6 +1,10 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -28,10 +32,11 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IDeviceValidator _deviceValidator;
     private readonly ITwoFactorAuthenticationValidator _twoFactorAuthenticationValidator;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IMailService _mailService;
     private readonly ILogger _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
+    private readonly IAuthRequestRepository _authRequestRepository;
+    private readonly IMailService _mailService;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -39,6 +44,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected ISsoConfigRepository SsoConfigRepository { get; }
     protected IUserService _userService { get; }
     protected IUserDecryptionOptionsBuilder UserDecryptionOptionsBuilder { get; }
+    protected IPolicyRequirementQuery PolicyRequirementQuery { get; }
 
     public BaseRequestValidator(
         UserManager<User> userManager,
@@ -47,7 +53,6 @@ public abstract class BaseRequestValidator<T> where T : class
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
         ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
@@ -55,7 +60,11 @@ public abstract class BaseRequestValidator<T> where T : class
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IAuthRequestRepository authRequestRepository,
+        IMailService mailService
+        )
     {
         _userManager = userManager;
         _userService = userService;
@@ -63,7 +72,6 @@ public abstract class BaseRequestValidator<T> where T : class
         _deviceValidator = deviceValidator;
         _twoFactorAuthenticationValidator = twoFactorAuthenticationValidator;
         _organizationUserRepository = organizationUserRepository;
-        _mailService = mailService;
         _logger = logger;
         CurrentContext = currentContext;
         _globalSettings = globalSettings;
@@ -72,28 +80,20 @@ public abstract class BaseRequestValidator<T> where T : class
         FeatureService = featureService;
         SsoConfigRepository = ssoConfigRepository;
         UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
+        PolicyRequirementQuery = policyRequirementQuery;
+        _authRequestRepository = authRequestRepository;
+        _mailService = mailService;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
-        // 1. We need to check if the user is a bot and if their master password hash is correct.
-        var isBot = validatorContext.CaptchaResponse?.IsBot ?? false;
+        // 1. We need to check if the user's master password hash is correct.
         var valid = await ValidateContextAsync(context, validatorContext);
         var user = validatorContext.User;
-        if (!valid || isBot)
+        if (!valid)
         {
-            if (isBot)
-            {
-                _logger.LogInformation(Constants.BypassFiltersEventId,
-                    "Login attempt for {UserName} detected as a captcha bot with score {CaptchaScore}.",
-                    request.UserName, validatorContext.CaptchaResponse.Score);
-            }
-
-            if (!valid)
-            {
-                await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
-            }
+            await UpdateFailedAuthDetailsAsync(user);
 
             await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
             return;
@@ -163,7 +163,8 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 else
                 {
-                    await UpdateFailedAuthDetailsAsync(user, true, !validatorContext.KnownDevice);
+                    await SendFailedTwoFactorEmail(user, twoFactorProviderType);
+                    await UpdateFailedAuthDetailsAsync(user);
                     await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                 }
                 return;
@@ -197,58 +198,46 @@ public abstract class BaseRequestValidator<T> where T : class
             return;
         }
 
+        // TODO: PM-24324 - This should be its own validator at some point.
+        // 6. Auth request handling
+        if (validatorContext.ValidatedAuthRequest != null)
+        {
+            validatorContext.ValidatedAuthRequest.AuthenticationDate = DateTime.UtcNow;
+            await _authRequestRepository.ReplaceAsync(validatorContext.ValidatedAuthRequest);
+        }
+
         await BuildSuccessResultAsync(user, context, validatorContext.Device, returnRememberMeToken);
     }
 
     protected async Task FailAuthForLegacyUserAsync(User user, T context)
     {
         await BuildErrorResultAsync(
-            $"Encryption key migration is required. Please log in to the web vault at {_globalSettings.BaseServiceUri.VaultWithHash}",
+            $"Legacy encryption without a userkey is no longer supported. To recover your account, please contact support",
             false, context, user);
     }
 
     protected abstract Task<bool> ValidateContextAsync(T context, CustomValidatorRequestContext validatorContext);
 
+
+    /// <summary>
+    /// Responsible for building the response to the client when the user has successfully authenticated.
+    /// </summary>
+    /// <param name="user">The authenticated user.</param>
+    /// <param name="context">The current request context.</param>
+    /// <param name="device">The device used for authentication.</param>
+    /// <param name="sendRememberToken">Whether to send a 2FA remember token.</param>
     protected async Task BuildSuccessResultAsync(User user, T context, Device device, bool sendRememberToken)
     {
         await _eventService.LogUserEventAsync(user.Id, EventType.User_LoggedIn);
 
-        var claims = new List<Claim>();
+        var claims = this.BuildSubjectClaims(user, context, device);
 
-        if (device != null)
-        {
-            claims.Add(new Claim(Claims.Device, device.Identifier));
-            claims.Add(new Claim(Claims.DeviceType, device.Type.ToString()));
-        }
-
-        var customResponse = new Dictionary<string, object>();
-        if (!string.IsNullOrWhiteSpace(user.PrivateKey))
-        {
-            customResponse.Add("PrivateKey", user.PrivateKey);
-        }
-
-        if (!string.IsNullOrWhiteSpace(user.Key))
-        {
-            customResponse.Add("Key", user.Key);
-        }
-
-        customResponse.Add("MasterPasswordPolicy", await GetMasterPasswordPolicyAsync(user));
-        customResponse.Add("ForcePasswordReset", user.ForcePasswordReset);
-        customResponse.Add("ResetMasterPassword", string.IsNullOrWhiteSpace(user.MasterPassword));
-        customResponse.Add("Kdf", (byte)user.Kdf);
-        customResponse.Add("KdfIterations", user.KdfIterations);
-        customResponse.Add("KdfMemory", user.KdfMemory);
-        customResponse.Add("KdfParallelism", user.KdfParallelism);
-        customResponse.Add("UserDecryptionOptions", await CreateUserDecryptionOptionsAsync(user, device, GetSubject(context)));
-
-        if (sendRememberToken)
-        {
-            var token = await _userManager.GenerateTwoFactorTokenAsync(user,
-                CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember));
-            customResponse.Add("TwoFactorToken", token);
-        }
+        var customResponse = await BuildCustomResponse(user, context, device, sendRememberToken);
 
         await ResetFailedAuthDetailsAsync(user);
+
+        // Once we've built the claims and custom response, we can set the success result.
+        // We delegate this to the derived classes, as the implementation varies based on the grant type.
         await SetSuccessResult(context, user, claims, customResponse);
     }
 
@@ -348,9 +337,12 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         // Check if user belongs to any organization with an active SSO policy
-        var anySsoPoliciesApplicableToUser = await PolicyService.AnyPoliciesApplicableToUserAsync(
-                                                user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
-        if (anySsoPoliciesApplicableToUser)
+        var ssoRequired = FeatureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            ? (await PolicyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(user.Id))
+                .SsoRequired
+            : await PolicyService.AnyPoliciesApplicableToUserAsync(
+                user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
+        if (ssoRequired)
         {
             return true;
         }
@@ -372,7 +364,7 @@ public abstract class BaseRequestValidator<T> where T : class
         await _userRepository.ReplaceAsync(user);
     }
 
-    private async Task UpdateFailedAuthDetailsAsync(User user, bool twoFactorInvalid, bool unknownDevice)
+    private async Task UpdateFailedAuthDetailsAsync(User user)
     {
         if (user == null)
         {
@@ -383,32 +375,14 @@ public abstract class BaseRequestValidator<T> where T : class
         user.FailedLoginCount = ++user.FailedLoginCount;
         user.LastFailedLoginDate = user.RevisionDate = utcNow;
         await _userRepository.ReplaceAsync(user);
-
-        if (ValidateFailedAuthEmailConditions(unknownDevice, user))
-        {
-            if (twoFactorInvalid)
-            {
-                await _mailService.SendFailedTwoFactorAttemptsEmailAsync(user.Email, utcNow, CurrentContext.IpAddress);
-            }
-            else
-            {
-                await _mailService.SendFailedLoginAttemptsEmailAsync(user.Email, utcNow, CurrentContext.IpAddress);
-            }
-        }
     }
 
-    /// <summary>
-    /// checks to see if a user is trying to log into a new device
-    /// and has reached the maximum number of failed login attempts.
-    /// </summary>
-    /// <param name="unknownDevice">boolean</param>
-    /// <param name="user">current user</param>
-    /// <returns></returns>
-    private bool ValidateFailedAuthEmailConditions(bool unknownDevice, User user)
+    private async Task SendFailedTwoFactorEmail(User user, TwoFactorProviderType failedAttemptType)
     {
-        var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;
-        var failedLoginCount = user?.FailedLoginCount ?? 0;
-        return unknownDevice && failedLoginCeiling > 0 && failedLoginCount == failedLoginCeiling;
+        if (FeatureService.IsEnabled(FeatureFlagKeys.FailedTwoFactorEmail))
+        {
+            await _mailService.SendFailedTwoFactorAttemptEmailAsync(user.Email, failedAttemptType, DateTime.UtcNow, CurrentContext.IpAddress);
+        }
     }
 
     private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicyAsync(User user)
@@ -423,6 +397,71 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         return new MasterPasswordPolicyResponseModel(await PolicyService.GetMasterPasswordPolicyForUserAsync(user));
+    }
+
+    /// <summary>
+    /// Builds the claims that will be stored on the persisted grant.
+    /// These claims are supplemented by the claims in the ProfileService when the access token is returned to the client.
+    /// </summary>
+    /// <param name="user">The authenticated user.</param>
+    /// <param name="context">The current request context.</param>
+    /// <param name="device">The device used for authentication.</param>
+    private List<Claim> BuildSubjectClaims(User user, T context, Device device)
+    {
+        // We are adding the security stamp claim to the list of claims that will be stored in the persisted grant.
+        // We need this because we check for changes in the stamp to determine if we need to invalidate token refresh requests,
+        // in the `ProfileService.IsActiveAsync` method.
+        // If we don't store the security stamp in the persisted grant, we won't have the previous value to compare against.
+        var claims = new List<Claim>
+        {
+            new Claim(Claims.SecurityStamp, user.SecurityStamp)
+        };
+
+        if (device != null)
+        {
+            claims.Add(new Claim(Claims.Device, device.Identifier));
+            claims.Add(new Claim(Claims.DeviceType, device.Type.ToString()));
+        }
+        return claims;
+    }
+
+    /// <summary>
+    /// Builds the custom response that will be sent to the client upon successful authentication, which
+    /// includes the information needed for the client to initialize the user's account in state.
+    /// </summary>
+    /// <param name="user">The authenticated user.</param>
+    /// <param name="context">The current request context.</param>
+    /// <param name="device">The device used for authentication.</param>
+    /// <param name="sendRememberToken">Whether to send a 2FA remember token.</param>
+    private async Task<Dictionary<string, object>> BuildCustomResponse(User user, T context, Device device, bool sendRememberToken)
+    {
+        var customResponse = new Dictionary<string, object>();
+        if (!string.IsNullOrWhiteSpace(user.PrivateKey))
+        {
+            customResponse.Add("PrivateKey", user.PrivateKey);
+        }
+
+        if (!string.IsNullOrWhiteSpace(user.Key))
+        {
+            customResponse.Add("Key", user.Key);
+        }
+
+        customResponse.Add("MasterPasswordPolicy", await GetMasterPasswordPolicyAsync(user));
+        customResponse.Add("ForcePasswordReset", user.ForcePasswordReset);
+        customResponse.Add("ResetMasterPassword", string.IsNullOrWhiteSpace(user.MasterPassword));
+        customResponse.Add("Kdf", (byte)user.Kdf);
+        customResponse.Add("KdfIterations", user.KdfIterations);
+        customResponse.Add("KdfMemory", user.KdfMemory);
+        customResponse.Add("KdfParallelism", user.KdfParallelism);
+        customResponse.Add("UserDecryptionOptions", await CreateUserDecryptionOptionsAsync(user, device, GetSubject(context)));
+
+        if (sendRememberToken)
+        {
+            var token = await _userManager.GenerateTwoFactorTokenAsync(user,
+                CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember));
+            customResponse.Add("TwoFactorToken", token);
+        }
+        return customResponse;
     }
 
 #nullable enable

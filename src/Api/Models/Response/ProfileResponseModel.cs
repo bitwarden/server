@@ -1,4 +1,7 @@
-﻿using Bit.Api.AdminConsole.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Providers;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Entities;
@@ -15,7 +18,7 @@ public class ProfileResponseModel : ResponseModel
         IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
         bool twoFactorEnabled,
         bool premiumFromOrganization,
-        IEnumerable<Guid> organizationIdsManagingUser) : base("profile")
+        IEnumerable<Guid> organizationIdsClaimingUser) : base("profile")
     {
         if (user == null)
         {
@@ -38,7 +41,7 @@ public class ProfileResponseModel : ResponseModel
         AvatarColor = user.AvatarColor;
         CreationDate = user.CreationDate;
         VerifyDevices = user.VerifyDevices;
-        Organizations = organizationsUserDetails?.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsManagingUser));
+        Organizations = organizationsUserDetails?.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingUser));
         Providers = providerUserDetails?.Select(p => new ProfileProviderResponseModel(p));
         ProviderOrganizations =
             providerUserOrganizationDetails?.Select(po => new ProfileProviderOrganizationResponseModel(po));

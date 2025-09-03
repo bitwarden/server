@@ -1,17 +1,16 @@
-﻿using Bit.Core.Auth.Models;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 
-public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
+public class TwoFactorIsEnabledQuery(IUserRepository userRepository) : ITwoFactorIsEnabledQuery
 {
-    private readonly IUserRepository _userRepository;
-
-    public TwoFactorIsEnabledQuery(IUserRepository userRepository)
-    {
-        _userRepository = userRepository;
-    }
+    private readonly IUserRepository _userRepository = userRepository;
 
     public async Task<IEnumerable<(Guid userId, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync(IEnumerable<Guid> userIds)
     {
@@ -21,26 +20,15 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
             return result;
         }
 
-        var userDetails = await _userRepository.GetManyWithCalculatedPremiumAsync(userIds.ToList());
-
+        var userDetails = await _userRepository.GetManyWithCalculatedPremiumAsync([.. userIds]);
         foreach (var userDetail in userDetails)
         {
-            var hasTwoFactor = false;
-            var providers = userDetail.GetTwoFactorProviders();
-            if (providers != null)
-            {
-                // Get all enabled providers
-                var enabledProviderKeys = from provider in providers
-                                          where provider.Value?.Enabled ?? false
-                                          select provider.Key;
-
-                // Find the first provider that is enabled and passes the premium check
-                hasTwoFactor = enabledProviderKeys
-                    .Select(type => userDetail.HasPremiumAccess || !TwoFactorProvider.RequiresPremium(type))
-                    .FirstOrDefault();
-            }
-
-            result.Add((userDetail.Id, hasTwoFactor));
+            result.Add(
+                (userDetail.Id,
+                 await TwoFactorEnabledAsync(userDetail.GetTwoFactorProviders(),
+                                () => Task.FromResult(userDetail.HasPremiumAccess))
+                )
+            );
         }
 
         return result;
@@ -83,41 +71,56 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
             return false;
         }
 
-        var providers = user.GetTwoFactorProviders();
-        if (providers == null || !providers.Any())
+        return await TwoFactorEnabledAsync(
+                        user.GetTwoFactorProviders(),
+                        async () =>
+                        {
+                            var calcUser = await _userRepository.GetCalculatedPremiumAsync(userId.Value);
+                            return calcUser?.HasPremiumAccess ?? false;
+                        });
+    }
+
+    /// <summary>
+    /// Checks to see what kind of two-factor is enabled.
+    /// We use a delegate to check if the user has premium access, since there are multiple ways to
+    /// determine if a user has premium access.
+    /// </summary>
+    /// <param name="providers">dictionary of two factor providers</param>
+    /// <param name="hasPremiumAccessDelegate">function to check if the user has premium access</param>
+    /// <returns> true if the user has two factor enabled; false otherwise;</returns>
+    private async static Task<bool> TwoFactorEnabledAsync(
+        Dictionary<TwoFactorProviderType, TwoFactorProvider> providers,
+        Func<Task<bool>> hasPremiumAccessDelegate)
+    {
+        // If there are no providers, then two factor is not enabled
+        if (providers == null || providers.Count == 0)
         {
             return false;
         }
 
         // Get all enabled providers
-        var enabledProviderKeys = providers
-            .Where(provider => provider.Value?.Enabled ?? false)
-            .Select(provider => provider.Key);
+        // TODO: PM-21210: In practice we don't save disabled providers to the database, worth looking into.
+        var enabledProviderKeys = from provider in providers
+                                  where provider.Value?.Enabled ?? false
+                                  select provider.Key;
 
+        // If no providers are enabled then two factor is not enabled
         if (!enabledProviderKeys.Any())
         {
             return false;
         }
 
-        // Determine if any enabled provider passes the premium check
-        var hasTwoFactor = enabledProviderKeys
-            .Select(type => user.GetPremium() || !TwoFactorProvider.RequiresPremium(type))
-            .FirstOrDefault();
-
-        // If no enabled provider passes the check, check the repository for organization premium access
-        if (!hasTwoFactor)
+        // If there are only premium two factor options then standard two factor is not enabled
+        var onlyHasPremiumTwoFactor = enabledProviderKeys.All(TwoFactorProvider.RequiresPremium);
+        if (onlyHasPremiumTwoFactor)
         {
-            var userDetails = await _userRepository.GetManyWithCalculatedPremiumAsync(new List<Guid> { userId.Value });
-            var userDetail = userDetails.FirstOrDefault();
-
-            if (userDetail != null)
-            {
-                hasTwoFactor = enabledProviderKeys
-                    .Select(type => userDetail.HasPremiumAccess || !TwoFactorProvider.RequiresPremium(type))
-                    .FirstOrDefault();
-            }
+            // There are no Standard two factor options, check if the user has premium access
+            // If the user has premium access, then two factor is enabled
+            var premiumAccess = await hasPremiumAccessDelegate();
+            return premiumAccess;
         }
 
-        return hasTwoFactor;
+        // The user has at least one non-premium two factor option
+        return true;
     }
 }

@@ -1,6 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Bit.Core;
+using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -9,6 +13,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Identity.IdentityServer.Enums;
+using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.Extensions.Caching.Distributed;
 
@@ -22,8 +27,8 @@ public class DeviceValidator(
     ICurrentContext currentContext,
     IUserService userService,
     IDistributedCache distributedCache,
-    ILogger<DeviceValidator> logger,
-    IFeatureService featureService) : IDeviceValidator
+    ITwoFactorEmailService twoFactorEmailService,
+    ILogger<DeviceValidator> logger) : IDeviceValidator
 {
     private readonly IDeviceService _deviceService = deviceService;
     private readonly IDeviceRepository _deviceRepository = deviceRepository;
@@ -33,7 +38,9 @@ public class DeviceValidator(
     private readonly IUserService _userService = userService;
     private readonly IDistributedCache distributedCache = distributedCache;
     private readonly ILogger<DeviceValidator> _logger = logger;
-    private readonly IFeatureService _featureService = featureService;
+    private readonly ITwoFactorEmailService _twoFactorEmailService = twoFactorEmailService;
+
+    private const string PasswordGrantType = "password";
 
     public async Task<bool> ValidateRequestDeviceAsync(ValidatedTokenRequest request, CustomValidatorRequestContext context)
     {
@@ -49,8 +56,10 @@ public class DeviceValidator(
             return false;
         }
 
-        // if not a new device request then check if the device is known
-        if (!NewDeviceOtpRequest(request))
+        // Check if the request has a NewDeviceOtp, if it does we can assume it is an unknown device
+        // that has already been prompted for new device verification so we don't
+        // have to hit the database to check if the device is known to avoid unnecessary database calls.
+        if (!RequestHasNewDeviceVerificationOtp(request))
         {
             var knownDevice = await GetKnownDeviceAsync(context.User, requestDevice);
             // if the device is know then we return the device fetched from the database
@@ -63,13 +72,24 @@ public class DeviceValidator(
             }
         }
 
-        // We have established that the device is unknown at this point; begin new device verification
-        // PM-13340: remove feature flag
-        if (_featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification) &&
-            request.GrantType == "password" &&
-            request.Raw["AuthRequest"] == null &&
-            !context.TwoFactorRequired &&
-            !context.SsoRequired &&
+        // The device is either unknown or the request has a NewDeviceOtp (implies unknown device)
+
+        var rawAuthRequestId = request.Raw["AuthRequest"]?.ToLowerInvariant();
+        var isAuthRequest = !string.IsNullOrEmpty(rawAuthRequestId);
+
+        // Device unknown, but if we are in an auth request flow, this is not valid
+        // as we only support auth request authN requests on known devices
+        // Note: we re-use the resource owner password flow for auth requests
+        if (request.GrantType == GrantType.ResourceOwnerPassword && isAuthRequest)
+        {
+            (context.ValidationErrorResult, context.CustomResponse) =
+                BuildDeviceErrorResult(DeviceValidationResultType.AuthRequestFlowUnknownDevice);
+            return false;
+        }
+
+        // Enforce new device verification for resource owner password flow (just normal password flow)
+        if (request.GrantType == GrantType.ResourceOwnerPassword &&
+            context is { TwoFactorRequired: false, SsoRequired: false } &&
             _globalSettings.EnableNewDeviceVerification)
         {
             var validationResult = await HandleNewDeviceVerificationAsync(context.User, request);
@@ -79,7 +99,7 @@ public class DeviceValidator(
                     BuildDeviceErrorResult(validationResult);
                 if (validationResult == DeviceValidationResultType.NewDeviceVerificationRequired)
                 {
-                    await _userService.SendOTPAsync(context.User);
+                    await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(context.User);
                 }
                 return false;
             }
@@ -116,6 +136,13 @@ public class DeviceValidator(
 
         // Has the User opted out of new device verification
         if (!user.VerifyDevices)
+        {
+            return DeviceValidationResultType.Success;
+        }
+
+        // User is newly registered, so don't require new device verification
+        var createdSpan = DateTime.UtcNow - user.CreationDate;
+        if (createdSpan < TimeSpan.FromHours(24))
         {
             return DeviceValidationResultType.Success;
         }
@@ -163,6 +190,14 @@ public class DeviceValidator(
         return DeviceValidationResultType.NewDeviceVerificationRequired;
     }
 
+    /// <summary>
+    /// Sends an email whenever the user logs in from a new device. Will not send to a user who's account
+    /// is less than 10 minutes old. We assume an account that is less than 10 minutes old is new and does
+    /// not need an email stating they just logged in.
+    /// </summary>
+    /// <param name="user">user logging in</param>
+    /// <param name="requestDevice">current device being approved to login</param>
+    /// <returns>void</returns>
     private async Task SendNewDeviceLoginEmail(User user, Device requestDevice)
     {
         // Ensure that the user doesn't receive a "new device" email on the first login
@@ -215,7 +250,7 @@ public class DeviceValidator(
     /// </summary>
     /// <param name="request"></param>
     /// <returns></returns>
-    public static bool NewDeviceOtpRequest(ValidatedRequest request)
+    public static bool RequestHasNewDeviceVerificationOtp(ValidatedRequest request)
     {
         return !string.IsNullOrEmpty(request.Raw["NewDeviceOtp"]?.ToString());
     }
@@ -235,6 +270,11 @@ public class DeviceValidator(
         var customResponse = new Dictionary<string, object>();
         switch (errorType)
         {
+            /*
+             * The ErrorMessage is brittle and is used to control the flow in the clients. Do not change them without updating the client as well.
+             * There is a backwards compatibility issue as well: if you make a change on the clients then ensure that they are backwards
+             * compatible.
+             */
             case DeviceValidationResultType.InvalidUser:
                 result.ErrorDescription = "Invalid user";
                 customResponse.Add("ErrorModel", new ErrorResponseModel("invalid user"));
@@ -250,6 +290,10 @@ public class DeviceValidator(
             case DeviceValidationResultType.NoDeviceInformationProvided:
                 result.ErrorDescription = "No device information provided";
                 customResponse.Add("ErrorModel", new ErrorResponseModel("no device information provided"));
+                break;
+            case DeviceValidationResultType.AuthRequestFlowUnknownDevice:
+                result.ErrorDescription = "Auth requests are not supported on unknown devices";
+                customResponse.Add("ErrorModel", new ErrorResponseModel("auth request flow unsupported on unknown device"));
                 break;
         }
         return (result, customResponse);

@@ -1,10 +1,12 @@
-﻿using Bit.Api.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
-using Bit.Core;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Bit.Core.Vault.Commands.Interfaces;
+using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Queries;
 using Microsoft.AspNetCore.Authorization;
@@ -14,7 +16,6 @@ namespace Bit.Api.Vault.Controllers;
 
 [Route("tasks")]
 [Authorize("Application")]
-[RequireFeature(FeatureFlagKeys.SecurityTasks)]
 public class SecurityTaskController : Controller
 {
     private readonly IUserService _userService;
@@ -22,19 +23,25 @@ public class SecurityTaskController : Controller
     private readonly IMarkTaskAsCompleteCommand _markTaskAsCompleteCommand;
     private readonly IGetTasksForOrganizationQuery _getTasksForOrganizationQuery;
     private readonly ICreateManyTasksCommand _createManyTasksCommand;
+    private readonly ICreateManyTaskNotificationsCommand _createManyTaskNotificationsCommand;
+    private readonly IGetTaskMetricsForOrganizationQuery _getTaskMetricsForOrganizationQuery;
 
     public SecurityTaskController(
         IUserService userService,
         IGetTaskDetailsForUserQuery getTaskDetailsForUserQuery,
         IMarkTaskAsCompleteCommand markTaskAsCompleteCommand,
         IGetTasksForOrganizationQuery getTasksForOrganizationQuery,
-        ICreateManyTasksCommand createManyTasksCommand)
+        ICreateManyTasksCommand createManyTasksCommand,
+        ICreateManyTaskNotificationsCommand createManyTaskNotificationsCommand,
+        IGetTaskMetricsForOrganizationQuery getTaskMetricsForOrganizationQuery)
     {
         _userService = userService;
         _getTaskDetailsForUserQuery = getTaskDetailsForUserQuery;
         _markTaskAsCompleteCommand = markTaskAsCompleteCommand;
         _getTasksForOrganizationQuery = getTasksForOrganizationQuery;
         _createManyTasksCommand = createManyTasksCommand;
+        _createManyTaskNotificationsCommand = createManyTaskNotificationsCommand;
+        _getTaskMetricsForOrganizationQuery = getTaskMetricsForOrganizationQuery;
     }
 
     /// <summary>
@@ -77,6 +84,18 @@ public class SecurityTaskController : Controller
     }
 
     /// <summary>
+    /// Retrieves security task metrics for an organization.
+    /// </summary>
+    /// <param name="organizationId">The organization Id</param>
+    [HttpGet("{organizationId:guid}/metrics")]
+    public async Task<SecurityTaskMetricsResponseModel> GetTaskMetricsForOrganization([FromRoute] Guid organizationId)
+    {
+        var metrics = await _getTaskMetricsForOrganizationQuery.GetTaskMetrics(organizationId);
+
+        return new SecurityTaskMetricsResponseModel(metrics.CompletedTasks, metrics.TotalTasks);
+    }
+
+    /// <summary>
     /// Bulk create security tasks for an organization.
     /// </summary>
     /// <param name="orgId"></param>
@@ -86,8 +105,28 @@ public class SecurityTaskController : Controller
     public async Task<ListResponseModel<SecurityTasksResponseModel>> BulkCreateTasks(Guid orgId,
         [FromBody] BulkCreateSecurityTasksRequestModel model)
     {
-        var securityTasks = await _createManyTasksCommand.CreateAsync(orgId, model.Tasks);
-        var response = securityTasks.Select(x => new SecurityTasksResponseModel(x)).ToList();
+        // Retrieve existing pending security tasks for the organization
+        var pendingSecurityTasks = await _getTasksForOrganizationQuery.GetTasksAsync(orgId, SecurityTaskStatus.Pending);
+
+        // Get the security tasks that are already associated with a cipher within the submitted model
+        var existingTasks = pendingSecurityTasks.Where(x => model.Tasks.Any(y => y.CipherId == x.CipherId)).ToList();
+
+        // Get tasks that need to be created
+        var tasksToCreateFromModel = model.Tasks.Where(x => !existingTasks.Any(y => y.CipherId == x.CipherId)).ToList();
+
+        ICollection<SecurityTask> newSecurityTasks = new List<SecurityTask>();
+
+        if (tasksToCreateFromModel.Count != 0)
+        {
+            newSecurityTasks = await _createManyTasksCommand.CreateAsync(orgId, tasksToCreateFromModel);
+        }
+
+        // Combine existing tasks and newly created tasks
+        var allTasks = existingTasks.Concat(newSecurityTasks);
+
+        await _createManyTaskNotificationsCommand.CreateAsync(orgId, allTasks);
+
+        var response = allTasks.Select(x => new SecurityTasksResponseModel(x)).ToList();
         return new ListResponseModel<SecurityTasksResponseModel>(response);
     }
 }

@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Identity\Identity.csproj" />
     <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\Core.Test\Core.Test.csproj" />
     <ProjectReference Include="..\IntegrationTestCommon\IntegrationTestCommon.csproj" />
   </ItemGroup>
 

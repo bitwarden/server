@@ -1,7 +1,12 @@
-﻿using Bit.Api.Tools.Authorization;
+﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.Tools.Authorization;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Bit.Core.IdentityServer;
+using Bit.Core.PhishingDomainFeatures;
+using Bit.Core.PhishingDomainFeatures.Interfaces;
+using Bit.Core.Repositories;
+using Bit.Core.Repositories.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.SecurityTasks;
@@ -14,7 +19,7 @@ namespace Bit.Api.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddSwagger(this IServiceCollection services, GlobalSettings globalSettings)
+    public static void AddSwagger(this IServiceCollection services, GlobalSettings globalSettings, IWebHostEnvironment environment)
     {
         services.AddSwaggerGen(config =>
         {
@@ -28,15 +33,18 @@ public static class ServiceCollectionExtensions
                     Url = new Uri("https://bitwarden.com"),
                     Email = "support@bitwarden.com"
                 },
-                Description = "The Bitwarden public APIs.",
+                Description = """
+                              This schema documents the endpoints available to the Public API, which provides
+                              organizations tools for managing members, collections, groups, event logs, and policies.
+                              If you are looking for the Vault Management API, refer instead to
+                              [this document](https://bitwarden.com/help/vault-management-api/).
+                              """,
                 License = new OpenApiLicense
                 {
                     Name = "GNU Affero General Public License v3.0",
                     Url = new Uri("https://github.com/bitwarden/server/blob/master/LICENSE.txt")
                 }
             });
-
-            config.CustomSchemaIds(type => type.FullName);
 
             config.SwaggerDoc("internal", new OpenApiInfo { Title = "Bitwarden Internal API", Version = "latest" });
 
@@ -74,7 +82,7 @@ public static class ServiceCollectionExtensions
             config.DescribeAllParametersInCamelCase();
             // config.UseReferencedDefinitionsForEnums();
 
-            config.SchemaFilter<EnumSchemaFilter>();
+            config.InitializeSwaggerFilters(environment);
 
             var apiFilePath = Path.Combine(AppContext.BaseDirectory, "Api.xml");
             config.IncludeXmlComments(apiFilePath, true);
@@ -107,5 +115,28 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthorizationHandler, VaultExportAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, SecurityTaskAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, SecurityTaskOrganizationAuthorizationHandler>();
+
+        services.AddScoped<IAuthorizationHandler, OrganizationRequirementHandler>();
+    }
+
+    public static void AddPhishingDomainServices(this IServiceCollection services, GlobalSettings globalSettings)
+    {
+        services.AddHttpClient("PhishingDomains", client =>
+        {
+            client.DefaultRequestHeaders.Add("User-Agent", globalSettings.SelfHosted ? "Bitwarden Self-Hosted" : "Bitwarden");
+            client.Timeout = TimeSpan.FromSeconds(1000); // the source list is very slow
+        });
+
+        services.AddSingleton<AzurePhishingDomainStorageService>();
+        services.AddSingleton<IPhishingDomainRepository, AzurePhishingDomainRepository>();
+
+        if (globalSettings.SelfHosted)
+        {
+            services.AddScoped<ICloudPhishingDomainQuery, CloudPhishingDomainRelayQuery>();
+        }
+        else
+        {
+            services.AddScoped<ICloudPhishingDomainQuery, CloudPhishingDomainDirectQuery>();
+        }
     }
 }

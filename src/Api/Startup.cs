@@ -5,7 +5,7 @@ using Bit.Core.Settings;
 using AspNetCoreRateLimit;
 using Stripe;
 using Bit.Core.Utilities;
-using IdentityModel;
+using Duende.IdentityModel;
 using System.Globalization;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
@@ -30,8 +30,9 @@ using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Tools.ImportFeatures;
-using Bit.Core.Tools.ReportFeatures;
-
+using Bit.Core.Auth.Models.Api.Request;
+using Bit.Core.Dirt.Reports.ReportFeatures;
+using Bit.Core.Tools.SendFeatures;
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -168,6 +169,9 @@ public class Startup
         services
             .AddScoped<IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>,
                 WebAuthnLoginKeyRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>>,
+                DeviceRotationValidator>();
 
         // Services
         services.AddBaseServices(globalSettings);
@@ -177,6 +181,9 @@ public class Startup
         services.AddBillingOperations();
         services.AddReportingServices();
         services.AddImportServices();
+        services.AddPhishingDomainServices(globalSettings);
+
+        services.AddSendServices();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();
@@ -203,7 +210,7 @@ public class Startup
             config.Conventions.Add(new PublicApiControllersModelConvention());
         });
 
-        services.AddSwagger(globalSettings);
+        services.AddSwagger(globalSettings, Environment);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
 
@@ -212,6 +219,9 @@ public class Startup
         {
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
+
+        // Add SlackService for OAuth API requests - if configured
+        services.AddSlackService(globalSettings);
     }
 
     public void Configure(

@@ -1,8 +1,8 @@
 ﻿using Bit.Admin.Billing.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
-using Bit.Core.Billing.Migration.Models;
-using Bit.Core.Billing.Migration.Services;
+using Bit.Core.Billing.Providers.Migration.Models;
+using Bit.Core.Billing.Providers.Migration.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

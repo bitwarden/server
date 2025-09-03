@@ -9,8 +9,7 @@
 
     var canViewUserInformation = AccessControlService.UserHasPermission(Permission.User_UserInformation_View);
     var canViewNewDeviceException = AccessControlService.UserHasPermission(Permission.User_NewDeviceException_Edit) &&
-                                    GlobalSettings.EnableNewDeviceVerification &&
-                                    FeatureService.IsEnabled(Bit.Core.FeatureFlagKeys.NewDeviceVerification);
+                                    GlobalSettings.EnableNewDeviceVerification;
     var canViewBillingInformation = AccessControlService.UserHasPermission(Permission.User_BillingInformation_View);
     var canViewGeneral = AccessControlService.UserHasPermission(Permission.User_GeneralDetails_View);
     var canViewPremium = AccessControlService.UserHasPermission(Permission.User_Premium_View);

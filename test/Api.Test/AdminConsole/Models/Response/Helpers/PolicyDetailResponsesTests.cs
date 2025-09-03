@@ -10,14 +10,19 @@ namespace Bit.Api.Test.AdminConsole.Models.Response.Helpers;
 
 public class PolicyDetailResponsesTests
 {
-    [Fact]
-    public async Task GetSingleOrgPolicyDetailResponseAsync_GivenPolicyEntity_WhenIsSingleOrgTypeAndHasVerifiedDomains_ThenShouldNotBeAbleToToggle()
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task GetSingleOrgPolicyDetailResponseAsync_WhenIsSingleOrgTypeAndHasVerifiedDomains_ShouldReturnExpectedToggleState(
+        bool policyEnabled,
+        bool expectedCanToggle)
     {
         var fixture = new Fixture();
 
         var policy = fixture.Build<Policy>()
             .Without(p => p.Data)
             .With(p => p.Type, PolicyType.SingleOrg)
+            .With(p => p.Enabled, policyEnabled)
             .Create();
 
         var querySub = Substitute.For<IOrganizationHasVerifiedDomainsQuery>();
@@ -26,11 +31,11 @@ public class PolicyDetailResponsesTests
 
         var result = await policy.GetSingleOrgPolicyDetailResponseAsync(querySub);
 
-        Assert.False(result.CanToggleState);
+        Assert.Equal(expectedCanToggle, result.CanToggleState);
     }
 
     [Fact]
-    public async Task GetSingleOrgPolicyDetailResponseAsync_GivenPolicyEntity_WhenIsNotSingleOrgType_ThenShouldThrowArgumentException()
+    public async Task GetSingleOrgPolicyDetailResponseAsync_WhenIsNotSingleOrgType_ThenShouldThrowArgumentException()
     {
         var fixture = new Fixture();
 
@@ -49,7 +54,7 @@ public class PolicyDetailResponsesTests
     }
 
     [Fact]
-    public async Task GetSingleOrgPolicyDetailResponseAsync_GivenPolicyEntity_WhenIsSingleOrgTypeAndDoesNotHaveVerifiedDomains_ThenShouldBeAbleToToggle()
+    public async Task GetSingleOrgPolicyDetailResponseAsync_WhenIsSingleOrgTypeAndDoesNotHaveVerifiedDomains_ThenShouldBeAbleToToggle()
     {
         var fixture = new Fixture();
 

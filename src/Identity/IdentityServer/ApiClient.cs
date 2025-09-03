@@ -1,4 +1,7 @@
-﻿using Bit.Core.Settings;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Settings;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Duende.IdentityServer.Models;
 

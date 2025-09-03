@@ -1,4 +1,7 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Diagnostics.CodeAnalysis;
 using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Core.SecretsManager.Models.Data;

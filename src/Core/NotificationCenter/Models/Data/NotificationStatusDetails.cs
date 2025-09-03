@@ -19,6 +19,7 @@ public class NotificationStatusDetails
     public string? Body { get; set; }
     public DateTime CreationDate { get; set; }
     public DateTime RevisionDate { get; set; }
+    public Guid? TaskId { get; set; }
     // Notification Status fields
     public DateTime? ReadDate { get; set; }
     public DateTime? DeletedDate { get; set; }

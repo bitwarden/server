@@ -27,7 +27,7 @@ public class PostUserCommandTests
             ExternalId = externalId,
             Emails = emails,
             Active = true,
-            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+            Schemas = [ScimConstants.Scim2SchemaUser]
         };
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -39,13 +39,16 @@ public class PostUserCommandTests
         sutProvider.GetDependency<IPaymentService>().HasSecretsManagerStandalone(organization).Returns(true);
 
         sutProvider.GetDependency<IOrganizationService>()
-            .InviteUserAsync(organizationId, invitingUserId: null, EventSystemUser.SCIM,
+            .InviteUserAsync(organizationId,
+                invitingUserId: null,
+                EventSystemUser.SCIM,
                 Arg.Is<OrganizationUserInvite>(i =>
                     i.Emails.Single().Equals(scimUserRequestModel.PrimaryEmail.ToLowerInvariant()) &&
                     i.Type == OrganizationUserType.User &&
                     !i.Collections.Any() &&
                     !i.Groups.Any() &&
-                    i.AccessSecretsManager), externalId)
+                    i.AccessSecretsManager),
+                externalId)
             .Returns(newUser);
 
         var user = await sutProvider.Sut.PostUserAsync(organizationId, scimUserRequestModel);

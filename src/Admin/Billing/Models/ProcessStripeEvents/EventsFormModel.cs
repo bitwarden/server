@@ -1,4 +1,7 @@
-﻿using System.ComponentModel;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Admin.Billing.Models.ProcessStripeEvents;

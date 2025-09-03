@@ -1,4 +1,7 @@
-﻿using Bit.Core.Settings;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using MailKit.Net.Smtp;
 using Microsoft.Extensions.Logging;
@@ -17,12 +20,17 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
         GlobalSettings globalSettings,
         ILogger<MailKitSmtpMailDeliveryService> logger)
     {
-        if (globalSettings.Mail?.Smtp?.Host == null)
+        if (globalSettings.Mail.Smtp?.Host == null)
         {
             throw new ArgumentNullException(nameof(globalSettings.Mail.Smtp.Host));
         }
 
-        _replyEmail = CoreHelpers.PunyEncode(globalSettings.Mail?.ReplyToEmail);
+        if (globalSettings.Mail.ReplyToEmail == null)
+        {
+            throw new InvalidOperationException("A GlobalSettings.Mail.ReplyToEmail is required to be set up.");
+        }
+
+        _replyEmail = CoreHelpers.PunyEncode(globalSettings.Mail.ReplyToEmail);
 
         if (_replyEmail.Contains("@"))
         {
@@ -34,6 +42,9 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
     }
 
     public async Task SendEmailAsync(Models.Mail.MailMessage message)
+        => await SendEmailAsync(message, CancellationToken.None);
+
+    public async Task SendEmailAsync(Models.Mail.MailMessage message, CancellationToken cancellationToken)
     {
         var mimeMessage = new MimeMessage();
         mimeMessage.From.Add(new MailboxAddress(_globalSettings.SiteName, _replyEmail));
@@ -76,25 +87,37 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
             if (!_globalSettings.Mail.Smtp.StartTls && !_globalSettings.Mail.Smtp.Ssl &&
                 _globalSettings.Mail.Smtp.Port == 25)
             {
-                await client.ConnectAsync(_globalSettings.Mail.Smtp.Host, _globalSettings.Mail.Smtp.Port,
-                    MailKit.Security.SecureSocketOptions.None);
+                await client.ConnectAsync(
+                    _globalSettings.Mail.Smtp.Host,
+                    _globalSettings.Mail.Smtp.Port,
+                    MailKit.Security.SecureSocketOptions.None,
+                    cancellationToken
+                );
             }
             else
             {
                 var useSsl = _globalSettings.Mail.Smtp.Port == 587 && !_globalSettings.Mail.Smtp.SslOverride ?
                     false : _globalSettings.Mail.Smtp.Ssl;
-                await client.ConnectAsync(_globalSettings.Mail.Smtp.Host, _globalSettings.Mail.Smtp.Port, useSsl);
+                await client.ConnectAsync(
+                    _globalSettings.Mail.Smtp.Host,
+                    _globalSettings.Mail.Smtp.Port,
+                    useSsl,
+                    cancellationToken
+                );
             }
 
             if (CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Username) &&
                 CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Password))
             {
-                await client.AuthenticateAsync(_globalSettings.Mail.Smtp.Username,
-                    _globalSettings.Mail.Smtp.Password);
+                await client.AuthenticateAsync(
+                    _globalSettings.Mail.Smtp.Username,
+                    _globalSettings.Mail.Smtp.Password,
+                    cancellationToken
+                );
             }
 
-            await client.SendAsync(mimeMessage);
-            await client.DisconnectAsync(true);
+            await client.SendAsync(mimeMessage, cancellationToken);
+            await client.DisconnectAsync(true, cancellationToken);
         }
     }
 }

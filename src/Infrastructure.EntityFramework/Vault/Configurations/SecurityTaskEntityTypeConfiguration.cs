@@ -25,6 +25,18 @@ public class SecurityTaskEntityTypeConfiguration : IEntityTypeConfiguration<Secu
             .IsClustered(false);
 
         builder
+            .HasOne(p => p.Organization)
+            .WithMany()
+            .HasForeignKey(p => p.OrganizationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder
+            .HasOne(p => p.Cipher)
+            .WithMany()
+            .HasForeignKey(p => p.CipherId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder
             .ToTable(nameof(SecurityTask));
     }
 }

@@ -55,7 +55,10 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @LimitCollectionDeletion BIT = NULL,
     @AllowAdminAccessToAllCollectionItems BIT = 0,
     @UseRiskInsights BIT = 0,
-    @LimitItemDeletion BIT = 0
+    @LimitItemDeletion BIT = 0,
+    @UseOrganizationDomains BIT = 0,
+    @UseAdminSponsoredFamilies BIT = 0,
+    @SyncSeats BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -118,7 +121,10 @@ BEGIN
         [LimitCollectionDeletion],
         [AllowAdminAccessToAllCollectionItems],
         [UseRiskInsights],
-        [LimitItemDeletion]
+        [LimitItemDeletion],
+        [UseOrganizationDomains],
+        [UseAdminSponsoredFamilies],
+        [SyncSeats]
     )
     VALUES
     (
@@ -178,6 +184,9 @@ BEGIN
         @LimitCollectionDeletion,
         @AllowAdminAccessToAllCollectionItems,
         @UseRiskInsights,
-        @LimitItemDeletion
+        @LimitItemDeletion,
+        @UseOrganizationDomains,
+        @UseAdminSponsoredFamilies,
+        @SyncSeats
     )
 END

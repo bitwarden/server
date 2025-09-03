@@ -1,4 +1,7 @@
-﻿using Azure.Storage.Queues;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Azure.Storage.Queues;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.SignalR;
@@ -83,6 +86,11 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                 {
                     await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 }
+            }
+            catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogDebug("Task.Delay cancelled during Alpine container shutdown");
+                break;
             }
             catch (Exception e)
             {

@@ -163,6 +163,11 @@ public class UpdateGroupCommand : IUpdateGroupCommand
             // Use generic error message to avoid enumeration
             throw new NotFoundException();
         }
+
+        if (collections.Any(c => c.Type == CollectionType.DefaultUserCollection))
+        {
+            throw new BadRequestException("You cannot modify group access for collections with the type as DefaultUserCollection.");
+        }
     }
 
     private async Task ValidateMemberAccessAsync(Group originalGroup,

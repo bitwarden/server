@@ -1,7 +1,8 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Scim.Models;
 using Bit.Scim.Users.Interfaces;
 
@@ -10,17 +11,19 @@ namespace Bit.Scim.Users;
 public class PatchUserCommand : IPatchUserCommand
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IOrganizationService _organizationService;
+    private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
     private readonly ILogger<PatchUserCommand> _logger;
+    private readonly IRevokeOrganizationUserCommand _revokeOrganizationUserCommand;
 
-    public PatchUserCommand(
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationService organizationService,
-        ILogger<PatchUserCommand> logger)
+    public PatchUserCommand(IOrganizationUserRepository organizationUserRepository,
+        IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
+        ILogger<PatchUserCommand> logger,
+        IRevokeOrganizationUserCommand revokeOrganizationUserCommand)
     {
         _organizationUserRepository = organizationUserRepository;
-        _organizationService = organizationService;
+        _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
         _logger = logger;
+        _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
     }
 
     public async Task PatchUserAsync(Guid organizationId, Guid id, ScimPatchModel model)
@@ -71,12 +74,12 @@ public class PatchUserCommand : IPatchUserCommand
     {
         if (active && orgUser.Status == OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RestoreUserAsync(orgUser, EventSystemUser.SCIM);
+            await _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, EventSystemUser.SCIM);
             return true;
         }
         else if (!active && orgUser.Status != OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RevokeUserAsync(orgUser, EventSystemUser.SCIM);
+            await _revokeOrganizationUserCommand.RevokeUserAsync(orgUser, EventSystemUser.SCIM);
             return true;
         }
         return false;

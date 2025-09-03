@@ -1,0 +1,30 @@
+{
+  "name": "@bitwarden/mjml-emails",
+  "version": "1.0.0",
+  "description": "Email templates for Bitwarden",
+  "private": true,
+  "type": "commonjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bitwarden/server.git"
+  },
+  "author": "Bitwarden Inc. <hello@bitwarden.com> (https://bitwarden.com)",
+  "license": "SEE LICENSE IN LICENSE.txt",
+  "bugs": {
+    "url": "https://github.com/bitwarden/server/issues"
+  },
+  "homepage": "https://bitwarden.com",
+  "scripts": {
+    "build": "./build.sh",
+    "watch": "nodemon --exec ./build.sh --watch ./components --watch ./emails --ext js,mjml",
+    "prettier": "prettier --cache --write ."
+  },
+  "dependencies": {
+    "mjml": "4.15.3",
+    "mjml-core": "4.15.3"
+  },
+  "devDependencies": {
+    "nodemon": "3.1.10",
+    "prettier": "3.5.3"
+  }
+}

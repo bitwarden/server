@@ -56,9 +56,9 @@ public class UserManagerTestWrapper<TUser> : UserManager<TUser> where TUser : cl
     /// </summary>
     /// <param name="user"></param>
     /// <returns></returns>
-    public override async Task<bool> GetTwoFactorEnabledAsync(TUser user)
+    public override Task<bool> GetTwoFactorEnabledAsync(TUser user)
     {
-        return TWO_FACTOR_ENABLED;
+        return Task.FromResult(TWO_FACTOR_ENABLED);
     }
 
     /// <summary>
@@ -66,9 +66,9 @@ public class UserManagerTestWrapper<TUser> : UserManager<TUser> where TUser : cl
     /// </summary>
     /// <param name="user"></param>
     /// <returns></returns>
-    public override async Task<IList<string>> GetValidTwoFactorProvidersAsync(TUser user)
+    public override Task<IList<string>> GetValidTwoFactorProvidersAsync(TUser user)
     {
-        return TWO_FACTOR_PROVIDERS;
+        return Task.FromResult(TWO_FACTOR_PROVIDERS);
     }
 
     /// <summary>
@@ -77,9 +77,9 @@ public class UserManagerTestWrapper<TUser> : UserManager<TUser> where TUser : cl
     /// <param name="user"></param>
     /// <param name="tokenProvider"></param>
     /// <returns></returns>
-    public override async Task<string> GenerateTwoFactorTokenAsync(TUser user, string tokenProvider)
+    public override Task<string> GenerateTwoFactorTokenAsync(TUser user, string tokenProvider)
     {
-        return TWO_FACTOR_TOKEN;
+        return Task.FromResult(TWO_FACTOR_TOKEN);
     }
 
     /// <summary>
@@ -89,8 +89,8 @@ public class UserManagerTestWrapper<TUser> : UserManager<TUser> where TUser : cl
     /// <param name="tokenProvider"></param>
     /// <param name="token"></param>
     /// <returns></returns>
-    public override async Task<bool> VerifyTwoFactorTokenAsync(TUser user, string tokenProvider, string token)
+    public override Task<bool> VerifyTwoFactorTokenAsync(TUser user, string tokenProvider, string token)
     {
-        return TWO_FACTOR_TOKEN_VERIFIED;
+        return Task.FromResult(TWO_FACTOR_TOKEN_VERIFIED);
     }
 }

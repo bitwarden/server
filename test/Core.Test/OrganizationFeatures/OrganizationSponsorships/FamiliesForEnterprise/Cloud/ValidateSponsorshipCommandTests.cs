@@ -251,4 +251,52 @@ public class ValidateSponsorshipCommandTests : CancelSponsorshipCommandTestsBase
         await AssertDidNotRemoveSponsoredPaymentAsync(sutProvider);
         await AssertDidNotDeleteSponsorshipAsync(sutProvider);
     }
+
+    [Theory(Skip = "Temporarily disabled")]
+    [BitMemberAutoData(nameof(EnterprisePlanTypes))]
+    public async Task ValidateSponsorshipAsync_AdminInitiatedButUseAdminSponsoredFamiliesFalse_IsInvalid(
+        PlanType planType, Organization sponsoredOrg, OrganizationSponsorship existingSponsorship,
+        Organization sponsoringOrg, SutProvider<ValidateSponsorshipCommand> sutProvider)
+    {
+        sponsoringOrg.PlanType = planType;
+        sponsoringOrg.UseAdminSponsoredFamilies = false;
+        existingSponsorship.SponsoringOrganizationId = sponsoringOrg.Id;
+        existingSponsorship.IsAdminInitiated = true;
+
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .GetBySponsoredOrganizationIdAsync(sponsoredOrg.Id).Returns(existingSponsorship);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoredOrg.Id).Returns(sponsoredOrg);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoringOrg.Id).Returns(sponsoringOrg);
+
+        var result = await sutProvider.Sut.ValidateSponsorshipAsync(sponsoredOrg.Id);
+
+        Assert.False(result);
+        await AssertRemovedSponsoredPaymentAsync(sponsoredOrg, existingSponsorship, sutProvider);
+        await AssertDeletedSponsorshipAsync(existingSponsorship, sutProvider);
+    }
+
+    [Theory(Skip = "Temporarily disabled")]
+    [BitMemberAutoData(nameof(EnterprisePlanTypes))]
+    public async Task ValidateSponsorshipAsync_AdminInitiatedAndUseAdminSponsoredFamiliesTrue_ContinuesValidation(
+        PlanType planType, Organization sponsoredOrg, OrganizationSponsorship existingSponsorship,
+        Organization sponsoringOrg, SutProvider<ValidateSponsorshipCommand> sutProvider)
+    {
+        sponsoringOrg.PlanType = planType;
+        sponsoringOrg.UseAdminSponsoredFamilies = true;
+        existingSponsorship.SponsoringOrganizationId = sponsoringOrg.Id;
+        existingSponsorship.IsAdminInitiated = true;
+        existingSponsorship.ToDelete = false;
+        existingSponsorship.LastSyncDate = null; // Not a self-hosted sponsorship
+
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .GetBySponsoredOrganizationIdAsync(sponsoredOrg.Id).Returns(existingSponsorship);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoredOrg.Id).Returns(sponsoredOrg);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoringOrg.Id).Returns(sponsoringOrg);
+
+        var result = await sutProvider.Sut.ValidateSponsorshipAsync(sponsoredOrg.Id);
+
+        Assert.True(result);
+        await AssertDidNotRemoveSponsoredPaymentAsync(sutProvider);
+        await AssertDidNotDeleteSponsorshipAsync(sutProvider);
+    }
 }

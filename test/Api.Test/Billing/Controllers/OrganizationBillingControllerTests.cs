@@ -2,7 +2,8 @@
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -52,7 +53,7 @@ public class OrganizationBillingControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId)
-            .Returns(new OrganizationMetadata(true, true, true, true, true, true, true, null, null, null));
+            .Returns(new OrganizationMetadata(true, true, true, true, true, true, true, null, null, null, 0));
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 

@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -9,6 +12,7 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -16,13 +20,16 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -60,6 +67,9 @@ public class OrganizationsController : Controller
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly ICloudOrganizationSignUpCommand _cloudOrganizationSignUpCommand;
     private readonly IOrganizationDeleteCommand _organizationDeleteCommand;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IPricingClient _pricingClient;
+    private readonly IOrganizationUpdateKeysCommand _organizationUpdateKeysCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -81,7 +91,10 @@ public class OrganizationsController : Controller
         IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         ICloudOrganizationSignUpCommand cloudOrganizationSignUpCommand,
-        IOrganizationDeleteCommand organizationDeleteCommand)
+        IOrganizationDeleteCommand organizationDeleteCommand,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IPricingClient pricingClient,
+        IOrganizationUpdateKeysCommand organizationUpdateKeysCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -103,6 +116,9 @@ public class OrganizationsController : Controller
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _cloudOrganizationSignUpCommand = cloudOrganizationSignUpCommand;
         _organizationDeleteCommand = organizationDeleteCommand;
+        _policyRequirementQuery = policyRequirementQuery;
+        _pricingClient = pricingClient;
+        _organizationUpdateKeysCommand = organizationUpdateKeysCommand;
     }
 
     [HttpGet("{id}")]
@@ -120,7 +136,8 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        return new OrganizationResponseModel(organization);
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        return new OrganizationResponseModel(organization, plan);
     }
 
     [HttpGet("")]
@@ -130,10 +147,10 @@ public class OrganizationsController : Controller
         var organizations = await _organizationUserRepository.GetManyDetailsByUserAsync(userId,
             OrganizationUserStatusType.Confirmed);
 
-        var organizationManagingActiveUser = await _userService.GetOrganizationsManagingUserAsync(userId);
-        var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
+        var organizationsClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(userId);
+        var organizationIdsClaimingActiveUser = organizationsClaimingActiveUser.Select(o => o.Id);
 
-        var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsManagingActiveUser));
+        var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingActiveUser));
         return new ListResponseModel<ProfileOrganizationResponseModel>(responses);
     }
 
@@ -158,8 +175,13 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var resetPasswordPolicy =
-            await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            var resetPasswordPolicyRequirement = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
+            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, resetPasswordPolicyRequirement.AutoEnrollEnabled(organization.Id));
+        }
+
+        var resetPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
         if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled || resetPasswordPolicy.Data == null)
         {
             return new OrganizationAutoEnrollStatusResponseModel(organization.Id, false);
@@ -167,6 +189,7 @@ public class OrganizationsController : Controller
 
         var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
         return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
+
     }
 
     [HttpPost("")]
@@ -181,7 +204,8 @@ public class OrganizationsController : Controller
 
         var organizationSignup = model.ToOrganizationSignup(user);
         var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Organization);
+        var plan = await _pricingClient.GetPlanOrThrow(result.Organization.PlanType);
+        return new OrganizationResponseModel(result.Organization, plan);
     }
 
     [HttpPost("create-without-payment")]
@@ -196,7 +220,8 @@ public class OrganizationsController : Controller
 
         var organizationSignup = model.ToOrganizationSignup(user);
         var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Organization);
+        var plan = await _pricingClient.GetPlanOrThrow(result.Organization.PlanType);
+        return new OrganizationResponseModel(result.Organization, plan);
     }
 
     [HttpPut("{id}")]
@@ -211,8 +236,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.DisplayBusinessName() ||
-                                                            model.BillingEmail != organization.BillingEmail);
+        var updateBilling = ShouldUpdateBilling(model, organization);
 
         var hasRequiredPermissions = updateBilling
             ? await _currentContext.EditSubscription(orgIdGuid)
@@ -224,7 +248,8 @@ public class OrganizationsController : Controller
         }
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization, _globalSettings), updateBilling);
-        return new OrganizationResponseModel(organization);
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        return new OrganizationResponseModel(organization, plan);
     }
 
     [HttpPost("{id}/storage")]
@@ -257,10 +282,9 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && (await _userService.GetOrganizationsManagingUserAsync(user.Id)).Any(x => x.Id == id))
+        if ((await _userService.GetOrganizationsClaimingUserAsync(user.Id)).Any(x => x.Id == id))
         {
-            throw new BadRequestException("Managed user account cannot leave managing organization. Contact your organization administrator for additional details.");
+            throw new BadRequestException("Claimed user account cannot leave claiming organization. Contact your organization administrator for additional details.");
         }
 
         await _removeOrganizationUserCommand.UserLeaveAsync(id, user.Id);
@@ -358,8 +382,8 @@ public class OrganizationsController : Controller
         if (model.Type == OrganizationApiKeyType.BillingSync || model.Type == OrganizationApiKeyType.Scim)
         {
             // Non-enterprise orgs should not be able to create or view an apikey of billing sync/scim key types
-            var plan = StaticStore.GetPlan(organization.PlanType);
-            if (plan.ProductTier is not ProductTierType.Enterprise and not ProductTierType.Teams)
+            var productTier = organization.PlanType.GetProductTier();
+            if (productTier is not ProductTierType.Enterprise and not ProductTierType.Teams)
             {
                 throw new NotFoundException();
             }
@@ -471,7 +495,7 @@ public class OrganizationsController : Controller
     }
 
     [HttpPost("{id}/keys")]
-    public async Task<OrganizationKeysResponseModel> PostKeys(string id, [FromBody] OrganizationKeysRequestModel model)
+    public async Task<OrganizationKeysResponseModel> PostKeys(Guid id, [FromBody] OrganizationKeysRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -479,7 +503,7 @@ public class OrganizationsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var org = await _organizationService.UpdateOrganizationKeysAsync(new Guid(id), model.PublicKey,
+        var org = await _organizationUpdateKeysCommand.UpdateOrganizationKeysAsync(id, model.PublicKey,
             model.EncryptedPrivateKey);
         return new OrganizationKeysResponseModel(org);
     }
@@ -542,7 +566,8 @@ public class OrganizationsController : Controller
         }
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization, _featureService), eventType: EventType.Organization_CollectionManagement_Updated);
-        return new OrganizationResponseModel(organization);
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        return new OrganizationResponseModel(organization, plan);
     }
 
     [HttpGet("{id}/plan-type")]
@@ -556,5 +581,12 @@ public class OrganizationsController : Controller
         }
 
         return organization.PlanType;
+    }
+
+    private bool ShouldUpdateBilling(OrganizationUpdateRequestModel model, Organization organization)
+    {
+        var organizationNameChanged = model.Name != organization.Name;
+        var billingEmailChanged = model.BillingEmail != organization.BillingEmail;
+        return !_globalSettings.SelfHosted && (organizationNameChanged || billingEmailChanged);
     }
 }

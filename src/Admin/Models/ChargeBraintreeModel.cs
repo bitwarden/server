@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Admin.Models;
 
@@ -17,7 +20,7 @@ public class ChargeBraintreeModel : IValidatableObject
     {
         if (Id != null)
         {
-            if (Id.Length != 36 || (Id[0] != 'o' && Id[0] != 'u') ||
+            if (Id.Length != 36 || (Id[0] != 'o' && Id[0] != 'u' && Id[0] != 'p') ||
                 !Guid.TryParse(Id.Substring(1, 32), out var guid))
             {
                 yield return new ValidationResult("Customer Id is not a valid format.");

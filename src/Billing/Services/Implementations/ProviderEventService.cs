@@ -1,15 +1,20 @@
-﻿using Bit.Billing.Constants;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Billing.Constants;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Entities;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Entities;
+using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Enums;
-using Bit.Core.Utilities;
+using Bit.Core.Repositories;
 using Stripe;
 
 namespace Bit.Billing.Services.Implementations;
 
 public class ProviderEventService(
-    ILogger<ProviderEventService> logger,
+    IOrganizationRepository organizationRepository,
+    IPricingClient pricingClient,
     IProviderInvoiceItemRepository providerInvoiceItemRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
@@ -54,7 +59,14 @@ public class ProviderEventService(
                             continue;
                         }
 
-                        var plan = StaticStore.Plans.Single(x => x.Name == client.Plan && providerPlans.Any(y => y.PlanType == x.Type));
+                        var organization = await organizationRepository.GetByIdAsync(client.OrganizationId);
+
+                        if (organization == null)
+                        {
+                            return;
+                        }
+
+                        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
                         var discountedPercentage = (100 - (invoice.Discount?.Coupon?.PercentOff ?? 0)) / 100;
 
@@ -76,7 +88,7 @@ public class ProviderEventService(
 
                     foreach (var providerPlan in providerPlans.Where(x => x.PurchasedSeats is null or 0))
                     {
-                        var plan = StaticStore.GetPlan(providerPlan.PlanType);
+                        var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
 
                         var clientSeats = invoiceItems
                             .Where(item => item.PlanName == plan.Name)

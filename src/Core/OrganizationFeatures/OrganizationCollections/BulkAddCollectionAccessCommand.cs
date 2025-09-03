@@ -52,6 +52,11 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
             throw new BadRequestException("No collections were provided.");
         }
 
+        if (collections.Any(c => c.Type == CollectionType.DefaultUserCollection))
+        {
+            throw new BadRequestException("You cannot add access to collections with the type as DefaultUserCollection.");
+        }
+
         var orgId = collections.First().OrganizationId;
 
         if (collections.Any(c => c.OrganizationId != orgId))

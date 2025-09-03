@@ -40,8 +40,6 @@ export function authenticate(
     payload["deviceName"] = "chrome";
     payload["username"] = username;
     payload["password"] = password;
-
-    params.headers["Auth-Email"] = encoding.b64encode(username);
   } else {
     payload["scope"] = "api.organization";
     payload["grant_type"] = "client_credentials";

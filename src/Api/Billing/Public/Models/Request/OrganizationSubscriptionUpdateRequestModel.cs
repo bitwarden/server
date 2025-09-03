@@ -1,6 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.StaticStore;
 
 namespace Bit.Api.Billing.Public.Models;
 
@@ -93,17 +97,17 @@ public class SecretsManagerSubscriptionUpdateModel
         set { _maxAutoScaleServiceAccounts = value < 0 ? null : value; }
     }
 
-    public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(Organization organization)
+    public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(Organization organization, Plan plan)
     {
-        var update = UpdateUpdateMaxAutoScale(organization);
+        var update = UpdateUpdateMaxAutoScale(organization, plan);
         UpdateSeats(organization, update);
         UpdateServiceAccounts(organization, update);
         return update;
     }
 
-    private SecretsManagerSubscriptionUpdate UpdateUpdateMaxAutoScale(Organization organization)
+    private SecretsManagerSubscriptionUpdate UpdateUpdateMaxAutoScale(Organization organization, Plan plan)
     {
-        var update = new SecretsManagerSubscriptionUpdate(organization, false)
+        var update = new SecretsManagerSubscriptionUpdate(organization, plan, false)
         {
             MaxAutoscaleSmSeats = MaxAutoScaleSeats ?? organization.MaxAutoscaleSmSeats,
             MaxAutoscaleSmServiceAccounts = MaxAutoScaleServiceAccounts ?? organization.MaxAutoscaleSmServiceAccounts

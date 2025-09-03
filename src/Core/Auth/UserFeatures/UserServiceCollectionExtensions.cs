@@ -1,5 +1,6 @@
 ﻿
 
+using Bit.Core.Auth.UserFeatures.DeviceTrust;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
@@ -22,6 +23,7 @@ public static class UserServiceCollectionExtensions
     public static void AddUserServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<IUserService, UserService>();
+        services.AddDeviceTrustCommands();
         services.AddUserPasswordCommands();
         services.AddUserRegistrationCommands();
         services.AddWebAuthnLoginCommands();
@@ -29,9 +31,14 @@ public static class UserServiceCollectionExtensions
         services.AddTwoFactorQueries();
     }
 
+    public static void AddDeviceTrustCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IUntrustDevicesCommand, UntrustDevicesCommand>();
+    }
+
     public static void AddUserKeyCommands(this IServiceCollection services, IGlobalSettings globalSettings)
     {
-        services.AddScoped<IRotateUserKeyCommand, RotateUserKeyCommand>();
+        services.AddScoped<IRotateUserAccountKeysCommand, RotateUserAccountKeysCommand>();
     }
 
     private static void AddUserPasswordCommands(this IServiceCollection services)

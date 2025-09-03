@@ -8,6 +8,7 @@ public interface IRegisterUserCommand
 
     /// <summary>
     /// Creates a new user, sends a welcome email, and raises the signup reference event.
+    /// This method is used for JIT of organization Users.
     /// </summary>
     /// <param name="user">The <see cref="User"/> to create</param>
     /// <returns><see cref="IdentityResult"/></returns>

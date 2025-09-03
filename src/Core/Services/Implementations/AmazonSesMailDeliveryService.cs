@@ -1,4 +1,6 @@
-﻿using Amazon;
+﻿#nullable enable
+
+using Amazon;
 using Amazon.SimpleEmail;
 using Amazon.SimpleEmail.Model;
 using Bit.Core.Models.Mail;
@@ -17,7 +19,7 @@ public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
     private readonly IAmazonSimpleEmailService _client;
     private readonly string _source;
     private readonly string _senderTag;
-    private readonly string _configSetName;
+    private readonly string? _configSetName;
 
     public AmazonSesMailDeliveryService(
         GlobalSettings globalSettings,

@@ -6,6 +6,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -13,6 +14,7 @@ using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Bit.Api.Test.Billing.Controllers;
@@ -145,5 +147,87 @@ public class OrganizationSponsorshipsControllerTests
         await sutProvider.GetDependency<IRemoveSponsorshipCommand>()
             .DidNotReceiveWithAnyArgs()
             .RemoveSponsorshipAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSponsoredOrganizations_OrganizationNotFound_ThrowsNotFound(
+        Guid sponsoringOrgId,
+        SutProvider<OrganizationSponsorshipsController> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoringOrgId).ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetSponsoredOrganizations(sponsoringOrgId));
+
+        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetManyBySponsoringOrganizationAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSponsoredOrganizations_NotOrganizationOwner_ThrowsNotFound(
+        Organization sponsoringOrg,
+        SutProvider<OrganizationSponsorshipsController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoringOrg.Id).Returns(sponsoringOrg);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(sponsoringOrg.Id).Returns(false);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(sponsoringOrg.Id).Returns(false);
+
+        // Create a CurrentContextOrganization with ManageUsers set to false
+        var currentContextOrg = new CurrentContextOrganization
+        {
+            Id = sponsoringOrg.Id,
+            Permissions = new Permissions { ManageUsers = false }
+        };
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns(new List<CurrentContextOrganization> { currentContextOrg });
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sutProvider.Sut.GetSponsoredOrganizations(sponsoringOrg.Id));
+
+        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetManyBySponsoringOrganizationAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSponsoredOrganizations_Success_ReturnsSponsorships(
+        Organization sponsoringOrg,
+        List<OrganizationSponsorship> sponsorships,
+        SutProvider<OrganizationSponsorshipsController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(sponsoringOrg.Id).Returns(sponsoringOrg);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(sponsoringOrg.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(sponsoringOrg.Id).Returns(false);
+
+        // Create a CurrentContextOrganization from the sponsoringOrg
+        var currentContextOrg = new CurrentContextOrganization
+        {
+            Id = sponsoringOrg.Id,
+            Permissions = new Permissions { ManageUsers = true }
+        };
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns(new List<CurrentContextOrganization> { currentContextOrg });
+
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .GetManyBySponsoringOrganizationAsync(sponsoringOrg.Id).Returns(sponsorships);
+
+        // Set IsAdminInitiated to true for all test sponsorships
+        foreach (var sponsorship in sponsorships)
+        {
+            sponsorship.IsAdminInitiated = true;
+        }
+
+        // Act
+        var result = await sutProvider.Sut.GetSponsoredOrganizations(sponsoringOrg.Id);
+
+        // Assert
+        Assert.Equal(sponsorships.Count, result.Data.Count());
+        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
+            .GetManyBySponsoringOrganizationAsync(sponsoringOrg.Id);
     }
 }

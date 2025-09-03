@@ -1,7 +1,8 @@
 @using Bit.Admin.Enums;
 @using Bit.Admin.Models
+@using Bit.Core.AdminConsole.Enums.Provider
 @using Bit.Core.Billing.Enums
-@using Bit.Core.Enums
+@using Bit.Core.Billing.Extensions
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 @model OrganizationEditModel
 @{
@@ -13,6 +14,11 @@
     var canRequestDelete = AccessControlService.UserHasPermission(Permission.Org_RequestDelete);
     var canDelete = AccessControlService.UserHasPermission(Permission.Org_Delete);
     var canUnlinkFromProvider = AccessControlService.UserHasPermission(Permission.Provider_Edit);
+
+    var canConvertToBusinessUnit = AccessControlService.UserHasPermission(Permission.Org_Billing_ConvertToBusinessUnit) &&
+                                   Model.Organization.PlanType.GetProductTier() == ProductTierType.Enterprise &&
+                                   !string.IsNullOrEmpty(Model.Organization.GatewaySubscriptionId) &&
+                                   Model.Provider is null or { Type: ProviderType.BusinessUnit, Status: ProviderStatusType.Pending };
 }
 
 @section Scripts {
@@ -113,6 +119,15 @@
             <button class="btn btn-secondary me-2" type="button" id="enterprise-trial">
                 Enterprise Trial
             </button>
+        }
+        @if (canConvertToBusinessUnit)
+        {
+            <a asp-controller="BusinessUnitConversion"
+               asp-action="Index"
+               asp-route-organizationId="@Model.Organization.Id"
+               class="btn btn-secondary me-2">
+                Convert to Business Unit
+            </a>
         }
         @if (canUnlinkFromProvider && Model.Provider is not null)
         {

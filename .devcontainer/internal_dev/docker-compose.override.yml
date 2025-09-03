@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   bitwarden_storage:
     image: mcr.microsoft.com/azure-storage/azurite:latest

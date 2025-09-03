@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Platform.Installations;
+﻿#nullable enable
+
+namespace Bit.Core.Platform.Installations;
 
 /// <summary>
 /// Queries responsible for fetching an installation from
@@ -19,7 +21,7 @@ public class GetInstallationQuery : IGetInstallationQuery
     }
 
     /// <inheritdoc cref="IGetInstallationQuery.GetByIdAsync"/>
-    public async Task<Installation> GetByIdAsync(Guid installationId)
+    public async Task<Installation?> GetByIdAsync(Guid installationId)
     {
         if (installationId == default(Guid))
         {

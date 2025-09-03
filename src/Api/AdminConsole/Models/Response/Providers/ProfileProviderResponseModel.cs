@@ -22,6 +22,7 @@ public class ProfileProviderResponseModel : ResponseModel
         UserId = provider.UserId;
         UseEvents = provider.UseEvents;
         ProviderStatus = provider.ProviderStatus;
+        ProviderType = provider.ProviderType;
     }
 
     public Guid Id { get; set; }
@@ -35,4 +36,5 @@ public class ProfileProviderResponseModel : ResponseModel
     public Guid? UserId { get; set; }
     public bool UseEvents { get; set; }
     public ProviderStatusType ProviderStatus { get; set; }
+    public ProviderType ProviderType { get; set; }
 }

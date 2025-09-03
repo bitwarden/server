@@ -1,6 +1,10 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -34,7 +38,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
         ILogger<CustomTokenRequestValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
@@ -44,7 +47,10 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IFeatureService featureService,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
-        IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand)
+        IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IAuthRequestRepository authRequestRepository,
+        IMailService mailService)
         : base(
             userManager,
             userService,
@@ -52,7 +58,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             deviceValidator,
             twoFactorAuthenticationValidator,
             organizationUserRepository,
-            mailService,
             logger,
             currentContext,
             globalSettings,
@@ -60,7 +65,10 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             policyService,
             featureService,
             ssoConfigRepository,
-            userDecryptionOptionsBuilder)
+            userDecryptionOptionsBuilder,
+            policyRequirementQuery,
+            authRequestRepository,
+            mailService)
     {
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;

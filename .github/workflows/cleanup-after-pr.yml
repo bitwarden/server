@@ -11,11 +11,15 @@ jobs:
   build-docker:
     name: Remove branch-specific Docker images
     runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
     steps:
-      - name: Log in to Azure - production subscription
-        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
         with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
 
       - name: Log in to Azure ACR
         run: az acr login -n $_AZ_REGISTRY --only-show-errors
@@ -62,3 +66,6 @@ jobs:
 
       - name: Log out of Docker
         run: docker logout
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main

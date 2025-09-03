@@ -27,5 +27,7 @@ public interface IGlobalSettings
     string DatabaseProvider { get; set; }
     GlobalSettings.SqlSettings SqlServer { get; set; }
     string DevelopmentDirectory { get; set; }
+    IWebPushSettings WebPush { get; set; }
     GlobalSettings.EventLoggingSettings EventLogging { get; set; }
+    IPhishingDomainSettings PhishingDomain { get; set; }
 }

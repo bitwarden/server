@@ -1,4 +1,8 @@
-﻿using System.Globalization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Globalization;
+using Bit.Billing.Constants;
 using Bit.Billing.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Services;
@@ -65,7 +69,7 @@ public class BitPayController : Controller
             return new BadRequestResult();
         }
 
-        if (model.Event.Name != "invoice_confirmed")
+        if (model.Event.Name != BitPayNotificationCode.InvoiceConfirmed)
         {
             // Only processing confirmed invoice events for now.
             return new OkResult();
@@ -75,20 +79,20 @@ public class BitPayController : Controller
         if (invoice == null)
         {
             // Request forged...?
-            _logger.LogWarning("Invoice not found. #" + model.Data.Id);
+            _logger.LogWarning("Invoice not found. #{InvoiceId}", model.Data.Id);
             return new BadRequestResult();
         }
 
-        if (invoice.Status != "confirmed" && invoice.Status != "completed")
+        if (invoice.Status != BitPayInvoiceStatus.Confirmed && invoice.Status != BitPayInvoiceStatus.Complete)
         {
-            _logger.LogWarning("Invoice status of '" + invoice.Status + "' is not acceptable. #" + invoice.Id);
+            _logger.LogWarning("Invoice status of '{InvoiceStatus}' is not acceptable. #{InvoiceId}", invoice.Status, invoice.Id);
             return new BadRequestResult();
         }
 
         if (invoice.Currency != "USD")
         {
             // Only process USD payments
-            _logger.LogWarning("Non USD payment received. #" + invoice.Id);
+            _logger.LogWarning("Non USD payment received. #{InvoiceId}", invoice.Id);
             return new OkResult();
         }
 

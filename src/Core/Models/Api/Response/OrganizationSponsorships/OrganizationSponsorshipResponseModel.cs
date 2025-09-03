@@ -1,4 +1,7 @@
-﻿using Bit.Core.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 
 namespace Bit.Core.Models.Api.Response.OrganizationSponsorships;
@@ -14,6 +17,7 @@ public class OrganizationSponsorshipResponseModel
     public bool ToDelete { get; set; }
 
     public bool CloudSponsorshipRemoved { get; set; }
+    public bool IsAdminInitiated { get; set; }
 
     public OrganizationSponsorshipResponseModel() { }
 
@@ -27,6 +31,7 @@ public class OrganizationSponsorshipResponseModel
         ValidUntil = sponsorshipData.ValidUntil;
         ToDelete = sponsorshipData.ToDelete;
         CloudSponsorshipRemoved = sponsorshipData.CloudSponsorshipRemoved;
+        IsAdminInitiated = sponsorshipData.IsAdminInitiated;
     }
 
     public OrganizationSponsorshipData ToOrganizationSponsorship()
@@ -40,7 +45,8 @@ public class OrganizationSponsorshipResponseModel
             LastSyncDate = LastSyncDate,
             ValidUntil = ValidUntil,
             ToDelete = ToDelete,
-            CloudSponsorshipRemoved = CloudSponsorshipRemoved
+            CloudSponsorshipRemoved = CloudSponsorshipRemoved,
+            IsAdminInitiated = IsAdminInitiated,
         };
 
     }

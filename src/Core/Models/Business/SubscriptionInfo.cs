@@ -1,4 +1,7 @@
-﻿using Stripe;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Stripe;
 
 namespace Bit.Core.Models.Business;
 
@@ -73,8 +76,11 @@ public class SubscriptionInfo
                     Name = item.Plan.Nickname;
                     Amount = item.Plan.Amount.GetValueOrDefault() / 100M;
                     Interval = item.Plan.Interval;
-                    AddonSubscriptionItem =
-                        Utilities.StaticStore.IsAddonSubscriptionItem(item.Plan.Id);
+
+                    if (item.Metadata != null)
+                    {
+                        AddonSubscriptionItem = item.Metadata.TryGetValue("isAddOn", out var value) && bool.Parse(value);
+                    }
                 }
 
                 Quantity = (int)item.Quantity;
@@ -82,7 +88,6 @@ public class SubscriptionInfo
             }
 
             public bool AddonSubscriptionItem { get; set; }
-
             public string ProductId { get; set; }
             public string Name { get; set; }
             public decimal Amount { get; set; }
