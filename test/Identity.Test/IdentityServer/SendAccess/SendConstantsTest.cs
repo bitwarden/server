@@ -1,4 +1,4 @@
-using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
+﻿using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Xunit;
 
 namespace Bit.Identity.Test.IdentityServer.SendAccess;
