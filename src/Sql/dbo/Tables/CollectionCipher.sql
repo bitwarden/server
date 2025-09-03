@@ -12,7 +12,3 @@ CREATE NONCLUSTERED INDEX [IX_CollectionCipher_CipherId]
     ON [dbo].[CollectionCipher]([CipherId] ASC);
 
 GO
-CREATE NONCLUSTERED INDEX IX_CollectionCipher_CollectionId_CipherId
-    ON dbo.CollectionCipher (CollectionId, CipherId);
-
-GO
