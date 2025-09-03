@@ -41,7 +41,7 @@ public static class SendAccessConstants
         /// <summary>
         /// The sendId is missing from the request.
         /// </summary>
-        public const string MissingSendId = "send_id_required";
+        public const string SendIdRequired = "send_id_required";
         /// <summary>
         /// The sendId is invalid, does not match a known send.
         /// </summary>
