@@ -5,6 +5,8 @@ namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 
 /// <summary>
 /// String constants for the Send Access user feature
+/// Most of these need to be synced with the `bitwarden-auth` crate in the SDK.
+/// There is snapshot testing to help ensure this.
 /// </summary>
 public static class SendAccessConstants
 {

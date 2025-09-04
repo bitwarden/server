@@ -3,7 +3,12 @@ using Xunit;
 
 namespace Bit.Identity.Test.IdentityServer.SendAccess;
 
-public class SendConstantsTest
+/// <summary>
+/// Snapshot tests to ensure the string constants in <see cref="SendAccessConstants"/> do not change unintentionally.
+/// If you change any of these values, please ensure you understand the impact and update the SDK accordingly.
+/// If you intentionally change any of these values, please update the tests to reflect the new expected values.
+/// </summary>
+public class SendConstantsSnapshotTests
 {
     [Fact]
     public void SendAccessError_Constant_HasCorrectValue()
