@@ -19,7 +19,7 @@ public abstract class IntegrationHandlerBase<T> : IIntegrationHandler<T>
     public async Task<IntegrationHandlerResult> HandleAsync(string json)
     {
         var message = IntegrationMessage<T>.FromJson(json);
-        return await HandleAsync(message ?? throw new ArgumentException());
+        return await HandleAsync(message ?? throw new ArgumentException("IntegrationMessage was null when created from the provided json"));
     }
 
     public abstract Task<IntegrationHandlerResult> HandleAsync(IntegrationMessage<T> message);
