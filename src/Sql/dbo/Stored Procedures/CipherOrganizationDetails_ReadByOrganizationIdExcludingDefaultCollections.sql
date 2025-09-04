@@ -8,7 +8,7 @@ CREATE PROCEDURE
 
       WITH [NonDefaultCiphers] AS (
           SELECT DISTINCT [Id]
-          FROM [dbo].[OrganizationCipherDetailsWithCollectionsView]
+          FROM [dbo].[OrganizationCipherDetailsCollectionsView]
           WHERE [OrganizationId] = @OrganizationId
               AND ([CollectionId] IS NULL
               OR [CollectionType] <> 1)
@@ -30,7 +30,7 @@ CREATE PROCEDURE
           V.[Key],
           V.[OrganizationUseTotp],
           V.[CollectionId]  -- For Dapper splitOn parameter
-      FROM [dbo].[OrganizationCipherDetailsWithCollectionsView] V
+      FROM [dbo].[OrganizationCipherDetailsCollectionsView] V
       INNER JOIN [NonDefaultCiphers] NDC ON V.[Id] = NDC.[Id]
       WHERE V.[OrganizationId] = @OrganizationId
           AND (V.[CollectionId] IS NULL OR V.[CollectionType] <> 1)
