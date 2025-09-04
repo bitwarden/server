@@ -13,5 +13,5 @@ public class TaxInfo
     public string BillingAddressCity { get; set; }
     public string BillingAddressState { get; set; }
     public string BillingAddressPostalCode { get; set; }
-    public string BillingAddressCountry { get; set; } = "US";
+    public string BillingAddressCountry { get; set; } = Constants.CountryAbbreviations.UnitedStates;
 }

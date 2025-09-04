@@ -59,6 +59,14 @@ public interface IMailService
         DateTime dueDate,
         List<string> items,
         bool mentionInvoices);
+    Task SendProviderInvoiceUpcoming(
+        IEnumerable<string> emails,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        string? collectionMethod,
+        bool hasPaymentMethod,
+        string? paymentMethodDescription);
     Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices);
     Task SendAddedCreditAsync(string email, decimal amount);
     Task SendLicenseExpiredAsync(IEnumerable<string> emails, string? organizationName = null);
