@@ -1,25 +1,24 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Data.Common;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
-using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using LinqToDB.Tools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OneOf;
+using OneOf.Types;
 using Organization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
@@ -388,26 +387,39 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
     public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        using var scope = ServiceScopeFactory.CreateScope();
+        await using var dbContext = GetDatabaseContext(scope);
+        return await GetOccupiedSeatCountByOrganizationIdAsync(organizationId, dbContext);
+    }
+
+    public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdInTransactionAsync(Guid organizationId,
+        DbTransaction transaction)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        await using var dbContext = GetDatabaseContext(scope);
+        await dbContext.Database.UseTransactionAsync(transaction);
+
+        return await GetOccupiedSeatCountByOrganizationIdAsync(organizationId, dbContext);
+    }
+
+    private static async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId, DatabaseContext dbContext)
+    {
+        var users = await dbContext.OrganizationUsers
+            .Where(ou => ou.OrganizationId == organizationId && ou.Status >= 0)
+            .CountAsync();
+
+        var sponsored = await dbContext.OrganizationSponsorships
+            .Where(os => os.SponsoringOrganizationId == organizationId &&
+                         os.IsAdminInitiated &&
+                         (os.ToDelete == false || (os.ToDelete == true && os.ValidUntil != null && os.ValidUntil > DateTime.UtcNow)) &&
+                         (os.SponsoredOrganizationId == null || (os.SponsoredOrganizationId != null && (os.ValidUntil == null || os.ValidUntil > DateTime.UtcNow))))
+            .CountAsync();
+
+        return new OrganizationSeatCounts
         {
-            var dbContext = GetDatabaseContext(scope);
-            var users = await dbContext.OrganizationUsers
-                .Where(ou => ou.OrganizationId == organizationId && ou.Status >= 0)
-                .CountAsync();
-
-            var sponsored = await dbContext.OrganizationSponsorships
-                .Where(os => os.SponsoringOrganizationId == organizationId &&
-                    os.IsAdminInitiated &&
-                    (os.ToDelete == false || (os.ToDelete == true && os.ValidUntil != null && os.ValidUntil > DateTime.UtcNow)) &&
-                    (os.SponsoredOrganizationId == null || (os.SponsoredOrganizationId != null && (os.ValidUntil == null || os.ValidUntil > DateTime.UtcNow))))
-                .CountAsync();
-
-            return new OrganizationSeatCounts
-            {
-                Users = users,
-                Sponsored = sponsored
-            };
-        }
+            Users = users,
+            Sponsored = sponsored
+        };
     }
 
     public async Task<IEnumerable<Core.AdminConsole.Entities.Organization>> GetOrganizationsForSubscriptionSyncAsync()
@@ -450,80 +462,50 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
     public async Task AddUsersToPasswordManagerAsync(
         Guid organizationId,
         DateTime requestDate,
-        Plan plan,
-        IEnumerable<CreateOrganizationUser> organizationUserCollection)
+        int passwordManagerSeatsToAdd,
+        IEnumerable<CreateOrganizationUser> organizationUserCollection,
+        DbTransaction transaction)
     {
         var organizationUsersList = organizationUserCollection.ToList();
 
         using var scope = ServiceScopeFactory.CreateScope();
         await using var dbContext = GetDatabaseContext(scope);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        await dbContext.Database.UseTransactionAsync(transaction);
 
-        var organization = await dbContext.Organizations.SingleOrDefaultAsync(x => x.Id == organizationId);
-
-        if (organization is null)
+        if (passwordManagerSeatsToAdd > 0)
         {
-            throw new Exception($"Organization with id {organizationId} not found.");
+            await dbContext.Organizations
+                .Where(o => o.Id == organizationId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(o => o.Seats, o => o.Seats + passwordManagerSeatsToAdd)
+                    .SetProperty(o => o.SyncSeats, true)
+                    .SetProperty(o => o.RevisionDate, requestDate));
         }
 
-        var users = await dbContext.OrganizationUsers
-            .Where(ou => ou.OrganizationId == organizationId && ou.Status >= 0)
-            .CountAsync();
-
-        var sponsored = await dbContext.OrganizationSponsorships
-            .Where(os => os.SponsoringOrganizationId == organizationId &&
-                         os.IsAdminInitiated &&
-                         (os.ToDelete == false || (os.ToDelete == true && os.ValidUntil != null && os.ValidUntil > DateTime.UtcNow)) &&
-                         (os.SponsoredOrganizationId == null || (os.SponsoredOrganizationId != null && (os.ValidUntil == null || os.ValidUntil > DateTime.UtcNow))))
-            .CountAsync(); ;
-
-        var occupiedSeatCount = new OrganizationSeatCounts
+        dbContext.OrganizationUsers.AddRange(Mapper.Map<List<OrganizationUser>>(organizationUsersList.Select(x => x.OrganizationUser)));
+        dbContext.CollectionUsers.AddRange(organizationUsersList.SelectMany(x => x.Collections, (user, collection) => new CollectionUser
         {
-            Users = users,
-            Sponsored = sponsored
-        };
-
-        var validatorRequest = new PasswordManagerSubscriptionUpdate(
-            new InviteOrganization(organization, plan),
-            occupiedSeatCount.Total,
-            organizationUsersList.Count);
-
-        var result = InviteUsersPasswordManagerValidator.ValidatePasswordManager(validatorRequest);
-
-        switch (result)
+            CollectionId = collection.Id,
+            HidePasswords = collection.HidePasswords,
+            OrganizationUserId = user.OrganizationUser.Id,
+            Manage = collection.Manage,
+            ReadOnly = collection.ReadOnly
+        }));
+        dbContext.GroupUsers.AddRange(organizationUsersList.SelectMany(x => x.Groups, (user, group) => new GroupUser
         {
-            case Valid<PasswordManagerSubscriptionUpdate> valid:
-                await dbContext.Organizations
-                    .Where(o => o.Id == organizationId)
-                    .ExecuteUpdateAsync(s => s
-                        .SetProperty(o => o.Seats, o => o.Seats + valid.Value.SeatsRequiredToAdd)
-                        .SetProperty(o => o.SyncSeats, true)
-                        .SetProperty(o => o.RevisionDate, requestDate));
+            GroupId = group,
+            OrganizationUserId = user.OrganizationUser.Id
+        }));
 
-                dbContext.OrganizationUsers.AddRange(Mapper.Map<List<OrganizationUser>>(organizationUsersList.Select(x => x.OrganizationUser)));
-                dbContext.CollectionUsers.AddRange(organizationUsersList.SelectMany(x => x.Collections, (user, collection) => new CollectionUser
-                {
-                    CollectionId = collection.Id,
-                    HidePasswords = collection.HidePasswords,
-                    OrganizationUserId = user.OrganizationUser.Id,
-                    Manage = collection.Manage,
-                    ReadOnly = collection.ReadOnly
-                }));
-                dbContext.GroupUsers.AddRange(organizationUsersList.SelectMany(x => x.Groups, (user, group) => new GroupUser
-                {
-                    GroupId = group,
-                    OrganizationUserId = user.OrganizationUser.Id
-                }));
+        await dbContext.SaveChangesAsync();
+    }
 
-                await transaction.CommitAsync();
-                break;
-            case Invalid<PasswordManagerSubscriptionUpdate> invalid:
-                await transaction.RollbackAsync();
-                throw new Exception(invalid.Error.Message);
-            default:
-                await transaction.RollbackAsync();
-                throw new Exception();
-        }
+    public async Task<OneOf<Core.AdminConsole.Entities.Organization, None>> GetByIdInTransactionAsync(Guid organizationId, DbTransaction transaction)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        await using var dbContext = GetDatabaseContext(scope);
+        await dbContext.Database.UseTransactionAsync(transaction);
 
+        return await dbContext.Organizations.FindAsync(organizationId);
     }
 }

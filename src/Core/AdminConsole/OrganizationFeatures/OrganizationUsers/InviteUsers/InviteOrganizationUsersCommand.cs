@@ -123,8 +123,12 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             InviteOrganization = request.InviteOrganization,
             PerformedBy = request.PerformedBy,
             PerformedAt = request.PerformedAt,
-            OccupiedPmSeats = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId)).Total,
-            OccupiedSmSeats = await organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId)
+            OccupiedPmSeats = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdInTransactionAsync(
+                request.InviteOrganization.OrganizationId,
+                request.Transaction!)).Total,
+            OccupiedSmSeats = await organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdInTransactionAsync(
+                    request.InviteOrganization.OrganizationId,
+                    request.Transaction!)
         });
 
         if (validationResult is Invalid<InviteOrganizationUsersValidationRequest> invalid)
@@ -138,14 +142,23 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             .Select(x => x.MapToDataModel(request.PerformedAt, validatedRequest!.Value.InviteOrganization))
             .ToArray();
 
-        var organization = await organizationRepository.GetByIdAsync(validatedRequest!.Value.InviteOrganization.OrganizationId);
+        var organizationOptional = await organizationRepository.GetByIdInTransactionAsync(
+            validatedRequest!.Value.InviteOrganization.OrganizationId,
+            request.Transaction!);
+
+        if (organizationOptional.IsT1)
+            return new Failure<InviteOrganizationUsersResponse>(
+                new RecordNotFoundError<InviteOrganizationUsersResponse>(new InviteOrganizationUsersResponse(validatedRequest.Value)));
+
+        var organization = organizationOptional.AsT0;
 
         try
         {
             await organizationRepository.AddUsersToPasswordManagerAsync(organization!.Id,
                 validatedRequest.Value.PerformedAt.UtcDateTime,
-                request.InviteOrganization.Plan,
-                organizationUserToInviteEntities);
+                validatedRequest.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd,
+                organizationUserToInviteEntities,
+                request.Transaction);
 
             organization.Seats = validatedRequest.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal;
             organization.SyncSeats = true;
@@ -157,12 +170,14 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             await SendAdditionalEmailsAsync(validatedRequest, organization);
 
             await SendInvitesAsync(organizationUserToInviteEntities, organization);
+
+            await request.Transaction.CommitAsync();
         }
         catch (Exception ex)
         {
             logger.LogError(ex, FailedToInviteUsersError.Code);
 
-            await organizationUserRepository.DeleteManyAsync(organizationUserToInviteEntities.Select(x => x.OrganizationUser.Id));
+            await request.Transaction.RollbackAsync();
 
             // Do this first so that SmSeats never exceed PM seats (due to current billing requirements)
             await RevertSecretsManagerChangesAsync(validatedRequest, organization, validatedRequest.Value.InviteOrganization.SmSeats);
@@ -182,8 +197,11 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task<IEnumerable<OrganizationUserInviteCommandModel>> FilterExistingUsersAsync(InviteOrganizationUsersRequest request)
     {
-        var existingEmails = new HashSet<string>(await organizationUserRepository.SelectKnownEmailsAsync(
-                request.InviteOrganization.OrganizationId, request.Invites.Select(i => i.Email), false),
+        var existingEmails = new HashSet<string>(await organizationUserRepository.SelectKnownEmailsInTransactionAsync(
+                request.InviteOrganization.OrganizationId,
+                request.Invites.Select(i => i.Email),
+                false,
+                request.Transaction!),
             StringComparer.OrdinalIgnoreCase);
 
         return request.Invites

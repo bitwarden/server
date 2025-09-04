@@ -1,4 +1,6 @@
-﻿using System.Net.Mail;
+﻿using System.Data;
+using System.Data.Common;
+using System.Net.Mail;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -19,7 +21,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -50,6 +51,8 @@ public class InviteOrganizationUserCommandTests
         user.Email = address.Address;
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+        var transaction = Substitute.For<DbTransaction>();
+        transaction.IsolationLevel.Returns(IsolationLevel.ReadCommitted);
 
         var request = new InviteOrganizationUsersRequest(
             invites: [
@@ -64,15 +67,19 @@ public class InviteOrganizationUserCommandTests
             ],
             inviteOrganization: inviteOrganization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            timeProvider.GetUtcNow(),
+            transaction: transaction);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
+            .SelectKnownEmailsInTransactionAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false,
+                Arg.Any<DbTransaction>())
             .Returns([user.Email]);
+
+        var validationMock = GetInviteValidationRequestMock(request, inviteOrganization, organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
             .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
-            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)));
+            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(validationMock));
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -103,6 +110,9 @@ public class InviteOrganizationUserCommandTests
         // Arrange
         orgUser.Email = address.Address;
 
+        var transaction = Substitute.For<DbTransaction>();
+        transaction.IsolationLevel.Returns(IsolationLevel.ReadCommitted);
+
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
 
         var requestDate = timeProvider.GetUtcNow();
@@ -120,14 +130,16 @@ public class InviteOrganizationUserCommandTests
             ],
             inviteOrganization: inviteOrganization,
             performedBy: Guid.Empty,
-            requestDate);
+            requestDate,
+            transaction);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
+            .SelectKnownEmailsInTransactionAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false,
+                Arg.Any<DbTransaction>())
             .Returns([]);
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
+            .GetByIdInTransactionAsync(organization.Id, transaction)
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
@@ -135,11 +147,13 @@ public class InviteOrganizationUserCommandTests
             .Returns(new Valid<InviteOrganizationUsersValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)));
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSeatCountByOrganizationIdInTransactionAsync(organization.Id,
+                Arg.Any<DbTransaction>())
             .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSmSeatCountByOrganizationIdInTransactionAsync(organization.Id,
+                Arg.Any<DbTransaction>())
             .Returns(0);
 
         // Act
@@ -152,9 +166,10 @@ public class InviteOrganizationUserCommandTests
             .Received(1)
             .AddUsersToPasswordManagerAsync(organization.Id,
                 requestDate.UtcDateTime,
-                Arg.Any<Plan>(),
+                0,
                 Arg.Is<IEnumerable<CreateOrganizationUser>>(users =>
-                users.Any(user => user.OrganizationUser.Email == request.Invites.First().Email)));
+                users.Any(user => user.OrganizationUser.Email == request.Invites.First().Email)),
+                Arg.Any<DbTransaction>());
 
         await sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
             .Received(1)
@@ -176,6 +191,9 @@ public class InviteOrganizationUserCommandTests
         // Arrange
         const string errorMessage = "Org cannot add user for some given reason";
 
+        var transaction = Substitute.For<DbTransaction>();
+        transaction.IsolationLevel.Returns(IsolationLevel.ReadCommitted);
+
         user.Email = address.Address;
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
@@ -193,16 +211,17 @@ public class InviteOrganizationUserCommandTests
             ],
             inviteOrganization: inviteOrganization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            timeProvider.GetUtcNow(),
+            transaction);
 
         var validationRequest = GetInviteValidationRequestMock(request, inviteOrganization, organization);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
+            .SelectKnownEmailsInTransactionAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false, transaction)
             .Returns([]);
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
+            .GetByIdInTransactionAsync(organization.Id, transaction)
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
@@ -211,11 +230,11 @@ public class InviteOrganizationUserCommandTests
                 new Error<InviteOrganizationUsersValidationRequest>(errorMessage, validationRequest)));
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSmSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(0);
 
         // Act
@@ -226,10 +245,6 @@ public class InviteOrganizationUserCommandTests
         var failure = result as Failure<ScimInviteOrganizationUsersResponse>;
 
         Assert.Equal(errorMessage, failure!.Error.Message);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceive()
-            .CreateManyAsync(Arg.Any<IEnumerable<CreateOrganizationUser>>());
 
         await sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
             .DidNotReceive()
@@ -252,6 +267,8 @@ public class InviteOrganizationUserCommandTests
         organization.Seats = 1;
         organization.MaxAutoscaleSeats = 2;
         ownerDetails.Type = OrganizationUserType.Owner;
+        var transaction = Substitute.For<DbTransaction>();
+        transaction.IsolationLevel.Returns(IsolationLevel.ReadCommitted);
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
 
@@ -268,19 +285,21 @@ public class InviteOrganizationUserCommandTests
             ],
             inviteOrganization: inviteOrganization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            timeProvider.GetUtcNow(),
+            transaction);
 
         var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
         orgUserRepository
-            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .SelectKnownEmailsInTransactionAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false, transaction)
             .Returns([]);
+
         orgUserRepository
             .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
             .Returns([ownerDetails]);
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
+            .GetByIdInTransactionAsync(organization.Id, transaction)
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
@@ -289,11 +308,11 @@ public class InviteOrganizationUserCommandTests
                 .WithPasswordManagerUpdate(new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1))));
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSmSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(0);
 
         // Act
@@ -328,6 +347,8 @@ public class InviteOrganizationUserCommandTests
         organization.MaxAutoscaleSeats = 2;
         organization.OwnersNotifiedOfAutoscaling = null;
         ownerDetails.Type = OrganizationUserType.Owner;
+        var transaction = Substitute.For<DbTransaction>();
+        transaction.IsolationLevel.Returns(IsolationLevel.ReadCommitted);
 
         var inviteOrganization = new InviteOrganization(organization, new Enterprise2019Plan(true));
 
@@ -345,19 +366,20 @@ public class InviteOrganizationUserCommandTests
             ],
             inviteOrganization: inviteOrganization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            timeProvider.GetUtcNow(),
+            transaction);
 
         var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
         orgUserRepository
-            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .SelectKnownEmailsInTransactionAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false, transaction)
             .Returns([]);
         orgUserRepository
             .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
             .Returns([ownerDetails]);
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
+            .GetByIdInTransactionAsync(organization.Id, transaction)
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
@@ -368,11 +390,11 @@ public class InviteOrganizationUserCommandTests
                         new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1))));
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSmSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(0);
 
         // Act
@@ -406,6 +428,8 @@ public class InviteOrganizationUserCommandTests
         organization.Seats = 1;
         organization.MaxAutoscaleSeats = 2;
         ownerDetails.Type = OrganizationUserType.Owner;
+        var transaction = Substitute.For<DbTransaction>();
+        transaction.IsolationLevel.Returns(IsolationLevel.ReadCommitted);
 
         var plan = new FreePlan();
         var inviteOrganization = new InviteOrganization(organization, plan);
@@ -423,14 +447,15 @@ public class InviteOrganizationUserCommandTests
             ],
             inviteOrganization: inviteOrganization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            timeProvider.GetUtcNow(),
+            transaction);
 
         var passwordManagerUpdate = new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1);
 
         var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
         orgUserRepository
-            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .SelectKnownEmailsInTransactionAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false, transaction)
             .Returns([]);
         orgUserRepository
             .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
@@ -438,7 +463,7 @@ public class InviteOrganizationUserCommandTests
 
         var orgRepository = sutProvider.GetDependency<IOrganizationRepository>();
 
-        orgRepository.GetByIdAsync(organization.Id)
+        orgRepository.GetByIdInTransactionAsync(organization.Id, transaction)
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
@@ -447,11 +472,11 @@ public class InviteOrganizationUserCommandTests
                 .WithPasswordManagerUpdate(passwordManagerUpdate)));
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSmSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(0);
 
         // Act
@@ -462,8 +487,9 @@ public class InviteOrganizationUserCommandTests
 
         await orgRepository.Received(1).AddUsersToPasswordManagerAsync(organization.Id,
             request.PerformedAt.UtcDateTime,
-            plan,
-            Arg.Any<IEnumerable<CreateOrganizationUser>>());
+            1,
+            Arg.Any<IEnumerable<CreateOrganizationUser>>(),
+            Arg.Any<DbTransaction>());
 
         await sutProvider.GetDependency<IApplicationCacheService>()
             .Received(1)
@@ -488,6 +514,8 @@ public class InviteOrganizationUserCommandTests
         organization.MaxAutoscaleSeats = 2;
         organization.MaxAutoscaleSmSeats = 2;
         ownerDetails.Type = OrganizationUserType.Owner;
+        var transaction = Substitute.For<DbTransaction>();
+        transaction.IsolationLevel.Returns(IsolationLevel.ReadCommitted);
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
 
@@ -504,7 +532,8 @@ public class InviteOrganizationUserCommandTests
             ],
             inviteOrganization: inviteOrganization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            timeProvider.GetUtcNow(),
+            transaction);
 
         var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, inviteOrganization.Plan, true)
             .AdjustSeats(request.Invites.Count(x => x.AccessSecretsManager));
@@ -513,19 +542,19 @@ public class InviteOrganizationUserCommandTests
         var orgRepository = sutProvider.GetDependency<IOrganizationRepository>();
 
         orgUserRepository
-            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .SelectKnownEmailsInTransactionAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false, transaction)
             .Returns([]);
         orgUserRepository
             .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
             .Returns([ownerDetails]);
-        orgRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+        orgRepository.GetOccupiedSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction).Returns(new OrganizationSeatCounts
         {
             Sponsored = 0,
             Users = 1
         });
-        orgUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id).Returns(1);
+        orgUserRepository.GetOccupiedSmSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction).Returns(1);
 
-        orgRepository.GetByIdAsync(organization.Id)
+        orgRepository.GetByIdInTransactionAsync(organization.Id, transaction)
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
@@ -562,6 +591,8 @@ public class InviteOrganizationUserCommandTests
         organization.MaxAutoscaleSeats = 2;
         organization.MaxAutoscaleSmSeats = 2;
         ownerDetails.Type = OrganizationUserType.Owner;
+        var transaction = Substitute.For<DbTransaction>();
+        transaction.IsolationLevel.Returns(IsolationLevel.ReadCommitted);
 
         var inviteOrganization = new InviteOrganization(organization, new FreePlan());
 
@@ -578,7 +609,8 @@ public class InviteOrganizationUserCommandTests
             ],
             inviteOrganization: inviteOrganization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            timeProvider.GetUtcNow(),
+            transaction);
 
         var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, inviteOrganization.Plan, true)
             .AdjustSeats(request.Invites.Count(x => x.AccessSecretsManager));
@@ -589,7 +621,7 @@ public class InviteOrganizationUserCommandTests
         var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
         orgUserRepository
-            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .SelectKnownEmailsInTransactionAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false, transaction)
             .Returns([]);
         orgUserRepository
             .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
@@ -597,7 +629,7 @@ public class InviteOrganizationUserCommandTests
 
         var orgRepository = sutProvider.GetDependency<IOrganizationRepository>();
 
-        orgRepository.GetByIdAsync(organization.Id)
+        orgRepository.GetByIdInTransactionAsync(organization.Id, transaction)
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
@@ -611,11 +643,11 @@ public class InviteOrganizationUserCommandTests
             .Throws(new Exception("Something went wrong"));
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSmSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(0);
 
         // Act
@@ -625,16 +657,12 @@ public class InviteOrganizationUserCommandTests
         Assert.IsType<Failure<ScimInviteOrganizationUsersResponse>>(result);
         Assert.Equal(FailedToInviteUsersError.Code, (result as Failure<ScimInviteOrganizationUsersResponse>)!.Error.Message);
 
-        // org user revert
-        await orgUserRepository.Received(1).DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(x => x.Count() == 1));
+        await transaction.Received(1).RollbackAsync();
 
         // SM revert
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
             .Received(2)
             .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>());
-
-        // PM revert
-        await orgRepository.Received(1).ReplaceAsync(Arg.Any<Organization>());
 
         await sutProvider.GetDependency<IApplicationCacheService>().Received(2)
             .UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
@@ -659,6 +687,8 @@ public class InviteOrganizationUserCommandTests
         organization.MaxAutoscaleSeats = 2;
         organization.MaxAutoscaleSmSeats = 2;
         ownerDetails.Type = OrganizationUserType.Owner;
+        var transaction = Substitute.For<DbTransaction>();
+        transaction.IsolationLevel.Returns(IsolationLevel.ReadCommitted);
 
         providerOrganization.OrganizationId = organization.Id;
 
@@ -677,7 +707,8 @@ public class InviteOrganizationUserCommandTests
             ],
             inviteOrganization: inviteOrganization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            timeProvider.GetUtcNow(),
+            transaction);
 
         var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, inviteOrganization.Plan, true)
             .AdjustSeats(request.Invites.Count(x => x.AccessSecretsManager));
@@ -688,7 +719,7 @@ public class InviteOrganizationUserCommandTests
         var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
         orgUserRepository
-            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .SelectKnownEmailsInTransactionAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false, transaction)
             .Returns([]);
         orgUserRepository
             .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
@@ -696,7 +727,7 @@ public class InviteOrganizationUserCommandTests
 
         var orgRepository = sutProvider.GetDependency<IOrganizationRepository>();
 
-        orgRepository.GetByIdAsync(organization.Id)
+        orgRepository.GetByIdInTransactionAsync(organization.Id, transaction)
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
@@ -720,11 +751,11 @@ public class InviteOrganizationUserCommandTests
             });
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSmSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(0);
 
         // Act
@@ -758,6 +789,8 @@ public class InviteOrganizationUserCommandTests
         organization.MaxAutoscaleSmSeats = 2;
         organization.OwnersNotifiedOfAutoscaling = null;
         ownerDetails.Type = OrganizationUserType.Owner;
+        var transaction = Substitute.For<DbTransaction>();
+        transaction.IsolationLevel.Returns(IsolationLevel.ReadCommitted);
 
         providerOrganization.OrganizationId = organization.Id;
 
@@ -776,7 +809,8 @@ public class InviteOrganizationUserCommandTests
             ],
             inviteOrganization: inviteOrganization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            timeProvider.GetUtcNow(),
+            transaction);
 
         var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, inviteOrganization.Plan, true)
             .AdjustSeats(request.Invites.Count(x => x.AccessSecretsManager));
@@ -787,7 +821,7 @@ public class InviteOrganizationUserCommandTests
         var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
         orgUserRepository
-            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .SelectKnownEmailsInTransactionAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false, transaction)
             .Returns([]);
         orgUserRepository
             .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
@@ -795,7 +829,7 @@ public class InviteOrganizationUserCommandTests
 
         var orgRepository = sutProvider.GetDependency<IOrganizationRepository>();
 
-        orgRepository.GetByIdAsync(organization.Id)
+        orgRepository.GetByIdInTransactionAsync(organization.Id, transaction)
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
@@ -819,11 +853,11 @@ public class InviteOrganizationUserCommandTests
             });
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSmSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(0);
 
         // Act
@@ -854,6 +888,8 @@ public class InviteOrganizationUserCommandTests
         organization.MaxAutoscaleSeats = 2;
         organization.OwnersNotifiedOfAutoscaling = DateTime.UtcNow;
         ownerDetails.Type = OrganizationUserType.Owner;
+        var transaction = Substitute.For<DbTransaction>();
+        transaction.IsolationLevel.Returns(IsolationLevel.ReadCommitted);
 
         var inviteOrganization = new InviteOrganization(organization, new Enterprise2019Plan(true));
 
@@ -871,19 +907,20 @@ public class InviteOrganizationUserCommandTests
             ],
             inviteOrganization: inviteOrganization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            timeProvider.GetUtcNow(),
+            transaction);
 
         var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
         orgUserRepository
-            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .SelectKnownEmailsInTransactionAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false, transaction)
             .Returns([]);
         orgUserRepository
             .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
             .Returns([ownerDetails]);
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
+            .GetByIdInTransactionAsync(organization.Id, transaction)
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
@@ -894,11 +931,11 @@ public class InviteOrganizationUserCommandTests
                         new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1))));
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSmSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(0);
 
         // Act
@@ -933,6 +970,8 @@ public class InviteOrganizationUserCommandTests
         organization.MaxAutoscaleSeats = 2;
         organization.OwnersNotifiedOfAutoscaling = DateTime.UtcNow;
         ownerDetails.Type = OrganizationUserType.Owner;
+        var transaction = Substitute.For<DbTransaction>();
+        transaction.IsolationLevel.Returns(IsolationLevel.ReadCommitted);
 
         var inviteOrganization = new InviteOrganization(organization, new Enterprise2019Plan(true));
 
@@ -950,19 +989,20 @@ public class InviteOrganizationUserCommandTests
             ],
             inviteOrganization: inviteOrganization,
             performedBy: Guid.Empty,
-            timeProvider.GetUtcNow());
+            timeProvider.GetUtcNow(),
+            transaction);
 
         var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
         orgUserRepository
-            .SelectKnownEmailsAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false)
+            .SelectKnownEmailsInTransactionAsync(inviteOrganization.OrganizationId, Arg.Any<IEnumerable<string>>(), false, transaction)
             .Returns([]);
         orgUserRepository
             .GetManyByMinimumRoleAsync(inviteOrganization.OrganizationId, OrganizationUserType.Owner)
             .Returns([ownerDetails]);
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
+            .GetByIdInTransactionAsync(organization.Id, transaction)
             .Returns(organization);
 
         sutProvider.GetDependency<IInviteUsersValidator>()
@@ -973,11 +1013,11 @@ public class InviteOrganizationUserCommandTests
                         new PasswordManagerSubscriptionUpdate(inviteOrganization, organization.Seats.Value, 1))));
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .GetOccupiedSmSeatCountByOrganizationIdInTransactionAsync(organization.Id, transaction)
             .Returns(0);
 
         // Act

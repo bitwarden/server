@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using System.Data;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business;
@@ -29,7 +30,8 @@ public class PostUserCommand(
     IFeatureService featureService,
     IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
     TimeProvider timeProvider,
-    IPricingClient pricingClient)
+    IPricingClient pricingClient,
+    ISqlTransactionProvider transactionProvider)
     : IPostUserCommand
 {
     public async Task<OrganizationUserUserDetails?> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
@@ -47,22 +49,27 @@ public class PostUserCommand(
         Guid organizationId,
         ScimProviderType scimProvider)
     {
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
+        await using var transaction = await transactionProvider.GetTransactionAsync(IsolationLevel.Serializable);
 
-        if (organization is null)
+        var organizationOption = await organizationRepository.GetByIdInTransactionAsync(organizationId, transaction);
+
+        if (organizationOption.IsT1) // None
         {
             throw new NotFoundException();
         }
+
+        var organization = organizationOption.AsT0; // Some
 
         var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
         var request = model.ToRequest(
             scimProvider: scimProvider,
             inviteOrganization: new InviteOrganization(organization, plan),
-            performedAt: timeProvider.GetUtcNow());
+            performedAt: timeProvider.GetUtcNow(),
+            transaction: transaction);
 
         var orgUsers = await organizationUserRepository
-            .GetManyDetailsByOrganizationAsync(request.InviteOrganization.OrganizationId);
+            .GetManyDetailsByOrganizationInTransactionAsync(request.InviteOrganization.OrganizationId, transaction);
 
         if (orgUsers.Any(existingUser =>
                 request.Invites.First().Email.Equals(existingUser.Email, StringComparison.OrdinalIgnoreCase) ||
@@ -75,7 +82,7 @@ public class PostUserCommand(
 
         var invitedOrganizationUserId = result switch
         {
-            Success<ScimInviteOrganizationUsersResponse> success => success.Value.InvitedUser.Id,
+            Core.AdminConsole.Utilities.Commands.Success<ScimInviteOrganizationUsersResponse> success => success.Value.InvitedUser.Id,
             Failure<ScimInviteOrganizationUsersResponse> { Error.Message: NoUsersToInviteError.Code } => (Guid?)null,
             Failure<ScimInviteOrganizationUsersResponse> failure => throw MapToBitException(failure.Error),
             _ => throw new InvalidOperationException()

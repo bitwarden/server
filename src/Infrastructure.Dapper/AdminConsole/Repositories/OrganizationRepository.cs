@@ -1,21 +1,20 @@
 ﻿using System.Data;
+using System.Data.Common;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
-using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
+using OneOf;
+using OneOf.Types;
 
 #nullable enable
 
@@ -224,15 +223,31 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
 
     public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
     {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var result = await connection.QueryAsync<OrganizationSeatCounts>(
-                "[dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]",
-                new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+        await using var connection = new SqlConnection(ConnectionString);
 
-            return result.SingleOrDefault() ?? new OrganizationSeatCounts();
-        }
+        return await GetOccupiedSeatCountByOrganizationIdAsync(organizationId, connection);
+    }
+
+    public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdInTransactionAsync(Guid organizationId,
+        DbTransaction transaction)
+    {
+        var connection = transaction.Connection;
+
+        if (connection is null) throw new InvalidOperationException("Transaction connection is null");
+
+        return await GetOccupiedSeatCountByOrganizationIdAsync(organizationId, connection);
+    }
+
+    private static async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(
+        Guid organizationId,
+        DbConnection connection)
+    {
+        var result = await connection.QueryAsync<OrganizationSeatCounts>(
+            "[dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]",
+            new { OrganizationId = organizationId },
+            commandType: CommandType.StoredProcedure);
+
+        return result.SingleOrDefault() ?? new OrganizationSeatCounts();
     }
 
     public async Task<IEnumerable<Organization>> GetOrganizationsForSubscriptionSyncAsync()
@@ -266,14 +281,61 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
     public async Task AddUsersToPasswordManagerAsync(
         Guid organizationId,
         DateTime requestDate,
-        Plan plan,
-        IEnumerable<CreateOrganizationUser> organizationUserCollection)
+        int passwordManagerSeatsToAdd,
+        IEnumerable<CreateOrganizationUser> organizationUserCollection,
+        DbTransaction transaction)
     {
         var organizationUsersList = organizationUserCollection.ToList();
 
-        await using var connection = new SqlConnection(ConnectionString);
+        var connection = transaction.Connection;
 
-        await using var transaction = await connection.BeginTransactionAsync();
+        if (connection is null) throw new InvalidOperationException("Transaction connection is null");
+
+        await connection.ExecuteAsync(
+            $"[{Schema}].[OrganizationUser_CreateManyWithCollectionsAndGroups]",
+            new
+            {
+                OrganizationUserData =
+                    JsonSerializer.Serialize(organizationUsersList.Select(x => x.OrganizationUser)),
+                CollectionData = JsonSerializer.Serialize(organizationUsersList
+                    .SelectMany(x => x.Collections,
+                        (user, collection) => new CollectionUser
+                        {
+                            CollectionId = collection.Id,
+                            OrganizationUserId = user.OrganizationUser.Id,
+                            ReadOnly = collection.ReadOnly,
+                            HidePasswords = collection.HidePasswords,
+                            Manage = collection.Manage
+                        })),
+                GroupData = JsonSerializer.Serialize(organizationUsersList
+                    .SelectMany(x => x.Groups,
+                        (user, group) => new GroupUser
+                        {
+                            GroupId = group,
+                            OrganizationUserId = user.OrganizationUser.Id
+                        }))
+            },
+            commandType: CommandType.StoredProcedure);
+
+        if (passwordManagerSeatsToAdd > 0)
+        {
+            await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
+                new
+                {
+                    OrganizationId = organizationId,
+                    SeatsToAdd = passwordManagerSeatsToAdd,
+                    RequestDate = requestDate
+                },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task<OneOf<Organization, None>> GetByIdInTransactionAsync(Guid organizationId,
+        DbTransaction transaction)
+    {
+        var connection = transaction.Connection;
+
+        if (connection is null) throw new InvalidOperationException("Transaction connection is null");
 
         var organizationResult = await connection.QueryAsync<Organization>(
             "[dbo].[Organization_ReadById]",
@@ -282,83 +344,6 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
 
         var organization = organizationResult.SingleOrDefault();
 
-        if (organization == null)
-        {
-            throw new Exception("Organization not found");
-        }
-
-        var occupiedSeatCountResult = await connection.QueryAsync<OrganizationSeatCounts>(
-            "[dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]",
-            new { OrganizationId = organizationId },
-            commandType: CommandType.StoredProcedure);
-
-        var occupiedSeatCount = occupiedSeatCountResult.SingleOrDefault() ?? new OrganizationSeatCounts();
-
-        var validatorRequest = new PasswordManagerSubscriptionUpdate(
-            new InviteOrganization(organization, plan),
-            occupiedSeatCount.Total,
-            organizationUsersList.Count);
-
-        var result = InviteUsersPasswordManagerValidator.ValidatePasswordManager(validatorRequest);
-
-        switch (result)
-        {
-            case Valid<PasswordManagerSubscriptionUpdate> valid:
-                try
-                {
-                    await connection.ExecuteAsync(
-                        $"[{Schema}].[OrganizationUser_CreateManyWithCollectionsAndGroups]",
-                        new
-                        {
-                            OrganizationUserData =
-                                JsonSerializer.Serialize(organizationUsersList.Select(x => x.OrganizationUser)),
-                            CollectionData = JsonSerializer.Serialize(organizationUsersList
-                                .SelectMany(x => x.Collections,
-                                    (user, collection) => new CollectionUser
-                                    {
-                                        CollectionId = collection.Id,
-                                        OrganizationUserId = user.OrganizationUser.Id,
-                                        ReadOnly = collection.ReadOnly,
-                                        HidePasswords = collection.HidePasswords,
-                                        Manage = collection.Manage
-                                    })),
-                            GroupData = JsonSerializer.Serialize(organizationUsersList
-                                .SelectMany(x => x.Groups,
-                                    (user, group) => new GroupUser
-                                    {
-                                        GroupId = group,
-                                        OrganizationUserId = user.OrganizationUser.Id
-                                    }))
-                        },
-                        commandType: CommandType.StoredProcedure);
-
-                    if (valid.Value.SeatsRequiredToAdd > 0)
-                    {
-                        await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
-                            new
-                            {
-                                OrganizationId = organizationId,
-                                SeatsToAdd = valid.Value.SeatsRequiredToAdd,
-                                RequestDate = requestDate
-                            },
-                            commandType: CommandType.StoredProcedure);
-                    }
-
-                    await transaction.CommitAsync();
-                }
-                catch (Exception)
-                {
-                    await transaction.RollbackAsync();
-                    throw;
-                }
-
-                break;
-            case Invalid<PasswordManagerSubscriptionUpdate> invalid:
-                await transaction.RollbackAsync();
-                throw new Exception(invalid.Error.Message);
-            default:
-                await transaction.RollbackAsync();
-                throw new Exception();
-        }
+        return organization is null ? new None() : organization!;
     }
 }

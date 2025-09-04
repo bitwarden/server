@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿using System.Data.Common;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -19,6 +20,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUser>> GetManyByOrganizationAsync(Guid organizationId, OrganizationUserType? type);
     Task<int> GetCountByOrganizationAsync(Guid organizationId, string email, bool onlyRegisteredUsers);
     Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers);
+    Task<ICollection<string>> SelectKnownEmailsInTransactionAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers, DbTransaction transaction);
     Task<OrganizationUser?> GetByOrganizationAsync(Guid organizationId, Guid userId);
     Task<Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id);
     Task<OrganizationUserUserDetails?> GetDetailsByIdAsync(Guid id);
@@ -36,12 +38,19 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// <param name="includeCollections">Whether to include collections</param>
     /// <returns>A list of OrganizationUserUserDetails</returns>
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
+
+    Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationInTransactionAsync(Guid organizationId,
+        DbTransaction transaction,
+        bool includeGroups = false,
+        bool includeCollections = false);
+
     /// <inheritdoc cref="GetManyDetailsByOrganizationAsync"/>
     /// <remarks>
     /// This method is optimized for performance.
     /// Reduces database round trips by fetching all data in fewer queries.
     /// </remarks>
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
+
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null);
     Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId, Guid organizationId,
@@ -62,6 +71,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task RestoreAsync(Guid id, OrganizationUserStatusType status);
     Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType);
     Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId);
+    Task<int> GetOccupiedSmSeatCountByOrganizationIdInTransactionAsync(Guid organizationId, DbTransaction transaction);
     Task<IEnumerable<OrganizationUserResetPasswordDetails>> GetManyAccountRecoveryDetailsByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds);
 
     /// <summary>

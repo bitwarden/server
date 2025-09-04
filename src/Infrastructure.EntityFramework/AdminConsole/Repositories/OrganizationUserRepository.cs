@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Data.Common;
 using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
@@ -404,12 +405,34 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationInTransactionAsync(
+        Guid organizationId,
+        DbTransaction transaction,
+        bool includeGroups,
+        bool includeCollections)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        await dbContext.Database.UseTransactionAsync(transaction);
+
+        return await GetManyDetailsByOrganizationAsync(dbContext, organizationId, includeGroups, includeCollections);
+    }
+
     public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(
         Guid organizationId, bool includeGroups, bool includeCollections)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
+        return await GetManyDetailsByOrganizationAsync(dbContext, organizationId, includeGroups, includeCollections);
+    }
+
+    private static async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(
+        DatabaseContext dbContext,
+        Guid organizationId,
+        bool includeGroups,
+        bool includeCollections)
+    {
         var query = from ou in dbContext.OrganizationUsers
                     where ou.OrganizationId == organizationId
                     select new OrganizationUserUserDetails
@@ -568,25 +591,44 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     public async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails, bool onlyRegisteredUsers)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var usersQuery = from ou in dbContext.OrganizationUsers
-                             join u in dbContext.Users
-                                 on ou.UserId equals u.Id into u_g
-                             from u in u_g
-                             where ou.OrganizationId == organizationId
-                             select new { ou, u };
-            var ouu = await usersQuery.ToListAsync();
-            var ouEmails = ouu.Select(x => x.ou.Email);
-            var uEmails = ouu.Select(x => x.u.Email);
-            var knownEmails = from e in emails
-                              where (ouEmails.Contains(e) || uEmails.Contains(e)) &&
-                              (!onlyRegisteredUsers && (uEmails.Contains(e) || ouEmails.Contains(e))) ||
-                              (onlyRegisteredUsers && uEmails.Contains(e))
-                              select e;
-            return knownEmails.ToList();
-        }
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        return await SelectKnownEmailsAsync(organizationId, emails, onlyRegisteredUsers, dbContext);
+    }
+
+    public async Task<ICollection<string>> SelectKnownEmailsInTransactionAsync(Guid organizationId,
+        IEnumerable<string> emails, bool onlyRegisteredUsers, DbTransaction transaction)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        await using var dbContext = GetDatabaseContext(scope);
+        await dbContext.Database.UseTransactionAsync(transaction);
+
+        return await SelectKnownEmailsAsync(organizationId, emails, onlyRegisteredUsers, dbContext);
+    }
+
+    private static async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId,
+        IEnumerable<string> emails,
+        bool onlyRegisteredUsers,
+        DatabaseContext dbContext)
+    {
+        var usersQuery = from ou in dbContext.OrganizationUsers
+                         join u in dbContext.Users
+                             on ou.UserId equals u.Id into u_g
+                         from u in u_g
+                         where ou.OrganizationId == organizationId
+                         select new { ou, u };
+        var ouu = await usersQuery.ToListAsync();
+        var ouEmails = ouu.Select(x => x.ou.Email);
+        var uEmails = ouu.Select(x => x.u.Email);
+        var knownEmails = from e in emails
+                          where (ouEmails.Contains(e) || uEmails.Contains(e)) &&
+                                !onlyRegisteredUsers && (uEmails.Contains(e) || ouEmails.Contains(e)) ||
+                                (onlyRegisteredUsers && uEmails.Contains(e))
+                          select e;
+
+        return knownEmails.ToList();
     }
 
     public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds)
@@ -723,6 +765,12 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         var query = new OrganizationUserReadOccupiedSmSeatCountByOrganizationIdQuery(organizationId);
         return await GetCountFromQuery(query);
     }
+
+    public async Task<int> GetOccupiedSmSeatCountByOrganizationIdInTransactionAsync(
+        Guid organizationId,
+        DbTransaction transaction) =>
+        await GetCountFromQuery(
+            new OrganizationUserReadOccupiedSmSeatCountByOrganizationIdQuery(organizationId, transaction));
 
     public async Task<IEnumerable<OrganizationUserResetPasswordDetails>>
         GetManyAccountRecoveryDetailsByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds)

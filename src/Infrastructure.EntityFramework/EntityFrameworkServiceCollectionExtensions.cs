@@ -113,6 +113,8 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
 
+        services.AddSingleton<ISqlTransactionProvider, EntityFrameworkTransactionProvider>();
+
         if (selfHosted)
         {
             services.AddSingleton<IEventRepository, EventRepository>();
