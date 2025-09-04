@@ -1,8 +1,8 @@
 ﻿using System.Collections.Specialized;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.UserFeatures.SendAccess;
 using Bit.Core.Enums;
-using Bit.Core.Identity;
-using Bit.Core.IdentityServer;
 using Bit.Core.KeyManagement.Sends;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Utilities;

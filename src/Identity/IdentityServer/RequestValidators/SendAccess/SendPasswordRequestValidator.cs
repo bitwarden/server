@@ -1,5 +1,5 @@
 ﻿using System.Security.Claims;
-using Bit.Core.Identity;
+using Bit.Core.Auth.Identity;
 using Bit.Core.KeyManagement.Sends;
 using Bit.Core.Tools.Models.Data;
 using Bit.Identity.IdentityServer.Enums;

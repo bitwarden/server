@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Caching.Distributed;
 
-namespace Bit.Core.IdentityServer;
+namespace Bit.Core.Auth.IdentityServer;
 
 public class DistributedCacheTicketStore : ITicketStore
 {
