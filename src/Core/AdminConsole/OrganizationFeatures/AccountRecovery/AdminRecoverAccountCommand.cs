@@ -16,7 +16,8 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
     IMailService mailService,
     IEventService eventService,
     IPushNotificationService pushNotificationService,
-    IUserService userService) : IAdminRecoverAccountCommand
+    IUserService userService,
+    TimeProvider timeProvider) : IAdminRecoverAccountCommand
 {
     public async Task<IdentityResult> RecoverAccountAsync(Guid orgId,
         OrganizationUser organizationUser, string newMasterPassword, string key)
@@ -63,7 +64,7 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
             return result;
         }
 
-        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+        user.RevisionDate = user.AccountRevisionDate = timeProvider.GetUtcNow().UtcDateTime;
         user.LastPasswordChangeDate = user.RevisionDate;
         user.ForcePasswordReset = true;
         user.Key = key;
