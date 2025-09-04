@@ -60,6 +60,14 @@ public class OrganizationIntegrationRequestModel : IValidatableObject
                         new[] { nameof(Configuration) });
                 }
                 break;
+            case IntegrationType.Datadog:
+                if (!IsIntegrationValid<DatadogIntegration>())
+                {
+                    yield return new ValidationResult(
+                        "Datadog integrations must include valid configuration.",
+                        new[] { nameof(Configuration) });
+                }
+                break;
             default:
                 yield return new ValidationResult(
                     $"Integration type '{Type}' is not recognized.",

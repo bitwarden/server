@@ -36,6 +36,10 @@ public class OrganizationIntegrationConfigurationRequestModel
                 return !string.IsNullOrWhiteSpace(Template) &&
                        Configuration is null &&
                        IsFiltersValid();
+            case IntegrationType.Datadog:
+                return !string.IsNullOrWhiteSpace(Template) &&
+                       Configuration is null &&
+                       IsFiltersValid();
             default:
                 return false;
 
