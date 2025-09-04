@@ -13,7 +13,6 @@ using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Auth.Entities;
-using Bit.Core.IdentityServer;
 using Bit.SharedWeb.Health;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
@@ -33,6 +32,8 @@ using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Tools.SendFeatures;
+using Bit.Core.Auth.IdentityServer;
+
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;

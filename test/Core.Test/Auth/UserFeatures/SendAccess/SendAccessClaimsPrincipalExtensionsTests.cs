@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures.SendAccess;
-using Bit.Core.Identity;
 using Xunit;
 
 namespace Bit.Core.Test.Auth.UserFeatures.SendAccess;
