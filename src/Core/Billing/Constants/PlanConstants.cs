@@ -27,4 +27,18 @@ public static class PlanConstants
         PlanType.TeamsMonthly2023,
         PlanType.TeamsMonthly
     ];
+
+    public static class OrganizationTiers
+    {
+        public const string Free = "free";
+        public const string Families = "families";
+        public const string Teams = "teams";
+        public const string Enterprise = "enterprise";
+    }
+
+    public static class Cadences
+    {
+        public const string Annually = "annually";
+        public const string Monthly = "monthly";
+    }
 }

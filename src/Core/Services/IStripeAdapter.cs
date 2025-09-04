@@ -3,6 +3,7 @@
 
 using Bit.Core.Models.BitStripe;
 using Stripe;
+using Stripe.Tax;
 
 namespace Bit.Core.Services;
 
@@ -62,4 +63,6 @@ public interface IStripeAdapter
     Task SetupIntentVerifyMicroDeposit(string id, SetupIntentVerifyMicrodepositsOptions options);
     Task<List<Stripe.TestHelpers.TestClock>> TestClockListAsync();
     Task<Price> PriceGetAsync(string id, PriceGetOptions options = null);
+    Task<Calculation> TaxCalculationCreateAsync(CalculationCreateOptions options);
+    Task<Calculation> TaxCalculationGetAsync(string id, CalculationGetOptions options = null);
 }
