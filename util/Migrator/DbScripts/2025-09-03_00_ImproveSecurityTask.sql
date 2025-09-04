@@ -14,7 +14,7 @@ BEGIN
             ON [O].[Id] = [OU].[OrganizationId]
         WHERE
             [OU].[UserId] = @UserId
-            AND [OU].[Status] = 2
+            AND [OU].[Status] = 2 -- Confirmed
             AND [O].[Enabled] = 1
     ),
     [UserCollectionAccess] AS (
@@ -30,7 +30,7 @@ BEGIN
             ON [CC].[CollectionId] = [CU].[CollectionId]
         WHERE
             [OU].[UserId] = @UserId
-            AND [OU].[Status] = 2
+            AND [OU].[Status] = 2 -- Confirmed
             AND [O].[Enabled] = 1
             AND [CU].[ReadOnly] = 0
     ),
@@ -49,7 +49,7 @@ BEGIN
             ON [CC].[CollectionId] = [CG].[CollectionId]
         WHERE
             [OU].[UserId] = @UserId
-            AND [OU].[Status] = 2
+            AND [OU].[Status] = 2 -- Confirmed
             AND [CG].[ReadOnly] = 0
     ),
     [AccessibleCiphers] AS (
@@ -97,5 +97,5 @@ BEGIN
 CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserId_Status_Filtered]
     ON [dbo].[OrganizationUser] ([UserId])
     INCLUDE ([Id], [OrganizationId])
-    WHERE [Status] = 2;
+    WHERE [Status] = 2; -- Confirmed
 END
