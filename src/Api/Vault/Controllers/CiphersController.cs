@@ -713,7 +713,7 @@ public class CiphersController : Controller
 
     [HttpPost("{id}/partial")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
-    public async Task<CipherResponseModel> PostPutPartial(Guid id, [FromBody] CipherPartialRequestModel model)
+    public async Task<CipherResponseModel> PostPartial(Guid id, [FromBody] CipherPartialRequestModel model)
     {
         return await PutPartial(id, model);
     }
@@ -756,7 +756,7 @@ public class CiphersController : Controller
 
     [HttpPost("{id}/share")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
-    public async Task<CipherResponseModel> PostPutShare(Guid id, [FromBody] CipherShareRequestModel model)
+    public async Task<CipherResponseModel> PostShare(Guid id, [FromBody] CipherShareRequestModel model)
     {
         return await PutShare(id, model);
     }
@@ -788,7 +788,7 @@ public class CiphersController : Controller
 
     [HttpPost("{id}/collections")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
-    public async Task<CipherDetailsResponseModel> PostPutCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    public async Task<CipherDetailsResponseModel> PostCollections(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {
         return await PutCollections(id, model);
     }
@@ -828,7 +828,7 @@ public class CiphersController : Controller
 
     [HttpPost("{id}/collections_v2")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
-    public async Task<OptionalCipherDetailsResponseModel> PostPutCollections_vNext(Guid id, [FromBody] CipherCollectionsRequestModel model)
+    public async Task<OptionalCipherDetailsResponseModel> PostCollections_vNext(Guid id, [FromBody] CipherCollectionsRequestModel model)
     {
         return await PutCollections_vNext(id, model);
     }
@@ -864,7 +864,7 @@ public class CiphersController : Controller
 
     [HttpPost("{id}/collections-admin")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
-    public async Task<CipherMiniDetailsResponseModel> PostPutCollectionsAdmin(string id, [FromBody] CipherCollectionsRequestModel model)
+    public async Task<CipherMiniDetailsResponseModel> PostCollectionsAdmin(string id, [FromBody] CipherCollectionsRequestModel model)
     {
         return await PutCollectionsAdmin(id, model);
     }
@@ -1191,7 +1191,7 @@ public class CiphersController : Controller
 
     [HttpPost("share")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead.")]
-    public async Task<ListResponseModel<CipherMiniResponseModel>> PostPutShareMany([FromBody] CipherBulkShareRequestModel model)
+    public async Task<ListResponseModel<CipherMiniResponseModel>> PostShareMany([FromBody] CipherBulkShareRequestModel model)
     {
         return await PutShareMany(model);
     }
