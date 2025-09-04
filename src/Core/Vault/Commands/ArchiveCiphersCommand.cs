@@ -48,7 +48,7 @@ public class ArchiveCiphersCommand : IArchiveCiphersCommand
         {
             c.RevisionDate = revisionDate;
             c.ArchivedDate = revisionDate;
-            return new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Unarchived, null);
+            return new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Archived, null);
         });
         foreach (var eventsBatch in events.Chunk(100))
         {
