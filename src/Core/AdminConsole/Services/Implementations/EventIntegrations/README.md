@@ -323,7 +323,8 @@ A hosted service (`IntegrationConfigurationDetailsCacheService`) runs in the bac
 # Building a new integration
 
 These are all the pieces required in the process of building out a new integration. For
-clarity in naming, these assume a new integration called "Example".
+clarity in naming, these assume a new integration called "Example". To see a complete example
+in context, view the PR for adding the Datadog integration.
 
 ## IntegrationType
 
@@ -418,13 +419,21 @@ dependencies and integrations. For instance, `SlackIntegrationHandler` needs a `
 `AddEventIntegrationServices` has a call to `AddSlackService`. Same thing for webhooks when it
 comes to defining a custom HttpClient by name.
 
-1. In `AddEventIntegrationServices` create the listener configuration:
+In `AddEventIntegrationServices`:
+
+1.  Create the singleton for the handler:
+
+``` csharp
+        services.TryAddSingleton<IIntegrationHandler<ExampleIntegrationConfigurationDetails>, ExampleIntegrationHandler>();
+```
+
+2. Create the listener configuration:
 
 ``` csharp
         var exampleConfiguration = new ExampleListenerConfiguration(globalSettings);
 ```
 
-2. Add the integration to both the RabbitMQ and ASB specific declarations:
+3. Add the integration to both the RabbitMQ and ASB specific declarations:
 
 ``` csharp
         services.AddRabbitMqIntegration<ExampleIntegrationConfigurationDetails, ExampleListenerConfiguration>(exampleConfiguration);
