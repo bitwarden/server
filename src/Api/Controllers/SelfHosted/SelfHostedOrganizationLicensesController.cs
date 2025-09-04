@@ -74,7 +74,7 @@ public class SelfHostedOrganizationLicensesController : Controller
     }
 
     [HttpPost("{id}")]
-    public async Task UpdateicenseAsync(string id, LicenseRequestModel model)
+    public async Task UpdateLicenseAsync(string id, LicenseRequestModel model)
     {
         var orgIdGuid = new Guid(id);
         if (!await _currentContext.OrganizationOwner(orgIdGuid))
