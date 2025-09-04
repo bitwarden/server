@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using AutoFixture;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.Repositories;
@@ -86,39 +87,22 @@ public class AdminRecoverAccountCommandTests
         Assert.Equal("Organization does not allow password reset.", exception.Message);
     }
 
-    [Theory]
-    [BitAutoData]
-    public async Task RecoverAccountAsync_PolicyDoesNotExist_ThrowsBadRequest(
-        string newMasterPassword,
-        string key,
-        Organization organization,
-        SutProvider<AdminRecoverAccountCommand> sutProvider)
+    public static IEnumerable<object[]> InvalidPolicies => new object[][]
     {
-        // Arrange
-        SetupValidOrganization(sutProvider, organization);
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword)
-            .Returns((Policy)null);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RecoverAccountAsync(organization.Id, new OrganizationUser { Id = Guid.NewGuid() },
-                newMasterPassword, key));
-        Assert.Equal("Organization does not have the password reset policy enabled.", exception.Message);
-    }
+        [new Policy { Type = PolicyType.ResetPassword, Enabled = false }], [null]
+    };
 
     [Theory]
-    [BitAutoData]
-    public async Task RecoverAccountAsync_PolicyNotEnabled_ThrowsBadRequest(
-        string newMasterPassword,
-        string key,
-        Organization organization,
+    [BitMemberAutoData(nameof(InvalidPolicies))]
+    public async Task RecoverAccountAsync_InvalidPolicy_ThrowsBadRequest(
         Policy resetPasswordPolicy,
+        string newMasterPassword,
+        string key,
+        Organization organization,
         SutProvider<AdminRecoverAccountCommand> sutProvider)
     {
         // Arrange
         SetupValidOrganization(sutProvider, organization);
-        resetPasswordPolicy.Enabled = false;
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword)
             .Returns(resetPasswordPolicy);
@@ -130,117 +114,74 @@ public class AdminRecoverAccountCommandTests
         Assert.Equal("Organization does not have the password reset policy enabled.", exception.Message);
     }
 
-    [Theory]
-    [BitAutoData]
-    public async Task RecoverAccountAsync_OrganizationUserDoesNotExist_ThrowsBadRequest(
-        string newMasterPassword,
-        string key,
-        Organization organization,
-        SutProvider<AdminRecoverAccountCommand> sutProvider)
+    public static IEnumerable<object[]> InvalidOrganizationUsers()
     {
-        // Arrange
-        SetupValidOrganization(sutProvider, organization);
-        SetupValidPolicy(sutProvider, organization);
-        var invalidOrgUser = new OrganizationUser { Id = Guid.NewGuid(), OrganizationId = organization.Id, Status = OrganizationUserStatusType.Invited };
+        // Make an organization so we can use its Id
+        var organization = new Fixture().Create<Organization>();
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RecoverAccountAsync(organization.Id, invalidOrgUser, newMasterPassword, key));
-        Assert.Equal("Organization User not valid", exception.Message);
+        var nonConfirmed = new OrganizationUser
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            Status = OrganizationUserStatusType.Invited
+        };
+        yield return [nonConfirmed, organization];
+
+        var wrongOrganization = new OrganizationUser
+        {
+            Status = OrganizationUserStatusType.Confirmed,
+            OrganizationId = Guid.NewGuid(), // Different org
+            ResetPasswordKey = "test-key",
+            UserId = Guid.NewGuid(),
+        };
+        yield return [wrongOrganization, organization];
+
+        var nullResetPasswordKey = new OrganizationUser
+        {
+            Status = OrganizationUserStatusType.Confirmed,
+            OrganizationId = organization.Id,
+            ResetPasswordKey = null,
+            UserId = Guid.NewGuid(),
+        };
+        yield return [nullResetPasswordKey, organization];
+
+        var emptyResetPasswordKey = new OrganizationUser
+        {
+            Status = OrganizationUserStatusType.Confirmed,
+            OrganizationId = organization.Id,
+            ResetPasswordKey = "",
+            UserId = Guid.NewGuid(),
+        };
+        yield return [emptyResetPasswordKey, organization];
+
+        var nullUserId = new OrganizationUser
+        {
+            Status = OrganizationUserStatusType.Confirmed,
+            OrganizationId = organization.Id,
+            ResetPasswordKey = "test-key",
+            UserId = null,
+        };
+        yield return [nullUserId, organization];
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task RecoverAccountAsync_OrganizationUserNotConfirmed_ThrowsBadRequest(
+    [BitMemberAutoData(nameof(InvalidOrganizationUsers))]
+    public async Task RecoverAccountAsync_OrganizationUserIsInvalid_ThrowsBadRequest(
+        OrganizationUser organizationUser,
+        Organization organization,
         string newMasterPassword,
         string key,
-        Organization organization,
-        OrganizationUser organizationUser,
         SutProvider<AdminRecoverAccountCommand> sutProvider)
     {
         // Arrange
         SetupValidOrganization(sutProvider, organization);
         SetupValidPolicy(sutProvider, organization);
-        organizationUser.Status = OrganizationUserStatusType.Invited;
-        organizationUser.OrganizationId = organization.Id;
-        organizationUser.ResetPasswordKey = "test-key";
-        organizationUser.UserId = Guid.NewGuid();
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RecoverAccountAsync(organization.Id, organizationUser, newMasterPassword, key));
         Assert.Equal("Organization User not valid", exception.Message);
     }
-
-    [Theory]
-    [BitAutoData]
-    public async Task RecoverAccountAsync_OrganizationUserWrongOrganization_ThrowsBadRequest(
-        string newMasterPassword,
-        string key,
-        Organization organization,
-        OrganizationUser organizationUser,
-        SutProvider<AdminRecoverAccountCommand> sutProvider)
-    {
-        // Arrange
-        SetupValidOrganization(sutProvider, organization);
-        SetupValidPolicy(sutProvider, organization);
-        organizationUser.Status = OrganizationUserStatusType.Confirmed;
-        organizationUser.OrganizationId = Guid.NewGuid(); // Different org
-        organizationUser.ResetPasswordKey = "test-key";
-        organizationUser.UserId = Guid.NewGuid();
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RecoverAccountAsync(organization.Id, organizationUser, newMasterPassword, key));
-        Assert.Equal("Organization User not valid", exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task RecoverAccountAsync_OrganizationUserNoResetPasswordKey_ThrowsBadRequest(
-        string newMasterPassword,
-        string key,
-        Organization organization,
-        OrganizationUser organizationUser,
-        SutProvider<AdminRecoverAccountCommand> sutProvider)
-    {
-        // Arrange
-        SetupValidOrganization(sutProvider, organization);
-        SetupValidPolicy(sutProvider, organization);
-        organizationUser.Status = OrganizationUserStatusType.Confirmed;
-        organizationUser.OrganizationId = organization.Id;
-        organizationUser.ResetPasswordKey = null;
-        organizationUser.UserId = Guid.NewGuid();
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RecoverAccountAsync(organization.Id, organizationUser, newMasterPassword, key));
-        Assert.Equal("Organization User not valid", exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task RecoverAccountAsync_OrganizationUserNoUserId_ThrowsBadRequest(
-        string newMasterPassword,
-        string key,
-        Organization organization,
-        OrganizationUser organizationUser,
-        SutProvider<AdminRecoverAccountCommand> sutProvider)
-    {
-        // Arrange
-        SetupValidOrganization(sutProvider, organization);
-        SetupValidPolicy(sutProvider, organization);
-        organizationUser.Status = OrganizationUserStatusType.Confirmed;
-        organizationUser.OrganizationId = organization.Id;
-        organizationUser.ResetPasswordKey = "test-key";
-        organizationUser.UserId = null;
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RecoverAccountAsync(organization.Id, organizationUser, newMasterPassword, key));
-        Assert.Equal("Organization User not valid", exception.Message);
-    }
-
 
     [Theory]
     [BitAutoData]
