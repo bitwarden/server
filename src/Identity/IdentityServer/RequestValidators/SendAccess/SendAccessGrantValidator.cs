@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Core;
-using Bit.Core.Identity;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
