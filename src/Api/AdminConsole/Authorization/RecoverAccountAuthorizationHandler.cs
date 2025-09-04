@@ -1,7 +1,7 @@
-﻿using Bit.Core.AdminConsole.Repositories;
+﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Api.AdminConsole.Authorization;
@@ -15,22 +15,18 @@ namespace Bit.Api.AdminConsole.Authorization;
 /// </remarks>
 public class RecoverAccountAuthorizationRequirement : IAuthorizationRequirement;
 
-public class RecoverAccountAuthorizationHandler(IHttpContextAccessor httpContextAccessor,
-    IProviderUserRepository providerUserRepository,
-    IUserService userService)
+public class RecoverAccountAuthorizationHandler(
+    IOrganizationContext organizationContext,
+    IProviderUserRepository providerUserRepository)
     : AuthorizationHandler<RecoverAccountAuthorizationRequirement, OrganizationUser>
 {
-    public const string NoUserIdError = "This method should only be called on the private api with a logged in user.";
-
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         RecoverAccountAuthorizationRequirement requirement,
         OrganizationUser targetOrganizationUser)
     {
-        var httpContext = httpContextAccessor.GetHttpContextOrThrow();
-
         var authorized =
-            await AuthorizeMemberAsync(httpContext, targetOrganizationUser) ||
-            await AuthorizeProviderAsync(httpContext, targetOrganizationUser);
+            await AuthorizeMemberAsync(context.User, targetOrganizationUser) ||
+            await AuthorizeProviderAsync(context.User, targetOrganizationUser);
 
         if (authorized)
         {
@@ -38,29 +34,21 @@ public class RecoverAccountAuthorizationHandler(IHttpContextAccessor httpContext
         }
     }
 
-    private async Task<bool> AuthorizeProviderAsync(HttpContext httpContext, OrganizationUser targetOrganizationUser)
+    private async Task<bool> AuthorizeProviderAsync(ClaimsPrincipal currentUser, OrganizationUser targetOrganizationUser)
     {
-        var userId = userService.GetProperUserId(httpContext.User);
-        if (userId == null)
-        {
-            throw new InvalidOperationException(NoUserIdError);
-        }
-
-        var isProviderUserForOrganization = await httpContext.IsProviderUserForOrgAsync(providerUserRepository,
-            userId.Value, targetOrganizationUser.OrganizationId);
-
-        return isProviderUserForOrganization;
+        return await organizationContext.IsProviderUserForOrganization(currentUser, targetOrganizationUser.OrganizationId);
     }
 
-    private async Task<bool> AuthorizeMemberAsync(HttpContext httpContext, OrganizationUser targetOrganizationUser)
+    private async Task<bool> AuthorizeMemberAsync(ClaimsPrincipal currentUser, OrganizationUser targetOrganizationUser)
     {
-        var currentContextOrganization = httpContext.User.GetCurrentContextOrganization(targetOrganizationUser.OrganizationId);
+        var currentContextOrganization = organizationContext.GetOrganizationClaims(currentUser, targetOrganizationUser.OrganizationId);
+
         if (currentContextOrganization == null)
         {
-            // The user is not a provider or member of the organization - cannot authorize
             return false;
         }
 
+        // Current user must have equal or greater permissions than the user account being recovered
         var roleAuthorized = targetOrganizationUser.Type switch
         {
             OrganizationUserType.Owner => currentContextOrganization.Type is OrganizationUserType.Owner,

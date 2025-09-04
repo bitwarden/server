@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -8,20 +7,6 @@ namespace Bit.Api.AdminConsole.Authorization;
 
 public static class OrganizationClaimsExtensions
 {
-    public static HttpContext GetHttpContextOrThrow(
-        this IHttpContextAccessor httpContextAccessor)
-    {
-        const string noHttpContextError = "This method should only be called in the context of an HTTP Request.";
-
-        var httpContext = httpContextAccessor.HttpContext;
-        if (httpContext == null)
-        {
-            throw new InvalidOperationException(noHttpContextError);
-        }
-
-        return httpContext;
-    }
-
     /// <summary>
     /// Parses a user's claims and returns an object representing their claims for the specified organization.
     /// </summary>
