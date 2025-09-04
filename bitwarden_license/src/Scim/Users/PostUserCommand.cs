@@ -49,50 +49,59 @@ public class PostUserCommand(
         Guid organizationId,
         ScimProviderType scimProvider)
     {
-        await using var transaction = await transactionProvider.GetTransactionAsync(IsolationLevel.Serializable);
-
-        var organizationOption = await organizationRepository.GetByIdInTransactionAsync(organizationId, transaction);
-
-        if (organizationOption.IsT1) // None
+        return await TransactionRetryPolicy.ExecuteWithRetry(async () =>
         {
-            throw new NotFoundException();
-        }
+            await using var transaction = await transactionProvider.GetTransactionAsync(IsolationLevel.Serializable);
 
-        var organization = organizationOption.AsT0; // Some
+            var organizationOption =
+                await organizationRepository.GetByIdInTransactionAsync(organizationId, transaction);
 
-        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+            if (organizationOption.IsT1) // None
+            {
+                throw new NotFoundException();
+            }
 
-        var request = model.ToRequest(
-            scimProvider: scimProvider,
-            inviteOrganization: new InviteOrganization(organization, plan),
-            performedAt: timeProvider.GetUtcNow(),
-            transaction: transaction);
+            var organization = organizationOption.AsT0; // Some
 
-        var orgUsers = await organizationUserRepository
-            .GetManyDetailsByOrganizationInTransactionAsync(request.InviteOrganization.OrganizationId, transaction);
+            var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
-        if (orgUsers.Any(existingUser =>
-                request.Invites.First().Email.Equals(existingUser.Email, StringComparison.OrdinalIgnoreCase) ||
-                request.Invites.First().ExternalId.Equals(existingUser.ExternalId, StringComparison.OrdinalIgnoreCase)))
-        {
-            throw new ConflictException("User already exists.");
-        }
+            var request = model.ToRequest(
+                scimProvider: scimProvider,
+                inviteOrganization: new InviteOrganization(organization, plan),
+                performedAt: timeProvider.GetUtcNow(),
+                transaction: transaction);
 
-        var result = await inviteOrganizationUsersCommand.InviteScimOrganizationUserAsync(request);
+            var orgUsers = await organizationUserRepository
+                .GetManyDetailsByOrganizationInTransactionAsync(request.InviteOrganization.OrganizationId, transaction);
 
-        var invitedOrganizationUserId = result switch
-        {
-            Core.AdminConsole.Utilities.Commands.Success<ScimInviteOrganizationUsersResponse> success => success.Value.InvitedUser.Id,
-            Failure<ScimInviteOrganizationUsersResponse> { Error.Message: NoUsersToInviteError.Code } => (Guid?)null,
-            Failure<ScimInviteOrganizationUsersResponse> failure => throw MapToBitException(failure.Error),
-            _ => throw new InvalidOperationException()
-        };
+            if (orgUsers.Any(existingUser =>
+                    request.Invites.First().Email.Equals(existingUser.Email, StringComparison.OrdinalIgnoreCase) ||
+                    request.Invites.First().ExternalId
+                        .Equals(existingUser.ExternalId, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new ConflictException("User already exists.");
+            }
 
-        var organizationUser = invitedOrganizationUserId.HasValue
-            ? await organizationUserRepository.GetDetailsByIdAsync(invitedOrganizationUserId.Value)
-            : null;
+            var result = await inviteOrganizationUsersCommand.InviteScimOrganizationUserAsync(request);
 
-        return organizationUser;
+            var invitedOrganizationUserId = result switch
+            {
+                Success<ScimInviteOrganizationUsersResponse> success => success
+                    .Value.InvitedUser.Id,
+                Failure<ScimInviteOrganizationUsersResponse>
+                {
+                    Error.Message: NoUsersToInviteError.Code
+                } => (Guid?)null,
+                Failure<ScimInviteOrganizationUsersResponse> failure => throw MapToBitException(failure.Error),
+                _ => throw new InvalidOperationException()
+            };
+
+            var organizationUser = invitedOrganizationUserId.HasValue
+                ? await organizationUserRepository.GetDetailsByIdAsync(invitedOrganizationUserId.Value)
+                : null;
+
+            return organizationUser;
+        });
     }
 
     private async Task<OrganizationUserUserDetails?> InviteScimOrganizationUserAsync(
