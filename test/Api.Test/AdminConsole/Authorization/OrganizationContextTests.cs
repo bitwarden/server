@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using AutoFixture;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -90,7 +90,7 @@ public class OrganizationContextTests
             .GetProperUserId(claimsPrincipal)
             .Returns((Guid?)null);
 
-        var exception = await Assert.ThrowsAsync<Exception>(() =>
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             sutProvider.Sut.IsProviderUserForOrganization(claimsPrincipal, organizationId));
 
         Assert.Equal(OrganizationContext.NoUserIdError, exception.Message);
