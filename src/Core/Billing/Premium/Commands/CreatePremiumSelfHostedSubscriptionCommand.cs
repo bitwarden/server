@@ -9,8 +9,18 @@ using OneOf.Types;
 
 namespace Bit.Core.Billing.Premium.Commands;
 
+/// <summary>
+/// Creates a premium subscription for a self-hosted user.
+/// Validates the license and applies premium benefits including storage limits based on the license terms.
+/// </summary>
 public interface ICreatePremiumSelfHostedSubscriptionCommand
 {
+    /// <summary>
+    /// Creates a premium self-hosted subscription for the specified user using the provided license.
+    /// </summary>
+    /// <param name="user">The user to create the premium subscription for. Must not already be a premium user.</param>
+    /// <param name="license">The user license containing the premium subscription details and verification data. Must be valid and usable by the specified user.</param>
+    /// <returns>A billing command result indicating success or failure with appropriate error details.</returns>
     Task<BillingCommandResult<None>> Run(User user, UserLicense license);
 }
 
@@ -45,7 +55,7 @@ public class CreatePremiumSelfHostedSubscriptionCommand(
 
         user.Premium = true;
         user.RevisionDate = DateTime.UtcNow;
-        user.MaxStorageGb = 10240; // 10 TB
+        user.MaxStorageGb = Core.Constants.SelfHostedMaxStorageGb;
         user.LicenseKey = license.LicenseKey;
         user.PremiumExpirationDate = license.Expires;
 

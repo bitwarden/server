@@ -915,7 +915,7 @@ public class StripePaymentService : IPaymentService
                     new()
                     {
                         Quantity = 1,
-                        Plan = "premium-annually"
+                        Plan = StripeConstants.Prices.PremiumAnnually
                     },
 
                     new()

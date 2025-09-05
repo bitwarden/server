@@ -1,54 +1,59 @@
-﻿using Bit.Core.Billing.Payment.Models;
+﻿using Bit.Core.Billing.Caches;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
+using Bit.Core.Settings;
+using Bit.Test.Common.AutoFixture.Attributes;
+using Braintree;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Stripe;
 using Xunit;
+using Address = Stripe.Address;
+using StripeCustomer = Stripe.Customer;
+using StripeSubscription = Stripe.Subscription;
 
 namespace Bit.Core.Test.Billing.Premium.Commands;
 
 public class CreatePremiumCloudHostedSubscriptionCommandTests
 {
-    private readonly IPremiumUserBillingService _premiumUserBillingService = Substitute.For<IPremiumUserBillingService>();
+    private readonly IBraintreeGateway _braintreeGateway = Substitute.For<IBraintreeGateway>();
+    private readonly IGlobalSettings _globalSettings = Substitute.For<IGlobalSettings>();
+    private readonly ISetupIntentCache _setupIntentCache = Substitute.For<ISetupIntentCache>();
+    private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
+    private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly IUserService _userService = Substitute.For<IUserService>();
-    private readonly IPaymentService _paymentService = Substitute.For<IPaymentService>();
     private readonly IPushNotificationService _pushNotificationService = Substitute.For<IPushNotificationService>();
     private readonly CreatePremiumCloudHostedSubscriptionCommand _command;
 
     public CreatePremiumCloudHostedSubscriptionCommandTests()
     {
+        var baseServiceUri = Substitute.For<IBaseServiceUriSettings>();
+        baseServiceUri.CloudRegion.Returns("US");
+        _globalSettings.BaseServiceUri.Returns(baseServiceUri);
+
         _command = new CreatePremiumCloudHostedSubscriptionCommand(
-            _premiumUserBillingService,
+            _braintreeGateway,
+            _globalSettings,
+            _setupIntentCache,
+            _stripeAdapter,
+            _subscriberService,
             _userService,
-            _paymentService,
             _pushNotificationService,
             Substitute.For<ILogger<CreatePremiumCloudHostedSubscriptionCommand>>());
     }
 
-    [Fact]
-    public async Task Run_UserAlreadyPremium_ReturnsBadRequest()
+    [Theory, BitAutoData]
+    public async Task Run_UserAlreadyPremium_ReturnsBadRequest(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
     {
         // Arrange
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Premium = true
-        };
-
-        var paymentMethod = new TokenizedPaymentMethod
-        {
-            Type = TokenizablePaymentMethodType.Card,
-            Token = "token_123"
-        };
-
-        var billingAddress = new BillingAddress
-        {
-            Country = "US",
-            PostalCode = "12345"
-        };
+        user.Premium = true;
 
         // Act
         var result = await _command.Run(user, paymentMethod, billingAddress, 0);
@@ -59,27 +64,14 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         Assert.Equal("Already a premium user.", badRequest.Response);
     }
 
-    [Fact]
-    public async Task Run_NegativeStorageAmount_ReturnsBadRequest()
+    [Theory, BitAutoData]
+    public async Task Run_NegativeStorageAmount_ReturnsBadRequest(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
     {
         // Arrange
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Premium = false
-        };
-
-        var paymentMethod = new TokenizedPaymentMethod
-        {
-            Type = TokenizablePaymentMethodType.Card,
-            Token = "token_123"
-        };
-
-        var billingAddress = new BillingAddress
-        {
-            Country = "US",
-            PostalCode = "12345"
-        };
+        user.Premium = false;
 
         // Act
         var result = await _command.Run(user, paymentMethod, billingAddress, -1);
@@ -87,154 +79,529 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Assert
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
-        Assert.Equal("You can't subtract storage.", badRequest.Response);
+        Assert.Equal("Additional storage must be greater than 0.", badRequest.Response);
     }
 
-    [Theory]
-    [InlineData(TokenizablePaymentMethodType.BankAccount)]
-    [InlineData(TokenizablePaymentMethodType.Card)]
-    [InlineData(TokenizablePaymentMethodType.PayPal)]
-    public async Task Run_ValidPaymentMethodTypes_Success(TokenizablePaymentMethodType paymentMethodType)
+    [Theory, BitAutoData]
+    public async Task Run_ValidPaymentMethodTypes_BankAccount_Success(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
     {
         // Arrange
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Premium = false,
-            Email = "test@example.com"
-        };
+        user.Premium = false;
+        user.GatewayCustomerId = null; // Ensure no existing customer ID
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.BankAccount;
+        paymentMethod.Token = "bank_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
 
-        var paymentMethod = new TokenizedPaymentMethod
-        {
-            Type = paymentMethodType,
-            Token = "token_123"
-        };
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "cust_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
 
-        var billingAddress = new BillingAddress
-        {
-            Country = "US",
-            PostalCode = "12345"
-        };
+        var mockSubscription = Substitute.For<StripeSubscription>();
+        mockSubscription.Id = "sub_123";
+        mockSubscription.Status = "active";
+
+        var mockInvoice = Substitute.For<Invoice>();
+
+        var mockSetupIntent = Substitute.For<SetupIntent>();
+        mockSetupIntent.Id = "seti_123";
+
+        _stripeAdapter.CustomerCreateAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.InvoiceUpdateAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
+        _stripeAdapter.SetupIntentList(Arg.Any<SetupIntentListOptions>()).Returns(Task.FromResult(new List<SetupIntent> { mockSetupIntent }));
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
         // Act
         var result = await _command.Run(user, paymentMethod, billingAddress, 0);
 
         // Assert
         Assert.True(result.IsT0);
-        await _premiumUserBillingService.Received(1).Finalize(Arg.Any<Bit.Core.Billing.Models.Sales.PremiumUserSale>());
+        await _stripeAdapter.Received(1).CustomerCreateAsync(Arg.Any<CustomerCreateOptions>());
+        await _stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _userService.Received(1).SaveUserAsync(user);
+        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
     }
 
-    [Fact]
-    public async Task Run_ValidRequestWithAdditionalStorage_Success()
+    [Theory, BitAutoData]
+    public async Task Run_ValidPaymentMethodTypes_Card_Success(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
     {
         // Arrange
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Premium = false,
-            Email = "test@example.com"
-        };
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
 
-        var paymentMethod = new TokenizedPaymentMethod
-        {
-            Type = TokenizablePaymentMethodType.Card,
-            Token = "token_123"
-        };
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "cust_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
 
-        var billingAddress = new BillingAddress
-        {
-            Country = "US",
-            PostalCode = "12345"
-        };
+        var mockSubscription = Substitute.For<StripeSubscription>();
+        mockSubscription.Id = "sub_123";
+        mockSubscription.Status = "active";
 
+        var mockInvoice = Substitute.For<Invoice>();
+
+        _stripeAdapter.CustomerCreateAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.InvoiceUpdateAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).CustomerCreateAsync(Arg.Any<CustomerCreateOptions>());
+        await _stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _userService.Received(1).SaveUserAsync(user);
+        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_ValidPaymentMethodTypes_PayPal_Success(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.PayPal;
+        paymentMethod.Token = "paypal_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
+
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "cust_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
+
+        var mockSubscription = Substitute.For<StripeSubscription>();
+        mockSubscription.Id = "sub_123";
+        mockSubscription.Status = "active";
+
+        var mockInvoice = Substitute.For<Invoice>();
+
+        _stripeAdapter.CustomerCreateAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.InvoiceUpdateAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+        _subscriberService.CreateBraintreeCustomer(Arg.Any<User>(), Arg.Any<string>()).Returns("bt_customer_123");
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).CustomerCreateAsync(Arg.Any<CustomerCreateOptions>());
+        await _stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _subscriberService.Received(1).CreateBraintreeCustomer(user, paymentMethod.Token);
+        await _userService.Received(1).SaveUserAsync(user);
+        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_ValidRequestWithAdditionalStorage_Success(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
         const short additionalStorage = 2;
+
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "cust_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
+
+        var mockSubscription = Substitute.For<StripeSubscription>();
+        mockSubscription.Id = "sub_123";
+        mockSubscription.Status = "active";
+        mockSubscription.CurrentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var mockInvoice = Substitute.For<Invoice>();
+
+        _stripeAdapter.CustomerCreateAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.InvoiceUpdateAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
         // Act
         var result = await _command.Run(user, paymentMethod, billingAddress, additionalStorage);
 
         // Assert
         Assert.True(result.IsT0);
-
-        // Verify user was updated correctly
         Assert.True(user.Premium);
         Assert.Equal((short)(1 + additionalStorage), user.MaxStorageGb);
         Assert.NotNull(user.LicenseKey);
         Assert.Equal(20, user.LicenseKey.Length);
         Assert.NotEqual(default, user.RevisionDate);
-
-        // Verify services were called
-        await _premiumUserBillingService.Received(1).Finalize(Arg.Any<Bit.Core.Billing.Models.Sales.PremiumUserSale>());
         await _userService.Received(1).SaveUserAsync(user);
         await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
     }
 
-    [Fact]
-    public async Task Run_UserServiceThrowsException_CancelsChargesAndRethrows()
+    [Theory, BitAutoData]
+    public async Task Run_UserHasExistingGatewayCustomerId_UsesExistingCustomer(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
     {
         // Arrange
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Premium = false,
-            Email = "test@example.com"
-        };
+        user.Premium = false;
+        user.GatewayCustomerId = "existing_customer_123";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
 
-        var paymentMethod = new TokenizedPaymentMethod
-        {
-            Type = TokenizablePaymentMethodType.Card,
-            Token = "token_123"
-        };
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "existing_customer_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
 
-        var billingAddress = new BillingAddress
-        {
-            Country = "US",
-            PostalCode = "12345"
-        };
+        var mockSubscription = Substitute.For<StripeSubscription>();
+        mockSubscription.Id = "sub_123";
+        mockSubscription.Status = "active";
 
-        var expectedException = new Exception("User service error");
-        _userService.When(x => x.SaveUserAsync(user)).Do(x => throw expectedException);
+        var mockInvoice = Substitute.For<Invoice>();
+
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.InvoiceUpdateAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
 
         // Act
         var result = await _command.Run(user, paymentMethod, billingAddress, 0);
 
         // Assert
-        Assert.True(result.IsT3);
-        // Verify payment cancellation was attempted
-        await _paymentService.Received(1).CancelAndRecoverChargesAsync(user);
+        Assert.True(result.IsT0);
+        await _subscriberService.Received(1).GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>());
+        await _stripeAdapter.DidNotReceive().CustomerCreateAsync(Arg.Any<CustomerCreateOptions>());
     }
 
-    [Fact]
-    public async Task Run_PushServiceThrowsException_CancelsChargesAndRethrows()
+    [Theory, BitAutoData]
+    public async Task Run_PayPalWithIncompleteSubscription_SetsPremiumTrue(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
     {
         // Arrange
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Premium = false,
-            Email = "test@example.com"
-        };
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        user.PremiumExpirationDate = null;
+        paymentMethod.Type = TokenizablePaymentMethodType.PayPal;
+        paymentMethod.Token = "paypal_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
 
-        var paymentMethod = new TokenizedPaymentMethod
-        {
-            Type = TokenizablePaymentMethodType.Card,
-            Token = "token_123"
-        };
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "cust_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
 
-        var billingAddress = new BillingAddress
-        {
-            Country = "US",
-            PostalCode = "12345"
-        };
+        var mockSubscription = Substitute.For<StripeSubscription>();
+        mockSubscription.Id = "sub_123";
+        mockSubscription.Status = "incomplete";
+        mockSubscription.CurrentPeriodEnd = DateTime.UtcNow.AddDays(30);
 
-        var expectedException = new Exception("Push service error");
-        _pushNotificationService.When(x => x.PushSyncVaultAsync(user.Id)).Do(x => throw expectedException);
+        var mockInvoice = Substitute.For<Invoice>();
+
+        _stripeAdapter.CustomerCreateAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.InvoiceUpdateAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
+        _subscriberService.CreateBraintreeCustomer(Arg.Any<User>(), Arg.Any<string>()).Returns("bt_customer_123");
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert
+        Assert.True(result.IsT0);
+        Assert.True(user.Premium);
+        Assert.Equal(mockSubscription.CurrentPeriodEnd, user.PremiumExpirationDate);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_NonPayPalWithActiveSubscription_SetsPremiumTrue(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
+
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "cust_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
+
+        var mockSubscription = Substitute.For<StripeSubscription>();
+        mockSubscription.Id = "sub_123";
+        mockSubscription.Status = "active";
+        mockSubscription.CurrentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var mockInvoice = Substitute.For<Invoice>();
+
+        _stripeAdapter.CustomerCreateAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.InvoiceUpdateAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert
+        Assert.True(result.IsT0);
+        Assert.True(user.Premium);
+        Assert.Equal(mockSubscription.CurrentPeriodEnd, user.PremiumExpirationDate);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_SubscriptionStatusDoesNotMatchPatterns_DoesNotSetPremium(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        user.PremiumExpirationDate = null;
+        paymentMethod.Type = TokenizablePaymentMethodType.PayPal;
+        paymentMethod.Token = "paypal_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
+
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "cust_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
+
+        var mockSubscription = Substitute.For<StripeSubscription>();
+        mockSubscription.Id = "sub_123";
+        mockSubscription.Status = "active"; // PayPal + active doesn't match pattern
+        mockSubscription.CurrentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var mockInvoice = Substitute.For<Invoice>();
+
+        _stripeAdapter.CustomerCreateAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.InvoiceUpdateAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
+        _subscriberService.CreateBraintreeCustomer(Arg.Any<User>(), Arg.Any<string>()).Returns("bt_customer_123");
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert
+        Assert.True(result.IsT0);
+        Assert.False(user.Premium);
+        Assert.Null(user.PremiumExpirationDate);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_MissingPaymentToken_ReturnsUnhandled(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = null; // Null token should cause validation error
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
+
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "cust_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
+
+        var mockSubscription = Substitute.For<StripeSubscription>();
+        mockSubscription.Id = "sub_123";
+        mockSubscription.Status = "incomplete";
+        mockSubscription.CurrentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var mockInvoice = Substitute.For<Invoice>();
+
+        _stripeAdapter.CustomerCreateAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.InvoiceUpdateAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
         // Act
         var result = await _command.Run(user, paymentMethod, billingAddress, 0);
 
         // Assert
         Assert.True(result.IsT3);
-        // Verify payment cancellation was attempted
-        await _paymentService.Received(1).CancelAndRecoverChargesAsync(user);
+        var unhandled = result.AsT3;
+        Assert.Equal("Something went wrong with your request. Please contact support for assistance.", unhandled.Response);
+    }
+
+    // todoclaude
+    // 1. fix this test and the tests below it to use BitAutoData to inject the user, payment method, and billing address instead of creating them manually.
+    // 2. you can still override properties where needed to make the test work consistently
+    // 3. if you are having issues, look at the test directly above this comment and use it as an example.
+    [Theory, BitAutoData]
+    public async Task Run_InvalidTaxInformationMissingCountry_ReturnsUnhandled(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+        billingAddress.Country = ""; // Missing country should cause validation error
+        billingAddress.PostalCode = "12345";
+
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "cust_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
+
+        var mockSubscription = Substitute.For<StripeSubscription>();
+        mockSubscription.Id = "sub_123";
+        mockSubscription.Status = "incomplete";
+        mockSubscription.CurrentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var mockInvoice = Substitute.For<Invoice>();
+
+        _stripeAdapter.CustomerCreateAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.InvoiceUpdateAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert
+        Assert.True(result.IsT3);
+        var unhandled = result.AsT3;
+        Assert.Equal("Something went wrong with your request. Please contact support for assistance.", unhandled.Response);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_InvalidTaxInformationMissingPostalCode_ReturnsUnhandled(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = ""; // Missing postal code should cause validation error
+
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "cust_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
+
+        var mockSubscription = Substitute.For<StripeSubscription>();
+        mockSubscription.Id = "sub_123";
+        mockSubscription.Status = "incomplete";
+        mockSubscription.CurrentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var mockInvoice = Substitute.For<Invoice>();
+
+        _stripeAdapter.CustomerCreateAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.InvoiceUpdateAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert
+        Assert.True(result.IsT3);
+        var unhandled = result.AsT3;
+        Assert.Equal("Something went wrong with your request. Please contact support for assistance.", unhandled.Response);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_BankAccountWithNoSetupIntentFound_ReturnsUnhandled(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.BankAccount;
+        paymentMethod.Token = "bank_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
+
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "cust_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
+
+        var mockSubscription = Substitute.For<StripeSubscription>();
+        mockSubscription.Id = "sub_123";
+        mockSubscription.Status = "incomplete";
+        mockSubscription.CurrentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var mockInvoice = Substitute.For<Invoice>();
+
+        _stripeAdapter.CustomerCreateAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.InvoiceUpdateAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+
+        _stripeAdapter.SetupIntentList(Arg.Any<SetupIntentListOptions>())
+            .Returns(Task.FromResult(new List<SetupIntent>())); // Empty list - no setup intent found
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert
+        Assert.True(result.IsT3);
+        var unhandled = result.AsT3;
+        Assert.Equal("Something went wrong with your request. Please contact support for assistance.", unhandled.Response);
     }
 }

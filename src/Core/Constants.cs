@@ -10,6 +10,11 @@ public static class Constants
     public const int BypassFiltersEventId = 12482444;
     public const int FailedSecretVerificationDelay = 2000;
 
+    /// <summary>
+    /// Self-hosted max storage limit in GB (10 TB).
+    /// </summary>
+    public const short SelfHostedMaxStorageGb = 10240;
+
     // File size limits - give 1 MB extra for cushion.
     // Note: if request size limits are changed, 'client_max_body_size'
     // in nginx/proxy.conf may also need to be updated accordingly.
