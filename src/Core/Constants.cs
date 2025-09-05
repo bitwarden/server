@@ -128,6 +128,7 @@ public static class FeatureFlagKeys
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string DirectoryConnectorPreventUserRemoval = "pm-24592-directory-connector-prevent-user-removal";
     public const string CipherRepositoryBulkResourceCreation = "pm-24951-cipher-repository-bulk-resource-creation-service";
+    public const string CollectionVaultRefactor = "pm-25030-resolve-ts-upgrade-errors";
 
     /* Auth Team */
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
@@ -160,7 +161,6 @@ public static class FeatureFlagKeys
     public const string TrialPayment = "PM-8163-trial-payment";
     public const string PM17772_AdminInitiatedSponsorships = "pm-17772-admin-initiated-sponsorships";
     public const string UsePricingService = "use-pricing-service";
-    public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
     public const string PM19422_AllowAutomaticTaxUpdates = "pm-19422-allow-automatic-tax-updates";
     public const string UseOrganizationWarningsService = "use-organization-warnings-service";
     public const string PM21881_ManagePaymentDetailsOutsideCheckout = "pm-21881-manage-payment-details-outside-checkout";
