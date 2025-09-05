@@ -1060,7 +1060,6 @@ public class CipherRepositoryTests
         ICipherRepository sutRepository,
         IUserRepository userRepository)
     {
-        // Arrange
         var user = await userRepository.CreateAsync(new User
         {
             Name = "Test User",

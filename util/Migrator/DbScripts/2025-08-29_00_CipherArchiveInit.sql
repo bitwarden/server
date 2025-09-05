@@ -452,15 +452,6 @@ WHERE
 END
 GO
 
-
-
-
-
-
-
-
--- Cipher Archive
-
 CREATE OR ALTER PROCEDURE [dbo].[Cipher_Archive]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER
@@ -501,9 +492,6 @@ BEGIN
     SELECT @UtcNow
 END
 GO
-
--- Unarchive Cipher
-
 
 CREATE OR ALTER PROCEDURE [dbo].[Cipher_Unarchive]
     @Ids AS [dbo].[GuidIdArray] READONLY,

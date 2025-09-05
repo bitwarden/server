@@ -28,7 +28,6 @@ public class ArchiveCiphersCommandTest
         int cipherRepoCalls, int resultCountFromQuery, int eventServiceCalls, int pushNotificationsCalls,
         SutProvider<ArchiveCiphersCommand> sutProvider, CipherDetails cipher, User user)
     {
-        // Arrange
         cipher.Edit = isEditable;
         cipher.OrganizationId = hasOrganizationId ? Guid.NewGuid() : null;
 
