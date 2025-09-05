@@ -184,72 +184,93 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
         return await policyWithAffectedUsers.ToListAsync();
     }
 
-    public async Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetailsByUserIdsAndPolicyType(IEnumerable<Guid> userIds, PolicyType policyType)
+    public async Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetailsByUserIdsAndPolicyType(
+        IEnumerable<Guid> userIds, PolicyType policyType)
     {
+        ArgumentNullException.ThrowIfNull(userIds);
+
+        var userIdsList = userIds.Where(id => id != Guid.Empty).ToList();
+
+        if (userIdsList.Count == 0)
+        {
+            return [];
+        }
+
         using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
+        await using var dbContext = GetDatabaseContext(scope);
 
-        var userIdsList = userIds.ToList();
-
-        var providerOrganizations = from pu in dbContext.ProviderUsers
+        // Get provider relationships
+        var providerLookup = await (from pu in dbContext.ProviderUsers
                                     join po in dbContext.ProviderOrganizations on pu.ProviderId equals po.ProviderId
-                                    where userIdsList.Contains(pu.UserId ?? Guid.Empty)
-                                    select new { pu.UserId, po.OrganizationId };
+                                    where pu.UserId != null && userIdsList.Contains(pu.UserId.Value)
+                                    select new { pu.UserId, po.OrganizationId })
+            .ToListAsync();
 
-        // Branch 1: Accepted users linked by UserId
-        var acceptedUsers = from p in dbContext.Policies
-                            join ou in dbContext.OrganizationUsers on p.OrganizationId equals ou.OrganizationId
-                            join o in dbContext.Organizations on p.OrganizationId equals o.Id
-                            where
-                                p.Enabled
-                                && p.Type == policyType
-                                && o.Enabled
-                                && o.UsePolicies
-                                && ou.Status != OrganizationUserStatusType.Invited
-                                && userIdsList.Contains(ou.UserId ?? Guid.Empty)
-                            select new OrganizationPolicyDetails
-                            {
-                                OrganizationUserId = ou.Id,
-                                OrganizationId = p.OrganizationId,
-                                PolicyType = p.Type,
-                                PolicyData = p.Data,
-                                OrganizationUserType = ou.Type,
-                                OrganizationUserStatus = ou.Status,
-                                OrganizationUserPermissionsData = ou.Permissions,
-                                UserId = ou.UserId ?? Guid.Empty,
-                                IsProvider = providerOrganizations.Any(po => po.UserId == ou.UserId
-                                                                             && po.OrganizationId == ou.OrganizationId)
-                            };
+        // Hashset for lookup
+        var providerSet = new HashSet<(Guid UserId, Guid OrganizationId)>(
+            providerLookup.Select(p => (p.UserId!.Value, p.OrganizationId)));
 
-        // Branch 2: Invited users matched by email
-        var invitedUsers = from p in dbContext.Policies
-                           join ou in dbContext.OrganizationUsers on p.OrganizationId equals ou.OrganizationId
-                           join o in dbContext.Organizations on p.OrganizationId equals o.Id
-                           join u in dbContext.Users on ou.Email equals u.Email
-                           where
-                               p.Enabled
-                               && o.Enabled
-                               && o.UsePolicies
-                               && ou.Status == OrganizationUserStatusType.Invited
-                               && userIdsList.Contains(u.Id)
-                               && p.Type == policyType
-                           select new OrganizationPolicyDetails
-                           {
-                               OrganizationUserId = ou.Id,
-                               OrganizationId = p.OrganizationId,
-                               PolicyType = p.Type,
-                               PolicyData = p.Data,
-                               OrganizationUserType = ou.Type,
-                               OrganizationUserStatus = ou.Status,
-                               OrganizationUserPermissionsData = ou.Permissions,
-                               UserId = u.Id,
-                               IsProvider = providerOrganizations
-                                   .Any(po => po.UserId == u.Id && po.OrganizationId == ou.OrganizationId)
-                           };
+        // Branch 1: Accepted users
+        var acceptedUsers = await (from p in dbContext.Policies
+                                   join ou in dbContext.OrganizationUsers on p.OrganizationId equals ou.OrganizationId
+                                   join o in dbContext.Organizations on p.OrganizationId equals o.Id
+                                   where p.Enabled
+                                         && p.Type == policyType
+                                         && o.Enabled
+                                         && o.UsePolicies
+                                         && ou.Status != OrganizationUserStatusType.Invited
+                                         && ou.UserId != null
+                                         && userIdsList.Contains(ou.UserId.Value)
+                                   select new
+                                   {
+                                       OrganizationUserId = ou.Id,
+                                       OrganizationId = p.OrganizationId,
+                                       PolicyType = p.Type,
+                                       PolicyData = p.Data,
+                                       OrganizationUserType = ou.Type,
+                                       OrganizationUserStatus = ou.Status,
+                                       OrganizationUserPermissionsData = ou.Permissions,
+                                       UserId = ou.UserId.Value
+                                   }).ToListAsync();
 
-        // Combine results using Union
-        var results = acceptedUsers.Union(invitedUsers);
+        // Branch 2: Invited users
+        var invitedUsers = await (from p in dbContext.Policies
+                                  join ou in dbContext.OrganizationUsers on p.OrganizationId equals ou.OrganizationId
+                                  join o in dbContext.Organizations on p.OrganizationId equals o.Id
+                                  join u in dbContext.Users on ou.Email equals u.Email
+                                  where p.Enabled
+                                        && o.Enabled
+                                        && o.UsePolicies
+                                        && ou.Status == OrganizationUserStatusType.Invited
+                                        && userIdsList.Contains(u.Id)
+                                        && p.Type == policyType
+                                  select new
+                                  {
+                                      OrganizationUserId = ou.Id,
+                                      OrganizationId = p.OrganizationId,
+                                      PolicyType = p.Type,
+                                      PolicyData = p.Data,
+                                      OrganizationUserType = ou.Type,
+                                      OrganizationUserStatus = ou.Status,
+                                      OrganizationUserPermissionsData = ou.Permissions,
+                                      UserId = u.Id
+                                  }).ToListAsync();
 
-        return await results.ToListAsync();
+        // Combine results with provder lookup
+        var allResults = acceptedUsers.Concat(invitedUsers)
+            .Select(item => new OrganizationPolicyDetails
+            {
+                OrganizationUserId = item.OrganizationUserId,
+                OrganizationId = item.OrganizationId,
+                PolicyType = item.PolicyType,
+                PolicyData = item.PolicyData,
+                OrganizationUserType = item.OrganizationUserType,
+                OrganizationUserStatus = item.OrganizationUserStatus,
+                OrganizationUserPermissionsData = item.OrganizationUserPermissionsData,
+                UserId = item.UserId,
+                IsProvider = providerSet.Contains((item.UserId, item.OrganizationId))
+            });
+
+        return allResults.ToList();
     }
 }

@@ -49,51 +49,35 @@ BEGIN
                AND O.UsePolicies = 1
                AND OU.[Status] = 0 -- Invited users only
                AND P.[Type] = @PolicyType
+         ),
+         AllUsers AS (
+             -- Combine both user sets
+             SELECT * FROM AcceptedUsers
+             UNION
+             SELECT * FROM InvitedUsers
+         ),
+         ProviderLookup AS (
+             -- Pre-calculate provider relationships for all relevant user/org combinations
+             SELECT DISTINCT
+                 PU.[UserId],
+                 PO.[OrganizationId]
+             FROM [dbo].[ProviderUserView] PU
+                      INNER JOIN [dbo].[ProviderOrganizationView] PO ON PO.[ProviderId] = PU.[ProviderId]
+                      INNER JOIN AllUsers AU ON PU.[UserId] = AU.UserId AND PO.[OrganizationId] = AU.OrganizationId
          )
-    -- Combine results with IsProvider calculation
+    -- Final result with efficient IsProvider lookup
     SELECT
-        OrganizationUserId,
-        OrganizationId,
-        PolicyType,
-        PolicyData,
-        OrganizationUserType,
-        OrganizationUserStatus,
-        OrganizationUserPermissionsData,
-        UserId,
-        IIF(
-                EXISTS(
-                    SELECT 1
-                    FROM [dbo].[ProviderUserView] PU
-                             INNER JOIN [dbo].[ProviderOrganizationView] PO ON PO.[ProviderId] = PU.[ProviderId]
-                    WHERE
-                        PU.[UserId] = UserId
-                      AND PO.[OrganizationId] = OrganizationId
-                ),
-                1,
-                0
-        ) AS IsProvider
-    FROM AcceptedUsers
-    UNION
-    SELECT
-        OrganizationUserId,
-        OrganizationId,
-        PolicyType,
-        PolicyData,
-        OrganizationUserType,
-        OrganizationUserStatus,
-        OrganizationUserPermissionsData,
-        UserId,
-        IIF(
-                EXISTS(
-                    SELECT 1
-                    FROM [dbo].[ProviderUserView] PU
-                             INNER JOIN [dbo].[ProviderOrganizationView] PO ON PO.[ProviderId] = PU.[ProviderId]
-                    WHERE
-                        PU.[UserId] = UserId
-                      AND PO.[OrganizationId] = OrganizationId
-                ),
-                1,
-                0
-        ) AS IsProvider
-    FROM InvitedUsers
+        AU.OrganizationUserId,
+        AU.OrganizationId,
+        AU.PolicyType,
+        AU.PolicyData,
+        AU.OrganizationUserType,
+        AU.OrganizationUserStatus,
+        AU.OrganizationUserPermissionsData,
+        AU.UserId,
+        IIF(PL.UserId IS NOT NULL, 1, 0) AS IsProvider
+    FROM AllUsers AU
+             LEFT JOIN ProviderLookup PL
+                       ON AU.UserId = PL.UserId
+                           AND AU.OrganizationId = PL.OrganizationId
 END
