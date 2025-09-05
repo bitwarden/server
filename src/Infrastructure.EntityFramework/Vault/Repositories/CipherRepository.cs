@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
@@ -999,6 +1000,55 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
 
             await dbContext.SaveChangesAsync();
         };
+    }
+
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(Guid organizationId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var defaultTypeInt = (int)CollectionType.DefaultUserCollection;
+
+        //  filter out any cipher that belongs *only* to default collections
+        //    i.e. keep ciphers with no collections, or with ≥1 non-default collection
+        var query = from c in dbContext.Ciphers.AsNoTracking()
+                    where c.UserId == null
+                       && c.OrganizationId == organizationId
+                       && c.Organization.Enabled
+                       && (
+                            c.CollectionCiphers.Count() == 0
+                            || c.CollectionCiphers.Any(cc => (int)cc.Collection.Type != defaultTypeInt)
+                          )
+                    select new CipherOrganizationDetailsWithCollections(
+                        new CipherOrganizationDetails
+                        {
+                            Id = c.Id,
+                            UserId = c.UserId,
+                            OrganizationId = c.OrganizationId,
+                            Type = c.Type,
+                            Data = c.Data,
+                            Favorites = c.Favorites,
+                            Folders = c.Folders,
+                            Attachments = c.Attachments,
+                            CreationDate = c.CreationDate,
+                            RevisionDate = c.RevisionDate,
+                            DeletedDate = c.DeletedDate,
+                            Reprompt = c.Reprompt,
+                            Key = c.Key,
+                            OrganizationUseTotp = c.Organization.UseTotp
+                        },
+                        new Dictionary<Guid, IGrouping<Guid, Bit.Core.Entities.CollectionCipher>>()
+                    )
+                    {
+                        CollectionIds = c.CollectionCiphers
+                            .Where(cc => (int)cc.Collection.Type != defaultTypeInt)
+                            .Select(cc => cc.CollectionId)
+                            .ToArray()
+                    };
+
+        var result = await query.ToListAsync();
+        return result;
     }
 
     /// <inheritdoc cref="UpdateForKeyRotation(Guid, IEnumerable{Cipher})"/>
