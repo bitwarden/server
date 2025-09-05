@@ -12,6 +12,7 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -235,8 +236,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.DisplayBusinessName() ||
-                                                            model.BillingEmail != organization.BillingEmail);
+        var updateBilling = ShouldUpdateBilling(model, organization);
 
         var hasRequiredPermissions = updateBilling
             ? await _currentContext.EditSubscription(orgIdGuid)
@@ -554,18 +554,12 @@ public class OrganizationsController : Controller
     [HttpPut("{id}/collection-management")]
     public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
-        var organization = await _organizationRepository.GetByIdAsync(id);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
         if (!await _currentContext.OrganizationOwner(id))
         {
             throw new NotFoundException();
         }
 
-        await _organizationService.UpdateAsync(model.ToOrganization(organization, _featureService), eventType: EventType.Organization_CollectionManagement_Updated);
+        var organization = await _organizationService.UpdateCollectionManagementSettingsAsync(id, model.ToSettings());
         var plan = await _pricingClient.GetPlan(organization.PlanType);
         return new OrganizationResponseModel(organization, plan);
     }
@@ -581,5 +575,12 @@ public class OrganizationsController : Controller
         }
 
         return organization.PlanType;
+    }
+
+    private bool ShouldUpdateBilling(OrganizationUpdateRequestModel model, Organization organization)
+    {
+        var organizationNameChanged = model.Name != organization.Name;
+        var billingEmailChanged = model.BillingEmail != organization.BillingEmail;
+        return !_globalSettings.SelfHosted && (organizationNameChanged || billingEmailChanged);
     }
 }

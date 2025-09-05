@@ -10,9 +10,9 @@ namespace Bit.Core.Services;
 public abstract class EventLoggingListenerService : BackgroundService
 {
     protected readonly IEventMessageHandler _handler;
-    protected ILogger<EventLoggingListenerService> _logger;
+    protected ILogger _logger;
 
-    protected EventLoggingListenerService(IEventMessageHandler handler, ILogger<EventLoggingListenerService> logger)
+    protected EventLoggingListenerService(IEventMessageHandler handler, ILogger logger)
     {
         _handler = handler;
         _logger = logger;

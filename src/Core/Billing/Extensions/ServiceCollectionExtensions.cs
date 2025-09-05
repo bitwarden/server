@@ -25,14 +25,12 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IPremiumUserBillingService, PremiumUserBillingService>();
         services.AddTransient<ISetupIntentCache, SetupIntentDistributedCache>();
         services.AddTransient<ISubscriberService, SubscriberService>();
-        services.AddKeyedTransient<IAutomaticTaxStrategy, PersonalUseAutomaticTaxStrategy>(AutomaticTaxFactory.PersonalUse);
-        services.AddKeyedTransient<IAutomaticTaxStrategy, BusinessUseAutomaticTaxStrategy>(AutomaticTaxFactory.BusinessUse);
-        services.AddTransient<IAutomaticTaxFactory, AutomaticTaxFactory>();
         services.AddLicenseServices();
         services.AddPricingClient();
         services.AddTransient<IPreviewTaxAmountCommand, PreviewTaxAmountCommand>();
         services.AddPaymentOperations();
         services.AddOrganizationLicenseCommandsQueries();
+        services.AddTransient<IGetOrganizationWarningsQuery, GetOrganizationWarningsQuery>();
     }
 
     private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)

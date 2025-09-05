@@ -73,13 +73,13 @@ public class PoliciesControllerTests
 
         // Assert that the data is deserialized correctly into a Dictionary<string, object>
         // for all MasterPasswordPolicyData properties
-        Assert.Equal(mpPolicyData.MinComplexity, ((JsonElement)result.Data["MinComplexity"]).GetInt32());
-        Assert.Equal(mpPolicyData.MinLength, ((JsonElement)result.Data["MinLength"]).GetInt32());
-        Assert.Equal(mpPolicyData.RequireLower, ((JsonElement)result.Data["RequireLower"]).GetBoolean());
-        Assert.Equal(mpPolicyData.RequireUpper, ((JsonElement)result.Data["RequireUpper"]).GetBoolean());
-        Assert.Equal(mpPolicyData.RequireNumbers, ((JsonElement)result.Data["RequireNumbers"]).GetBoolean());
-        Assert.Equal(mpPolicyData.RequireSpecial, ((JsonElement)result.Data["RequireSpecial"]).GetBoolean());
-        Assert.Equal(mpPolicyData.EnforceOnLogin, ((JsonElement)result.Data["EnforceOnLogin"]).GetBoolean());
+        Assert.Equal(mpPolicyData.MinComplexity, ((JsonElement)result.Data["minComplexity"]).GetInt32());
+        Assert.Equal(mpPolicyData.MinLength, ((JsonElement)result.Data["minLength"]).GetInt32());
+        Assert.Equal(mpPolicyData.RequireLower, ((JsonElement)result.Data["requireLower"]).GetBoolean());
+        Assert.Equal(mpPolicyData.RequireUpper, ((JsonElement)result.Data["requireUpper"]).GetBoolean());
+        Assert.Equal(mpPolicyData.RequireNumbers, ((JsonElement)result.Data["requireNumbers"]).GetBoolean());
+        Assert.Equal(mpPolicyData.RequireSpecial, ((JsonElement)result.Data["requireSpecial"]).GetBoolean());
+        Assert.Equal(mpPolicyData.EnforceOnLogin, ((JsonElement)result.Data["enforceOnLogin"]).GetBoolean());
     }
 
 

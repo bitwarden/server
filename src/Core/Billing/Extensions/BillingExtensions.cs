@@ -22,6 +22,19 @@ public static class BillingExtensions
             _ => throw new BillingException($"PlanType {planType} could not be matched to a ProductTierType")
         };
 
+    public static bool IsBusinessProductTierType(this PlanType planType)
+        => IsBusinessProductTierType(planType.GetProductTier());
+
+    public static bool IsBusinessProductTierType(this ProductTierType productTierType)
+        => productTierType switch
+        {
+            ProductTierType.Free => false,
+            ProductTierType.Families => false,
+            ProductTierType.Enterprise => true,
+            ProductTierType.Teams => true,
+            ProductTierType.TeamsStarter => true
+        };
+
     public static bool IsBillable(this Provider provider) =>
         provider is
         {
@@ -35,6 +48,10 @@ public static class BillingExtensions
             Type: ProviderType.Msp or ProviderType.BusinessUnit,
             Status: ProviderStatusType.Billable
         };
+
+    // Reseller types do not have Stripe entities
+    public static bool IsStripeSupported(this ProviderType providerType) =>
+        providerType is ProviderType.Msp or ProviderType.BusinessUnit;
 
     public static bool SupportsConsolidatedBilling(this ProviderType providerType)
         => providerType is ProviderType.Msp or ProviderType.BusinessUnit;

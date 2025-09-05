@@ -532,6 +532,12 @@
   <data name="AcceptInviteBeforeUsingSSO" xml:space="preserve">
     <value>To accept your invite to {0}, you must first log in using your master password. Once your invite has been accepted, you will be able to log in using SSO.</value>
   </data>
+  <data name="OrganizationUserAccessRevoked" xml:space="preserve">
+    <value>Your access to organization {0} has been revoked. Please contact your administrator for assistance.</value>
+  </data>
+  <data name="OrganizationUserUnknownStatus" xml:space="preserve">
+    <value>Your access to organization {0} is in an unknown state. Please contact your administrator for assistance.</value>
+  </data>
   <data name="UserAlreadyExistsInviteProcess" xml:space="preserve">
     <value>You were removed from the organization managing single sign-on for your account. Contact the organization administrator for help regaining access to your account.</value>
   </data>

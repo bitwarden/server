@@ -3,7 +3,6 @@ using System.Diagnostics;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Api.Billing.Queries.Organizations;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
@@ -28,7 +27,6 @@ public class OrganizationBillingController(
     ICurrentContext currentContext,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
-    IOrganizationWarningsQuery organizationWarningsQuery,
     IPaymentService paymentService,
     IPricingClient pricingClient,
     ISubscriberService subscriberService,
@@ -358,31 +356,6 @@ public class OrganizationBillingController(
 
         return TypedResults.Ok(providerId);
     }
-
-    [HttpGet("warnings")]
-    public async Task<IResult> GetWarningsAsync([FromRoute] Guid organizationId)
-    {
-        /*
-         * We'll keep these available at the User level, because we're hiding any pertinent information and
-         * we want to throw as few errors as possible since these are not core features.
-         */
-        if (!await currentContext.OrganizationUser(organizationId))
-        {
-            return Error.Unauthorized();
-        }
-
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
-
-        if (organization == null)
-        {
-            return Error.NotFound();
-        }
-
-        var response = await organizationWarningsQuery.Run(organization);
-
-        return TypedResults.Ok(response);
-    }
-
 
     [HttpPost("change-frequency")]
     [SelfHosted(NotSelfHostedOnly = true)]
