@@ -7,7 +7,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Licenses.Models;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 
 namespace Bit.Core.Billing.Licenses.Services.Implementations;
 
