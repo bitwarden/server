@@ -1,5 +1,6 @@
-CREATE OR ALTER PROCEDURE [dbo].[PolicyDetails_ReadByUserIdsPolicyType] @UserIds AS [dbo].[GuidIdArray] READONLY,
-                                                                        @PolicyType AS TINYINT
+CREATE OR ALTER PROCEDURE [dbo].[PolicyDetails_ReadByUserIdsPolicyType]
+    @UserIds AS [dbo].[GuidIdArray] READONLY,
+    @PolicyType AS TINYINT
 AS
 BEGIN
     SET NOCOUNT ON;
