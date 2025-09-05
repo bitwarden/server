@@ -217,7 +217,8 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                                 OrganizationUserStatus = ou.Status,
                                 OrganizationUserPermissionsData = ou.Permissions,
                                 UserId = ou.UserId ?? Guid.Empty,
-                                IsProvider = providerOrganizations.Any(po => po.UserId == ou.UserId)
+                                IsProvider = providerOrganizations.Any(po => po.UserId == ou.UserId
+                                                                             && po.OrganizationId == ou.OrganizationId)
                             };
 
         // Branch 2: Invited users matched by email
