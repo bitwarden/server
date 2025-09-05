@@ -9,19 +9,13 @@ const AUTH_USERNAME = __ENV.AUTH_USER_EMAIL;
 const AUTH_PASSWORD = __ENV.AUTH_USER_PASSWORD_HASH;
 
 export const options = {
-  ext: {
-    loadimpact: {
-      projectID: 3639465,
-      name: "Config",
-    },
-  },
   scenarios: {
     constant_load: {
       executor: "constant-arrival-rate",
       rate: 1,
       timeUnit: "1s", // 1 request / second
       duration: "10m",
-      preAllocatedVUs: 5,
+      maxVUs: 10,
     },
     ramping_load: {
       executor: "ramping-arrival-rate",
@@ -38,7 +32,7 @@ export const options = {
         { duration: "30s", target: 90 },
         { duration: "30s", target: 0 },
       ],
-      preAllocatedVUs: 40,
+      maxVUs: 300,
     },
   },
   thresholds: {

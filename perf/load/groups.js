@@ -10,19 +10,12 @@ const AUTH_CLIENT_ID = __ENV.AUTH_CLIENT_ID;
 const AUTH_CLIENT_SECRET = __ENV.AUTH_CLIENT_SECRET;
 
 export const options = {
-  ext: {
-    loadimpact: {
-      projectID: 3639465,
-      name: "Groups",
-    },
-  },
   scenarios: {
     constant_load: {
       executor: "constant-arrival-rate",
       rate: 30,
       timeUnit: "1m", // 0.5 requests / second
       duration: "10m",
-      preAllocatedVUs: 5,
     },
     ramping_load: {
       executor: "ramping-arrival-rate",
@@ -39,7 +32,6 @@ export const options = {
         { duration: "30s", target: 60 },
         { duration: "30s", target: 0 },
       ],
-      preAllocatedVUs: 20,
     },
   },
   thresholds: {
