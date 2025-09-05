@@ -5,6 +5,8 @@ namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 
 /// <summary>
 /// String constants for the Send Access user feature
+/// Most of these need to be synced with the `bitwarden-auth` crate in the SDK.
+/// There is snapshot testing to help ensure this.
 /// </summary>
 public static class SendAccessConstants
 {
@@ -41,7 +43,7 @@ public static class SendAccessConstants
         /// <summary>
         /// The sendId is missing from the request.
         /// </summary>
-        public const string MissingSendId = "send_id_required";
+        public const string SendIdRequired = "send_id_required";
         /// <summary>
         /// The sendId is invalid, does not match a known send.
         /// </summary>
