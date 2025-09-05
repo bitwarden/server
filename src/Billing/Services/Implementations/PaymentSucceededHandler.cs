@@ -1,7 +1,9 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -54,12 +56,17 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
     public async Task HandleAsync(Event parsedEvent)
     {
         var invoice = await _stripeEventService.GetInvoice(parsedEvent, true);
-        if (!invoice.Paid || invoice.BillingReason != "subscription_create")
+        if (invoice.Status != StripeConstants.InvoiceStatus.Paid || invoice.BillingReason != "subscription_create")
         {
             return;
         }
 
-        var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
+        if (invoice.Parent?.SubscriptionDetails == null)
+        {
+            return;
+        }
+
+        var subscription = await _stripeFacade.GetSubscription(invoice.Parent.SubscriptionDetails.SubscriptionId);
         if (subscription?.Status != StripeSubscriptionStatus.Active)
         {
             return;
@@ -121,7 +128,7 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
                 return;
             }
 
-            await _organizationEnableCommand.EnableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+            await _organizationEnableCommand.EnableAsync(organizationId.Value, subscription.GetCurrentPeriodEnd());
             await _pushNotificationService.PushSyncOrganizationStatusAsync(organization);
         }
         else if (userId.HasValue)
@@ -131,7 +138,7 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
                 return;
             }
 
-            await _userService.EnablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
+            await _userService.EnablePremiumAsync(userId.Value, subscription.GetCurrentPeriodEnd());
         }
     }
 }
