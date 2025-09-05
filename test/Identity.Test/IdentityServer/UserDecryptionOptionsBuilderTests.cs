@@ -4,8 +4,10 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Identity.IdentityServer;
+using Bit.Identity.Test.AutoFixture;
 using Bit.Identity.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -220,19 +222,28 @@ public class UserDecryptionOptionsBuilderTests
         Assert.False(result.TrustedDeviceOption?.HasLoginApprovingDevice);
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
     public async Task Build_WhenManageResetPasswordPermissions_ShouldReturnHasManageResetPasswordPermissionTrue(
+        OrganizationUserType organizationUserType,
         SsoConfig ssoConfig,
         SsoConfigurationData configurationData,
-        CurrentContextOrganization organization)
+        CurrentContextOrganization organization,
+        [OrganizationUserWithDefaultPermissions] OrganizationUser organizationUser,
+        User user)
     {
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
         ssoConfig.Data = configurationData.Serialize();
         ssoConfig.OrganizationId = organization.Id;
-        _currentContext.Organizations.Returns(new List<CurrentContextOrganization>(new CurrentContextOrganization[] { organization }));
-        _currentContext.ManageResetPassword(organization.Id).Returns(true);
+        _currentContext.Organizations.Returns([organization]);
+        organizationUser.Type = organizationUserType;
+        organizationUser.SetPermissions(new Permissions() { ManageResetPassword = true });
+        _organizationUserRepository.GetByOrganizationAsync(ssoConfig.OrganizationId, user.Id).Returns(organizationUser);
 
-        var result = await _builder.WithSso(ssoConfig).BuildAsync();
+        var result = await _builder.ForUser(user).WithSso(ssoConfig).BuildAsync();
 
         Assert.True(result.TrustedDeviceOption?.HasManageResetPasswordPermission);
     }
@@ -241,7 +252,7 @@ public class UserDecryptionOptionsBuilderTests
     public async Task Build_WhenIsOwnerInvite_ShouldReturnHasManageResetPasswordPermissionTrue(
         SsoConfig ssoConfig,
         SsoConfigurationData configurationData,
-        OrganizationUser organizationUser,
+        [OrganizationUserWithDefaultPermissions] OrganizationUser organizationUser,
         User user)
     {
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
@@ -258,7 +269,7 @@ public class UserDecryptionOptionsBuilderTests
     public async Task Build_WhenIsAdminInvite_ShouldReturnHasManageResetPasswordPermissionTrue(
         SsoConfig ssoConfig,
         SsoConfigurationData configurationData,
-        OrganizationUser organizationUser,
+        [OrganizationUserWithDefaultPermissions] OrganizationUser organizationUser,
         User user)
     {
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
@@ -275,7 +286,7 @@ public class UserDecryptionOptionsBuilderTests
     public async Task Build_WhenUserHasEnrolledIntoPasswordReset_ShouldReturnHasAdminApprovalTrue(
         SsoConfig ssoConfig,
         SsoConfigurationData configurationData,
-        OrganizationUser organizationUser,
+        [OrganizationUserWithDefaultPermissions] OrganizationUser organizationUser,
         User user)
     {
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
