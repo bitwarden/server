@@ -1,104 +1,88 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Billing.Caches;
+﻿using Bit.Core.Billing.Caches;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
+using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Braintree;
 using Microsoft.Extensions.Logging;
+using OneOf.Types;
 using Stripe;
 using Customer = Stripe.Customer;
 using Subscription = Stripe.Subscription;
 
-namespace Bit.Core.Billing.Services.Implementations;
+namespace Bit.Core.Billing.Premium.Commands;
 
 using static Utilities;
 
-public class PremiumUserBillingService(
+/// <summary>
+/// Creates a premium subscription for a cloud-hosted user with Stripe payment processing.
+/// Handles customer creation, payment method setup, and subscription creation.
+/// </summary>
+public interface ICreatePremiumCloudHostedSubscriptionCommand
+{
+    /// <summary>
+    /// Creates a premium cloud-hosted subscription for the specified user.
+    /// </summary>
+    /// <param name="user">The user to create the premium subscription for. Must not already be a premium user.</param>
+    /// <param name="paymentMethod">The tokenized payment method containing the payment type and token for billing.</param>
+    /// <param name="billingAddress">The billing address information required for tax calculation and customer creation.</param>
+    /// <param name="additionalStorageGb">Additional storage in GB beyond the base 1GB included with premium (must be >= 0).</param>
+    /// <returns>A billing command result indicating success or failure with appropriate error details.</returns>
+    Task<BillingCommandResult<None>> Run(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress,
+        short additionalStorageGb);
+}
+
+public class CreatePremiumCloudHostedSubscriptionCommand(
     IBraintreeGateway braintreeGateway,
     IGlobalSettings globalSettings,
-    ILogger<PremiumUserBillingService> logger,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
-    IUserRepository userRepository) : IPremiumUserBillingService
+    IUserService userService,
+    IPushNotificationService pushNotificationService,
+    ILogger<CreatePremiumCloudHostedSubscriptionCommand> logger)
+    : BaseBillingCommand<CreatePremiumCloudHostedSubscriptionCommand>(logger), ICreatePremiumCloudHostedSubscriptionCommand
 {
-    public async Task Credit(User user, decimal amount)
+    private static readonly List<string> _expand = ["tax"];
+    private readonly ILogger<CreatePremiumCloudHostedSubscriptionCommand> _logger = logger;
+
+    public Task<BillingCommandResult<None>> Run(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress,
+        short additionalStorageGb) => HandleAsync<None>(async () =>
     {
-        var customer = await subscriberService.GetCustomer(user);
-
-        // Negative credit represents a balance, and all Stripe denomination is in cents.
-        var credit = (long)(amount * -100);
-
-        if (customer == null)
+        if (user.Premium)
         {
-            var options = new CustomerCreateOptions
-            {
-                Balance = credit,
-                Description = user.Name,
-                Email = user.Email,
-                InvoiceSettings = new CustomerInvoiceSettingsOptions
-                {
-                    CustomFields =
-                    [
-                        new CustomerInvoiceSettingsCustomFieldOptions
-                        {
-                            Name = user.SubscriberType(),
-                            Value = user.SubscriberName().Length <= 30
-                                ? user.SubscriberName()
-                                : user.SubscriberName()[..30]
-                        }
-                    ]
-                },
-                Metadata = new Dictionary<string, string>
-                {
-                    ["region"] = globalSettings.BaseServiceUri.CloudRegion,
-                    ["userId"] = user.Id.ToString()
-                }
-            };
-
-            customer = await stripeAdapter.CustomerCreateAsync(options);
-
-            user.Gateway = GatewayType.Stripe;
-            user.GatewayCustomerId = customer.Id;
-            await userRepository.ReplaceAsync(user);
+            return new BadRequest("Already a premium user.");
         }
-        else
+
+        if (additionalStorageGb < 0)
         {
-            var options = new CustomerUpdateOptions
-            {
-                Balance = customer.Balance + credit
-            };
-
-            await stripeAdapter.CustomerUpdateAsync(customer.Id, options);
+            return new BadRequest("Additional storage must be greater than 0.");
         }
-    }
 
-    public async Task Finalize(PremiumUserSale sale)
-    {
-        var (user, customerSetup, storage) = sale;
-
-        List<string> expand = ["tax"];
+        var customerSetup = CustomerSetup.From(paymentMethod, billingAddress);
 
         var customer = string.IsNullOrEmpty(user.GatewayCustomerId)
             ? await CreateCustomerAsync(user, customerSetup)
-            : await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = expand });
+            : await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = _expand });
 
-        /*
-         * If the customer was previously set up with credit, which does not require a billing location,
-         * we need to update the customer on the fly before we start the subscription.
-         */
-        customer = await ReconcileBillingLocationAsync(customer, customerSetup.TaxInformation);
+        customer = await ReconcileBillingLocationAsync(customer, customerSetup.TaxInformation!);
 
-        var subscription = await CreateSubscriptionAsync(user.Id, customer, storage);
+        var subscription = await CreateSubscriptionAsync(user.Id, customer, additionalStorageGb > 0 ? additionalStorageGb : null);
 
         switch (customerSetup.TokenizedPaymentSource)
         {
@@ -116,35 +100,17 @@ public class PremiumUserBillingService(
         user.Gateway = GatewayType.Stripe;
         user.GatewayCustomerId = customer.Id;
         user.GatewaySubscriptionId = subscription.Id;
+        user.MaxStorageGb = (short)(1 + additionalStorageGb);
+        user.LicenseKey = CoreHelpers.SecureRandomString(20);
+        user.RevisionDate = DateTime.UtcNow;
 
-        await userRepository.ReplaceAsync(user);
-    }
+        await userService.SaveUserAsync(user);
+        await pushNotificationService.PushSyncVaultAsync(user.Id);
 
-    public async Task UpdatePaymentMethod(
-        User user,
-        TokenizedPaymentSource tokenizedPaymentSource,
-        TaxInformation taxInformation)
-    {
-        if (string.IsNullOrEmpty(user.GatewayCustomerId))
-        {
-            var customer = await CreateCustomerAsync(user,
-                new CustomerSetup { TokenizedPaymentSource = tokenizedPaymentSource, TaxInformation = taxInformation });
+        return new None();
+    });
 
-            user.Gateway = GatewayType.Stripe;
-            user.GatewayCustomerId = customer.Id;
-
-            await userRepository.ReplaceAsync(user);
-        }
-        else
-        {
-            await subscriberService.UpdatePaymentSource(user, tokenizedPaymentSource);
-            await subscriberService.UpdateTaxInformation(user, taxInformation);
-        }
-    }
-
-    private async Task<Customer> CreateCustomerAsync(
-        User user,
-        CustomerSetup customerSetup)
+    private async Task<Customer> CreateCustomerAsync(User user, CustomerSetup customerSetup)
     {
         /*
          * Creating a Customer via the adding of a payment method or the purchasing of a subscription requires
@@ -157,22 +123,17 @@ public class PremiumUserBillingService(
                 Token: not null and not ""
             })
         {
-            logger.LogError(
-                "Cannot create customer for user ({UserID}) without a valid payment source", user.Id);
-
+            _logger.LogError("Cannot create customer for user ({UserID}) without a valid payment source", user.Id);
             throw new BillingException();
         }
 
         if (customerSetup.TaxInformation is not { Country: not null and not "", PostalCode: not null and not "" })
         {
-            logger.LogError(
-                "Cannot create customer for user ({UserID}) without valid tax information", user.Id);
-
+            _logger.LogError("Cannot create customer for user ({UserID}) without valid tax information", user.Id);
             throw new BillingException();
         }
 
         var subscriberName = user.SubscriberName();
-
         var customerCreateOptions = new CustomerCreateOptions
         {
             Address = new AddressOptions
@@ -186,7 +147,7 @@ public class PremiumUserBillingService(
             },
             Description = user.Name,
             Email = user.Email,
-            Expand = ["tax"],
+            Expand = _expand,
             InvoiceSettings = new CustomerInvoiceSettingsOptions
             {
                 CustomFields =
@@ -202,8 +163,8 @@ public class PremiumUserBillingService(
             },
             Metadata = new Dictionary<string, string>
             {
-                ["region"] = globalSettings.BaseServiceUri.CloudRegion,
-                ["userId"] = user.Id.ToString()
+                [StripeConstants.MetadataKeys.Region] = globalSettings.BaseServiceUri.CloudRegion,
+                [StripeConstants.MetadataKeys.UserId] = user.Id.ToString()
             },
             Tax = new CustomerTaxOptions
             {
@@ -212,7 +173,6 @@ public class PremiumUserBillingService(
         };
 
         var (paymentMethodType, paymentMethodToken) = customerSetup.TokenizedPaymentSource;
-
         var braintreeCustomerId = "";
 
         // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
@@ -226,7 +186,7 @@ public class PremiumUserBillingService(
 
                     if (setupIntent == null)
                     {
-                        logger.LogError("Cannot create customer for user ({UserID}) without a setup intent for their bank account", user.Id);
+                        _logger.LogError("Cannot create customer for user ({UserID}) without a setup intent for their bank account", user.Id);
                         throw new BillingException();
                     }
 
@@ -247,7 +207,7 @@ public class PremiumUserBillingService(
                 }
             default:
                 {
-                    logger.LogError("Cannot create customer for user ({UserID}) using payment method type ({PaymentMethodType}) as it is not supported", user.Id, paymentMethodType.ToString());
+                    _logger.LogError("Cannot create customer for user ({UserID}) using payment method type ({PaymentMethodType}) as it is not supported", user.Id, paymentMethodType.ToString());
                     throw new BillingException();
                 }
         }
@@ -295,6 +255,39 @@ public class PremiumUserBillingService(
         }
     }
 
+    private async Task<Customer> ReconcileBillingLocationAsync(
+        Customer customer,
+        TaxInformation taxInformation)
+    {
+        /*
+         * If the customer was previously set up with credit, which does not require a billing location,
+         * we need to update the customer on the fly before we start the subscription.
+         */
+        if (customer is { Address: { Country: not null and not "", PostalCode: not null and not "" } })
+        {
+            return customer;
+        }
+
+        var options = new CustomerUpdateOptions
+        {
+            Address = new AddressOptions
+            {
+                Line1 = taxInformation.Line1,
+                Line2 = taxInformation.Line2,
+                City = taxInformation.City,
+                PostalCode = taxInformation.PostalCode,
+                State = taxInformation.State,
+                Country = taxInformation.Country
+            },
+            Expand = _expand,
+            Tax = new CustomerTaxOptions
+            {
+                ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
+            }
+        };
+        return await stripeAdapter.CustomerUpdateAsync(customer.Id, options);
+    }
+
     private async Task<Subscription> CreateSubscriptionAsync(
         Guid userId,
         Customer customer,
@@ -331,7 +324,7 @@ public class PremiumUserBillingService(
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
-                ["userId"] = userId.ToString()
+                [StripeConstants.MetadataKeys.UserId] = userId.ToString()
             },
             PaymentBehavior = usingPayPal
                 ? StripeConstants.PaymentBehavior.DefaultIncomplete
@@ -350,35 +343,5 @@ public class PremiumUserBillingService(
         }
 
         return subscription;
-    }
-
-    private async Task<Customer> ReconcileBillingLocationAsync(
-        Customer customer,
-        TaxInformation taxInformation)
-    {
-        if (customer is { Address: { Country: not null and not "", PostalCode: not null and not "" } })
-        {
-            return customer;
-        }
-
-        var options = new CustomerUpdateOptions
-        {
-            Address = new AddressOptions
-            {
-                Line1 = taxInformation.Line1,
-                Line2 = taxInformation.Line2,
-                City = taxInformation.City,
-                PostalCode = taxInformation.PostalCode,
-                State = taxInformation.State,
-                Country = taxInformation.Country
-            },
-            Expand = ["tax"],
-            Tax = new CustomerTaxOptions
-            {
-                ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
-            }
-        };
-
-        return await stripeAdapter.CustomerUpdateAsync(customer.Id, options);
     }
 }

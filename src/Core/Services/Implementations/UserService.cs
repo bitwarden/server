@@ -44,8 +44,6 @@ namespace Bit.Core.Services;
 
 public class UserService : UserManager<User>, IUserService
 {
-    private const string PremiumPlanId = "premium-annually";
-
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
@@ -930,7 +928,7 @@ public class UserService : UserManager<User>, IUserService
 
         if (_globalSettings.SelfHosted)
         {
-            user.MaxStorageGb = 10240; // 10 TB
+            user.MaxStorageGb = Constants.SelfHostedMaxStorageGb;
             user.LicenseKey = license.LicenseKey;
             user.PremiumExpirationDate = license.Expires;
         }
@@ -989,7 +987,7 @@ public class UserService : UserManager<User>, IUserService
 
         user.Premium = license.Premium;
         user.RevisionDate = DateTime.UtcNow;
-        user.MaxStorageGb = _globalSettings.SelfHosted ? 10240 : license.MaxStorageGb; // 10 TB
+        user.MaxStorageGb = _globalSettings.SelfHosted ? Constants.SelfHostedMaxStorageGb : license.MaxStorageGb;
         user.LicenseKey = license.LicenseKey;
         user.PremiumExpirationDate = license.Expires;
         await SaveUserAsync(user);

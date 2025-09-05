@@ -389,4 +389,12 @@ public class LicensingService : ILicensingService
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
     }
+
+    public async Task WriteUserLicenseAsync(User user, UserLicense license)
+    {
+        var dir = $"{_globalSettings.LicenseDirectory}/user";
+        Directory.CreateDirectory(dir);
+        await using var fs = File.OpenWrite(Path.Combine(dir, $"{user.Id}.json"));
+        await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
+    }
 }
