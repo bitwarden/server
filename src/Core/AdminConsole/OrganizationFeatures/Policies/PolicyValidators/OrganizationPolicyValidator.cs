@@ -6,7 +6,12 @@ using Bit.Core.AdminConsole.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public abstract class OrganizationPolicyValidator(IPolicyRepository policyRepository, IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories) : IPolicyValidator
+
+/// <summary>
+/// Please do not use this validator. We're currently in the process of refactoring our policy validator pattern.
+/// This is a stop-gap solution for post-policy-save side effects, but it is not the long-term solution.
+/// </summary>
+public abstract class OrganizationPolicyValidator(IPolicyRepository policyRepository, IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
 {
     public abstract PolicyType Type { get; }
 
