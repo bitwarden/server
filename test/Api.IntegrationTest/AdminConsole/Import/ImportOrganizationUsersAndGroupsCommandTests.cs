@@ -25,12 +25,6 @@ public class ImportOrganizationUsersAndGroupsCommandTests : IClassFixture<ApiApp
     public ImportOrganizationUsersAndGroupsCommandTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.SubstituteService((IFeatureService featureService)
-            =>
-        {
-            featureService.IsEnabled(FeatureFlagKeys.DirectoryConnectorPreventUserRemoval)
-                .Returns(true);
-        });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
