@@ -177,7 +177,7 @@ public class CollectionsControllerTests
             .GetManySharedCollectionsByOrganizationIdAsync(organization.Id)
             .Returns(collections);
 
-        var response = await sutProvider.Sut.Get(organization.Id);
+        var response = await sutProvider.Sut.GetAll(organization.Id);
 
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManySharedCollectionsByOrganizationIdAsync(organization.Id);
 
@@ -219,7 +219,7 @@ public class CollectionsControllerTests
             .GetManyByUserIdAsync(userId)
             .Returns(collections);
 
-        var result = await sutProvider.Sut.Get(organization.Id);
+        var result = await sutProvider.Sut.GetAll(organization.Id);
 
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().GetManyByOrganizationIdAsync(organization.Id);
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId);

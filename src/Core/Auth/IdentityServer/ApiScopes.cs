@@ -1,6 +1,6 @@
 ﻿using Duende.IdentityServer.Models;
 
-namespace Bit.Core.IdentityServer;
+namespace Bit.Core.Auth.IdentityServer;
 
 public static class ApiScopes
 {
