@@ -28,12 +28,12 @@ public abstract class EventLoggingListenerService : BackgroundService
             if (root.ValueKind == JsonValueKind.Array)
             {
                 var eventMessages = root.Deserialize<IEnumerable<EventMessage>>();
-                await _handler.HandleManyEventsAsync(eventMessages);
+                await _handler.HandleManyEventsAsync(eventMessages ?? throw new JsonException("Deserialize returned null"));
             }
             else if (root.ValueKind == JsonValueKind.Object)
             {
                 var eventMessage = root.Deserialize<EventMessage>();
-                await _handler.HandleEventAsync(eventMessage);
+                await _handler.HandleEventAsync(eventMessage ?? throw new JsonException("Deserialize returned null"));
             }
             else
             {
