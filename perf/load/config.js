@@ -33,7 +33,6 @@ export const options = {
         { duration: "30s", target: 90 },
         { duration: "30s", target: 0 },
       ],
-      preAllocatedVUs: 40,
       maxVUs: 300,
     },
   },
