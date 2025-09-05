@@ -4,8 +4,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
 
-#nullable enable
-
 namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 
 public class OrganizationIntegrationRequestModel : IValidatableObject
