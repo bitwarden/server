@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Text;
+﻿using System.Text;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 
 namespace Bit.Core.Services;
