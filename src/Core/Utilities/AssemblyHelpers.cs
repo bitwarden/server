@@ -1,46 +1,34 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
+﻿using System.Diagnostics;
 using System.Reflection;
 
 namespace Bit.Core.Utilities;
 
 public static class AssemblyHelpers
 {
-    private static readonly IEnumerable<AssemblyMetadataAttribute> _assemblyMetadataAttributes;
-    private static readonly AssemblyInformationalVersionAttribute _assemblyInformationalVersionAttributes;
-    private const string GIT_HASH_ASSEMBLY_KEY = "GitHash";
     private static string _version;
     private static string _gitHash;
 
     static AssemblyHelpers()
     {
-        _assemblyMetadataAttributes = Assembly.GetEntryAssembly().GetCustomAttributes<AssemblyMetadataAttribute>();
-        _assemblyInformationalVersionAttributes = Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        var entryAssembly = Assembly.GetEntryAssembly();
+        Debug.Assert(entryAssembly is not null);
+        var assemblyInformationalVersionAttribute = entryAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        Debug.Assert(assemblyInformationalVersionAttribute is not null);
+
+        var success = assemblyInformationalVersionAttribute.InformationalVersion.AsSpan().TrySplitBy('+', out var version, out var gitHash);
+        Debug.Assert(success);
+
+        _version = version.ToString();
+        _gitHash = gitHash[..8].ToString();
     }
 
     public static string GetVersion()
     {
-        if (string.IsNullOrWhiteSpace(_version))
-        {
-            _version = _assemblyInformationalVersionAttributes.InformationalVersion;
-        }
-
         return _version;
     }
 
     public static string GetGitHash()
     {
-        if (string.IsNullOrWhiteSpace(_gitHash))
-        {
-            try
-            {
-                _gitHash = _assemblyMetadataAttributes.Where(i => i.Key == GIT_HASH_ASSEMBLY_KEY).First().Value;
-            }
-            catch (Exception)
-            { }
-        }
-
         return _gitHash;
     }
 }
