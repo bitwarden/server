@@ -66,12 +66,15 @@ public class OrganizationContext(
         var userId = userService.GetProperUserId(user);
         if (!userId.HasValue)
         {
-            throw new Exception(NoUserIdError);
+            throw new InvalidOperationException(NoUserIdError);
         }
 
         if (!_providerUserOrganizationsCache.TryGetValue(userId.Value, out var providerUserOrganizations))
         {
-            providerUserOrganizations = (await providerUserRepository.GetManyOrganizationDetailsByUserAsync(userId.Value, ProviderUserStatusType.Confirmed)).ToList();
+            providerUserOrganizations =
+                await providerUserRepository.GetManyOrganizationDetailsByUserAsync(userId.Value,
+                    ProviderUserStatusType.Confirmed);
+            providerUserOrganizations = providerUserOrganizations.ToList();
             _providerUserOrganizationsCache[userId.Value] = providerUserOrganizations;
         }
 
