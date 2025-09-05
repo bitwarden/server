@@ -10,9 +10,7 @@ public static class AssemblyHelpers
 
     static AssemblyHelpers()
     {
-        var entryAssembly = Assembly.GetEntryAssembly();
-        Debug.Assert(entryAssembly is not null);
-        var assemblyInformationalVersionAttribute = entryAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        var assemblyInformationalVersionAttribute = typeof(AssemblyHelpers).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
         Debug.Assert(assemblyInformationalVersionAttribute is not null);
 
         var success = assemblyInformationalVersionAttribute.InformationalVersion.AsSpan().TrySplitBy('+', out var version, out var gitHash);
