@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Data.Common;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
@@ -94,31 +95,60 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     public async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId)
     {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var result = await connection.ExecuteScalarAsync<int>(
-                "[dbo].[OrganizationUser_ReadOccupiedSmSeatCountByOrganizationId]",
-                new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+        await using var connection = new SqlConnection(ConnectionString);
 
-            return result;
-        }
+        return await GetOccupiedSmSeatCountByOrganizationIdAsync(organizationId, connection);
     }
+
+    public async Task<int> GetOccupiedSmSeatCountByOrganizationIdInTransactionAsync(Guid organizationId,
+        DbTransaction transaction)
+    {
+        var connection = transaction.Connection;
+
+        if (connection is null) throw new InvalidOperationException("Transaction connection is null");
+
+        return await GetOccupiedSmSeatCountByOrganizationIdAsync(organizationId, connection);
+    }
+
+    private static async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId, DbConnection connection) =>
+        await connection.ExecuteScalarAsync<int>(
+            "[dbo].[OrganizationUser_ReadOccupiedSmSeatCountByOrganizationId]",
+            new { OrganizationId = organizationId },
+            commandType: CommandType.StoredProcedure);
 
     public async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
         bool onlyRegisteredUsers)
     {
-        var emailsTvp = emails.ToArrayTVP("Email");
-        using (var connection = new SqlConnection(_marsConnectionString))
-        {
-            var result = await connection.QueryAsync<string>(
-                "[dbo].[OrganizationUser_SelectKnownEmails]",
-                new { OrganizationId = organizationId, Emails = emailsTvp, OnlyUsers = onlyRegisteredUsers },
-                commandType: CommandType.StoredProcedure);
+        await using var connection = new SqlConnection(_marsConnectionString);
+        return await SelectKnownEmailsAsync(organizationId, emails, onlyRegisteredUsers, connection);
+    }
 
-            // Return as a list to avoid timing out the sql connection
-            return result.ToList();
-        }
+    public async Task<ICollection<string>> SelectKnownEmailsInTransactionAsync(Guid organizationId,
+        IEnumerable<string> emails,
+        bool onlyRegisteredUsers,
+        DbTransaction transaction)
+    {
+        var connection = transaction.Connection;
+
+        if (connection == null) throw new InvalidOperationException("Transaction connection is null");
+
+        return await SelectKnownEmailsAsync(organizationId, emails, onlyRegisteredUsers, connection);
+    }
+
+    private static async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId,
+        IEnumerable<string> emails,
+        bool onlyRegisteredUsers,
+        DbConnection connection)
+    {
+        var emailsTvp = emails.ToArrayTVP("Email");
+
+        var result = await connection.QueryAsync<string>(
+            "[dbo].[OrganizationUser_SelectKnownEmails]",
+            new { OrganizationId = organizationId, Emails = emailsTvp, OnlyUsers = onlyRegisteredUsers },
+            commandType: CommandType.StoredProcedure);
+
+        // Return as a list to avoid timing out the sql connection
+        return result.ToList();
     }
 
     public async Task<OrganizationUser?> GetByOrganizationAsync(Guid organizationId, Guid userId)
@@ -268,66 +298,87 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationInTransactionAsync(
+        Guid organizationId,
+        DbTransaction transaction,
+        bool includeGroups = false,
+        bool includeCollections = false)
+    {
+        await using var connection = transaction.Connection;
+
+        if (connection == null) throw new InvalidOperationException("Transaction connection is null");
+
+        return await GetManyDetailsByOrganizationAsync(connection, organizationId, includeGroups, includeCollections);
+    }
+
     public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups, bool includeCollections)
     {
-        using (var connection = new SqlConnection(ConnectionString))
+        await using var connection = new SqlConnection(ConnectionString);
+
+        return await GetManyDetailsByOrganizationAsync(connection, organizationId, includeGroups, includeCollections);
+    }
+
+    private static async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(
+        DbConnection connection,
+        Guid organizationId,
+        bool includeGroups,
+        bool includeCollections)
+    {
+        // Use a single call that returns multiple result sets
+        var results = await connection.QueryMultipleAsync(
+            "[dbo].[OrganizationUserUserDetails_ReadByOrganizationId_V2]",
+            new
+            {
+                OrganizationId = organizationId,
+                IncludeGroups = includeGroups,
+                IncludeCollections = includeCollections
+            },
+            commandType: CommandType.StoredProcedure);
+
+        // Read the user details (first result set)
+        var users = (await results.ReadAsync<OrganizationUserUserDetails>()).ToList();
+
+        // Read group associations (second result set, if requested)
+        Dictionary<Guid, List<Guid>>? userGroupMap = null;
+        if (includeGroups)
         {
-            // Use a single call that returns multiple result sets
-            var results = await connection.QueryMultipleAsync(
-                "[dbo].[OrganizationUserUserDetails_ReadByOrganizationId_V2]",
-                new
-                {
-                    OrganizationId = organizationId,
-                    IncludeGroups = includeGroups,
-                    IncludeCollections = includeCollections
-                },
-                commandType: CommandType.StoredProcedure);
-
-            // Read the user details (first result set)
-            var users = (await results.ReadAsync<OrganizationUserUserDetails>()).ToList();
-
-            // Read group associations (second result set, if requested)
-            Dictionary<Guid, List<Guid>>? userGroupMap = null;
-            if (includeGroups)
-            {
-                var groupUsers = await results.ReadAsync<GroupUser>();
-                userGroupMap = groupUsers
-                    .GroupBy(gu => gu.OrganizationUserId)
-                    .ToDictionary(g => g.Key, g => g.Select(gu => gu.GroupId).ToList());
-            }
-
-            // Read collection associations (third result set, if requested)
-            Dictionary<Guid, List<CollectionAccessSelection>>? userCollectionMap = null;
-            if (includeCollections)
-            {
-                var collectionUsers = await results.ReadAsync<CollectionUser>();
-                userCollectionMap = collectionUsers
-                    .GroupBy(cu => cu.OrganizationUserId)
-                    .ToDictionary(g => g.Key, g => g.Select(cu => new CollectionAccessSelection
-                    {
-                        Id = cu.CollectionId,
-                        ReadOnly = cu.ReadOnly,
-                        HidePasswords = cu.HidePasswords,
-                        Manage = cu.Manage
-                    }).ToList());
-            }
-
-            // Map the associations to users
-            foreach (var user in users)
-            {
-                if (userGroupMap != null)
-                {
-                    user.Groups = userGroupMap.GetValueOrDefault(user.Id, new List<Guid>());
-                }
-
-                if (userCollectionMap != null)
-                {
-                    user.Collections = userCollectionMap.GetValueOrDefault(user.Id, new List<CollectionAccessSelection>());
-                }
-            }
-
-            return users;
+            var groupUsers = await results.ReadAsync<GroupUser>();
+            userGroupMap = groupUsers
+                .GroupBy(gu => gu.OrganizationUserId)
+                .ToDictionary(g => g.Key, g => g.Select(gu => gu.GroupId).ToList());
         }
+
+        // Read collection associations (third result set, if requested)
+        Dictionary<Guid, List<CollectionAccessSelection>>? userCollectionMap = null;
+        if (includeCollections)
+        {
+            var collectionUsers = await results.ReadAsync<CollectionUser>();
+            userCollectionMap = collectionUsers
+                .GroupBy(cu => cu.OrganizationUserId)
+                .ToDictionary(g => g.Key, g => g.Select(cu => new CollectionAccessSelection
+                {
+                    Id = cu.CollectionId,
+                    ReadOnly = cu.ReadOnly,
+                    HidePasswords = cu.HidePasswords,
+                    Manage = cu.Manage
+                }).ToList());
+        }
+
+        // Map the associations to users
+        foreach (var user in users)
+        {
+            if (userGroupMap != null)
+            {
+                user.Groups = userGroupMap.GetValueOrDefault(user.Id, new List<Guid>());
+            }
+
+            if (userCollectionMap != null)
+            {
+                user.Collections = userCollectionMap.GetValueOrDefault(user.Id, new List<CollectionAccessSelection>());
+            }
+        }
+
+        return users;
     }
 
     public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
