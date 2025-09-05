@@ -15,11 +15,12 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
 {
     public Task<List<Claim>> GenerateClaims(Organization entity, LicenseContext licenseContext)
     {
+        var issued = DateTime.UtcNow;
         var subscriptionInfo = licenseContext.SubscriptionInfo;
-        var expires = entity.CalculateFreshExpirationDate(subscriptionInfo);
-        var refresh = entity.CalculateFreshRefreshDate(subscriptionInfo, expires);
-        var expirationWithoutGracePeriod = entity.CalculateFreshExpirationDateWithoutGracePeriod(subscriptionInfo, expires);
-        var trial = IsTrialing(entity, subscriptionInfo);
+        var expires = entity.CalculateFreshExpirationDate(subscriptionInfo, issued);
+        var refresh = entity.CalculateFreshRefreshDate(subscriptionInfo, issued);
+        var expirationWithoutGracePeriod = entity.CalculateFreshExpirationDateWithoutGracePeriod(subscriptionInfo);
+        var trial = entity.CalculateIsTrialing(subscriptionInfo);
 
         var claims = new List<Claim>
         {
@@ -50,10 +51,10 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
                 (entity.LimitCollectionCreation || entity.LimitCollectionDeletion).ToString()),
             new(nameof(OrganizationLicenseConstants.AllowAdminAccessToAllCollectionItems), entity.AllowAdminAccessToAllCollectionItems.ToString()),
             new(nameof(OrganizationLicenseConstants.UseRiskInsights), entity.UseRiskInsights.ToString()),
-            new(nameof(OrganizationLicenseConstants.Issued), DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
+            new(nameof(OrganizationLicenseConstants.Issued), issued.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.Expires), expires.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.Refresh), refresh.ToString(CultureInfo.InvariantCulture)),
-            new(nameof(OrganizationLicenseConstants.ExpirationWithoutGracePeriod), expirationWithoutGracePeriod.ToString(CultureInfo.InvariantCulture)),
+            new(nameof(OrganizationLicenseConstants.ExpirationWithoutGracePeriod), expirationWithoutGracePeriod?.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.Trial), trial.ToString()),
             new(nameof(OrganizationLicenseConstants.UseAdminSponsoredFamilies), entity.UseAdminSponsoredFamilies.ToString()),
             new(nameof(OrganizationLicenseConstants.UseOrganizationDomains), entity.UseOrganizationDomains.ToString()),
@@ -117,9 +118,4 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
 
         return Task.FromResult(claims);
     }
-
-    private static bool IsTrialing(Organization org, SubscriptionInfo subscriptionInfo) =>
-        subscriptionInfo?.Subscription is null
-            ? !org.ExpirationDate.HasValue
-            : subscriptionInfo.Subscription.TrialEndDate > DateTime.UtcNow;
 }
