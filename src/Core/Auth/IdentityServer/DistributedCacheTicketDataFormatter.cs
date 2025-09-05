@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
 
-namespace Bit.Core.IdentityServer;
+namespace Bit.Core.Auth.IdentityServer;
 
 public class DistributedCacheTicketDataFormatter : ISecureDataFormat<AuthenticationTicket>
 {
