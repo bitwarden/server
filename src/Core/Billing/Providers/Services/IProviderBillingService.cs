@@ -7,7 +7,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Models;
-using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Models.Business;
 using Stripe;
 
@@ -100,17 +99,6 @@ public interface IProviderBillingService
     /// <remarks>This method requires the <paramref name="provider"/> to already have a linked Stripe <see cref="Stripe.Customer"/> via its <see cref="Provider.GatewayCustomerId"/> field.</remarks>
     Task<Subscription> SetupSubscription(
         Provider provider);
-
-    /// <summary>
-    /// Updates the <paramref name="provider"/>'s payment source and tax information and then sets their subscription's collection_method to be "charge_automatically".
-    /// </summary>
-    /// <param name="provider">The <paramref name="provider"/> to update the payment source and tax information for.</param>
-    /// <param name="tokenizedPaymentSource">The tokenized payment source (ex. Credit Card) to attach to the <paramref name="provider"/>.</param>
-    /// <param name="taxInformation">The <paramref name="provider"/>'s updated tax information.</param>
-    Task UpdatePaymentMethod(
-        Provider provider,
-        TokenizedPaymentSource tokenizedPaymentSource,
-        TaxInformation taxInformation);
 
     Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command);
 }

@@ -20,7 +20,6 @@ using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -753,19 +752,6 @@ public class ProviderBillingService(
         {
             throw new BadRequestException("Your location wasn't recognized. Please ensure your country and postal code are valid.");
         }
-    }
-
-    public async Task UpdatePaymentMethod(
-        Provider provider,
-        TokenizedPaymentSource tokenizedPaymentSource,
-        TaxInformation taxInformation)
-    {
-        await Task.WhenAll(
-            subscriberService.UpdatePaymentSource(provider, tokenizedPaymentSource),
-            subscriberService.UpdateTaxInformation(provider, taxInformation));
-
-        await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
-            new SubscriptionUpdateOptions { CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically });
     }
 
     public async Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command)

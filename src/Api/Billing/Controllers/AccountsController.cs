@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Api.Models.Request;
+﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
@@ -97,29 +96,6 @@ public class AccountsController(
         }
     }
 
-    [HttpPost("payment")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostPaymentAsync([FromBody] PaymentRequestModel model)
-    {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        await userService.ReplacePaymentMethodAsync(user, model.PaymentToken, model.PaymentMethodType!.Value,
-            new TaxInfo
-            {
-                BillingAddressLine1 = model.Line1,
-                BillingAddressLine2 = model.Line2,
-                BillingAddressCity = model.City,
-                BillingAddressState = model.State,
-                BillingAddressCountry = model.Country,
-                BillingAddressPostalCode = model.PostalCode,
-                TaxIdNumber = model.TaxId
-            });
-    }
-
     [HttpPost("storage")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<PaymentResponseModel> PostStorageAsync([FromBody] StorageRequestModel model)
@@ -133,8 +109,6 @@ public class AccountsController(
         var result = await userService.AdjustStorageAsync(user, model.StorageGbAdjustment!.Value);
         return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
     }
-
-
 
     [HttpPost("license")]
     [SelfHosted(SelfHostedOnly = true)]
@@ -183,41 +157,6 @@ public class AccountsController(
         }
 
         await userService.ReinstatePremiumAsync(user);
-    }
-
-    [HttpGet("tax")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<TaxInfoResponseModel> GetTaxInfoAsync(
-        [FromServices] IPaymentService paymentService)
-    {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var taxInfo = await paymentService.GetTaxInfoAsync(user);
-        return new TaxInfoResponseModel(taxInfo);
-    }
-
-    [HttpPut("tax")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PutTaxInfoAsync(
-        [FromBody] TaxInfoUpdateRequestModel model,
-        [FromServices] IPaymentService paymentService)
-    {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var taxInfo = new TaxInfo
-        {
-            BillingAddressPostalCode = model.PostalCode,
-            BillingAddressCountry = model.Country,
-        };
-        await paymentService.SaveTaxInfoAsync(user, taxInfo);
     }
 
     private async Task<IEnumerable<Guid>> GetOrganizationIdsClaimingUserAsync(Guid userId)
