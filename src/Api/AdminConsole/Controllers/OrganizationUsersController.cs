@@ -167,7 +167,7 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
+    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> GetAll(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
         var request = new OrganizationUserUserDetailsQueryRequest
         {
@@ -360,7 +360,6 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpPut("{id}")]
-    [HttpPost("{id}")]
     [Authorize<ManageUsersRequirement>]
     public async Task Put(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
     {
@@ -436,6 +435,14 @@ public class OrganizationUsersController : Controller
             collectionsToSave, groupsToSave);
     }
 
+    [HttpPost("{id}")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task PostPut(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
+    {
+        await Put(orgId, id, model);
+    }
+
     [HttpPut("{userId}/reset-password-enrollment")]
     public async Task PutResetPasswordEnrollment(Guid orgId, Guid userId, [FromBody] OrganizationUserResetPasswordEnrollmentRequestModel model)
     {
@@ -492,7 +499,6 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpDelete("{id}")]
-    [HttpPost("{id}/remove")]
     [Authorize<ManageUsersRequirement>]
     public async Task Remove(Guid orgId, Guid id)
     {
@@ -500,8 +506,15 @@ public class OrganizationUsersController : Controller
         await _removeOrganizationUserCommand.RemoveUserAsync(orgId, id, userId.Value);
     }
 
+    [HttpPost("{id}/remove")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task PostRemove(Guid orgId, Guid id)
+    {
+        await Remove(orgId, id);
+    }
+
     [HttpDelete("")]
-    [HttpPost("remove")]
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRemove(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
@@ -511,8 +524,15 @@ public class OrganizationUsersController : Controller
             new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.ErrorMessage)));
     }
 
+    [HttpPost("remove")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> PostBulkRemove(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    {
+        return await BulkRemove(orgId, model);
+    }
+
     [HttpDelete("{id}/delete-account")]
-    [HttpPost("{id}/delete-account")]
     [Authorize<ManageUsersRequirement>]
     public async Task DeleteAccount(Guid orgId, Guid id)
     {
@@ -525,8 +545,15 @@ public class OrganizationUsersController : Controller
         await _deleteClaimedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
     }
 
+    [HttpPost("{id}/delete-account")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task PostDeleteAccount(Guid orgId, Guid id)
+    {
+        await DeleteAccount(orgId, id);
+    }
+
     [HttpDelete("delete-account")]
-    [HttpPost("delete-account")]
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccount(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
@@ -542,7 +569,14 @@ public class OrganizationUsersController : Controller
             new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.ErrorMessage)));
     }
 
-    [HttpPatch("{id}/revoke")]
+    [HttpPost("delete-account")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> PostBulkDeleteAccount(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    {
+        return await BulkDeleteAccount(orgId, model);
+    }
+
     [HttpPut("{id}/revoke")]
     [Authorize<ManageUsersRequirement>]
     public async Task RevokeAsync(Guid orgId, Guid id)
@@ -550,7 +584,14 @@ public class OrganizationUsersController : Controller
         await RestoreOrRevokeUserAsync(orgId, id, _revokeOrganizationUserCommand.RevokeUserAsync);
     }
 
-    [HttpPatch("revoke")]
+    [HttpPatch("{id}/revoke")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task PatchRevokeAsync(Guid orgId, Guid id)
+    {
+        await RevokeAsync(orgId, id);
+    }
+
     [HttpPut("revoke")]
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRevokeAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
@@ -558,7 +599,14 @@ public class OrganizationUsersController : Controller
         return await RestoreOrRevokeUsersAsync(orgId, model, _revokeOrganizationUserCommand.RevokeUsersAsync);
     }
 
-    [HttpPatch("{id}/restore")]
+    [HttpPatch("revoke")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> PatchBulkRevokeAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    {
+        return await BulkRevokeAsync(orgId, model);
+    }
+
     [HttpPut("{id}/restore")]
     [Authorize<ManageUsersRequirement>]
     public async Task RestoreAsync(Guid orgId, Guid id)
@@ -566,7 +614,14 @@ public class OrganizationUsersController : Controller
         await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId));
     }
 
-    [HttpPatch("restore")]
+    [HttpPatch("{id}/restore")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task PatchRestoreAsync(Guid orgId, Guid id)
+    {
+        await RestoreAsync(orgId, id);
+    }
+
     [HttpPut("restore")]
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRestoreAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
@@ -574,7 +629,14 @@ public class OrganizationUsersController : Controller
         return await RestoreOrRevokeUsersAsync(orgId, model, (orgId, orgUserIds, restoringUserId) => _restoreOrganizationUserCommand.RestoreUsersAsync(orgId, orgUserIds, restoringUserId, _userService));
     }
 
-    [HttpPatch("enable-secrets-manager")]
+    [HttpPatch("restore")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> PatchBulkRestoreAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    {
+        return await BulkRestoreAsync(orgId, model);
+    }
+
     [HttpPut("enable-secrets-manager")]
     [Authorize<ManageUsersRequirement>]
     public async Task BulkEnableSecretsManagerAsync(Guid orgId,
@@ -605,6 +667,15 @@ public class OrganizationUsersController : Controller
         }
 
         await _organizationUserRepository.ReplaceManyAsync(orgUsers);
+    }
+
+    [HttpPatch("enable-secrets-manager")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task PatchBulkEnableSecretsManagerAsync(Guid orgId,
+        [FromBody] OrganizationUserBulkRequestModel model)
+    {
+        await BulkEnableSecretsManagerAsync(orgId, model);
     }
 
     private async Task RestoreOrRevokeUserAsync(
