@@ -11,22 +11,6 @@ public static class HttpContextExtensions
     public const string NoHttpContextError = "This method should only be called in the context of an HTTP Request.";
 
     /// <summary>
-    /// Gets the <see cref="HttpContext"/> or throws if it is null.
-    /// </summary>
-    public static HttpContext GetHttpContextOrThrow(
-        this IHttpContextAccessor httpContextAccessor)
-    {
-
-        var httpContext = httpContextAccessor.HttpContext;
-        if (httpContext == null)
-        {
-            throw new InvalidOperationException(NoHttpContextError);
-        }
-
-        return httpContext;
-    }
-
-    /// <summary>
     /// Returns the result of the callback, caching it in HttpContext.Features for the lifetime of the request.
     /// Subsequent calls will retrieve the cached value.
     /// Results are stored by type and therefore must be of a unique type.

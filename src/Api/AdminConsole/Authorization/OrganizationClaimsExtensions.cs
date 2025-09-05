@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
