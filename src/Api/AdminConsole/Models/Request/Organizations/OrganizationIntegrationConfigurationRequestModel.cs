@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
@@ -33,6 +31,10 @@ public class OrganizationIntegrationConfigurationRequestModel
                        IsConfigurationValid<WebhookIntegrationConfiguration>() &&
                        IsFiltersValid();
             case IntegrationType.Hec:
+                return !string.IsNullOrWhiteSpace(Template) &&
+                       Configuration is null &&
+                       IsFiltersValid();
+            case IntegrationType.Datadog:
                 return !string.IsNullOrWhiteSpace(Template) &&
                        Configuration is null &&
                        IsFiltersValid();

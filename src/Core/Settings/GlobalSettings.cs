@@ -304,6 +304,8 @@ public class GlobalSettings : IGlobalSettings
             public virtual string WebhookIntegrationSubscriptionName { get; set; } = "integration-webhook-subscription";
             public virtual string HecEventSubscriptionName { get; set; } = "events-hec-subscription";
             public virtual string HecIntegrationSubscriptionName { get; set; } = "integration-hec-subscription";
+            public virtual string DatadogEventSubscriptionName { get; set; } = "events-datadog-subscription";
+            public virtual string DatadogIntegrationSubscriptionName { get; set; } = "integration-datadog-subscription";
 
             public string ConnectionString
             {
@@ -345,6 +347,9 @@ public class GlobalSettings : IGlobalSettings
             public virtual string HecEventsQueueName { get; set; } = "events-hec-queue";
             public virtual string HecIntegrationQueueName { get; set; } = "integration-hec-queue";
             public virtual string HecIntegrationRetryQueueName { get; set; } = "integration-hec-retry-queue";
+            public virtual string DatadogEventsQueueName { get; set; } = "events-datadog-queue";
+            public virtual string DatadogIntegrationQueueName { get; set; } = "integration-datadog-queue";
+            public virtual string DatadogIntegrationRetryQueueName { get; set; } = "integration-datadog-retry-queue";
 
             public string HostName
             {
