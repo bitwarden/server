@@ -1,6 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -442,7 +446,8 @@ public class OrganizationUserRepositoryTests
     [DatabaseTheory, DatabaseData]
     public async Task GetManyDetailsByUserAsync_Works(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository)
+        IOrganizationUserRepository organizationUserRepository,
+        ISsoConfigRepository ssoConfigRepository)
     {
         var user1 = await userRepository.CreateAsync(new User
         {
@@ -475,6 +480,18 @@ public class OrganizationUserRepositoryTests
             AccessSecretsManager = false
         });
 
+        var ssoConfigData = new SsoConfigurationData
+        {
+            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption
+        };
+
+        var ssoConfig = await ssoConfigRepository.CreateAsync(new SsoConfig
+        {
+            OrganizationId = organization.Id,
+            Enabled = true,
+            Data = ssoConfigData.Serialize()
+        });
+
         var responseModel = await organizationUserRepository.GetManyDetailsByUserAsync(user1.Id);
 
         Assert.NotNull(responseModel);
@@ -487,6 +504,8 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(organization.UsePolicies, result.UsePolicies);
         Assert.Equal(organization.UseSso, result.UseSso);
         Assert.Equal(organization.UseKeyConnector, result.UseKeyConnector);
+        Assert.Equal(ssoConfig.Enabled, result.SsoEnabled);
+        Assert.Equal(ssoConfig.Data, result.SsoConfig);
         Assert.Equal(organization.UseScim, result.UseScim);
         Assert.Equal(organization.UseGroups, result.UseGroups);
         Assert.Equal(organization.UseDirectory, result.UseDirectory);
