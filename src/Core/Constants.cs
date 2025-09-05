@@ -178,6 +178,7 @@ public static class FeatureFlagKeys
     public const string PM17987_BlockType0 = "pm-17987-block-type-0";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
+    public const string BiometricsSystemV2 = "system-biometrics-v2";
 
     /* Mobile Team */
     public const string NativeCarouselFlow = "native-carousel-flow";
