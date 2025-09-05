@@ -51,8 +51,9 @@ public class OrganizationContext(
 
     /// <summary>
     /// Caches provider relationships by UserId.
-    /// In reality this should only have 1 entry (for the current user), but ensures that a mix-up between users cannot
-    /// occur if a different ClaimsPrincipal is provided for any reason.
+    /// In practice this should only have 1 entry (for the current user), but this approach ensures that a mix-up
+    /// between users cannot occur if <see cref="IsProviderUserForOrganization"/> is called with a different
+    /// ClaimsPrincipal for any reason.
     /// </summary>
     private readonly Dictionary<Guid, IEnumerable<ProviderUserOrganizationDetails>> _providerUserOrganizationsCache = new();
 
