@@ -14,7 +14,6 @@ public static class Registrations
         services.AddTransient<ICreateBitPayInvoiceForCreditCommand, CreateBitPayInvoiceForCreditCommand>();
         services.AddTransient<IUpdateBillingAddressCommand, UpdateBillingAddressCommand>();
         services.AddTransient<IUpdatePaymentMethodCommand, UpdatePaymentMethodCommand>();
-        services.AddTransient<IVerifyBankAccountCommand, VerifyBankAccountCommand>();
 
         // Queries
         services.AddTransient<IGetBillingAddressQuery, GetBillingAddressQuery>();

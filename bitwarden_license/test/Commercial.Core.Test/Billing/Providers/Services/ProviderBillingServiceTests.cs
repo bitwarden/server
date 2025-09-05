@@ -1003,7 +1003,7 @@ public class ProviderBillingServiceTests
                 o.TaxIdData.FirstOrDefault().Value == taxInfo.TaxIdNumber))
             .Throws<StripeException>();
 
-        sutProvider.GetDependency<ISetupIntentCache>().Get(provider.Id).Returns("setup_intent_id");
+        sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(provider.Id).Returns("setup_intent_id");
 
         await Assert.ThrowsAsync<StripeException>(() =>
             sutProvider.Sut.SetupCustomer(provider, taxInfo, tokenizedPaymentSource));
@@ -1013,7 +1013,7 @@ public class ProviderBillingServiceTests
         await stripeAdapter.Received(1).SetupIntentCancel("setup_intent_id", Arg.Is<SetupIntentCancelOptions>(options =>
             options.CancellationReason == "abandoned"));
 
-        await sutProvider.GetDependency<ISetupIntentCache>().Received(1).Remove(provider.Id);
+        await sutProvider.GetDependency<ISetupIntentCache>().Received(1).RemoveSetupIntentForSubscriber(provider.Id);
     }
 
     [Theory, BitAutoData]
@@ -1644,7 +1644,7 @@ public class ProviderBillingServiceTests
 
         const string setupIntentId = "seti_123";
 
-        sutProvider.GetDependency<ISetupIntentCache>().Get(provider.Id).Returns(setupIntentId);
+        sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(provider.Id).Returns(setupIntentId);
 
         sutProvider.GetDependency<IStripeAdapter>().SetupIntentGet(setupIntentId, Arg.Is<SetupIntentGetOptions>(options =>
             options.Expand.Contains("payment_method"))).Returns(new SetupIntent

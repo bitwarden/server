@@ -670,7 +670,7 @@ public class SubscriberServiceTests
             }
         };
 
-        sutProvider.GetDependency<ISetupIntentCache>().Get(provider.Id).Returns(setupIntent.Id);
+        sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(provider.Id).Returns(setupIntent.Id);
 
         sutProvider.GetDependency<IStripeAdapter>().SetupIntentGet(setupIntent.Id,
             Arg.Is<SetupIntentGetOptions>(options => options.Expand.Contains("payment_method"))).Returns(setupIntent);
@@ -1876,7 +1876,7 @@ public class SubscriberServiceTests
             PaymentMethodId = "payment_method_id"
         };
 
-        sutProvider.GetDependency<ISetupIntentCache>().Get(provider.Id).Returns(setupIntent.Id);
+        sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(provider.Id).Returns(setupIntent.Id);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 

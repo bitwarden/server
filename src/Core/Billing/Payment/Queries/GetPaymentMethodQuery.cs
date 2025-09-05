@@ -77,7 +77,7 @@ public class GetPaymentMethodQuery(
             }
         }
 
-        var setupIntentId = await setupIntentCache.Get(subscriber.Id);
+        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriber.Id);
 
         if (string.IsNullOrEmpty(setupIntentId))
         {

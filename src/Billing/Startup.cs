@@ -73,6 +73,7 @@ public class Startup
         services.AddScoped<IPaymentMethodAttachedHandler, PaymentMethodAttachedHandler>();
         services.AddScoped<IPaymentSucceededHandler, PaymentSucceededHandler>();
         services.AddScoped<IInvoiceFinalizedHandler, InvoiceFinalizedHandler>();
+        services.AddScoped<ISetupIntentSucceededHandler, SetupIntentSucceededHandler>();
         services.AddScoped<IStripeEventProcessor, StripeEventProcessor>();
 
         // Identity
@@ -111,6 +112,7 @@ public class Startup
         services.AddScoped<IStripeFacade, StripeFacade>();
         services.AddScoped<IStripeEventService, StripeEventService>();
         services.AddScoped<IProviderEventService, ProviderEventService>();
+        services.AddScoped<IPushNotificationAdapter, PushNotificationAdapter>();
 
         // Add Quartz services first
         services.AddQuartz(q =>

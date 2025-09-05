@@ -10,7 +10,7 @@ public record MaskedBankAccount
 {
     public required string BankName { get; init; }
     public required string Last4 { get; init; }
-    public required bool Verified { get; init; }
+    public string? HostedVerificationUrl { get; init; }
     public string Type => "bankAccount";
 }
 
@@ -39,8 +39,7 @@ public class MaskedPaymentMethod(OneOf<MaskedBankAccount, MaskedCard, MaskedPayP
     public static MaskedPaymentMethod From(BankAccount bankAccount) => new MaskedBankAccount
     {
         BankName = bankAccount.BankName,
-        Last4 = bankAccount.Last4,
-        Verified = bankAccount.Status == "verified"
+        Last4 = bankAccount.Last4
     };
 
     public static MaskedPaymentMethod From(Card card) => new MaskedCard
@@ -61,7 +60,7 @@ public class MaskedPaymentMethod(OneOf<MaskedBankAccount, MaskedCard, MaskedPayP
     {
         BankName = setupIntent.PaymentMethod.UsBankAccount.BankName,
         Last4 = setupIntent.PaymentMethod.UsBankAccount.Last4,
-        Verified = false
+        HostedVerificationUrl = setupIntent.NextAction?.VerifyWithMicrodeposits?.HostedVerificationUrl
     };
 
     public static MaskedPaymentMethod From(SourceCard sourceCard) => new MaskedCard
@@ -74,8 +73,7 @@ public class MaskedPaymentMethod(OneOf<MaskedBankAccount, MaskedCard, MaskedPayP
     public static MaskedPaymentMethod From(PaymentMethodUsBankAccount bankAccount) => new MaskedBankAccount
     {
         BankName = bankAccount.BankName,
-        Last4 = bankAccount.Last4,
-        Verified = true
+        Last4 = bankAccount.Last4
     };
 
     public static MaskedPaymentMethod From(PayPalAccount payPalAccount) => new MaskedPayPalAccount { Email = payPalAccount.Email };

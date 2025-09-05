@@ -23,8 +23,7 @@ public class ProviderBillingVNextController(
     IGetProviderWarningsQuery getProviderWarningsQuery,
     IProviderService providerService,
     IUpdateBillingAddressCommand updateBillingAddressCommand,
-    IUpdatePaymentMethodCommand updatePaymentMethodCommand,
-    IVerifyBankAccountCommand verifyBankAccountCommand) : BaseBillingController
+    IUpdatePaymentMethodCommand updatePaymentMethodCommand) : BaseBillingController
 {
     [HttpGet("address")]
     [InjectProvider(ProviderUserType.ProviderAdmin)]
@@ -94,16 +93,6 @@ public class ProviderBillingVNextController(
                 await providerService.UpdateAsync(provider);
             });
         }
-        return Handle(result);
-    }
-
-    [HttpPost("payment-method/verify-bank-account")]
-    [InjectProvider(ProviderUserType.ProviderAdmin)]
-    public async Task<IResult> VerifyBankAccountAsync(
-        [BindNever] Provider provider,
-        [FromBody] VerifyBankAccountRequest request)
-    {
-        var result = await verifyBankAccountCommand.Run(provider, request.DescriptorCode);
         return Handle(result);
     }
 
