@@ -222,7 +222,7 @@ public class AuthRequestsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Put_ReturnsAuthRequest(
+    public async Task Put_WithRequestNotApproved_ReturnsAuthRequest(
         SutProvider<AuthRequestsController> sutProvider,
         User user,
         AuthRequestUpdateRequestModel requestModel,
@@ -230,6 +230,7 @@ public class AuthRequestsControllerTests
     {
         // Arrange
         SetBaseServiceUri(sutProvider);
+        requestModel.RequestApproved = false; // Not an approval, so validation should be skipped
 
         sutProvider.GetDependency<IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
@@ -246,6 +247,117 @@ public class AuthRequestsControllerTests
         // Assert
         Assert.NotNull(result);
         Assert.IsType<AuthRequestResponseModel>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_WithApprovedRequest_ValidatesAndReturnsAuthRequest(
+        SutProvider<AuthRequestsController> sutProvider,
+        User user,
+        AuthRequestUpdateRequestModel requestModel,
+        AuthRequest currentAuthRequest,
+        AuthRequest updatedAuthRequest,
+        List<PendingAuthRequestDetails> pendingRequests)
+    {
+        // Arrange
+        SetBaseServiceUri(sutProvider);
+        requestModel.RequestApproved = true; // Approval triggers validation
+        currentAuthRequest.RequestDeviceIdentifier = "device-identifier-123";
+
+        // Setup pending requests - make the current request the most recent for its device
+        var mostRecentForDevice = new PendingAuthRequestDetails(currentAuthRequest, Guid.NewGuid());
+        pendingRequests.Add(mostRecentForDevice);
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(user.Id);
+
+        // Setup validation dependencies
+        sutProvider.GetDependency<IAuthRequestService>()
+            .GetAuthRequestAsync(currentAuthRequest.Id, user.Id)
+            .Returns(currentAuthRequest);
+
+        sutProvider.GetDependency<IAuthRequestRepository>()
+            .GetManyPendingAuthRequestByUserId(user.Id)
+            .Returns(pendingRequests);
+
+        sutProvider.GetDependency<IAuthRequestService>()
+            .UpdateAuthRequestAsync(currentAuthRequest.Id, user.Id, requestModel)
+            .Returns(updatedAuthRequest);
+
+        // Act
+        var result = await sutProvider.Sut
+                .Put(currentAuthRequest.Id, requestModel);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.IsType<AuthRequestResponseModel>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_WithApprovedRequest_CurrentAuthRequestNotFound_ThrowsNotFoundException(
+        SutProvider<AuthRequestsController> sutProvider,
+        User user,
+        AuthRequestUpdateRequestModel requestModel,
+        Guid authRequestId)
+    {
+        // Arrange
+        requestModel.RequestApproved = true; // Approval triggers validation
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(user.Id);
+
+        // Current auth request not found
+        sutProvider.GetDependency<IAuthRequestService>()
+            .GetAuthRequestAsync(authRequestId, user.Id)
+            .Returns((AuthRequest)null);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.Put(authRequestId, requestModel));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_WithApprovedRequest_NotMostRecentForDevice_ThrowsBadRequestException(
+        SutProvider<AuthRequestsController> sutProvider,
+        User user,
+        AuthRequestUpdateRequestModel requestModel,
+        AuthRequest currentAuthRequest,
+        List<PendingAuthRequestDetails> pendingRequests)
+    {
+        // Arrange
+        requestModel.RequestApproved = true; // Approval triggers validation
+        currentAuthRequest.RequestDeviceIdentifier = "device-identifier-123";
+
+        // Setup pending requests - make a different request the most recent for the same device
+        var differentAuthRequest = new AuthRequest
+        {
+            Id = Guid.NewGuid(), // Different ID than current request
+            RequestDeviceIdentifier = currentAuthRequest.RequestDeviceIdentifier,
+            UserId = user.Id,
+            Type = AuthRequestType.AuthenticateAndUnlock,
+            CreationDate = DateTime.UtcNow
+        };
+        var mostRecentForDevice = new PendingAuthRequestDetails(differentAuthRequest, Guid.NewGuid());
+        pendingRequests.Add(mostRecentForDevice);
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(user.Id);
+
+        sutProvider.GetDependency<IAuthRequestService>()
+            .GetAuthRequestAsync(currentAuthRequest.Id, user.Id)
+            .Returns(currentAuthRequest);
+
+        sutProvider.GetDependency<IAuthRequestRepository>()
+            .GetManyPendingAuthRequestByUserId(user.Id)
+            .Returns(pendingRequests);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.Put(currentAuthRequest.Id, requestModel));
+
+        Assert.Equal("This request is no longer valid. Make sure to approve the most recent request.", exception.Message);
     }
 
     private void SetBaseServiceUri(SutProvider<AuthRequestsController> sutProvider)
