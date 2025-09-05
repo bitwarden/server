@@ -45,7 +45,7 @@ public static class PolicyTypeExtensions
             PolicyType.AutomaticAppLogIn => "Automatically log in users for allowed applications",
             PolicyType.FreeFamiliesSponsorshipPolicy => "Remove Free Bitwarden Families sponsorship",
             PolicyType.RemoveUnlockWithPin => "Remove unlock with PIN",
-            PolicyType.RestrictedItemTypesPolicy => "Restricted item types",
+            PolicyType.RestrictedItemTypesPolicy => "Remove certain item types",
         };
     }
 }
