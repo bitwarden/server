@@ -18,7 +18,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Auth.Controllers;
 
 [Route("emergency-access")]
-[Authorize("Application")]
+[Authorize(Core.Auth.Identity.Policies.Application)]
 public class EmergencyAccessController : Controller
 {
     private readonly IUserService _userService;
