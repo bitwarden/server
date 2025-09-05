@@ -7,6 +7,7 @@ using Bit.Api.Auth.Models.Response.TwoFactor;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.LoginFeatures.PasswordlessLogin.Interfaces;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -26,7 +27,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Auth.Controllers;
 
 [Route("two-factor")]
-[Authorize("Web")]
+[Authorize(Policies.Web)]
 public class TwoFactorController : Controller
 {
     private readonly IUserService _userService;

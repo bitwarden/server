@@ -5,6 +5,7 @@ using Bit.Api.Auth.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Auth.Services;
 using Bit.Core.Exceptions;
@@ -18,7 +19,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Auth.Controllers;
 
 [Route("auth-requests")]
-[Authorize("Application")]
+[Authorize(Policies.Application)]
 public class AuthRequestsController(
     IUserService userService,
     IAuthRequestRepository authRequestRepository,
