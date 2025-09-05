@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Services;
@@ -35,7 +36,7 @@ public interface IOrganizationContext
     /// <param name="organizationId">The organization to check the provider relationship for.</param>
     /// <returns>True if the user is a ProviderUser for the specified organization, otherwise false.</returns>
     /// <remarks>
-    /// This requires a database call, but the results are cached for the lifetime of the HTTP request.
+    /// This requires a database call, but the results are cached for the lifetime of the service instance.
     /// Try to check purely claims-based sources of authorization first (such as organization membership with
     /// <see cref="GetOrganizationClaims"/>) to avoid unnecessary database calls.
     /// </remarks>
@@ -43,11 +44,17 @@ public interface IOrganizationContext
 }
 
 public class OrganizationContext(
-    IHttpContextAccessor httpContextAccessor,
     IUserService userService,
     IProviderUserRepository providerUserRepository) : IOrganizationContext
 {
     public const string NoUserIdError = "This method should only be called on the private api with a logged in user.";
+
+    /// <summary>
+    /// Caches provider relationships by UserId.
+    /// In reality this should only have 1 entry (for the current user), but ensures that a mix-up between users cannot
+    /// occur if a different ClaimsPrincipal is provided for any reason.
+    /// </summary>
+    private readonly Dictionary<Guid, IEnumerable<ProviderUserOrganizationDetails>> _providerUserOrganizationsCache = new();
 
     public CurrentContextOrganization? GetOrganizationClaims(ClaimsPrincipal user, Guid organizationId)
     {
@@ -62,9 +69,11 @@ public class OrganizationContext(
             throw new Exception(NoUserIdError);
         }
 
-        var httpContext = httpContextAccessor.GetHttpContextOrThrow();
-        var providerUserOrganizations = await httpContext.WithFeaturesCacheAsync(() =>
-            providerUserRepository.GetManyOrganizationDetailsByUserAsync(userId.Value, ProviderUserStatusType.Confirmed));
+        if (!_providerUserOrganizationsCache.TryGetValue(userId.Value, out var providerUserOrganizations))
+        {
+            providerUserOrganizations = (await providerUserRepository.GetManyOrganizationDetailsByUserAsync(userId.Value, ProviderUserStatusType.Confirmed)).ToList();
+            _providerUserOrganizationsCache[userId.Value] = providerUserOrganizations;
+        }
 
         return providerUserOrganizations.Any(o => o.OrganizationId == organizationId);
     }
