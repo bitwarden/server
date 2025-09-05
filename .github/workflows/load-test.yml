@@ -97,7 +97,7 @@ jobs:
         continue-on-error: false
         env:
           K6_OTEL_METRIC_PREFIX: k6_
-          K6_OTEL_TLS_INSECURE_SKIP_VERIFY: true
+          K6_OTEL_GRPC_EXPORTER_INSECURE: true
           # Load test specific environment variables
           API_URL: ${{ env.API_ENV_URL }}
           IDENTITY_URL: ${{ env.IDENTITY_ENV_URL }}
