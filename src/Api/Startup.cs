@@ -146,7 +146,7 @@ public class Startup
                     (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
                 ));
             });
-            config.AddPolicy(Policies.Tools.Send, configurePolicy: policy =>
+            config.AddPolicy(Policies.Send, configurePolicy: policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiSendAccess);

@@ -3,11 +3,8 @@
 public static class Policies
 {
     /// <summary>
-    /// Class holding the policies that support the Tools team
+    /// Policy for managing access to the Send feature.
     /// </summary>
-    public static class Tools
-    {
-        public const string Send = "Send";  // [Authorize(Policy = Policies.Send)]
-    }
+    public const string Send = "Send";  // [Authorize(Policy = Policies.Send)]
     // TODO: migrate other existing policies to use this class
 }
