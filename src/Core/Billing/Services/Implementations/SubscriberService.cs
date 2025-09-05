@@ -345,7 +345,7 @@ public class SubscriberService(
             return PaymentMethod.Empty;
         }
 
-        var accountCredit = customer.Balance * -1 / 100;
+        var accountCredit = customer.Balance * -1 / 100M;
 
         var paymentMethod = await GetPaymentSourceAsync(subscriber.Id, customer);
 
