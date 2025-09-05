@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Identity;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Vault.Entities;
 
@@ -136,6 +137,21 @@ public class NoopEventService : IEventService
 
     public Task LogServiceAccountProjectsEventAsync(Guid serviceAccountId, IEnumerable<Project> projects, EventType type,
         DateTime? date = null)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task LogServiceAccountPeopleEventAsync(Guid userId, UserServiceAccountAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task LogServiceAccountGroupEventAsync(Guid userId, GroupServiceAccountAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task LogServiceAccountEventAsync(Guid userId, List<ServiceAccount> serviceAccount, EventType type, IdentityClientType identityClientType, DateTime? date = null)
     {
         return Task.FromResult(0);
     }
