@@ -15,7 +15,6 @@ export const options = {
       rate: 1,
       timeUnit: "1s", // 1 request / second
       duration: "10m",
-      preAllocatedVUs: 5,
       maxVUs: 10,
     },
     ramping_load: {

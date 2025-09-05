@@ -16,7 +16,6 @@ export const options = {
       rate: 30,
       timeUnit: "1m", // 0.5 requests / second
       duration: "10m",
-      preAllocatedVUs: 5,
     },
     ramping_load: {
       executor: "ramping-arrival-rate",
@@ -33,7 +32,6 @@ export const options = {
         { duration: "30s", target: 60 },
         { duration: "30s", target: 0 },
       ],
-      preAllocatedVUs: 20,
     },
   },
   thresholds: {
