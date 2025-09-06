@@ -236,8 +236,8 @@ public class OrganizationUserPublicKeyResponseModel : ResponseModel
 
 public class OrganizationUserBulkResponseModel : ResponseModel
 {
-    public OrganizationUserBulkResponseModel(Guid id, string error,
-        string obj = "OrganizationBulkConfirmResponseModel") : base(obj)
+    public OrganizationUserBulkResponseModel(Guid id, string error)
+        : base("OrganizationBulkConfirmResponseModel")
     {
         Id = id;
         Error = error;
