@@ -13,7 +13,7 @@ public static class AssemblyHelpers
         var assemblyInformationalVersionAttribute = typeof(AssemblyHelpers).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
         if (assemblyInformationalVersionAttribute == null)
         {
-            Debug.Fail("");
+            Debug.Fail("Thr AssemblyInformationalVersuonAttribute is expected to exist in this assembly, possibly its generation was turned off.");
             return;
         }
 
