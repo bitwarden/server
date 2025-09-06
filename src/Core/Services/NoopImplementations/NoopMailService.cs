@@ -137,6 +137,15 @@ public class NoopMailService : IMailService
         List<string> items,
         bool mentionInvoices) => Task.FromResult(0);
 
+    public Task SendProviderInvoiceUpcoming(
+        IEnumerable<string> emails,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        string? collectionMethod = null,
+        bool hasPaymentMethod = true,
+        string? paymentMethodDescription = null) => Task.FromResult(0);
+
     public Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices)
     {
         return Task.FromResult(0);
