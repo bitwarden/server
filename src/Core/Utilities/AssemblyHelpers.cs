@@ -5,27 +5,41 @@ namespace Bit.Core.Utilities;
 
 public static class AssemblyHelpers
 {
-    private static string _version;
-    private static string _gitHash;
+    private static string? _version;
+    private static string? _gitHash;
 
     static AssemblyHelpers()
     {
         var assemblyInformationalVersionAttribute = typeof(AssemblyHelpers).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-        Debug.Assert(assemblyInformationalVersionAttribute is not null);
+        if (assemblyInformationalVersionAttribute == null)
+        {
+            Debug.Fail("");
+            return;
+        }
 
-        var success = assemblyInformationalVersionAttribute.InformationalVersion.AsSpan().TrySplitBy('+', out var version, out var gitHash);
-        Debug.Assert(success);
+        var informationalVersion = assemblyInformationalVersionAttribute.InformationalVersion.AsSpan();
+
+        if (!informationalVersion.TrySplitBy('+', out var version, out var gitHash))
+        {
+            // Treat the whole tbing as the version
+            _version = informationalVersion.ToString();
+            return;
+        }
 
         _version = version.ToString();
+        if (gitHash.Length < 8)
+        {
+            return;
+        }
         _gitHash = gitHash[..8].ToString();
     }
 
-    public static string GetVersion()
+    public static string? GetVersion()
     {
         return _version;
     }
 
-    public static string GetGitHash()
+    public static string? GetGitHash()
     {
         return _gitHash;
     }
