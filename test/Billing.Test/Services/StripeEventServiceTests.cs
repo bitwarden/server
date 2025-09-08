@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -28,7 +29,13 @@ public class StripeEventServiceTests
         _providerRepository = Substitute.For<IProviderRepository>();
         _setupIntentCache = Substitute.For<ISetupIntentCache>();
         _stripeFacade = Substitute.For<IStripeFacade>();
-        _stripeEventService = new StripeEventService(globalSettings, _organizationRepository, _providerRepository, _setupIntentCache, _stripeFacade);
+        _stripeEventService = new StripeEventService(
+            globalSettings,
+            Substitute.For<ILogger<StripeEventService>>(),
+            _organizationRepository,
+            _providerRepository,
+            _setupIntentCache,
+            _stripeFacade);
     }
 
     #region GetCharge
