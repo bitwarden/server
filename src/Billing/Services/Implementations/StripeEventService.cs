@@ -3,12 +3,14 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Serilog.Data;
 using Stripe;
 
 namespace Bit.Billing.Services.Implementations;
 
 public class StripeEventService(
     GlobalSettings globalSettings,
+    ILogger<StripeEventService> logger,
     IOrganizationRepository organizationRepository,
     IProviderRepository providerRepository,
     ISetupIntentCache setupIntentCache,
@@ -90,6 +92,9 @@ public class StripeEventService(
 
     public async Task<bool> ValidateCloudRegion(Event stripeEvent)
     {
+        logger.LogInformation("Validating cloud region for Stripe event ({ID}) with type '{Type}'", stripeEvent.Id,
+            stripeEvent.Type);
+
         var serverRegion = globalSettings.BaseServiceUri.CloudRegion;
 
         var customerExpansion = new List<string> { "customer" };
@@ -123,6 +128,7 @@ public class StripeEventService(
 
         if (customerMetadata == null)
         {
+            logger.LogWarning("Customer metadata was null for Stripe event ({ID})", stripeEvent.Id);
             return false;
         }
 
@@ -146,11 +152,15 @@ public class StripeEventService(
 
         async Task<Dictionary<string, string>?> GetCustomerMetadataFromSetupIntentSucceededEvent(Event localStripeEvent)
         {
+            logger.LogInformation("Getting Customer metadata for setup_intent.succeeded event ({ID})", localStripeEvent.Id);
+
             var setupIntent = await GetSetupIntent(localStripeEvent);
 
             var subscriberId = await setupIntentCache.GetSubscriberIdForSetupIntent(setupIntent.Id);
             if (subscriberId == null)
             {
+                logger.LogWarning("No subscriber ID was found for setup_intent.succeeded event ({ID})",
+                    localStripeEvent.Id);
                 return null;
             }
 
