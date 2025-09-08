@@ -251,17 +251,14 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IVNextInMemoryApplicationCacheService, VNextInMemoryApplicationCacheService>();
         services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
-
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
         {
             services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
-            services.AddSingleton<IApplicationCacheServiceBusMessaging, ServiceBusApplicationCacheMessaging>();
         }
         else
         {
             services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryApplicationCacheService>();
-            services.AddSingleton<IApplicationCacheServiceBusMessaging, NoOpApplicationCacheMessaging>();
         }
 
         var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
