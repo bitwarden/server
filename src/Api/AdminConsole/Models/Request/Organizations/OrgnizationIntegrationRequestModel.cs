@@ -4,8 +4,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
 
-#nullable enable
-
 namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 
 public class OrganizationIntegrationRequestModel : IValidatableObject
@@ -57,6 +55,14 @@ public class OrganizationIntegrationRequestModel : IValidatableObject
                 {
                     yield return new ValidationResult(
                         "HEC integrations must include valid configuration.",
+                        new[] { nameof(Configuration) });
+                }
+                break;
+            case IntegrationType.Datadog:
+                if (!IsIntegrationValid<DatadogIntegration>())
+                {
+                    yield return new ValidationResult(
+                        "Datadog integrations must include valid configuration.",
                         new[] { nameof(Configuration) });
                 }
                 break;
