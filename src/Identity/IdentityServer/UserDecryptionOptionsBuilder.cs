@@ -141,6 +141,8 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
         var hasManageResetPasswordPermission =
             organizationUser?.GetPermissions() is { ManageResetPassword: true } ||
             organizationUser?.Type is OrganizationUserType.Admin or OrganizationUserType.Owner ||
+            // The Organization User alone isn't enough to verify for Provider User case;
+            // // check the current context for permissions granted through this relationship.
             await _currentContext.ManageResetPassword(_ssoConfig!.OrganizationId);
 
         // They can only be approved by an admin if they have enrolled in reset password
