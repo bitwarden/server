@@ -13,7 +13,7 @@ public static class AssemblyHelpers
         var assemblyInformationalVersionAttribute = typeof(AssemblyHelpers).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
         if (assemblyInformationalVersionAttribute == null)
         {
-            Debug.Fail("Thr AssemblyInformationalVersuonAttribute is expected to exist in this assembly, possibly its generation was turned off.");
+            Debug.Fail("The AssemblyInformationalVersionAttribute is expected to exist in this assembly, possibly its generation was turned off.");
             return;
         }
 
@@ -21,7 +21,7 @@ public static class AssemblyHelpers
 
         if (!informationalVersion.TrySplitBy('+', out var version, out var gitHash))
         {
-            // Treat the whole tbing as the version
+            // Treat the whole thing as the version
             _version = informationalVersion.ToString();
             return;
         }
