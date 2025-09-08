@@ -1,5 +1,6 @@
-﻿using System.Net;
-using System.Net.Http.Headers;
+﻿#nullable enable
+
+using System.Net;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -13,15 +14,14 @@ using Xunit;
 namespace Bit.Core.Test.Services;
 
 [SutProviderCustomize]
-public class WebhookIntegrationHandlerTests
+public class DatadogIntegrationHandlerTests
 {
     private readonly MockedHttpMessageHandler _handler;
     private readonly HttpClient _httpClient;
-    private const string _scheme = "Bearer";
-    private const string _token = "AUTH_TOKEN";
-    private static readonly Uri _webhookUri = new Uri("https://localhost");
+    private const string _apiKey = "AUTH_TOKEN";
+    private static readonly Uri _datadogUri = new Uri("https://localhost");
 
-    public WebhookIntegrationHandlerTests()
+    public DatadogIntegrationHandlerTests()
     {
         _handler = new MockedHttpMessageHandler();
         _handler.Fallback
@@ -30,22 +30,22 @@ public class WebhookIntegrationHandlerTests
         _httpClient = _handler.ToHttpClient();
     }
 
-    private SutProvider<WebhookIntegrationHandler> GetSutProvider()
+    private SutProvider<DatadogIntegrationHandler> GetSutProvider()
     {
         var clientFactory = Substitute.For<IHttpClientFactory>();
-        clientFactory.CreateClient(WebhookIntegrationHandler.HttpClientName).Returns(_httpClient);
+        clientFactory.CreateClient(DatadogIntegrationHandler.HttpClientName).Returns(_httpClient);
 
-        return new SutProvider<WebhookIntegrationHandler>()
+        return new SutProvider<DatadogIntegrationHandler>()
             .SetDependency(clientFactory)
             .WithFakeTimeProvider()
             .Create();
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_SuccessfulRequestWithoutAuth_ReturnsSuccess(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_SuccessfulRequest_ReturnsSuccess(IntegrationMessage<DatadogIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUri);
+        message.Configuration = new DatadogIntegrationConfigurationDetails(ApiKey: _apiKey, Uri: _datadogUri);
 
         var result = await sutProvider.Sut.HandleAsync(message);
 
@@ -54,7 +54,7 @@ public class WebhookIntegrationHandlerTests
         Assert.Empty(result.FailureReason);
 
         sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient(
-            Arg.Is(AssertHelper.AssertPropertyEqual(WebhookIntegrationHandler.HttpClientName))
+            Arg.Is(AssertHelper.AssertPropertyEqual(DatadogIntegrationHandler.HttpClientName))
         );
 
         Assert.Single(_handler.CapturedRequests);
@@ -64,48 +64,20 @@ public class WebhookIntegrationHandlerTests
         var returned = await request.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpMethod.Post, request.Method);
-        Assert.Null(request.Headers.Authorization);
-        Assert.Equal(_webhookUri, request.RequestUri);
+        Assert.Equal(_apiKey, request.Headers.GetValues("DD-API-KEY").Single());
+        Assert.Equal(_datadogUri, request.RequestUri);
         AssertHelper.AssertPropertyEqual(message.RenderedTemplate, returned);
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_SuccessfulRequestWithAuthorizationHeader_ReturnsSuccess(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
-    {
-        var sutProvider = GetSutProvider();
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUri, _scheme, _token);
-
-        var result = await sutProvider.Sut.HandleAsync(message);
-
-        Assert.True(result.Success);
-        Assert.Equal(result.Message, message);
-        Assert.Empty(result.FailureReason);
-
-        sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient(
-            Arg.Is(AssertHelper.AssertPropertyEqual(WebhookIntegrationHandler.HttpClientName))
-        );
-
-        Assert.Single(_handler.CapturedRequests);
-        var request = _handler.CapturedRequests[0];
-        Assert.NotNull(request);
-        Assert.NotNull(request.Content);
-        var returned = await request.Content.ReadAsStringAsync();
-
-        Assert.Equal(HttpMethod.Post, request.Method);
-        Assert.Equal(new AuthenticationHeaderValue(_scheme, _token), request.Headers.Authorization);
-        Assert.Equal(_webhookUri, request.RequestUri);
-        AssertHelper.AssertPropertyEqual(message.RenderedTemplate, returned);
-    }
-
-    [Theory, BitAutoData]
-    public async Task HandleAsync_TooManyRequests_ReturnsFailureSetsDelayUntilDate(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_TooManyRequests_ReturnsFailureSetsDelayUntilDate(IntegrationMessage<DatadogIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
         var now = new DateTime(2014, 3, 2, 1, 0, 0, DateTimeKind.Utc);
         var retryAfter = now.AddSeconds(60);
 
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUri, _scheme, _token);
+        message.Configuration = new DatadogIntegrationConfigurationDetails(ApiKey: _apiKey, Uri: _datadogUri);
 
         _handler.Fallback
             .WithStatusCode(HttpStatusCode.TooManyRequests)
@@ -123,12 +95,12 @@ public class WebhookIntegrationHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_TooManyRequestsWithDate_ReturnsFailureSetsDelayUntilDate(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_TooManyRequestsWithDate_ReturnsFailureSetsDelayUntilDate(IntegrationMessage<DatadogIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
         var now = new DateTime(2014, 3, 2, 1, 0, 0, DateTimeKind.Utc);
         var retryAfter = now.AddSeconds(60);
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUri, _scheme, _token);
+        message.Configuration = new DatadogIntegrationConfigurationDetails(ApiKey: _apiKey, Uri: _datadogUri);
 
         _handler.Fallback
             .WithStatusCode(HttpStatusCode.TooManyRequests)
@@ -146,10 +118,10 @@ public class WebhookIntegrationHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_InternalServerError_ReturnsFailureSetsRetryable(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_InternalServerError_ReturnsFailureSetsRetryable(IntegrationMessage<DatadogIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUri, _scheme, _token);
+        message.Configuration = new DatadogIntegrationConfigurationDetails(ApiKey: _apiKey, Uri: _datadogUri);
 
         _handler.Fallback
             .WithStatusCode(HttpStatusCode.InternalServerError)
@@ -165,10 +137,10 @@ public class WebhookIntegrationHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_UnexpectedRedirect_ReturnsFailureNotRetryable(IntegrationMessage<WebhookIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_UnexpectedRedirect_ReturnsFailureNotRetryable(IntegrationMessage<DatadogIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
-        message.Configuration = new WebhookIntegrationConfigurationDetails(_webhookUri, _scheme, _token);
+        message.Configuration = new DatadogIntegrationConfigurationDetails(ApiKey: _apiKey, Uri: _datadogUri);
 
         _handler.Fallback
             .WithStatusCode(HttpStatusCode.TemporaryRedirect)
