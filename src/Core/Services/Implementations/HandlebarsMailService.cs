@@ -15,6 +15,7 @@ using Bit.Core.Billing.Models.Mail;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
+using Bit.Core.Models.Mail.Auth;
 using Bit.Core.Models.Mail.Billing;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
@@ -196,6 +197,26 @@ public class HandlebarsMailService : IMailService
         await AddMessageContentAsync(message, "Auth.TwoFactorEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         message.Category = "TwoFactorEmail";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendSendEmailOtpEmailAsync(string email, string token, string subject)
+    {
+        var message = CreateDefaultMessage(subject, email);
+        var requestDateTime = DateTime.UtcNow;
+        var model = new DefaultEmailOtpViewModel
+        {
+            Token = token,
+            TheDate = requestDateTime.ToLongDateString(),
+            TheTime = requestDateTime.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+        };
+        await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmail", model);
+        message.MetaData.Add("SendGridBypassListManagement", true);
+        // TODO - PM-25380 change to string constant
+        message.Category = "SendEmailOtp";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
@@ -457,6 +478,33 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendProviderInvoiceUpcoming(
+        IEnumerable<string> emails,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        string? collectionMethod = null,
+        bool hasPaymentMethod = true,
+        string? paymentMethodDescription = null)
+    {
+        var message = CreateDefaultMessage("Your upcoming Bitwarden invoice", emails);
+        var model = new InvoiceUpcomingViewModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+            AmountDue = amount,
+            DueDate = dueDate,
+            Items = items,
+            MentionInvoices = false,
+            CollectionMethod = collectionMethod,
+            HasPaymentMethod = hasPaymentMethod,
+            PaymentMethodDescription = paymentMethodDescription
+        };
+        await AddMessageContentAsync(message, "ProviderInvoiceUpcoming", model);
+        message.Category = "ProviderInvoiceUpcoming";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices)
     {
         var message = CreateDefaultMessage("Payment Failed", email);
@@ -538,7 +586,7 @@ public class HandlebarsMailService : IMailService
             SiteName = _globalSettings.SiteName,
             DeviceType = deviceType,
             TheDate = timestamp.ToLongDateString(),
-            TheTime = timestamp.ToShortTimeString(),
+            TheTime = timestamp.ToString("hh:mm:ss tt"),
             TimeZone = _utcTimeZoneDisplay,
             IpAddress = ip
         };
@@ -687,6 +735,8 @@ public class HandlebarsMailService : IMailService
         Handlebars.RegisterTemplate("SecurityTasksHtmlLayout", securityTasksHtmlLayoutSource);
         var securityTasksTextLayoutSource = await ReadSourceAsync("Layouts.SecurityTasks.text");
         Handlebars.RegisterTemplate("SecurityTasksTextLayout", securityTasksTextLayoutSource);
+        var providerFullHtmlLayoutSource = await ReadSourceAsync("Layouts.ProviderFull.html");
+        Handlebars.RegisterTemplate("ProviderFull", providerFullHtmlLayoutSource);
 
         Handlebars.RegisterHelper("date", (writer, context, parameters) =>
         {
@@ -841,6 +891,19 @@ public class HandlebarsMailService : IMailService
             {
                 writer.WriteSafeString(string.Empty);
             }
+        });
+
+        // Equality comparison helper for conditional templates.
+        Handlebars.RegisterHelper("eq", (context, arguments) =>
+        {
+            if (arguments.Length != 2)
+            {
+                return false;
+            }
+
+            var value1 = arguments[0]?.ToString();
+            var value2 = arguments[1]?.ToString();
+            return string.Equals(value1, value2, StringComparison.OrdinalIgnoreCase);
         });
     }
 

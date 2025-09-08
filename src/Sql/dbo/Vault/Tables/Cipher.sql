@@ -43,3 +43,4 @@ CREATE
 NONCLUSTERED INDEX [IX_Cipher_ArchivedDate]
     ON [dbo].[Cipher]([ArchivedDate] ASC);
 
+GO
