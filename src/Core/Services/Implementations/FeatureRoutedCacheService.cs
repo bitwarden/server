@@ -24,7 +24,8 @@ namespace Bit.Core.Services.Implementations;
 public class FeatureRoutedCacheService(
     IFeatureService featureService,
     IVNextInMemoryApplicationCacheService vNextInMemoryApplicationCacheService,
-    IVCurrentInMemoryApplicationCacheService inMemoryApplicationCacheService)
+    IVCurrentInMemoryApplicationCacheService inMemoryApplicationCacheService,
+    IApplicationCacheServiceBusMessaging serviceBusMessaging)
     : IApplicationCacheService
 {
     public async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
@@ -65,6 +66,8 @@ public class FeatureRoutedCacheService(
         {
             await inMemoryApplicationCacheService.UpsertOrganizationAbilityAsync(organization);
         }
+
+        await serviceBusMessaging.NotifyOrganizationAbilityUpsertedAsync(organization);
     }
 
     public async Task UpsertProviderAbilityAsync(Provider provider)
@@ -89,6 +92,8 @@ public class FeatureRoutedCacheService(
         {
             await inMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
         }
+
+        await serviceBusMessaging.NotifyOrganizationAbilityDeletedAsync(organizationId);
     }
 
     public async Task DeleteProviderAbilityAsync(Guid providerId)
@@ -100,6 +105,46 @@ public class FeatureRoutedCacheService(
         else
         {
             await inMemoryApplicationCacheService.DeleteProviderAbilityAsync(providerId);
+        }
+
+        await serviceBusMessaging.NotifyProviderAbilityDeletedAsync(providerId);
+    }
+
+    public async Task BaseUpsertOrganizationAbilityAsync(Organization organization)
+    {
+        if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))
+        {
+            await vNextInMemoryApplicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        }
+        else
+        {
+            if (inMemoryApplicationCacheService is InMemoryServiceBusApplicationCacheService serviceBusCache)
+            {
+                await serviceBusCache.UpsertOrganizationAbilityAsync(organization);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Expected {nameof(inMemoryApplicationCacheService)} to be of type {nameof(InMemoryServiceBusApplicationCacheService)}");
+            }
+        }
+    }
+
+    public async Task BaseDeleteOrganizationAbilityAsync(Guid organizationId)
+    {
+        if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))
+        {
+            await vNextInMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
+        }
+        else
+        {
+            if (inMemoryApplicationCacheService is InMemoryServiceBusApplicationCacheService serviceBusCache)
+            {
+                await serviceBusCache.DeleteOrganizationAbilityAsync(organizationId);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Expected {nameof(inMemoryApplicationCacheService)} to be of type {nameof(InMemoryServiceBusApplicationCacheService)}");
+            }
         }
     }
 }
