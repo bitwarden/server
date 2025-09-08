@@ -8,7 +8,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace Bit.Core.Auth.IdentityServer;
+namespace Bit.Core.IdentityServer;
 
 public class ConfigureOpenIdConnectDistributedOptions : IPostConfigureOptions<CookieAuthenticationOptions>
 {

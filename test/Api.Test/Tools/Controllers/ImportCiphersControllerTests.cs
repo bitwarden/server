@@ -126,7 +126,7 @@ public class ImportCiphersControllerTests
         };
 
         // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PostImportOrganization(Arg.Any<string>(), model));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PostImport(Arg.Any<string>(), model));
 
         // Assert
         Assert.Equal("You cannot import this much data at once.", exception.Message);
@@ -186,7 +186,7 @@ public class ImportCiphersControllerTests
             .Returns(existingCollections.Select(c => new Collection { Id = orgIdGuid }).ToList());
 
         // Act
-        await sutProvider.Sut.PostImportOrganization(orgId, request);
+        await sutProvider.Sut.PostImport(orgId, request);
 
         // Assert
         await sutProvider.GetDependency<IImportCiphersCommand>()
@@ -257,7 +257,7 @@ public class ImportCiphersControllerTests
             .Returns(existingCollections.Select(c => new Collection { Id = orgIdGuid }).ToList());
 
         // Act
-        await sutProvider.Sut.PostImportOrganization(orgId, request);
+        await sutProvider.Sut.PostImport(orgId, request);
 
         // Assert
         await sutProvider.GetDependency<IImportCiphersCommand>()
@@ -324,7 +324,7 @@ public class ImportCiphersControllerTests
 
         // Act
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.PostImportOrganization(orgId, request));
+            sutProvider.Sut.PostImport(orgId, request));
 
         // Assert
         Assert.IsType<Bit.Core.Exceptions.BadRequestException>(exception);
@@ -387,7 +387,7 @@ public class ImportCiphersControllerTests
 
         // Act
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.PostImportOrganization(orgId, request));
+            sutProvider.Sut.PostImport(orgId, request));
 
         // Assert
         Assert.IsType<Bit.Core.Exceptions.BadRequestException>(exception);
@@ -457,7 +457,7 @@ public class ImportCiphersControllerTests
         // Act
         // User imports into collections and creates new collections
         // User has ImportCiphers and Create ciphers permission
-        await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
+        await sutProvider.Sut.PostImport(orgId.ToString(), request);
 
         // Assert
         await sutProvider.GetDependency<IImportCiphersCommand>()
@@ -535,7 +535,7 @@ public class ImportCiphersControllerTests
         // User has ImportCiphers permission only and doesn't have Create permission
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
         {
-            await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
+            await sutProvider.Sut.PostImport(orgId.ToString(), request);
         });
 
         // Assert
@@ -610,7 +610,7 @@ public class ImportCiphersControllerTests
         // Act
         // User imports/creates a new collection - existing collections not affected
         // User has create permissions and doesn't need import permissions
-        await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
+        await sutProvider.Sut.PostImport(orgId.ToString(), request);
 
         // Assert
         await sutProvider.GetDependency<IImportCiphersCommand>()
@@ -685,7 +685,7 @@ public class ImportCiphersControllerTests
         // Act
         // User import into existing collection
         // User has ImportCiphers permission only and doesn't need create permission
-        await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
+        await sutProvider.Sut.PostImport(orgId.ToString(), request);
 
         // Assert
         await sutProvider.GetDependency<IImportCiphersCommand>()
@@ -753,7 +753,7 @@ public class ImportCiphersControllerTests
         // import ciphers only and no collections
         // User has Create permissions
         // expected to be successful
-        await sutProvider.Sut.PostImportOrganization(orgId.ToString(), request);
+        await sutProvider.Sut.PostImport(orgId.ToString(), request);
 
         // Assert
         await sutProvider.GetDependency<IImportCiphersCommand>()

@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Auth.Identity;
+﻿namespace Bit.Core.Identity;
 
 public enum IdentityClientType : byte
 {

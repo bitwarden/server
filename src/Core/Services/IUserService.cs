@@ -90,6 +90,9 @@ public interface IUserService
 
     void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
 
+    [Obsolete("To be removed when the feature flag pm-17128-recovery-code-login is removed PM-18175.")]
+    Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
+
     /// <summary>
     /// This method is used by the TwoFactorAuthenticationValidator to recover two
     /// factor for a user. This allows users to be logged in after a successful recovery

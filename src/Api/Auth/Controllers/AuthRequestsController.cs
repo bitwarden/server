@@ -31,7 +31,7 @@ public class AuthRequestsController(
     private readonly IAuthRequestService _authRequestService = authRequestService;
 
     [HttpGet("")]
-    public async Task<ListResponseModel<AuthRequestResponseModel>> GetAll()
+    public async Task<ListResponseModel<AuthRequestResponseModel>> Get()
     {
         var userId = _userService.GetProperUserId(User).Value;
         var authRequests = await _authRequestRepository.GetManyByUserIdAsync(userId);

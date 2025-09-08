@@ -345,7 +345,7 @@ public class SubscriberService(
             return PaymentMethod.Empty;
         }
 
-        var accountCredit = customer.Balance * -1 / 100M;
+        var accountCredit = customer.Balance * -1 / 100;
 
         var paymentMethod = await GetPaymentSourceAsync(subscriber.Id, customer);
 
@@ -801,13 +801,15 @@ public class SubscriberService(
             _ => false
         };
 
+
+
         if (isBusinessUseSubscriber)
         {
             switch (customer)
             {
                 case
                 {
-                    Address.Country: not Core.Constants.CountryAbbreviations.UnitedStates,
+                    Address.Country: not "US",
                     TaxExempt: not TaxExempt.Reverse
                 }:
                     await stripeAdapter.CustomerUpdateAsync(customer.Id,
@@ -815,7 +817,7 @@ public class SubscriberService(
                     break;
                 case
                 {
-                    Address.Country: Core.Constants.CountryAbbreviations.UnitedStates,
+                    Address.Country: "US",
                     TaxExempt: TaxExempt.Reverse
                 }:
                     await stripeAdapter.CustomerUpdateAsync(customer.Id,
@@ -838,8 +840,8 @@ public class SubscriberService(
             {
                 User => true,
                 Organization organization => organization.PlanType.GetProductTier() == ProductTierType.Families ||
-                                             customer.Address.Country == Core.Constants.CountryAbbreviations.UnitedStates || (customer.TaxIds?.Any() ?? false),
-                Provider => customer.Address.Country == Core.Constants.CountryAbbreviations.UnitedStates || (customer.TaxIds?.Any() ?? false),
+                                             customer.Address.Country == "US" || (customer.TaxIds?.Any() ?? false),
+                Provider => customer.Address.Country == "US" || (customer.TaxIds?.Any() ?? false),
                 _ => false
             };
 

@@ -11,7 +11,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Repositories;
-using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;

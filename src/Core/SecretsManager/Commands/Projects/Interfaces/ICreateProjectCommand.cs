@@ -1,4 +1,4 @@
-﻿using Bit.Core.Auth.Identity;
+﻿using Bit.Core.Identity;
 using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Core.SecretsManager.Commands.Projects.Interfaces;

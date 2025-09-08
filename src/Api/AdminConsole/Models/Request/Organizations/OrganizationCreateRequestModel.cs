@@ -3,7 +3,6 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using Bit.Core;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -140,7 +139,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
                 new string[] { nameof(BillingAddressCountry) });
         }
 
-        if (PlanType != PlanType.Free && BillingAddressCountry == Constants.CountryAbbreviations.UnitedStates &&
+        if (PlanType != PlanType.Free && BillingAddressCountry == "US" &&
             string.IsNullOrWhiteSpace(BillingAddressPostalCode))
         {
             yield return new ValidationResult("Zip / postal code is required.",

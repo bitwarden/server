@@ -152,12 +152,6 @@ public class FreshdeskController : Controller
             return new BadRequestResult();
         }
 
-        // if there is no description, then we don't send anything to onyx
-        if (string.IsNullOrEmpty(model.TicketDescriptionText.Trim()))
-        {
-            return Ok();
-        }
-
         // create the onyx `answer-with-citation` request
         var onyxRequestModel = new OnyxAnswerWithCitationRequestModel(model.TicketDescriptionText, _billingSettings.Onyx.PersonaId);
         var onyxRequest = new HttpRequestMessage(HttpMethod.Post,
@@ -170,12 +164,9 @@ public class FreshdeskController : Controller
         // the CallOnyxApi will return a null if we have an error response
         if (onyxJsonResponse?.Answer == null || !string.IsNullOrEmpty(onyxJsonResponse?.ErrorMsg))
         {
-            _logger.LogWarning("Error getting answer from Onyx AI. Freshdesk model: {model}\r\n Onyx query {query}\r\nresponse: {response}. ",
-                    JsonSerializer.Serialize(model),
-                    JsonSerializer.Serialize(onyxRequestModel),
-                    JsonSerializer.Serialize(onyxJsonResponse));
-
-            return Ok(); // return ok so we don't retry
+            return BadRequest(
+                string.Format("Failed to get a valid response from Onyx API. Response: {0}",
+                            JsonSerializer.Serialize(onyxJsonResponse ?? new OnyxAnswerWithCitationResponseModel())));
         }
 
         // add the answer as a note to the ticket

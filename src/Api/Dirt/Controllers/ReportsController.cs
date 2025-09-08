@@ -1,7 +1,6 @@
 ﻿using Bit.Api.Dirt.Models;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Tools.Models.Response;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Reports.Models.Data;
@@ -27,7 +26,6 @@ public class ReportsController : Controller
     private readonly IAddOrganizationReportCommand _addOrganizationReportCommand;
     private readonly IDropOrganizationReportCommand _dropOrganizationReportCommand;
     private readonly IGetOrganizationReportQuery _getOrganizationReportQuery;
-    private readonly ILogger<ReportsController> _logger;
 
     public ReportsController(
         ICurrentContext currentContext,
@@ -38,8 +36,7 @@ public class ReportsController : Controller
         IDropPasswordHealthReportApplicationCommand dropPwdHealthReportAppCommand,
         IGetOrganizationReportQuery getOrganizationReportQuery,
         IAddOrganizationReportCommand addOrganizationReportCommand,
-        IDropOrganizationReportCommand dropOrganizationReportCommand,
-        ILogger<ReportsController> logger
+        IDropOrganizationReportCommand dropOrganizationReportCommand
     )
     {
         _currentContext = currentContext;
@@ -51,7 +48,6 @@ public class ReportsController : Controller
         _getOrganizationReportQuery = getOrganizationReportQuery;
         _addOrganizationReportCommand = addOrganizationReportCommand;
         _dropOrganizationReportCommand = dropOrganizationReportCommand;
-        _logger = logger;
     }
 
     /// <summary>
@@ -90,22 +86,30 @@ public class ReportsController : Controller
     {
         if (!await _currentContext.AccessReports(orgId))
         {
-            _logger.LogInformation(Constants.BypassFiltersEventId,
-                "AccessReports Check - UserId: {userId} OrgId: {orgId} DeviceType: {deviceType}",
-                _currentContext.UserId, orgId, _currentContext.DeviceType);
             throw new NotFoundException();
         }
 
-        _logger.LogInformation(Constants.BypassFiltersEventId,
-            "MemberAccessReportQuery starts - UserId: {userId} OrgId: {orgId} DeviceType: {deviceType}",
-            _currentContext.UserId, orgId, _currentContext.DeviceType);
-
-        var accessDetails = await _memberAccessReportQuery
-            .GetMemberAccessReportsAsync(new MemberAccessReportRequest { OrganizationId = orgId });
+        var accessDetails = await GetMemberAccessDetails(new MemberAccessReportRequest { OrganizationId = orgId });
 
         var responses = accessDetails.Select(x => new MemberAccessDetailReportResponseModel(x));
 
         return responses;
+    }
+
+    /// <summary>
+    /// Contains the organization member info, the cipher ids associated with the member,
+    /// and details on their collections, groups, and permissions
+    /// </summary>
+    /// <param name="request">Request parameters</param>
+    /// <returns>
+    ///     List of a user's permissions at a group and collection level as well as the number of ciphers
+    ///     associated with that group/collection
+    /// </returns>
+    private async Task<IEnumerable<MemberAccessReportDetail>> GetMemberAccessDetails(
+        MemberAccessReportRequest request)
+    {
+        var accessDetails = await _memberAccessReportQuery.GetMemberAccessReportsAsync(request);
+        return accessDetails;
     }
 
     /// <summary>

@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Core.Auth.IdentityServer;
+namespace Bit.Core.IdentityServer;
 
 public class DistributedCacheCookieManager : ICookieManager
 {

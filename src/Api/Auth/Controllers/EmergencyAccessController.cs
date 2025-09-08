@@ -79,6 +79,7 @@ public class EmergencyAccessController : Controller
     }
 
     [HttpPut("{id}")]
+    [HttpPost("{id}")]
     public async Task Put(Guid id, [FromBody] EmergencyAccessUpdateRequestModel model)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
@@ -91,25 +92,12 @@ public class EmergencyAccessController : Controller
         await _emergencyAccessService.SaveAsync(model.ToEmergencyAccess(emergencyAccess), user);
     }
 
-    [HttpPost("{id}")]
-    [Obsolete("This endpoint is deprecated. Use PUT /{id} instead.")]
-    public async Task Post(Guid id, [FromBody] EmergencyAccessUpdateRequestModel model)
-    {
-        await Put(id, model);
-    }
-
     [HttpDelete("{id}")]
+    [HttpPost("{id}/delete")]
     public async Task Delete(Guid id)
     {
         var userId = _userService.GetProperUserId(User);
         await _emergencyAccessService.DeleteAsync(id, userId.Value);
-    }
-
-    [HttpPost("{id}/delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE /{id} instead.")]
-    public async Task PostDelete(Guid id)
-    {
-        await Delete(id);
     }
 
     [HttpPost("invite")]
@@ -148,7 +136,7 @@ public class EmergencyAccessController : Controller
     }
 
     [HttpPost("{id}/approve")]
-    public async Task Approve(Guid id)
+    public async Task Accept(Guid id)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         await _emergencyAccessService.ApproveAsync(id, user);

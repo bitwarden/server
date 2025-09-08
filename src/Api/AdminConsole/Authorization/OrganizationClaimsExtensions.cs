@@ -1,9 +1,9 @@
 ﻿#nullable enable
 
 using System.Security.Claims;
-using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
+using Bit.Core.Identity;
 using Bit.Core.Models.Data;
 
 namespace Bit.Api.AdminConsole.Authorization;

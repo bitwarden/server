@@ -642,15 +642,7 @@ public class CipherService : ICipherService
             cipherIds.Add(cipher.Id);
         }
 
-        var useBulkResourceCreationService = _featureService.IsEnabled(FeatureFlagKeys.CipherRepositoryBulkResourceCreation);
-        if (useBulkResourceCreationService)
-        {
-            await _cipherRepository.UpdateCiphersAsync_vNext(sharingUserId, cipherInfos.Select(c => c.cipher));
-        }
-        else
-        {
-            await _cipherRepository.UpdateCiphersAsync(sharingUserId, cipherInfos.Select(c => c.cipher));
-        }
+        await _cipherRepository.UpdateCiphersAsync(sharingUserId, cipherInfos.Select(c => c.cipher));
         await _collectionCipherRepository.UpdateCollectionsForCiphersAsync(cipherIds, sharingUserId,
             organizationId, collectionIds);
 

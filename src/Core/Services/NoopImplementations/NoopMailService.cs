@@ -93,11 +93,6 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendSendEmailOtpEmailAsync(string email, string token, string subject)
-    {
-        return Task.FromResult(0);
-    }
-
     public Task SendFailedTwoFactorAttemptEmailAsync(string email, TwoFactorProviderType failedType, DateTime utcNow, string ip)
     {
         return Task.FromResult(0);
@@ -136,15 +131,6 @@ public class NoopMailService : IMailService
         DateTime dueDate,
         List<string> items,
         bool mentionInvoices) => Task.FromResult(0);
-
-    public Task SendProviderInvoiceUpcoming(
-        IEnumerable<string> emails,
-        decimal amount,
-        DateTime dueDate,
-        List<string> items,
-        string? collectionMethod = null,
-        bool hasPaymentMethod = true,
-        string? paymentMethodDescription = null) => Task.FromResult(0);
 
     public Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices)
     {

@@ -63,7 +63,7 @@ public class ImportCiphersController : Controller
     }
 
     [HttpPost("import-organization")]
-    public async Task PostImportOrganization([FromQuery] string organizationId,
+    public async Task PostImport([FromQuery] string organizationId,
         [FromBody] ImportOrganizationCiphersRequestModel model)
     {
         if (!_globalSettings.SelfHosted &&

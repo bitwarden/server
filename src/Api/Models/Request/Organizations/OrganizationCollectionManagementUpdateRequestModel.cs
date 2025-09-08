@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Models.Business;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Services;
 
 namespace Bit.Api.Models.Request.Organizations;
 
@@ -9,11 +10,12 @@ public class OrganizationCollectionManagementUpdateRequestModel
     public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
 
-    public OrganizationCollectionManagementSettings ToSettings() => new()
+    public virtual Organization ToOrganization(Organization existingOrganization, IFeatureService featureService)
     {
-        LimitCollectionCreation = LimitCollectionCreation,
-        LimitCollectionDeletion = LimitCollectionDeletion,
-        LimitItemDeletion = LimitItemDeletion,
-        AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems
-    };
+        existingOrganization.LimitCollectionCreation = LimitCollectionCreation;
+        existingOrganization.LimitCollectionDeletion = LimitCollectionDeletion;
+        existingOrganization.LimitItemDeletion = LimitItemDeletion;
+        existingOrganization.AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems;
+        return existingOrganization;
+    }
 }

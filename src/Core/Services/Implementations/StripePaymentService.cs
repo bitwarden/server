@@ -9,9 +9,11 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Requests;
 using Bit.Core.Billing.Tax.Responses;
 using Bit.Core.Billing.Tax.Services;
+using Bit.Core.Billing.Tax.Services.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -19,6 +21,7 @@ using Bit.Core.Models.BitStripe;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using PaymentMethod = Stripe.PaymentMethod;
@@ -38,6 +41,8 @@ public class StripePaymentService : IPaymentService
     private readonly IFeatureService _featureService;
     private readonly ITaxService _taxService;
     private readonly IPricingClient _pricingClient;
+    private readonly IAutomaticTaxFactory _automaticTaxFactory;
+    private readonly IAutomaticTaxStrategy _personalUseTaxStrategy;
 
     public StripePaymentService(
         ITransactionRepository transactionRepository,
@@ -47,7 +52,9 @@ public class StripePaymentService : IPaymentService
         IGlobalSettings globalSettings,
         IFeatureService featureService,
         ITaxService taxService,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IAutomaticTaxFactory automaticTaxFactory,
+        [FromKeyedServices(AutomaticTaxFactory.PersonalUse)] IAutomaticTaxStrategy personalUseTaxStrategy)
     {
         _transactionRepository = transactionRepository;
         _logger = logger;
@@ -57,6 +64,8 @@ public class StripePaymentService : IPaymentService
         _featureService = featureService;
         _taxService = taxService;
         _pricingClient = pricingClient;
+        _automaticTaxFactory = automaticTaxFactory;
+        _personalUseTaxStrategy = personalUseTaxStrategy;
     }
 
     private async Task ChangeOrganizationSponsorship(
@@ -128,7 +137,7 @@ public class StripePaymentService : IPaymentService
         {
             if (sub.Customer is
                 {
-                    Address.Country: not Constants.CountryAbbreviations.UnitedStates,
+                    Address.Country: not "US",
                     TaxExempt: not StripeConstants.TaxExempt.Reverse
                 })
             {
@@ -978,6 +987,8 @@ public class StripePaymentService : IPaymentService
             }
         }
 
+        _personalUseTaxStrategy.SetInvoiceCreatePreviewOptions(options);
+
         try
         {
             var invoice = await _stripeAdapter.InvoiceCreatePreviewAsync(options);
@@ -1141,12 +1152,9 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        options.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true };
-        if (parameters.PasswordManager.Plan.IsBusinessProductTierType() &&
-            parameters.TaxInformation.Country != Constants.CountryAbbreviations.UnitedStates)
-        {
-            options.CustomerDetails.TaxExempt = StripeConstants.TaxExempt.Reverse;
-        }
+        var automaticTaxFactoryParameters = new AutomaticTaxFactoryParameters(parameters.PasswordManager.Plan);
+        var automaticTaxStrategy = await _automaticTaxFactory.CreateAsync(automaticTaxFactoryParameters);
+        automaticTaxStrategy.SetInvoiceCreatePreviewOptions(options);
 
         try
         {

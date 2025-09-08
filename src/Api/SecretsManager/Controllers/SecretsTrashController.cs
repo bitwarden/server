@@ -1,8 +1,8 @@
 ﻿using Bit.Api.SecretsManager.Models.Response;
-using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Identity;
 using Bit.Core.SecretsManager.Commands.Trash.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;

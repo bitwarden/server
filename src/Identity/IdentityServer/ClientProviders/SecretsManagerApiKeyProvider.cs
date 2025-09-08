@@ -1,7 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core.Auth.Identity;
+using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;

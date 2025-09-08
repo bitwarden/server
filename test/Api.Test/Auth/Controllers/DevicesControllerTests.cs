@@ -73,7 +73,7 @@ public class DevicesControllerTest
         _deviceRepositoryMock.GetManyByUserIdWithDeviceAuth(userId).Returns(devicesWithPendingAuthData);
 
         // Act
-        var result = await _sut.GetAll();
+        var result = await _sut.Get();
 
         // Assert
         Assert.NotNull(result);
@@ -94,6 +94,6 @@ public class DevicesControllerTest
         _userServiceMock.GetProperUserId(Arg.Any<System.Security.Claims.ClaimsPrincipal>()).Returns((Guid?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.GetAll());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.Get());
     }
 }

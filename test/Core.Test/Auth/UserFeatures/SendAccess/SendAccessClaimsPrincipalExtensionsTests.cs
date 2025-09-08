@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
-using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures.SendAccess;
+using Bit.Core.Identity;
 using Xunit;
 
 namespace Bit.Core.Test.Auth.UserFeatures.SendAccess;
@@ -12,7 +12,7 @@ public class SendAccessClaimsPrincipalExtensionsTests
     {
         // Arrange
         var guid = Guid.NewGuid();
-        var claims = new[] { new Claim(Claims.SendAccessClaims.SendId, guid.ToString()) };
+        var claims = new[] { new Claim(Claims.SendId, guid.ToString()) };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
 
         // Act
@@ -30,19 +30,19 @@ public class SendAccessClaimsPrincipalExtensionsTests
 
         // Act & Assert
         var ex = Assert.Throws<InvalidOperationException>(() => principal.GetSendId());
-        Assert.Equal("send_id claim not found.", ex.Message);
+        Assert.Equal("Send ID claim not found.", ex.Message);
     }
 
     [Fact]
     public void GetSendId_ThrowsInvalidOperationException_WhenClaimValueIsInvalid()
     {
         // Arrange
-        var claims = new[] { new Claim(Claims.SendAccessClaims.SendId, "not-a-guid") };
+        var claims = new[] { new Claim(Claims.SendId, "not-a-guid") };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
 
         // Act & Assert
         var ex = Assert.Throws<InvalidOperationException>(() => principal.GetSendId());
-        Assert.Equal("Invalid send_id claim value.", ex.Message);
+        Assert.Equal("Invalid Send ID claim value.", ex.Message);
     }
 
     [Fact]

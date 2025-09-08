@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Auth.Identity;
+﻿namespace Bit.Core.Identity;
 
 public static class Claims
 {
@@ -39,9 +39,6 @@ public static class Claims
         public const string ManageResetPassword = "manageresetpassword";
         public const string ManageScim = "managescim";
     }
-    public static class SendAccessClaims
-    {
-        public const string SendId = "send_id";
-        public const string Email = "send_email";
-    }
+
+    public const string SendId = "send_id";
 }

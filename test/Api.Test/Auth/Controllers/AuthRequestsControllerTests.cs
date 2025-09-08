@@ -43,7 +43,7 @@ public class AuthRequestsControllerTests
             .Returns([authRequest]);
 
         // Act
-        var result = await sutProvider.Sut.GetAll();
+        var result = await sutProvider.Sut.Get();
 
         // Assert
         Assert.NotNull(result);

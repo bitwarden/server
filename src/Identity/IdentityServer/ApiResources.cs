@@ -1,5 +1,5 @@
-﻿using Bit.Core.Auth.Identity;
-using Bit.Core.Auth.IdentityServer;
+﻿using Bit.Core.Identity;
+using Bit.Core.IdentityServer;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
 
@@ -29,7 +29,7 @@ public class ApiResources
             }),
             new(ApiScopes.ApiSendAccess, [
                 JwtClaimTypes.Subject,
-                Claims.SendAccessClaims.SendId
+                Claims.SendId
             ]),
             new(ApiScopes.Internal, new[] { JwtClaimTypes.Subject }),
             new(ApiScopes.ApiPush, new[] { JwtClaimTypes.Subject }),

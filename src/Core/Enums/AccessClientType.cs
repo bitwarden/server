@@ -1,4 +1,4 @@
-﻿using Bit.Core.Auth.Identity;
+﻿using Bit.Core.Identity;
 
 namespace Bit.Core.Enums;
 

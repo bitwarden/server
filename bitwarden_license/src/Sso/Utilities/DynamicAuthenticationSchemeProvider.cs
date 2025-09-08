@@ -4,7 +4,6 @@
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Settings;
@@ -417,7 +416,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
             SPOptions = spOptions,
             SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
             SignOutScheme = IdentityServerConstants.DefaultCookieAuthenticationScheme,
-            CookieManager = new DistributedCacheCookieManager(),
+            CookieManager = new IdentityServer.DistributedCacheCookieManager(),
         };
         options.IdentityProviders.Add(idp);
 

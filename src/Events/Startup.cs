@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using Bit.Core.AdminConsole.AbilitiesCache;
-using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Context;
+using Bit.Core.IdentityServer;
 using Bit.Core.Services;
 using Bit.Core.Services.Implementations;
 using Bit.Core.Settings;

@@ -31,6 +31,8 @@ using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
+using Bit.Core.Identity;
+using Bit.Core.IdentityServer;
 using Bit.Core.KeyManagement;
 using Bit.Core.NotificationCenter;
 using Bit.Core.OrganizationFeatures;

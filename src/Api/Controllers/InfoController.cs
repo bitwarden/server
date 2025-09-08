@@ -6,16 +6,10 @@ namespace Bit.Api.Controllers;
 public class InfoController : Controller
 {
     [HttpGet("~/alive")]
+    [HttpGet("~/now")]
     public DateTime GetAlive()
     {
         return DateTime.UtcNow;
-    }
-
-    [HttpGet("~/now")]
-    [Obsolete("This endpoint is deprecated. Use GET /alive instead.")]
-    public DateTime GetNow()
-    {
-        return GetAlive();
     }
 
     [HttpGet("~/version")]

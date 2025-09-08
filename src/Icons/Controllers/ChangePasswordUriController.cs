@@ -5,7 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace Bit.Icons.Controllers;
 
-[Route("~/change-password-uri")]
+[Route("change-password-uri")]
 public class ChangePasswordUriController : Controller
 {
     private readonly IMemoryCache _memoryCache;

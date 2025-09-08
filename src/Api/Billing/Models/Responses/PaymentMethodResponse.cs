@@ -4,7 +4,7 @@ using Bit.Core.Billing.Tax.Models;
 namespace Bit.Api.Billing.Models.Responses;
 
 public record PaymentMethodResponse(
-    decimal AccountCredit,
+    long AccountCredit,
     PaymentSource PaymentSource,
     string SubscriptionStatus,
     TaxInformation TaxInformation)
