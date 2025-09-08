@@ -1,5 +1,4 @@
 ﻿using Azure.Messaging.ServiceBus;
-using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
@@ -9,9 +8,8 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Services;
 
-public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCacheService, IVCurrentInMemoryApplicationCacheService
+public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCacheService
 {
-    private readonly ServiceBusClient _serviceBusClient;
     private readonly ServiceBusSender _topicMessageSender;
     private readonly string _subName;
 
@@ -22,7 +20,7 @@ public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCach
         : base(organizationRepository, providerRepository)
     {
         _subName = CoreHelpers.GetApplicationCacheServiceBusSubscriptionName(globalSettings);
-        _serviceBusClient = new ServiceBusClient(globalSettings.ServiceBus.ConnectionString);
+
         _topicMessageSender = new ServiceBusClient(globalSettings.ServiceBus.ConnectionString).CreateSender(globalSettings.ServiceBus.ApplicationCacheTopicName);
     }
 

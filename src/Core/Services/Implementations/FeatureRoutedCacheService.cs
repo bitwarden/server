@@ -61,13 +61,12 @@ public class FeatureRoutedCacheService(
         if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))
         {
             await vNextInMemoryApplicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            await serviceBusMessaging.NotifyOrganizationAbilityUpsertedAsync(organization);
         }
         else
         {
             await inMemoryApplicationCacheService.UpsertOrganizationAbilityAsync(organization);
         }
-
-        await serviceBusMessaging.NotifyOrganizationAbilityUpsertedAsync(organization);
     }
 
     public async Task UpsertProviderAbilityAsync(Provider provider)
@@ -87,13 +86,12 @@ public class FeatureRoutedCacheService(
         if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))
         {
             await vNextInMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
+            await serviceBusMessaging.NotifyOrganizationAbilityDeletedAsync(organizationId);
         }
         else
         {
             await inMemoryApplicationCacheService.DeleteOrganizationAbilityAsync(organizationId);
         }
-
-        await serviceBusMessaging.NotifyOrganizationAbilityDeletedAsync(organizationId);
     }
 
     public async Task DeleteProviderAbilityAsync(Guid providerId)
@@ -101,13 +99,13 @@ public class FeatureRoutedCacheService(
         if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))
         {
             await vNextInMemoryApplicationCacheService.DeleteProviderAbilityAsync(providerId);
+            await serviceBusMessaging.NotifyProviderAbilityDeletedAsync(providerId);
         }
         else
         {
             await inMemoryApplicationCacheService.DeleteProviderAbilityAsync(providerId);
         }
 
-        await serviceBusMessaging.NotifyProviderAbilityDeletedAsync(providerId);
     }
 
     public async Task BaseUpsertOrganizationAbilityAsync(Organization organization)
@@ -118,9 +116,11 @@ public class FeatureRoutedCacheService(
         }
         else
         {
+            // NOTE: This is a temporary workaround InMemoryServiceBusApplicationCacheService legacy implementation.
+            // Avoid using this approach in new code.
             if (inMemoryApplicationCacheService is InMemoryServiceBusApplicationCacheService serviceBusCache)
             {
-                await serviceBusCache.UpsertOrganizationAbilityAsync(organization);
+                await serviceBusCache.BaseUpsertOrganizationAbilityAsync(organization);
             }
             else
             {
@@ -137,9 +137,11 @@ public class FeatureRoutedCacheService(
         }
         else
         {
+            // NOTE: This is a temporary workaround InMemoryServiceBusApplicationCacheService legacy implementation.
+            // Avoid using this approach in new code.
             if (inMemoryApplicationCacheService is InMemoryServiceBusApplicationCacheService serviceBusCache)
             {
-                await serviceBusCache.DeleteOrganizationAbilityAsync(organizationId);
+                await serviceBusCache.BaseDeleteOrganizationAbilityAsync(organizationId);
             }
             else
             {
