@@ -36,8 +36,7 @@ public class OrganizationIntegrationRequestModel : IValidatableObject
                 yield return new ValidationResult($"{nameof(Type)} integrations are not yet supported.", [nameof(Type)]);
                 break;
             case IntegrationType.Slack:
-                yield return new ValidationResult($"{nameof(Type)} integrations cannot be created directly.", [nameof(Type)
-                ]);
+                yield return new ValidationResult($"{nameof(Type)} integrations cannot be created directly.", [nameof(Type)]);
                 break;
             case IntegrationType.Webhook:
                 foreach (var r in ValidateConfiguration<WebhookIntegration>(allowNullOrEmpty: true))
