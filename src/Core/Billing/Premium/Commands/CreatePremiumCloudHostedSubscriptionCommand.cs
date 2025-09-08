@@ -1,13 +1,10 @@
 ﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -74,21 +71,19 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             return new BadRequest("Additional storage must be greater than 0.");
         }
 
-        var customerSetup = CustomerSetup.From(paymentMethod, billingAddress);
-
         var customer = string.IsNullOrEmpty(user.GatewayCustomerId)
-            ? await CreateCustomerAsync(user, customerSetup)
+            ? await CreateCustomerAsync(user, paymentMethod, billingAddress)
             : await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = _expand });
 
-        customer = await ReconcileBillingLocationAsync(customer, customerSetup.TaxInformation!);
+        customer = await ReconcileBillingLocationAsync(customer, billingAddress);
 
         var subscription = await CreateSubscriptionAsync(user.Id, customer, additionalStorageGb > 0 ? additionalStorageGb : null);
 
-        switch (customerSetup.TokenizedPaymentSource)
+        switch (paymentMethod)
         {
-            case { Type: PaymentMethodType.PayPal }
+            case { Type: TokenizablePaymentMethodType.PayPal }
                 when subscription.Status == StripeConstants.SubscriptionStatus.Incomplete:
-            case { Type: not PaymentMethodType.PayPal }
+            case { Type: not TokenizablePaymentMethodType.PayPal }
                 when subscription.Status == StripeConstants.SubscriptionStatus.Active:
                 {
                     user.Premium = true;
@@ -110,40 +105,21 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         return new None();
     });
 
-    private async Task<Customer> CreateCustomerAsync(User user, CustomerSetup customerSetup)
+    private async Task<Customer> CreateCustomerAsync(User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
     {
-        /*
-         * Creating a Customer via the adding of a payment method or the purchasing of a subscription requires
-         * an actual payment source. The only time this is not the case is when the Customer is created when the
-         * User purchases credit.
-         */
-        if (customerSetup.TokenizedPaymentSource is not
-            {
-                Type: PaymentMethodType.BankAccount or PaymentMethodType.Card or PaymentMethodType.PayPal,
-                Token: not null and not ""
-            })
-        {
-            _logger.LogError("Cannot create customer for user ({UserID}) without a valid payment source", user.Id);
-            throw new BillingException();
-        }
-
-        if (customerSetup.TaxInformation is not { Country: not null and not "", PostalCode: not null and not "" })
-        {
-            _logger.LogError("Cannot create customer for user ({UserID}) without valid tax information", user.Id);
-            throw new BillingException();
-        }
-
         var subscriberName = user.SubscriberName();
         var customerCreateOptions = new CustomerCreateOptions
         {
             Address = new AddressOptions
             {
-                Line1 = customerSetup.TaxInformation.Line1,
-                Line2 = customerSetup.TaxInformation.Line2,
-                City = customerSetup.TaxInformation.City,
-                PostalCode = customerSetup.TaxInformation.PostalCode,
-                State = customerSetup.TaxInformation.State,
-                Country = customerSetup.TaxInformation.Country
+                Line1 = billingAddress.Line1,
+                Line2 = billingAddress.Line2,
+                City = billingAddress.City,
+                PostalCode = billingAddress.PostalCode,
+                State = billingAddress.State,
+                Country = billingAddress.Country
             },
             Description = user.Name,
             Email = user.Email,
@@ -172,16 +148,15 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             }
         };
 
-        var (paymentMethodType, paymentMethodToken) = customerSetup.TokenizedPaymentSource;
         var braintreeCustomerId = "";
 
         // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
-        switch (paymentMethodType)
+        switch (paymentMethod.Type)
         {
-            case PaymentMethodType.BankAccount:
+            case TokenizablePaymentMethodType.BankAccount:
                 {
                     var setupIntent =
-                        (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = paymentMethodToken }))
+                        (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = paymentMethod.Token }))
                         .FirstOrDefault();
 
                     if (setupIntent == null)
@@ -193,21 +168,21 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
                     await setupIntentCache.Set(user.Id, setupIntent.Id);
                     break;
                 }
-            case PaymentMethodType.Card:
+            case TokenizablePaymentMethodType.Card:
                 {
-                    customerCreateOptions.PaymentMethod = paymentMethodToken;
-                    customerCreateOptions.InvoiceSettings.DefaultPaymentMethod = paymentMethodToken;
+                    customerCreateOptions.PaymentMethod = paymentMethod.Token;
+                    customerCreateOptions.InvoiceSettings.DefaultPaymentMethod = paymentMethod.Token;
                     break;
                 }
-            case PaymentMethodType.PayPal:
+            case TokenizablePaymentMethodType.PayPal:
                 {
-                    braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(user, paymentMethodToken);
+                    braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(user, paymentMethod.Token);
                     customerCreateOptions.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
                     break;
                 }
             default:
                 {
-                    _logger.LogError("Cannot create customer for user ({UserID}) using payment method type ({PaymentMethodType}) as it is not supported", user.Id, paymentMethodType.ToString());
+                    _logger.LogError("Cannot create customer for user ({UserID}) using payment method type ({PaymentMethodType}) as it is not supported", user.Id, paymentMethod.Type.ToString());
                     throw new BillingException();
                 }
         }
@@ -215,20 +190,6 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         try
         {
             return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
-        }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Code ==
-                                                      StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
-        {
-            await Revert();
-            throw new BadRequestException(
-                "Your location wasn't recognized. Please ensure your country and postal code are valid.");
-        }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Code ==
-                                                      StripeConstants.ErrorCodes.TaxIdInvalid)
-        {
-            await Revert();
-            throw new BadRequestException(
-                "Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.");
         }
         catch
         {
@@ -239,14 +200,14 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         async Task Revert()
         {
             // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
-            switch (customerSetup.TokenizedPaymentSource!.Type)
+            switch (paymentMethod.Type)
             {
-                case PaymentMethodType.BankAccount:
+                case TokenizablePaymentMethodType.BankAccount:
                     {
                         await setupIntentCache.Remove(user.Id);
                         break;
                     }
-                case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
+                case TokenizablePaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
                     {
                         await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
                         break;
@@ -257,7 +218,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
     private async Task<Customer> ReconcileBillingLocationAsync(
         Customer customer,
-        TaxInformation taxInformation)
+        BillingAddress billingAddress)
     {
         /*
          * If the customer was previously set up with credit, which does not require a billing location,
@@ -272,12 +233,12 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         {
             Address = new AddressOptions
             {
-                Line1 = taxInformation.Line1,
-                Line2 = taxInformation.Line2,
-                City = taxInformation.City,
-                PostalCode = taxInformation.PostalCode,
-                State = taxInformation.State,
-                Country = taxInformation.Country
+                Line1 = billingAddress.Line1,
+                Line2 = billingAddress.Line2,
+                City = billingAddress.City,
+                PostalCode = billingAddress.PostalCode,
+                State = billingAddress.State,
+                Country = billingAddress.Country
             },
             Expand = _expand,
             Tax = new CustomerTaxOptions
