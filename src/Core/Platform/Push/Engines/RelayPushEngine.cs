@@ -1,6 +1,6 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core.Auth.IdentityServer;
+using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.IdentityServer;
 using Bit.Core.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
