@@ -52,23 +52,23 @@ public class OrganizationReportsController : Controller
 
     #region Whole OrganizationReport Endpoints
 
-    [HttpGet("{orgId}/latest")]
-    public async Task<IActionResult> GetLatestOrganizationReportAsync(Guid orgId)
+    [HttpGet("{organizationId}/latest")]
+    public async Task<IActionResult> GetLatestOrganizationReportAsync(Guid organizationId)
     {
-        if (!await _currentContext.AccessReports(orgId))
+        if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
         }
 
-        var latestReport = await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(orgId);
+        var latestReport = await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId);
 
         return Ok(latestReport);
     }
 
-    [HttpGet("{orgId}/{reportId}")]
-    public async Task<IActionResult> GetOrganizationReportAsync(Guid orgId, Guid reportId)
+    [HttpGet("{organizationId}/{reportId}")]
+    public async Task<IActionResult> GetOrganizationReportAsync(Guid organizationId, Guid reportId)
     {
-        if (!await _currentContext.AccessReports(orgId))
+        if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
         }
@@ -80,7 +80,7 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException("Report not found for the specified organization.");
         }
 
-        if (report.OrganizationId != orgId)
+        if (report.OrganizationId != organizationId)
         {
             throw new BadRequestException("Invalid report ID");
         }
@@ -88,15 +88,15 @@ public class OrganizationReportsController : Controller
         return Ok(report);
     }
 
-    [HttpPost("{orgId}")]
-    public async Task<IActionResult> CreateOrganizationReportAsync(Guid orgId, [FromBody] AddOrganizationReportRequest request)
+    [HttpPost("{organizationId}")]
+    public async Task<IActionResult> CreateOrganizationReportAsync(Guid organizationId, [FromBody] AddOrganizationReportRequest request)
     {
-        if (!await _currentContext.AccessReports(orgId))
+        if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
         }
 
-        if (request.OrganizationId != orgId)
+        if (request.OrganizationId != organizationId)
         {
             throw new BadRequestException("Organization ID in the request body must match the route parameter");
         }
@@ -105,15 +105,15 @@ public class OrganizationReportsController : Controller
         return Ok(report);
     }
 
-    [HttpPatch("{orgId}/{reportId}")]
-    public async Task<IActionResult> UpdateOrganizationReportAsync(Guid orgId, [FromBody] UpdateOrganizationReportRequest request)
+    [HttpPatch("{organizationId}/{reportId}")]
+    public async Task<IActionResult> UpdateOrganizationReportAsync(Guid organizationId, [FromBody] UpdateOrganizationReportRequest request)
     {
-        if (!await _currentContext.AccessReports(orgId))
+        if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
         }
 
-        if (request.OrganizationId != orgId)
+        if (request.OrganizationId != organizationId)
         {
             throw new BadRequestException("Organization ID in the request body must match the route parameter");
         }
@@ -126,36 +126,36 @@ public class OrganizationReportsController : Controller
 
     # region SummaryData Field Endpoints
 
-    [HttpGet("{orgId}/data/summary")]
+    [HttpGet("{organizationId}/data/summary")]
     public async Task<IActionResult> GetOrganizationReportSummaryDataByDateRangeAsync(
-        Guid orgId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
+        Guid organizationId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
     {
-        if (!await _currentContext.AccessReports(orgId))
+        if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
         }
 
-        if (orgId.Equals(null))
+        if (organizationId.Equals(null))
         {
             throw new BadRequestException("Organization ID is required.");
         }
 
         var summaryDataList = await _getOrganizationReportSummaryDataByDateRangeQuery
-            .GetOrganizationReportSummaryDataByDateRangeAsync(orgId, startDate, endDate);
+            .GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
 
         return Ok(summaryDataList);
     }
 
-    [HttpGet("{orgId}/data/summary/{reportId}")]
-    public async Task<IActionResult> GetOrganizationReportSummaryAsync(Guid orgId, Guid reportId)
+    [HttpGet("{organizationId}/data/summary/{reportId}")]
+    public async Task<IActionResult> GetOrganizationReportSummaryAsync(Guid organizationId, Guid reportId)
     {
-        if (!await _currentContext.AccessReports(orgId))
+        if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
         }
 
         var summaryData =
-            await _getOrganizationReportSummaryDataQuery.GetOrganizationReportSummaryDataAsync(orgId, reportId);
+            await _getOrganizationReportSummaryDataQuery.GetOrganizationReportSummaryDataAsync(organizationId, reportId);
 
         if (summaryData == null)
         {
@@ -165,15 +165,15 @@ public class OrganizationReportsController : Controller
         return Ok(summaryData);
     }
 
-    [HttpPatch("{orgId}/data/summary/{reportId}")]
-    public async Task<IActionResult> UpdateOrganizationReportSummaryAsync(Guid orgId, Guid reportId, [FromBody] UpdateOrganizationReportSummaryRequest request)
+    [HttpPatch("{organizationId}/data/summary/{reportId}")]
+    public async Task<IActionResult> UpdateOrganizationReportSummaryAsync(Guid organizationId, Guid reportId, [FromBody] UpdateOrganizationReportSummaryRequest request)
     {
-        if (!await _currentContext.AccessReports(orgId))
+        if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
         }
 
-        if (request.OrganizationId != orgId)
+        if (request.OrganizationId != organizationId)
         {
             throw new BadRequestException("Organization ID in the request body must match the route parameter");
         }
@@ -191,15 +191,15 @@ public class OrganizationReportsController : Controller
 
     #region ReportData Field Endpoints
 
-    [HttpGet("{orgId}/data/report/{reportId}")]
-    public async Task<IActionResult> GetOrganizationReportDataAsync(Guid orgId, Guid reportId)
+    [HttpGet("{organizationId}/data/report/{reportId}")]
+    public async Task<IActionResult> GetOrganizationReportDataAsync(Guid organizationId, Guid reportId)
     {
-        if (!await _currentContext.AccessReports(orgId))
+        if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
         }
 
-        var reportData = await _getOrganizationReportDataQuery.GetOrganizationReportDataAsync(orgId, reportId);
+        var reportData = await _getOrganizationReportDataQuery.GetOrganizationReportDataAsync(organizationId, reportId);
 
         if (reportData == null)
         {
@@ -209,15 +209,15 @@ public class OrganizationReportsController : Controller
         return Ok(reportData);
     }
 
-    [HttpPatch("{orgId}/data/report/{reportId}")]
-    public async Task<IActionResult> UpdateOrganizationReportDataAsync(Guid orgId, Guid reportId, [FromBody] UpdateOrganizationReportDataRequest request)
+    [HttpPatch("{organizationId}/data/report/{reportId}")]
+    public async Task<IActionResult> UpdateOrganizationReportDataAsync(Guid organizationId, Guid reportId, [FromBody] UpdateOrganizationReportDataRequest request)
     {
-        if (!await _currentContext.AccessReports(orgId))
+        if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
         }
 
-        if (request.OrganizationId != orgId)
+        if (request.OrganizationId != organizationId)
         {
             throw new BadRequestException("Organization ID in the request body must match the route parameter");
         }
@@ -235,17 +235,17 @@ public class OrganizationReportsController : Controller
 
     #region ApplicationData Field Endpoints
 
-    [HttpGet("{orgId}/data/application/{reportId}")]
-    public async Task<IActionResult> GetOrganizationReportApplicationDataAsync(Guid orgId, Guid reportId)
+    [HttpGet("{organizationId}/data/application/{reportId}")]
+    public async Task<IActionResult> GetOrganizationReportApplicationDataAsync(Guid organizationId, Guid reportId)
     {
         try
         {
-            if (!await _currentContext.AccessReports(orgId))
+            if (!await _currentContext.AccessReports(organizationId))
             {
                 throw new NotFoundException();
             }
 
-            var applicationData = await _getOrganizationReportApplicationDataQuery.GetOrganizationReportApplicationDataAsync(orgId, reportId);
+            var applicationData = await _getOrganizationReportApplicationDataQuery.GetOrganizationReportApplicationDataAsync(organizationId, reportId);
 
             if (applicationData == null)
             {
@@ -260,18 +260,18 @@ public class OrganizationReportsController : Controller
         }
     }
 
-    [HttpPatch("{orgId}/data/application/{reportId}")]
-    public async Task<IActionResult> UpdateOrganizationReportApplicationDataAsync(Guid orgId, Guid reportId, [FromBody] UpdateOrganizationReportApplicationDataRequest request)
+    [HttpPatch("{organizationId}/data/application/{reportId}")]
+    public async Task<IActionResult> UpdateOrganizationReportApplicationDataAsync(Guid organizationId, Guid reportId, [FromBody] UpdateOrganizationReportApplicationDataRequest request)
     {
         try
         {
 
-            if (!await _currentContext.AccessReports(orgId))
+            if (!await _currentContext.AccessReports(organizationId))
             {
                 throw new NotFoundException();
             }
 
-            if (request.OrganizationId != orgId)
+            if (request.OrganizationId != organizationId)
             {
                 throw new BadRequestException("Organization ID in the request body must match the route parameter");
             }

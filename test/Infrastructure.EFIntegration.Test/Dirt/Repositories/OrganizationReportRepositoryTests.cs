@@ -126,8 +126,9 @@ public class OrganizationReportRepositoryTests
         var fixture = new Fixture();
         var secondReport = fixture.Build<OrganizationReport>()
             .With(x => x.OrganizationId, org.Id)
-            .With(x => x.RevisionDate, DateTime.UtcNow.AddMinutes(1))
+            .With(x => x.RevisionDate, firstReport.RevisionDate.AddMinutes(30))
             .Create();
+
         await sqlOrganizationReportRepo.CreateAsync(secondReport);
 
         // Act
@@ -292,7 +293,7 @@ public class OrganizationReportRepositoryTests
         // Arrange
         var (org, report) = await CreateOrganizationAndReportAsync(sqlOrganizationRepo, sqlOrganizationReportRepo);
         var newApplicationData = "Updated application data";
-        var originalRevisionDate = report.RevisionDate;
+        var originalRevisionDate = DateTime.UtcNow.Subtract(TimeSpan.FromDays(1)); // ensure old revision date
 
         // Add a small delay to ensure revision date difference
         await Task.Delay(100);

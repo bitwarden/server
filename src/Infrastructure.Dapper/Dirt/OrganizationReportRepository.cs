@@ -37,14 +37,14 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
         }
     }
 
-    public async Task<OrganizationReport> UpdateSummaryDataAsync(Guid orgId, Guid reportId, string summaryData)
+    public async Task<OrganizationReport> UpdateSummaryDataAsync(Guid organizationId, Guid reportId, string summaryData)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var parameters = new
             {
                 Id = reportId,
-                OrganizationId = orgId,
+                OrganizationId = organizationId,
                 SummaryData = summaryData,
                 RevisionDate = DateTime.UtcNow
             };
@@ -111,13 +111,13 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
         }
     }
 
-    public async Task<OrganizationReport> UpdateReportDataAsync(Guid orgId, Guid reportId, string reportData)
+    public async Task<OrganizationReport> UpdateReportDataAsync(Guid organizationId, Guid reportId, string reportData)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var parameters = new
             {
-                OrganizationId = orgId,
+                OrganizationId = organizationId,
                 Id = reportId,
                 ReportData = reportData,
                 RevisionDate = DateTime.UtcNow
@@ -149,13 +149,13 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
         }
     }
 
-    public async Task<OrganizationReport> UpdateApplicationDataAsync(Guid orgId, Guid reportId, string applicationData)
+    public async Task<OrganizationReport> UpdateApplicationDataAsync(Guid organizationId, Guid reportId, string applicationData)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var parameters = new
             {
-                OrganizationId = orgId,
+                OrganizationId = organizationId,
                 Id = reportId,
                 ApplicationData = applicationData,
                 RevisionDate = DateTime.UtcNow
