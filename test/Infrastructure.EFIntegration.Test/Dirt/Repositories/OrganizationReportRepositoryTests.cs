@@ -146,6 +146,7 @@ public class OrganizationReportRepositoryTests
     {
         // Arrange
         var (_, report) = await CreateOrganizationAndReportAsync(sqlOrganizationRepo, sqlOrganizationReportRepo);
+        report.RevisionDate = DateTime.UtcNow.Subtract(TimeSpan.FromDays(1)); // ensure old revision date
         var newSummaryData = "Updated summary data";
         var originalRevisionDate = report.RevisionDate;
 
@@ -173,8 +174,6 @@ public class OrganizationReportRepositoryTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(org.Id, result.OrganizationId);
-        Assert.Equal(report.Id, result.Id);
         Assert.Equal(summaryData, result.SummaryData);
     }
 
@@ -219,7 +218,6 @@ public class OrganizationReportRepositoryTests
         Assert.NotNull(results);
         var resultsList = results.ToList();
         Assert.True(resultsList.Count >= 2, $"Expected at least 2 results, but got {resultsList.Count}");
-        Assert.All(resultsList, r => Assert.Equal(org.Id, r.OrganizationId));
         Assert.All(resultsList, r => Assert.NotNull(r.SummaryData));
     }
 
@@ -239,8 +237,6 @@ public class OrganizationReportRepositoryTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(org.Id, result.OrganizationId);
-        Assert.Equal(report.Id, result.Id);
         Assert.Equal(reportData, result.ReportData);
     }
 
@@ -285,8 +281,6 @@ public class OrganizationReportRepositoryTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(org.Id, result.OrganizationId);
-        Assert.Equal(report.Id, result.Id);
         Assert.Equal(applicationData, result.ApplicationData);
     }
 
@@ -373,6 +367,7 @@ public class OrganizationReportRepositoryTests
 
         var orgReportRecord = fixture.Build<OrganizationReport>()
             .With(x => x.OrganizationId, organization.Id)
+            .With(x => x.RevisionDate, organization.RevisionDate)
             .Create();
 
         organization = await orgRepo.CreateAsync(organization);

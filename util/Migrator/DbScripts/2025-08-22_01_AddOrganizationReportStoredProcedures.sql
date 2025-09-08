@@ -28,8 +28,6 @@ BEGIN
     SET NOCOUNT ON
 
 SELECT
-    [Id],
-    [OrganizationId],
     [SummaryData]
 FROM [dbo].[OrganizationReportView]
 WHERE [OrganizationId] = @OrganizationId
@@ -46,8 +44,6 @@ BEGIN
     SET NOCOUNT ON
 
 SELECT
-    [Id],
-    [OrganizationId],
     [SummaryData]
 FROM [dbo].[OrganizationReportView]
 WHERE [Id] = @Id
@@ -79,8 +75,6 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        [Id],
-        [OrganizationId],
         [ReportData]
     FROM [dbo].[OrganizationReportView]
     WHERE [Id] = @Id
@@ -112,8 +106,6 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        [Id],
-        [OrganizationId],
         [ApplicationData]
     FROM [dbo].[OrganizationReportView]
     WHERE [Id] = @Id;

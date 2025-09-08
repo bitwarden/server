@@ -157,15 +157,9 @@ public class OrganizationReportsController : Controller
         var summaryData =
             await _getOrganizationReportSummaryDataQuery.GetOrganizationReportSummaryDataAsync(orgId, reportId);
 
-
         if (summaryData == null)
         {
             throw new NotFoundException("Report not found for the specified organization.");
-        }
-
-        if (summaryData.OrganizationId != orgId)
-        {
-            throw new BadRequestException("Invalid report ID");
         }
 
         return Ok(summaryData);
@@ -212,11 +206,6 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException("Organization report data not found.");
         }
 
-        if (reportData.OrganizationId != orgId)
-        {
-            throw new BadRequestException("Invalid report ID");
-        }
-
         return Ok(reportData);
     }
 
@@ -261,11 +250,6 @@ public class OrganizationReportsController : Controller
             if (applicationData == null)
             {
                 throw new NotFoundException("Organization report application data not found.");
-            }
-
-            if (applicationData.OrganizationId != orgId)
-            {
-                throw new BadRequestException("Invalid report ID");
             }
 
             return Ok(applicationData);

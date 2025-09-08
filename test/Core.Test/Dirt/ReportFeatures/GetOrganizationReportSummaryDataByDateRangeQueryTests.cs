@@ -26,7 +26,6 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
         var startDate = DateTime.UtcNow.AddDays(-30);
         var endDate = DateTime.UtcNow;
         var summaryDataList = fixture.Build<OrganizationReportSummaryDataResponse>()
-            .With(x => x.OrganizationId, organizationId)
             .CreateMany(3);
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
@@ -39,7 +38,6 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal(3, result.Count());
-        Assert.All(result, item => Assert.Equal(organizationId, item.OrganizationId));
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .Received(1).GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
     }

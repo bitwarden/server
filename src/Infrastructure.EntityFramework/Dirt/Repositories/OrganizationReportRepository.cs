@@ -71,8 +71,6 @@ public class OrganizationReportRepository :
                 .Where(p => p.OrganizationId == organizationId && p.Id == reportId)
                 .Select(p => new OrganizationReportSummaryDataResponse
                 {
-                    Id = p.Id,
-                    OrganizationId = p.OrganizationId,
                     SummaryData = p.SummaryData
                 })
                 .FirstOrDefaultAsync();
@@ -95,8 +93,6 @@ public class OrganizationReportRepository :
                             p.CreationDate >= startDate && p.CreationDate <= endDate)
                 .Select(p => new OrganizationReportSummaryDataResponse
                 {
-                    Id = p.Id,
-                    OrganizationId = p.OrganizationId,
                     SummaryData = p.SummaryData
                 })
                 .ToListAsync();
@@ -115,8 +111,6 @@ public class OrganizationReportRepository :
                 .Where(p => p.OrganizationId == organizationId && p.Id == reportId)
                 .Select(p => new OrganizationReportDataResponse
                 {
-                    Id = p.Id,
-                    OrganizationId = p.OrganizationId,
                     ReportData = p.ReportData
                 })
                 .FirstOrDefaultAsync();
@@ -159,8 +153,6 @@ public class OrganizationReportRepository :
                 .Where(p => p.OrganizationId == organizationId && p.Id == reportId)
                 .Select(p => new OrganizationReportApplicationDataResponse
                 {
-                    Id = p.Id,
-                    OrganizationId = p.OrganizationId,
                     ApplicationData = p.ApplicationData
                 })
                 .FirstOrDefaultAsync();

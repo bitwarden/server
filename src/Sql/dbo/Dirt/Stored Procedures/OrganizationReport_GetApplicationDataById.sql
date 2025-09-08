@@ -5,8 +5,6 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT
-        [Id],
-        [OrganizationId],
         [ApplicationData]
     FROM [dbo].[OrganizationReportView]
     WHERE [Id] = @Id

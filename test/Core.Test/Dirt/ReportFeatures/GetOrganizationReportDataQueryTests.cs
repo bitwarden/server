@@ -24,8 +24,6 @@ public class GetOrganizationReportDataQueryTests
         var organizationId = fixture.Create<Guid>();
         var reportId = fixture.Create<Guid>();
         var reportDataResponse = fixture.Build<OrganizationReportDataResponse>()
-            .With(x => x.OrganizationId, organizationId)
-            .With(x => x.Id, reportId)
             .Create();
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
@@ -37,8 +35,6 @@ public class GetOrganizationReportDataQueryTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(organizationId, result.OrganizationId);
-        Assert.Equal(reportId, result.Id);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .Received(1).GetReportDataAsync(organizationId, reportId);
     }

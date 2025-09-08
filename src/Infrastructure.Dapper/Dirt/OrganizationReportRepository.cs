@@ -68,7 +68,7 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
         {
             var result = await connection.QuerySingleOrDefaultAsync<OrganizationReportSummaryDataResponse>(
                 $"[{Schema}].[OrganizationReport_GetSummaryDataById]",
-                new { OrganizationId = organizationId, Id = reportId },
+                new { Id = reportId },
                 commandType: CommandType.StoredProcedure);
 
             return result;
@@ -142,7 +142,7 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
         {
             var result = await connection.QuerySingleOrDefaultAsync<OrganizationReportApplicationDataResponse>(
                 $"[{Schema}].[OrganizationReport_GetApplicationDataById]",
-                new { OrganizationId = organizationId, Id = reportId },
+                new { Id = reportId },
                 commandType: CommandType.StoredProcedure);
 
             return result;
