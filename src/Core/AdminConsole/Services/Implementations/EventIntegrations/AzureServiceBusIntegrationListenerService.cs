@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using Azure.Messaging.ServiceBus;
+﻿using Azure.Messaging.ServiceBus;
 using Bit.Core.AdminConsole.Models.Data.EventIntegrations;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
