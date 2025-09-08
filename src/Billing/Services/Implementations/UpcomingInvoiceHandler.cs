@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
@@ -18,6 +19,7 @@ using Event = Stripe.Event;
 namespace Bit.Billing.Services.Implementations;
 
 public class UpcomingInvoiceHandler(
+    IGetPaymentMethodQuery getPaymentMethodQuery,
     ILogger<StripeEventProcessor> logger,
     IMailService mailService,
     IOrganizationRepository organizationRepository,
@@ -137,7 +139,7 @@ public class UpcomingInvoiceHandler(
 
             await AlignProviderTaxConcernsAsync(provider, subscription, parsedEvent.Id);
 
-            await SendUpcomingInvoiceEmailsAsync(new List<string> { provider.BillingEmail }, invoice);
+            await SendProviderUpcomingInvoiceEmailsAsync(new List<string> { provider.BillingEmail }, invoice, subscription, providerId.Value);
         }
     }
 
@@ -158,6 +160,42 @@ public class UpcomingInvoiceHandler(
         }
     }
 
+    private async Task SendProviderUpcomingInvoiceEmailsAsync(IEnumerable<string> emails, Invoice invoice, Subscription subscription, Guid providerId)
+    {
+        var validEmails = emails.Where(e => !string.IsNullOrEmpty(e));
+
+        var items = invoice.FormatForProvider(subscription);
+
+        if (invoice.NextPaymentAttempt.HasValue && invoice.AmountDue > 0)
+        {
+            var provider = await providerRepository.GetByIdAsync(providerId);
+            if (provider == null)
+            {
+                logger.LogWarning("Provider {ProviderId} not found for invoice upcoming email", providerId);
+                return;
+            }
+
+            var collectionMethod = subscription.CollectionMethod;
+            var paymentMethod = await getPaymentMethodQuery.Run(provider);
+
+            var hasPaymentMethod = paymentMethod != null;
+            var paymentMethodDescription = paymentMethod?.Match(
+                bankAccount => $"Bank account ending in {bankAccount.Last4}",
+                card => $"{card.Brand} ending in {card.Last4}",
+                payPal => $"PayPal account {payPal.Email}"
+            );
+
+            await mailService.SendProviderInvoiceUpcoming(
+                validEmails,
+                invoice.AmountDue / 100M,
+                invoice.NextPaymentAttempt.Value,
+                items,
+                collectionMethod,
+                hasPaymentMethod,
+                paymentMethodDescription);
+        }
+    }
+
     private async Task AlignOrganizationTaxConcernsAsync(
         Organization organization,
         Subscription subscription,
@@ -165,7 +203,7 @@ public class UpcomingInvoiceHandler(
     {
         var nonUSBusinessUse =
             organization.PlanType.GetProductTier() != ProductTierType.Families &&
-            subscription.Customer.Address.Country != "US";
+            subscription.Customer.Address.Country != Core.Constants.CountryAbbreviations.UnitedStates;
 
         if (nonUSBusinessUse && subscription.Customer.TaxExempt != StripeConstants.TaxExempt.Reverse)
         {
@@ -210,7 +248,7 @@ public class UpcomingInvoiceHandler(
         Subscription subscription,
         string eventId)
     {
-        if (subscription.Customer.Address.Country != "US" &&
+        if (subscription.Customer.Address.Country != Core.Constants.CountryAbbreviations.UnitedStates &&
             subscription.Customer.TaxExempt != StripeConstants.TaxExempt.Reverse)
         {
             try
