@@ -22,6 +22,8 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
         GlobalSettings globalSettings)
     {
         var freeOrgTitle = "A Bitwarden member invited you to an organization. Join now to start securing your passwords!";
+        var userHasExistingUser = orgInvitesInfo.OrgUserHasExistingUserDict[orgUser.Id];
+
         return new OrganizationUserInvitedViewModel
         {
             TitleFirst = orgInvitesInfo.IsFreeOrg ? freeOrgTitle : "Join ",
@@ -44,7 +46,8 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
             OrgSsoIdentifier = orgInvitesInfo.OrgSsoIdentifier,
             OrgSsoEnabled = orgInvitesInfo.OrgSsoEnabled,
             OrgSsoLoginRequiredPolicyEnabled = orgInvitesInfo.OrgSsoLoginRequiredPolicyEnabled,
-            OrgUserHasExistingUser = orgInvitesInfo.OrgUserHasExistingUserDict[orgUser.Id]
+            OrgUserHasExistingUser = userHasExistingUser,
+            JoinOrganizationButtonText = userHasExistingUser ? "Accept invitation" : "Finish account setup"
         };
     }
 
@@ -60,6 +63,7 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
     public bool OrgSsoEnabled { get; set; }
     public bool OrgSsoLoginRequiredPolicyEnabled { get; set; }
     public bool OrgUserHasExistingUser { get; set; }
+    public string JoinOrganizationButtonText { get; set; } = "Join Organization";
 
     public string Url
     {

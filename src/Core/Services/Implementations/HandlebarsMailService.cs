@@ -351,12 +351,6 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo)
     {
-        MailQueueMessage CreateMessage(string email, object model)
-        {
-            var message = CreateDefaultMessage($"Join {orgInvitesInfo.OrganizationName}", email);
-            return new MailQueueMessage(message, "OrganizationUserInvited", model);
-        }
-
         var messageModels = orgInvitesInfo.OrgUserTokenPairs.Select(orgUserTokenPair =>
         {
             Debug.Assert(orgUserTokenPair.OrgUser.Email is not null);
@@ -366,6 +360,18 @@ public class HandlebarsMailService : IMailService
         });
 
         await EnqueueMailAsync(messageModels);
+        return;
+
+        MailQueueMessage CreateMessage(string email, OrganizationUserInvitedViewModel model)
+        {
+            var subject = model.OrgUserHasExistingUser
+                ? $"{model.OrganizationName} invited you to their Bitwarden organization."
+                : $"{model.OrganizationName} set up a Bitwarden account for you.";
+
+            var message = CreateDefaultMessage(subject, email);
+
+            return new MailQueueMessage(message, "OrganizationUserInvited", model);
+        }
     }
 
     public async Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email)
