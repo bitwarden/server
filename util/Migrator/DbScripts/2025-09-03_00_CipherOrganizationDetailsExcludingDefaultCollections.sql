@@ -66,19 +66,4 @@ CREATE OR ALTER PROCEDURE
           AND (V.[CollectionId] IS NULL OR V.[CollectionType] <> 1)
       ORDER BY V.[RevisionDate] DESC;
   END;
-  GO
-
-IF NOT EXISTS (
-    SELECT 1
-    FROM sys.indexes
-    WHERE name = 'IX_Cipher_OrganizationId_Filtered_OrgCiphersOnly'
-    AND object_id = OBJECT_ID('dbo.Cipher')
-)
-BEGIN
-    CREATE NONCLUSTERED INDEX [IX_Cipher_OrganizationId_Filtered_OrgCiphersOnly]
-          ON [dbo].[Cipher] ([OrganizationId])
-          INCLUDE ([Id], [Type], [Data], [Favorites], [Folders], [Attachments], [CreationDate], [RevisionDate], [DeletedDate], [Reprompt], [Key])
-          WHERE [UserId] IS NULL;
-
-END;
 GO
