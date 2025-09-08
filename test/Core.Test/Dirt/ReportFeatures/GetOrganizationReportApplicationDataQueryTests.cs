@@ -27,7 +27,7 @@ public class GetOrganizationReportApplicationDataQueryTests
             .Create();
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
-            .GetApplicationDataAsync(organizationId, reportId)
+            .GetApplicationDataAsync(reportId)
             .Returns(applicationDataResponse);
 
         // Act
@@ -36,7 +36,7 @@ public class GetOrganizationReportApplicationDataQueryTests
         // Assert
         Assert.NotNull(result);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .Received(1).GetApplicationDataAsync(organizationId, reportId);
+            .Received(1).GetApplicationDataAsync(reportId);
     }
 
     [Theory]
@@ -53,7 +53,7 @@ public class GetOrganizationReportApplicationDataQueryTests
 
         Assert.Equal("OrganizationId is required.", exception.Message);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .DidNotReceive().GetApplicationDataAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+            .DidNotReceive().GetApplicationDataAsync(Arg.Any<Guid>());
     }
 
     [Theory]
@@ -70,7 +70,7 @@ public class GetOrganizationReportApplicationDataQueryTests
 
         Assert.Equal("ReportId is required.", exception.Message);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .DidNotReceive().GetApplicationDataAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+            .DidNotReceive().GetApplicationDataAsync(Arg.Any<Guid>());
     }
 
     [Theory]
@@ -83,7 +83,7 @@ public class GetOrganizationReportApplicationDataQueryTests
         var reportId = Guid.NewGuid();
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
-            .GetApplicationDataAsync(organizationId, reportId)
+            .GetApplicationDataAsync(reportId)
             .Returns((OrganizationReportApplicationDataResponse)null);
 
         // Act & Assert
@@ -104,7 +104,7 @@ public class GetOrganizationReportApplicationDataQueryTests
         var expectedMessage = "Database connection failed";
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
-            .GetApplicationDataAsync(organizationId, reportId)
+            .GetApplicationDataAsync(reportId)
             .Throws(new InvalidOperationException(expectedMessage));
 
         // Act & Assert

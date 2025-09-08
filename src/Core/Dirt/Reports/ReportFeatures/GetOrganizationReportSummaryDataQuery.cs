@@ -38,7 +38,7 @@ public class GetOrganizationReportSummaryDataQuery : IGetOrganizationReportSumma
                 throw new BadRequestException("ReportId is required.");
             }
 
-            var summaryDataResponse = await _organizationReportRepo.GetSummaryDataAsync(organizationId, reportId);
+            var summaryDataResponse = await _organizationReportRepo.GetSummaryDataAsync(reportId);
 
             if (summaryDataResponse == null)
             {

@@ -11,15 +11,15 @@ public interface IOrganizationReportRepository : IRepository<OrganizationReport,
 
     // SummaryData methods
     Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetSummaryDataByDateRangeAsync(Guid organizationId, DateTime startDate, DateTime endDate);
-    Task<OrganizationReportSummaryDataResponse> GetSummaryDataAsync(Guid organizationId, Guid reportId);
+    Task<OrganizationReportSummaryDataResponse> GetSummaryDataAsync(Guid reportId);
     Task<OrganizationReport> UpdateSummaryDataAsync(Guid orgId, Guid reportId, string summaryData);
 
     // ReportData methods
-    Task<OrganizationReportDataResponse> GetReportDataAsync(Guid organizationId, Guid reportId);
-    Task<OrganizationReport> UpdateReportDataAsync(Guid organizationId, Guid reportId, string reportData);
+    Task<OrganizationReportDataResponse> GetReportDataAsync(Guid reportId);
+    Task<OrganizationReport> UpdateReportDataAsync(Guid orgId, Guid reportId, string reportData);
 
     // ApplicationData methods
-    Task<OrganizationReportApplicationDataResponse> GetApplicationDataAsync(Guid organizationId, Guid reportId);
-    Task<OrganizationReport> UpdateApplicationDataAsync(Guid organizationId, Guid reportId, string applicationData);
+    Task<OrganizationReportApplicationDataResponse> GetApplicationDataAsync(Guid reportId);
+    Task<OrganizationReport> UpdateApplicationDataAsync(Guid orgId, Guid reportId, string applicationData);
 }
 

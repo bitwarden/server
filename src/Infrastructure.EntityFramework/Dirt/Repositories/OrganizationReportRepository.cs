@@ -61,14 +61,14 @@ public class OrganizationReportRepository :
         }
     }
 
-    public async Task<OrganizationReportSummaryDataResponse> GetSummaryDataAsync(Guid organizationId, Guid reportId)
+    public async Task<OrganizationReportSummaryDataResponse> GetSummaryDataAsync(Guid reportId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
 
             var result = await dbContext.OrganizationReports
-                .Where(p => p.OrganizationId == organizationId && p.Id == reportId)
+                .Where(p => p.Id == reportId)
                 .Select(p => new OrganizationReportSummaryDataResponse
                 {
                     SummaryData = p.SummaryData
@@ -101,14 +101,14 @@ public class OrganizationReportRepository :
         }
     }
 
-    public async Task<OrganizationReportDataResponse> GetReportDataAsync(Guid organizationId, Guid reportId)
+    public async Task<OrganizationReportDataResponse> GetReportDataAsync(Guid reportId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
 
             var result = await dbContext.OrganizationReports
-                .Where(p => p.OrganizationId == organizationId && p.Id == reportId)
+                .Where(p => p.Id == reportId)
                 .Select(p => new OrganizationReportDataResponse
                 {
                     ReportData = p.ReportData
@@ -119,7 +119,7 @@ public class OrganizationReportRepository :
         }
     }
 
-    public async Task<OrganizationReport> UpdateReportDataAsync(Guid organizationId, Guid reportId, string reportData)
+    public async Task<OrganizationReport> UpdateReportDataAsync(Guid orgId, Guid reportId, string reportData)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -127,7 +127,7 @@ public class OrganizationReportRepository :
 
             // Update only ReportData and RevisionDate
             await dbContext.OrganizationReports
-                .Where(p => p.OrganizationId == organizationId && p.Id == reportId)
+                .Where(p => p.Id == reportId && p.OrganizationId == orgId)
                 .UpdateAsync(p => new Models.OrganizationReport
                 {
                     ReportData = reportData,
@@ -143,14 +143,14 @@ public class OrganizationReportRepository :
         }
     }
 
-    public async Task<OrganizationReportApplicationDataResponse> GetApplicationDataAsync(Guid organizationId, Guid reportId)
+    public async Task<OrganizationReportApplicationDataResponse> GetApplicationDataAsync(Guid reportId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
 
             var result = await dbContext.OrganizationReports
-                .Where(p => p.OrganizationId == organizationId && p.Id == reportId)
+                .Where(p => p.Id == reportId)
                 .Select(p => new OrganizationReportApplicationDataResponse
                 {
                     ApplicationData = p.ApplicationData
@@ -161,7 +161,7 @@ public class OrganizationReportRepository :
         }
     }
 
-    public async Task<OrganizationReport> UpdateApplicationDataAsync(Guid organizationId, Guid reportId, string applicationData)
+    public async Task<OrganizationReport> UpdateApplicationDataAsync(Guid orgId, Guid reportId, string applicationData)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -169,7 +169,7 @@ public class OrganizationReportRepository :
 
             // Update only ApplicationData and RevisionDate
             await dbContext.OrganizationReports
-                .Where(p => p.OrganizationId == organizationId && p.Id == reportId)
+                .Where(p => p.Id == reportId && p.OrganizationId == orgId)
                 .UpdateAsync(p => new Models.OrganizationReport
                 {
                     ApplicationData = applicationData,

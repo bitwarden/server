@@ -170,7 +170,7 @@ public class OrganizationReportRepositoryTests
             sqlOrganizationRepo, sqlOrganizationReportRepo, summaryData);
 
         // Act
-        var result = await sqlOrganizationReportRepo.GetSummaryDataAsync(org.Id, report.Id);
+        var result = await sqlOrganizationReportRepo.GetSummaryDataAsync(report.Id);
 
         // Assert
         Assert.NotNull(result);
@@ -233,7 +233,7 @@ public class OrganizationReportRepositoryTests
             sqlOrganizationRepo, sqlOrganizationReportRepo, reportData);
 
         // Act
-        var result = await sqlOrganizationReportRepo.GetReportDataAsync(org.Id, report.Id);
+        var result = await sqlOrganizationReportRepo.GetReportDataAsync(report.Id);
 
         // Assert
         Assert.NotNull(result);
@@ -277,7 +277,7 @@ public class OrganizationReportRepositoryTests
             sqlOrganizationRepo, sqlOrganizationReportRepo, applicationData);
 
         // Act
-        var result = await sqlOrganizationReportRepo.GetApplicationDataAsync(org.Id, report.Id);
+        var result = await sqlOrganizationReportRepo.GetApplicationDataAsync(report.Id);
 
         // Assert
         Assert.NotNull(result);
@@ -320,7 +320,7 @@ public class OrganizationReportRepositoryTests
         var nonExistentReportId = Guid.NewGuid();
 
         // Act
-        var result = await sqlOrganizationReportRepo.GetSummaryDataAsync(org.Id, nonExistentReportId);
+        var result = await sqlOrganizationReportRepo.GetSummaryDataAsync(nonExistentReportId);
 
         // Assert
         Assert.Null(result);
@@ -336,7 +336,7 @@ public class OrganizationReportRepositoryTests
         var nonExistentReportId = Guid.NewGuid();
 
         // Act
-        var result = await sqlOrganizationReportRepo.GetReportDataAsync(org.Id, nonExistentReportId);
+        var result = await sqlOrganizationReportRepo.GetReportDataAsync(nonExistentReportId);
 
         // Assert
         Assert.Null(result);
@@ -352,7 +352,7 @@ public class OrganizationReportRepositoryTests
         var nonExistentReportId = Guid.NewGuid();
 
         // Act
-        var result = await sqlOrganizationReportRepo.GetApplicationDataAsync(org.Id, nonExistentReportId);
+        var result = await sqlOrganizationReportRepo.GetApplicationDataAsync(nonExistentReportId);
 
         // Assert
         Assert.Null(result);

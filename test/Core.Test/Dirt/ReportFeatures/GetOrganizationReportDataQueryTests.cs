@@ -27,7 +27,7 @@ public class GetOrganizationReportDataQueryTests
             .Create();
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
-            .GetReportDataAsync(organizationId, reportId)
+            .GetReportDataAsync(reportId)
             .Returns(reportDataResponse);
 
         // Act
@@ -36,7 +36,7 @@ public class GetOrganizationReportDataQueryTests
         // Assert
         Assert.NotNull(result);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .Received(1).GetReportDataAsync(organizationId, reportId);
+            .Received(1).GetReportDataAsync(reportId);
     }
 
     [Theory]
@@ -53,7 +53,7 @@ public class GetOrganizationReportDataQueryTests
 
         Assert.Equal("OrganizationId is required.", exception.Message);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .DidNotReceive().GetReportDataAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+            .DidNotReceive().GetReportDataAsync(Arg.Any<Guid>());
     }
 
     [Theory]
@@ -70,7 +70,7 @@ public class GetOrganizationReportDataQueryTests
 
         Assert.Equal("ReportId is required.", exception.Message);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .DidNotReceive().GetReportDataAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+            .DidNotReceive().GetReportDataAsync(Arg.Any<Guid>());
     }
 
     [Theory]
@@ -83,7 +83,7 @@ public class GetOrganizationReportDataQueryTests
         var reportId = Guid.NewGuid();
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
-            .GetReportDataAsync(organizationId, reportId)
+            .GetReportDataAsync(reportId)
             .Returns((OrganizationReportDataResponse)null);
 
         // Act & Assert
@@ -104,7 +104,7 @@ public class GetOrganizationReportDataQueryTests
         var expectedMessage = "Database connection failed";
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
-            .GetReportDataAsync(organizationId, reportId)
+            .GetReportDataAsync(reportId)
             .Throws(new InvalidOperationException(expectedMessage));
 
         // Act & Assert

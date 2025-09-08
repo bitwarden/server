@@ -38,7 +38,7 @@ public class GetOrganizationReportApplicationDataQuery : IGetOrganizationReportA
                 throw new BadRequestException("ReportId is required.");
             }
 
-            var applicationDataResponse = await _organizationReportRepo.GetApplicationDataAsync(organizationId, reportId);
+            var applicationDataResponse = await _organizationReportRepo.GetApplicationDataAsync(reportId);
 
             if (applicationDataResponse == null)
             {
