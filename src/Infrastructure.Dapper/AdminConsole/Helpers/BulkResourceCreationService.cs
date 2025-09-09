@@ -12,6 +12,12 @@ public static class BulkResourceCreationService
     {
         using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction);
         bulkCopy.DestinationTableName = "[dbo].[CollectionUser]";
+        bulkCopy.BatchSize = 500;
+        bulkCopy.BulkCopyTimeout = 120;
+        bulkCopy.EnableStreaming = true;
+        bulkCopy.ColumnOrderHints.Add("CollectionId", SortOrder.Ascending);
+        bulkCopy.ColumnOrderHints.Add("OrganizationUserId", SortOrder.Ascending);
+
         var dataTable = BuildCollectionsUsersTable(bulkCopy, collectionUsers, errorMessage);
         await bulkCopy.WriteToServerAsync(dataTable);
     }
@@ -100,6 +106,11 @@ public static class BulkResourceCreationService
     {
         using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction);
         bulkCopy.DestinationTableName = "[dbo].[Collection]";
+        bulkCopy.BatchSize = 500;
+        bulkCopy.BulkCopyTimeout = 120;
+        bulkCopy.EnableStreaming = true;
+        bulkCopy.ColumnOrderHints.Add("Id", SortOrder.Ascending);
+
         var dataTable = BuildCollectionsTable(bulkCopy, collections, errorMessage);
         await bulkCopy.WriteToServerAsync(dataTable);
     }

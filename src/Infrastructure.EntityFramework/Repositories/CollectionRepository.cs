@@ -2,6 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using LinqToDB.EntityFrameworkCore;
@@ -854,7 +855,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
         foreach (var orgUserId in missingDefaultCollectionUserIds)
         {
-            var collectionId = Guid.NewGuid();
+            var collectionId = CoreHelpers.GenerateComb();
 
             collections.Add(new Collection
             {
@@ -877,6 +878,14 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 Manage = true,
             });
         }
+
+        // Offload some work from SQL Server by pre-sorting before insert.
+        // This lets us use the SqlBulkCopy.ColumnOrderHints to improve performance.
+        collections = collections.OrderBy(c => c.Id).ToList();
+        collectionUsers = collectionUsers
+            .OrderBy(cu => cu.CollectionId)
+            .ThenBy(cu => cu.OrganizationUserId)
+            .ToList();
 
         return (collectionUsers, collections);
     }
