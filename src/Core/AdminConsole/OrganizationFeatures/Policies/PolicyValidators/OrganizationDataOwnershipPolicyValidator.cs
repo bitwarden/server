@@ -10,7 +10,7 @@ using Bit.Core.Services;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
 /// <summary>
-/// Please do not use this validator. We're currently in the process of refactoring our policy validator pattern.
+/// Please do not extend or expand this validator. We're currently in the process of refactoring our policy validator pattern.
 /// This is a stop-gap solution for post-policy-save side effects, but it is not the long-term solution.
 /// </summary>
 public class OrganizationDataOwnershipPolicyValidator(
