@@ -323,7 +323,8 @@ A hosted service (`IntegrationConfigurationDetailsCacheService`) runs in the bac
 # Building a new integration
 
 These are all the pieces required in the process of building out a new integration. For
-clarity in naming, these assume a new integration called "Example".
+clarity in naming, these assume a new integration called "Example". To see a complete example
+in context, view [the PR for adding the Datadog integration](https://github.com/bitwarden/server/pull/6289).
 
 ## IntegrationType
 
