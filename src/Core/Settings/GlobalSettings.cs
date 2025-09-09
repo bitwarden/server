@@ -471,6 +471,10 @@ public class GlobalSettings : IGlobalSettings
         /// Global override for absolute refresh token lifetime in seconds. If null, uses the constructor parameter value.
         /// </summary>
         public int? AbsoluteRefreshTokenLifetimeSeconds { get; set; }
+        /// <summary>
+        /// Global override for refresh token expiration policy. False = Sliding (default), True = Absolute.
+        /// </summary>
+        public bool UseAbsoluteRefreshTokenExpiration { get; set; } = false;
     }
 
     public class DataProtectionSettings

@@ -18,9 +18,14 @@ public class ApiClient : Client
     {
         ClientId = id;
         AllowedGrantTypes = new[] { GrantType.ResourceOwnerPassword, GrantType.AuthorizationCode, WebAuthnGrantValidator.GrantType };
-        RefreshTokenExpiration = TokenExpiration.Sliding;
+        
+        // Use global setting: false = Sliding (default), true = Absolute
+        RefreshTokenExpiration = globalSettings.IdentityServer.UseAbsoluteRefreshTokenExpiration 
+            ? TokenExpiration.Absolute 
+            : TokenExpiration.Sliding;
+        
         RefreshTokenUsage = TokenUsage.ReUse;
-
+        
         // Use global setting if provided, otherwise use constructor parameter
         SlidingRefreshTokenLifetime = globalSettings.IdentityServer.SlidingRefreshTokenLifetimeSeconds ?? (86400 * refreshTokenSlidingDays);
         AbsoluteRefreshTokenLifetime = globalSettings.IdentityServer.AbsoluteRefreshTokenLifetimeSeconds ?? 0; // forever
