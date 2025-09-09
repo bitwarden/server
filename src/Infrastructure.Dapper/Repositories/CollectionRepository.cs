@@ -326,8 +326,9 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName)
+    public async Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName, bool checkForExistingCollections = true)
     {
+        affectedOrgUserIds = affectedOrgUserIds.ToList();
         if (!affectedOrgUserIds.Any())
         {
             return;
@@ -338,11 +339,14 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         await using var transaction = connection.BeginTransaction();
         try
         {
-            var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(connection, transaction, organizationId);
+            var targetOrganizationUserIds = affectedOrgUserIds;
+            if (checkForExistingCollections)
+            {
+                var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(connection, transaction, organizationId);
+                targetOrganizationUserIds = affectedOrgUserIds.Except(orgUserIdWithDefaultCollection);
+            }
 
-            var missingDefaultCollectionUserIds = affectedOrgUserIds.Except(orgUserIdWithDefaultCollection);
-
-            var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
+            var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, targetOrganizationUserIds, defaultCollectionName);
 
             if (!collectionUsers.Any() || !collections.Any())
             {

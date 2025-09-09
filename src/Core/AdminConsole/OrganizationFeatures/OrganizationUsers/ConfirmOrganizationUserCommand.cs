@@ -311,7 +311,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        var policyEligibleOrganizationUserIds = await _policyRequirementQuery.GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId);
+        var policyEligibleOrganizationUserIds =
+            await _policyRequirementQuery.GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId);
 
         var eligibleOrganizationUserIds = confirmedOrganizationUsers
             .Where(ou => policyEligibleOrganizationUserIds.Contains(ou.Id))
@@ -323,6 +324,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        await _collectionRepository.UpsertDefaultCollectionsAsync(organizationId, eligibleOrganizationUserIds, defaultUserCollectionName);
+        // Don't need to checkForExistingCollections because users being confirmed will never have a default collection already
+        await _collectionRepository.UpsertDefaultCollectionsAsync(organizationId, eligibleOrganizationUserIds, defaultUserCollectionName, checkForExistingCollections: false);
     }
 }

@@ -63,5 +63,16 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task CreateOrUpdateAccessForManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
         IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups);
 
-    Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName);
+    /// <summary>
+    /// Creates default user collections for the specified users.
+    /// </summary>
+    /// <param name="organizationId">The Organization ID.</param>
+    /// <param name="affectedOrgUserIds">The Organization User IDs to create default collections for.</param>
+    /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
+    /// <param name="checkForExistingCollections">
+    /// If true, this will skip users with default collections already. WARNING: do not set this to false unless you
+    /// are certain that the user cannot have a default collection already.
+    /// </param>
+    /// <returns></returns>
+    Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName, bool checkForExistingCollections = true);
 }
