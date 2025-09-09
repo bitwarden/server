@@ -1,5 +1,5 @@
-﻿using Bit.Core.Identity;
-using Bit.Core.IdentityServer;
+﻿using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.IdentityServer;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
 

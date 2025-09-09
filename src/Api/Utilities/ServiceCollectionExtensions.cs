@@ -2,7 +2,7 @@
 using Bit.Api.Tools.Authorization;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
-using Bit.Core.IdentityServer;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.PhishingDomainFeatures;
 using Bit.Core.PhishingDomainFeatures.Interfaces;
 using Bit.Core.Repositories;

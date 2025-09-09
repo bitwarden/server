@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Core;
-using Bit.Core.Identity;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
@@ -23,7 +23,7 @@ public class SendAccessGrantValidator(
     private static readonly Dictionary<string, string>
     _sendGrantValidatorErrorDescriptions = new()
     {
-        { SendAccessConstants.GrantValidatorResults.MissingSendId, $"{SendAccessConstants.TokenRequest.SendId} is required." },
+        { SendAccessConstants.GrantValidatorResults.SendIdRequired, $"{SendAccessConstants.TokenRequest.SendId} is required." },
         { SendAccessConstants.GrantValidatorResults.InvalidSendId, $"{SendAccessConstants.TokenRequest.SendId} is invalid." }
     };
 
@@ -90,7 +90,7 @@ public class SendAccessGrantValidator(
         // if the sendId is null then the request is the wrong shape and the request is invalid
         if (sendId == null)
         {
-            return (Guid.Empty, SendAccessConstants.GrantValidatorResults.MissingSendId);
+            return (Guid.Empty, SendAccessConstants.GrantValidatorResults.SendIdRequired);
         }
         // the send_id is not null so the request is the correct shape, so we will attempt to parse it
         try
@@ -125,7 +125,7 @@ public class SendAccessGrantValidator(
         return error switch
         {
             // Request is the wrong shape
-            SendAccessConstants.GrantValidatorResults.MissingSendId => new GrantValidationResult(
+            SendAccessConstants.GrantValidatorResults.SendIdRequired => new GrantValidationResult(
                                 TokenRequestErrors.InvalidRequest,
                                 errorDescription: _sendGrantValidatorErrorDescriptions[error],
                                 customResponse),

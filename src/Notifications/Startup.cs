@@ -1,5 +1,5 @@
 ﻿using System.Globalization;
-using Bit.Core.IdentityServer;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
