@@ -1,5 +1,5 @@
 ﻿using System.Security.Claims;
-using Bit.Core.Identity;
+using Bit.Core.Auth.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.SendAccess;
 
@@ -9,12 +9,12 @@ public static class SendAccessClaimsPrincipalExtensions
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        var sendIdClaim = user.FindFirst(Claims.SendId)
-            ?? throw new InvalidOperationException("Send ID claim not found.");
+        var sendIdClaim = user.FindFirst(Claims.SendAccessClaims.SendId)
+            ?? throw new InvalidOperationException("send_id claim not found.");
 
         if (!Guid.TryParse(sendIdClaim.Value, out var sendGuid))
         {
-            throw new InvalidOperationException("Invalid Send ID claim value.");
+            throw new InvalidOperationException("Invalid send_id claim value.");
         }
 
         return sendGuid;

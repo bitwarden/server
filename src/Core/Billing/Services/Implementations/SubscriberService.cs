@@ -345,7 +345,7 @@ public class SubscriberService(
             return PaymentMethod.Empty;
         }
 
-        var accountCredit = customer.Balance * -1 / 100;
+        var accountCredit = customer.Balance * -1 / 100M;
 
         var paymentMethod = await GetPaymentSourceAsync(subscriber.Id, customer);
 
@@ -801,15 +801,13 @@ public class SubscriberService(
             _ => false
         };
 
-
-
         if (isBusinessUseSubscriber)
         {
             switch (customer)
             {
                 case
                 {
-                    Address.Country: not "US",
+                    Address.Country: not Core.Constants.CountryAbbreviations.UnitedStates,
                     TaxExempt: not TaxExempt.Reverse
                 }:
                     await stripeAdapter.CustomerUpdateAsync(customer.Id,
@@ -817,7 +815,7 @@ public class SubscriberService(
                     break;
                 case
                 {
-                    Address.Country: "US",
+                    Address.Country: Core.Constants.CountryAbbreviations.UnitedStates,
                     TaxExempt: TaxExempt.Reverse
                 }:
                     await stripeAdapter.CustomerUpdateAsync(customer.Id,
@@ -840,8 +838,8 @@ public class SubscriberService(
             {
                 User => true,
                 Organization organization => organization.PlanType.GetProductTier() == ProductTierType.Families ||
-                                             customer.Address.Country == "US" || (customer.TaxIds?.Any() ?? false),
-                Provider => customer.Address.Country == "US" || (customer.TaxIds?.Any() ?? false),
+                                             customer.Address.Country == Core.Constants.CountryAbbreviations.UnitedStates || (customer.TaxIds?.Any() ?? false),
+                Provider => customer.Address.Country == Core.Constants.CountryAbbreviations.UnitedStates || (customer.TaxIds?.Any() ?? false),
                 _ => false
             };
 
@@ -860,7 +858,7 @@ public class SubscriberService(
         ISubscriber subscriber,
         string descriptorCode)
     {
-        var setupIntentId = await setupIntentCache.Get(subscriber.Id);
+        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriber.Id);
 
         if (string.IsNullOrEmpty(setupIntentId))
         {
@@ -988,7 +986,7 @@ public class SubscriberService(
          * attachedPaymentMethodDTO being null represents a case where we could be looking for the SetupIntent for an unverified "us_bank_account".
          * We store the ID of this SetupIntent in the cache when we originally update the payment method.
          */
-        var setupIntentId = await setupIntentCache.Get(subscriberId);
+        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriberId);
 
         if (string.IsNullOrEmpty(setupIntentId))
         {

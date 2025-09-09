@@ -30,8 +30,6 @@ using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
-using Bit.Core.Identity;
-using Bit.Core.IdentityServer;
 using Bit.Core.KeyManagement;
 using Bit.Core.NotificationCenter;
 using Bit.Core.OrganizationFeatures;
@@ -883,15 +881,18 @@ public static class ServiceCollectionExtensions
         services.AddSlackService(globalSettings);
         services.TryAddSingleton(TimeProvider.System);
         services.AddHttpClient(WebhookIntegrationHandler.HttpClientName);
+        services.AddHttpClient(DatadogIntegrationHandler.HttpClientName);
 
         // Add integration handlers
         services.TryAddSingleton<IIntegrationHandler<SlackIntegrationConfigurationDetails>, SlackIntegrationHandler>();
         services.TryAddSingleton<IIntegrationHandler<WebhookIntegrationConfigurationDetails>, WebhookIntegrationHandler>();
+        services.TryAddSingleton<IIntegrationHandler<DatadogIntegrationConfigurationDetails>, DatadogIntegrationHandler>();
 
         var repositoryConfiguration = new RepositoryListenerConfiguration(globalSettings);
         var slackConfiguration = new SlackListenerConfiguration(globalSettings);
         var webhookConfiguration = new WebhookListenerConfiguration(globalSettings);
         var hecConfiguration = new HecListenerConfiguration(globalSettings);
+        var datadogConfiguration = new DatadogListenerConfiguration(globalSettings);
 
         if (IsRabbitMqEnabled(globalSettings))
         {
@@ -908,6 +909,7 @@ public static class ServiceCollectionExtensions
             services.AddRabbitMqIntegration<SlackIntegrationConfigurationDetails, SlackListenerConfiguration>(slackConfiguration);
             services.AddRabbitMqIntegration<WebhookIntegrationConfigurationDetails, WebhookListenerConfiguration>(webhookConfiguration);
             services.AddRabbitMqIntegration<WebhookIntegrationConfigurationDetails, HecListenerConfiguration>(hecConfiguration);
+            services.AddRabbitMqIntegration<DatadogIntegrationConfigurationDetails, DatadogListenerConfiguration>(datadogConfiguration);
         }
 
         if (IsAzureServiceBusEnabled(globalSettings))
@@ -925,6 +927,7 @@ public static class ServiceCollectionExtensions
             services.AddAzureServiceBusIntegration<SlackIntegrationConfigurationDetails, SlackListenerConfiguration>(slackConfiguration);
             services.AddAzureServiceBusIntegration<WebhookIntegrationConfigurationDetails, WebhookListenerConfiguration>(webhookConfiguration);
             services.AddAzureServiceBusIntegration<WebhookIntegrationConfigurationDetails, HecListenerConfiguration>(hecConfiguration);
+            services.AddAzureServiceBusIntegration<DatadogIntegrationConfigurationDetails, DatadogListenerConfiguration>(datadogConfiguration);
         }
 
         return services;

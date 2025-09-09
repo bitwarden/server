@@ -283,7 +283,7 @@ public class PremiumUserBillingService(
             {
                 case PaymentMethodType.BankAccount:
                     {
-                        await setupIntentCache.Remove(user.Id);
+                        await setupIntentCache.RemoveSetupIntentForSubscriber(user.Id);
                         break;
                     }
                 case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
