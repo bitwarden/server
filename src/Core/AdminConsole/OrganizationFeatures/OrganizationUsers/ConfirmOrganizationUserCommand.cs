@@ -11,6 +11,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -82,7 +83,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             throw new BadRequestException(error);
         }
 
-        await HandleConfirmationSideEffectsAsync(organizationId, confirmedOrganizationUsers: [orgUser], defaultUserCollectionName);
+        await CreateDefaultCollectionAsync(orgUser, defaultUserCollectionName);
 
         return orgUser;
     }
@@ -97,9 +98,13 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             .Select(r => r.Item1)
             .ToList();
 
-        if (confirmedOrganizationUsers.Count > 0)
+        if (confirmedOrganizationUsers.Count == 1)
         {
-            await HandleConfirmationSideEffectsAsync(organizationId, confirmedOrganizationUsers, defaultUserCollectionName);
+            await CreateDefaultCollectionAsync(confirmedOrganizationUsers.Single(), defaultUserCollectionName);
+        }
+        else if (confirmedOrganizationUsers.Count > 1)
+        {
+            await CreateManyDefaultCollectionsAsync(organizationId, confirmedOrganizationUsers, defaultUserCollectionName);
         }
 
         return result;
@@ -245,14 +250,54 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     }
 
     /// <summary>
-    /// Handles the side effects of confirming an organization user.
-    /// Creates a default collection for the user if the organization
-    /// has the OrganizationDataOwnership policy enabled.
+    /// Creates a default collection for a single user if required by the Organization Data Ownership policy.
+    /// </summary>
+    /// <param name="organizationUser">The organization user who has just been confirmed.</param>
+    /// <param name="defaultUserCollectionName">The encrypted default user collection name.</param>
+    private async Task CreateDefaultCollectionAsync(OrganizationUser organizationUser, string defaultUserCollectionName)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
+        {
+            return;
+        }
+
+        // Skip if no collection name provided (backwards compatibility)
+        if (string.IsNullOrWhiteSpace(defaultUserCollectionName))
+        {
+            return;
+        }
+
+        var organizationDataOwnershipPolicy =
+            await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId!.Value);
+        if (!organizationDataOwnershipPolicy.RequiresDefaultCollectionOnConfirm(organizationUser.OrganizationId))
+        {
+            return;
+        }
+
+        var defaultCollection = new Collection
+        {
+            OrganizationId = organizationUser.OrganizationId,
+            Name = defaultUserCollectionName,
+            Type = CollectionType.DefaultUserCollection
+        };
+        var collectionUser = new CollectionAccessSelection
+        {
+            Id = organizationUser.Id,
+            ReadOnly = false,
+            HidePasswords = false,
+            Manage = true
+        };
+
+        await _collectionRepository.CreateAsync(defaultCollection, groups: null, users: [collectionUser]);
+    }
+
+    /// <summary>
+    /// Creates default collections for multiple users if required by the Organization Data Ownership policy.
     /// </summary>
     /// <param name="organizationId">The organization ID.</param>
     /// <param name="confirmedOrganizationUsers">The confirmed organization users.</param>
     /// <param name="defaultUserCollectionName">The encrypted default user collection name.</param>
-    private async Task HandleConfirmationSideEffectsAsync(Guid organizationId,
+    private async Task CreateManyDefaultCollectionsAsync(Guid organizationId,
         IEnumerable<OrganizationUser> confirmedOrganizationUsers, string defaultUserCollectionName)
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
