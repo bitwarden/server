@@ -128,10 +128,10 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
             return;
         }
 
-        if (latestInvoice.Status != StripeInvoiceStatus.Open)
+        if (latestInvoice.Status != StripeInvoiceStatus.Open && latestInvoice.Status != StripeInvoiceStatus.Draft)
         {
             _logger.LogWarning(
-                "Attempted to pay unpaid subscription {SubscriptionId} but latest invoice wasn't \"open\"",
+                "Attempted to pay unpaid subscription {SubscriptionId} but latest invoice wasn't \"open\" or \"draft\"",
                 unpaidSubscription.Id);
 
             return;
