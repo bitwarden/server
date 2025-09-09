@@ -12,7 +12,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
@@ -20,7 +19,6 @@ using Microsoft.AspNetCore.Http;
 namespace Bit.Core.Context;
 
 public class CurrentContext(
-    IFeatureService _featureService,
     IProviderOrganizationRepository _providerOrganizationRepository,
     IProviderUserRepository _providerUserRepository) : ICurrentContext
 {
@@ -142,7 +140,7 @@ public class CurrentContext(
             }
         }
 
-        if (IdentityClientType == IdentityClientType.Send && _featureService.IsEnabled(FeatureFlagKeys.SendAccess))
+        if (IdentityClientType == IdentityClientType.Send)
         {
             // For the Send client, we don't need to set any User specific properties on the context
             // so just short circuit and return here.
