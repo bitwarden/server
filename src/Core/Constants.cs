@@ -199,7 +199,6 @@ public static class FeatureFlagKeys
     public const string SendAccess = "pm-19394-send-access-control";
 
     /* Platform Team */
-    public const string PersistPopupView = "persist-popup-view";
     public const string IpcChannelFramework = "ipc-channel-framework";
     public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
     public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
