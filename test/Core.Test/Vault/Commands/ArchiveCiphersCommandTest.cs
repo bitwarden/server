@@ -1,10 +1,7 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Platform.Push;
-using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Bit.Core.Vault.Commands.Interfaces;
-using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -25,7 +22,7 @@ public class ArchiveCiphersCommandTest
     [BitAutoData(true, true, 1, 0, 0, 1)]
     public async Task ArchiveAsync_Works(
         bool isEditable, bool hasOrganizationId,
-        int cipherRepoCalls, int resultCountFromQuery, int eventServiceCalls, int pushNotificationsCalls,
+        int cipherRepoCalls, int resultCountFromQuery, int pushNotificationsCalls,
         SutProvider<ArchiveCiphersCommand> sutProvider, CipherDetails cipher, User user)
     {
         cipher.Edit = isEditable;
@@ -42,10 +39,10 @@ public class ArchiveCiphersCommandTest
         // Assert
         await sutProvider.GetDependency<ICipherRepository>().Received(cipherRepoCalls).ArchiveAsync(
             Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == resultCountFromQuery
-                                             && ids.Count() >= 1 ? true : ids.All(id => cipherList.Contains(cipher))),
+                                             && ids.Count() >= 1
+                ? true
+                : ids.All(id => cipherList.Contains(cipher))),
             user.Id);
-        await sutProvider.GetDependency<IEventService>().Received(eventServiceCalls)
-            .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(pushNotificationsCalls)
             .PushSyncCiphersAsync(user.Id);
     }
