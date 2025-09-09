@@ -22,6 +22,42 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
         GlobalSettings globalSettings)
     {
         var freeOrgTitle = "A Bitwarden member invited you to an organization. Join now to start securing your passwords!";
+
+        return new OrganizationUserInvitedViewModel
+        {
+            TitleFirst = orgInvitesInfo.IsFreeOrg ? freeOrgTitle : "Join ",
+            TitleSecondBold =
+                orgInvitesInfo.IsFreeOrg
+                    ? string.Empty
+                    : CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
+            TitleThird = orgInvitesInfo.IsFreeOrg ? string.Empty : " on Bitwarden and start securing your passwords!",
+            OrganizationName = CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false) + orgUser.Status,
+            Email = WebUtility.UrlEncode(orgUser.Email),
+            OrganizationId = orgUser.OrganizationId.ToString(),
+            OrganizationUserId = orgUser.Id.ToString(),
+            Token = WebUtility.UrlEncode(expiringToken.Token),
+            ExpirationDate =
+                $"{expiringToken.ExpirationDate.ToLongDateString()} {expiringToken.ExpirationDate.ToShortTimeString()} UTC",
+            OrganizationNameUrlEncoded = WebUtility.UrlEncode(orgInvitesInfo.OrganizationName),
+            WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = globalSettings.SiteName,
+            InitOrganization = orgInvitesInfo.InitOrganization,
+            OrgSsoIdentifier = orgInvitesInfo.OrgSsoIdentifier,
+            OrgSsoEnabled = orgInvitesInfo.OrgSsoEnabled,
+            OrgSsoLoginRequiredPolicyEnabled = orgInvitesInfo.OrgSsoLoginRequiredPolicyEnabled,
+            OrgUserHasExistingUser = orgInvitesInfo.OrgUserHasExistingUserDict[orgUser.Id]
+        };
+    }
+
+    public static OrganizationUserInvitedViewModel CreateFromInviteInfo_v2(
+        OrganizationInvitesInfo orgInvitesInfo,
+        OrganizationUser orgUser,
+        ExpiringToken expiringToken,
+        GlobalSettings globalSettings)
+    {
+        const string freeOrgTitle = "A Bitwarden member invited you to an organization. " +
+                                    "Join now to start securing your passwords!";
+
         var userHasExistingUser = orgInvitesInfo.OrgUserHasExistingUserDict[orgUser.Id];
 
         return new OrganizationUserInvitedViewModel

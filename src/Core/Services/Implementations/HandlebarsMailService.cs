@@ -354,8 +354,13 @@ public class HandlebarsMailService : IMailService
         var messageModels = orgInvitesInfo.OrgUserTokenPairs.Select(orgUserTokenPair =>
         {
             Debug.Assert(orgUserTokenPair.OrgUser.Email is not null);
-            var orgUserInviteViewModel = OrganizationUserInvitedViewModel.CreateFromInviteInfo(
-                orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token, _globalSettings);
+
+            var orgUserInviteViewModel = orgInvitesInfo.IsSubjectFeatureEnabled
+                ? OrganizationUserInvitedViewModel.CreateFromInviteInfo_v2(
+                    orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token, _globalSettings)
+                : OrganizationUserInvitedViewModel.CreateFromInviteInfo(orgInvitesInfo, orgUserTokenPair.OrgUser,
+                    orgUserTokenPair.Token, _globalSettings);
+
             return CreateMessage(orgUserTokenPair.OrgUser.Email, orgUserInviteViewModel);
         });
 
@@ -364,9 +369,14 @@ public class HandlebarsMailService : IMailService
 
         MailQueueMessage CreateMessage(string email, OrganizationUserInvitedViewModel model)
         {
-            var subject = model.OrgUserHasExistingUser
-                ? $"{model.OrganizationName} invited you to their Bitwarden organization."
-                : $"{model.OrganizationName} set up a Bitwarden account for you.";
+            var subject = $"Join {orgInvitesInfo.OrganizationName}";
+
+            if (orgInvitesInfo.IsSubjectFeatureEnabled)
+            {
+                subject = model.OrgUserHasExistingUser
+                    ? $"{model.OrganizationName} invited you to their Bitwarden organization."
+                    : $"{model.OrganizationName} set up a Bitwarden account for you.";
+            }
 
             var message = CreateDefaultMessage(subject, email);
 
