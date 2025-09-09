@@ -1,9 +1,10 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
+using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 
-namespace Bit.Core.Vault.Commands.Interfaces;
+namespace Bit.Core.Vault.Commands;
 
 public class UnarchiveCiphersCommand : IUnarchiveCiphersCommand
 {
@@ -31,7 +32,8 @@ public class UnarchiveCiphersCommand : IUnarchiveCiphersCommand
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(unarchivingUserId);
         var unarchivingCiphers = ciphers
             .Where(c => cipherIdsSet.Contains(c.Id) && c.Edit)
-            .Select(CipherOrganizationDetails (c) => c).ToList();
+            .Select(c => (CipherOrganizationDetails)c)
+            .ToList();
 
         var revisionDate =
             await _cipherRepository.UnarchiveAsync(unarchivingCiphers.Select(c => c.Id), unarchivingUserId);

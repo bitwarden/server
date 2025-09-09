@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Platform.Push;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
-using Bit.Core.Vault.Commands.Interfaces;
+using Bit.Core.Vault.Commands;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -16,10 +16,10 @@ namespace Bit.Core.Test.Vault.Commands;
 public class ArchiveCiphersCommandTest
 {
     [Theory]
-    [BitAutoData(true, false, 1, 1, 1, 1)]
-    [BitAutoData(false, false, 1, 0, 0, 1)]
-    [BitAutoData(false, true, 1, 0, 0, 1)]
-    [BitAutoData(true, true, 1, 0, 0, 1)]
+    [BitAutoData(true, false, 1, 1, 1)]
+    [BitAutoData(false, false, 1, 0, 1)]
+    [BitAutoData(false, true, 1, 0, 1)]
+    [BitAutoData(true, true, 1, 0, 1)]
     public async Task ArchiveAsync_Works(
         bool isEditable, bool hasOrganizationId,
         int cipherRepoCalls, int resultCountFromQuery, int pushNotificationsCalls,

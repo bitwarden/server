@@ -1,9 +1,10 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
+using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 
-namespace Bit.Core.Vault.Commands.Interfaces;
+namespace Bit.Core.Vault.Commands;
 
 public class ArchiveCiphersCommand : IArchiveCiphersCommand
 {
@@ -31,7 +32,8 @@ public class ArchiveCiphersCommand : IArchiveCiphersCommand
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(archivingUserId);
         var archivingCiphers = ciphers
             .Where(c => cipherIdsSet.Contains(c.Id) && c.Edit && !c.OrganizationId.HasValue)
-            .Select(CipherOrganizationDetails (c) => c).ToList();
+            .Select(c => (CipherOrganizationDetails)c)
+            .ToList();
 
         var revisionDate = await _cipherRepository.ArchiveAsync(archivingCiphers.Select(c => c.Id), archivingUserId);
 
