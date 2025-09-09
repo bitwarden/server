@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Serilog.Data;
 using Stripe;
 
 namespace Bit.Billing.Services.Implementations;
