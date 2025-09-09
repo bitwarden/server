@@ -12,16 +12,18 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.Context;
 
-public class CurrentContext : ICurrentContext
+public class CurrentContext(
+    IFeatureService _featureService,
+    IProviderOrganizationRepository _providerOrganizationRepository,
+    IProviderUserRepository _providerUserRepository) : ICurrentContext
 {
-    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
-    private readonly IProviderUserRepository _providerUserRepository;
     private bool _builtHttpContext;
     private bool _builtClaimsPrincipal;
     private IEnumerable<ProviderOrganizationProviderDetails> _providerOrganizationProviderDetails;
@@ -47,14 +49,6 @@ public class CurrentContext : ICurrentContext
     public virtual bool ClientVersionIsPrerelease { get; set; }
     public virtual IdentityClientType IdentityClientType { get; set; }
     public virtual Guid? ServiceAccountOrganizationId { get; set; }
-
-    public CurrentContext(
-        IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderUserRepository providerUserRepository)
-    {
-        _providerOrganizationRepository = providerOrganizationRepository;
-        _providerUserRepository = providerUserRepository;
-    }
 
     public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
     {
@@ -137,6 +131,24 @@ public class CurrentContext : ICurrentContext
 
         var claimsDict = user.Claims.GroupBy(c => c.Type).ToDictionary(c => c.Key, c => c.Select(v => v));
 
+        ClientId = GetClaimValue(claimsDict, "client_id");
+
+        var clientType = GetClaimValue(claimsDict, Claims.Type);
+        if (clientType != null)
+        {
+            if (Enum.TryParse(clientType, out IdentityClientType c))
+            {
+                IdentityClientType = c;
+            }
+        }
+
+        if (IdentityClientType == IdentityClientType.Send && _featureService.IsEnabled(FeatureFlagKeys.SendAccess))
+        {
+            // For the Send client, we don't need to set any User specific properties on the context
+            // so just short circuit and return here.
+            return Task.FromResult(0);
+        }
+
         var subject = GetClaimValue(claimsDict, "sub");
         if (Guid.TryParse(subject, out var subIdGuid))
         {
@@ -163,13 +175,6 @@ public class CurrentContext : ICurrentContext
                     orgApi = true;
                 }
             }
-        }
-
-        var clientType = GetClaimValue(claimsDict, Claims.Type);
-        if (clientType != null)
-        {
-            Enum.TryParse(clientType, out IdentityClientType c);
-            IdentityClientType = c;
         }
 
         if (IdentityClientType == IdentityClientType.ServiceAccount)
