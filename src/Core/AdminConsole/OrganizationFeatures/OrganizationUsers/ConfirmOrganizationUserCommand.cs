@@ -324,7 +324,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        // Don't need to checkForExistingCollections because users being confirmed will never have a default collection already
-        await _collectionRepository.UpsertDefaultCollectionsAsync(organizationId, eligibleOrganizationUserIds, defaultUserCollectionName, checkForExistingCollections: false);
+        await _collectionRepository.UpsertDefaultCollectionsAsync(organizationId, eligibleOrganizationUserIds, defaultUserCollectionName);
     }
 }

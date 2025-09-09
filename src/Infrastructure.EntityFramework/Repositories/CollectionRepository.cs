@@ -794,10 +794,10 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         // SaveChangesAsync is expected to be called outside this method
     }
 
-    public async Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName, bool checkForExistingCollections = true)
+    public async Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
     {
-        affectedOrgUserIds = affectedOrgUserIds.ToList();
-        if (!affectedOrgUserIds.Any())
+        organizationUserIds = organizationUserIds.ToList();
+        if (!organizationUserIds.Any())
         {
             return;
         }
@@ -805,14 +805,10 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var targetOrganizationUserIds = affectedOrgUserIds;
-        if (checkForExistingCollections)
-        {
-            var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(dbContext, organizationId);
-            targetOrganizationUserIds = affectedOrgUserIds.Except(orgUserIdWithDefaultCollection);
-        }
+        var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(dbContext, organizationId);
+        var missingDefaultCollectionUserIds = organizationUserIds.Except(orgUserIdWithDefaultCollection);
 
-        var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, targetOrganizationUserIds, defaultCollectionName);
+        var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
 
         if (!collectionUsers.Any() || !collections.Any())
         {

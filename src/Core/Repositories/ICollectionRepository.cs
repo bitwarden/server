@@ -64,15 +64,11 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
         IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups);
 
     /// <summary>
-    /// Creates default user collections for the specified users.
+    /// Creates default user collections for the specified organization users if they do not already have one.
     /// </summary>
     /// <param name="organizationId">The Organization ID.</param>
-    /// <param name="affectedOrgUserIds">The Organization User IDs to create default collections for.</param>
+    /// <param name="organizationUserIds">The Organization User IDs to create default collections for.</param>
     /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
-    /// <param name="checkForExistingCollections">
-    /// If true, this will skip users with default collections already. WARNING: do not set this to false unless you
-    /// are certain that the user cannot have a default collection already.
-    /// </param>
     /// <returns></returns>
-    Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> affectedOrgUserIds, string defaultCollectionName, bool checkForExistingCollections = true);
+    Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
 }
